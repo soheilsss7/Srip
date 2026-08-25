@@ -1,0 +1,2 @@
+import React from'react';import{SafeAreaView,Text,ScrollView}from'react-native';import{styles}from'../lib/ui';
+export default function MeetingBrief(){return <SafeAreaView style={styles.screen}><ScrollView contentContainerStyle={styles.content}><Text style={styles.title}>Meeting Brief</Text>{['Relationship Health','Last Meeting','Open Commitments','Key People','Risks','Opportunities','Suggested Agenda'].map(x=><Text style={styles.card} key={x}>{x}</Text>)}</ScrollView></SafeAreaView>}

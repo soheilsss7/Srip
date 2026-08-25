@@ -1,0 +1,1 @@
+import React from 'react'; import { DataScreen } from '../../features/data-screen'; export default function Relationships(){return <DataScreen title="Relationships" path="/relationships" fields={['id','status','healthScore','strategicScore']}/>}

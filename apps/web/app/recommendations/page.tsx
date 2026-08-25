@@ -1,0 +1,13 @@
+'use client';
+import {useEffect,useState} from 'react';
+import {api} from '../_lib/api';
+import {Badge,ErrorCard,Loading,PageHeader} from '../_components/page-ui';
+export default function Recommendations(){
+ const [items,setItems]=useState<any[]>([]),[loading,setLoading]=useState(true),[busy,setBusy]=useState(''),[error,setError]=useState('');
+ const unwrap=(x:any)=>Array.isArray(x)?x:x?.items??x?.rows??x?.data??[];
+ const load=async()=>{setLoading(true);setError('');try{setItems(unwrap(await api('/recommendations')))}catch(e){setError((e as Error).message)}finally{setLoading(false)}};
+ useEffect(()=>{load()},[]);
+ async function generate(){setBusy('generate');try{await api('/recommendations/generate',{method:'POST',body:JSON.stringify({})});await load()}catch(e){setError((e as Error).message)}finally{setBusy('')}}
+ async function act(id:string,action:string){setBusy(id+action);try{await api(`/recommendations/${id}/${action}`,{method:'POST',body:JSON.stringify({})});await load()}catch(e){setError((e as Error).message)}finally{setBusy('')}}
+ return <main className="feature-page"><PageHeader eyebrow="ACTIONABLE INTELLIGENCE" title="Recommendations" description="هر پیشنهاد باید Evidence، Confidence، Reason و Human Approval داشته باشد." actions={<button className="primary-action" onClick={generate} disabled={!!busy}>{busy==='generate'?'در حال تولید…':'تولید پیشنهادها'}</button>}/><ErrorCard message={error}/>{loading?<Loading/>:<section className="recommendation-list">{items.length?items.map(r=><article className="panel" key={r.id}><div className="panel-title"><div><h2>{r.title??r.type??'Recommendation'}</h2><p>{r.rationale??r.reason??'بدون توضیح ثبت‌شده'}</p></div><Badge tone={r.status==='APPROVED'?'success':r.status==='REJECTED'?'danger':'info'}>{r.status??'PENDING'}</Badge></div><div className="metric-list"><div><span>Confidence</span><strong>{r.confidence??'—'}</strong></div><div><span>Evidence</span><strong>{r.evidence? 'دارای شواهد':'—'}</strong></div></div>{r.status==='PENDING'&&<div className="toolbar"><button onClick={()=>act(r.id,'approve')}>Approve</button><button onClick={()=>act(r.id,'reject')}>Reject</button><button onClick={()=>act(r.id,'snooze')}>Snooze</button></div>}</article>):<div className="empty-state">پیشنهادی برای نمایش وجود ندارد.</div>}</section>}</main>
+}

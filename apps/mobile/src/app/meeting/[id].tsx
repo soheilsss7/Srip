@@ -1,0 +1,1 @@
+import React from 'react'; import { useLocalSearchParams } from 'expo-router'; import { DataScreen } from '../../features/data-screen'; export default function Meeting(){const {id}=useLocalSearchParams<{id:string}>();return <DataScreen title="Meeting detail" path={`/meetings/${id}`} fields={['id','title','startAt','endAt','objective','agenda','outcome']}/>}

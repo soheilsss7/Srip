@@ -1,0 +1,43 @@
+{
+  "name": "srip",
+  "private": true,
+  "packageManager": "pnpm@10.12.4",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "db:generate": "pnpm --filter @srip/api prisma:generate",
+    "db:migrate": "pnpm --filter @srip/api prisma:migrate",
+    "db:studio": "pnpm --filter @srip/api prisma:studio",
+    "db:seed": "pnpm --filter @srip/api prisma:seed",
+    "db:deploy": "pnpm --filter @srip/api prisma migrate deploy",
+    "check:phase0-6": "bash scripts/verify-phase0-6.sh",
+    "verify": "bash scripts/verify.sh && bash scripts/verify-phase0-6.sh && bash scripts/verify-phase8.sh",
+    "db:reset:local": "pnpm --filter @srip/api prisma migrate reset --force",
+    "check:phase8": "bash scripts/verify-phase8.sh",
+    "check:phase13": "bash scripts/verify-phase13.sh",
+    "check:phase17": "bash scripts/verify-phase17.sh",
+    "check:phase18": "bash scripts/verify-phase18.sh",
+    "check:phase19": "bash scripts/verify-phase19.sh",
+    "check:phase10": "bash scripts/verify-phase10.sh",
+    "preflight:phase19": "bash scripts/preflight-phase19.sh --static",
+    "release:preflight": "bash scripts/preflight-phase19.sh --production",
+    "check:phase20": "bash scripts/verify-phase20-queue.sh",
+    "check:phase37": "bash scripts/verify-phase37-observability.sh",
+    "check:phase38": "bash scripts/verify-phase38-dr.sh",
+    "check:phase39": "bash scripts/verify-phase39-testing.sh",
+    "test:integration": "pnpm --filter @srip/api test:integration",
+    "test:queue-integration": "RUN_QUEUE_INTEGRATION=1 pnpm --filter @srip/api test -- test/integration/queue-integration.spec.ts",
+    "pretest:hardening": "bash scripts/verify-pretest-hardening.sh",
+    "verify:phase-ag": "bash apps/api/scripts/verify-phase-ag.sh",
+    "verify:phase-al": "bash scripts/verify-phase-al.sh",
+    "verify:phase-ar": "bash scripts/verify-phase-ar.sh",
+    "check:package8-15": "bash scripts/verify-package8-15-final.sh"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.6",
+    "typescript": "^5.9.2"
+  }
+}

@@ -1,0 +1,2 @@
+import React from 'react'; import { SafeAreaView, ScrollView, Text } from 'react-native'; import { DataScreen } from '../features/data-screen'; import { styles } from '../lib/ui';
+export default function Organizations(){ return <SafeAreaView style={styles.screen}><ScrollView contentContainerStyle={styles.content}><Text style={styles.title}>Organizations</Text><DataScreen title="Organization Directory" path="/organizations" fields={['id','name','type','status','country','strategicImportance']}/></ScrollView></SafeAreaView> }

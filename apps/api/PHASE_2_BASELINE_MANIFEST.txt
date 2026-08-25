@@ -1,0 +1,21 @@
+PHASE 2 BASELINE
+================
+Source baseline: srip-starter-2_PHASE1_CORE_DOMAIN_BASELINE.zip
+Scope: Interaction / Meeting / Action / Commitment / Project / Opportunity
+Frontend: untouched
+AI: untouched
+
+Canonical changes:
+- Interaction: secure context resolution, allowlisted mutation, pagination, transactional audit/outbox.
+- Meeting: explicit MeetingStatus, completedAt, atomic participant reconciliation, completion event, pagination.
+- Action: BLOCKED state, reminderAt, createdById, dependency endpoints, pagination, transactional events.
+- Commitment: reminderAt, recommendationId, organization context derivation, pagination, overdue/completion events.
+- Project: transactional CRUD/events, pagination, requirements/relationship reconciliation, Risk and Milestone APIs.
+- Opportunity: secure context resolution, allowlisted mutation, pagination, transactional events.
+- Prisma duplicate model declarations canonicalized to one definition each.
+
+Verification:
+- scripts/verify-phase2-domain.sh: PASS
+- TypeScript transpile syntax check for all Phase 2 changed TS files: PASS
+- npm dependency installation: attempted, timed out in build environment
+- full Jest/Prisma runtime suite: not executed because dependencies/DB are unavailable in this environment

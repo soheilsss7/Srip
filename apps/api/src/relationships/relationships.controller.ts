@@ -1,0 +1,25 @@
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { RelationshipLifecycleStage, RelationshipStatus, DataClassification } from '@prisma/client';
+import { RelationshipsService } from './relationships.service';
+import { AuthGuard } from '../common/guards/auth.guard';
+import { AuthorizationGuard } from '../common/guards/authorization.guard';
+import { RequirePermission } from '../common/decorators/require-permission.decorator'; import { DataLifecycleService } from '../common/data-lifecycle/data-lifecycle.service';
+
+class CreateRelationshipDto { @IsString() sourceOrganizationId!: string; @IsString() targetOrganizationId!: string; @IsString() relationshipType!: string; @IsEnum(RelationshipStatus) @IsOptional() status?: RelationshipStatus; @IsEnum(DataClassification) @IsOptional() sensitivity?: DataClassification; @IsInt() @Min(0) @Max(100) @IsOptional() healthScore?: number; @IsInt() @Min(0) @Max(100) @IsOptional() strategicScore?: number; @IsInt() @Min(0) @Max(100) @IsOptional() riskScore?: number; @IsInt() @Min(0) @Max(100) @IsOptional() trustScore?: number; @IsInt() @Min(0) @Max(100) @IsOptional() accessScore?: number; @IsInt() @Min(0) @Max(100) @IsOptional() influenceScore?: number; @IsInt() @Min(0) @Max(100) @IsOptional() opportunityScore?: number; @IsInt() @Min(0) @Max(100) @IsOptional() resilienceScore?: number; @IsInt() @Min(0) @Max(100) @IsOptional() engagementScore?: number; @IsInt() @Min(1) @IsOptional() reviewCadenceDays?: number; @IsString() @IsOptional() ownerId?: string; @IsString() @IsOptional() backupOwnerId?: string; @IsOptional() nextActionAt?: string; @IsOptional() nextReviewAt?: string; @IsOptional() lastInteractionAt?: string; }
+class UpdateRelationshipDto { @IsString() @IsOptional() sourceOrganizationId?: string; @IsString() @IsOptional() targetOrganizationId?: string; @IsString() @IsOptional() relationshipType?: string; @IsEnum(RelationshipStatus) @IsOptional() status?: RelationshipStatus; @IsEnum(RelationshipLifecycleStage) @IsOptional() lifecycleStage?: RelationshipLifecycleStage; @IsEnum(DataClassification) @IsOptional() sensitivity?: DataClassification; @IsInt() @Min(0) @Max(100) @IsOptional() healthScore?: number; @IsInt() @Min(0) @Max(100) @IsOptional() strategicScore?: number; @IsInt() @Min(0) @Max(100) @IsOptional() riskScore?: number; @IsInt() @Min(0) @Max(100) @IsOptional() trustScore?: number; @IsInt() @Min(0) @Max(100) @IsOptional() accessScore?: number; @IsInt() @Min(0) @Max(100) @IsOptional() influenceScore?: number; @IsInt() @Min(0) @Max(100) @IsOptional() opportunityScore?: number; @IsInt() @Min(0) @Max(100) @IsOptional() resilienceScore?: number; @IsInt() @Min(0) @Max(100) @IsOptional() engagementScore?: number; @IsInt() @Min(1) @IsOptional() reviewCadenceDays?: number; @IsString() @IsOptional() ownerId?: string; @IsString() @IsOptional() backupOwnerId?: string; @IsOptional() nextActionAt?: string; @IsOptional() nextReviewAt?: string; @IsOptional() lastInteractionAt?: string; }
+class UpdateRelationshipLifecycleDto { @IsEnum(RelationshipLifecycleStage) lifecycleStage!: RelationshipLifecycleStage; }
+
+@Controller('relationships')
+@UseGuards(AuthGuard, AuthorizationGuard)
+export class RelationshipsController {
+  constructor(private readonly s: RelationshipsService, private readonly lifecycle: DataLifecycleService) {}
+  @Get() @RequirePermission('relationship.read') list(@Req() req: any, @Query('organizationId') organizationId?: string, @Query('status') status?: RelationshipStatus, @Query('lifecycleStage') lifecycleStage?: RelationshipLifecycleStage, @Query('page') page?: string, @Query('pageSize') pageSize?: string) { return this.s.list(req.user.sub, organizationId, status, lifecycleStage, Number(page || 1), Number(pageSize || 50)); }
+  @Get(':id/timeline') @RequirePermission('relationship.read') timeline(@Param('id') id: string, @Req() req: any) { return this.s.timeline(req.user.sub, id); }
+  @Get(':id') @RequirePermission('relationship.read') get(@Param('id') id: string, @Req() req: any) { return this.s.get(req.user.sub, id); }
+  @Post() @RequirePermission('relationship.write') create(@Body() d: CreateRelationshipDto, @Req() req: any) { return this.s.create(req.user.sub, d); }
+  @Patch(':id') @RequirePermission('relationship.write') update(@Param('id') id: string, @Body() d: UpdateRelationshipDto, @Req() req: any) { return this.s.update(req.user.sub, id, d as any); }
+  @Patch(':id/lifecycle') updateLifecycle(@Param('id') id: string, @Body() d: UpdateRelationshipLifecycleDto, @Req() req: any) { return this.s.updateLifecycle(req.user.sub, id, d.lifecycleStage); }
+  @Patch(':id/archive') @RequirePermission('relationship.write') archive(@Param('id') id: string, @Req() req: any) { return this.s.archive(req.user.sub, id); }
+  @Post(':id/restore') @RequirePermission('data.restore') restore(@Param('id') id: string, @Req() req: any) { return this.s.restore(req.user.sub, id); }
+}

@@ -1,0 +1,4 @@
+FROM postgres:17-alpine
+RUN apk add --no-cache aws-cli bash openssl coreutils
+COPY infra/backup/archive-wal.sh /usr/local/bin/archive-wal.sh
+RUN chmod 0755 /usr/local/bin/archive-wal.sh

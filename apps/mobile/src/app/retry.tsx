@@ -1,0 +1,1 @@
+import React from'react';import{SafeAreaView,Text}from'react-native';import{styles}from'../lib/ui';export default function Retry(){return <SafeAreaView style={styles.content}><Text style={styles.title}>Retry</Text><Text style={styles.card}>Queued mutations track attempts and remain local until successfully delivered.</Text></SafeAreaView>}

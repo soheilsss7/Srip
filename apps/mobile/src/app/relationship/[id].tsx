@@ -1,0 +1,1 @@
+import React from 'react'; import { useLocalSearchParams } from 'expo-router'; import { DataScreen } from '../../features/data-screen'; export default function Relationship(){const {id}=useLocalSearchParams<{id:string}>();return <DataScreen title="Relationship detail" path={`/relationships/${id}`} fields={['id','status','healthScore','strategicScore','riskScore','trustScore']}/>}

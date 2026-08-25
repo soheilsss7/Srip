@@ -1,0 +1,12 @@
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, RefreshControl, SafeAreaView, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { apiGet, apiPost } from '../../services/api-client';
+import { useSession } from '../../state/session';
+import { colors, styles } from '../../lib/ui';
+
+export default function Interactions(){
+ const {token}=useSession(); const [items,setItems]=useState<any[]>([]); const [error,setError]=useState<string|null>(null); const [refreshing,setRefreshing]=useState(false); const [subject,setSubject]=useState(''); const [summary,setSummary]=useState(''); const [busy,setBusy]=useState(false);
+ const load=useCallback(async()=>{if(!token)return;setError(null);try{setItems(await apiGet<any[]>('/interactions',token))}catch(e){setError(e instanceof Error?e.message:'Request failed')}},[token]); useEffect(()=>{load()},[load]);
+ const save=async()=>{if(!token||!subject.trim())return;setBusy(true);setError(null);try{await apiPost('/interactions',{type:'NOTE',subject:subject.trim(),summary:summary.trim()||undefined},token);setSubject('');setSummary('');await load()}catch(e){setError(e instanceof Error?e.message:'Request failed')}finally{setBusy(false)}};
+ return <SafeAreaView style={styles.screen}><ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async()=>{setRefreshing(true);await load();setRefreshing(false)}}/>}><Text style={styles.title}>Interactions</Text><Text style={styles.subtitle}>Capture notes and interaction history from mobile.</Text>{error&&<Text style={styles.error}>{error}</Text>}<View style={styles.card}><Text style={styles.label}>New note</Text><TextInput style={styles.input} placeholder="Subject" value={subject} onChangeText={setSubject}/><TextInput style={styles.input} placeholder="Summary" value={summary} onChangeText={setSummary} multiline/><TouchableOpacity style={styles.button} onPress={save} disabled={busy}><Text style={styles.buttonText}>{busy?'Saving…':'Save note'}</Text></TouchableOpacity></View>{!items.length&&!error&&<ActivityIndicator/>}{items.map((item:any)=><View style={styles.card} key={item.id}><Text style={styles.label}>{item.type}</Text><Text style={styles.value}>{item.subject}</Text><Text style={styles.subtitle}>{item.summary||'No summary recorded.'}</Text><Text style={styles.subtitle}>{item.occurredAt?new Date(item.occurredAt).toLocaleString():''}</Text></View>)}</ScrollView></SafeAreaView>
+}

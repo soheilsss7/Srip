@@ -1,0 +1,2 @@
+-- Prisma field reconciliation only: the physical Person.notes column is retained.
+-- The Prisma relation is named notes, so the scalar is exposed as notesText and mapped to the same column.

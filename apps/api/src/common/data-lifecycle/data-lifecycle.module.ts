@@ -1,0 +1,2 @@
+import { Module } from '@nestjs/common'; import { DataLifecycleService } from './data-lifecycle.service'; import { DataLifecycleController } from './data-lifecycle.controller'; import { PermissionsModule } from '../../permissions/permissions.module'; import { AuditModule } from '../../audit/audit.module'; import { PrismaService } from '../../prisma/prisma.service';
+@Module({imports:[PermissionsModule,AuditModule],controllers:[DataLifecycleController],providers:[DataLifecycleService,PrismaService],exports:[DataLifecycleService]}) export class DataLifecycleModule {}

@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
+      - run: pnpm check:phase0-6
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm build
+      - run: pnpm audit --audit-level high
+      - run: pnpm pretest:hardening
+      - run: pnpm test:integration
+
+  api-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: srip
+          POSTGRES_PASSWORD: srip_dev
+          POSTGRES_DB: srip
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U srip -d srip"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
+      - run: pnpm --filter @srip/api test
+      - run: pnpm --filter @srip/api test:integration
+        env:
+          DATABASE_URL: postgresql://srip:srip_dev@localhost:5432/srip?schema=public
+          REDIS_URL: redis://localhost:6379
+
+  security-static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
+      - run: node --check tests/security/package8-security-regression.mjs
+      - run: node --check tests/e2e/package8-e2e.mjs
+      - run: bash scripts/verify-package8-final.sh
+      - run: bash scripts/verify-package82-hardening.sh
+      - run: pnpm audit --audit-level high

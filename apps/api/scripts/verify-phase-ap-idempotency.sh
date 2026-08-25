@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+REPO="$(cd "$ROOT/../.." && pwd)"
+I="$ROOT/src/common/api-contract/api-contract.interceptor.ts"
+M="$ROOT/src/main.ts"
+S="$ROOT/prisma/schema.prisma"
+W="$ROOT/src/integrations/integration-webhook.controller.ts"
+D="$REPO/docs/api/API_IDEMPOTENCY_CONTRACT_AP.md"
+for f in "$I" "$M" "$S" "$W" "$D"; do test -f "$f"; done
+grep -q "MUTATING_METHODS" "$I"
+grep -q "isWebhook" "$I"
+grep -q "isExport" "$I"
+grep -q "hashBytes(req.rawBody)" "$I"
+grep -q "responseBodyBase64" "$I"
+grep -q "catchError" "$I"
+grep -q "Idempotency-Key" "$M"
+grep -q "responseBodyBase64 String?" "$S"
+grep -q "Idempotency-Key" "$D"
+grep -q "x-event-id" "$W"
+test -f "$ROOT/prisma/migrations/20260824270000_phase_ap_idempotency_response/migration.sql"
+echo "PHASE_AP_STATIC_IDEMPOTENCY=PASS"

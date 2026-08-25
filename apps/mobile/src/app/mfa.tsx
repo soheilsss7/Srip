@@ -1,0 +1,2 @@
+import React,{useState}from'react';import{SafeAreaView,Text,TextInput,Pressable}from'react-native';import{styles}from'../lib/ui';
+export default function MFA(){const[c,setC]=useState('');return <SafeAreaView style={styles.screen}><Text style={styles.title}>MFA</Text><Text style={styles.subtitle}>کد TOTP یا Recovery Code را وارد کنید.</Text><TextInput style={styles.input} keyboardType="number-pad" value={c} onChangeText={setC} placeholder="123456"/><Pressable style={styles.button}><Text style={styles.buttonText}>Verify</Text></Pressable></SafeAreaView>}

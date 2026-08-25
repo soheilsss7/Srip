@@ -1,0 +1,30 @@
+{
+  "package": "8.27",
+  "baseline": "8.26",
+  "scope": "Frontend hardening and full non-AI Backend integration surface",
+  "ai_ui_enabled": false,
+  "preservation": "Existing repository retained; changes are additive/reconciled.",
+  "security_hardening": [
+    "No hard-coded development credentials",
+    "Session-scoped refresh token and memory-first access token",
+    "Automatic access-token refresh with rotation",
+    "Backend logout/revocation",
+    "Central API layer for JSON, Blob and uploads",
+    "No unauthenticated report download links",
+    "No direct fetch outside API/auth infrastructure",
+    "Global runtime error boundary"
+  ],
+  "document_alignment": [
+    "Web + Backend shared API",
+    "Admin: Users/Roles/Permissions/Organizations/Custom Fields/Tags/Relationship Types/Interaction Types/Workflows/Scoring/Notification Rules/Integrations/Audit",
+    "Import: Upload/Preview/Approval",
+    "Reporting: Relationship/Organization/Contact/Meeting/Commitment/Action/Opportunity/Network/Risk/Influence/Referral/Project/Subsidiary/Holding",
+    "RBAC/ABAC remains Backend authority",
+    "RTL Persian Web baseline"
+  ],
+  "static_audit": "PASS",
+  "zip_integrity": "PASS",
+  "production_build": "NOT_PROVEN_IN_THIS_RUNTIME",
+  "browser_e2e": "NOT_PROVEN_IN_THIS_RUNTIME",
+  "live_db_redis_queue_storage": "NOT_PROVEN_IN_THIS_RUNTIME"
+}

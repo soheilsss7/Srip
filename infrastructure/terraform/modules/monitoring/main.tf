@@ -1,0 +1,9 @@
+resource "aws_cloudwatch_log_group" "application" { name="/srip/${var.name}/application" retention_in_days=30 tags=var.tags }
+resource "aws_cloudwatch_log_group" "security" { name="/srip/${var.name}/security" retention_in_days=365 tags=var.tags }
+resource "aws_cloudwatch_log_group" "waf" { name="/aws/wafv2/${var.name}" retention_in_days=90 tags=var.tags }
+resource "aws_sns_topic" "alerts" { name="${var.name}-alerts" tags=var.tags }
+resource "aws_sns_topic_subscription" "email" { count=var.alert_email==""?0:1 topic_arn=aws_sns_topic.alerts.arn protocol="email" endpoint=var.alert_email }
+resource "aws_cloudwatch_log_metric_filter" "application_errors" { name="${var.name}-application-errors" log_group_name=aws_cloudwatch_log_group.application.name pattern="?ERROR ?EXCEPTION ?FATAL" metric_transformation { name="ApplicationErrors" namespace="SRIP/${var.name}" value="1" default_value=0 } }
+resource "aws_cloudwatch_log_metric_filter" "slow_queries" { name="${var.name}-slow-queries" log_group_name=aws_cloudwatch_log_group.application.name pattern="SLOW_QUERY" metric_transformation { name="SlowQueries" namespace="SRIP/${var.name}" value="1" default_value=0 } }
+resource "aws_cloudwatch_metric_alarm" "application_errors" { alarm_name="${var.name}-application-errors" namespace="SRIP/${var.name}" metric_name="ApplicationErrors" statistic="Sum" period=300 evaluation_periods=1 threshold=var.application_error_threshold comparison_operator="GreaterThanOrEqualToThreshold" alarm_actions=[aws_sns_topic.alerts.arn] treat_missing_data="notBreaching" }
+resource "aws_cloudwatch_metric_alarm" "slow_queries" { alarm_name="${var.name}-slow-queries" namespace="SRIP/${var.name}" metric_name="SlowQueries" statistic="Sum" period=300 evaluation_periods=1 threshold=var.slow_query_threshold comparison_operator="GreaterThanOrEqualToThreshold" alarm_actions=[aws_sns_topic.alerts.arn] treat_missing_data="notBreaching" }

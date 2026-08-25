@@ -1,0 +1,1 @@
+import React from'react';import{SafeAreaView,Text}from'react-native';import{styles}from'../lib/ui';export default function Settings(){return <SafeAreaView style={styles.content}><Text style={styles.title}>Settings</Text><Text style={styles.card}>Theme · Language · Timezone · Notifications · Default Company · Default Calendar</Text></SafeAreaView>}

@@ -1,0 +1,1 @@
+import React from'react';import{SafeAreaView,Text}from'react-native';import{styles}from'../lib/ui';export default function Profile(){return <SafeAreaView style={styles.content}><Text style={styles.title}>Profile</Text><Text style={styles.card}>Account, language, timezone and privacy settings.</Text></SafeAreaView>}

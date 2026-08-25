@@ -1,0 +1,2 @@
+import { EntityWorkspace } from '../_components/entity-workspace';
+export default function Page(){return <EntityWorkspace config={{title:'معرفی‌ها',eyebrow:'REFERRALS',description:'مدیریت مسیرهای معرفی، وضعیت، نتیجه و ارتباطات موفق.',endpoint:'/core-domain/referrals',fields:[{name:'relationshipId',label:'Relationship ID',required:true},{name:'fromPersonId',label:'معرف',required:true},{name:'toPersonId',label:'فرد معرفی‌شونده',required:true},{name:'status',label:'وضعیت',type:'select',options:['REQUESTED','ACCEPTED','DECLINED','COMPLETED']}]}}/>}

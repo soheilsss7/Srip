@@ -1,0 +1,1 @@
+import React from 'react'; import { DataScreen } from '../../features/data-screen'; export default function Meetings(){return <DataScreen title="Meetings" path="/meetings" fields={['id','title','startAt','objective']}/>}

@@ -1,0 +1,2 @@
+import React from 'react'; import { SafeAreaView, ScrollView, Text } from 'react-native'; import { DataScreen } from '../features/data-screen'; import { styles } from '../lib/ui';
+export default function People(){ return <SafeAreaView style={styles.screen}><ScrollView contentContainerStyle={styles.content}><Text style={styles.title}>People</Text><DataScreen title="People Directory" path="/people" fields={['id','displayName','firstName','lastName','title','department','email','country']}/></ScrollView></SafeAreaView> }
