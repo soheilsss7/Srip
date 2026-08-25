@@ -16,7 +16,7 @@ import { forwardRef } from '@nestjs/common';
 import { PrivacyModule } from '../privacy/privacy.module';
 
 @Module({
-  imports: [ConfigModule, AiModule, DocumentsModule, IntegrationsModule, NotificationsModule, RecommendationsModule, MeetingsModule, SearchModule, AnalyticsModule, CommitmentsModule, forwardRef(() => PrivacyModule)],
+  imports: [ConfigModule, AiModule, DocumentsModule, IntegrationsModule, NotificationsModule, RecommendationsModule, MeetingsModule, SearchModule, forwardRef(() => AnalyticsModule), CommitmentsModule, forwardRef(() => PrivacyModule)],
   providers: [QueueService, JobService, JobWorker],
   exports: [QueueService, JobService],
 })

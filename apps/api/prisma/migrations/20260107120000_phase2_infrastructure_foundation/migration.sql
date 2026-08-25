@@ -393,7 +393,6 @@ CREATE TABLE "WorkflowExecution" (
 ALTER TABLE "User" ADD CONSTRAINT "User_email_key" UNIQUE ("email");
 ALTER TABLE "Membership" ADD CONSTRAINT "Membership_userId_organizationId_key" UNIQUE ("userId", "organizationId");
 ALTER TABLE "Relationship" ADD CONSTRAINT "Relationship_sourceOrganizationId_targetOrganizationId_relationshipType_key" UNIQUE ("sourceOrganizationId", "targetOrganizationId", "relationshipType");
-ALTER TABLE "Tag" ADD CONSTRAINT "Tag_name_key" UNIQUE ("name");
 ALTER TABLE "Permission" ADD CONSTRAINT "Permission_key_key" UNIQUE ("key");
 ALTER TABLE "Session" ADD CONSTRAINT "Session_tokenHash_key" UNIQUE ("tokenHash");
 ALTER TABLE "PasswordResetToken" ADD CONSTRAINT "PasswordResetToken_tokenHash_key" UNIQUE ("tokenHash");

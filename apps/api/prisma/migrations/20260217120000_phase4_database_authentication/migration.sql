@@ -44,6 +44,7 @@ CREATE INDEX "IdentityProvider_provider_enabled_idx" ON "IdentityProvider"("prov
 ALTER TABLE "Session"
   ADD COLUMN "rotatedAt" TIMESTAMP(3),
   ADD COLUMN "tokenFamilyId" TEXT;
+  ALTER TABLE "Session"
   ADD COLUMN "replacedBySessionId" TEXT;
 UPDATE "Session" SET "tokenFamilyId" = "id" WHERE "tokenFamilyId" IS NULL;
 ALTER TABLE "Session" ALTER COLUMN "tokenFamilyId" SET NOT NULL;
