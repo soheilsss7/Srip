@@ -107,7 +107,7 @@ export class DataImportService {
  }
  async processApproved(userId:string,id:string){
   let job=await this.prisma.dataImport.findUnique({where:{id}}); if(!job)throw new NotFoundException('Import not found');
-  if([ImportStatus.COMPLETED,ImportStatus.FAILED].includes(job.status))return job;
+  if(([ImportStatus.COMPLETED,ImportStatus.FAILED] as ImportStatus[]).includes(job.status))return job;
   const leaseId = `queue:${id}`;
   const now = new Date();
   if(job.status===ImportStatus.APPROVED){const claim=await this.prisma.dataImport.updateMany({where:{id,status:ImportStatus.APPROVED},data:{status:ImportStatus.PROCESSING,pipelineStage:'IMPORT',processingLeaseId:leaseId,processingHeartbeatAt:now}});if(!claim.count){job=await this.prisma.dataImport.findUnique({where:{id}});if(!job||job.status!==ImportStatus.PROCESSING)return job;}}

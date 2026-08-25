@@ -30,11 +30,15 @@ export class MeetingsService {
     return { items: EntityResponseDto.many('Meeting', items), page: p.page, pageSize: p.pageSize, total, totalPages: Math.ceil(total / p.pageSize) };
   }
 
-  async get(userId: string, id: string) {
+  private async fetch(userId: string, id: string) {
     const row = await this.prisma.meeting.findUnique({ where: { id }, include: { organization: true, relationship: { select: { id: true, sourceOrganizationId: true, targetOrganizationId: true, status: true, healthScore: true } }, participants: { include: { person: true } }, actions: true, commitments: true } });
     if (!row || row.deletedAt) throw new NotFoundException('Meeting not found');
     await this.assertAccess(userId, row);
-    return EntityResponseDto.from('Meeting', row);
+    return row;
+  }
+
+  async get(userId: string, id: string) {
+    return EntityResponseDto.from('Meeting', await this.fetch(userId, id));
   }
 
   private async validateParticipants(userId: string, participantIds: string[], relationshipId?: string, organizationId?: string) {
@@ -117,7 +121,7 @@ export class MeetingsService {
    * هر جلسه می‌توان به آن رجوع کرد یا آن را برای Follow-up استفاده کرد.
    */
   async minutes(userId: string, id: string) {
-    const row = await this.get(userId, id);
+    const row = await this.fetch(userId, id);
     const actions = (row.actions ?? []) as any[];
     const commitments = (row.commitments ?? []) as any[];
     const now = new Date();
@@ -193,7 +197,7 @@ export class MeetingsService {
 
   /** استخراج کاندید Action Item از notes/transcript ذخیره‌شده‌ی همین جلسه، بدون نوشتن چیزی در دیتابیس. */
   async extractActionItemsForMeeting(userId: string, id: string) {
-    const row = await this.get(userId, id);
+    const row = await this.fetch(userId, id);
     const source = [row.notes, row.transcript, row.outcome].filter(Boolean).join('\n');
     const candidates = this.extractActionItems(source);
     return { meetingId: row.id, source: source ? 'notes+transcript+outcome' : 'none', candidateCount: candidates.length, candidates };
@@ -205,7 +209,7 @@ export class MeetingsService {
    * وصل می‌کند تا Follow-up ممکن شود.
    */
   async applyActionItems(userId: string, id: string, items: Array<{ title: string; dueAt?: string; asCommitment?: boolean; ownerId?: string; priority?: string; description?: string }>) {
-    const row = await this.get(userId, id);
+    const row = await this.fetch(userId, id);
     if (!items?.length) return { created: [] as any[] };
     const created: any[] = [];
     for (const item of items) {

@@ -5,7 +5,7 @@ describe('CommitmentsService Phase 9 contracts', () => {
   const authorization: any = { assertPermission: jest.fn(), assertAnyOrganizationAccess: jest.fn(), accessibleOrganizationIds: jest.fn().mockResolvedValue(null) };
   const audit: any = { logMutation: jest.fn() };
   const notifications: any = { create: jest.fn() };
-  const service = new CommitmentsService(prisma, authorization, audit, notifications);
+  const service = new CommitmentsService(prisma, authorization, audit, notifications, {} as any, {} as any);
 
   it('marks overdue commitments deterministically', async () => {
     const row = { id: 'c', status: 'OPEN', dueAt: new Date(Date.now() - 1000), ownerId: 'u', relationship: null, meeting: null, project: null, person: null };
@@ -32,7 +32,7 @@ describe('CommitmentsService.sweepOverdue (Phase 26 automatic follow-up)', () =>
     const authorization: any = {};
     const audit: any = { logMutation: jest.fn() };
     const notifications: any = { create: jest.fn().mockResolvedValue({}) };
-    const service = new CommitmentsService(prisma, authorization, audit, notifications);
+    const service = new CommitmentsService(prisma, authorization, audit, notifications, {} as any, {} as any);
     const result = await service.sweepOverdue();
     expect(result.swept).toBe(2);
     expect(result.commitmentIds).toEqual(['c1', 'c2']);
@@ -48,14 +48,14 @@ describe('CommitmentsService.sweepOverdue (Phase 26 automatic follow-up)', () =>
     const authorization: any = {};
     const audit: any = { logMutation: jest.fn() };
     const notifications: any = { create: jest.fn().mockRejectedValue(new Error('email disabled')) };
-    const service = new CommitmentsService(prisma, authorization, audit, notifications);
+    const service = new CommitmentsService(prisma, authorization, audit, notifications, {} as any, {} as any);
     const result = await service.sweepOverdue();
     expect(result.swept).toBe(1);
   });
 
   it('returns zero when nothing is overdue', async () => {
     const prisma: any = { commitment: { findMany: jest.fn().mockResolvedValue([]) } };
-    const service = new CommitmentsService(prisma, {}, { logMutation: jest.fn() } as any, { create: jest.fn() } as any);
+    const service = new CommitmentsService(prisma, {} as any, { logMutation: jest.fn() } as any, { create: jest.fn() } as any, {} as any, {} as any);
     const result = await service.sweepOverdue();
     expect(result.swept).toBe(0);
     expect(result.commitmentIds).toEqual([]);
@@ -66,7 +66,7 @@ describe('CommitmentsService.listOverdue / listDueSoon (Phase 26 follow-up views
   it('scopes listOverdue to OVERDUE status only', async () => {
     const prisma: any = { commitment: { findMany: jest.fn().mockResolvedValue([]) } };
     const authorization: any = { accessibleOrganizationIds: jest.fn().mockResolvedValue(['org1']) };
-    const service = new CommitmentsService(prisma, authorization, {} as any, {} as any);
+    const service = new CommitmentsService(prisma, authorization, {} as any, {} as any, {} as any, {} as any);
     await service.listOverdue('u1');
     const args = prisma.commitment.findMany.mock.calls[0][0];
     expect(args.where.status).toBe('OVERDUE');
@@ -75,7 +75,7 @@ describe('CommitmentsService.listOverdue / listDueSoon (Phase 26 follow-up views
   it('scopes listDueSoon to OPEN status within the given horizon', async () => {
     const prisma: any = { commitment: { findMany: jest.fn().mockResolvedValue([]) } };
     const authorization: any = { accessibleOrganizationIds: jest.fn().mockResolvedValue(null) };
-    const service = new CommitmentsService(prisma, authorization, {} as any, {} as any);
+    const service = new CommitmentsService(prisma, authorization, {} as any, {} as any, {} as any, {} as any);
     await service.listDueSoon('u1', 3);
     const args = prisma.commitment.findMany.mock.calls[0][0];
     expect(args.where.status).toBe('OPEN');

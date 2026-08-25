@@ -1,4 +1,5 @@
-import { Injectable, OnModuleDestroy, TooManyRequestsException } from '@nestjs/common';
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
+import { TooManyRequestsException } from '../exceptions';
 import Redis from 'ioredis';
 
 export type RateLimitCategory = 'default'|'login'|'password-reset'|'mfa'|'export'|'search'|'bulk-import'|'webhook'|'sensitive';

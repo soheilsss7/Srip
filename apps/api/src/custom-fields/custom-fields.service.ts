@@ -137,7 +137,7 @@ export class CustomFieldsService {
 
   private buildValueData(fieldType: CustomFieldType, value: unknown) {
     const stored=this.toStoredValue(fieldType,value);
-    return { ...Object.fromEntries(VALUE_KEYS.map(k=>[k,null])), [stored.key]: stored.value } as Prisma.CustomFieldValueCreateInput;
+    return { ...Object.fromEntries(VALUE_KEYS.map(k=>[k,null])), [stored.key]: stored.value } as Prisma.CustomFieldValueUncheckedCreateInput;
   }
 
   async getEntityValues(userId: string, entityType: string, entityId: string) {
@@ -170,7 +170,7 @@ export class CustomFieldsService {
     await this.prisma.$transaction(async tx=>{
       for(const {d,input,stored} of prepared){
         const data=this.buildValueData(d.fieldType as CustomFieldType,input.value);
-        await tx.customFieldValue.upsert({where:{customFieldId_entityType_entityId:{customFieldId:d.id,entityType,entityId}},create:{customFieldId:d.id,entityType,entityId,...data},update:data});
+        await tx.customFieldValue.upsert({where:{customFieldId_entityType_entityId:{customFieldId:d.id,entityType,entityId}},create:{...data,customFieldId:d.id,entityType,entityId},update:data});
       }
       const allRequired=await tx.customField.findMany({where:{entityType,active:true,required:true,OR:[{organizationId:null},{organizationId}]},select:{id:true}});
       const after=await tx.customFieldValue.findMany({where:{entityType,entityId,customFieldId:{in:allRequired.map(x=>x.id)}}});

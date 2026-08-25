@@ -15,8 +15,8 @@ export interface NotificationProviderPort {
  * دقیقاً چرا ارسال واقعی انجام نشد و چه پیامی قرار بود برود.
  */
 export class LocalLogNotificationProvider implements NotificationProviderPort {
-  private readonly logger = new Logger(`NotificationProvider:${this.channel}`);
   constructor(public readonly channel: NotificationDelivery['channel'], private readonly reason: string) {}
+  private readonly logger = new Logger('LocalLogNotificationProvider');
   async send(message: NotificationDelivery) {
     this.logger.warn(`Delivery not sent (provider not configured: ${this.reason}). userId=${message.userId} title="${message.title}"`);
     return { accepted: false, provider: `local-log:${this.channel.toLowerCase()}`, errorMessage: this.reason };

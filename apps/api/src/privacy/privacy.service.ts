@@ -12,7 +12,7 @@ import { createHash } from 'node:crypto';
 
 @Injectable()
 export class PrivacyService {
-  constructor(private readonly prisma: PrismaService, private readonly auth: AuthorizationService, private readonly audit: AuditService, private readonly lifecycle: DataLifecycleService, private readonly jobs: JobService, private readonly storage: S3Storage) {}
+  constructor(private readonly prisma: PrismaService, private readonly auth: AuthorizationService, private readonly audit: AuditService, private readonly lifecycleService: DataLifecycleService, private readonly jobs: JobService, private readonly storage: S3Storage) {}
 
   async policies(userId: string) {
     await this.auth.assertPermission(userId, 'privacy.read', {});
@@ -140,7 +140,7 @@ export class PrivacyService {
       await tx.passwordResetToken.deleteMany({ where: { userId } });
       await tx.emailVerificationToken.deleteMany({ where: { userId } });
       await tx.recoveryCode.deleteMany({ where: { userId } });
-      await tx.mfaDevice.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: now } });
+      await tx.mfaDevice.updateMany({ where: { userId, enabled: true }, data: { enabled: false } });
       await tx.user.update({ where: { id: userId }, data: { name: `Erased User ${userId.slice(0, 8)}`, email: `erased+${userId}@privacy.invalid`, passwordHash: null, emailVerifiedAt: null, isActive: false, deletedAt: now } });
       await tx.privacyRequest.updateMany({ where: { userId, status: { in: ['PENDING', 'PROCESSING'] } }, data: { status: PrivacyRequestStatus.COMPLETED, completedAt: now, result: { blockedLegalRetention: blocked.map(x => x.entityType) } } });
     });
@@ -155,30 +155,35 @@ export class PrivacyService {
     return EntityResponseDto.fromUnknown(row);
   }
 
-  async retentionPreview(userId: string) {
+  private async computeRetentionPreview(userId: string) {
     await this.auth.assertPermission(userId, 'privacy.manage', {});
     const policies = await this.prisma.dataProcessingPolicy.findMany({ where: { active: true, retentionDays: { not: null } } });
     const now = Date.now();
-    const result = [];
+    const result: Array<{ entityType: string; purpose: string | null; retentionDays: number | null; cutoff: Date; erasable: boolean; count: number }> = [];
     for (const p of policies) {
       const cutoff = new Date(now - Number(p.retentionDays) * 86400000);
       let count = 0;
-      const config = (() => { try { return (this.lifecycle as any).config?.(p.entityType); } catch { return null; } })();
+      const config = (() => { try { return (this.lifecycleService as any).config?.(p.entityType); } catch { return null; } })();
       if (config) count = await (this.prisma as any)[config.delegate].count({ where: { createdAt: { lt: cutoff }, deletedAt: null } });
       result.push({ entityType: p.entityType, purpose: p.purpose, retentionDays: p.retentionDays, cutoff, erasable: p.erasable, count });
     }
-    return EntityResponseDto.fromUnknown(result);
+    return result;
+  }
+
+  async retentionPreview(userId: string) {
+    await this.auth.assertPermission(userId, 'privacy.manage', {});
+    return EntityResponseDto.fromUnknown(await this.computeRetentionPreview(userId));
   }
 
   async retentionExecute(userId: string) {
     await this.auth.assertPermission(userId, 'privacy.manage', {});
-    const preview = await this.retentionPreview(userId);
+    const preview = await this.computeRetentionPreview(userId);
     const now = new Date();
     const changed: Array<{entityType:string;count:number}> = [];
     for (const item of preview) {
       if (!item.erasable || !item.count) continue;
       const where:any = { createdAt: { lt: item.cutoff }, deletedAt: null };
-      const result = await this.lifecycle.softDeleteMany(userId, item.entityType, where, `retention-policy:${item.purpose}`);
+      const result = await this.lifecycleService.softDeleteMany(userId, item.entityType, where, `retention-policy:${item.purpose}`);
       const count = result.count;
       if (count) changed.push({entityType:item.entityType,count});
     }

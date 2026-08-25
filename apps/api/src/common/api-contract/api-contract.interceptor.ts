@@ -1,4 +1,5 @@
 import { CallHandler, ExecutionContext, Injectable, NestInterceptor, ConflictException, BadRequestException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { Observable, from, of, switchMap, catchError, throwError } from 'rxjs';
 import crypto from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -142,7 +143,7 @@ export class ApiContractInterceptor implements NestInterceptor {
 
   private async claimIdempotency(keyHash: string, requestHash: string, method: string, path: string, userId?: string) {
     try {
-      const record = await this.prisma.idempotencyRecord.create({ data: { keyHash, requestHash, method, path, userId, statusCode: 425, responseJson: null, responseBodyBase64: null, responseHeaders: {}, expiresAt: new Date(Date.now()+IDEMPOTENCY_TTL_MS) } });
+      const record = await this.prisma.idempotencyRecord.create({ data: { keyHash, requestHash, method, path, userId, statusCode: 425, responseJson: Prisma.JsonNull, responseBodyBase64: null, responseHeaders: {}, expiresAt: new Date(Date.now()+IDEMPOTENCY_TTL_MS) } });
       return { created: true, record };
     } catch (e: any) {
       if (e?.code !== 'P2002') throw e;

@@ -14,7 +14,7 @@ export class OrganizationsService {
     await this.authorization.assertPermission(userId, 'org.read', { organizationId: organizationId });
     const organization = await this.prisma.organization.findFirst({ where: { id: organizationId, deletedAt: null } });
     if (!organization) throw new NotFoundException('Organization not found');
-    return EntityResponseDto.fromUnknown(organization);
+    return organization;
   }
 
   async list(userId: string, parentOrganizationId?: string, page = 1, pageSize = 50) {
@@ -59,7 +59,7 @@ export class OrganizationsService {
     const [interactions, meetings, actions] = await Promise.all([
       this.prisma.interaction.findMany({ where: { organizationId: id, deletedAt: null }, orderBy: { occurredAt: 'desc' }, take: 50, select: { id: true, type: true, subject: true, summary: true, occurredAt: true } }),
       this.prisma.meeting.findMany({ where: { organizationId: id, deletedAt: null }, orderBy: { startAt: 'desc' }, take: 50, select: { id: true, title: true, startAt: true, outcome: true } }),
-      this.prisma.action.findMany({ where: { organizationId: id, deletedAt: null }, orderBy: { createdAt: 'desc' }, take: 50, select: { id: true, title: true, status: true, dueDate: true, createdAt: true } }),
+      this.prisma.action.findMany({ where: { organizationId: id, deletedAt: null }, orderBy: { createdAt: 'desc' }, take: 50, select: { id: true, title: true, status: true, dueAt: true, createdAt: true } }),
     ]);
     return { organization: { id: org.id, name: org.name }, items: [
       ...interactions.map(x => ({ kind: 'interaction', date: x.occurredAt, ...x })),

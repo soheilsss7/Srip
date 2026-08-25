@@ -25,7 +25,7 @@ describe('MeetingsService.extractActionItems (deterministic, no AI/network depen
   const prisma: any = {};
   const authorization: any = {};
   const audit: any = {};
-  const service = new MeetingsService(prisma, authorization, audit);
+  const service = new MeetingsService(prisma, authorization, audit, {} as any, {} as any);
 
   it('returns an empty array for empty/whitespace input', () => {
     expect(service.extractActionItems('')).toEqual([]);
@@ -90,7 +90,7 @@ describe('MeetingsService.minutes (structured output)', () => {
     const prisma: any = { meeting: { findUnique: jest.fn().mockResolvedValue(meetingRow) } };
     const authorization: any = { assertPermission: jest.fn(), assertAnyOrganizationAccess: jest.fn(), accessibleOrganizationIds: jest.fn().mockResolvedValue(null) };
     const audit: any = { logMutation: jest.fn() };
-    const service = new MeetingsService(prisma, authorization, audit);
+    const service = new MeetingsService(prisma, authorization, audit, {} as any, {} as any);
     const minutes = await service.minutes('u1', 'm1');
     expect(minutes.actionItems.overdueOpen).toHaveLength(1);
     expect(minutes.actionItems.open).toHaveLength(2);
@@ -112,7 +112,7 @@ describe('MeetingsService.applyActionItems', () => {
     };
     const authorization: any = { assertPermission: jest.fn(), assertAnyOrganizationAccess: jest.fn(), accessibleOrganizationIds: jest.fn().mockResolvedValue(null) };
     const audit: any = { logMutation: jest.fn() };
-    const service = new MeetingsService(prisma, authorization, audit);
+    const service = new MeetingsService(prisma, authorization, audit, {} as any, {} as any);
     const result = await service.applyActionItems('u1', 'm1', [
       { title: 'Send proposal', dueAt: new Date().toISOString() },
       { title: 'Deliver financing terms', asCommitment: true, description: 'Bank commitment' },
@@ -130,7 +130,7 @@ describe('MeetingsService.applyActionItems', () => {
     const prisma: any = { meeting: { findUnique: jest.fn().mockResolvedValue(meetingRow) }, action: { create: jest.fn() }, commitment: { create: jest.fn() } };
     const authorization: any = { assertPermission: jest.fn(), assertAnyOrganizationAccess: jest.fn(), accessibleOrganizationIds: jest.fn().mockResolvedValue(null) };
     const audit: any = { logMutation: jest.fn() };
-    const service = new MeetingsService(prisma, authorization, audit);
+    const service = new MeetingsService(prisma, authorization, audit, {} as any, {} as any);
     const result = await service.applyActionItems('u1', 'm1', [{ title: '   ' }]);
     expect(result.created).toHaveLength(0);
     expect(prisma.action.create).not.toHaveBeenCalled();

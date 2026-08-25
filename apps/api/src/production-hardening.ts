@@ -6,7 +6,7 @@ import { NextFunction, Request, Response } from 'express';
 export class ProductionHardeningMiddleware implements NestMiddleware {
   private readonly maxBodyBytes = Number(process.env.MAX_REQUEST_BODY_BYTES ?? 1_048_576);
 
-  use(req: Request & { requestId?: string }, res: Response, next: NextFunction) {
+  use(req: Request & { requestId?: string; correlationId?: string }, res: Response, next: NextFunction) {
     const requestId = req.requestId ?? crypto.randomUUID();
     req.requestId = requestId;
     res.setHeader('X-Request-Id', requestId);
@@ -35,7 +35,7 @@ export class OriginVerificationMiddleware implements NestMiddleware {
   private readonly trustedOrigins = (process.env.TRUSTED_ORIGINS ?? process.env.WEB_ORIGIN ?? 'http://localhost:3000').split(',').map((o) => o.trim()).filter(Boolean);
   private readonly enforce = process.env.ORIGIN_CHECK_ENFORCED !== 'false';
 
-  use(req: Request & { requestId?: string }, res: Response, next: NextFunction) {
+  use(req: Request & { requestId?: string; correlationId?: string }, res: Response, next: NextFunction) {
     if (!this.enforce) return next();
     const mutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
     if (!mutating) return next();

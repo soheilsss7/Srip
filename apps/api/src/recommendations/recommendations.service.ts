@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { Priority } from '@prisma/client';
 import { AuthorizationService } from '../common/authorization/authorization.service';
@@ -27,7 +28,7 @@ export class RecommendationsService {
     if (!r) throw new NotFoundException('Relationship not found');
     await this.authorization.assertPermission(userId, 'relationship.read', { organizationId: r.sourceOrganizationId });
     await this.authorization.assertPermission(userId, 'relationship.read', { organizationId: r.targetOrganizationId });
-    return EntityResponseDto.fromUnknown(r);
+    return r;
   }
 
   private async recommendationScope(userId:string, id:string) {
@@ -35,7 +36,7 @@ export class RecommendationsService {
     if (!rec) throw new NotFoundException('Recommendation not found');
     if (rec.relationship) await this.relationshipScope(userId,rec.relationship.id);
     else await this.authorization.assertPermission(userId, 'recommendation.read', {});
-    return EntityResponseDto.fromUnknown(rec);
+    return rec;
   }
 
   async list(userId:string, status?:RecommendationStatus, type?:RecommendationType) {
@@ -60,7 +61,7 @@ export class RecommendationsService {
     return true;
   }
 
-  private async createCandidate(userId:string,input:{type:RecommendationType;relationshipId?:string;targetId?:string;title:string;rationale:string;confidence:number;evidence:Record<string,unknown>}){let organizationId:string|undefined;if(input.relationshipId){const r=await this.relationshipScope(userId,input.relationshipId);await this.authorization.assertPermission(userId,'recommendation.write',{organizationId:r.sourceOrganizationId});organizationId=r.sourceOrganizationId;}else await this.authorization.assertPermission(userId,'recommendation.write',{});if(await this.exists(userId,input.type,input.relationshipId,input.targetId))return null;const created=await this.eventBus.transaction(async tx=>{const row=await tx.recommendation.create({data:{userId,relationshipId:input.relationshipId,targetId:input.targetId,type:input.type,title:input.title,rationale:input.rationale,confidence:clamp(input.confidence),status:'PROPOSED',evidence:input.evidence}});await this.audit.logMutation({userId,action:'CREATE',entityType:'Recommendation',entityId:row.id,organizationId,after:row,reason:'recommendation-generated'},tx);await this.eventBus.publishInTransaction(tx,{eventType:DOMAIN_EVENT_TYPES.RECOMMENDATION_CREATED,aggregateType:'Recommendation',aggregateId:row.id,organizationId,actorId:userId,payload:row as any});return row;});return EntityResponseDto.fromUnknown(created);}
+  private async createCandidate(userId:string,input:{type:RecommendationType;relationshipId?:string;targetId?:string;title:string;rationale:string;confidence:number;evidence:Record<string,unknown>}){let organizationId:string|undefined;if(input.relationshipId){const r=await this.relationshipScope(userId,input.relationshipId);await this.authorization.assertPermission(userId,'recommendation.write',{organizationId:r.sourceOrganizationId});organizationId=r.sourceOrganizationId;}else await this.authorization.assertPermission(userId,'recommendation.write',{});if(await this.exists(userId,input.type,input.relationshipId,input.targetId))return null;const created=await this.eventBus.transaction(async tx=>{const row=await tx.recommendation.create({data:{userId,relationshipId:input.relationshipId,targetId:input.targetId,type:input.type,title:input.title,rationale:input.rationale,confidence:clamp(input.confidence),status:'PROPOSED',evidence:input.evidence as Prisma.InputJsonValue}});await this.audit.logMutation({userId,action:'CREATE',entityType:'Recommendation',entityId:row.id,organizationId,after:row,reason:'recommendation-generated'},tx);await this.eventBus.publishInTransaction(tx,{eventType:DOMAIN_EVENT_TYPES.RECOMMENDATION_CREATED,aggregateType:'Recommendation',aggregateId:row.id,organizationId,actorId:userId,payload:row as any});return row;});return EntityResponseDto.fromUnknown(created);}
 
   async generate(userId:string, organizationId?:string) {
     await this.authorization.assertPermission(userId, 'recommendation.write', { organizationId: organizationId });
@@ -100,7 +101,7 @@ export class RecommendationsService {
 
   async reject(userId:string,id:string){const rec=await this.recommendationScope(userId,id);if(['REJECTED','EXECUTED','ARCHIVED'].includes(rec.status))throw new BadRequestException('Recommendation cannot be rejected');const updated=await this.eventBus.transaction(async tx=>{const row=await tx.recommendation.update({where:{id},data:{status:'REJECTED',decisionById:userId,decisionAt:new Date()}});await this.audit.logMutation({userId,action:'UPDATE',entityType:'Recommendation',entityId:id,organizationId:rec.relationship?.sourceOrganizationId,before:rec,after:row,reason:'human-rejection'},tx);await this.eventBus.publishInTransaction(tx,{eventType:DOMAIN_EVENT_TYPES.RECOMMENDATION_UPDATED,aggregateType:'Recommendation',aggregateId:row.id,organizationId:rec.relationship?.sourceOrganizationId,actorId:userId,payload:row as any});return row;});return EntityResponseDto.fromUnknown(updated);}
 
-  async edit(userId:string,id:string,patch:{title?:string;rationale?:string;confidence?:number;evidence?:Record<string,unknown>}){const rec=await this.recommendationScope(userId,id);if(['REJECTED','EXECUTED','ARCHIVED'].includes(rec.status))throw new BadRequestException('Recommendation cannot be edited');const updated=await this.eventBus.transaction(async tx=>{const row=await tx.recommendation.update({where:{id},data:{...patch,confidence:patch.confidence===undefined?undefined:clamp(patch.confidence),editedAt:new Date()}});await this.audit.logMutation({userId,action:'UPDATE',entityType:'Recommendation',entityId:id,organizationId:rec.relationship?.sourceOrganizationId,before:rec,after:row,reason:'human-edit'},tx);await this.eventBus.publishInTransaction(tx,{eventType:DOMAIN_EVENT_TYPES.RECOMMENDATION_UPDATED,aggregateType:'Recommendation',aggregateId:row.id,organizationId:rec.relationship?.sourceOrganizationId,actorId:userId,payload:row as any});return row;});return EntityResponseDto.fromUnknown(updated);}
+  async edit(userId:string,id:string,patch:{title?:string;rationale?:string;confidence?:number;evidence?:Record<string,unknown>}){const rec=await this.recommendationScope(userId,id);if(['REJECTED','EXECUTED','ARCHIVED'].includes(rec.status))throw new BadRequestException('Recommendation cannot be edited');const updated=await this.eventBus.transaction(async tx=>{const row=await tx.recommendation.update({where:{id},data:{title:patch.title,rationale:patch.rationale,evidence:patch.evidence as Prisma.InputJsonValue|undefined,confidence:patch.confidence===undefined?undefined:clamp(patch.confidence),editedAt:new Date()}});await this.audit.logMutation({userId,action:'UPDATE',entityType:'Recommendation',entityId:id,organizationId:rec.relationship?.sourceOrganizationId,before:rec,after:row,reason:'human-edit'},tx);await this.eventBus.publishInTransaction(tx,{eventType:DOMAIN_EVENT_TYPES.RECOMMENDATION_UPDATED,aggregateType:'Recommendation',aggregateId:row.id,organizationId:rec.relationship?.sourceOrganizationId,actorId:userId,payload:row as any});return row;});return EntityResponseDto.fromUnknown(updated);}
 
   async snooze(userId:string,id:string,until:Date){if(until.getTime()<=Date.now())throw new BadRequestException('Snooze time must be in the future');const rec=await this.recommendationScope(userId,id);const updated=await this.eventBus.transaction(async tx=>{const row=await tx.recommendation.update({where:{id},data:{status:'SNOOZED',snoozedUntil:until}});await this.audit.logMutation({userId,action:'UPDATE',entityType:'Recommendation',entityId:id,organizationId:rec.relationship?.sourceOrganizationId,before:rec,after:row,reason:'human-snooze'},tx);await this.eventBus.publishInTransaction(tx,{eventType:DOMAIN_EVENT_TYPES.RECOMMENDATION_UPDATED,aggregateType:'Recommendation',aggregateId:row.id,organizationId:rec.relationship?.sourceOrganizationId,actorId:userId,payload:row as any});return row;});return EntityResponseDto.fromUnknown(updated);}
 

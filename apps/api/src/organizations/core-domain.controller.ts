@@ -161,7 +161,7 @@ export class CoreDomainController {
   async connectionPaths(@Req() req: any) {
     const ids = await this.authorization.accessibleOrganizationIds(req.user.sub);
     return this.prisma.connectionPath.findMany({
-      where: { sourceOrganizationId: { in: ids }, targetOrganizationId: { in: ids } },
+      where: { sourceOrganizationId: { in: ids ?? undefined }, targetOrganizationId: { in: ids ?? undefined } },
       orderBy: [{ strength: 'desc' }, { createdAt: 'desc' }], take: 200,
     });
   }

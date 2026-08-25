@@ -74,8 +74,8 @@ export class PeopleService {
     const [interactions, meetings, actions, commitments] = await Promise.all([
       this.prisma.interaction.findMany({ where: { personId: id, deletedAt: null }, orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }], take: 50, select: { id: true, type: true, subject: true, summary: true, occurredAt: true } }),
       this.prisma.meetingParticipant.findMany({ where: { personId: id, meeting: { deletedAt: null } }, orderBy: { meeting: { startAt: 'desc' } }, take: 50, include: { meeting: { select: { id: true, title: true, startAt: true, outcome: true } } } }),
-      this.prisma.action.findMany({ where: { personId: id, deletedAt: null }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 50, select: { id: true, title: true, status: true, dueDate: true, createdAt: true } }),
-      this.prisma.commitment.findMany({ where: { personId: id, deletedAt: null }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 50, select: { id: true, description: true, status: true, dueDate: true, createdAt: true } }),
+      this.prisma.action.findMany({ where: { personId: id, deletedAt: null }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 50, select: { id: true, title: true, status: true, dueAt: true, createdAt: true } }),
+      this.prisma.commitment.findMany({ where: { personId: id, deletedAt: null }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 50, select: { id: true, description: true, status: true, dueAt: true, createdAt: true } }),
     ]);
     return { person: { id: person.id, displayName: person.displayName || `${person.firstName} ${person.lastName}` }, items: [
       ...interactions.map(x => ({ kind: 'interaction', date: x.occurredAt, ...x })),
@@ -98,7 +98,7 @@ export class PeopleService {
     ] } });
     if (duplicate) throw new ConflictException('A matching person already exists in this organization');
     const created = await this.eventBus.transaction(async tx => {
-      const row = await tx.person.create({ data: { ...data, firstName, lastName, displayName: `${firstName} ${lastName}`, email } });
+      const row = await tx.person.create({ data: { ...data, notes: undefined, notesText: data.notes, firstName, lastName, displayName: `${firstName} ${lastName}`, email } });
       await tx.organizationPerson.create({ data: { organizationId: data.organizationId, personId: row.id, roleTitle: data.title, department: data.department, isPrimary: true } });
       await this.audit.logMutation({ userId, action: 'CREATE', entityType: 'Person', entityId: row.id, organizationId: row.organizationId, after: row }, tx);
       await this.eventBus.publishInTransaction(tx, { eventType: DOMAIN_EVENT_TYPES.PERSON_CREATED, aggregateType: 'Person', aggregateId: row.id, organizationId: row.organizationId, actorId: userId, payload: row as any });

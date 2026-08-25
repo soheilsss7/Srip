@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, TooManyRequestsException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { TooManyRequestsException } from '../common/exceptions';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'node:crypto';

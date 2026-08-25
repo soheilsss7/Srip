@@ -103,7 +103,7 @@ export class ActionsService {
     return EntityResponseDto.from('Action', updated);
   }
 
-  async remove(userId: string, id: string) { const row = await this.get(userId, id); const updated = await this.eventBus.transaction(async tx => { const next = await this.lifecycle.softDelete(userId, 'Action', row.id, 'remove', tx); await this.eventBus.publishInTransaction(tx, { eventType: DOMAIN_EVENT_TYPES.ACTION_DELETED, aggregateType: 'Action', aggregateId: next.id, organizationId: (next as any).organizationId ?? undefined, actorId: userId, payload: next as any }); return next; }); return EntityResponseDto.from('Action', updated); }
+  async remove(userId: string, id: string) { const row = await this.get(userId, id); const updated = await this.eventBus.transaction(async tx => { const next = await this.lifecycle.softDelete(userId, 'Action', row.id as string, 'remove', tx as Prisma.TransactionClient); await this.eventBus.publishInTransaction(tx, { eventType: DOMAIN_EVENT_TYPES.ACTION_DELETED, aggregateType: 'Action', aggregateId: next.id, organizationId: (next as any).organizationId ?? undefined, actorId: userId, payload: next as any }); return next; }); return EntityResponseDto.from('Action', updated); }
 
   async addDependency(userId: string, id: string, dependsOnActionId: string) {
     if (id === dependsOnActionId) throw new NotFoundException('An action cannot depend on itself');

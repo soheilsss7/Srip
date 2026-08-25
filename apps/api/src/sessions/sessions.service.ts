@@ -59,7 +59,7 @@ export class SessionsService {
       await tx.session.update({ where: { id: current.id }, data: { rotatedAt: now, revokedAt: now, replacedBySessionId: created.id } });
       return EntityResponseDto.fromUnknown(created);
     });
-    await this.audit.logMutation({ userId: current.userId, action: 'TOKEN_CHANGE', entityType: 'Session', entityId: next.id, before: { previousSessionId: current.id, rotated: false }, after: { rotated: true, previousSessionId: current.id, tokenFamilyId: current.tokenFamilyId }, reason: 'refresh-token-rotated' });
+    await this.audit.logMutation({ userId: current.userId, action: 'TOKEN_CHANGE', entityType: 'Session', entityId: next.id as string, before: { previousSessionId: current.id, rotated: false }, after: { rotated: true, previousSessionId: current.id, tokenFamilyId: current.tokenFamilyId }, reason: 'refresh-token-rotated' });
     return { refreshToken: nextRaw, sessionId: next.id, userId: current.userId };
   }
 

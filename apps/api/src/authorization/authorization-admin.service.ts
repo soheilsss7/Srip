@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { AccessScopeType, DataClassification } from '@prisma/client';
+import { AccessScopeType, DataClassification, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthorizationService } from '../common/authorization/authorization.service';
 import { AuditService } from '../audit/audit.service';
@@ -71,8 +71,8 @@ export class AuthorizationAdminService {
     if (data.accessScope === AccessScopeType.OWNED && !data.scope) data.scope = {};
     const row = await this.prisma.membership.upsert({
       where: { userId_organizationId: { userId: data.userId, organizationId: data.organizationId } },
-      update: { role: data.role, department: data.department, departmentUnitId: data.departmentUnitId, dataScope: data.dataScope ?? DataClassification.INTERNAL, accessScope: data.accessScope ?? AccessScopeType.ORGANIZATION, scope: data.scope, isPrimary: !!data.isPrimary },
-      create: { userId: data.userId, organizationId: data.organizationId, role: data.role, department: data.department, departmentUnitId: data.departmentUnitId, dataScope: data.dataScope ?? DataClassification.INTERNAL, accessScope: data.accessScope ?? AccessScopeType.ORGANIZATION, scope: data.scope, isPrimary: !!data.isPrimary },
+      update: { role: data.role, department: data.department, departmentUnitId: data.departmentUnitId, dataScope: data.dataScope ?? DataClassification.INTERNAL, accessScope: data.accessScope ?? AccessScopeType.ORGANIZATION, scope: data.scope as Prisma.InputJsonValue | undefined, isPrimary: !!data.isPrimary },
+      create: { userId: data.userId, organizationId: data.organizationId, role: data.role, department: data.department, departmentUnitId: data.departmentUnitId, dataScope: data.dataScope ?? DataClassification.INTERNAL, accessScope: data.accessScope ?? AccessScopeType.ORGANIZATION, scope: data.scope as Prisma.InputJsonValue | undefined, isPrimary: !!data.isPrimary },
     });
     await this.audit.logMutation({ userId: actorId, action: 'PERMISSION_CHANGE', entityType: 'Membership', entityId: row.id, organizationId: data.organizationId, after: row, reason: 'RBAC membership assigned/updated' });
     return EntityResponseDto.fromUnknown(row);

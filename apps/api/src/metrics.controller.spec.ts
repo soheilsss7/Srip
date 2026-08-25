@@ -16,8 +16,8 @@ describe('MetricsController security contract', () => {
 
   it('requires metrics.read on management endpoints', () => {
     for (const method of ['summary', 'apiLatency', 'dbLatency', 'ai', 'storage']) {
-      expect(Reflect.getMetadata(PERMISSION_KEY, MetricsController.prototype[method])).toBe('metrics.read');
-      const guards = Reflect.getMetadata('__guards__', MetricsController.prototype[method]);
+      expect(Reflect.getMetadata(PERMISSION_KEY, (MetricsController.prototype as any)[method])).toBe('metrics.read');
+      const guards = Reflect.getMetadata('__guards__', (MetricsController.prototype as any)[method]);
       expect(guards.map((g: any) => g.name)).toEqual(expect.arrayContaining(['AuthGuard', 'AuthorizationGuard']));
     }
   });

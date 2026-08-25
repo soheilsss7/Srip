@@ -13,7 +13,7 @@ describe('AnalyticsService.recompute (Phase 26: real, non-throwing scheduled job
       analyticsEvent: { create: jest.fn().mockResolvedValue({}) },
     };
     const authorization: any = {};
-    const service = new AnalyticsService(prisma, authorization);
+    const service = new AnalyticsService(prisma, authorization, {} as any);
     const result = await service.recompute();
     expect(result.organizationsProcessed).toBe(2);
     expect(prisma.analyticsEvent.create).toHaveBeenCalledTimes(2);
@@ -24,7 +24,7 @@ describe('AnalyticsService.recompute (Phase 26: real, non-throwing scheduled job
 
   it('defaults to the system actor id when no actor is provided', async () => {
     const prisma: any = { organization: { findMany: jest.fn().mockResolvedValue([{ id: 'org1' }]) }, relationship: { count: jest.fn().mockResolvedValue(0) }, commitment: { count: jest.fn().mockResolvedValue(0) }, action: { count: jest.fn().mockResolvedValue(0) }, opportunity: { count: jest.fn().mockResolvedValue(0) }, analyticsEvent: { create: jest.fn().mockResolvedValue({}) } };
-    const service = new AnalyticsService(prisma, {} as any);
+    const service = new AnalyticsService(prisma, {} as any, {} as any);
     await service.recompute();
     const args = prisma.analyticsEvent.create.mock.calls[0][0];
     expect(args.data.userId).toBe(SYSTEM_USER_ID);
@@ -32,7 +32,7 @@ describe('AnalyticsService.recompute (Phase 26: real, non-throwing scheduled job
 
   it('returns zero when there are no active organizations', async () => {
     const prisma: any = { organization: { findMany: jest.fn().mockResolvedValue([]) }, analyticsEvent: { create: jest.fn() } };
-    const service = new AnalyticsService(prisma, {} as any);
+    const service = new AnalyticsService(prisma, {} as any, {} as any);
     const result = await service.recompute();
     expect(result.organizationsProcessed).toBe(0);
     expect(prisma.analyticsEvent.create).not.toHaveBeenCalled();

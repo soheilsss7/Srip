@@ -61,11 +61,11 @@ export class EntityResponseDto {
     return values.map(value => this.from(entityType, value));
   }
 
-  static fromUnknown<T extends Record<string, unknown>>(value: T): EntityResponse {
-    return this.from('Unknown', value);
+  static fromUnknown<T>(value: T): EntityResponse {
+    return clone(value, 'Unknown') as EntityResponse;
   }
 
-  static manyUnknown<T extends Record<string, unknown>>(values: T[]): EntityResponse[] {
+  static manyUnknown<T>(values: T[]): EntityResponse[] {
     return values.map(value => this.fromUnknown(value));
   }
 }

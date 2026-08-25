@@ -102,7 +102,7 @@ export class AnalyticsService {
           type: 'RECOMMENDATION_OUTCOME',
           feature: 'recommendation_funnel',
           organizationId: rec.relationship?.sourceOrganizationId,
-          metadata: { recommendationId, domainEventId: event.id, outcome: outcome.trim(), outcomeValue },
+          metadata: { recommendationId, domainEventId: event.id, outcome: outcome.trim(), outcomeValue } as Prisma.InputJsonValue,
         },
       });
       return { recorded: true, eventId: event.id, recommendationId, outcome: outcome.trim() };

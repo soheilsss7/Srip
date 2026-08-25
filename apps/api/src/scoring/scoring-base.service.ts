@@ -1,3 +1,4 @@
+import { DOMAIN_EVENT_TYPES } from '../event-bus/event-bus.constants';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventBusService } from '../event-bus/event-bus.service';

@@ -17,7 +17,7 @@ export class IntelligenceService {
     const r = await this.prisma.relationship.findUnique({ where: { id } });
     if (!r || r.deletedAt) throw new NotFoundException('Relationship not found');
     await this.authorization.assertAnyOrganizationAccess(userId, [r.sourceOrganizationId, r.targetOrganizationId]);
-    return EntityResponseDto.fromUnknown(r);
+    return r;
   }
 
   async explain(userId: string, id: string) {
@@ -79,7 +79,7 @@ export class IntelligenceService {
 
   async riskSignals(userId: string, organizationId?: string) {
     const ids = await this.authorization.accessibleOrganizationIds(userId); const scope = organizationId ? (ids ? (ids.includes(organizationId) ? [organizationId] : []) : [organizationId]) : ids;
-    const relationships = await this.prisma.relationship.findMany({ where: { deletedAt: null, OR: [{ sourceOrganizationId: { in: scope } }, { targetOrganizationId: { in: scope } }] }, orderBy: [{ riskScore: 'desc' }, { healthScore: 'asc' }], take: 100 });
+    const relationships = await this.prisma.relationship.findMany({ where: { deletedAt: null, OR: [{ sourceOrganizationId: { in: scope ?? undefined } }, { targetOrganizationId: { in: scope ?? undefined } }] }, orderBy: [{ riskScore: 'desc' }, { healthScore: 'asc' }], take: 100 });
     return relationships.map(r => ({ relationshipId: r.id, riskScore: r.riskScore, healthScore: r.healthScore, resilienceScore: r.resilienceScore, lastInteractionAt: r.lastInteractionAt, signals: [...(r.riskScore >= 70 ? ['high-risk-score'] : []), ...(r.healthScore <= 40 ? ['low-health'] : []), ...(r.resilienceScore <= 40 ? ['low-resilience'] : []), ...(!r.lastInteractionAt || Date.now() - r.lastInteractionAt.getTime() > 90 * 86400000 ? ['relationship-decay'] : [])] }));
   }
 
@@ -121,8 +121,8 @@ export class IntelligenceService {
 
   async opportunityDetection(userId: string, organizationId?: string) {
     const ids = await this.authorization.accessibleOrganizationIds(userId); const scope = organizationId ? (ids ? (ids.includes(organizationId) ? [organizationId] : []) : [organizationId]) : ids;
-    const relationships = await this.prisma.relationship.findMany({ where: { deletedAt: null, OR: [{ sourceOrganizationId: { in: scope } }, { targetOrganizationId: { in: scope } }] }, select: { id:true, sourceOrganizationId:true, targetOrganizationId:true, opportunityScore:true, healthScore:true, strategicScore:true }, orderBy: [{ opportunityScore:'desc' }, { healthScore:'desc' }], take: 5000 });
-    const opportunities = await this.prisma.opportunity.findMany({ where: { deletedAt: null, organizationId: { in: scope } }, select: { relationshipId:true }, take: 10000 });
+    const relationships = await this.prisma.relationship.findMany({ where: { deletedAt: null, OR: [{ sourceOrganizationId: { in: scope ?? undefined } }, { targetOrganizationId: { in: scope ?? undefined } }] }, select: { id:true, sourceOrganizationId:true, targetOrganizationId:true, opportunityScore:true, healthScore:true, strategicScore:true }, orderBy: [{ opportunityScore:'desc' }, { healthScore:'desc' }], take: 5000 });
+    const opportunities = await this.prisma.opportunity.findMany({ where: { deletedAt: null, organizationId: { in: scope ?? undefined } }, select: { relationshipId:true }, take: 10000 });
     const linked = new Set(opportunities.map(o => o.relationshipId).filter(Boolean));
     return relationships.filter(r => r.opportunityScore >= 60 && r.healthScore >= 45 && !linked.has(r.id)).map(r => ({ relationshipId: r.id, type: 'RELATIONSHIP_OPPORTUNITY', confidence: clamp((r.opportunityScore + r.healthScore + r.strategicScore) / 3), evidence: { opportunityScore: r.opportunityScore, healthScore: r.healthScore, strategicScore: r.strategicScore }, reason: 'High opportunity and healthy relationship without a linked active opportunity', sourceOrganizationId: r.sourceOrganizationId, targetOrganizationId: r.targetOrganizationId }));
   }
@@ -130,11 +130,11 @@ export class IntelligenceService {
   async strategicCoverage(userId: string, organizationId?: string) {
     const ids = await this.authorization.accessibleOrganizationIds(userId); const scope = organizationId ? (ids ? (ids.includes(organizationId) ? [organizationId] : []) : [organizationId]) : ids;
     const [strategicRelationships, healthyStrategicRelationships, resilientStrategicRelationships] = await Promise.all([
-      this.prisma.relationship.count({ where: { deletedAt: null, strategicScore: { gte: 60 }, OR: [{ sourceOrganizationId: { in: scope } }, { targetOrganizationId: { in: scope } }] } }),
-      this.prisma.relationship.count({ where: { deletedAt: null, strategicScore: { gte: 60 }, healthScore: { gte: 60 }, OR: [{ sourceOrganizationId: { in: scope } }, { targetOrganizationId: { in: scope } }] } }),
-      this.prisma.relationship.count({ where: { deletedAt: null, strategicScore: { gte: 60 }, resilienceScore: { gte: 60 }, OR: [{ sourceOrganizationId: { in: scope } }, { targetOrganizationId: { in: scope } }] } }),
+      this.prisma.relationship.count({ where: { deletedAt: null, strategicScore: { gte: 60 }, OR: [{ sourceOrganizationId: { in: scope ?? undefined } }, { targetOrganizationId: { in: scope ?? undefined } }] } }),
+      this.prisma.relationship.count({ where: { deletedAt: null, strategicScore: { gte: 60 }, healthScore: { gte: 60 }, OR: [{ sourceOrganizationId: { in: scope ?? undefined } }, { targetOrganizationId: { in: scope ?? undefined } }] } }),
+      this.prisma.relationship.count({ where: { deletedAt: null, strategicScore: { gte: 60 }, resilienceScore: { gte: 60 }, OR: [{ sourceOrganizationId: { in: scope ?? undefined } }, { targetOrganizationId: { in: scope ?? undefined } }] } }),
     ]);
-    return { scopeOrganizations: scope.length, strategicRelationships, healthyStrategicRelationships, resilientStrategicRelationships, coveragePercent: strategicRelationships ? clamp(healthyStrategicRelationships / strategicRelationships * 100) : 100, bounded: true }; 
+    return { scopeOrganizations: scope ? scope.length : await this.prisma.organization.count({ where: { deletedAt: null } }), strategicRelationships, healthyStrategicRelationships, resilientStrategicRelationships, coveragePercent: strategicRelationships ? clamp(healthyStrategicRelationships / strategicRelationships * 100) : 100, bounded: true }; 
   }
 
   async networkIntelligence(userId: string, organizationId?: string) {

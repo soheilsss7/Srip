@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthorizationService } from '../common/authorization/authorization.service';
 import { AuditService } from '../audit/audit.service';
@@ -109,7 +110,7 @@ export class ScoreVersioningService {
         name,
         version: (latest?.version ?? 0) + 1,
         status: 'DRAFT',
-        weights,
+        weights: weights as Prisma.InputJsonValue,
         calibrationNotes: body?.calibrationNotes ?? body?.notes ?? null,
         createdById: userId,
       },

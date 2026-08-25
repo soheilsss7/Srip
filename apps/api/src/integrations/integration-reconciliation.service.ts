@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { IntegrationKind, ExternalEvent } from './integration-provider.port';
+import { Prisma } from '@prisma/client';
 import { DataLifecycleService } from '../common/data-lifecycle/data-lifecycle.service';
 import { EntityResponseDto } from '../common/dto/entity-response.dto';
 
@@ -13,12 +14,12 @@ export class IntegrationReconciliationService {
 
   private async peopleFor(event:ExternalEvent){
     const emails=this.emails(event); if(!emails.length) return [];
-    return EntityResponseDto.manyUnknown(await this.prisma.person.findMany({where:{email:{in:emails},deletedAt:null},select:{id:true,email:true,organizationId:true,firstName:true,lastName:true}}));
+    return await this.prisma.person.findMany({where:{email:{in:emails},deletedAt:null},select:{id:true,email:true,organizationId:true,firstName:true,lastName:true}});
   }
 
   private async relationshipFor(orgA?:string|null, orgB?:string|null){
     if(!orgA||!orgB) return null;
-    return EntityResponseDto.fromUnknown(await this.prisma.relationship.findFirst({where:{deletedAt:null,OR:[{sourceOrganizationId:orgA,targetOrganizationId:orgB},{sourceOrganizationId:orgB,targetOrganizationId:orgA}]},orderBy:{updatedAt:'desc'}}));
+    return await this.prisma.relationship.findFirst({where:{deletedAt:null,OR:[{sourceOrganizationId:orgA,targetOrganizationId:orgB},{sourceOrganizationId:orgB,targetOrganizationId:orgA}]},orderBy:{updatedAt:'desc'}});
   }
 
   async reconcile(connectionId:string,userId:string,organizationId:string|undefined,events:ExternalEvent[],runId:string){
@@ -35,7 +36,7 @@ export class IntegrationReconciliationService {
           let meetingId=existing?.meetingId;
           if(event.cancelled){
             if(meetingId) await this.lifecycle.softDelete(userId,'Meeting',meetingId,'integration-event-cancelled');
-            if(existing) await this.prisma.integrationExternalRecord.update({where:{id:existing.id},data:{status:'CANCELLED',cancelledAt:new Date(),externalUpdatedAt:event.updatedAt?new Date(event.updatedAt):undefined,payload:event.raw as any}});
+            if(existing) await this.prisma.integrationExternalRecord.update({where:{id:existing.id},data:{status:'CANCELLED',cancelledAt:new Date(),externalUpdatedAt:event.updatedAt?new Date(event.updatedAt):undefined,payload:event.raw as Prisma.InputJsonValue}});
             summary.cancelled++; continue;
           }
           const owner=await this.prisma.user.findUnique({where:{id:userId},select:{id:true}}); if(!owner) throw new Error('Integration owner not found');
@@ -43,19 +44,19 @@ export class IntegrationReconciliationService {
           if(meetingId){await this.prisma.meeting.update({where:{id:meetingId},data}); summary.updated++;}
           else {const m=await this.prisma.meeting.create({data}); meetingId=m.id; summary.created++;}
           if(personIds.length) {await this.prisma.meetingParticipant.deleteMany({where:{meetingId}});await this.prisma.meetingParticipant.createMany({data:personIds.map(personId=>({meetingId:meetingId!,personId})),skipDuplicates:true});}
-          const payload=event.raw as any;
+          const payload=event.raw as Prisma.InputJsonValue;
           await this.prisma.integrationExternalRecord.upsert({where:{connectionId_kind_externalId:{connectionId,kind:event.kind,externalId:event.externalId}},create:{connectionId,kind:event.kind,externalId:event.externalId,externalUpdatedAt:event.updatedAt?new Date(event.updatedAt):undefined,etag:event.etag,meetingId,personId:personIds[0],organizationId:targetOrg,relationshipId:rel?.id,payload},update:{externalUpdatedAt:event.updatedAt?new Date(event.updatedAt):undefined,etag:event.etag,status:'ACTIVE',meetingId,personId:personIds[0],organizationId:targetOrg,relationshipId:rel?.id,payload,cancelledAt:null}});
         } else if(event.kind==='EMAIL'){
           const subject=event.subject||event.title||'Imported email';
           const occurredAt=event.updatedAt?new Date(event.updatedAt):new Date();
           const existingInteraction=existing?.interactionId;
-          const attachment={externalConnectionId:connectionId,externalMessageId:event.externalId,externalThreadId:event.threadId||null,providerPayload:event.raw};
+          const attachment={externalConnectionId:connectionId,externalMessageId:event.externalId,externalThreadId:event.threadId||null,providerPayload:(event.raw as Prisma.InputJsonValue)};
           let interactionId=existingInteraction;
           if(interactionId){await this.prisma.interaction.update({where:{id:interactionId},data:{subject,occurredAt,summary:JSON.stringify({threadId:event.threadId,sender:event.sender,recipients:event.recipients}),organizationId:targetOrg,personId:personIds[0],relationshipId:rel?.id,attachments:attachment as any}});summary.updated++;}
           else {const i=await this.prisma.interaction.create({data:{type:'EMAIL',subject,summary:JSON.stringify({threadId:event.threadId,sender:event.sender,recipients:event.recipients}),occurredAt,userId,organizationId:targetOrg,personId:personIds[0],relationshipId:rel?.id,attachments:attachment as any}});interactionId=i.id;summary.created++;}
-          await this.prisma.integrationExternalRecord.upsert({where:{connectionId_kind_externalId:{connectionId,kind:event.kind,externalId:event.externalId}},create:{connectionId,kind:event.kind,externalId:event.externalId,externalThreadId:event.threadId,externalUpdatedAt:event.updatedAt?new Date(event.updatedAt):undefined,etag:event.etag,interactionId,personId:personIds[0],organizationId:targetOrg,relationshipId:rel?.id,payload:event.raw as any},update:{externalThreadId:event.threadId,externalUpdatedAt:event.updatedAt?new Date(event.updatedAt):undefined,etag:event.etag,status:'ACTIVE',interactionId,personId:personIds[0],organizationId:targetOrg,relationshipId:rel?.id,payload:event.raw as any}});
+          await this.prisma.integrationExternalRecord.upsert({where:{connectionId_kind_externalId:{connectionId,kind:event.kind,externalId:event.externalId}},create:{connectionId,kind:event.kind,externalId:event.externalId,externalThreadId:event.threadId,externalUpdatedAt:event.updatedAt?new Date(event.updatedAt):undefined,etag:event.etag,interactionId,personId:personIds[0],organizationId:targetOrg,relationshipId:rel?.id,payload:(event.raw as Prisma.InputJsonValue) as Prisma.InputJsonValue},update:{externalThreadId:event.threadId,externalUpdatedAt:event.updatedAt?new Date(event.updatedAt):undefined,etag:event.etag,status:'ACTIVE',interactionId,personId:personIds[0],organizationId:targetOrg,relationshipId:rel?.id,payload:(event.raw as Prisma.InputJsonValue) as Prisma.InputJsonValue}});
         } else {
-          await this.prisma.integrationExternalRecord.upsert({where:{connectionId_kind_externalId:{connectionId,kind:event.kind,externalId:event.externalId}},create:{connectionId,kind:event.kind,externalId:event.externalId,externalUpdatedAt:event.updatedAt?new Date(event.updatedAt):undefined,etag:event.etag,status:event.cancelled?'CANCELLED':'ACTIVE',cancelledAt:event.cancelled?new Date():undefined,personId:personIds[0],organizationId:targetOrg,payload:event.raw as any},update:{externalUpdatedAt:event.updatedAt?new Date(event.updatedAt):undefined,etag:event.etag,status:event.cancelled?'CANCELLED':'ACTIVE',cancelledAt:event.cancelled?new Date():undefined,personId:personIds[0],organizationId:targetOrg,payload:event.raw as any}});
+          await this.prisma.integrationExternalRecord.upsert({where:{connectionId_kind_externalId:{connectionId,kind:event.kind,externalId:event.externalId}},create:{connectionId,kind:event.kind,externalId:event.externalId,externalUpdatedAt:event.updatedAt?new Date(event.updatedAt):undefined,etag:event.etag,status:event.cancelled?'CANCELLED':'ACTIVE',cancelledAt:event.cancelled?new Date():undefined,personId:personIds[0],organizationId:targetOrg,payload:(event.raw as Prisma.InputJsonValue) as Prisma.InputJsonValue},update:{externalUpdatedAt:event.updatedAt?new Date(event.updatedAt):undefined,etag:event.etag,status:event.cancelled?'CANCELLED':'ACTIVE',cancelledAt:event.cancelled?new Date():undefined,personId:personIds[0],organizationId:targetOrg,payload:(event.raw as Prisma.InputJsonValue) as Prisma.InputJsonValue}});
           if(existing)summary.updated++; else summary.created++;
         }
       }catch(e:any){summary.errors.push(`${event.kind}:${event.externalId}:${String(e?.message||e)}`);}

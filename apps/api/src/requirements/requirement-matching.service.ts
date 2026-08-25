@@ -132,11 +132,9 @@ export class RequirementMatchingService {
     const orgWhere = accessible ? { id: { in: accessible }, deletedAt: null } : { deletedAt: null };
     // Scalable candidate generation: never materialize the entire organization/relationship graph.
     const candidateTake = Math.max(300, Math.min(1000, limit * 20));
-    const requirementTerms = [...new Set(
-      tokens(`${req.title} ${req.category ?? ''} ${req.description ?? ''}`)
-        .map((term) => term.trim())
-        .filter((term) => term.length >= 3)
-    )].slice(0, 12);
+    const requirementTerms = Array.from(new Set(
+        Array.from(tokens(`${req.title} ${req.category ?? ''} ${req.description ?? ''}`)).map((term: string) => term.trim()).filter((term: string) => term.length >= 3)
+      )).slice(0, 12);
     const candidateWhere: Prisma.OrganizationWhereInput = requirementTerms.length
       ? {
           ...orgWhere,

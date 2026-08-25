@@ -35,7 +35,7 @@ export class EventBusService implements OnModuleDestroy {
     const row = await tx.domainEventOutbox.create({ data: {
       eventType: input.eventType, aggregateType: input.aggregateType, aggregateId: input.aggregateId,
       organizationId: input.organizationId, actorId: input.actorId, version: input.version ?? 1,
-      payload: input.payload,
+      payload: input.payload === undefined ? Prisma.JsonNull : input.payload as Prisma.InputJsonValue,
       requestId: this.requestContext.requestId,
       correlationId: this.requestContext.correlationId,
     }});
@@ -70,7 +70,7 @@ export class EventBusService implements OnModuleDestroy {
     }
   }
 
-  async pending(limit = 100) { return EntityResponseDto.manyUnknown(await this.prisma.domainEventOutbox.findMany({ where: { status: { in: ['PENDING','FAILED'] } }, orderBy: { createdAt: 'asc' }, take: Math.min(500, limit) })); }
+  async pending(limit = 100) { return await this.prisma.domainEventOutbox.findMany({ where: { status: { in: ['PENDING','FAILED'] } }, orderBy: { createdAt: 'asc' }, take: Math.min(500, limit) }); }
   private async enqueue(id: string) { try { const row = await this.prisma.domainEventOutbox.findUnique({ where: { id }, select: { requestId: true, correlationId: true } }); await this.queues.enqueue(DOMAIN_EVENT_QUEUE_JOB as any, { eventId: id, ...(row?.requestId ? {_requestId: row.requestId} : {}), ...(row?.correlationId ? {_correlationId: row.correlationId} : {}) }, { jobId: `domain-event:${id}` }); } catch (e: any) { this.logger.warn(`domain event enqueue deferred: ${e?.message ?? e}`); } }
   private async flushPending() { try { const rows = await this.pending(50); for (const row of rows) await this.enqueue(row.id); } catch (e: any) { this.logger.debug(`domain event flush unavailable: ${e?.message ?? e}`); } }
   async onModuleDestroy() { if (this.timer) clearInterval(this.timer); this.subscribers.clear(); }

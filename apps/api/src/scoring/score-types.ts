@@ -8,5 +8,5 @@ export type ScoreResult = {
   subjectType: string;
   subjectId: string;
   explanation: string;
-  factors: Record<string, number | string | boolean | null>;
+  factors: Record<string, number | string | boolean | null | Record<string, number>>;
 };

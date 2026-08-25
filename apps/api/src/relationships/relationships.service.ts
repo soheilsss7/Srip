@@ -55,8 +55,8 @@ export class RelationshipsService {
     const [interactions, meetings, actions, commitments, opportunities] = await Promise.all([
       this.prisma.interaction.findMany({ where: { relationshipId: id, deletedAt: null }, orderBy: { occurredAt: 'desc' }, take: 50, select: { id: true, type: true, subject: true, summary: true, occurredAt: true } }),
       this.prisma.meeting.findMany({ where: { relationshipId: id, deletedAt: null }, orderBy: { startAt: 'desc' }, take: 50, select: { id: true, title: true, startAt: true, outcome: true } }),
-      this.prisma.action.findMany({ where: { relationshipId: id, deletedAt: null }, orderBy: { createdAt: 'desc' }, take: 50, select: { id: true, title: true, status: true, dueDate: true, createdAt: true } }),
-      this.prisma.commitment.findMany({ where: { relationshipId: id, deletedAt: null }, orderBy: { createdAt: 'desc' }, take: 50, select: { id: true, description: true, status: true, dueDate: true, createdAt: true } }),
+      this.prisma.action.findMany({ where: { relationshipId: id, deletedAt: null }, orderBy: { createdAt: 'desc' }, take: 50, select: { id: true, title: true, status: true, dueAt: true, createdAt: true } }),
+      this.prisma.commitment.findMany({ where: { relationshipId: id, deletedAt: null }, orderBy: { createdAt: 'desc' }, take: 50, select: { id: true, description: true, status: true, dueAt: true, createdAt: true } }),
       this.prisma.opportunity.findMany({ where: { relationshipId: id, deletedAt: null }, orderBy: { createdAt: 'desc' }, take: 50, select: { id: true, name: true, status: true, probability: true, createdAt: true } }),
     ]);
     return { relationshipId: id, items: [

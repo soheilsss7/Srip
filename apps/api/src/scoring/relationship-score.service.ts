@@ -137,6 +137,8 @@ export class CanonicalRelationshipScoreService extends ScoringBaseService {
     await this.authorization.assertAnyOrganizationAccess(userId, [relationship.sourceOrganizationId, relationship.targetOrganizationId]);
 
     const since = new Date(Date.now() - 180 * 86400000);
+    const interactionTypeRows = await this.prisma.interaction.groupBy({ by: ['type'], where: { relationshipId, deletedAt: null, occurredAt: { gte: since } } });
+    const interactionPeopleRows = await this.prisma.interaction.groupBy({ by: ['personId'], where: { relationshipId, deletedAt: null, occurredAt: { gte: since }, personId: { not: null } } });
     const [interactionCount, meetings, latest, active, opportunityAgg, commitmentAgg, interactionTypeCount, peopleCount, outcomeInteractions] = await Promise.all([
       this.prisma.interaction.count({ where: { relationshipId, deletedAt: null, occurredAt: { gte: since } } }),
       this.prisma.meeting.count({ where: { relationshipId, deletedAt: null, startAt: { gte: since } } }),
@@ -144,8 +146,8 @@ export class CanonicalRelationshipScoreService extends ScoringBaseService {
       this.activeVersion('RELATIONSHIP'),
       this.prisma.opportunity.aggregate({ where: { relationshipId, deletedAt: null }, _count: { _all: true }, _sum: { value: true }, _avg: { probability: true } }),
       this.prisma.$queryRaw<Array<{ total: bigint; completed: bigint; nonCancelled: bigint }>>(Prisma.sql`SELECT COUNT(*)::bigint AS total, COUNT(*) FILTER (WHERE status = 'FULFILLED' AND (due_at IS NULL OR completion_at IS NULL OR completion_at <= due_at))::bigint AS completed, COUNT(*) FILTER (WHERE status <> 'CANCELLED')::bigint AS "nonCancelled" FROM "Commitment" WHERE "relationshipId" = ${relationshipId} AND "deletedAt" IS NULL`),
-      this.prisma.interaction.count({ where: { relationshipId, deletedAt: null, occurredAt: { gte: since } }, distinct: ['type'] }),
-      this.prisma.interaction.count({ where: { relationshipId, deletedAt: null, occurredAt: { gte: since }, personId: { not: null } }, distinct: ['personId'] }),
+      interactionTypeRows.length,
+      interactionPeopleRows.length,
       this.prisma.interaction.count({ where: { relationshipId, deletedAt: null, occurredAt: { gte: since }, outcome: { not: null } } }),
     ]);
 

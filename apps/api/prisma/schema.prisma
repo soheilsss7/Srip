@@ -1,20 +1,101 @@
-datasource db { provider = "postgresql" url = env("DATABASE_URL") }
-generator client { provider = "prisma-client-js" }
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+generator client {
+  provider = "prisma-client-js"
+}
 
-enum OrganizationStatus { ACTIVE INACTIVE ARCHIVED }
-enum OrganizationType { HOLDING SUBSIDIARY CUSTOMER PARTNER BANK GOVERNMENT INVESTOR SUPPLIER OTHER }
-enum RelationshipStatus { PROSPECTIVE ACTIVE AT_RISK DORMANT ARCHIVED }
-enum RelationshipLifecycleStage { IDENTIFIED INTRODUCED INITIAL_CONTACT DEVELOPING ACTIVE STRATEGIC DORMANT AT_RISK LOST }
-enum InteractionKind { CALL EMAIL MEETING NOTE MESSAGE OTHER
+enum OrganizationStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+enum OrganizationType {
+  HOLDING
+  SUBSIDIARY
+  CUSTOMER
+  PARTNER
+  BANK
+  GOVERNMENT
+  INVESTOR
+  SUPPLIER
+  OTHER
+}
+enum RelationshipStatus {
+  PROSPECTIVE
+  ACTIVE
+  AT_RISK
+  DORMANT
+  ARCHIVED
+}
+enum RelationshipLifecycleStage {
+  IDENTIFIED
+  INTRODUCED
+  INITIAL_CONTACT
+  DEVELOPING
+  ACTIVE
+  STRATEGIC
+  DORMANT
+  AT_RISK
+  LOST
+}
+enum InteractionKind {
+  CALL
+  EMAIL
+  MEETING
+  NOTE
+  MESSAGE
+  OTHER
+
   @@map("InteractionKind")
 }
-enum ActionStatus { OPEN IN_PROGRESS BLOCKED DONE CANCELLED }
-enum CommitmentStatus { OPEN FULFILLED OVERDUE CANCELLED }
-enum ProjectStatus { PLANNED ACTIVE ON_HOLD COMPLETED CANCELLED }
-enum RequirementStatus { OPEN IN_PROGRESS SATISFIED BLOCKED CANCELLED }
-enum OpportunityStatus { IDENTIFIED QUALIFYING ACTIVE WON LOST }
-enum Priority { LOW MEDIUM HIGH CRITICAL }
-enum NotificationType { INFO SUCCESS WARNING ALERT }
+enum ActionStatus {
+  OPEN
+  IN_PROGRESS
+  BLOCKED
+  DONE
+  CANCELLED
+}
+enum CommitmentStatus {
+  OPEN
+  FULFILLED
+  OVERDUE
+  CANCELLED
+}
+enum ProjectStatus {
+  PLANNED
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+enum RequirementStatus {
+  OPEN
+  IN_PROGRESS
+  SATISFIED
+  BLOCKED
+  CANCELLED
+}
+enum OpportunityStatus {
+  IDENTIFIED
+  QUALIFYING
+  ACTIVE
+  WON
+  LOST
+}
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ALERT
+}
 enum AuditAction {
   CREATE
   READ
@@ -46,33 +127,183 @@ enum AuditAction {
   TOKEN_CHANGE
   INTEGRATION_CHANGE
 }
-enum DataClassification { PUBLIC INTERNAL CONFIDENTIAL RESTRICTED PRIVATE HIGHLY_CONFIDENTIAL }
-enum PrivacyRequestType { ACCESS EXPORT ERASURE }
-enum PrivacyRequestStatus { PENDING PROCESSING COMPLETED REJECTED }
-enum ConsentStatus { GRANTED REVOKED }
-enum DataLifecycleState { CREATION ACTIVE ARCHIVED RETENTION DELETION RESTORED PURGED }
-enum DataDeletionApprovalStatus { PENDING APPROVED REJECTED EXPIRED }
-enum LegalBasis { CONSENT CONTRACT LEGAL_OBLIGATION LEGITIMATE_INTEREST VITAL_INTEREST PUBLIC_TASK }
-enum FileUploadStatus { QUARANTINED READY REJECTED }
-enum FileScanStatus { PENDING CLEAN INFECTED ERROR NOT_REQUIRED }
-enum AccessScopeType { ORGANIZATION SUBSIDIARIES DEPARTMENT OWNED SHARED PRIVATE }
-enum TokenType { PASSWORD_RESET EMAIL_VERIFICATION }
-enum AuthProvider { LOCAL OIDC SAML }
-enum SecurityEventSeverity { INFO WARNING HIGH CRITICAL }
-enum SecurityEventType { LOGIN_SUCCESS LOGIN_FAILURE ACCOUNT_LOCKED PERMISSION_DENIED RATE_LIMITED SUSPICIOUS_ACCESS EXPORT_CREATED MFA_EVENT }
-enum IntegrationProvider { GOOGLE MICROSOFT }
-enum IntegrationKind { CALENDAR EMAIL DRIVE TEAMS SHAREPOINT }
-enum IntegrationStatus { PENDING CONNECTED ERROR DISCONNECTED }
-enum ReferralStatus { PENDING ACCEPTED DECLINED COMPLETED CANCELLED }
-enum ConnectionPathType { DIRECT ONE_HOP TWO_HOP MULTI_HOP }
-enum MilestoneStatus { PLANNED IN_PROGRESS COMPLETED BLOCKED CANCELLED }
-enum MeetingStatus { SCHEDULED IN_PROGRESS COMPLETED CANCELLED }
-enum ImportEntityType { ORGANIZATION PERSON }
-enum ImportFormat { CSV XLSX XLS }
-enum ImportStatus { UPLOADED MAPPED VALIDATING PREVIEWED APPROVED PROCESSING COMPLETED REJECTED FAILED }
-enum ImportRowStatus { VALID INVALID DUPLICATE IMPORTED SKIPPED UPDATED }
-enum DuplicateStrategy { SKIP UPDATE CREATE }
-enum ImportPipelineStage { UPLOAD MAPPING VALIDATION DUPLICATE_DETECTION PREVIEW APPROVAL IMPORT REPORT }
+enum DataClassification {
+  PUBLIC
+  INTERNAL
+  CONFIDENTIAL
+  RESTRICTED
+  PRIVATE
+  HIGHLY_CONFIDENTIAL
+}
+enum PrivacyRequestType {
+  ACCESS
+  EXPORT
+  ERASURE
+}
+enum PrivacyRequestStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  REJECTED
+}
+enum ConsentStatus {
+  GRANTED
+  REVOKED
+}
+enum DataLifecycleState {
+  CREATION
+  ACTIVE
+  ARCHIVED
+  RETENTION
+  DELETION
+  RESTORED
+  PURGED
+}
+enum DataDeletionApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+enum LegalBasis {
+  CONSENT
+  CONTRACT
+  LEGAL_OBLIGATION
+  LEGITIMATE_INTEREST
+  VITAL_INTEREST
+  PUBLIC_TASK
+}
+enum FileUploadStatus {
+  QUARANTINED
+  READY
+  REJECTED
+}
+enum FileScanStatus {
+  PENDING
+  CLEAN
+  INFECTED
+  ERROR
+  NOT_REQUIRED
+}
+enum AccessScopeType {
+  ORGANIZATION
+  SUBSIDIARIES
+  DEPARTMENT
+  OWNED
+  SHARED
+  PRIVATE
+}
+enum TokenType {
+  PASSWORD_RESET
+  EMAIL_VERIFICATION
+}
+enum AuthProvider {
+  LOCAL
+  OIDC
+  SAML
+}
+enum SecurityEventSeverity {
+  INFO
+  WARNING
+  HIGH
+  CRITICAL
+}
+enum SecurityEventType {
+  LOGIN_SUCCESS
+  LOGIN_FAILURE
+  ACCOUNT_LOCKED
+  PERMISSION_DENIED
+  RATE_LIMITED
+  SUSPICIOUS_ACCESS
+  EXPORT_CREATED
+  MFA_EVENT
+}
+enum IntegrationProvider {
+  GOOGLE
+  MICROSOFT
+}
+enum IntegrationKind {
+  CALENDAR
+  EMAIL
+  DRIVE
+  TEAMS
+  SHAREPOINT
+}
+enum IntegrationStatus {
+  PENDING
+  CONNECTED
+  ERROR
+  DISCONNECTED
+}
+enum ReferralStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  COMPLETED
+  CANCELLED
+}
+enum ConnectionPathType {
+  DIRECT
+  ONE_HOP
+  TWO_HOP
+  MULTI_HOP
+}
+enum MilestoneStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  BLOCKED
+  CANCELLED
+}
+enum MeetingStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+enum ImportEntityType {
+  ORGANIZATION
+  PERSON
+}
+enum ImportFormat {
+  CSV
+  XLSX
+  XLS
+}
+enum ImportStatus {
+  UPLOADED
+  MAPPED
+  VALIDATING
+  PREVIEWED
+  APPROVED
+  PROCESSING
+  COMPLETED
+  REJECTED
+  FAILED
+}
+enum ImportRowStatus {
+  VALID
+  INVALID
+  DUPLICATE
+  IMPORTED
+  SKIPPED
+  UPDATED
+}
+enum DuplicateStrategy {
+  SKIP
+  UPDATE
+  CREATE
+}
+enum ImportPipelineStage {
+  UPLOAD
+  MAPPING
+  VALIDATION
+  DUPLICATE_DETECTION
+  PREVIEW
+  APPROVAL
+  IMPORT
+  REPORT
+}
 
 
 
@@ -552,6 +783,7 @@ model Relationship {
   referrals Referral[]
   tags RelationshipTag[]
 
+  opportunities Opportunity[] @relation("RelationshipOpportunity")
 }
 
 model Score {
@@ -595,6 +827,7 @@ model ScoreVersion {
   createdBy User? @relation("ScoreVersionCreator", fields: [createdById], references: [id])
   @@unique([name, version])
   @@index([status])
+  calibrations ScoreCalibration[]
 }
 
 model ScoreCalibration {
@@ -804,6 +1037,8 @@ model Project {
   @@index([organizationId])
   @@index([deletedAt])
   @@index([organizationId, deletedAt, id])
+  risks ProjectRisk[]
+  milestones ProjectMilestone[]
 }
 model ProjectRelationship {
   projectId String
@@ -936,7 +1171,8 @@ model ConnectionPath {
   createdAt DateTime @default(now())
   @@index([sourceOrganizationId, targetOrganizationId])
   @@index([type, strength])
-}model Opportunity {
+}
+model Opportunity {
   id String @id @default(uuid())
   name String
   description String?
@@ -1149,7 +1385,6 @@ model PrivacyRequest {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([userId, type, status])
   @@index([status, createdAt])
-  @@index([pipelineStage, createdAt])
 }
 
 model ConsentRecord {
@@ -1331,8 +1566,6 @@ model AiUsageEvent {
   createdAt DateTime @default(now())
   @@index([organizationId, createdAt])
   @@index([userId, createdAt])
-  @@index([requestId, createdAt])
-  @@index([correlationId, createdAt])
 }
 
 model AuditLog {

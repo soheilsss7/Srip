@@ -100,14 +100,14 @@ export class DataQualityService {
       this.prisma.relationship.count({ where: { ...relationshipWhere, nextReviewAt: null } }),
       this.prisma.meeting.findMany({ where: { ...meetingWhere, startAt: null }, select: { id: true }, take: MAX_IDS }),
       this.prisma.meeting.count({ where: { ...meetingWhere, startAt: null } }),
-      this.prisma.action.findMany({ where: { ...actionWhere, dueAt: null }, select: { id: true }, take: MAX_IDS }),
+      this.prisma.action.findMany({ where: { ...actionWhere, dueAt: null }, select: { id: true, organizationId: true, personId: true }, take: MAX_IDS }),
       this.prisma.action.count({ where: { ...actionWhere, dueAt: null } }),
       this.prisma.organization.count({ where: { ...orgWhere, OR: [{ name: null }, { country: null }, { website: null }, { phone: null }, { email: null }] } }),
       this.prisma.person.count({ where: { ...personWhere, OR: [{ firstName: '' }, { lastName: '' }, { title: null }, { email: null }, { phone: null }] } }),
     ]);
 
-    const orgWithContacts = new Set(missingOrgContacts.map(x => x.organizationId).filter(Boolean) as string[]);
-    const personWithContacts = new Set(missingPersonContacts.map(x => x.personId).filter(Boolean) as string[]);
+    const orgWithContacts = new Set(missingOrgContacts.map(x => x.id).filter(Boolean) as string[]);
+    const personWithContacts = new Set(missingPersonContacts.map(x => x.id).filter(Boolean) as string[]);
     const invalidEmails = [
       ...invalidOrgEmails.filter(x => x.email && !EMAIL.test(x.email)).map(x => ({ entityType: 'Organization', id: x.id, field: 'email' })),
       ...invalidPersonEmails.filter(x => x.email && !EMAIL.test(x.email)).map(x => ({ entityType: 'Person', id: x.id, field: 'email' })),
