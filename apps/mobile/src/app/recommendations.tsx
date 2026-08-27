@@ -1,2 +1,48 @@
-import React,{useEffect,useState}from'react';import{SafeAreaView,ScrollView,Text,Pressable,View,ActivityIndicator}from'react-native';import{apiGet,apiPost}from'../services/api-client';import{useSession}from'../state/session';import{styles}from'../lib/ui';
-export default function Recommendations(){const{token}=useSession();const[r,setR]=useState<any[]>([]);const[e,setE]=useState('');const load=async()=>{try{const x=await apiGet<any>('/recommendations',token);setR(x.items??x)}catch(x){setE((x as Error).message)}};useEffect(()=>{load()},[token]);async function decide(id:string,action:'approve'|'reject'|'snooze'){try{await apiPost(`/recommendations/${id}/${action}`,action==='snooze'?{until:new Date(Date.now()+86400000).toISOString()}:undefined,token);load()}catch(x){setE((x as Error).message)}}async function execute(id:string){try{await apiPost(`/recommendations/${id}/execute`,{},token);load()}catch(x){setE((x as Error).message)}}return <SafeAreaView style={styles.screen}><ScrollView contentContainerStyle={styles.content}><Text style={styles.title}>Recommendations</Text>{!r.length&&!e?<ActivityIndicator/>:null}{e?<Text style={styles.error}>{e}</Text>:null}{r.map(x=><View style={styles.card} key={x.id}><Text style={styles.value}>{x.type}</Text><Text style={styles.label}>Confidence: {x.confidence}</Text><Text style={styles.value}>{x.reason}</Text><Text style={styles.label}>{x.evidence}</Text><Pressable style={styles.button} onPress={()=>decide(x.id,'approve')}><Text style={styles.buttonText}>Approve</Text></Pressable><Pressable style={styles.button} onPress={()=>decide(x.id,'reject')}><Text style={styles.buttonText}>Reject</Text></Pressable><Pressable style={styles.button} onPress={()=>decide(x.id,'snooze')}><Text style={styles.buttonText}>Snooze</Text></Pressable><Pressable style={styles.button} onPress={()=>execute(x.id)}><Text style={styles.buttonText}>Execute</Text></Pressable></View>)}</ScrollView></SafeAreaView>}
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, RefreshControl, SafeAreaView, ScrollView, Text, View } from 'react-native';
+import { Link } from 'expo-router';
+import { apiGet } from '../services/api-client';
+import { useSession } from '../state/session';
+import { styles, colors } from '../lib/ui';
+
+type Item = { id: string; type?: string; title?: string; rationale?: string; confidence?: number; status?: string; relationship?: any };
+
+export default function Recommendations() {
+  const { token } = useSession();
+  const [rows, setRows] = useState<Item[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    setError(null);
+    try {
+      const x = await apiGet<any>('/recommendations', token);
+      setRows(Array.isArray(x) ? x : (x?.items ?? []));
+    } catch (e) { setError(e instanceof Error ? e.message : 'Request failed'); }
+  }, [token]);
+  useEffect(() => { load(); }, [load]);
+  const refresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
+
+  return (
+    <SafeAreaView style={styles.screen}>
+      <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
+        <Text style={styles.title}>Recommendations</Text>
+        {!!rows.length && <Text style={styles.subtitle}>{rows.length} recommendation{rows.length === 1 ? '' : 's'}</Text>}
+        {error && <Text style={styles.error}>{error}</Text>}
+        {!rows.length && !error && <ActivityIndicator />}
+        {!rows.length && error && <Text style={{ color: colors.muted }}>Unable to load recommendations.</Text>}
+        {rows.map((r) => (
+          <Link key={r.id} href={{ pathname: '/recommendation/[id]', params: { id: r.id } }} asChild>
+            <Pressable style={styles.card}>
+              <Text style={styles.value}>{r.title ?? r.type ?? r.id}</Text>
+              <Text style={styles.subtitle}>{r.type}{r.status ? ` · ${r.status}` : ''}{r.confidence != null ? ` · ${r.confidence}%` : ''}</Text>
+              {r.rationale ? <Text style={{ color: colors.muted }}>{r.rationale}</Text> : null}
+              <Text style={{ color: colors.accent, fontWeight: '700' }}>Open detail →</Text>
+            </Pressable>
+          </Link>
+        ))}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
