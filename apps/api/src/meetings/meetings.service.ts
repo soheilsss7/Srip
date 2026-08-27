@@ -164,8 +164,10 @@ export class MeetingsService {
    */
   extractActionItems(text: string): Array<{ text: string; suggestedTitle: string; suggestedDueAt: string; isCommitmentLike: boolean; matchedKeyword: string }> {
     if (!text || !text.trim()) return [];
-    const commitmentKeywords = /\b(قول|تعهد|متعهد|commit(?:ment|s|ted)?|promise[sd]?|will send|will provide|will deliver)\b/i;
-    const actionKeywords = /\b(باید|لازم است|پیگیری|follow[- ]?up|will|must|need to|needs to|should|to do|action item|deadline|ارسال|آماده|schedule|prepare|send|deliver|review)\b/i;
+    const commitmentKeywords = /(?:\b(?:commit(?:ment|s|ted)?|promise[sd]?|will send|will provide|will deliver)\b|قول|تعهد|متعهد)/i;
+    // \b is ASCII-only in JS; Persian keywords are matched by bare alternates while
+    // English keywords keep \b word boundaries so e.g. "will" does not match "willpower".
+    const actionKeywords = /(?:\b(?:follow[ -]?up|will|must|need to|needs to|should|to do|action item|deadline|schedule|prepare|send|deliver|review)\b|باید|لازم است|پیگیری|ارسال|آماده)/i;
     const rawSentences = text
       .replace(/\r/g, '')
       .split(/(?<=[.!?؟])\s+|\n+/)

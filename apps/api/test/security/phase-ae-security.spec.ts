@@ -71,9 +71,10 @@ describe('PHASE AE backend security matrix', () => {
 
   it('SQL injection: application search uses parameterized query values rather than string interpolation for the user query', () => {
     const search = read('src/search/search.service.ts');
-    expect(search).toContain('$queryRawUnsafe');
-    expect(search).toContain('q);');
-    expect(search).not.toMatch(/\$queryRawUnsafe\([^\n]*\$\{q\}/);
+    // Search uses Prisma tagged-template (parameterized) raw queries, never unsafe interpolation.
+    expect(search).toMatch(/\$queryRaw`/);
+    expect(search).toContain("plainto_tsquery('simple', ${q})");
+    expect(search).not.toMatch(/\$queryRawUnsafe/);
   });
 
   it('XSS: API security headers and output DTO boundary are present', () => {
