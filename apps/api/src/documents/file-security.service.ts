@@ -14,6 +14,14 @@ const ALLOWED: Record<string, string[]> = {
 };
 const MAX_BYTES = Number(process.env.FILE_MAX_BYTES || 25 * 1024 * 1024);
 
+const STRONG_MAGIC: Record<string, string[]> = {
+  '.pdf': ['application/pdf'],
+  '.png': ['image/png'],
+  '.jpg': ['image/jpeg'],
+  '.jpeg': ['image/jpeg'],
+  '.gif': ['image/gif'],
+};
+
 @Injectable()
 export class FileSecurityService {
   constructor(private readonly prisma: PrismaService, private readonly storage: S3Storage) {}
@@ -26,6 +34,8 @@ export class FileSecurityService {
     if (!allowed || !allowed.includes(String(file.mimetype).toLowerCase())) throw new BadRequestException('File extension and MIME type are not allowed');
     const detected = this.detectMime(file.buffer);
     if (detected && !(allowed.includes(detected) || (detected === 'application/zip' && (ext === '.docx' || ext === '.xlsx')))) throw new BadRequestException('File content does not match declared MIME type');
+    const strong = STRONG_MAGIC[ext];
+    if (strong && (!detected || !strong.includes(detected))) throw new BadRequestException('File content does not match declared MIME type');
     return { ext, mimeType: String(file.mimetype).toLowerCase(), sha256: createHash('sha256').update(file.buffer).digest('hex'), detectedMimeType: detected };
   }
 

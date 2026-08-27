@@ -2,7 +2,13 @@ import { BadRequestException } from '@nestjs/common';
 import { WorkflowsService } from '../../src/workflows/workflows.service';
 
 describe('Phase 17 workflow regression', () => {
-  const service = new WorkflowsService({} as any, {} as any) as any;
+  const notifications: any = { create: jest.fn() };
+  const eventBus: any = { transaction: jest.fn((fn: (tx: unknown) => unknown) => fn({})), publishInTransaction: jest.fn() };
+  const audit: any = { logMutation: jest.fn() };
+  const requestContext: any = { run: jest.fn(), requestId: undefined, correlationId: undefined };
+  const trace: any = { childSpan: jest.fn(() => ({ end: jest.fn() })) };
+  const workflowApprovals: any = { request: jest.fn(), decide: jest.fn() };
+  const service = new WorkflowsService({} as any, {} as any, notifications, eventBus, audit, requestContext, trace, workflowApprovals) as any;
 
   it('accepts supported workflow actions and rejects unsupported actions', () => {
     expect(() => service.validateDefinition({ actions: [{ type: 'CREATE_NOTIFICATION' }] })).not.toThrow();

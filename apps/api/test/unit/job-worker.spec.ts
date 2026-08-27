@@ -17,9 +17,18 @@ describe('JobWorker.process routing (Phase 26 regression: no throwing placeholde
   const search: any = { reindex: jest.fn().mockResolvedValue({ analyzedTables: ['Organization'], errors: [] }) };
   const analytics: any = { recompute: jest.fn().mockResolvedValue({ organizationsProcessed: 1 }) };
   const commitments: any = { sweepOverdue: jest.fn().mockResolvedValue({ swept: 0, commitmentIds: [] }) };
-  const queues: any = { enqueue: jest.fn(), deadLetter: jest.fn() };
+  const queues: any = { enqueue: jest.fn(), deadLetter: jest.fn(), counts: jest.fn().mockResolvedValue({}) };
+  const trace: any = {
+    parseTraceparent: jest.fn((value?: string) => value ? { traceId: 'a'.repeat(32), spanId: 'b'.repeat(16), traceparent: value } : undefined),
+    startRoot: jest.fn(() => ({ traceId: 'a'.repeat(32), spanId: 'b'.repeat(16), traceparent: `00-${'a'.repeat(32)}-${'b'.repeat(16)}-01`, requestId: 'req', correlationId: 'corr' })),
+    run: jest.fn((_ctx: unknown, fn: () => unknown) => fn()),
+    childSpan: jest.fn(() => ({ end: jest.fn(), context: {} })),
+  };
+  const metrics: any = { observeQueue: jest.fn() };
+  const requestContext: any = { run: jest.fn((_initial: unknown, fn: () => unknown) => fn()) };
+  const privacy: any = { processExportJob: jest.fn() };
 
-  const worker = new JobWorker(config, notifications, ai, documents, integrations, recommendations, meetings, search, analytics, commitments, queues) as any;
+  const worker = new JobWorker(config, notifications, ai, documents, integrations, recommendations, meetings, search, analytics, commitments, queues, trace, metrics, requestContext, privacy) as any;
 
   it('routes meetings.transcribe to MeetingsService.regenerateFollowUpCandidates instead of throwing', async () => {
     const result = await worker.process({ name: 'meetings.transcribe', data: { meetingId: 'm1' } });

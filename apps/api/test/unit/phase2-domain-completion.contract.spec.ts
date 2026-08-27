@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 describe('Phase 2 domain completion contract', () => {
-  const root = join(__dirname, '../../..');
+  const root = join(__dirname, '../..');
   const read = (file: string) => readFileSync(join(root, file), 'utf8');
 
   it('covers the source Interaction/Meeting/Action/Commitment/Project/Opportunity contract', () => {

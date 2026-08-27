@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 describe('Package 8.14 concurrency/bounds regression contracts', () => {
-  const root = join(process.cwd());
+  const root = join(__dirname, '../../../..');
   const read = (p: string) => readFileSync(join(root, p), 'utf8');
 
   it('checks permanent-delete approval inside the active transaction', () => {

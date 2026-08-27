@@ -8,8 +8,9 @@ describe('PHASE AD integration matrix contract', () => {
   it('API exposes versioned controllers and standard security middleware', () => {
     const main = read('src/main.ts');
     expect(main).toContain('/api/v1');
-    expect(main).toContain('ProductionHardeningMiddleware');
-    expect(main).toContain('OriginVerificationMiddleware');
+    const appModule = read('src/app.module.ts');
+    expect(appModule).toContain('ProductionHardeningMiddleware');
+    expect(appModule).toContain('OriginVerificationMiddleware');
   });
 
   it('PostgreSQL integration is covered by the existing runtime integration suite', () => {
@@ -27,8 +28,8 @@ describe('PHASE AD integration matrix contract', () => {
   });
 
   it('Queue integration is represented by BullMQ producer/worker contracts', () => {
-    const queue = read('src/queue/queue.service.ts');
-    const worker = read('src/queue/queue.worker.ts');
+    const queue = read('src/jobs/queue.service.ts');
+    const worker = read('src/jobs/job.worker.ts');
     expect(queue).toContain('Queue');
     expect(queue).toContain('add(');
     expect(worker).toContain('Worker');

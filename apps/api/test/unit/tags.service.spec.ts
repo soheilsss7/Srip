@@ -28,7 +28,7 @@ describe('TagsService - Phase C', () => {
     const tag = { id: 't1', name: 'Strategic' };
     prisma.tag.create.mockResolvedValue(tag);
     await expect(service.create('u1', { name: ' Strategic ' })).resolves.toEqual(tag);
-    expect(authorization.assertPermission).toHaveBeenCalledWith('u1', 'tag.write');
+    expect(authorization.assertPermission).toHaveBeenCalledWith('u1', 'tag.write', {});
     expect(audit.logMutation).toHaveBeenCalledWith(expect.objectContaining({ action: AuditAction.TAG_CREATED, entityType: 'Tag', entityId: 't1' }));
   });
 
@@ -44,8 +44,8 @@ describe('TagsService - Phase C', () => {
     prisma.tagAssignment.findUnique.mockResolvedValue(null);
     prisma.tagAssignment.create.mockResolvedValue({ id: 'a1', tag: { id: 'tag-1', name: 'VIP' }, organizationId: 'org-1' });
     await service.assign('u1', 'Organization', 'org-1', { tagId: 'tag-1' });
-    expect(authorization.assertPermission).toHaveBeenCalledWith('u1', 'entity.write', 'org-1');
-    expect(authorization.assertPermission).toHaveBeenCalledWith('u1', 'tag.write', 'org-1');
+    expect(authorization.assertPermission).toHaveBeenCalledWith('u1', 'entity.write', { organizationId: 'org-1' });
+    expect(authorization.assertPermission).toHaveBeenCalledWith('u1', 'tag.write', { organizationId: 'org-1' });
     expect(audit.logMutation).toHaveBeenCalledWith(expect.objectContaining({ action: AuditAction.TAG_ASSIGNED, entityType: 'TagAssignment' }));
   });
 

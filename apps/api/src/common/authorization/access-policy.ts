@@ -87,11 +87,12 @@ export function evaluateConditions(subject: AuthorizationSubject, attributes: Ac
   if (!conditions) return true;
   if (Array.isArray(conditions)) return conditions.every(c => evaluateCondition(subject, attributes, c as Condition));
   if (typeof conditions !== 'object') return false;
-  const c = conditions as { all?: unknown[]; any?: unknown[]; not?: unknown; conditions?: unknown[] };
+  const c = conditions as { all?: unknown[]; any?: unknown[]; not?: unknown; conditions?: unknown[]; field?: string; op?: string; value?: unknown };
   if (c.all && !c.all.every(x => evaluateConditions(subject, attributes, x))) return false;
   if (c.any && !c.any.some(x => evaluateConditions(subject, attributes, x))) return false;
   if (c.not && evaluateConditions(subject, attributes, c.not)) return false;
   if (c.conditions && !c.conditions.every(x => evaluateConditions(subject, attributes, x))) return false;
+  if (typeof c.field === 'string' && typeof c.op === 'string') return evaluateCondition(subject, attributes, c as Condition);
   return true;
 }
 

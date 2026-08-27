@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { AccessScopeType, DataClassification } from '@prisma/client';
 import { RELATIONSHIP_SCORE_FACTORS } from '../../src/scoring/relationship-score.service';
 import { attributesAllow, roleCanManageAccess } from '../../src/common/authorization/access-policy';
 import { ROLES } from '../../src/common/authorization/access.constants';
@@ -7,6 +8,10 @@ import { EntityResponseDto } from '../../src/common/dto/entity-response.dto';
 import { FileSecurityService } from '../../src/documents/file-security.service';
 
 describe('PHASE AD unit matrix', () => {
+  const subject = (role: string, scope: AccessScopeType = AccessScopeType.ORGANIZATION, dataScope: DataClassification = DataClassification.CONFIDENTIAL) => ({
+    userId: 'u1', role, organizationId: 'o1', department: 'Finance', departmentUnitId: 'd1', dataScope, accessScope: scope, scope: { region: 'DE' },
+  });
+
   it('Score Engine contains all canonical relationship factors and risk', () => {
     expect(RELATIONSHIP_SCORE_FACTORS).toHaveLength(12);
     expect(RELATIONSHIP_SCORE_FACTORS).toEqual(expect.arrayContaining([
@@ -18,9 +23,9 @@ describe('PHASE AD unit matrix', () => {
   it('Permission Engine enforces role, department, classification and ownership boundaries', () => {
     expect(roleCanManageAccess(ROLES.SUPER_ADMIN)).toBe(true);
     expect(roleCanManageAccess(ROLES.ANALYST)).toBe(false);
-    expect(attributesAllow(ROLES.ANALYST, 'Finance', 'CONFIDENTIAL', 'u1', { department: 'Sales' })).toBe(false);
-    expect(attributesAllow(ROLES.ANALYST, 'Finance', 'CONFIDENTIAL', 'u1', { classification: 'PRIVATE' })).toBe(false);
-    expect(attributesAllow(ROLES.READ_ONLY, null, 'PRIVATE', 'u1', { ownerId: 'u2' })).toBe(false);
+    expect(attributesAllow(subject(ROLES.ANALYST, AccessScopeType.DEPARTMENT), { department: 'Sales' })).toBe(false);
+    expect(attributesAllow(subject(ROLES.ANALYST, AccessScopeType.ORGANIZATION, DataClassification.CONFIDENTIAL), { classification: 'PRIVATE' })).toBe(false);
+    expect(attributesAllow(subject(ROLES.READ_ONLY, AccessScopeType.OWNED, DataClassification.PRIVATE), { ownerId: 'u2' })).toBe(false);
   });
 
   it('Field Security removes sensitive relationship fields when their permissions are denied', async () => {

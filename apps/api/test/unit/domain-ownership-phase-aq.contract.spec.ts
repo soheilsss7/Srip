@@ -1,4 +1,3 @@
-import { describe, expect, it } from 'vitest';
 import { DOMAIN_OWNERSHIP } from '../../src/common/domain-ownership.contract';
 import * as fs from 'node:fs';
 import * as path from 'node:path';

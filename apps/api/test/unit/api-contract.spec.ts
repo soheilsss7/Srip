@@ -18,7 +18,9 @@ describe('Phase 17 API security contract', () => {
   });
 
   it('keeps relationship score recalculation organization-scoped', () => {
-    const service = src('relationships/relationship-score.service.ts');
-    expect(service).toContain('assertAnyOrganizationAccess');
+    const facade = src('relationships/relationship-score.service.ts');
+    const canonical = src('scoring/relationship-score.service.ts');
+    expect(facade).toContain('CanonicalRelationshipScoreService');
+    expect(canonical).toContain('assertAnyOrganizationAccess');
   });
 });

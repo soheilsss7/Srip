@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 describe('Package 8.15 final audit regression contracts', () => {
-  const root = join(process.cwd());
+  const root = join(__dirname, '../../../..');
   const read = (p: string) => readFileSync(join(root, p), 'utf8');
 
   it('does not reference an out-of-scope transaction variable in permanent-delete approval', () => {

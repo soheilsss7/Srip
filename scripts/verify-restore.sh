@@ -6,15 +6,17 @@ set -euo pipefail
 psql_cmd=(psql "$RESTORE_DATABASE_URL" -X -v ON_ERROR_STOP=1)
 
 # Schema existence: these are stable core/domain tables from schema.prisma.
+# Prisma model tables are created as quoted PascalCase identifiers, and
+# to_regclass() lowercases unquoted names, so quote each table name explicitly.
 required_tables=(
-  organization person relationship interaction meeting action commitment
-  project opportunity audit_log domain_event_outbox workflow_execution
-  approval_request notification analytics_event feature_flag
+  Organization Person Relationship Interaction Meeting Action Commitment
+  Project Opportunity AuditLog DomainEventOutbox WorkflowExecution
+  ApprovalRequest Notification AnalyticsEvent FeatureFlag
 )
 
 missing=()
 for table in "${required_tables[@]}"; do
-  exists="$("${psql_cmd[@]}" -Atqc "SELECT to_regclass('public.$table') IS NOT NULL;")"
+  exists="$("${psql_cmd[@]}" -Atqc "SELECT to_regclass('public.\"$table\"') IS NOT NULL;")"
   [[ "$exists" == "t" ]] || missing+=("$table")
 done
 if ((${#missing[@]})); then
@@ -28,7 +30,7 @@ unvalidated="$("${psql_cmd[@]}" -Atqc "SELECT count(*) FROM pg_constraint WHERE 
 
 # Verify that all expected application tables are queryable and produce numeric counts.
 for table in "${required_tables[@]}"; do
-  count="$("${psql_cmd[@]}" -Atqc "SELECT count(*) FROM public.$table;")"
+  count="$("${psql_cmd[@]}" -Atqc "SELECT count(*) FROM public.\"$table\";")"
   [[ "$count" =~ ^[0-9]+$ ]] || { echo "RESTORE_VERIFY_FAILED invalid_count:$table" >&2; exit 1; }
 done
 

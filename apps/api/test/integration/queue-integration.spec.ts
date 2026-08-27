@@ -1,4 +1,3 @@
-import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import IORedis from 'ioredis';
 import { Queue, Worker, QueueEvents, Job } from 'bullmq';
 

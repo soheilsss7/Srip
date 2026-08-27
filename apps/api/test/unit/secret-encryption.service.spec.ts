@@ -36,7 +36,7 @@ describe('SecretEncryptionService', () => {
 
   it('fails closed with a wrong key', () => {
     const encrypted = service.encrypt('secret');
-    process.env.SECRET_ENCRYPTION_KEY = 'abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab';
+    process.env.SECRET_ENCRYPTION_KEY = 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
     expect(() => service.decrypt(encrypted)).toThrow(BadRequestException);
   });
 });
