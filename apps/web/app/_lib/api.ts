@@ -36,7 +36,6 @@ export function setScope(scope:string){if(typeof window!=='undefined')localStora
 export function getScope(){return typeof window==='undefined'?'all':localStorage.getItem(SCOPE_KEY)??'all';}
 
 function requestId(){return typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random().toString(16).slice(2)}`;}
-function mutationKey(method?:string){return /^(POST|PUT|PATCH|DELETE)$/i.test(method??'')?requestId():undefined;}
 function messageOf(body:any,status:number){
   if(body?.error?.message)return String(body.error.message);
   if(Array.isArray(body?.message))return body.message.join('، ');
@@ -58,7 +57,9 @@ async function raw(path:string,init:ApiOptions={},token?:string){
   if(!isForm&&!headers.has('Content-Type'))headers.set('Content-Type','application/json');
   if(token&&!headers.has('Authorization'))headers.set('Authorization',`Bearer ${token}`);
   if(!headers.has('X-Request-ID'))headers.set('X-Request-ID',requestId());
-  if(init.idempotencyKey&&!headers.has('Idempotency-Key'))headers.set('Idempotency-Key',init.idempotencyKey);
+  const reqMethod=(init.method??'GET').toUpperCase();
+  const retrySensitive=/^(POST|PUT|PATCH|DELETE)$/.test(reqMethod)||/\/reports\/[^/]+\/export\/[^/]+$/.test(path);
+  if(retrySensitive&&!headers.has('Idempotency-Key'))headers.set('Idempotency-Key',init.idempotencyKey??requestId());
   const timeoutMs=init.timeoutMs??30000;
   const controller=new AbortController();
   const timeout=setTimeout(()=>controller.abort(),timeoutMs);
