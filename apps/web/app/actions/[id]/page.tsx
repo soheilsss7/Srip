@@ -1,3 +1,29 @@
 'use client';
-import {use} from 'react';import {EntityDetail} from '../../_components/entity-detail';
-export default function Page({params}:{params:Promise<{id:string}>}){const p=use(params);return <EntityDetail title="Action" eyebrow="ACTION" endpoint="/actions" id={p.id} timelineEndpoint={'/actions/:id'} actions={[{label:'حذف',method:'DELETE',path:'/actions/:id',confirm:'این مورد حذف شود؟'}]}/>}
+import {use,useCallback,useEffect,useState} from 'react';
+import {api} from '../../_lib/api';
+import {Badge,ErrorCard,Loading,PageHeader} from '../../_components/page-ui';
+const STATUS=['OPEN','IN_PROGRESS','DONE','BLOCKED','CANCELLED'];
+export default function Page({params}:{params:Promise<{id:string}>}){
+ const {id}=use(params);
+ const [a,setA]=useState<any>(null),[error,setError]=useState(''),[busy,setBusy]=useState('');
+ const load=useCallback(async()=>{setError('');try{setA(await api(`/actions/${id}`))}catch(e){setError((e as Error).message)}},[id]);
+ useEffect(()=>{load()},[load]);
+ async function doIt(label:string,fn:()=>Promise<any>){setBusy(label);setError('');try{await fn();await load()}catch(e){setError((e as Error).message)}finally{setBusy('')}}
+ async function patch(body:any){await doIt('patch',()=>api(`/actions/${id}`,{method:'PATCH',body:JSON.stringify(body)}))}
+ async function addDependency(dependsOnActionId:string){await doIt('dep',()=>api(`/actions/${id}/dependencies/${encodeURIComponent(dependsOnActionId)}`,{method:'POST'}))}
+ async function removeDependency(dependsOnActionId:string){if(!confirm('این وابستگی حذف شود؟'))return;await doIt('undep',()=>api(`/actions/${id}/dependencies/${encodeURIComponent(dependsOnActionId)}`,{method:'DELETE'}))}
+ const deps=a?.dependencies??[];
+ const blockedBy=a?.blockedBy??[];
+ const info=a?Object.entries(a).filter(([k])=>!['dependencies','blockedBy','owner','createdBy','organization','relationship','meeting','project','person'].includes(k)&&typeof a[k]!=='function').slice(0,24):[];
+ return <main className="feature-page">
+  <PageHeader eyebrow="ACTION" title={a?.title??'Action'} description={`شناسه: ${id}`} actions={<div className="toolbar"><button className="secondary-action" onClick={load} disabled={!!busy}>بازخوانی</button><label className="inline-label">وضعیت<select value={a?.status??'OPEN'} disabled={!!busy} onChange={e=>patch({status:e.target.value})}>{STATUS.map(s=><option key={s} value={s}>{s}</option>)}</select></label><button className="danger-action" disabled={!!busy} onClick={()=>{if(confirm('این اقدام حذف شود؟'))doIt('del',()=>api(`/actions/${id}`,{method:'DELETE'}))}}>حذف</button></div>}/>
+  <ErrorCard message={error}/>
+  {!a&&!error?<Loading/>:a&&<>
+   <section className="panel"><div className="panel-title"><div><h2>جزئیات اقدام</h2><p>{a.description??'بدون توضیح'}</p></div><Badge tone={a.status==='DONE'?'success':a.status==='BLOCKED'?'danger':'neutral'}>{a.status??'—'}</Badge></div><div className="detail-grid">{info.map(([k,v])=>{if(v==null)return null;return <div className="detail-item" key={k}><small>{k}</small><strong>{typeof v==='object'?JSON.stringify(v):String(v)}</strong></div>})}</div></section>
+   <div className="split-panels">
+    <section className="panel"><div className="panel-title"><div><h2>وابستگی‌ها (این اقدام وابسته است به…)</h2><Badge>{deps.length}</Badge></div><button className="secondary-action" onClick={()=>{const v=window.prompt('Action ID که این اقدام به آن وابسته است');if(v)addDependency(v)}} disabled={!!busy}>افزودن وابستگی</button></div>{deps.length?<div className="list">{deps.map((d:any)=><div className="listRow" key={d.id??d.dependsOnActionId}><Badge tone={d.dependsOnAction?.status==='DONE'?'success':'neutral'}>{d.dependsOnAction?.status??'—'}</Badge><span><strong>{d.dependsOnAction?.title??d.dependsOnActionId}</strong><small>{d.dependsOnAction?.dueAt?`سررسید ${new Date(d.dependsOnAction.dueAt).toLocaleDateString()}`:'بدون سررسید'}</small></span><span className="resource-row-actions"><button onClick={()=>removeDependency(d.dependsOnActionId)}>حذف</button></span></div>)}</div>:<p className="empty-state">وابستگی ثبت نشده است.</p>}</section>
+    <section className="panel"><div className="panel-title"><div><h2>مسدودکننده‌ها (Blocked By)</h2><Badge>{blockedBy.length}</Badge></div></div>{blockedBy.length?<div className="list">{blockedBy.map((b:any)=><div className="listRow" key={b.actionId}><Badge tone={b.action?.status==='DONE'?'success':'danger'}>{b.action?.status??'—'}</Badge><span><strong>{b.action?.title??b.actionId}</strong></span></div>)}</div>:<p className="empty-state">این اقدام مسدود نیست.</p>}</section>
+   </div>
+  </>}
+ </main>;
+}
