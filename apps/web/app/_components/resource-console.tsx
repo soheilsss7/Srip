@@ -4,7 +4,7 @@ import {api} from '../_lib/api';
 import {DataTable,Empty,ErrorCard,Loading,PageHeader} from './page-ui';
 export type Field={name:string;label:string;type?:'text'|'number'|'date'|'datetime-local'|'email'|'textarea'|'select'|'checkbox';required?:boolean;options?:string[]};
 export type Action={label:string;method:'POST'|'PATCH'|'DELETE';path:(id:string)=>string;confirm?:string};
-export type ResourceConfig={title:string;eyebrow:string;description:string;endpoint:string;idField?:string;fields?:Field[];columns?:string[];labels?:Record<string,string>;create?:boolean;update?:boolean;remove?:boolean;actions?:Action[];query?:Record<string,string|number|boolean|undefined>};
+export type ResourceConfig={title:string;eyebrow:string;description:string;endpoint:string;idField?:string;fields?:Field[];columns?:string[];labels?:Record<string,string>;create?:boolean;update?:boolean;remove?:boolean;actions?:Action[];query?:Record<string,string|number|boolean|undefined>;uppercase?:string[]};
 const rowsOf=(x:any)=>Array.isArray(x)?x:Array.isArray(x?.items)?x.items:Array.isArray(x?.rows)?x.rows:Array.isArray(x?.data)?x.data:x?[x]:[];
 const text=(v:any)=>v==null?'—':typeof v==='object'?(v.name??v.title??v.label??v.id??JSON.stringify(v)):String(v);
 export function ResourceConsole({config}:{config:ResourceConfig}){
@@ -15,7 +15,7 @@ export function ResourceConsole({config}:{config:ResourceConfig}){
  const columns=config.columns??(rows[0]?Object.keys(rows[0]).filter(k=>!k.startsWith('_')).slice(0,8):[]);
  const id=(r:any)=>String(r[config.idField??'id']??'');
  function begin(r?:any){setEditing(r??{});const f:any={};(config.fields??[]).forEach(x=>f[x.name]=r?.[x.name]??'');setForm(f)}
- function change(k:string,v:any){setForm(x=>({...x,[k]:v}))}
+  function change(k:string,v:any){setForm(x=>({...x,[k]:(config.uppercase??[]).includes(k)?String(v).toUpperCase():v}))}
  async function save(e:React.FormEvent){e.preventDefault();setSaving(true);setError('');try{if(editing?.[config.idField??'id']&&config.update)await api(`${config.endpoint}/${encodeURIComponent(id(editing))}`,{method:'PATCH',body:JSON.stringify(form)});else await api(config.endpoint,{method:'POST',body:JSON.stringify(form)});setEditing(null);setForm({});await load()}catch(x){setError((x as Error).message)}finally{setSaving(false)}}
  async function remove(r:any){if(!config.remove||!id(r))return;if(!confirm('حذف این مورد انجام شود؟'))return;try{await api(`${config.endpoint}/${encodeURIComponent(id(r))}`,{method:'DELETE'});await load()}catch(x){setError((x as Error).message)}}
  async function run(a:Action,r:any){if(a.confirm&&!confirm(a.confirm))return;try{await api(a.path(id(r)),{method:a.method,body:a.method==='DELETE'?undefined:'{}'});await load()}catch(x){setError((x as Error).message)}}
