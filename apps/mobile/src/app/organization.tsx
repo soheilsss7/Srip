@@ -1,1 +1,0 @@
-import React from'react';import{SafeAreaView,Text}from'react-native';import{styles}from'../lib/ui';export default function Organization(){return <SafeAreaView style={styles.content}><Text style={styles.title}>Organization</Text><Text style={styles.card}>Profile, owner, score, people, relationships, projects and timeline.</Text></SafeAreaView>}

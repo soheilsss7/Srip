@@ -1,1 +1,0 @@
-import React from'react';import{SafeAreaView,Text}from'react-native';import{styles}from'../lib/ui';export default function Person(){return <SafeAreaView style={styles.content}><Text style={styles.title}>Person</Text><Text style={styles.card}>Contact information, organization, title, influence and relationship context.</Text></SafeAreaView>}
