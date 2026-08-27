@@ -10,13 +10,13 @@ export default function Page({params}:{params:Promise<{id:string}>}){
  const [unitForm,setUnitForm]=useState({name:'',type:'DEPARTMENT',parentUnitId:''});
  const [ctForm,setCtForm]=useState({kind:'PHONE',value:'',label:'',isPrimary:false});
  const arr=(x:any)=>Array.isArray(x)?x:Array.isArray(x?.items)?x.items:Array.isArray(x?.data)?x.data:Array.isArray(x?.rows)?x.rows:[];
- const load=useCallback(async()=>{setError('');try{const [org,unitRows,tl]=await Promise.all([api(`/organizations/${id}`),api(`/organizations/${id}/units`),api(`/organizations/${id}/timeline`)]);setO(org);setUnits(arr(unitRows));setTimeline(arr(tl))}catch(e){setError((e as Error).message)}},[id]);
- const loadContacts=useCallback(async()=>{setError('');try{setContacts(arr(await api(`/organizations/${id}/contacts`)))}catch(e){setError((e as Error).message)}},[id]);
+  const load=useCallback(async()=>{setError('');try{const [org,unitRows,tl]=await Promise.all([api(`/organizations/${id}`),api(`/core-domain/organizations/${id}/units`),api(`/organizations/${id}/timeline`)]);setO(org);setUnits(arr(unitRows));setTimeline(arr(tl))}catch(e){setError((e as Error).message)}},[id]);
+  const loadContacts=useCallback(async()=>{setError('');try{setContacts(arr(await api(`/core-domain/organizations/${id}/contacts`)))}catch(e){setError((e as Error).message)}},[id]);
  useEffect(()=>{load()},[load]);
  useEffect(()=>{loadContacts()},[loadContacts]);
  async function doIt(label:string,fn:()=>Promise<any>){setBusy(label);setError('');try{await fn();await load()}catch(e){setError((e as Error).message)}finally{setBusy('')}}
- async function addUnit(e:React.FormEvent){e.preventDefault();await doIt('unit',()=>api(`/organizations/${id}/units`,{method:'POST',body:JSON.stringify({...unitForm,parentUnitId:unitForm.parentUnitId||undefined})}));setUnitForm({name:'',type:'DEPARTMENT',parentUnitId:''});setPanel(null)}
- async function addContact(e:React.FormEvent){e.preventDefault();await doIt('ct',()=>api(`/organizations/${id}/contacts`,{method:'POST',body:JSON.stringify(ctForm)}));setCtForm({kind:'PHONE',value:'',label:'',isPrimary:false});setPanel(null);await loadContacts()}
+  async function addUnit(e:React.FormEvent){e.preventDefault();await doIt('unit',()=>api(`/core-domain/organizations/${id}/units`,{method:'POST',body:JSON.stringify({name:unitForm.name,type:unitForm.type,parentUnitId:unitForm.parentUnitId||undefined})}));setUnitForm({name:'',type:'DEPARTMENT',parentUnitId:''});setPanel(null)}
+  async function addContact(e:React.FormEvent){e.preventDefault();await doIt('ct',()=>api(`/core-domain/organizations/${id}/contacts`,{method:'POST',body:JSON.stringify(ctForm)}));setCtForm({kind:'PHONE',value:'',label:'',isPrimary:false});setPanel(null);await loadContacts()}
  const info=o?Object.entries(o).filter(([k])=>!['units'].includes(k)&&typeof o[k]!=='function'&&k!=='timeline').slice(0,24):[];
  const flattened=units.flatMap((u:any)=>[{u,depth:0},...(u.children??[]).map((c:any)=>({u:c,depth:1})),(u.children??[]).flatMap((c:any)=>(c.children??[]).map((g:any)=>({u:g,depth:2})))].flat());
  return <main className="feature-page">
