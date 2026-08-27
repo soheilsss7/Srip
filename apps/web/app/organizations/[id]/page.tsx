@@ -1,2 +1,3 @@
-import Link from 'next/link';
-export default function Page(){return <main><header><div><p className="eyebrow">SRIP</p><h1>Organization Profile</h1><p className="muted">جزئیات موجودیت با scope و permission-aware data.</p></div><Link className="pill" href="/">Dashboard</Link></header><section className="panel"><h2>Organization Profile</h2><p>Header · Score/Status · Owner · Timeline · Related records · Actions</p></section></main>}
+'use client';
+import {use} from 'react';import {EntityDetail} from '../../_components/entity-detail';
+export default function Page({params}:{params:Promise<{id:string}>}){const p=use(params);return <EntityDetail title="Organization" eyebrow="ORGANIZATION" endpoint="/organizations" id={p.id} timelineEndpoint={'/organizations/:id/timeline'} actions={[{label:'بایگانی',method:'PATCH',path:'/organizations/:id/archive',confirm:'این سازمان بایگانی شود؟'}]}/>}
