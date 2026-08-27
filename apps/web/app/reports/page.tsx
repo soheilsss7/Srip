@@ -2,9 +2,9 @@
 import {useEffect,useState} from 'react';
 import {api,apiBlob} from '../_lib/api';
 import {DataTable,ErrorCard,Loading,PageHeader} from '../_components/page-ui';
-const kinds=['relationship','organization','contact','meeting','commitment','action','opportunity','network','risk','influence','referral','project','subsidiary-comparison','holding-overview'];
+const kinds=['relationship-health','company','contact','meeting','commitment','action','opportunity','network','risk','influence','referral','project','subsidiary-comparison','holding'];
 export default function Reports(){
- const[kind,setKind]=useState('relationship'),[data,setData]=useState<any>(null),[e,setE]=useState(''),[loading,setLoading]=useState(false),[exporting,setExporting]=useState('');
+ const[kind,setKind]=useState('relationship-health'),[data,setData]=useState<any>(null),[e,setE]=useState(''),[loading,setLoading]=useState(false),[exporting,setExporting]=useState('');
  async function load(k=kind){setLoading(true);setE('');try{setData(await api(`/reports/${encodeURIComponent(k)}`))}catch(x){setE((x as Error).message)}finally{setLoading(false)}}
  useEffect(()=>{load()},[]);
  async function download(format:string){
