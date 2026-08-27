@@ -13,8 +13,7 @@ export class EnterpriseService {
     await this.authorization.assertPermission(userId, 'enterprise.read', { organizationId: organizationId });
     return EntityResponseDto.manyUnknown(await this.prisma.authorizationPolicy.findMany({ where: { ...(organizationId ? { organizationId } : {}) }, orderBy: { updatedAt: 'desc' } }));
   }
-  async upsertPolicy(userId: string, data: any) {
-    const effect = data.effect === 'DENY' ? 'DENY' : data.effect === 'ALLOW' ? 'ALLOW' : null;
+  async upsertPolicy(userId: string, data: any) {    const effect = data.effect === 'DENY' ? 'DENY' : data.effect === 'ALLOW' ? 'ALLOW' : null;
     if (!effect || !data.key || !data.permissionKey) throw new ForbiddenException('Invalid authorization policy');
     await this.authorization.assertPermission(userId, 'enterprise.admin', { organizationId: data.organizationId });
     const permission = await this.prisma.permission.findUnique({ where: { key: data.permissionKey } });
@@ -35,6 +34,26 @@ export class EnterpriseService {
     const deleted = await this.prisma.authorizationPolicy.update({ where: { id }, data: { enabled: false } });
     await this.audit.logMutation({ userId, action: 'PERMISSION_CHANGE', entityType: 'AuthorizationPolicy', entityId: id, organizationId: row.organizationId ?? undefined, before: row, after: deleted, reason: 'ABAC policy disabled' });
     return EntityResponseDto.fromUnknown(deleted);
+  }
+  async overview(userId: string, organizationId?: string) {
+    await this.authorization.assertPermission(userId, 'enterprise.read', { organizationId: organizationId });
+    const where = organizationId ? { organizationId } : {};
+    const flagWhere = organizationId ? { OR: [{ organizationId }, { organizationId: null }] } : {};
+    const [policies, exports, securityEvents, flags, organizations, documentClassification] = await Promise.all([
+      this.prisma.authorizationPolicy.count({ where }),
+      this.prisma.dataExportLog.count({ where }),
+      this.prisma.securityEvent.count({ where }),
+      this.prisma.featureFlag.count({ where: flagWhere }),
+      this.prisma.organization.count({}),
+      this.prisma.document.groupBy({ by: ['classification'], _count: { _all: true }, where: { deletedAt: null } }),
+    ]);
+    const enabledFlags = await this.prisma.featureFlag.count({ where: { ...flagWhere, enabled: true } });
+    return EntityResponseDto.fromUnknown({
+      governance: { policies, securityEvents, featureFlags: flags, enabledFeatureFlags: enabledFlags, organizations },
+      exports: { total: exports },
+      classification: { documents: Object.fromEntries(documentClassification.map((r) => [r.classification, r._count._all])) },
+      ownership: { organizations },
+    });
   }
   async exports(userId: string, organizationId?: string) {
     await this.authorization.assertPermission(userId, 'enterprise.read', { organizationId: organizationId });

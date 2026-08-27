@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Req, UseGuards, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { DocumentsService } from './documents.service';
 import { AuthGuard } from '../common/guards/auth.guard';
@@ -8,6 +8,7 @@ import { RequirePermission } from '../common/decorators/require-permission.decor
 @UseGuards(AuthGuard,AuthorizationGuard)
 export class DocumentsController {
   constructor(private readonly service: DocumentsService) {}
+  @Get() @RequirePermission('document.read') list(@Req() req:any,@Query('organizationId') organizationId?:string){ return this.service.list(req.user.sub, organizationId); }
   @Get('status') status(){ return this.service.status(); }
   @Get(':id') get(@Req() req:any,@Param('id') id:string){ return this.service.get(req.user.sub,id); }
   @Get(':id/signed-url') @RequirePermission('document.read')

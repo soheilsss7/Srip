@@ -23,7 +23,7 @@ export const PERMISSIONS = [
   'opportunity.read','opportunity.write',
   'audit.read','workflow.read','workflow.write','workflow.execute',
   'search.read','search.write','analytics.read','ai.executive_brief','analytics.write','network.read','security.read','metrics.read','integration.read','integration.write','recommendation.read','recommendation.write',
-  'data.restore','data.permanent_delete',
+  'data.restore','data.permanent_delete','data.lifecycle_status',
   'enterprise.read','enterprise.admin','enterprise.export','report.read','report.export','enterprise.security','feature_flag.read','feature_flag.write',
   'access.manage','role.manage','admin.users','scoring.admin','data.import','data.import.approve','data.quality.read','data.quality.execute','approval.request','approval.read','approval.decide','privacy.read','privacy.export','privacy.access','privacy.erase','privacy.manage','privacy.audit',
 ] as const;

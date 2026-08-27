@@ -33,8 +33,27 @@ export class DataLifecycleService {
     return approval;
   }
 
-  async listPendingApprovals(userId:string){
-    await this.authorization.assertPermission(userId,'approval.read',{});
+  async status(userId:string){
+    const ids=await this.authorization.accessibleOrganizationIds(userId);
+    const approvalWhere:any={actionType:'DELETE',status:'PENDING',...(ids?{organizationId:{in:ids}}:{})};
+    const [byState,byEntity,pendingDeletionApprovals,recentRecords]=await Promise.all([
+      (this.prisma as any).dataLifecycleRecord.groupBy({by:['state'],_count:{_all:true}}),
+      (this.prisma as any).dataLifecycleRecord.groupBy({by:['entityType'],_count:{_all:true}}),
+      this.prisma.approvalRequest.count({where:approvalWhere}),
+      this.prisma.dataLifecycleRecord.findMany({orderBy:{transitionedAt:'desc'},take:20,select:{entityType:true,entityId:true,state:true,reason:true,transitionedAt:true}}),
+    ]);
+    const totalRecords=(byState as any[]).reduce((s,r)=>s+r._count._all,0);
+    return EntityResponseDto.fromUnknown({
+      totalLifecycleRecords:totalRecords,
+      byState:Object.fromEntries((byState as any[]).map(r=>[r.state,r._count._all])),
+      byEntityType:Object.fromEntries((byEntity as any[]).map(r=>[r.entityType,r._count._all])),
+      pendingDeletionApprovals,
+      entities:Object.keys(LIFECYCLE_ENTITIES),
+      states:Object.values(DataLifecycleState),
+      recent:{records:recentRecords},
+    });
+  }
+  async listPendingApprovals(userId:string){    await this.authorization.assertPermission(userId,'approval.read',{});
     const ids=await this.authorization.accessibleOrganizationIds(userId);
     return EntityResponseDto.manyUnknown(await this.prisma.approvalRequest.findMany({where:{actionType:'DELETE',status:'PENDING',...(ids?{organizationId:{in:ids}}:{})},orderBy:{createdAt:'asc'}}));
   }

@@ -8,6 +8,7 @@ import { EnterpriseService } from './enterprise.service';
 @UseGuards(AuthGuard, AuthorizationGuard)
 export class EnterpriseController {
   constructor(private readonly service: EnterpriseService) {}
+  @Get('overview') @RequirePermission('enterprise.read') overview(@Req() r: any, @Query('organizationId') organizationId?: string) { return this.service.overview(r.user.sub, organizationId); }
   @Get('policies') @RequirePermission('enterprise.read') policies(@Req() r: any, @Query('organizationId') organizationId?: string) { return this.service.policies(r.user.sub, organizationId); }
   @Post('policies') @RequirePermission('enterprise.admin') policy(@Req() r: any, @Body() body: any) { return this.service.upsertPolicy(r.user.sub, body); }
   @Delete('policies/:id') @RequirePermission('enterprise.admin') deletePolicy(@Req() r: any, @Param('id') id: string) { return this.service.deletePolicy(r.user.sub, id); }
