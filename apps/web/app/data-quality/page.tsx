@@ -14,5 +14,5 @@ export default function DataQuality(){
    ...(Array.isArray(m.missingDates?.actions?.values)?m.missingDates.actions.values.map((id:any)=>({kind:'Missing Action Date',target:id})):[]),
    ...(Array.isArray(m.missingDates?.relationships?.values)?m.missingDates.relationships.values.map((id:any)=>({kind:'Missing Review Date',target:id})):[]),
   ];
-  return <main className="feature-page"><PageHeader eyebrow="DATA QUALITY" title="کیفیت داده" description="Duplicate Records، Missing Owners، Missing Contacts، Stale Relationships، Invalid Emails، Missing Organizations، Missing Dates و Incomplete Profiles."/><ErrorCard message={e}/>{!d&&!e?<Loading/>:<section className="panel">{rows.length===0?<p className="muted">هیچ مورد کیفیتی یافت نشد.</p>:<DataTable columns={['kind','entity','target'].map(k=>({key:k,label:k}))} rows={rows}/>}</section>}</main>
+  return <main className="feature-page"><PageHeader eyebrow="DATA QUALITY" title="کیفیت داده" description="Duplicate Records، Missing Owners، Missing Contacts، Stale Relationships، Invalid Emails، Missing Organizations، Missing Dates و Incomplete Profiles."/><ErrorCard message={e}/>{!d&&!e?<Loading/>:d&&<section className="panel">{rows.length===0?<p className="muted">هیچ مورد کیفیتی یافت نشد.</p>:<DataTable columns={['kind','entity','target'].map(k=>({key:k,label:k}))} rows={rows}/>}</section>}</main>
 }
