@@ -6,7 +6,7 @@ fail(){ echo "FAIL: $1" >&2; exit 1; }
 [ -f "$API/src/reporting/reporting.service.ts" ] || fail "reporting service missing"
 [ -f "$API/src/reporting/reporting.controller.ts" ] || fail "reporting controller missing"
 [ -f "$API/src/reporting/reporting.module.ts" ] || fail "reporting module missing"
-[ -f "$API/prisma/migrations/20260824_reporting_export_engine/migration.sql" ] || fail "reporting migration missing"
+[ -f "$API/prisma/migrations/20260225120000_reporting_export_engine/migration.sql" ] || fail "reporting migration missing"
 for kind in relationship-health relationship-risk network meeting opportunity project company executive holding executive-summary; do grep -q "'$kind'" "$API/src/reporting/reporting.service.ts" || fail "report kind missing: $kind"; done
 for fmt in csv xlsx pdf json; do grep -q "'$fmt'" "$API/src/reporting/reporting.service.ts" || fail "export format missing: $fmt"; done
 grep -q "report.read" "$API/src/common/authorization/access.constants.ts" || fail "report.read permission missing"
@@ -31,9 +31,9 @@ grep -q "companyRows" "$API/src/reporting/reporting.service.ts" || fail "company
 grep -q "executiveRows" "$API/src/reporting/reporting.service.ts" || fail "executive report implementation missing"
 grep -q "holdingReport" "$API/src/reporting/reporting.service.ts" || fail "holding report implementation missing"
 grep -q "Executive Report" "$ROOT/docs/PHASE27_REPORTING_EXPORT_COMPLETION.md" || fail "completion doc missing"
-# Basic TypeScript parser check: tsc must report only dependency-resolution failures in this dependency-free sandbox.
+# Basic TypeScript parser check: report genuine syntax/type diagnostics while tolerating dependency-resolution failures.
 if command -v tsc >/dev/null 2>&1; then
-  OUT=$(cd "$API" && tsc --noEmit --noResolve --target ES2023 --module commonjs --experimentalDecorators --emitDecoratorMetadata --esModuleInterop --skipLibCheck src/reporting/reporting.service.ts src/reporting/reporting.controller.ts src/reporting/reporting.module.ts 2>&1 || true)
+  OUT=$(cd "$API" && tsc --noEmit --target ES2023 --module commonjs --moduleResolution node --experimentalDecorators --emitDecoratorMetadata --esModuleInterop --skipLibCheck src/reporting/reporting.service.ts src/reporting/reporting.controller.ts src/reporting/reporting.module.ts 2>&1 || true)
   if echo "$OUT" | grep -E "error TS1(00[0-9]|1[0-9][0-9])|error TS2[0-9]{3}" | grep -v "TS2307" | grep -v "TS2580" >/dev/null; then
     echo "$OUT"; fail "unexpected TypeScript syntax/type diagnostic in reporting files"
   fi

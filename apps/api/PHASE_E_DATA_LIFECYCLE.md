@@ -25,6 +25,6 @@ This phase centralizes lifecycle operations without deleting prior backend imple
 
 ## Database
 
-Migration: `prisma/migrations/20260824103000_phase_e_data_lifecycle/migration.sql`
+Migration: `prisma/migrations/20260214120000_phase_e_data_lifecycle/migration.sql`
 
 Adds lifecycle states, governed deletion approval, audit actions, lifecycle actor/approval metadata, and missing `deletedById` fields on Referral and IntegrationConnection.

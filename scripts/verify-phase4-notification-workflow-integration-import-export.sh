@@ -29,6 +29,6 @@ echo '[phase4] checking schema/migration'
 grep -q 'approvalRequestId String?' apps/api/prisma/schema.prisma
 grep -q 'groupKey String?' apps/api/prisma/schema.prisma
 grep -q 'criticalOnly Boolean' apps/api/prisma/schema.prisma
-test -f apps/api/prisma/migrations/20260824_phase4_notifications_approval_import/migration.sql
+test -f apps/api/prisma/migrations/20260224120000_phase4_notifications_approval_import/migration.sql
 
 echo '[phase4] PASS'

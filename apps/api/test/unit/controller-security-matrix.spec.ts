@@ -61,7 +61,7 @@ describe('PHASE AF controller security matrix', () => {
           expect(source).toContain('WebhookSignatureGuard');
           break;
         case 'HEALTH':
-          expect(source).toContain('@Controller('health')');
+          expect(source).toContain("@Controller('health')");
           expect(source).not.toContain('AuthGuard');
           expect(source).not.toContain('AuthorizationGuard');
           break;

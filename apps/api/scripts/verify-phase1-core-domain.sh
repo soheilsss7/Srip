@@ -48,7 +48,7 @@ pass 'Transactional restore lifecycle'
 
 python3 - <<'PY'
 from pathlib import Path
-m=Path('apps/api/prisma/migrations/20260824110000_phase1_organization_person/migration.sql').read_text()
+m=Path('apps/api/prisma/migrations/20260109120000_phase1_organization_person/migration.sql').read_text()
 required=['CREATE TABLE "OrganizationPerson"','OrganizationPerson_organizationId_personId_key','OrganizationPerson_personId_status_idx','OrganizationPerson_organizationId_status_idx']
 missing=[x for x in required if x not in m]
 if missing: raise SystemExit('FAIL: migration missing '+', '.join(missing))

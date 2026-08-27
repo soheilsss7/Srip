@@ -14,7 +14,7 @@ required=(
 )
 for f in "${required[@]}"; do test -s "$f" || { echo "missing:$f"; exit 1; }; done
 for token in "CanonicalRelationshipScoreService" "OpportunityScoreService" "RiskScoreService" "ConnectorScoreService" "NetworkScoreService"; do grep -q "$token" "$API/src/scoring/scoring.module.ts" || { echo "missing-service:$token"; exit 1; }; done
-for token in "score.updated" "scoreVersion" "scoreSnapshot" "relationship-default" "opportunity-default" "risk-default" "connector-default" "network-default"; do grep -R -q "$token" "$API/src/scoring" "$API/prisma/seed.ts" || { echo "missing-contract:$token"; exit 1; }; done
+for token in "score.updated" "scoreVersion" "scoreSnapshot" "relationship-default" "opportunity-default" "risk-default" "connector-default" "network-default"; do grep -R -q "$token" "$API/src/scoring" "$API/prisma/seed.ts" "$API/src/event-bus/event-bus.constants.ts" || { echo "missing-contract:$token"; exit 1; }; done
 grep -q "ScoringModule" "$API/src/app.module.ts" || { echo "not-wired:app"; exit 1; }
 grep -q "ScoringModule" "$API/src/intelligence/intelligence.module.ts" || { echo "not-wired:intelligence"; exit 1; }
 grep -q "ScoringModule" "$API/src/network/network.module.ts" || { echo "not-wired:network"; exit 1; }

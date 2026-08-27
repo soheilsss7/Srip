@@ -20,7 +20,7 @@ required=(
 for f in "${required[@]}"; do test -f "$root/$f" || { echo "MISSING: $f"; exit 1; }; done
 
 grep -q "@Controller('metrics')" "$root/apps/api/src/metrics.controller.ts"
-grep -q "srip_http_requests_total" "$root/apps/api/src/metrics.service.ts"
+grep -q "srip_http_requests_total" "$root/apps/api/src/observability/metrics.service.ts"
 grep -q "prometheus:" "$root/docker-compose.production.yml"
 grep -q "grafana:" "$root/docker-compose.production.yml"
 grep -q "pg_dump" "$root/scripts/backup-postgres.sh"

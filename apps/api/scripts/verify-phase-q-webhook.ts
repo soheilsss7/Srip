@@ -7,7 +7,7 @@ const service = fs.readFileSync(path.join(root, 'src/integrations/integrations.s
 const schema = fs.readFileSync(path.join(root, 'prisma/schema.prisma'), 'utf8');
 const main = fs.readFileSync(path.join(root, 'src/main.ts'), 'utf8');
 const constants = fs.readFileSync(path.join(root, 'src/event-bus/event-bus.constants.ts'), 'utf8');
-const migration = fs.readFileSync(path.join(root, 'prisma/migrations/20260824220000_phase_q_webhook_security/migration.sql'), 'utf8');
+const migration = fs.readFileSync(path.join(root, 'prisma/migrations/20260102120000_phase_q_webhook_security/migration.sql'), 'utf8');
 
 const checks: Array<[string, boolean]> = [
   ['Nest rawBody enabled', /rawBody:\s*true/.test(main)],

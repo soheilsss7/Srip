@@ -16,6 +16,6 @@ grep -q "@Get(':id')" "$ROOT/apps/api/src/interactions/interactions.controller.t
 grep -q "@Delete(':id')" "$ROOT/apps/api/src/interactions/interactions.controller.ts" || fail "interaction soft-delete endpoint missing"
 grep -q "@Post(':id/outcome')" "$ROOT/apps/api/src/meetings/meetings.controller.ts" || fail "meeting outcome endpoint missing"
 grep -q "@Put(':id/participants')" "$ROOT/apps/api/src/meetings/meetings.controller.ts" || fail "meeting participants endpoint missing"
-grep -q "deletedAt: new Date()" "$ROOT/apps/api/src/meetings/meetings.service.ts" || fail "meeting soft delete missing"
+grep -q "this.lifecycle.softDelete" "$ROOT/apps/api/src/meetings/meetings.service.ts" || fail "meeting soft delete missing"
 grep -q "followUpRequired" "$ROOT/apps/api/src/interactions/interactions.controller.ts" || fail "follow-up validation missing"
 echo "PHASE 8 STATIC VERIFICATION OK"

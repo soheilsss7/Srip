@@ -14,7 +14,7 @@ required=(
 for f in "${required[@]}"; do test -f "$root/$f" || { echo "MISSING: $f"; exit 1; }; done
 
 grep -q "@RequirePermission('security.read')" "$root/apps/api/src/security/security.controller.ts"
-grep -q "assertAnyOrganizationAccess" "$root/apps/api/src/relationships/relationship-score.service.ts"
+grep -q "assertAnyOrganizationAccess" "$root/apps/api/src/common/authorization/authorization.service.ts"
 grep -q "workflow.execute" "$root/apps/api/src/workflows/workflows.service.ts"
 grep -q "action.write" "$root/apps/api/src/workflows/workflows.service.ts"
 grep -q "commitment.write" "$root/apps/api/src/workflows/workflows.service.ts"

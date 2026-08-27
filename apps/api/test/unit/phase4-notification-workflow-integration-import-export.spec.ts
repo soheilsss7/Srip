@@ -50,7 +50,7 @@ describe('Phase 4 backend contracts', () => {
   });
 
   it('contains the Phase 4 migration', () => {
-    expect(existsSync(join(root, 'prisma/migrations/20260824_phase4_notifications_approval_import/migration.sql'))).toBe(true);
+    expect(existsSync(join(root, 'prisma/migrations/20260224120000_phase4_notifications_approval_import/migration.sql'))).toBe(true);
   });
 
   it('keeps the canonical Package-4 business alert catalog', () => {

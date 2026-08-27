@@ -41,7 +41,7 @@ The public relationship API continues to accept the stable `relationshipType` ke
 
 ## Migration
 
-`20260823190000_phase23_core_domain_contract_reconciliation` is additive. It:
+`20260118120000_phase23_core_domain_contract_reconciliation` is additive. It:
 
 1. Renames the legacy PostgreSQL InteractionType enum to InteractionKind.
 2. Creates the canonical InteractionType catalog.

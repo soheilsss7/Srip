@@ -10,7 +10,8 @@ required=(
 )
 for f in "${required[@]}"; do test -f "$API/src/$f" || { echo "missing $f"; exit 1; }; done
 for e in organization person relationship interaction meeting commitment action score opportunity recommendation; do
-  grep -Rqi "eventType:.*${e}\." "$API/src" || { echo "missing event family: $e"; exit 1; }
+  up=$(printf '%s' "$e" | tr '[:lower:]' '[:upper:]')
+  grep -Rqi "DOMAIN_EVENT_TYPES\.${up}_" "$API/src" || { echo "missing event family: $e"; exit 1; }
 done
 grep -q "model DomainEventOutbox" "$API/prisma/schema.prisma"
 grep -q "enum DomainEventStatus" "$API/prisma/schema.prisma"

@@ -40,7 +40,7 @@ grep -q "@Post(':id/risks')" "$ROOT/src/projects/projects.controller.ts" || fail
 grep -q "@Post(':id/milestones')" "$ROOT/src/projects/projects.controller.ts" || fail 'project milestone endpoint missing'
 pass 'Phase 2 API contracts'
 
-migration="$ROOT/prisma/migrations/20260824280000_phase2_interaction_domain_completion/migration.sql"
+migration="$ROOT/prisma/migrations/20260201120000_phase2_interaction_domain_completion/migration.sql"
 for x in 'MeetingStatus' 'ALTER TABLE "Meeting" ADD COLUMN IF NOT EXISTS "status"' 'ALTER TABLE "Action" ADD COLUMN IF NOT EXISTS "reminderAt"' 'ALTER TABLE "Commitment" ADD COLUMN IF NOT EXISTS "recommendationId"'; do grep -q "$x" "$migration" || fail "migration missing $x"; done
 pass 'Phase 2 migration'
 

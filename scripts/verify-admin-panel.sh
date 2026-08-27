@@ -5,7 +5,7 @@ required=(
   "apps/api/src/admin/admin.controller.ts"
   "apps/api/src/admin/admin.service.ts"
   "apps/api/src/admin/admin.module.ts"
-  "apps/api/prisma/migrations/20260824_admin_panel_backend_completion/migration.sql"
+  "apps/api/prisma/migrations/20260202120000_admin_panel_backend_completion/migration.sql"
 )
 for f in "${required[@]}"; do test -f "$ROOT/$f" || { echo "MISSING:$f"; exit 1; }; done
 for key in enterprise.admin admin.users admin.organizations admin.catalog admin.custom_fields admin.scoring_rules admin.notification_rules admin.ai_settings admin.integrations admin.audit; do

@@ -16,7 +16,7 @@ Baseline: Phase 0→29.
 
 ## Persistence
 
-`IdempotencyRecord` stores request fingerprint, actor, route, response, response headers, status code and expiry. Migration: `20260824_api_contract_hardening`.
+`IdempotencyRecord` stores request fingerprint, actor, route, response, response headers, status code and expiry. Migration: `20260103120000_api_contract_hardening`.
 
 ## Verification
 

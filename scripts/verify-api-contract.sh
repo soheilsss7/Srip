@@ -3,7 +3,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 API="$ROOT/apps/api/src"
 SCHEMA="$ROOT/apps/api/prisma/schema.prisma"
-MIG="$ROOT/apps/api/prisma/migrations/20260824_api_contract_hardening/migration.sql"
+MIG="$ROOT/apps/api/prisma/migrations/20260103120000_api_contract_hardening/migration.sql"
 
 grep -q "ApiContractInterceptor" "$ROOT/apps/api/src/app.module.ts"
 grep -q "ApiContractExceptionFilter" "$ROOT/apps/api/src/app.module.ts"
