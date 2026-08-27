@@ -5,7 +5,7 @@ import {Badge,ErrorCard,Loading,PageHeader} from '../../_components/page-ui';
 type Prompt='outcome'|'participant';
 export default function Page({params}:{params:Promise<{id:string}>}){
  const {id}=use(params);
- const [m,setM]=useState<any>(null),[minutes,setMinutes]=useState<any>(null),[error,setError]=useState(''),[busy,setBusy]=useState(''),[prompt,setPrompt]=useState<Prompt|null>(null),[]=useState('');
+ const [m,setM]=useState<any>(null),[minutes,setMinutes]=useState<any>(null),[error,setError]=useState(''),[busy,setBusy]=useState(''),[prompt,setPrompt]=useState<Prompt|null>(null);
  const [outForm,setOutForm]=useState({notes:'',outcome:'',decisions:'[]',transcript:''});
  const [candidates,setCandidates]=useState<any[]>([]),[]=useState([]);
  const load=useCallback(async()=>{setError('');try{setM(await api(`/meetings/${id}`))}catch(e){setError((e as Error).message)}},[id]);
