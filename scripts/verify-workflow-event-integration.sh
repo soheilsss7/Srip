@@ -8,7 +8,7 @@ for f in \
   "$API/src/workflows/workflows.module.ts" \
   "$API/src/event-bus/event-bus.service.ts" \
   "$API/src/event-bus/event-bus.constants.ts" \
-  "$API/prisma/migrations/20260110120000_workflow_event_integration/migration.sql"; do
+  "$API/prisma/migrations/20260108120000_workflow_event_integration/migration.sql"; do
   test -f "$f" || { echo "MISSING: $f"; exit 1; }
 done
 for ev in organization person relationship interaction meeting commitment action score opportunity recommendation; do

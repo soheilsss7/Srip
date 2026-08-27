@@ -6,7 +6,7 @@ describe('Phase E data lifecycle contract', () => {
   const schema = readFileSync(join(root, 'prisma/schema.prisma'), 'utf8');
   const service = readFileSync(join(root, 'src/common/data-lifecycle/data-lifecycle.service.ts'), 'utf8');
   const controller = readFileSync(join(root, 'src/common/data-lifecycle/data-lifecycle.controller.ts'), 'utf8');
-  const migration = readFileSync(join(root, 'prisma/migrations/20260214120000_phase_e_data_lifecycle/migration.sql'), 'utf8');
+  const migration = readFileSync(join(root, 'prisma/migrations/20260205120000_phase_e_data_lifecycle/migration.sql'), 'utf8');
   test('has lifecycle states, approval model and audit actions', () => {
     expect(schema).toContain('RESTORED PURGED');
     expect(schema).toContain('model DataDeletionApproval');

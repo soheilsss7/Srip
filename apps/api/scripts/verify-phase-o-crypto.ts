@@ -11,7 +11,7 @@ if (service.decrypt(encrypted) !== token) throw new Error('AES-256-GCM round-tri
 if (encrypted.includes(token)) throw new Error('Plaintext token leaked into ciphertext envelope');
 if (service.isEncrypted(token)) throw new Error('Plaintext incorrectly classified as encrypted');
 const wrongKey = process.env.SECRET_ENCRYPTION_KEY;
-process.env.SECRET_ENCRYPTION_KEY = 'abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab';
+process.env.SECRET_ENCRYPTION_KEY = 'c0'.repeat(32);
 try { service.decrypt(encrypted); throw new Error('Wrong key unexpectedly decrypted ciphertext'); } catch (error) { if (!(error instanceof Error) || !error.message.includes('decrypt')) throw error; }
 process.env.SECRET_ENCRYPTION_KEY = wrongKey;
 console.log('PHASE_O_SECRET_ENCRYPTION_VERIFICATION=PASS');

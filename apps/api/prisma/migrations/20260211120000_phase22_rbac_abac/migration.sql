@@ -45,7 +45,6 @@ CREATE INDEX "Membership_departmentUnitId_idx" ON "Membership"("departmentUnitId
 CREATE INDEX "Membership_userId_accessScope_idx" ON "Membership"("userId","accessScope");
 ALTER TABLE "Membership" ADD CONSTRAINT "Membership_departmentUnitId_fkey" FOREIGN KEY ("departmentUnitId") REFERENCES "OrganizationUnit"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
-ALTER TABLE "Relationship" ADD COLUMN "sensitivity" "DataClassification" NOT NULL DEFAULT 'INTERNAL';
 ALTER TABLE "AuthorizationPolicy" ADD COLUMN "subjectScope" "AccessScopeType";
 
 ALTER TABLE "Membership" ADD CONSTRAINT "Membership_role_fkey" FOREIGN KEY ("role") REFERENCES "Role"("key") ON DELETE RESTRICT ON UPDATE CASCADE;

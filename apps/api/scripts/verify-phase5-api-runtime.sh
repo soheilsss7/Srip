@@ -29,6 +29,6 @@ grep -q "@Get('liveness')" "$ROOT/src/health/health.controller.ts"
 grep -q "@Get('readiness')" "$ROOT/src/health/health.controller.ts"
 grep -q "error: 'dependency unavailable'" "$ROOT/src/health/health.service.ts"
 grep -q "error: 'redis unavailable'" "$ROOT/src/health/health.service.ts"
-grep -q "error:'storage unavailable'" "$ROOT/src/health/health.service.ts"
+grep -q "error: 'storage unavailable'" "$ROOT/src/health/health.service.ts"
 
 echo "PHASE5_API_RUNTIME_STATIC=PASS"

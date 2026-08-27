@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"; API="$ROOT/apps/api"; SCHEMA="$API/prisma/schema.prisma"; MIG="$API/prisma/migrations/20260203120000_phaseD_custom_fields/migration.sql"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"; API="$ROOT/apps/api"; SCHEMA="$API/prisma/schema.prisma"; MIG="$API/prisma/migrations/20260129120000_phaseD_custom_fields/migration.sql"
 fail(){ echo "[FAIL] $1" >&2; exit 1; }; pass(){ echo "[PASS] $1"; }
 grep -q 'model CustomFieldValue' "$SCHEMA" || fail 'CustomFieldValue model missing'
 for x in 'stringValue String?' 'numberValue Decimal?' 'booleanValue Boolean?' 'dateValue DateTime?' 'jsonValue Json?' '@@unique([customFieldId, entityType, entityId])'; do grep -Fq "$x" "$SCHEMA" || fail "Schema contract missing: $x"; done

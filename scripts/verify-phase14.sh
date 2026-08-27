@@ -26,6 +26,6 @@ grep -q "WAIT" "$root/apps/api/src/workflows/workflows.service.ts"
 grep -q "resume" "$root/apps/api/src/workflows/workflows.controller.ts"
 grep -q "plainto_tsquery" "$root/apps/api/src/search/search.service.ts"
 grep -q "RECOMMENDATION_ACCEPTED" "$root/apps/api/src/analytics/analytics.service.ts"
-grep -q "CREATE INDEX IF NOT EXISTS \"Organization_search_fts_idx\"" "$root/apps/api/prisma/migrations/20260112120000_phase14_completion/migration.sql"
+grep -q "CREATE INDEX IF NOT EXISTS \"Organization_search_fts_idx\"" "$root/apps/api/prisma/migrations/20260223120000_phase14_completion/migration.sql"
 if grep -RIn --exclude-dir=node_modules -E '<<<<<<<|=======|>>>>>>>' "$root/apps/api/src" "$root/apps/web/app" "$root/apps/mobile/src" >/dev/null; then echo "Conflict markers found"; exit 1; fi
 echo "PHASE 14 ENHANCED STATIC VERIFICATION OK"

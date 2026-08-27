@@ -6,7 +6,7 @@ fail(){ echo "FAIL: $1" >&2; exit 1; }
 [ -f "$API/src/reporting/reporting.service.ts" ] || fail "reporting service missing"
 [ -f "$API/src/reporting/reporting.controller.ts" ] || fail "reporting controller missing"
 [ -f "$API/src/reporting/reporting.module.ts" ] || fail "reporting module missing"
-[ -f "$API/prisma/migrations/20260225120000_reporting_export_engine/migration.sql" ] || fail "reporting migration missing"
+[ -f "$API/prisma/migrations/20260216120000_reporting_export_engine/migration.sql" ] || fail "reporting migration missing"
 for kind in relationship-health relationship-risk network meeting opportunity project company executive holding executive-summary; do grep -q "'$kind'" "$API/src/reporting/reporting.service.ts" || fail "report kind missing: $kind"; done
 for fmt in csv xlsx pdf json; do grep -q "'$fmt'" "$API/src/reporting/reporting.service.ts" || fail "export format missing: $fmt"; done
 grep -q "report.read" "$API/src/common/authorization/access.constants.ts" || fail "report.read permission missing"

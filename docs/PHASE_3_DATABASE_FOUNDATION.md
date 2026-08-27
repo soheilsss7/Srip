@@ -46,7 +46,7 @@ Organization-owned entities already carry organization foreign keys where their 
 
 ## Migration
 
-`apps/api/prisma/migrations/20260216120000_phase3_database_foundation/migration.sql` is additive and intended to run after the Phase 2 migration.
+`apps/api/prisma/migrations/20260207120000_phase3_database_foundation/migration.sql` is additive and intended to run after the Phase 2 migration.
 
 ## Seed
 

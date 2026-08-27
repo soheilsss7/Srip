@@ -4,7 +4,7 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 required=(
   package.json pnpm-workspace.yaml turbo.json docker-compose.yml
   apps/web/package.json apps/mobile/package.json apps/api/package.json
-  apps/api/prisma/schema.prisma apps/api/prisma/migrations/migration_lock.toml apps/api/prisma/migrations/20260107120000_phase2_infrastructure_foundation/migration.sql apps/api/prisma/migrations/20260217120000_phase4_database_authentication/migration.sql apps/api/src/app.module.ts apps/api/src/health/health.service.ts
+  apps/api/prisma/schema.prisma apps/api/prisma/migrations/migration_lock.toml apps/api/prisma/migrations/20260106120000_phase2_infrastructure_foundation/migration.sql apps/api/prisma/migrations/20260208120000_phase4_database_authentication/migration.sql apps/api/src/app.module.ts apps/api/src/health/health.service.ts
   docs/MASTER_TECHNICAL_SPEC.md docs/IMPLEMENTATION_CHECKLIST.md docs/SECURITY.md docs/BUILD_STATUS.md docs/SRIP_LIVE_CHECKLIST_0_197.md
 )
 for f in "${required[@]}"; do test -f "$root/$f" || { echo "MISSING: $f"; exit 1; }; done
@@ -27,7 +27,7 @@ grep -q 'model AuthorizationPolicy' "$root/apps/api/prisma/schema.prisma" || { e
 grep -q 'authorizationPolicies AuthorizationPolicy' "$root/apps/api/prisma/schema.prisma" || { echo 'AuthorizationPolicy relations missing'; exit 1; }
 grep -q 'AuthorizationGuard' "$root/apps/api/src/common/guards/authorization.guard.ts" || { echo 'AuthorizationGuard missing'; exit 1; }
 grep -q "@RequirePermission('person.read')" "$root/apps/api/src/people/people.controller.ts" || { echo 'person.read authorization missing'; exit 1; }
-test -f "$root/apps/api/prisma/migrations/20260219120000_phase5_authorization_multitenancy/migration.sql" || { echo 'Phase 5 migration missing'; exit 1; }
+test -f "$root/apps/api/prisma/migrations/20260210120000_phase5_authorization_multitenancy/migration.sql" || { echo 'Phase 5 migration missing'; exit 1; }
 test -f "$root/apps/api/src/common/authorization/access-policy.spec.ts" || { echo 'Phase 5 permission tests missing'; exit 1; }
 python - <<PY2
 from docx import Document

@@ -7,7 +7,7 @@ test -f "$API/src/integrations/integration-reconciliation.service.ts"
 test -f "$API/src/integrations/google.integration-provider.ts"
 test -f "$API/src/integrations/microsoft.integration-provider.ts"
 test -f "$API/src/integrations/integrations.service.ts"
-test -f "$API/prisma/migrations/20260106120000_integrations_reconciliation/migration.sql"
+test -f "$API/prisma/migrations/20260221120000_integrations_reconciliation/migration.sql"
 
 grep -q "IntegrationExternalRecord" "$API/prisma/schema.prisma"
 grep -q "IntegrationSyncRun" "$API/prisma/schema.prisma"

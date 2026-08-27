@@ -6,7 +6,7 @@ LISTENER="$ROOT/src/analytics/analytics-recommendation.listener.ts"
 CONTROLLER="$ROOT/src/analytics/analytics.controller.ts"
 CONSTANTS="$ROOT/src/event-bus/event-bus.constants.ts"
 SCHEMA="$ROOT/prisma/schema.prisma"
-MIGRATION="$ROOT/prisma/migrations/20260113120000_phase_y_recommendation_funnel/migration.sql"
+MIGRATION="$ROOT/prisma/migrations/20260224120000_phase_y_recommendation_funnel/migration.sql"
 for f in "$SERVICE" "$LISTENER" "$CONTROLLER" "$CONSTANTS" "$SCHEMA" "$MIGRATION"; do test -f "$f"; done
 for token in RECOMMENDATION_VIEWED RECOMMENDATION_ACCEPTED RECOMMENDATION_ACTION_CREATED RECOMMENDATION_ACTION_COMPLETED RECOMMENDATION_OUTCOME; do grep -q "$token" "$CONSTANTS" "$SERVICE" "$LISTENER"; done
 grep -q "recommendationFunnel" "$SERVICE" "$CONTROLLER"

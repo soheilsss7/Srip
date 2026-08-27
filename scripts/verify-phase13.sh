@@ -5,7 +5,7 @@ req=(
   "$ROOT/apps/api/src/recommendations/recommendations.service.ts"
   "$ROOT/apps/api/src/recommendations/recommendations.controller.ts"
   "$ROOT/apps/api/src/recommendations/recommendations.service.spec.ts"
-  "$ROOT/apps/api/prisma/migrations/20260212120000_phase13_recommendation_engine/migration.sql"
+  "$ROOT/apps/api/prisma/migrations/20260203120000_phase13_recommendation_engine/migration.sql"
   "$ROOT/apps/web/app/recommendations/page.tsx"
 )
 for f in "${req[@]}"; do test -f "$f" || { echo "MISSING: $f"; exit 1; }; done

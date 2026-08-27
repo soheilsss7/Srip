@@ -14,7 +14,8 @@ for f in "$schema" "$ROOT/src/interactions/interactions.service.ts" "$ROOT/src/m
 [[ "$(grep -c '^model Referral {' "$schema")" == 1 ]] || fail 'duplicate Referral model'
 
 grep -q 'enum MeetingStatus' "$schema" || fail 'MeetingStatus missing'
-grep -q 'enum ActionStatus { OPEN IN_PROGRESS BLOCKED DONE CANCELLED }' "$schema" || fail 'Action BLOCKED status missing'
+action_status=$(awk '/^enum ActionStatus \{/{f=1;next} /^\}/{f=0} f' "$schema")
+for tok in OPEN IN_PROGRESS BLOCKED DONE CANCELLED; do echo "$action_status" | grep -qw "$tok" || fail "ActionStatus $tok missing"; done
 grep -q 'reminderAt DateTime?' "$schema" || fail 'reminderAt missing'
 grep -q 'recommendationId String?' "$schema" || fail 'Commitment recommendation linkage missing'
 grep -q 'createdById String?' "$schema" || fail 'Action creator missing'
@@ -40,7 +41,7 @@ grep -q "@Post(':id/risks')" "$ROOT/src/projects/projects.controller.ts" || fail
 grep -q "@Post(':id/milestones')" "$ROOT/src/projects/projects.controller.ts" || fail 'project milestone endpoint missing'
 pass 'Phase 2 API contracts'
 
-migration="$ROOT/prisma/migrations/20260201120000_phase2_interaction_domain_completion/migration.sql"
+migration="$ROOT/prisma/migrations/20260127120000_phase2_interaction_domain_completion/migration.sql"
 for x in 'MeetingStatus' 'ALTER TABLE "Meeting" ADD COLUMN IF NOT EXISTS "status"' 'ALTER TABLE "Action" ADD COLUMN IF NOT EXISTS "reminderAt"' 'ALTER TABLE "Commitment" ADD COLUMN IF NOT EXISTS "recommendationId"'; do grep -q "$x" "$migration" || fail "migration missing $x"; done
 pass 'Phase 2 migration'
 

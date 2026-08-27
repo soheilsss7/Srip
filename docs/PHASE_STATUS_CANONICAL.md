@@ -48,7 +48,7 @@ This status is based on the current unified archive and the completion gates in 
 6. **`classificationAllows` extracted and unit-tested** (previously inline ABAC logic that `scripts/verify-phase0-6.sh` expected as a named symbol but did not find).
 7. **Refresh-token reuse detection made explicit**: a distinct `SecurityEvent` (severity `HIGH`, type `SUSPICIOUS_ACCESS`) is now recorded specifically when a rotated (already-used) refresh token is presented again — previously this case was folded into a generic "expired or revoked" branch with no dedicated audit trail.
 8. **Origin verification middleware** added as CSRF defense-in-depth, with an explicit architectural note: this API authenticates via Bearer token in the `Authorization` header (not cookies), so classic CSRF does not apply the way it would to a cookie-session API — see `production-hardening.ts` for the full reasoning.
-9. New migration `20260206120000_phase26_backend_completion`: system actor user (for audit-safe scheduled-job actors), `NotificationDeliveryLog`, `PushSubscription`, `Meeting.followUpCandidates`.
+9. New migration `20260227120000_phase26_backend_completion`: system actor user (for audit-safe scheduled-job actors), `NotificationDeliveryLog`, `PushSubscription`, `Meeting.followUpCandidates`.
 10. New/expanded unit tests: `meetings.service.spec.ts`, `commitments.service.spec.ts`, `actions.service.spec.ts`, `search.service.spec.ts`, `analytics.service.spec.ts`, `test/unit/job-worker.spec.ts`, `authorization.service.spec.ts`.
 
 **What was verified on this machine (no network/DB access here):**

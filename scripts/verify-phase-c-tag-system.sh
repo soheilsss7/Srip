@@ -2,7 +2,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCHEMA="$ROOT/apps/api/prisma/schema.prisma"
-MIGRATION="$ROOT/apps/api/prisma/migrations/20260123120000_phaseC_tag_system/migration.sql"
+MIGRATION="$ROOT/apps/api/prisma/migrations/20260119120000_phaseC_tag_system/migration.sql"
 CONTROLLER="$ROOT/apps/api/src/tags/tags.controller.ts"
 SERVICE="$ROOT/apps/api/src/tags/tags.service.ts"
 MODULE="$ROOT/apps/api/src/tags/tags.module.ts"

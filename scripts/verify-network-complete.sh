@@ -5,7 +5,7 @@ cd "$ROOT"
 fail(){ echo "NETWORK_STATIC_CHECK=FAIL: $1" >&2; exit 1; }
 [[ -f apps/api/src/network/network.controller.ts ]] || fail "network controller missing"
 [[ -f apps/api/src/network/network.service.ts ]] || fail "network service missing"
-[[ -f apps/api/prisma/migrations/20260204120000_person_relationship_network/migration.sql ]] || fail "person relationship migration missing"
+[[ -f apps/api/prisma/migrations/20260130120000_person_relationship_network/migration.sql ]] || fail "person relationship migration missing"
 grep -q "model PersonRelationship" apps/api/prisma/schema.prisma || fail "PersonRelationship model missing"
 grep -q "person-relationships" apps/api/src/network/network.controller.ts || fail "person relationship endpoints missing"
 for x in "shortest" "best" "centrality" "bridgePeople" "bottlenecks" "singlePointsOfFailure" "connectors"; do grep -q "$x" apps/api/src/network/network.service.ts || fail "network capability missing: $x"; done
