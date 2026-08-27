@@ -118,3 +118,4 @@ export const apiGet=<T=unknown>(path:string,init:ApiOptions={})=>api<T>(path,{..
 export const apiPost=<T=unknown>(path:string,body:unknown,opts:ApiOptions={})=>api<T>(path,{...opts,method:'POST',body:JSON.stringify(body)});
 export const apiPatch=<T=unknown>(path:string,body:unknown,opts:ApiOptions={})=>api<T>(path,{...opts,method:'PATCH',body:JSON.stringify(body)});
 export const apiDelete=<T=unknown>(path:string,opts:ApiOptions={})=>api<T>(path,{...opts,method:'DELETE'});
+export function unwrapList<T=unknown>(value:any):T[]{ if(Array.isArray(value))return value as T[]; if(value&&value.items!==undefined&&Array.isArray(value.items))return value.items as T[]; if(value&&value.rows!==undefined&&Array.isArray(value.rows))return value.rows as T[]; if(value&&value.data!==undefined&&Array.isArray(value.data))return value.data as T[]; return []; }
