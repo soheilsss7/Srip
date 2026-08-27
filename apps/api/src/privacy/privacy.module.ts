@@ -3,9 +3,11 @@ import { PrivacyController } from './privacy.controller';
 import { PrivacyService } from './privacy.service';
 import { JobsModule } from '../jobs/jobs.module';
 import { DocumentsModule } from '../documents/documents.module';
-import { PrismaService } from '../prisma/prisma.service';
-import { AuthorizationService } from '../common/authorization/authorization.service';
 import { AuthorizationGuard } from '../common/guards/authorization.guard';
-import { AuditService } from '../audit/audit.service'; import { DataLifecycleModule } from '../common/data-lifecycle/data-lifecycle.module';
-@Module({imports:[DataLifecycleModule, DocumentsModule, forwardRef(() => JobsModule)],controllers:[PrivacyController],providers:[PrivacyService,PrismaService,AuthorizationService,AuthorizationGuard,AuditService],exports:[PrivacyService]})
-export class PrivacyModule {}
+import { AuditService } from '../audit/audit.service';
+import { DataLifecycleModule } from '../common/data-lifecycle/data-lifecycle.module';
+@Module({ imports: [DataLifecycleModule, DocumentsModule, forwardRef(() => JobsModule)], controllers: [PrivacyController], providers: [
+        PrivacyService, AuthorizationGuard, AuditService
+    ], exports: [PrivacyService] })
+export class PrivacyModule {
+}

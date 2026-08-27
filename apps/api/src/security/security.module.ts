@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { SecurityController } from './security.controller';
 import { SecurityService } from './security.service';
-import { PrismaService } from '../prisma/prisma.service';
 import { PermissionsModule } from '../permissions/permissions.module';
-import { AuthorizationService } from '../common/authorization/authorization.service';
 import { AuditModule } from '../audit/audit.module';
 import { SecurityGovernanceService } from './security-governance.service';
-
-@Module({ imports: [PermissionsModule, AuditModule], controllers: [SecurityController], providers: [SecurityService, SecurityGovernanceService, PrismaService, AuthorizationService], exports: [SecurityService, SecurityGovernanceService] })
-export class SecurityModule {}
+@Module({ imports: [PermissionsModule, AuditModule], controllers: [SecurityController], providers: [
+        SecurityService, SecurityGovernanceService
+    ], exports: [SecurityService, SecurityGovernanceService] })
+export class SecurityModule {
+}

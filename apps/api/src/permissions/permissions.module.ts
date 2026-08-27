@@ -5,5 +5,8 @@ import { AuthorizationService } from '../common/authorization/authorization.serv
 import { AuthorizationGuard } from '../common/guards/authorization.guard';
 import { FieldSecurityService } from '../common/authorization/field-security.service';
 import { Reflector } from '@nestjs/core';
-@Module({ providers: [PermissionsService, PrismaService, AuthorizationService, AuthorizationGuard, FieldSecurityService, Reflector], exports: [PermissionsService, AuthorizationService, AuthorizationGuard, FieldSecurityService, PrismaService] })
-export class PermissionsModule {}
+@Module({ providers: [
+        PermissionsService, AuthorizationGuard, Reflector
+    ], exports: [PermissionsService, AuthorizationService, AuthorizationGuard, FieldSecurityService, PrismaService] })
+export class PermissionsModule {
+}

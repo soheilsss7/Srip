@@ -1,1 +1,13 @@
-import {Module} from '@nestjs/common'; import { AuditModule } from '../audit/audit.module'; import { PermissionsModule } from '../permissions/permissions.module'; import { NotificationsModule } from '../notifications/notifications.module'; import {CommitmentsController} from './commitments.controller'; import {CommitmentsService} from './commitments.service'; import {PrismaService} from '../prisma/prisma.service'; import {AuthGuard} from '../common/guards/auth.guard'; import {DataLifecycleModule} from '../common/data-lifecycle/data-lifecycle.module'; @Module({imports:[PermissionsModule,AuditModule,NotificationsModule,DataLifecycleModule],controllers:[CommitmentsController],providers:[CommitmentsService,PrismaService,AuthGuard],exports:[CommitmentsService]}) export class CommitmentsModule{}
+import { Module } from '@nestjs/common';
+import { AuditModule } from '../audit/audit.module';
+import { PermissionsModule } from '../permissions/permissions.module';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { CommitmentsController } from './commitments.controller';
+import { CommitmentsService } from './commitments.service';
+import { AuthGuard } from '../common/guards/auth.guard';
+import { DataLifecycleModule } from '../common/data-lifecycle/data-lifecycle.module';
+@Module({ imports: [PermissionsModule, AuditModule, NotificationsModule, DataLifecycleModule], controllers: [CommitmentsController], providers: [
+        CommitmentsService, AuthGuard
+    ], exports: [CommitmentsService] })
+export class CommitmentsModule {
+}
