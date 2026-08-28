@@ -7,6 +7,7 @@ import ForceGraph2D, { ForceGraphMethods } from 'react-force-graph-2d';
 import {
   GGraph,
   GNode,
+  PATH_COLOR,
   edgeStrokeColor,
   edgeStrokeWidth,
   edgeDisplayLabel,
@@ -23,7 +24,14 @@ export interface NetworkGraphHandle {
 export interface NetworkGraphProps {
   graph: GGraph;
   selectedNodeId?: string | null;
-  dimOthers: boolean;
+  selectedEdgeId?: string | null;
+  focusNodeId?: string | null;
+  // Path highlight (organization path). When a path is set, non-path content is dimmed.
+  pathNodeIds?: Set<string> | null;
+  pathEdgeIds?: Set<string> | null;
+  // Analytics-inferred highlight set (e.g. top centrality connectors).
+  analysisNodeIds?: Set<string> | null;
+  dimOthers?: boolean;
   onNodeSelect?: (node: GNode | null) => void;
   onNodeHover?: (node: GNode | null) => void;
   onEdgeSelect?: (edge: GNode['id'] | null) => void;
@@ -36,7 +44,21 @@ const LINK_SOURCE = 'source';
 const LINK_TARGET = 'target';
 
 const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function NetworkGraph(
-  { graph, selectedNodeId, dimOthers, onNodeSelect, onNodeHover, onEdgeSelect, onEdgeHover, onRendered },
+  {
+    graph,
+    selectedNodeId,
+    selectedEdgeId,
+    focusNodeId,
+    pathNodeIds,
+    pathEdgeIds,
+    analysisNodeIds,
+    dimOthers = false,
+    onNodeSelect,
+    onNodeHover,
+    onEdgeSelect,
+    onEdgeHover,
+    onRendered,
+  },
   ref,
 ) {
   const graphRef = useRef<ForceGraphMethods | undefined>(undefined);
@@ -88,6 +110,34 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [graph]);
 
+  // When a path is active, only the path is emphasized and everything else is dimmed.
+  const pathActive = Boolean(pathNodeIds && pathNodeIds.size > 0);
+
+  const nodeAlpha = (id: string): number => {
+    if (pathActive) return pathNodeIds?.has(id) ? 1 : 0.14;
+    const sel = selectedNodeId;
+    if (dimOthers && sel != null && sel !== id) return 0.3;
+    return 1;
+  };
+
+  const nodeAccent = (id: string): string | null => {
+    if (pathNodeIds?.has(id)) return PATH_COLOR;
+    if (analysisNodeIds?.has(id)) return PATH_COLOR;
+    return null;
+  };
+
+  const linkColorValue = (l: any): string => {
+    if (pathEdgeIds?.has(l.id)) return PATH_COLOR;
+    if (selectedEdgeId === l.id) return '#111827';
+    if (pathActive) return edgeStrokeColor(l as any);
+    const sel = selectedNodeId;
+    if (dimOthers && sel != null && l.source !== sel && l.target !== sel) {
+      const c = edgeStrokeColor(l as any);
+      return `${c}33`;
+    }
+    return edgeStrokeColor(l as any);
+  };
+
   return (
     <div ref={containerRef} style={{ width: '100%' }}>
       <ForceGraph2D
@@ -104,15 +154,30 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
       d3AlphaDecay={0.028}
       nodeLabel={(n: any) => nodeDisplayName(n as GNode)}
       linkLabel={(l: any) => edgeDisplayLabel(l as any)}
-      nodeColor={(n: any) => nodeColor(n as GNode)}
+      nodeColor={(n: any) => {
+        const accent = nodeAccent((n as GNode).id);
+        if (accent) return accent;
+        const alpha = nodeAlpha((n as GNode).id);
+        const c = nodeColor(n as GNode);
+        return alpha < 1 ? `${c}${Math.round(alpha * 255).toString(16).padStart(2, '0')}` : c;
+      }}
       nodeCanvasObject={(n: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
         const { x, y } = n as { x: number; y: number };
         const node = n as GNode;
         const selected = selectedNodeId === node.id;
-        const dim = dimOthers && selectedNodeId != null && !selected;
+        const focusedN = focusNodeId === node.id;
+        const alpha = nodeAlpha(node.id);
         const size = 18 / globalScale;
         ctx.save();
-        ctx.globalAlpha = dim ? 0.35 : 1;
+        ctx.globalAlpha = alpha;
+        // Emphasis ring for the active focus node (Expand neighbors)
+        if (focusedN) {
+          ctx.beginPath();
+          ctx.arc(x, y, 24 / globalScale, 0, Math.PI * 2);
+          ctx.lineWidth = 2 / globalScale;
+          ctx.strokeStyle = '#111827';
+          ctx.stroke();
+        }
         drawNode(ctx, x, y, size, nodeColor(node), node.type, selected);
         ctx.restore();
       }}
@@ -123,8 +188,12 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
         ctx.arc(x, y, 18, 0, Math.PI * 2);
         ctx.fill();
       }}
-      linkColor={(l: any) => edgeStrokeColor(l as any)}
-      linkWidth={(l: any) => edgeStrokeWidth(l as any)}
+      linkColor={(l: any) => linkColorValue(l)}
+      linkWidth={(l: any) => {
+        if (selectedEdgeId === l.id) return edgeStrokeWidth(l as any) + 2;
+        if (pathEdgeIds?.has(l.id)) return edgeStrokeWidth(l as any) + 1;
+        return edgeStrokeWidth(l as any);
+      }}
       linkLineDash={(l: any) => {
         const kind = (l as any)?.kind;
         if (kind === 'membership') return [4, 3];

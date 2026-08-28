@@ -60,6 +60,25 @@ export const RISK_THRESHOLD = 60;
 export const WIDTH_MIN = 1;
 export const WIDTH_MAX = 6;
 
+// Highlight color used for path (organization path) and focused/analytics emphasis.
+export const PATH_COLOR = '#B45309';
+
+// Nodes are prefixed by the backend graph engine: org:/person:/project:<uuid>.
+// The entity detail routes (/organizations/[id], /people/[id], /projects/[id])
+// expect the bare UUID, so strip the prefix when navigating.
+export function nodeEntityRoute(n: GNode): { href: string } | null {
+  switch (n.type) {
+    case 'organization':
+      return n.id.startsWith('org:') ? { href: `/organizations/${n.id.slice(4)}` } : null;
+    case 'person':
+      return n.id.startsWith('person:') ? { href: `/people/${n.id.slice(7)}` } : null;
+    case 'project':
+      return n.id.startsWith('project:') ? { href: `/projects/${n.id.slice(8)}` } : null;
+    default:
+      return null;
+  }
+}
+
 export function edgeStrokeColor(e: GEdge): string {
   if (e.risk >= RISK_THRESHOLD) return RISK_COLOR;
   return EDGE_COLORS[e.kind] ?? '#94A3B8';

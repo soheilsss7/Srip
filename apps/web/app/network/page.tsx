@@ -1,18 +1,23 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { apiGet } from '../_lib/api';
 import { DataTable, Empty, ErrorCard, Loading } from '../_components/page-ui';
 import {
   GGraph,
   GNode,
+  GEdge,
   EDGE_COLORS,
   EDGE_DASH,
   NODE_COLORS,
   RISK_COLOR,
   RISK_THRESHOLD,
+  PATH_COLOR,
   kindLabel,
   nodeDisplayName,
+  nodeEntityRoute,
+  edgeDisplayLabel,
 } from './_nodes';
 import type { NetworkGraphHandle } from './_graph';
 
@@ -22,29 +27,173 @@ const NetworkGraph = dynamic(() => import('./_graph'), { ssr: false, loading: ()
 const STATUSES = ['PROSPECTIVE', 'ACTIVE', 'AT_RISK', 'DORMANT', 'ARCHIVED'];
 const PAGE_LIMIT = 500;
 
-function renderAnalysis(kind: string, rows: any[]) {
+const PANEL_STYLE: React.CSSProperties = {
+  position: 'fixed',
+  insetInlineEnd: 0,
+  top: 0,
+  height: '100vh',
+  width: 340,
+  maxWidth: '92vw',
+  background: '#fff',
+  borderInlineStart: '1px solid #e5eaf2',
+  boxShadow: '-12px 0 30px rgba(16,32,51,.12)',
+  zIndex: 50,
+  overflowY: 'auto',
+  padding: 20,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 14,
+};
+
+const OVERLAY_STYLE: React.CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  background: 'rgba(16,32,51,.28)',
+  zIndex: 49,
+};
+
+function DetailButton({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        border: '1px solid #315cf5',
+        color: '#315cf5',
+        background: '#fff',
+        borderRadius: 10,
+        padding: '9px 14px',
+        fontWeight: 700,
+        textDecoration: 'none',
+        minHeight: 40,
+      }}
+    >
+      {label}
+    </Link>
+  );
+}
+
+function NodeDetails({ node, onExpand, onClose }: { node: GNode; onExpand: () => void; onClose: () => void }) {
+  const route = nodeEntityRoute(node);
+  const fields: [string, string][] = [
+    ['Type', node.type],
+    ['ID', node.id],
+    ['Display name', node.label],
+    ...(node.organizationId ? ([['Organization ID', node.organizationId]] as [string, string][]) : []),
+  ];
+  return (
+    <>
+      <div style={OVERLAY_STYLE} onClick={onClose} aria-hidden />
+      <aside className="net-panel" style={PANEL_STYLE} role="dialog" aria-label="Node details">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 style={{ margin: 0, fontSize: 18 }}>Node details</h2>
+          <button onClick={onClose} aria-label="Close node details" style={{ border: 0, background: 'none', cursor: 'pointer', fontSize: 20, minHeight: 40 }}>
+            ✕
+          </button>
+        </div>
+        <div>
+          <p style={{ margin: '0 0 12px', color: '#6b7788' }}>{nodeDisplayName(node)}</p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {route && <DetailButton href={route.href} label={`Open ${node.type}`} />}
+            <button
+              onClick={onExpand}
+              style={{ border: '1px solid #315cf5', background: '#315cf5', color: '#fff', borderRadius: 10, padding: '9px 14px', fontWeight: 700, cursor: 'pointer', minHeight: 40 }}
+            >
+              Expand neighbors (focus)
+            </button>
+          </div>
+        </div>
+        <div className="detail-grid" style={{ gridTemplateColumns: '1fr' }}>
+          {fields.map(([k, v]) => (
+            <div className="detail-item" key={k} style={{ padding: 12, border: '1px solid var(--line)', borderRadius: 10 }}>
+              <small>{k}</small>
+              <strong style={{ overflowWrap: 'anywhere' }}>{v}</strong>
+            </div>
+          ))}
+        </div>
+      </aside>
+    </>
+  );
+}
+
+function EdgeDetails({ edge, onClose }: { edge: GEdge; onClose: () => void }) {
+  const hasRisk = Number.isFinite(edge.risk);
+  const hasWeight = Number.isFinite(edge.weight);
+  const hasStrategic = Number.isFinite(edge.strategicImportance);
+  const fields: [string, string][] = [
+    ['Kind', kindLabel(edge.kind)],
+    ...(edge.label ? ([['Relationship type', edge.label]] as [string, string][]) : []),
+    ...(hasWeight ? ([['Weight', String(edge.weight)]] as [string, string][]) : []),
+    ...(hasRisk ? ([['Risk', String(edge.risk)]] as [string, string][]) : []),
+    ...(hasStrategic ? ([['Strategic importance', String(edge.strategicImportance)]] as [string, string][]) : []),
+  ];
+  return (
+    <>
+      <div style={OVERLAY_STYLE} onClick={onClose} aria-hidden />
+      <aside className="net-panel" style={PANEL_STYLE} role="dialog" aria-label="Edge details">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 style={{ margin: 0, fontSize: 18 }}>Edge details</h2>
+          <button onClick={onClose} aria-label="Close edge details" style={{ border: 0, background: 'none', cursor: 'pointer', fontSize: 20, minHeight: 40 }}>
+            ✕
+          </button>
+        </div>
+        <p style={{ margin: 0, color: '#6b7788' }}>{edgeDisplayLabel(edge)}</p>
+        <div className="detail-grid" style={{ gridTemplateColumns: '1fr' }}>
+          {fields.map(([k, v]) => (
+            <div className="detail-item" key={k} style={{ padding: 12, border: '1px solid var(--line)', borderRadius: 10 }}>
+              <small>{k}</small>
+              <strong style={{ overflowWrap: 'anywhere' }}>{v}</strong>
+            </div>
+          ))}
+        </div>
+      </aside>
+    </>
+  );
+}
+
+function renderAnalysis(
+  kind: string,
+  rows: any[],
+  onSelectNode: (id: string) => void,
+  nodeSet: Set<string> | null,
+) {
   if (!rows.length) return <Empty>داده‌ای برای این تحلیل یافت نشد.</Empty>;
   const nodeName = (x: any) => x?.node?.name ?? x?.node?.displayName ?? x?.node?.label ?? (typeof x?.node === 'string' ? x.node : '—');
+  const nodeId = (x: any) => x?.node?.id ?? null;
   const metric = (x: any) =>
     kind === 'centrality' ? ('degree' in x ? x.degree : x.degreeScore)
       : kind === 'bridges' ? ('bridgeScore' in x ? x.bridgeScore : '—')
         : kind === 'bottlenecks' ? ('bottleneckScore' in x ? x.bottleneckScore : '—')
           : ('fragmentationIncrease' in x ? x.fragmentationIncrease : '—');
+  const renderNode = (x: any) => {
+    const id = nodeId(x);
+    if (!id || !nodeSet?.has(id)) return nodeName(x);
+    return (
+      <button
+        onClick={() => onSelectNode(id)}
+        title="Highlight in graph"
+        style={{ border: 0, background: 'none', color: '#315cf5', cursor: 'pointer', padding: 0, fontWeight: 700, textAlign: 'right', minHeight: 'auto' }}
+      >
+        {nodeName(x)}
+      </button>
+    );
+  };
   const cols = kind === 'bottlenecks'
     ? [{ key: 'node', label: 'گره' }, { key: 'score', label: 'Bottleneck' }, { key: 'risky', label: 'Risky' }]
     : kind === 'connectors'
       ? [{ key: 'node', label: 'گره' }, { key: 'score', label: 'Connector' }, { key: 'version', label: 'Version' }]
       : [{ key: 'node', label: 'گره' }, { key: 'score', label: 'امتیاز' }];
-  const mapped = rows.map((x) => {
-    if (kind === 'connectors') return { node: nodeName(x), score: Number(x.connectorScore).toFixed(2), version: x.scoreVersion ?? '—' };
-    if (kind === 'bottlenecks') return { node: nodeName(x), score: Number(x.bottleneckScore).toFixed(2), risky: x.riskyConnections ?? '—' };
-    return { node: nodeName(x), score: String(metric(x)) };
+  const mapped = rows.map((x, i) => {
+    if (kind === 'connectors') return { key: i, node: renderNode(x), score: Number(x.connectorScore).toFixed(2), version: x.scoreVersion ?? '—' };
+    if (kind === 'bottlenecks') return { key: i, node: renderNode(x), score: Number(x.bottleneckScore).toFixed(2), risky: x.riskyConnections ?? '—' };
+    return { key: i, node: renderNode(x), score: String(metric(x)) };
   });
   return <DataTable columns={cols} rows={mapped} />;
 }
 
 export default function Page() {
-  const [connectors, setConnectors] = useState<any[]>([]);
   const [graph, setGraph] = useState<GGraph | null>(null);
   const [q, setQ] = useState('');
   const [type, setType] = useState('all');
@@ -61,7 +210,7 @@ export default function Page() {
   const [error, setError] = useState('');
   const [selectedNode, setSelectedNode] = useState<GNode | null>(null);
   const [hoverNode, setHoverNode] = useState<GNode | null>(null);
-  const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [hoverEdge, setHoverEdge] = useState<string | null>(null);
   const [renderCounts, setRenderCounts] = useState({ nodes: 0, edges: 0 });
   const graphHandle = useRef<NetworkGraphHandle | null>(null);
@@ -109,6 +258,44 @@ export default function Page() {
   const orphanEdges = graph ? graph.edges.length - renderedEdges.length : 0;
   const hasNext = Boolean(graph?.page.nextCursor);
 
+  const selected = selectedNode ?? hoverNode;
+
+  const selectedEdge = useMemo(
+    () => graph?.edges.find((e) => e.id === selectedEdgeId) ?? null,
+    [graph, selectedEdgeId],
+  );
+
+  // Path highlight sets (org-level semantics; only highlight nodes/edges present in the loaded graph).
+  const pathNodeSet = useMemo(() => {
+    const s = new Set<string>();
+    (path?.nodes ?? []).forEach((n: any) => s.add(n?.id));
+    return s;
+  }, [path]);
+  const pathEdgeSet = useMemo(() => {
+    const s = new Set<string>();
+    (path?.edges ?? []).forEach((e: any) => s.add(e?.id));
+    return s;
+  }, [path]);
+
+  const analysisList = useMemo(
+    () => (Array.isArray(analysis) ? analysis : analysis?.items ?? []),
+    [analysis],
+  );
+  const analysisNodeSet = useMemo(() => {
+    const s = new Set<string>();
+    analysisList.forEach((r: any) => { if (r?.node?.id) s.add(r.node.id); });
+    return s;
+  }, [analysisList]);
+
+  const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
+  if (q) activeFilters.push({ key: 'q', label: `q: ${q}`, onClear: () => setQ('') });
+  if (type !== 'all') activeFilters.push({ key: 'type', label: `type: ${type}`, onClear: () => setType('all') });
+  if (status) activeFilters.push({ key: 'status', label: `status: ${status}`, onClear: () => setStatus('') });
+  if (focus) {
+    const focusNode = graph?.nodes.find((n) => n.id === focus);
+    activeFilters.push({ key: 'focus', label: `focus: ${focusNode ? nodeDisplayName(focusNode) : focus}`, onClear: () => setFocus('') });
+  }
+
   const runPath = async () => {
     if (!from || !to) return;
     setError('');
@@ -118,6 +305,7 @@ export default function Page() {
       setError(e?.message || 'Unable to calculate path');
     }
   };
+  const clearPath = () => setPath(null);
   const loadConnectors = async () => {
     setError('');
     setAnalysisKind('connectors');
@@ -142,8 +330,28 @@ export default function Page() {
     await load(graph.page.nextCursor, true);
   };
 
+  // Neighbor expansion: reuse the backend focus capability and reload.
+  const expandNode = (node: GNode) => {
+    setSelectedNode(node);
+    if (focus !== node.id) setFocus(node.id);
+  };
+  const clearFocus = () => {
+    setFocus('');
+    setSelectedNode(null);
+  };
+
+  // Analytics row click: highlight the node in the graph by selecting it.
+  const selectAnalyticsNode = (id: string) => {
+    const node = graph?.nodes.find((n) => n.id === id) ?? null;
+    setSelectedNode(node);
+  };
+
+  const onNodeSelect = useCallback((n: GNode | null) => {
+    setSelectedNode(n);
+    if (n) setSelectedEdgeId(null);
+  }, []);
+
   const orgNodes = graph ? graph.nodes.filter((n) => n.type === 'organization') : [];
-  const selected = selectedNode ?? hoverNode;
 
   return (
     <main className="shell">
@@ -162,7 +370,7 @@ export default function Page() {
         <>
           <ErrorCard message={error} />
           <section className="card">
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
               <input aria-label="Search network" placeholder="Search organizations, people, projects" value={q} onChange={(e) => setQ(e.target.value)} />
               <select aria-label="Node type" value={type} onChange={(e) => setType(e.target.value)}>
                 <option value="all">All</option>
@@ -196,6 +404,26 @@ export default function Page() {
                 Reset
               </button>
             </div>
+            {activeFilters.length > 0 && (
+              <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                <small style={{ color: '#667085' }}>Active filters:</small>
+                {activeFilters.map((f) => (
+                  <span
+                    key={f.key}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#eef4ff', color: '#315cf5', borderRadius: 999, padding: '4px 10px', fontSize: 12, fontWeight: 700 }}
+                  >
+                    {f.label}
+                    <button
+                      onClick={f.onClear}
+                      aria-label={`Clear filter ${f.label}`}
+                      style={{ border: 0, background: 'none', cursor: 'pointer', padding: 0, color: 'inherit', fontSize: 14, lineHeight: 1, minHeight: 'auto' }}
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
           </section>
 
           {graph && (
@@ -210,33 +438,41 @@ export default function Page() {
                   {graph.meta.organizationCount} organizations · {graph.meta.peopleCount} people · {graph.meta.projectCount} projects ·{' '}
                   {graph.meta.relationshipCount} org relationships · {graph.meta.personRelationshipCount} person relationships
                 </p>
+                {path?.found ? (
+                  <p style={{ color: PATH_COLOR, fontWeight: 700 }}>
+                    Organization path: {path.hops} hop{path.hops === 1 ? '' : 's'} · nodes highlighted. Non-path content dimmed.
+                  </p>
+                ) : path && !path.found ? (
+                  <p style={{ color: '#b42318' }}>Organization path: no visible path found between the selected organizations.</p>
+                ) : null}
                 <div style={{ border: '1px solid #e5eaf2', borderRadius: 8, overflow: 'hidden', minHeight: 360 }}>
                   <NetworkGraph
                     ref={graphHandle}
                     graph={graph}
                     selectedNodeId={selected?.id ?? null}
+                    selectedEdgeId={selectedEdgeId}
+                    focusNodeId={focus || null}
+                    pathNodeIds={path?.found ? pathNodeSet : null}
+                    pathEdgeIds={path?.found ? pathEdgeSet : null}
+                    analysisNodeIds={analysisNodeSet.size ? analysisNodeSet : null}
                     dimOthers={Boolean(selectedNode)}
-                    onNodeSelect={(n) => setSelectedNode(n ?? null)}
+                    onNodeSelect={onNodeSelect}
                     onNodeHover={(n) => setHoverNode(n ?? null)}
-                    onEdgeSelect={(id) => setSelectedEdge(id)}
+                    onEdgeSelect={(id) => setSelectedEdgeId(id)}
                     onEdgeHover={(label) => setHoverEdge(label)}
                     onRendered={onRendered}
                   />
                 </div>
-                {(selected || hoverEdge || selectedEdge) && (
-                  <div style={{ marginTop: 10, padding: 10, background: '#f6f7f9', borderRadius: 6 }}>
-                    {selected && (
-                      <p>
-                        <strong>Node:</strong> {nodeDisplayName(selected)} <small>({selected.type})</small> · id {selected.id}
-                      </p>
-                    )}
-                    {(hoverEdge || selectedEdge) && (
-                      <p>
-                        <strong>Edge:</strong> {selectedEdge ? `selected ${selectedEdge}` : hoverEdge}
-                      </p>
-                    )}
-                  </div>
-                )}
+                {hoverNode && !selectedNode ? (
+                  <p className="muted" style={{ marginTop: 10 }}>
+                    Hovering: {nodeDisplayName(hoverNode)} ({hoverNode.type}) — click for details
+                  </p>
+                ) : null}
+                {hoverEdge && !selectedEdgeId ? (
+                  <p className="muted" style={{ marginTop: 10 }}>
+                    Hovering edge: {hoverEdge} — click for details
+                  </p>
+                ) : null}
                 <div style={{ marginTop: 10, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
                   <div>
                     <strong>Nodes</strong>
@@ -247,6 +483,10 @@ export default function Page() {
                           {k}
                         </li>
                       ))}
+                      <li style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ width: 12, height: 12, background: PATH_COLOR, display: 'inline-block' }} />
+                        Path / focus
+                      </li>
                     </ul>
                   </div>
                   <div>
@@ -263,9 +503,18 @@ export default function Page() {
                         <span style={{ width: 18, height: 3, background: RISK_COLOR, display: 'inline-block' }} />
                         Risk ≥ {RISK_THRESHOLD} (red)
                       </li>
+                      <li style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ width: 18, height: 3, background: PATH_COLOR, display: 'inline-block' }} />
+                        Path edge
+                      </li>
                     </ul>
                   </div>
                 </div>
+                {focus ? (
+                  <button onClick={clearFocus} style={{ marginTop: 10 }}>
+                    Clear focus (return to broader view)
+                  </button>
+                ) : null}
                 {hasNext && (
                   <button onClick={loadMore} disabled={loadingMore} style={{ marginTop: 10 }}>
                     {loadingMore ? 'Loading…' : 'Load more (next page of organizations)'}
@@ -274,9 +523,10 @@ export default function Page() {
               </section>
 
               <section className="card">
-                <h2>Connection path (organization nodes — organization-level semantics)</h2>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <select value={from} onChange={(e) => setFrom(e.target.value)}>
+                <h2>Organization path</h2>
+                <p className="muted">Organization-to-organization pathfinding (organization-level semantics).</p>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <select value={from} onChange={(e) => setFrom(e.target.value)} aria-label="Path from">
                     <option value="">From</option>
                     {orgNodes.map((n) => (
                       <option key={n.id} value={n.id}>
@@ -284,7 +534,7 @@ export default function Page() {
                       </option>
                     ))}
                   </select>
-                  <select value={to} onChange={(e) => setTo(e.target.value)}>
+                  <select value={to} onChange={(e) => setTo(e.target.value)} aria-label="Path to">
                     <option value="">To</option>
                     {orgNodes.map((n) => (
                       <option key={n.id} value={n.id}>
@@ -292,17 +542,21 @@ export default function Page() {
                       </option>
                     ))}
                   </select>
-                  <select value={mode} onChange={(e) => setMode(e.target.value as any)}>
+                  <select value={mode} onChange={(e) => setMode(e.target.value as any)} aria-label="Path mode">
                     <option value="shortest">Shortest</option>
                     <option value="best">Best</option>
                   </select>
                   <button onClick={runPath}>Find path</button>
+                  {path ? (
+                    <button onClick={clearPath}>Clear path</button>
+                  ) : null}
                 </div>
-                {path && <p>{path.found ? `${path.hops} hops · cost ${path.totalCost ?? '—'}` : 'No visible path found'}</p>}
+                {path && <p className="muted" style={{ marginTop: 8 }}>{path.found ? `${path.hops} hops · cost ${path.totalCost ?? '—'}` : 'No visible path found'}</p>}
               </section>
 
               <section className="card">
                 <h2>Network analysis</h2>
+                <p className="muted">Click a highlighted result to select and highlight that node in the graph.</p>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <button onClick={() => runAnalysis('centrality')}>Centrality</button>
                   <button onClick={loadConnectors}>Connectors</button>
@@ -310,16 +564,26 @@ export default function Page() {
                   <button onClick={() => runAnalysis('bottlenecks')}>Bottlenecks</button>
                   <button onClick={() => runAnalysis('single-points-of-failure')}>Single points of failure</button>
                 </div>
-                {analysis && (
+                {analysis ? (
                   <div className="table-wrap" style={{ marginTop: 12 }}>
-                    {renderAnalysis(analysisKind || 'centrality', Array.isArray(analysis) ? analysis : analysis?.items ?? [])}
+                    {renderAnalysis(analysisKind || 'centrality', analysisList, selectAnalyticsNode, analysisNodeSet)}
                   </div>
-                )}
+                ) : null}
               </section>
             </>
           )}
         </>
       )}
+
+      {/* Node details side panel */}
+      {selectedNode ? (
+        <NodeDetails node={selectedNode} onExpand={() => expandNode(selectedNode)} onClose={() => setSelectedNode(null)} />
+      ) : null}
+
+      {/* Edge details side panel */}
+      {selectedEdge ? (
+        <EdgeDetails edge={selectedEdge} onClose={() => setSelectedEdgeId(null)} />
+      ) : null}
     </main>
   );
 }
