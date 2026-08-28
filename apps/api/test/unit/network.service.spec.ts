@@ -27,4 +27,18 @@ describe('NetworkService algorithms', () => {
     expect(result[0].node).toEqual(person);
     expect(result[0].connectorScore).toBe(42);
   });
+  it('relationshipStatus normalizes a valid status without throwing', () => {
+    expect((service as any).relationshipStatus('ACTIVE')).toBe('ACTIVE');
+    expect((service as any).relationshipStatus('prospective')).toBe('PROSPECTIVE');
+    expect((service as any).relationshipStatus(' at_risk ')).toBe('AT_RISK');
+  });
+  it('relationshipStatus returns undefined for empty input', () => {
+    expect((service as any).relationshipStatus(undefined)).toBeUndefined();
+    expect((service as any).relationshipStatus('')).toBeUndefined();
+  });
+  it('relationshipStatus rejects an invalid status with BadRequestException (not a 500)', async () => {
+    const { BadRequestException } = require('@nestjs/common');
+    expect(() => (service as any).relationshipStatus('bogus')).toThrow(BadRequestException);
+    expect(() => (service as any).relationshipStatus('DORMANT-and-more')).toThrow(BadRequestException);
+  });
 });

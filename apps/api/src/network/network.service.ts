@@ -1,4 +1,5 @@
-import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Injectable, ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { RelationshipStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthorizationService } from '../common/authorization/authorization.service';
 import { AuditService } from '../audit/audit.service';
@@ -25,6 +26,15 @@ export class NetworkService {
       return [organizationId];
     }
     return ids;
+  }
+
+  private relationshipStatus(value?: string): RelationshipStatus | undefined {
+    if (!value) return undefined;
+    const candidate = String(value).trim().toUpperCase();
+    if (!['PROSPECTIVE', 'ACTIVE', 'AT_RISK', 'DORMANT', 'ARCHIVED'].includes(candidate)) {
+      throw new BadRequestException(`Invalid relationship status '${value}'. Allowed: PROSPECTIVE, ACTIVE, AT_RISK, DORMANT, ARCHIVED`);
+    }
+    return candidate as RelationshipStatus;
   }
 
   async graph(userId: string, organizationId?: string, type?: string, status?: string, query?: string, focus?: string, limit = 250, cursor?: string): Promise<Graph & { page: { limit: number; nextCursor: string | null; bounded: true } }> {
@@ -66,13 +76,13 @@ export class NetworkService {
     const scopedProjects = projects.filter(p => !p.organizationId || visibleOrgIds.includes(p.organizationId)).slice(0, Math.min(pageSize * 2, 500));
 
     const relationships = await this.prisma.relationship.findMany({
-      where: { deletedAt: null, ...(status ? { status: status as any } : {}), OR: [{ sourceOrganizationId: { in: visibleOrgIds } }, { targetOrganizationId: { in: visibleOrgIds } }] },
+      where: { deletedAt: null, ...(status ? { status: this.relationshipStatus(status) } : {}), OR: [{ sourceOrganizationId: { in: visibleOrgIds } }, { targetOrganizationId: { in: visibleOrgIds } }] },
       select: { id: true, sourceOrganizationId: true, targetOrganizationId: true, relationshipType: true, healthScore: true, trustScore: true, accessScore: true, influenceScore: true, riskScore: true, strategicScore: true },
       orderBy: { id: 'asc' }, take: Math.min(pageSize * 4, 1000),
     });
     const visiblePersonIds = scopedPeople.map(p => p.id);
     const personRelationships = visiblePersonIds.length ? await this.prisma.personRelationship.findMany({
-      where: { deletedAt: null, ...(status ? { status: status as any } : {}), OR: [{ sourcePersonId: { in: visiblePersonIds } }, { targetPersonId: { in: visiblePersonIds } }] },
+      where: { deletedAt: null, ...(status ? { status: this.relationshipStatus(status) } : {}), OR: [{ sourcePersonId: { in: visiblePersonIds } }, { targetPersonId: { in: visiblePersonIds } }] },
       select: { id: true, sourcePersonId: true, targetPersonId: true, relationshipType: true, healthScore: true, trustScore: true, accessScore: true, influenceScore: true, riskScore: true, strategicScore: true },
       orderBy: { id: 'asc' }, take: Math.min(pageSize * 4, 1000),
     }) : [];
@@ -89,7 +99,7 @@ export class NetworkService {
 
   async listPersonRelationships(userId: string, organizationId?: string, status?: string, limit = 100, cursor?: string) {
     const allowed = await this.allowed(userId, organizationId);
-    const where: any = { deletedAt: null, ...(status ? { status: status as any } : {}) };
+    const where: any = { deletedAt: null, ...(status ? { status: this.relationshipStatus(status) } : {}) };
     if (allowed) where.OR = [{ sourceOrganizationId: { in: allowed } }, { targetOrganizationId: { in: allowed } }];
     if (organizationId) where.AND = [{ OR: [{ sourceOrganizationId: organizationId }, { targetOrganizationId: organizationId }] }];
     const take = Math.max(25, Math.min(Number(limit) || 100, 200));
