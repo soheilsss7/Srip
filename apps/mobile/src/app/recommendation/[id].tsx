@@ -58,7 +58,15 @@ export default function RecommendationDetail() {
             <Text style={styles.label}>Rationale</Text>
             <Text style={styles.value}>{r.rationale}</Text>
             {r.evidence != null && typeof r.evidence === 'object' && Object.keys(r.evidence).length > 0 && (
-              <Text style={{ color: colors.muted }}>{JSON.stringify(r.evidence)}</Text>
+              <View>
+                <Text style={styles.label}>Evidence</Text>
+                {Object.entries(r.evidence).map(([ek, ev]) => (
+                  <View key={ek} style={{ paddingVertical: 3 }}>
+                    <Text style={styles.label}>{ek}</Text>
+                    <Text style={styles.value}>{typeof ev === 'object' ? JSON.stringify(ev).slice(0, 500) : String(ev)}</Text>
+                  </View>
+                ))}
+              </View>
             )}
             {[['Relationship', r.relationship?.relationshipType], ['Source org', r.relationship?.sourceOrganization?.name], ['Target org', r.relationship?.targetOrganization?.name], ['Assigned to', r.assignedToId], ['Decided by', r.decisionById], ['Decision at', r.decisionAt ? new Date(r.decisionAt).toLocaleDateString() : ''], ['Snoozed until', r.snoozedUntil ? new Date(r.snoozedUntil).toLocaleDateString() : '']].filter(([, v]) => v != null && v !== '').map(([k, v]) => (
               <View key={String(k)} style={{ paddingVertical: 3 }}>
@@ -99,7 +107,16 @@ export default function RecommendationDetail() {
           <View style={styles.card}>
             <Text style={styles.label}>Explainability</Text>
             <Pressable style={styles.button} disabled={!!busy} onPress={showExplain}><Text style={styles.buttonText}>Explain</Text></Pressable>
-            {explanation && <View style={{ marginTop: 8 }}>{typeof explanation === 'object' && 'explanation' in explanation ? <Text style={styles.value}>{String((explanation as any).explanation)}</Text> : <Text style={{ color: colors.muted }}>{typeof explanation === 'string' ? explanation : JSON.stringify(explanation).slice(0, 2500)}</Text>}</View>}
+            {explanation && <View style={{ marginTop: 8 }}>
+              {typeof explanation === 'object' && explanation !== null ? (
+                <>
+                  {explanation.reason ? <Text style={styles.value}>{String(explanation.reason)}</Text> : null}
+                  <View style={{ paddingVertical: 3 }}><Text style={styles.label}>Confidence</Text><Text style={styles.value}>{String(explanation.confidence ?? r?.confidence ?? '—')}</Text></View>
+                  {explanation.explainability?.humanApprovalRequired != null ? <View style={{ paddingVertical: 3 }}><Text style={styles.label}>Human approval required</Text><Text style={styles.value}>{explanation.explainability.humanApprovalRequired ? 'Yes' : 'No'}</Text></View> : null}
+                  {Array.isArray(explanation.evidence) && explanation.evidence.length ? <View><Text style={styles.label}>Evidence</Text>{explanation.evidence.map((e: any, i: number) => <Text key={i} style={styles.subtitle}>• {typeof e === 'object' ? JSON.stringify(e).slice(0, 300) : String(e)}</Text>)}</View> : null}
+                </>
+              ) : <Text style={{ color: colors.muted }}>{typeof explanation === 'string' ? explanation : ''}</Text>}
+            </View>}
           </View>
         </>}
       </ScrollView>

@@ -64,7 +64,14 @@ export default function Documents() {
         {status && (
           <View style={styles.card}>
             <Text style={styles.label}>Library status</Text>
-            <Text style={styles.value}>{JSON.stringify(status)}</Text>
+            {typeof status === 'object' && status !== null ? <>
+              {status.module ? <Text style={styles.value}>Module: {String(status.module)}</Text> : null}
+              {status.status ? <Text style={styles.value}>Status: {String(status.status)}</Text> : null}
+              {Array.isArray(status.capabilities) && status.capabilities.length ? <>
+                <Text style={styles.label}>Capabilities</Text>
+                {status.capabilities.map((c: string, i: number) => <Text key={`${i}-${c}`} style={styles.subtitle}>• {c}</Text>)}
+              </> : null}
+            </> : <Text style={styles.value}>{String(status)}</Text>}
           </View>
         )}
         <TextInput style={styles.input} placeholder="Organization ID (optional, for upload)" value={orgId} onChangeText={setOrgId} />
