@@ -1,7 +1,7 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthorizationService } from '../common/authorization/authorization.service';
-import { AuditAction } from '@prisma/client';
+import { AuditAction, CommitmentStatus, ActionStatus } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { AiPipelineService } from './ai-pipeline.service';
 import { MetricsService } from '../observability/metrics.service';
@@ -67,8 +67,8 @@ export class AiGatewayService {
     const relFilter:any = scopeIds ? { OR: [{ sourceOrganizationId:{in:scopeIds} }, { targetOrganizationId:{in:scopeIds} }] } : {};
     const [meetings, commitments, overdueActions, relationships, opportunities] = await Promise.all([
       this.prisma.meeting.findMany({where:{deletedAt:null,...orgFilter,startAt:{gte:start,lte:end}},orderBy:{startAt:'asc'},take:20,select:{id:true,title:true,startAt:true,objective:true,organizationId:true}}),
-      this.prisma.commitment.findMany({where:{deletedAt:null,...orgFilter,status:{not:'COMPLETED'}},orderBy:{dueAt:'asc'},take:20,select:{id:true,description:true,dueAt:true,status:true,organizationId:true}}),
-      this.prisma.action.findMany({where:{deletedAt:null,...orgFilter,dueAt:{lt:new Date()},status:{not:'COMPLETED'}},orderBy:{dueAt:'asc'},take:20,select:{id:true,title:true,dueAt:true,status:true}}),
+      this.prisma.commitment.findMany({where:{deletedAt:null,...orgFilter,status:{notIn:[CommitmentStatus.FULFILLED,CommitmentStatus.CANCELLED]}},orderBy:{dueAt:'asc'},take:20,select:{id:true,description:true,dueAt:true,status:true,organizationId:true}}),
+      this.prisma.action.findMany({where:{deletedAt:null,...orgFilter,dueAt:{lt:new Date()},status:{notIn:[ActionStatus.DONE,ActionStatus.CANCELLED]}},orderBy:{dueAt:'asc'},take:20,select:{id:true,title:true,dueAt:true,status:true}}),
       this.prisma.relationship.findMany({where:{deletedAt:null,AND:[relFilter,{OR:[{riskScore:{gte:60}},{healthScore:{lte:40}}]}]},orderBy:[{riskScore:'desc'},{healthScore:'asc'}],take:20,select:{id:true,status:true,riskScore:true,healthScore:true,strategicScore:true,nextActionAt:true,sourceOrganizationId:true,targetOrganizationId:true}}),
       this.prisma.opportunity.findMany({where:{deletedAt:null,...orgFilter},orderBy:{createdAt:'desc'},take:20,select:{id:true,name:true,status:true,probability:true,organizationId:true,createdAt:true}}),
     ]);
