@@ -34,12 +34,14 @@ for (const key of ['passwordHash','refreshTokenHash','accessTokenEncrypted','ref
   if (!dto.includes(`'${key}'`)) failures.push(`DTO security block missing: ${key}`);
 }
 
+const repoRoot = path.resolve(root, '../../..');
 const parse = spawnSync('node', ['-e', `
-const ts=require('/opt/nvm/versions/node/v22.16.0/lib/node_modules/typescript');
+const {createRequire}=require('module');
+const ts=createRequire(process.argv[1])( 'typescript' );
 const fs=require('fs'),path=require('path');let e=[];
 function w(d){for(const n of fs.readdirSync(d)){const p=path.join(d,n),s=fs.statSync(p);if(s.isDirectory())w(p);else if(p.endsWith('.ts')){const o=ts.transpileModule(fs.readFileSync(p,'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2023,module:ts.ModuleKind.CommonJS},reportDiagnostics:true,fileName:p});for(const x of o.diagnostics||[])e.push([p,ts.flattenDiagnosticMessageText(x.messageText,' ')]);}}}
-w(process.argv[1]);console.log(e.length);if(e.length)process.exit(1);
-`, root], { encoding: 'utf8' });
+w(process.argv[2]);console.log(e.length);if(e.length)process.exit(1);
+`, path.join(repoRoot, 'package.json'), root], { encoding: 'utf8' });
 if (parse.status !== 0 || parse.stdout.trim() !== '0') failures.push(`TypeScript syntax/parse verification failed: ${parse.stderr || parse.stdout}`);
 
 console.log(`SERVICE_FILES_CHECKED=${serviceFiles.length}`);

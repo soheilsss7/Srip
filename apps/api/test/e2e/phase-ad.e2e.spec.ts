@@ -20,9 +20,13 @@ describeE2E('PHASE AD backend E2E acceptance flow', () => {
   let commitmentId = '';
 
   async function api(path: string, init: RequestInit = {}) {
+    const method = (init.method ?? 'GET').toUpperCase();
     const headers = new Headers(init.headers);
     headers.set('content-type', 'application/json');
     if (token) headers.set('authorization', `Bearer ${token}`);
+    if (['POST', 'PATCH', 'PUT', 'DELETE'].includes(method) && !headers.has('Idempotency-Key')) {
+      headers.set('Idempotency-Key', `${path}:${Date.now()}:${Math.random().toString(36).slice(2)}`);
+    }
     const response = await fetch(`${base}${path}`, { ...init, headers });
     const body = await response.json().catch(() => undefined);
     return { response, body };
@@ -50,14 +54,14 @@ describeE2E('PHASE AD backend E2E acceptance flow', () => {
   });
 
   it('Create Person', async () => {
-    const r = await api('/api/v1/people', { method: 'POST', body: JSON.stringify({ name: 'AD E2E Person', organizationId }) });
+    const r = await api('/api/v1/people', { method: 'POST', body: JSON.stringify({ firstName: 'AD', lastName: 'E2E Person', organizationId }) });
     expect(r.response.ok).toBe(true);
     personId = r.body?.id ?? r.body?.person?.id;
     expect(personId).toBeTruthy();
   });
 
   it('Create Relationship', async () => {
-    const r = await api('/api/v1/relationships', { method: 'POST', body: JSON.stringify({ sourceOrganizationId: organizationId, targetOrganizationId }) });
+    const r = await api('/api/v1/relationships', { method: 'POST', body: JSON.stringify({ sourceOrganizationId: organizationId, targetOrganizationId, relationshipType: 'PARTNER' }) });
     expect(r.response.ok).toBe(true);
     relationshipId = r.body?.id ?? r.body?.relationship?.id;
     expect(relationshipId).toBeTruthy();
@@ -83,7 +87,7 @@ describeE2E('PHASE AD backend E2E acceptance flow', () => {
   });
 
   it('Create Commitment', async () => {
-    const r = await api('/api/v1/commitments', { method: 'POST', body: JSON.stringify({ organizationId, title: 'AD E2E Commitment', ownerId: process.env.E2E_USER_ID, dueAt: new Date(Date.now()+86400000).toISOString() }) });
+    const r = await api('/api/v1/commitments', { method: 'POST', body: JSON.stringify({ organizationId, description: 'AD E2E Commitment', ownerId: process.env.E2E_USER_ID, dueAt: new Date(Date.now()+86400000).toISOString() }) });
     expect(r.response.ok).toBe(true);
     commitmentId = r.body?.id ?? r.body?.commitment?.id;
     expect(commitmentId).toBeTruthy();
