@@ -1,5 +1,6 @@
 'use client';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { api } from '../_lib/api';
 import { Badge, DataTable, Empty, ErrorCard, Loading, PageHeader } from './page-ui';
 
@@ -9,6 +10,7 @@ export type CrudConfig={
  fields:Field[]; columns:string[]; columnLabels?:Record<string,string>;
  idField?:string; createLabel?:string; updateLabel?:string; delete?:boolean;
  query?:string;
+ detailPath?:string;
 };
 
 function unwrap(value:any):any[]{ if(Array.isArray(value)) return value; if(Array.isArray(value?.items)) return value.items; if(Array.isArray(value?.rows)) return value.rows; if(Array.isArray(value?.data)) return value.data; return value?[value]:[]; }
@@ -45,7 +47,7 @@ export function CrudWorkspace({config}:{config:CrudConfig}){
       <div className="panel-title"><div><h2>فهرست</h2><p>{rows.length} مورد در پاسخ فعلی</p></div><button className="secondary-action" onClick={load} disabled={loading}>بازخوانی</button></div>
       {loading?<Loading/>:rows.length===0?<Empty/>:<>
        <DataTable columns={config.columns.map(k=>({key:k,label:config.columnLabels?.[k]??k}))} rows={tableRows}/>
-       <div className="crud-actions">{rows.map(r=><div key={String(r[idField])} className="crud-row-actions"><span>{display(r[config.columns[0]])}</span><div><button onClick={()=>beginEdit(r)}>ویرایش</button>{config.delete&&<button className="danger-action" onClick={()=>remove(r)} disabled={busy}>حذف</button>}</div></div>)}</div>
+       <div className="crud-actions">{rows.map(r=><div key={String(r[idField])} className="crud-row-actions"><span>{display(r[config.columns[0]])}</span><div>{config.detailPath&&<Link className="secondary-action" href={config.detailPath.replace('{id}',encodeURIComponent(String(r[idField])))}>مشاهده</Link>}<button onClick={()=>beginEdit(r)}>ویرایش</button>{config.delete&&<button className="danger-action" onClick={()=>remove(r)} disabled={busy}>حذف</button>}</div></div>)}</div>
       </>}
     </section>
    </div>
