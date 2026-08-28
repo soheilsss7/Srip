@@ -4,11 +4,11 @@ import {api} from '../_lib/api';
 type Entity={key:string;label:string;endpoint:string;fields:{name:string;label:string;type?:string;required?:boolean}[]};
 const entities:Entity[]=[
  {key:'organization',label:'سازمان',endpoint:'/organizations',fields:[{name:'name',label:'نام',required:true},{name:'type',label:'نوع'}]},
- {key:'person',label:'شخص',endpoint:'/people',fields:[{name:'firstName',label:'نام',required:true},{name:'lastName',label:'نام خانوادگی',required:true},{name:'email',label:'ایمیل',type:'email'}]},
- {key:'relationship',label:'ارتباط',endpoint:'/relationships',fields:[{name:'sourceId',label:'Source ID',required:true},{name:'targetId',label:'Target ID',required:true},{name:'type',label:'Type',required:true}]},
- {key:'meeting',label:'جلسه',endpoint:'/meetings',fields:[{name:'title',label:'عنوان',required:true},{name:'startAt',label:'شروع',type:'datetime-local',required:true},{name:'endAt',label:'پایان',type:'datetime-local'}]},
- {key:'action',label:'اقدام',endpoint:'/actions',fields:[{name:'title',label:'عنوان',required:true},{name:'dueAt',label:'موعد',type:'datetime-local'}]},
- {key:'commitment',label:'تعهد',endpoint:'/commitments',fields:[{name:'title',label:'عنوان',required:true},{name:'dueAt',label:'موعد',type:'datetime-local'}]},
+{key:'person',label:'شخص',endpoint:'/people',fields:[{name:'firstName',label:'نام',required:true},{name:'lastName',label:'نام خانوادگی',required:true},{name:'organizationId',label:'Organization ID',required:true},{name:'email',label:'ایمیل',type:'email'}]},
+  {key:'relationship',label:'ارتباط',endpoint:'/relationships',fields:[{name:'sourceOrganizationId',label:'Source Organization ID',required:true},{name:'targetOrganizationId',label:'Target Organization ID',required:true},{name:'relationshipType',label:'نوع ارتباط',required:true}]},
+  {key:'meeting',label:'جلسه',endpoint:'/meetings',fields:[{name:'title',label:'عنوان',required:true},{name:'startAt',label:'شروع',type:'datetime-local',required:true},{name:'endAt',label:'پایان',type:'datetime-local'}]},
+  {key:'action',label:'اقدام',endpoint:'/actions',fields:[{name:'title',label:'عنوان',required:true},{name:'dueAt',label:'موعد',type:'datetime-local'}]},
+  {key:'commitment',label:'تعهد',endpoint:'/commitments',fields:[{name:'description',label:'توضیح',required:true},{name:'dueAt',label:'موعد',type:'datetime-local'}]},
  {key:'project',label:'پروژه',endpoint:'/projects',fields:[{name:'name',label:'نام',required:true},{name:'description',label:'توضیح'}]},
  {key:'opportunity',label:'فرصت',endpoint:'/opportunities',fields:[{name:'name',label:'نام',required:true},{name:'value',label:'ارزش',type:'number'}]},
 ];

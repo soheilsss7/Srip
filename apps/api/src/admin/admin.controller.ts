@@ -23,6 +23,7 @@ export class AdminController {
 
   @Get('tags') tags(@Req() req: any, @Query('search') search?: string) { return this.service.listTags(req.user.sub, search); }
   @Post('tags') createTag(@Req() req: any, @Body() body: any) { return this.service.upsertTag(req.user.sub, body.name); }
+  @Patch('tags/:id') renameTag(@Req() req: any, @Param('id') id: string, @Body() body: any) { return this.service.renameTag(req.user.sub, id, String(body.name ?? '').trim()); }
   @Delete('tags/:id') deleteTag(@Req() req: any, @Param('id') id: string) { return this.service.deleteTag(req.user.sub, id); }
 
   @Get('relationship-types') relationshipTypes(@Req() req: any) { return this.service.listRelationshipTypes(req.user.sub); }

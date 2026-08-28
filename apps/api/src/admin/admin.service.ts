@@ -113,6 +113,22 @@ export class AdminService {
     return { deleted: true, id };
   }
 
+  async renameTag(userId: string, id: string, name: string) {
+    await this.assertAdmin(userId);
+    const normalized = String(name || '').trim();
+    if (normalized.length < 1 || normalized.length > 100) throw new BadRequestException('Invalid tag name');
+    const existing = await this.prisma.tag.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('Tag not found');
+    const tag = await this.prisma.tag.upsert({ where: { name: normalized }, create: { name: normalized }, update: {} });
+    if (tag.id !== id) {
+      await this.prisma.tagAssignment.updateMany({ where: { tagId: id }, data: { tagId: tag.id } }).catch(() => undefined);
+      await this.prisma.relationshipTag.updateMany({ where: { tagId: id }, data: { tagId: tag.id } }).catch(() => undefined);
+      await this.prisma.tag.delete({ where: { id } }).catch(() => undefined);
+    }
+    await this.audit.logMutation({ userId, action: 'UPDATE', entityType: 'Tag', entityId: tag.id, after: tag, reason: 'Admin tag renamed' });
+    return EntityResponseDto.fromUnknown(await this.prisma.tag.findUnique({ where: { id: tag.id } }));
+  }
+
   async listRelationshipTypes(userId: string) {
     await this.assertAdmin(userId);
     return EntityResponseDto.manyUnknown(await this.prisma.relationshipType.findMany({ orderBy: { key: 'asc' } }));
