@@ -80,13 +80,19 @@ export function nodeEntityRoute(n: GNode): { href: string } | null {
 }
 
 export function edgeStrokeColor(e: GEdge): string {
-  if (e.risk >= RISK_THRESHOLD) return RISK_COLOR;
+  if (Number.isFinite(e.risk) && e.risk >= RISK_THRESHOLD) return RISK_COLOR;
   return EDGE_COLORS[e.kind] ?? '#94A3B8';
 }
 
+function toFinite(v: unknown, fallback: number): number {
+  return typeof v === 'number' && Number.isFinite(v) ? v : fallback;
+}
+
 export function edgeStrokeWidth(e: GEdge): number {
-  const base = Math.min(WIDTH_MAX, Math.max(WIDTH_MIN, Math.round(e.weight / 20)));
-  return e.risk >= RISK_THRESHOLD ? base + 1 : base;
+  const weight = toFinite(e.weight, 0);
+  const base = Math.min(WIDTH_MAX, Math.max(WIDTH_MIN, Math.round(weight / 20)));
+  const risk = toFinite(e.risk, 0);
+  return risk >= RISK_THRESHOLD ? base + 1 : base;
 }
 
 export function nodeColor(n: GNode): string {
@@ -150,7 +156,9 @@ export function kindLabel(kind: GEdgeKind): string {
 
 export function edgeDisplayLabel(e: GEdge): string {
   const rel = e.label ? `${e.label}` : kindLabel(e.kind);
-  return `${rel} · wt ${e.weight} · risk ${e.risk}`;
+  const weight = Number.isFinite(e.weight) ? String(e.weight) : '—';
+  const risk = Number.isFinite(e.risk) ? String(e.risk) : '—';
+  return `${rel} · wt ${weight} · risk ${risk}`;
 }
 
 export function nodeDisplayName(n: GNode): string {
