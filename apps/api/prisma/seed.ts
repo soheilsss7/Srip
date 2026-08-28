@@ -101,7 +101,7 @@ async function main() {
   });
 
   await prisma.account.upsert({
-    where: { userId_provider: { userId: user.id, provider: 'LOCAL' } },
+    where: { provider_providerAccountId: { provider: 'LOCAL', providerAccountId: user.id } },
     update: { providerAccountId: user.id },
     create: { userId: user.id, provider: 'LOCAL', providerAccountId: user.id },
   });
@@ -214,7 +214,7 @@ async function main() {
   const project = await prisma.project.upsert({
     where: { id: IDS.project },
     update: { name: 'Phase 3 Seed Project', organizationId: customer.id, ownerId: user.id, status: ProjectStatus.ACTIVE, deletedAt: null, deletedById: null },
-    create: { id: IDS.project, name: 'Phase 3 Seed Project', description: 'Database fixture', organizationId: customer.id, ownerId: user.id, status: ProjectStatus.ACTIVE },
+    create: { id: IDS.project, name: 'Phase 3 Seed Project', description: 'Database fixture', organizationId: customer.id, ownerId: user.id, status: ProjectStatus.ACTIVE, priority: Priority.MEDIUM },
   });
   await prisma.projectRequirement.upsert({
     where: { id: IDS.requirement },

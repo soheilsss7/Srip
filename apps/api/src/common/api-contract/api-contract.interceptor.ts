@@ -22,17 +22,26 @@ function hashBytes(value: Buffer): string {
 function sanitize(value: any): any {
   if (Buffer.isBuffer(value) || value instanceof Uint8Array) return value;
   if (Array.isArray(value)) return value.map(sanitize);
+  if (value instanceof Date) return value;
+  if (typeof value === 'bigint') return value.toString();
   if (!value || typeof value !== 'object') return value;
   const blocked = new Set(['passwordHash','accessTokenEncrypted','refreshTokenEncrypted','oauthStateHash','clientSecret','secret','apiKey','privateKey','recoveryCodes']);
   return Object.fromEntries(Object.entries(value).filter(([k]) => !blocked.has(k)).map(([k,v]) => [k,sanitize(v)]));
 }
 
+const GLOBAL_PREFIX = '/api/v1';
+
+function stripGlobalPrefix(path: string): string {
+  return path.startsWith(GLOBAL_PREFIX) ? path.slice(GLOBAL_PREFIX.length) : path;
+}
+
 function isPublicMutation(path: string): boolean {
-  return PUBLIC_MUTATION_PREFIXES.some((prefix) => path.startsWith(prefix));
+  const p = stripGlobalPrefix(path);
+  return PUBLIC_MUTATION_PREFIXES.some((prefix) => p.startsWith(prefix));
 }
 
 function isWebhook(path: string): boolean {
-  return path.startsWith('/integrations/webhooks/');
+  return stripGlobalPrefix(path).startsWith('/integrations/webhooks/');
 }
 
 function isExport(path: string): boolean {
