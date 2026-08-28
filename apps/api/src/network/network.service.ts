@@ -201,7 +201,10 @@ export class NetworkService {
   async connectors(userId: string, organizationId?: string, limit = 10) {
     const graph = await this.graph(userId, organizationId);
     const people = graph.nodes.filter(n => n.type === 'person');
-    const scored = await Promise.all(people.map(async n => ({ node: n, canonical: await this.connectorScore.calculate(userId, n.id, false) })));
+    const scored = await Promise.all(people.map(async n => {
+      const personId = n.id.startsWith('person:') ? n.id.slice('person:'.length) : n.id;
+      return { node: n, canonical: await this.connectorScore.calculate(userId, personId, false) };
+    }));
     return scored.map(x => ({ node: x.node, connectorScore: x.canonical.score, scoreVersion: x.canonical.version, factors: x.canonical.factors }))
       .sort((a,b) => b.connectorScore - a.connectorScore).slice(0, Math.max(1, Math.min(100, limit)));
   }

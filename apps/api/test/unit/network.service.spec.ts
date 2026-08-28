@@ -13,4 +13,18 @@ describe('NetworkService algorithms', () => {
     const after=(service as any).componentCount(['a','c'],[]);
     expect(after-baseline).toBe(1);
   });
+  it('connectors passes the bare person UUID (person: prefix stripped) to connectorScore.calculate', async () => {
+    const person = { id: 'person:11111111-1111-1111-1111-111111111111', type: 'person' };
+    const graph = {
+      nodes: [person, { id: 'org:22222222-2222-2222-2222-222222222222', type: 'organization' }],
+      edges: [],
+    };
+    const seen: string[] = [];
+    (service as any).graph = async () => graph;
+    (service as any).connectorScore = { calculate: async (_u: string, id: string) => { seen.push(id); return { score: 42, version: 3, factors: { totalConnections: 0 } }; } };
+    const result: any = await (service as any).connectors('user-1');
+    expect(seen).toEqual(['11111111-1111-1111-1111-111111111111']);
+    expect(result[0].node).toEqual(person);
+    expect(result[0].connectorScore).toBe(42);
+  });
 });
