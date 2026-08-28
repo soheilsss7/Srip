@@ -120,3 +120,5 @@ export const apiPost=<T=unknown>(path:string,body:unknown,opts:ApiOptions={})=>a
 export const apiPatch=<T=unknown>(path:string,body:unknown,opts:ApiOptions={})=>api<T>(path,{...opts,method:'PATCH',body:JSON.stringify(body)});
 export const apiDelete=<T=unknown>(path:string,opts:ApiOptions={})=>api<T>(path,{...opts,method:'DELETE'});
 export function unwrapList<T=unknown>(value:any):T[]{ if(Array.isArray(value))return value as T[]; if(value&&value.items!==undefined&&Array.isArray(value.items))return value.items as T[]; if(value&&value.rows!==undefined&&Array.isArray(value.rows))return value.rows as T[]; if(value&&value.data!==undefined&&Array.isArray(value.data))return value.data as T[]; return []; }
+export function docsOrigin(){return API.replace(/\/api\/v1\/?$/,'');}
+export async function apiDocsJson(){const r=await fetch(`${docsOrigin()}/docs-json`,{cache:'no-store'});if(!r.ok)throw new ApiError(`GET /docs-json → ${r.status}`,r.status);return r.json();}

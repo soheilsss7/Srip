@@ -1,13 +1,12 @@
 'use client';import {useEffect,useMemo,useState} from 'react';
 import {PageHeader,DataTable} from '../_components/page-ui';
-import {API} from '../_lib/api';
+import {apiDocsJson} from '../_lib/api';
 type Row={module:string;method:string;path:string;status:string};
-function origin(){try{return API.replace(/\/api\/v1\/?$/,'')}catch{return 'http://localhost:4000'}}
 export default function ApiCoverage(){
  const [rows,setRows]=useState<Row[]>([]),[error,setError]=useState('');
  const [q,setQ]=useState('');
  useEffect(()=>{
-  fetch(`${origin()}/docs-json`).then(r=>{if(!r.ok)throw new Error(`GET /docs-json → ${r.status}`);return r.json()}).then(spec=>{
+  apiDocsJson().then(spec=>{
    const out:Row[]=[];const paths=spec?.paths??{};
    for(const [path,item] of Object.entries<any>(paths))for(const [method,op] of Object.entries<any>(item??{})){
     if(!['get','post','put','patch','delete'].includes(method))continue;
