@@ -1,9 +1,10 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { apiGet } from '../_lib/api';
-import { DataTable, Empty, ErrorCard, Loading } from '../_components/page-ui';
+import { Empty, ErrorCard, Loading } from '../_components/page-ui';
 import {
   GGraph,
   GNode,
@@ -27,7 +28,7 @@ const NetworkGraph = dynamic(() => import('./_graph'), { ssr: false, loading: ()
 const STATUSES = ['PROSPECTIVE', 'ACTIVE', 'AT_RISK', 'DORMANT', 'ARCHIVED'];
 const PAGE_LIMIT = 500;
 
-const PANEL_STYLE: React.CSSProperties = {
+const PANEL_STYLE: CSSProperties = {
   position: 'fixed',
   insetInlineEnd: 0,
   top: 0,
@@ -45,7 +46,7 @@ const PANEL_STYLE: React.CSSProperties = {
   gap: 14,
 };
 
-const OVERLAY_STYLE: React.CSSProperties = {
+const OVERLAY_STYLE: CSSProperties = {
   position: 'fixed',
   inset: 0,
   background: 'rgba(16,32,51,.28)',
@@ -167,30 +168,56 @@ function renderAnalysis(
       : kind === 'bridges' ? ('bridgeScore' in x ? x.bridgeScore : '—')
         : kind === 'bottlenecks' ? ('bottleneckScore' in x ? x.bottleneckScore : '—')
           : ('fragmentationIncrease' in x ? x.fragmentationIncrease : '—');
+  const cols =
+    kind === 'bottlenecks'
+      ? ['Node' as string, 'Bottleneck' as string, 'Risky' as string]
+      : kind === 'connectors'
+        ? ['Node' as string, 'Connector' as string, 'Version' as string]
+        : ['Node' as string, 'Score' as string];
   const renderNode = (x: any) => {
     const id = nodeId(x);
-    if (!id || !nodeSet?.has(id)) return nodeName(x);
+    const name = nodeName(x);
+    if (!id || !nodeSet?.has(id)) return <span>{name}</span>;
     return (
       <button
         onClick={() => onSelectNode(id)}
         title="Highlight in graph"
         style={{ border: 0, background: 'none', color: '#315cf5', cursor: 'pointer', padding: 0, fontWeight: 700, textAlign: 'right', minHeight: 'auto' }}
       >
-        {nodeName(x)}
+        {name}
       </button>
     );
   };
-  const cols = kind === 'bottlenecks'
-    ? [{ key: 'node', label: 'گره' }, { key: 'score', label: 'Bottleneck' }, { key: 'risky', label: 'Risky' }]
-    : kind === 'connectors'
-      ? [{ key: 'node', label: 'گره' }, { key: 'score', label: 'Connector' }, { key: 'version', label: 'Version' }]
-      : [{ key: 'node', label: 'گره' }, { key: 'score', label: 'امتیاز' }];
-  const mapped = rows.map((x, i) => {
-    if (kind === 'connectors') return { key: i, node: renderNode(x), score: Number(x.connectorScore).toFixed(2), version: x.scoreVersion ?? '—' };
-    if (kind === 'bottlenecks') return { key: i, node: renderNode(x), score: Number(x.bottleneckScore).toFixed(2), risky: x.riskyConnections ?? '—' };
-    return { key: i, node: renderNode(x), score: String(metric(x)) };
-  });
-  return <DataTable columns={cols} rows={mapped} />;
+  return (
+    <div className="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            {cols.map((c) => (
+              <th key={c}>{c}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((x, i) => {
+            const cells:  (string | ReactNode)[] =
+              kind === 'connectors'
+                ? [renderNode(x), Number(x.connectorScore).toFixed(2), x.scoreVersion ?? '—']
+                : kind === 'bottlenecks'
+                  ? [renderNode(x), Number(x.bottleneckScore).toFixed(2), x.riskyConnections ?? '—']
+                  : [renderNode(x), String(metric(x))];
+            return (
+              <tr key={x?.node?.id ?? i}>
+                {cells.map((c, ci) => (
+                  <td key={ci}>{c}</td>
+                ))}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 export default function Page() {
