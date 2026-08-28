@@ -13,7 +13,10 @@ Phase 5 status:
 COMPLETE
 
 Last verified commit:
-<a1d1b71 Phase 4 / the Phase 5 commit created below>
+39920ed (harden(network): Stage 14 Phase 5 hardening, performance & accessibility)
+
+Phase 4 commit that Phase 5 stacks on:
+a1d1b71
 
 Working tree:
 CLEAN (after final commit)
