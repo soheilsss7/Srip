@@ -23,6 +23,23 @@ class ActionDto {
   @IsString() @IsOptional() recommendationId?: string;
 }
 
+class UpdateActionDto {
+  @IsString() @MinLength(2) @IsOptional() title?: string;
+  @IsEnum(ActionStatus) @IsOptional() status?: ActionStatus;
+  @IsEnum(Priority) @IsOptional() priority?: Priority;
+  @IsDateString() @IsOptional() dueAt?: string;
+  @IsDateString() @IsOptional() reminderAt?: string;
+  @IsDateString() @IsOptional() completionAt?: string;
+  @IsString() @IsOptional() outcome?: string;
+  @IsString() @IsOptional() organizationId?: string;
+  @IsString() @IsOptional() ownerId?: string;
+  @IsString() @IsOptional() relationshipId?: string;
+  @IsString() @IsOptional() meetingId?: string;
+  @IsString() @IsOptional() personId?: string;
+  @IsString() @IsOptional() projectId?: string;
+  @IsString() @IsOptional() recommendationId?: string;
+}
+
 @Controller('actions')
 @UseGuards(AuthGuard, AuthorizationGuard)
 export class ActionsController {
@@ -32,7 +49,7 @@ export class ActionsController {
   @Get('follow-up/due-soon') @RequirePermission('action.read') dueSoon(@Req() req: any, @Query('days') days?: string, @Query('page') page?: string, @Query('pageSize') pageSize?: string) { return this.s.listDueSoon(req.user.sub, days ? Number(days) : undefined, page, pageSize); }
   @Get(':id') @RequirePermission('action.read') get(@Param('id') id: string, @Req() req: any) { return this.s.get(req.user.sub, id); }
   @Post() @RequirePermission('action.write') create(@Body() d: ActionDto, @Req() req: any) { return this.s.create(req.user.sub, d); }
-  @Patch(':id') @RequirePermission('action.write') update(@Param('id') id: string, @Body() d: ActionDto, @Req() req: any) { return this.s.update(req.user.sub, id, d); }
+  @Patch(':id') @RequirePermission('action.write') update(@Param('id') id: string, @Body() d: UpdateActionDto, @Req() req: any) { return this.s.update(req.user.sub, id, d); }
   @Post(':id/dependencies/:dependsOnActionId') @RequirePermission('action.write') addDependency(@Param('id') id: string, @Param('dependsOnActionId') dependsOnActionId: string, @Req() req: any) { return this.s.addDependency(req.user.sub, id, dependsOnActionId); }
   @Delete(':id/dependencies/:dependsOnActionId') @RequirePermission('action.write') removeDependency(@Param('id') id: string, @Param('dependsOnActionId') dependsOnActionId: string, @Req() req: any) { return this.s.removeDependency(req.user.sub, id, dependsOnActionId); }
   @Delete(':id') @RequirePermission('action.write') remove(@Param('id') id: string, @Req() req: any) { return this.s.remove(req.user.sub, id); }
