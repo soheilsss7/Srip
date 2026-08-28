@@ -92,14 +92,22 @@ export function nodeColor(n: GNode): string {
   return NODE_COLORS[n.type] ?? '#94A3B8';
 }
 
+// Coerce to a finite number or a safe fallback. Protects the graph transforms
+// from NaN/Infinity coming from malformed or partial payloads.
+function toFinite(v: unknown, fallback: number): number {
+  return typeof v === 'number' && Number.isFinite(v) ? v : fallback;
+}
+
 export function edgeStrokeColor(e: GEdge): string {
-  if (e.risk >= RISK_THRESHOLD) return RISK_COLOR;
+  if (Number.isFinite(e.risk) && e.risk >= RISK_THRESHOLD) return RISK_COLOR;
   return EDGE_COLORS[e.kind] ?? '#94A3B8';
 }
 
 export function edgeStrokeWidth(e: GEdge): number {
-  const base = Math.min(WIDTH_MAX, Math.max(WIDTH_MIN, Math.round(e.weight / 20)));
-  return e.risk >= RISK_THRESHOLD ? base + 1 : base;
+  const weight = toFinite(e.weight, 0);
+  const base = Math.min(WIDTH_MAX, Math.max(WIDTH_MIN, Math.round(weight / 20)));
+  const risk = toFinite(e.risk, 0);
+  return risk >= RISK_THRESHOLD ? base + 1 : base;
 }
 
 export function kindLabel(kind: GEdgeKind): string {
@@ -119,7 +127,9 @@ export function kindLabel(kind: GEdgeKind): string {
 
 export function edgeDisplayLabel(e: GEdge): string {
   const rel = e.label ? `${e.label}` : kindLabel(e.kind);
-  return `${rel} · wt ${e.weight} · risk ${e.risk}`;
+  const weight = Number.isFinite(e.weight) ? String(e.weight) : '—';
+  const risk = Number.isFinite(e.risk) ? String(e.risk) : '—';
+  return `${rel} · wt ${weight} · risk ${risk}`;
 }
 
 export function nodeDisplayName(n: GNode): string {
@@ -128,16 +138,19 @@ export function nodeDisplayName(n: GNode): string {
 
 // Deterministic circular layout (no force simulation — lightweight and predictable).
 // Returns a world-space position per node id (origin at 0,0; radius ~1).
+// A single node is placed at the origin; with 2+ nodes every node sits on the
+// unit circle (no node is forced to the center, which would overlap its edges).
 export function layoutNodes(nodes: GNode[]): Map<string, GLayoutPoint> {
   const positions = new Map<string, GLayoutPoint>();
   const unique = nodes.filter((n, i) => nodes.findIndex((m) => m.id === n.id) === i);
   const n = unique.length;
-  const orphans = n < 2 ? 0 : 1; // keep single-node graphs from vanishing at origin
-  const radius = n <= 1 ? 0 : 1;
+  if (n === 1 && unique[0]) {
+    positions.set(unique[0].id, { x: 0, y: 0 });
+    return positions;
+  }
   unique.forEach((node, i) => {
     const angle = (i / Math.max(n, 1)) * Math.PI * 2 - Math.PI / 2;
-    positions.set(node.id, { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius });
+    positions.set(node.id, { x: Math.cos(angle), y: Math.sin(angle) });
   });
-  if (orphans) positions.set(unique[0].id, { x: 0, y: 0 });
   return positions;
 }

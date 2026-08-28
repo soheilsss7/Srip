@@ -163,6 +163,7 @@ function renderAnalysis(
   if (!rows.length) return <Empty>داده‌ای برای این تحلیل یافت نشد.</Empty>;
   const nodeName = (x: any) => x?.node?.name ?? x?.node?.displayName ?? x?.node?.label ?? (typeof x?.node === 'string' ? x.node : '—');
   const nodeId = (x: any) => x?.node?.id ?? null;
+  const fmt = (v: any) => { const n = Number(v); return Number.isFinite(n) ? n.toFixed(2) : '—'; };
   const metric = (x: any) =>
     kind === 'centrality' ? ('degree' in x ? x.degree : x.degreeScore)
       : kind === 'bridges' ? ('bridgeScore' in x ? x.bridgeScore : '—')
@@ -182,6 +183,7 @@ function renderAnalysis(
       <button
         onClick={() => onSelectNode(id)}
         title="Highlight in graph"
+        aria-label={`Highlight ${name} in the graph`}
         style={{ border: 0, background: 'none', color: '#315cf5', cursor: 'pointer', padding: 0, fontWeight: 700, textAlign: 'right', minHeight: 'auto' }}
       >
         {name}
@@ -202,9 +204,9 @@ function renderAnalysis(
           {rows.map((x, i) => {
             const cells:  (string | ReactNode)[] =
               kind === 'connectors'
-                ? [renderNode(x), Number(x.connectorScore).toFixed(2), x.scoreVersion ?? '—']
+                ? [renderNode(x), fmt(x.connectorScore), x.scoreVersion ?? '—']
                 : kind === 'bottlenecks'
-                  ? [renderNode(x), Number(x.bottleneckScore).toFixed(2), x.riskyConnections ?? '—']
+                  ? [renderNode(x), fmt(x.bottleneckScore), x.riskyConnections ?? '—']
                   : [renderNode(x), String(metric(x))];
             return (
               <tr key={x?.node?.id ?? i}>
@@ -242,7 +244,24 @@ export default function Page() {
   const [renderCounts, setRenderCounts] = useState({ nodes: 0, edges: 0 });
   const graphHandle = useRef<NetworkGraphHandle | null>(null);
 
+  // Request sequencing + cancellation: only the most recent request may apply its result,
+  // and pending requests are aborted on supersession/unmount to avoid stale overwrites and
+  // setState-after-unmount (rapid filter/analytics switching, page navigation).
+  const seqRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
+  const beginRequest = useCallback(() => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const seq = ++seqRef.current;
+    return { seq, signal: controller.signal };
+  }, []);
+  useEffect(() => {
+    return () => abortRef.current?.abort();
+  }, []);
+
   const load = useCallback(async (cursor?: string, append = false) => {
+    const { seq, signal } = beginRequest();
     try {
       setError('');
       if (append) setLoadingMore(true);
@@ -254,7 +273,8 @@ export default function Page() {
       if (focus) params.set('focus', focus);
       params.set('limit', String(PAGE_LIMIT));
       if (cursor) params.set('cursor', cursor);
-      const data = await apiGet<GGraph>(`/network/graph?${params.toString()}`);
+      const data = await apiGet<GGraph>(`/network/graph?${params.toString()}`, { signal });
+      if (seq !== seqRef.current) return;
       setGraph((prev) => {
         if (append && prev) {
           const seenNodeIds = new Set(prev.nodes.map((n) => n.id));
@@ -266,12 +286,15 @@ export default function Page() {
         return data;
       });
     } catch (e: any) {
+      if (seq !== seqRef.current || e?.name === 'AbortError') return;
       setError(e?.message || 'Unable to load network');
     } finally {
-      setLoading(false);
-      setLoadingMore(false);
+      if (seq === seqRef.current) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
     }
-  }, [q, type, status, focus]);
+  }, [q, type, status, focus, beginRequest]);
 
   useEffect(() => {
     load();
@@ -325,29 +348,38 @@ export default function Page() {
 
   const runPath = async () => {
     if (!from || !to) return;
+    const { seq, signal } = beginRequest();
     setError('');
     try {
-      setPath(await apiGet(`/network/path?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&mode=${mode}`));
+      const result = await apiGet(`/network/path?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&mode=${mode}`, { signal });
+      if (seq === seqRef.current) setPath(result);
     } catch (e: any) {
+      if (seq !== seqRef.current || e?.name === 'AbortError') return;
       setError(e?.message || 'Unable to calculate path');
     }
   };
   const clearPath = () => setPath(null);
   const loadConnectors = async () => {
+    const { seq, signal } = beginRequest();
     setError('');
     setAnalysisKind('connectors');
     try {
-      setAnalysis(await apiGet('/network/connectors'));
+      const result = await apiGet('/network/connectors', { signal });
+      if (seq === seqRef.current) setAnalysis(result);
     } catch (e: any) {
+      if (seq !== seqRef.current || e?.name === 'AbortError') return;
       setError(e?.message || 'Unable to load connectors');
     }
   };
   const runAnalysis = async (endpoint: string) => {
+    const { seq, signal } = beginRequest();
     setError('');
     setAnalysisKind(endpoint);
     try {
-      setAnalysis(await apiGet(`/network/${endpoint}`));
+      const result = await apiGet(`/network/${endpoint}`, { signal });
+      if (seq === seqRef.current) setAnalysis(result);
     } catch (e: any) {
+      if (seq !== seqRef.current || e?.name === 'AbortError') return;
       setError(e?.message || 'Unable to load analysis');
     }
   };
@@ -396,6 +428,11 @@ export default function Page() {
       ) : (
         <>
           <ErrorCard message={error} />
+          {!graph && error ? (
+            <div style={{ marginTop: 10 }}>
+              <button onClick={() => load()} aria-label="Retry loading network">Retry</button>
+            </div>
+          ) : null}
           <section className="card">
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
               <input aria-label="Search network" placeholder="Search organizations, people, projects" value={q} onChange={(e) => setQ(e.target.value)} />

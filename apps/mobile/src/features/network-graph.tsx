@@ -55,16 +55,34 @@ interface ScreenPoint {
 
 function worldToScreen(p: { x: number; y: number }, vp: Viewport, size: { w: number; h: number }): ScreenPoint {
   // World is a unit circle centered at (0,0). Center it in the viewport, then scale/pan.
-  const cx = size.w / 2 + vp.tx;
-  const cy = size.h / 2 + vp.ty;
-  return { x: cx + p.x * vp.scale, y: cy + p.y * vp.scale };
+  const w = Number.isFinite(size.w) ? size.w : 0;
+  const h = Number.isFinite(size.h) ? size.h : 0;
+  const cx = w / 2 + (Number.isFinite(vp.tx) ? vp.tx : 0);
+  const cy = h / 2 + (Number.isFinite(vp.ty) ? vp.ty : 0);
+  const sx = Number.isFinite(vp.scale) ? vp.scale : 1;
+  const px = cx + p.x * sx;
+  const py = cy + p.y * sx;
+  return { x: Number.isFinite(px) ? px : w / 2, y: Number.isFinite(py) ? py : h / 2 };
 }
+
+// Keep every viewport transform finite and bounded: scale ∈ [MIN, MAX], offsets finite.
+function clampViewport(vp: Viewport): Viewport {
+  const scale = Number.isFinite(vp.scale) ? Math.max(MIN_SCALE, Math.min(MAX_SCALE, vp.scale)) : 1;
+  const tx = Number.isFinite(vp.tx) ? vp.tx : 0;
+  const ty = Number.isFinite(vp.ty) ? vp.ty : 0;
+  return { scale, tx, ty };
+}
+
+const MIN_SCALE = 0.25;
+const MAX_SCALE = 6;
 
 // Fit a unit circle (radius 1) into the viewport with a margin, panning/zooming the view.
 function makeFitViewport(size: { w: number; h: number }): Viewport {
-  const usable = Math.max(1, Math.min(size.w, size.h));
+  const w = Number.isFinite(size.w) ? size.w : 0;
+  const h = Number.isFinite(size.h) ? size.h : 0;
+  const usable = Math.max(1, Math.min(w, h));
   const scale = (usable / 2) * 0.78;
-  return { scale, tx: 0, ty: 0 };
+  return clampViewport({ scale, tx: 0, ty: 0 });
 }
 
 const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(function NetworkGraph(
@@ -140,11 +158,11 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(function NetworkGraph
             const dist = Math.hypot(a.pageX - b.pageX, a.pageY - b.pageY);
             if (pinchStart.current && pinchStart.current.dist > 0) {
               const ratio = dist / pinchStart.current.dist;
-              const next = Math.max(0.25, Math.min(6, pinchStart.current.scale * ratio));
-              setViewport({ ...vp, scale: next });
+              const next = Math.max(MIN_SCALE, Math.min(MAX_SCALE, pinchStart.current.scale * ratio));
+              setViewport(clampViewport({ ...vp, scale: next }));
             }
           } else if (dragStart.current) {
-            setViewport({ ...vp, tx: dragStart.current.tx + g.dx, ty: dragStart.current.ty + g.dy });
+            setViewport(clampViewport({ ...vp, tx: dragStart.current.tx + g.dx, ty: dragStart.current.ty + g.dy }));
           }
         },
         onPanResponderRelease: () => {
@@ -159,33 +177,34 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(function NetworkGraph
     [],
   );
 
-  const handleNodeTap = (node: GNode) => {
+  const handleNodeTap = useCallback((node: GNode) => {
     const now = Date.now();
     if (now - lastTap.current < 300) {
       lastTap.current = 0;
-      // Double-tap on a node: zoom toward it / expand focus is handled by callers;
-      // here we simply keep it selected (avoids accidental pan from double-tap).
-      setViewport({ ...viewportRef.current, scale: Math.min(6, viewportRef.current.scale * 1.4) });
+      // Double-tap on a node: zoom in a bounded step (avoids accidental pan on double-tap).
+      setViewport(clampViewport({ ...viewportRef.current, scale: Math.min(MAX_SCALE, viewportRef.current.scale * 1.4) }));
       return;
     }
     lastTap.current = now;
     onSelectNode?.(node);
-  };
+  }, [onSelectNode]);
 
   const pathActive = Boolean(pathNodeIds && pathNodeIds.size > 0);
 
-  const alphaFor = (node: GNode): number => {
+  const alphaFor = useCallback((node: GNode): number => {
     if (pathActive) return pathNodeIds?.has(node.id) ? 1 : 0.14;
     const sel = selectedNodeId;
     if (dimOthers && sel != null && sel !== node.id) return 0.3;
     return 1;
-  };
-  const accentFor = (node: GNode): string | null => {
+  }, [pathActive, pathNodeIds, selectedNodeId, dimOthers]);
+
+  const accentFor = useCallback((node: GNode): string | null => {
     if (pathNodeIds?.has(node.id)) return PATH_COLOR;
     if (analysisNodeIds?.has(node.id)) return PATH_COLOR;
     return null;
-  };
-  const edgeColorFor = (e: GEdge): string => {
+  }, [pathNodeIds, analysisNodeIds]);
+
+  const edgeColorFor = useCallback((e: GEdge): string => {
     if (pathEdgeIds?.has(e.id)) return PATH_COLOR;
     if (selectedEdgeId === e.id) return '#111827';
     if (pathActive) return edgeStrokeColor(e);
@@ -194,12 +213,13 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(function NetworkGraph
       return `${edgeStrokeColor(e)}55`;
     }
     return edgeStrokeColor(e);
-  };
-  const edgeOpacityFor = (e: GEdge): number => {
+  }, [pathEdgeIds, selectedEdgeId, pathActive, selectedNodeId, dimOthers]);
+
+  const edgeOpacityFor = useCallback((e: GEdge): number => {
     if (selectedEdgeId === e.id || pathEdgeIds?.has(e.id)) return 1;
     if (pathActive) return pathEdgeIds?.has(e.id) ? 1 : 0.3;
     return 1;
-  };
+  }, [selectedEdgeId, pathEdgeIds, pathActive]);
 
   const nodeViews = useMemo(() => {
     return graph.nodes.map((node) => {
@@ -282,7 +302,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(function NetworkGraph
       );
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [graph.nodes, layout, screenOf, viewport, selectedNodeId, focusNodeId, pathNodeIds, analysisNodeIds, dimOthers, selectedNodeId, size.w]);
+  }, [graph.nodes, layout, screenOf, viewport, selectedNodeId, focusNodeId, size.w, alphaFor, accentFor, handleNodeTap]);
 
   const edgeViews = useMemo(() => {
     return edges.map((e) => {
@@ -338,7 +358,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(function NetworkGraph
       );
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [edges, nodeMap, layout, screenOf, viewport, selectedEdgeId, pathEdgeIds, pathActive, dimOthers, selectedNodeId]);
+  }, [edges, nodeMap, layout, screenOf, viewport, selectedEdgeId, size.w, alphaFor, accentFor, edgeColorFor, edgeOpacityFor]);
 
   const isEmpty = graph.nodes.length === 0;
 
@@ -370,7 +390,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(function NetworkGraph
         </View>
       )}
       {isEmpty ? (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }} accessible accessibilityRole="text" accessibilityLabel="No nodes to display">
           <Text style={{ color: '#667085', fontSize: 14 }}>No nodes to display.</Text>
         </View>
       ) : null}

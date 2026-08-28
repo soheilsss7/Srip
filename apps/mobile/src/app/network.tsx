@@ -86,10 +86,14 @@ function NodeDetailsModal({
   const router = useRouter();
   const route = nodeEntityRoute(node);
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible transparent animationType="slide" onRequestClose={onClose} accessibilityViewIsModal>
       <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(16,32,51,0.36)' }}>
-        <Pressable style={{ flex: 1 }} onPress={onClose} />
-        <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20, paddingBottom: 30, gap: 12 }}>
+        <Pressable style={{ flex: 1 }} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close node details" />
+        <View
+          accessible
+          accessibilityLabel={`${node.type} details`}
+          style={{ backgroundColor: colors.card, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20, paddingBottom: 30, gap: 12 }}
+        >
           <Text style={[styles.subtitle, { textTransform: 'uppercase' }]}>{node.type}</Text>
           <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text }}>{nodeDisplayName(node)}</Text>
           <DetailRow label="ID" value={node.id} />
@@ -124,10 +128,14 @@ function EdgeDetailsModal({ edge, onClose }: { edge: GEdge; onClose: () => void 
   const hasNum = (v: number) => Number.isFinite(v);
   const isOrgRelationship = edge.kind === 'relationship';
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible transparent animationType="slide" onRequestClose={onClose} accessibilityViewIsModal>
       <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(16,32,51,0.36)' }}>
-        <Pressable style={{ flex: 1 }} onPress={onClose} />
-        <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20, paddingBottom: 30, gap: 12 }}>
+        <Pressable style={{ flex: 1 }} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close edge details" />
+        <View
+          accessible
+          accessibilityLabel="Edge details"
+          style={{ backgroundColor: colors.card, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20, paddingBottom: 30, gap: 12 }}
+        >
           <Text style={[styles.subtitle, { textTransform: 'uppercase' }]}>Edge</Text>
           <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text }}>{edgeDisplayLabel(edge)}</Text>
           <DetailRow label="Kind" value={kindLabel(edge.kind)} />
@@ -178,22 +186,41 @@ export default function Network() {
   const [refreshing, setRefreshing] = useState(false);
 
   const graphRef = useRef<NetworkGraphHandle | null>(null);
+  // Monotonic request sequence + mounted guard: only the most recent request may apply
+  // its result, and async work never updates state after unmount (avoids stale overwrites
+  // during rapid filter/focus/analytics changes and setState-after-unmount).
+  const seqRef = useRef(0);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      seqRef.current += 1; // invalidate any in-flight request on unmount
+    };
+  }, []);
+  const isCurrent = useCallback((seq: number) => mountedRef.current && seq === seqRef.current, []);
+  const beginRequest = useCallback(() => {
+    seqRef.current += 1;
+    return seqRef.current;
+  }, []);
 
   const load = useCallback(
     async (cursor?: string, append = false) => {
       if (!token) return;
+      const seq = beginRequest();
+      setError('');
+      if (append) setLoadingMore(true);
+      else setLoading(true);
+      const params = new URLSearchParams();
+      if (q) params.set('q', q);
+      if (type !== 'all') params.set('type', type);
+      if (status) params.set('status', status);
+      if (focus) params.set('focus', focus);
+      params.set('limit', String(PAGE_LIMIT));
+      if (cursor) params.set('cursor', cursor);
       try {
-        setError('');
-        if (append) setLoadingMore(true);
-        else setLoading(true);
-        const params = new URLSearchParams();
-        if (q) params.set('q', q);
-        if (type !== 'all') params.set('type', type);
-        if (status) params.set('status', status);
-        if (focus) params.set('focus', focus);
-        params.set('limit', String(PAGE_LIMIT));
-        if (cursor) params.set('cursor', cursor);
         const data = await apiGet<GGraph>(`/network/graph?${params.toString()}`, token);
+        if (!isCurrent(seq)) return;
         setGraph((prev) => {
           if (append && prev) {
             const seenN = new Set(prev.nodes.map((n) => n.id));
@@ -205,14 +232,17 @@ export default function Network() {
           return data;
         });
       } catch (e) {
+        if (!isCurrent(seq)) return;
         setError(e instanceof Error ? e.message : 'Unable to load network');
       } finally {
-        setLoading(false);
-        setLoadingMore(false);
-        setRefreshing(false);
+        if (isCurrent(seq)) {
+          setLoading(false);
+          setLoadingMore(false);
+          setRefreshing(false);
+        }
       }
     },
-    [token, q, type, status, focus],
+    [token, q, type, status, focus, beginRequest, isCurrent],
   );
 
   useEffect(() => {
@@ -228,6 +258,18 @@ export default function Network() {
 
   const nodeIds = useMemo(() => new Set(graph?.nodes.map((n) => n.id) ?? []), [graph]);
   const orgNodes = useMemo(() => graph?.nodes.filter((n) => n.type === 'organization') ?? [], [graph]);
+
+  // A selection is only meaningful while its node/edge still exists in the loaded graph.
+  // Drop stale selections after a filter/focus/pagination refresh removes their target.
+  useEffect(() => {
+    if (!graph) return;
+    if (selectedNode && !nodeIds.has(selectedNode.id)) setSelectedNode(null);
+    if (selectedEdge) {
+      const stillPresent = graph.edges.some((e) => e.id === selectedEdge.id);
+      if (!stillPresent) setSelectedEdge(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [graph]);
 
   const pathNodeSet = useMemo(() => {
     const s = new Set<string>();
@@ -261,10 +303,13 @@ export default function Network() {
 
   const runPath = async () => {
     if (!from || !to || !token) return;
+    const seq = beginRequest();
     setError('');
     try {
-      setPath(await apiGet(`/network/path?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&mode=${mode}`, token));
+      const result = await apiGet(`/network/path?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&mode=${mode}`, token);
+      if (isCurrent(seq)) setPath(result);
     } catch (e) {
+      if (!isCurrent(seq)) return;
       setError(e instanceof Error ? e.message : 'Unable to calculate path');
     }
   };
@@ -272,11 +317,14 @@ export default function Network() {
 
   const runAnalysis = async (endpoint: string) => {
     if (!token) return;
+    const seq = beginRequest();
     setError('');
     setAnalysisKind(endpoint);
     try {
-      setAnalysis(await apiGet(`/network/${endpoint}`, token));
+      const result = await apiGet(`/network/${endpoint}`, token);
+      if (isCurrent(seq)) setAnalysis(result);
     } catch (e) {
+      if (!isCurrent(seq)) return;
       setError(e instanceof Error ? e.message : 'Unable to load analysis');
     }
   };
@@ -305,7 +353,12 @@ export default function Network() {
       >
         <Text style={styles.title}>Network Intelligence</Text>
         {error ? <Text style={styles.error}>{error}</Text> : null}
-        {loading && !graph ? <ActivityIndicator /> : null}
+        {!graph && loading ? <ActivityIndicator accessibilityLabel="Loading network" /> : null}
+        {!graph && !loading && error ? (
+          <Pressable style={styles.button} onPress={() => load()} accessibilityRole="button" accessibilityLabel="Retry loading network">
+            <Text style={styles.buttonText}>Retry</Text>
+          </Pressable>
+        ) : null}
 
         {graph && (
           <>
@@ -338,7 +391,7 @@ export default function Network() {
               <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
                 <Chip label={focus ? 'Focus: on' : 'Focus: off'} active={Boolean(focus)} onPress={clearFocus} />
               </View>
-              <Pressable style={styles.button} onPress={() => load()} disabled={loading}>
+              <Pressable style={styles.button} onPress={() => load()} disabled={loading} accessibilityRole="button" accessibilityLabel="Apply filters" accessibilityState={{ disabled: loading }}>
                 <Text style={styles.buttonText}>Apply</Text>
               </Pressable>
               {activeFilters.length ? (
@@ -390,7 +443,7 @@ export default function Network() {
                 <Chip label="Shortest" active={mode === 'shortest'} onPress={() => setMode('shortest')} />
                 <Chip label="Best" active={mode === 'best'} onPress={() => setMode('best')} />
               </View>
-              <Pressable style={styles.button} onPress={runPath} disabled={!from || !to}>
+              <Pressable style={styles.button} onPress={runPath} disabled={!from || !to} accessibilityRole="button" accessibilityLabel="Find path" accessibilityState={{ disabled: !from || !to }}>
                 <Text style={styles.buttonText}>Find path</Text>
               </Pressable>
               {path ? (
