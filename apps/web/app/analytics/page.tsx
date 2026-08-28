@@ -6,9 +6,10 @@ const list=(x:any)=>Array.isArray(x)?x:x?.items??x?.rows??x?.data??[];
 export default function Analytics(){
  const [data,setData]=useState<any>(null),[net,setNet]=useState<any>(null),[wf,setWf]=useState<any>(null),[funnel,setFunnel]=useState<any>(null),[e,setE]=useState('');
  useEffect(()=>{Promise.all([api('/analytics/summary'),api('/analytics/network'),api('/analytics/workflows'),api('/analytics/recommendations/funnel')]).then(([s,n,w,f])=>{setData(s);setNet(n);setWf(w);setFunnel(f)}).catch(x=>setE((x as Error).message))},[]);
- const counts=data?.counts??{}; const eng=data?.engagement??{}; const feature=list(eng.featureUsage);
- const netAvg=net?.relationshipAverages??{}; const netKpis=[
-  ['Health',netAvg.healthScore??'—'],['Strategic',netAvg.strategicScore??'—'],['Trust',netAvg.trustScore??'—'],['Influence',netAvg.influenceScore??'—'],['Access',netAvg.accessScore??'—'],['Opportunity',netAvg.opportunityScore??'—'],['Resilience',netAvg.resilienceScore??'—'],['Risk',netAvg.riskScore??'—'],['Engagement',netAvg.engagementScore??'—']];
+const counts=data?.counts??{}; const eng=data?.engagement??{}; const feature=list(eng.featureUsage);
+const netNm=net?.strategicNetworkMetrics??{}; const netKpis=[
+  ['Network capital',netNm.networkCapital??'—'],['Strategic index',netNm.strategicRelationshipIndex??'—'],['Resilience',netNm.relationshipResilienceScore??'—'],['Weighted opportunity',netNm.weightedOpportunityValue??'—'],['Referral success',netNm.referralSuccessRate??'—']];
+const netSummary=`${netNm.relationshipCount??'—'} relationships · ${netNm.opportunityCount??'—'} opportunities · ${netNm.peopleCount??'—'} people`;
  const wfRows=list(wf?.executions); const stages=funnel?.stages??{}; const conv=funnel?.conversion??{}; const overall=funnel?.overall??{};
  return <main className="feature-page"><PageHeader eyebrow="PRODUCT ANALYTICS" title="Analytics" description="Tenant-scoped usage, activity, strategic network، workflow execution و Recommendation Funnel."/>
  <ErrorCard message={e}/>{!data&&!e?<Loading/>:<>
@@ -18,7 +19,7 @@ export default function Analytics(){
   <section className="panel"><div className="panel-title"><div><h2>Engagement</h2></div></div><div className="metric-list"><div><span>Active users (30d)</span><strong>{eng.activeUsers30d??0}</strong></div><div><span>Recommendation acceptance</span><strong>{eng.recommendationAcceptance??0}</strong></div><div><span>Successful connections</span><strong>{eng.successfulConnections??0}</strong></div><div><span>Relationship updates</span><strong>{eng.relationshipUpdates??0}</strong></div></div></section>
  </section>
  {feature.length>0&&<section className="panel"><div className="panel-title"><div><h2>Feature Usage (30d)</h2></div></div><DataTable columns={[{key:'feature',label:'Feature'},{key:'count',label:'Count'}]} rows={feature.map((x:any)=>({feature:x.feature,count:x.count}))}/></section>}
- {net&&<section className="panel"><div className="panel-title"><div><h2>Strategic Network Metrics</h2><p>{net.relationships??'—'} relationships · {net.opportunities??'—'} opportunities · {net.people??'—'} people · {net.referralGroups??'—'} referral groups</p></div></div>
+ {net&&<section className="panel"><div className="panel-title"><div><h2>Strategic Network Metrics</h2><p>{netSummary}</p></div></div>
   <div className="kpi-grid">{netKpis.map(([k,v])=><div className="kpi-card" key={k}><small>{k}</small><strong>{typeof v==='number'?Math.round(v*100)/100:v}</strong></div>)}</div>
   <DataTable columns={[{key:'k',label:'متریک'},{key:'v',label:'مقدار'}]} rows={netKpis.map(([k,v])=>({k,v}))}/>
  </section>}

@@ -28,6 +28,7 @@ export default function MeetingsTab() {
     <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
         <Text style={styles.title}>Meetings</Text>
+        <Link href="/create-meeting" asChild><Pressable style={styles.button}><Text style={styles.buttonText}>New meeting</Text></Pressable></Link>
         {error && <Text style={styles.error}>{error}</Text>}
         {!rows.length && !error && <ActivityIndicator />}
         {rows.map((r) => (

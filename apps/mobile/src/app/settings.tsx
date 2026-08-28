@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, RefreshControl, SafeAreaView, ScrollView, Text, View } from 'react-native';
+import { Link } from 'expo-router';
 import { apiGet, apiPatch, apiPost } from '../services/api-client';
 import { useSession } from '../state/session';
 import { styles, colors } from '../lib/ui';
@@ -77,6 +78,12 @@ export default function Settings() {
           </View>
         ))}
         {!log.length && !error && <Text style={{ color: colors.muted }}>No deliveries yet.</Text>}
+        <View style={styles.card}>
+          <Text style={styles.label}>Security &amp; sync</Text>
+          <Link href="/mfa" asChild><Pressable style={{ paddingVertical: 8 }}><Text style={styles.buttonText}>MFA &amp; two-factor →</Text></Pressable></Link>
+          <Link href="/offline-queue" asChild><Pressable style={{ paddingVertical: 8 }}><Text style={styles.buttonText}>Offline queue →</Text></Pressable></Link>
+          <Link href="/sync" asChild><Pressable style={{ paddingVertical: 8 }}><Text style={styles.buttonText}>Sync →</Text></Pressable></Link>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
