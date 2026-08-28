@@ -14,6 +14,18 @@ export class ApiClientError extends Error {
 }
 
 let refreshPromise: Promise<string | null> | null = null;
+let keyCounter = 0;
+
+function makeIdempotencyKey(existing?: string | null): string {
+  if (existing && existing.trim().length >= 16) return existing.trim();
+  // 32-char hex, satisfies the backend's min-length (>=16) requirement.
+  const rand = (globalThis.crypto?.randomUUID?.().replace(/-/g, '') ?? '');
+  keyCounter = (keyCounter + 1) >>> 0;
+  return (rand || `${Date.now().toString(16)}${Math.random().toString(16).slice(2)}`)
+    .slice(0, 24) + keyCounter.toString(16).padStart(8, '0');
+}
+
+const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 async function refreshAccessToken(): Promise<string | null> {
   const tokens = await getStoredTokens();
@@ -43,12 +55,19 @@ async function refreshAccessToken(): Promise<string | null> {
   return refreshPromise;
 }
 
-export async function apiRequest<T>(path: string, options: RequestInit = {}, token?: string | null): Promise<T> {
+export async function apiRequest<T>(path: string, options: RequestInit = {}, token?: string | null, idempotencyKey?: string | null): Promise<T> {
   const isForm = typeof FormData !== 'undefined' && options.body instanceof FormData;
   let headers = new Headers(options.headers);
   headers.set('Accept', 'application/json');
   if (options.body != null && !isForm && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
   if (token) headers.set('Authorization', `Bearer ${token}`);
+  const method = String(options.method ?? 'GET').toUpperCase();
+  // Every protected write mutation must carry a valid Idempotency-Key (backend-enforced).
+  // Auto-generate one when the caller (or offline queue) did not supply one. Reads (GET/HEAD)
+  // never receive a key.
+  if (MUTATING_METHODS.has(method) && !headers.has('Idempotency-Key')) {
+    headers.set('Idempotency-Key', makeIdempotencyKey(idempotencyKey));
+  }
   let response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
   if (response.status === 401 && !path.startsWith('/auth/')) {
     const next = await refreshAccessToken();
@@ -81,21 +100,25 @@ function isPermanentFailure(error: unknown): boolean {
 }
 
 export async function apiPostOffline<T>(path: string, body: unknown, token?: string | null) {
+  // Stable key: used for the immediate attempt AND persisted to the queue so later
+  // retries/reconnects replay the same mutation instead of creating duplicates.
+  const idempotencyKey = makeIdempotencyKey();
   try {
-    return await apiPost<T>(path, body, token);
+    return await apiRequest<T>(path, { method: 'POST', body: JSON.stringify(body) }, token, idempotencyKey);
   } catch (error) {
     if (isPermanentFailure(error)) throw error;
-    await enqueueMutation({ path, method: 'POST', body });
+    await enqueueMutation({ path, method: 'POST', body, idempotencyKey });
     return { queued: true } as T;
   }
 }
 
 export async function apiPatchOffline<T>(path: string, body: unknown, token?: string | null) {
+  const idempotencyKey = makeIdempotencyKey();
   try {
-    return await apiPatch<T>(path, body, token);
+    return await apiRequest<T>(path, { method: 'PATCH', body: JSON.stringify(body) }, token, idempotencyKey);
   } catch (error) {
     if (isPermanentFailure(error)) throw error;
-    await enqueueMutation({ path, method: 'PATCH', body });
+    await enqueueMutation({ path, method: 'PATCH', body, idempotencyKey });
     return { queued: true } as T;
   }
 }

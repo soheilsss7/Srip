@@ -8,7 +8,9 @@ const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
 const IDEMPOTENCY_TTL_MS = Number(process.env.IDEMPOTENCY_TTL_MS ?? 24 * 60 * 60 * 1000);
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-const PUBLIC_MUTATION_PREFIXES = ['/auth/login', '/auth/refresh', '/auth/forgot-password', '/auth/reset-password', '/auth/verify-email'];
+// Exact public auth mutation routes that must work without a Bearer token or Idempotency-Key.
+// Must match the real routes in AuthController; do not broadly exempt /auth/*.
+const PUBLIC_MUTATION_PREFIXES = ['/auth/login', '/auth/refresh', '/auth/password-reset/request', '/auth/password-reset/confirm', '/auth/register', '/auth/email/verify'];
 // Legacy idempotency aliases are normalized by the error contract: IDEMPOTENCY_KEY_REQUIRED, IDEMPOTENCY_KEY_REUSED, IDEMPOTENCY_REQUEST_IN_PROGRESS.
 
 function hash(value: unknown): string {

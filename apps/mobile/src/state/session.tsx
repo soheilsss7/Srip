@@ -23,9 +23,13 @@ function bearer(status: number, message: string) {
 }
 
 async function sendQueued(token: string, m: QueuedMutation) {
+  // Reuse the mutation's stable idempotency key across retries/reconnects so the backend
+  // replays the original result instead of creating a duplicate resource.
+  const headers: Record<string, string> = { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+  if (m.idempotencyKey) headers['Idempotency-Key'] = m.idempotencyKey;
   const response = await fetch(`${API_BASE_URL}${m.path}`, {
     method: m.method,
-    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    headers,
     body: m.body === undefined ? undefined : JSON.stringify(m.body),
   });
   if (!response.ok) throw bearer(response.status, `queued mutation failed ${response.status}`);
