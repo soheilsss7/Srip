@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthorizationService } from '../common/authorization/authorization.service';
+import { EntityResponseDto } from '../common/dto/entity-response.dto';
 
 const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
 
@@ -223,7 +224,7 @@ export class RequirementMatchingService {
     const best = matches[0] ?? null;
     const recommendations = matches.slice(0, 5).map((m, index) => ({ rank: index + 1, targetOrganizationId: m.targetOrganization.id, type: m.connectionType === 'DIRECT' ? 'DIRECT_CONNECTION' : 'INTRODUCTION', title: `Best connection to ${m.targetOrganization.name}`, rationale: m.recommendation, successProbability: m.successProbability, connectorPerson: m.connectorPerson, path: m.path }));
 
-    return {
+    return EntityResponseDto.fromUnknown({
       requirement: { id: req.id, title: req.title, description: req.description, category: req.category },
       sourceOrganizationId: sourceOrganizationId ?? null,
       pipeline: ['Requirement', 'Requirement Keywords', 'Target Organizations', 'Direct Relationship', '1-Hop', '2-Hop', 'Connector Person', 'Path Strength', 'Relationship Health', 'Trust', 'Engagement', 'Success Probability', 'Rank'],
@@ -236,6 +237,6 @@ export class RequirementMatchingService {
       relationshipGaps: gaps.slice(0, limit),
       recommendations,
       matches: matches.slice(0, Math.max(1, Math.min(limit, 50))),
-    };
+    });
   }
 }

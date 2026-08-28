@@ -21,6 +21,8 @@ const GLOBAL_BLOCKED_KEYS = new Set([
   'storageKey',
   'deletedById',
   'deletedBy',
+  'processingLeaseId',
+  'processingHeartbeatAt',
 ]);
 
 const ENTITY_BLOCKED_KEYS: Record<string, Set<string>> = {

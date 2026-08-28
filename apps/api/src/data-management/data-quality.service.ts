@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthorizationService } from '../common/authorization/authorization.service';
 import { AuditService } from '../audit/audit.service';
+import { EntityResponseDto } from '../common/dto/entity-response.dto';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
 const configuredMaxIds = Number(process.env.DATA_QUALITY_MAX_IDS ?? 500);
@@ -156,9 +157,9 @@ export class DataQualityService {
   private async createSnapshot(userId: string, organizationId: string | undefined, metrics: any) {
     const snapshot = await this.prisma.dataQualitySnapshot.create({ data: { organizationId: organizationId || undefined, createdById: userId, metrics } });
     await this.audit.logMutation({ userId, action: 'CREATE', entityType: 'DataQualitySnapshot', entityId: snapshot.id, organizationId, after: metrics });
-    return snapshot;
+    return EntityResponseDto.fromUnknown(snapshot);
   }
 
-  async get(userId: string, organizationId?: string) { await this.auth.assertPermission(userId, 'data.quality.read', { organizationId }); const ids = await this.auth.accessibleOrganizationIds(userId); if (!organizationId && ids !== null) return this.execute(userId, organizationId); const latest = await this.prisma.dataQualitySnapshot.findFirst({ where: { organizationId: organizationId || undefined }, orderBy: { scannedAt: 'desc' } }); return latest ?? this.execute(userId, organizationId); }
+  async get(userId: string, organizationId?: string) { await this.auth.assertPermission(userId, 'data.quality.read', { organizationId }); const ids = await this.auth.accessibleOrganizationIds(userId); if (!organizationId && ids !== null) return this.execute(userId, organizationId); const latest = await this.prisma.dataQualitySnapshot.findFirst({ where: { organizationId: organizationId || undefined }, orderBy: { scannedAt: 'desc' } }); return latest ? EntityResponseDto.fromUnknown(latest) : this.execute(userId, organizationId); }
   async duplicates(userId: string, organizationId?: string) { const report = await this.execute(userId, organizationId); return { snapshotId: report.id, duplicateOrganizations: (report.metrics as any).duplicateOrganizations }; }
 }

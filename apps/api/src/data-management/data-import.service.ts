@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { DuplicateStrategy, ImportEntityType, ImportFormat, ImportRowStatus, ImportStatus } from '@prisma/client';
 import * as XLSX from 'xlsx';
 import { PrismaService } from '../prisma/prisma.service';
+import { EntityResponseDto } from '../common/dto/entity-response.dto';
 import { AuthorizationService } from '../common/authorization/authorization.service';
 import { AuditService } from '../audit/audit.service';
 import { DuplicateDetectionService } from './duplicate-detection.service';
@@ -91,7 +92,7 @@ export class DataImportService {
   await this.audit.logMutation({userId,action:'CREATE',entityType:'DataImport',entityId:job.id,organizationId:orgId,after:{status:'PREVIEWED',entityType:entity,format,total:rows.length,valid,invalid,duplicates:dupes,approvalRequestId:(approval as any).id}});
   return this.getReport(userId,job.id);
  }
- async getReport(userId:string,id:string,page=1,limit=100){const safePage=Math.max(1,Number(page)||1);const safeLimit=Math.max(1,Math.min(500,Number(limit)||100));const job=await this.prisma.dataImport.findUnique({where:{id}});if(!job)throw new NotFoundException('Import not found');if(job.requestedById!==userId){await this.auth.assertPermission(userId, 'enterprise.admin', { organizationId: job.organizationId??undefined });}else{await this.auth.assertPermission(userId, 'data.import', { organizationId: job.organizationId??undefined });}const [rows,total,duplicates]=await this.prisma.$transaction([this.prisma.dataImportRow.findMany({where:{importId:id},include:{duplicates:true},orderBy:{rowNumber:'asc'},skip:(safePage-1)*safeLimit,take:safeLimit}),this.prisma.dataImportRow.count({where:{importId:id}}),this.prisma.dataImportDuplicate.count({where:{importId:id}})]);return {...job,rows,duplicates,totalRows:total,totalDuplicates:duplicates,page:safePage,limit:safeLimit,totalPages:Math.ceil(total/safeLimit)}}
+ async getReport(userId:string,id:string,page=1,limit=100){const safePage=Math.max(1,Number(page)||1);const safeLimit=Math.max(1,Math.min(500,Number(limit)||100));const job=await this.prisma.dataImport.findUnique({where:{id}});if(!job)throw new NotFoundException('Import not found');if(job.requestedById!==userId){await this.auth.assertPermission(userId, 'enterprise.admin', { organizationId: job.organizationId??undefined });}else{await this.auth.assertPermission(userId, 'data.import', { organizationId: job.organizationId??undefined });}const [rows,total,duplicates]=await this.prisma.$transaction([this.prisma.dataImportRow.findMany({where:{importId:id},include:{duplicates:true},orderBy:{rowNumber:'asc'},skip:(safePage-1)*safeLimit,take:safeLimit}),this.prisma.dataImportRow.count({where:{importId:id}}),this.prisma.dataImportDuplicate.count({where:{importId:id}})]);return EntityResponseDto.fromUnknown({...job,rows,duplicates,totalRows:total,totalDuplicates:duplicates,page:safePage,limit:safeLimit,totalPages:Math.ceil(total/safeLimit)})}
  async approve(userId:string,id:string,body:any){
   const job=await this.prisma.dataImport.findUnique({where:{id}}); if(!job)throw new NotFoundException('Import not found');
   await this.auth.assertPermission(userId,'data.import.approve',{organizationId:job.organizationId??undefined});
@@ -103,7 +104,7 @@ export class DataImportService {
   const approved=await this.prisma.dataImport.update({where:{id},data:{status:ImportStatus.APPROVED,pipelineStage:'APPROVAL',approvedById:userId,approvedAt:new Date(),duplicateStrategy:strategy}});
   const queued=await this.queues.enqueue(JOB_NAMES.dataImportProcess,{importId:id,userId},{jobId:`data-import:${id}`});
   await this.audit.logMutation({userId,action:'UPDATE',entityType:'DataImport',entityId:id,organizationId:job.organizationId??undefined,after:{status:'APPROVED',duplicateStrategy:strategy,queueJobId:queued.id}});
-  return {...approved,queueJobId:queued.id,queued:true};
+  return EntityResponseDto.fromUnknown({...approved,queueJobId:queued.id,queued:true});
  }
  async processApproved(userId:string,id:string){
   let job=await this.prisma.dataImport.findUnique({where:{id}}); if(!job)throw new NotFoundException('Import not found');

@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuthorizationService } from '../common/authorization/authorization.service';
 import { AuditService } from '../audit/audit.service';
 import { EventBusService } from '../event-bus/event-bus.service';
+import { EntityResponseDto } from '../common/dto/entity-response.dto';
 import { RELATIONSHIP_SCORE_FACTORS } from './relationship-score.service';
 
 type WeightConfig = Record<string, unknown>;
@@ -93,9 +94,10 @@ export class ScoreVersioningService {
 
   async list(userId: string) {
     await this.assertAdmin(userId);
-    return this.prisma.scoreVersion.findMany({
+    const rows = await this.prisma.scoreVersion.findMany({
       orderBy: [{ name: 'asc' }, { version: 'desc' }],
     });
+    return EntityResponseDto.manyUnknown(rows);
   }
 
   async create(userId: string, body: any) {
@@ -125,7 +127,7 @@ export class ScoreVersioningService {
       after: created,
       reason: 'score-version-created',
     });
-    return created;
+    return EntityResponseDto.fromUnknown({ ...created, organizationId: body?.organizationId ?? undefined });
   }
 
   async configureIndustry(userId: string, body: any) {
@@ -173,13 +175,13 @@ export class ScoreVersioningService {
       userId, action: 'UPDATE', entityType: 'ScoreVersion', entityId: id,
       before: current, after: updated, reason: 'score-version-draft-updated',
     });
-    return updated;
+    return EntityResponseDto.fromUnknown(updated);
   }
 
   async activate(userId: string, id: string) {
     const target = await this.prisma.scoreVersion.findUnique({ where: { id } });
     if (!target) throw new NotFoundException('Score version not found');
-    if (target.status === 'ACTIVE') return target;
+    if (target.status === 'ACTIVE') return EntityResponseDto.fromUnknown(target);
     await this.assertAdmin(userId);
 
     validateWeightsDocument(target.weights);
@@ -194,15 +196,16 @@ export class ScoreVersioningService {
       userId, action: 'UPDATE', entityType: 'ScoreVersion', entityId: id,
       before: target, after: activated, reason: 'score-version-activated',
     });
-    return activated;
+    return EntityResponseDto.fromUnknown(activated);
   }
 
   async calibrations(userId: string, versionId: string) {
     await this.assertAdmin(userId);
-    return this.prisma.scoreCalibration.findMany({
+    const rows = await this.prisma.scoreCalibration.findMany({
       where: { scoreVersionId: versionId },
       orderBy: { createdAt: 'desc' },
     });
+    return EntityResponseDto.manyUnknown(rows);
   }
 
   async addCalibration(userId: string, versionId: string, body: any) {
@@ -228,6 +231,6 @@ export class ScoreVersioningService {
       userId, action: 'CREATE', entityType: 'ScoreCalibration', entityId: calibration.id,
       before: null, after: calibration, reason: 'score-calibration-created',
     });
-    return calibration;
+    return EntityResponseDto.fromUnknown(calibration);
   }
 }
