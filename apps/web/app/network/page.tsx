@@ -77,13 +77,15 @@ export default function Page() {
       if (status) params.set('status', status);
       if (focus) params.set('focus', focus);
       params.set('limit', String(PAGE_LIMIT));
-      if (cursor && !append) params.set('cursor', cursor);
+      if (cursor) params.set('cursor', cursor);
       const data = await apiGet<GGraph>(`/network/graph?${params.toString()}`);
       setGraph((prev) => {
         if (append && prev) {
-          const seenNodes = new Set(prev.nodes.map((n) => n.id));
-          const newNodes = data.nodes.filter((n) => !seenNodes.has(n.id));
-          return { ...data, nodes: [...prev.nodes, ...newNodes], meta: data.meta, page: data.page };
+          const seenNodeIds = new Set(prev.nodes.map((n) => n.id));
+          const newNodes = data.nodes.filter((n) => !seenNodeIds.has(n.id));
+          const seenEdgeIds = new Set(prev.edges.map((e) => e.id));
+          const newEdges = data.edges.filter((e) => !seenEdgeIds.has(e.id));
+          return { ...data, nodes: [...prev.nodes, ...newNodes], edges: [...prev.edges, ...newEdges], meta: data.meta, page: data.page };
         }
         return data;
       });
