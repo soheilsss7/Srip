@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, SafeAreaView, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, RefreshControl, SafeAreaView, ScrollView, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { apiGet, apiPatch, apiPost } from '../../services/api-client';
+import { apiGet, apiPatch, apiPost, api } from '../../services/api-client';
 import { useSession } from '../../state/session';
 import { styles, colors } from '../../lib/ui';
 
@@ -52,6 +52,11 @@ export default function PersonDetail() {
     await act('org', () => apiPost(`/people/${id}/organizations`, { organizationId: orgId.trim(), roleTitle: roleTitle.trim() || undefined }, token));
     setOrgId(''); setRoleTitle('');
   }
+  async function removeOrg(o: any) {
+    const oid = o?.organizationId;
+    if (!oid) { setError('Organization ID missing on assignment.'); return; }
+    Alert.alert('حذف انتساب', `خروج از سازمان «${o?.organization?.name ?? oid}»؟`, [{ text: 'لغو', style: 'cancel' }, { text: 'حذف', style: 'destructive', onPress: () => act('rmorg', () => api(`/people/${id}/organizations/${oid}`, { method: 'DELETE' }, token)) }]);
+  }
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -78,6 +83,7 @@ export default function PersonDetail() {
               <View key={o?.id ?? o?.organizationId} style={{ paddingVertical: 4 }}>
                 <Text style={styles.value}>{o?.organization?.name ?? o?.organizationId}</Text>
                 <Text style={styles.label}>{o?.roleTitle ?? o?.role ?? '—'}</Text>
+                <Pressable onPress={() => removeOrg(o)}><Text style={{ color: colors.danger, fontWeight: '700' }}>Remove assignment</Text></Pressable>
               </View>
             ))}
             <TextInput style={styles.input} placeholder="Organization ID" value={orgId} onChangeText={setOrgId} />

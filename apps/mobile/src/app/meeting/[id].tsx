@@ -1,13 +1,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, SafeAreaView, ScrollView, Text, TextInput, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
-import { apiGet, apiPatch, apiPost } from '../../services/api-client';
+import { ActivityIndicator, Alert, Pressable, RefreshControl, SafeAreaView, ScrollView, Text, TextInput, View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { apiGet, apiPatch, apiPost, api } from '../../services/api-client';
 import { useSession } from '../../state/session';
 import { styles, colors } from '../../lib/ui';
 
 export default function MeetingDetail() {
   const { token } = useSession();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const [m, setM] = useState<any>(null);
   const [minutes, setMinutes] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -18,11 +19,13 @@ export default function MeetingDetail() {
   const [transcript, setTranscript] = useState('');
   const [candidates, setCandidates] = useState<any[]>([]);
   const [checked, setChecked] = useState<Record<number, boolean>>({});
+  const [edit, setEdit] = useState({ title: '', objective: '', agenda: '', location: '' });
+  const [personId, setPersonId] = useState('');
 
   const load = useCallback(async () => {
     if (!token || !id) return;
     setError(null);
-    try { setM(await apiGet<any>(`/meetings/${id}`, token)); } catch (e) { setError(e instanceof Error ? e.message : 'Request failed'); }
+    try { const d = await apiGet<any>(`/meetings/${id}`, token); setM(d); setEdit({ title: d.title ?? '', objective: d.objective ?? '', agenda: d.agenda ?? '', location: d.location ?? '' }); } catch (e) { setError(e instanceof Error ? e.message : 'Request failed'); }
   }, [token, id]);
   useEffect(() => { load(); }, [load]);
   const refresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
@@ -64,6 +67,24 @@ export default function MeetingDetail() {
   async function setStatus(s: string) {
     await act('status', async () => { await apiPatch(`/meetings/${id}`, { status: s }, token); await load(); });
   }
+  async function saveEdit() {
+    await act('edit', async () => {
+      await apiPatch(`/meetings/${id}`, { title: edit.title.trim() || undefined, objective: edit.objective.trim() || undefined, agenda: edit.agenda.trim() || undefined, location: edit.location.trim() || undefined }, token);
+      await load();
+    });
+  }
+  async function addParticipant() {
+    if (!personId.trim()) { setError('Person ID required.'); return; }
+    const current = (m?.participants ?? []).map((p: any) => p?.personId ?? p?.person?.id).filter(Boolean);
+    await act('pt', async () => {
+      await api(`/meetings/${id}/participants`, { method: 'PUT', body: JSON.stringify({ personIds: [...current, personId.trim()] }) }, token);
+      await load();
+    });
+    setPersonId('');
+  }
+  async function deleteMeeting() {
+    Alert.alert('حذف جلسه', `«${m?.title}» حذف شود؟`, [{ text: 'لغو', style: 'cancel' }, { text: 'حذف', style: 'destructive', onPress: async () => { setBusy('pdel'); setError(null); try { await api(`/meetings/${id}`, { method: 'DELETE' }, token); router.replace('/meetings'); } catch (e) { setError(e instanceof Error ? e.message : 'Request failed'); } finally { setBusy(''); } } }]);
+  }
 
   const participants = m?.participants ?? [];
   const actions = m?.actions ?? [];
@@ -88,6 +109,16 @@ export default function MeetingDetail() {
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 6 }}>
               {m.status !== 'COMPLETED' && chip('COMPLETE', m.status === 'COMPLETED', () => setStatus('COMPLETED'))}
             </View>
+            <Pressable style={[styles.button, { backgroundColor: colors.danger, marginTop: 8 }]} disabled={!!busy} onPress={deleteMeeting}><Text style={styles.buttonText}>{busy === 'pdel' ? 'Deleting…' : 'Delete meeting'}</Text></Pressable>
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.label}>Edit meeting</Text>
+            <TextInput style={styles.input} value={edit.title} onChangeText={t => setEdit(e => ({ ...e, title: t }))} placeholder="Title" />
+            <TextInput style={styles.input} value={edit.objective} onChangeText={t => setEdit(e => ({ ...e, objective: t }))} placeholder="Objective" multiline />
+            <TextInput style={styles.input} value={edit.agenda} onChangeText={t => setEdit(e => ({ ...e, agenda: t }))} placeholder="Agenda" multiline />
+            <TextInput style={styles.input} value={edit.location} onChangeText={t => setEdit(e => ({ ...e, location: t }))} placeholder="Location" />
+            <Pressable style={styles.button} disabled={!!busy} onPress={saveEdit}><Text style={styles.buttonText}>{busy === 'edit' ? 'Saving…' : 'Save edit'}</Text></Pressable>
           </View>
 
           <View style={styles.card}>
@@ -99,6 +130,10 @@ export default function MeetingDetail() {
               <Text style={styles.buttonText}>{busy === 'outcome' ? 'Saving…' : 'Save outcome'}</Text>
             </Pressable>
             <Text style={styles.label}>Participants: {participants.map((p: any) => p?.person?.displayName ?? p?.person?.firstName ?? p?.personId ?? '').join(', ') || 'none'}</Text>
+            <View style={styles.row}>
+              <TextInput style={[styles.input, { flex: 1 }]} placeholder="Person ID to add" value={personId} onChangeText={setPersonId} />
+              <Pressable style={styles.button} onPress={addParticipant}><Text style={styles.buttonText}>Add</Text></Pressable>
+            </View>
           </View>
 
           <Pressable style={styles.button} disabled={!!busy} onPress={() => { extract(); }}>

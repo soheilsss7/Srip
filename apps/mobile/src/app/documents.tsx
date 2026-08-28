@@ -16,6 +16,7 @@ export default function Documents() {
   const [orgId, setOrgId] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  const [indexText, setIndexText] = useState('');
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -56,6 +57,11 @@ export default function Documents() {
       Linking.openURL(url).catch(() => Alert.alert('Open document', url));
     } catch (e) { Alert.alert('Download', (e as Error).message); }
   }
+  async function indexDoc(doc: Doc, text: string) {
+    if (!token) return;
+    try { await api<any>(`/documents/${doc.id}/index`, { method: 'POST', body: JSON.stringify({ text }) }, token); Alert.alert('Index', 'Indexing content submitted.'); setIndexText(''); }
+    catch (e) { Alert.alert('Index', (e as Error).message); }
+  }
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -80,11 +86,17 @@ export default function Documents() {
         {error && <Text style={styles.error}>{error}</Text>}
         {!rows.length && !error && <ActivityIndicator />}
         {rows.map((d) => (
-          <Pressable key={d.id} style={styles.card} onPress={() => download(d)}>
-            <Text style={styles.value}>{d.name}</Text>
-            <Text style={styles.subtitle}>{d.classification} · {d.mimeType} · {(d.sizeBytes ?? 0) > 0 ? `${d.sizeBytes} B` : ''}</Text>
-            <Text style={styles.label}>{d.uploadStatus} · {d.scanStatus}</Text>
-          </Pressable>
+          <View key={d.id} style={styles.card}>
+            <Pressable onPress={() => download(d)}>
+              <Text style={styles.value}>{d.name}</Text>
+              <Text style={styles.subtitle}>{d.classification} · {d.mimeType} · {(d.sizeBytes ?? 0) > 0 ? `${d.sizeBytes} B` : ''}</Text>
+              <Text style={styles.label}>{d.uploadStatus} · {d.scanStatus} · tap to download</Text>
+            </Pressable>
+            <View style={styles.row}>
+              <TextInput style={[styles.input, { flex: 1 }]} placeholder="Index content text" value={indexText} onChangeText={setIndexText} />
+              <Pressable style={styles.button} onPress={() => indexDoc(d, indexText)}><Text style={styles.buttonText}>Index</Text></Pressable>
+            </View>
+          </View>
         ))}
         {!rows.length && !error && <Text style={{ color: colors.muted }}>No documents yet.</Text>}
       </ScrollView>
