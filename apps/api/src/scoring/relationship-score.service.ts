@@ -145,7 +145,7 @@ export class CanonicalRelationshipScoreService extends ScoringBaseService {
       this.prisma.interaction.findFirst({ where: { relationshipId, deletedAt: null }, orderBy: { occurredAt: 'desc' }, select: { occurredAt: true } }),
       this.activeVersion('RELATIONSHIP'),
       this.prisma.opportunity.aggregate({ where: { relationshipId, deletedAt: null }, _count: { _all: true }, _sum: { value: true }, _avg: { probability: true } }),
-      this.prisma.$queryRaw<Array<{ total: bigint; completed: bigint; nonCancelled: bigint }>>(Prisma.sql`SELECT COUNT(*)::bigint AS total, COUNT(*) FILTER (WHERE status = 'FULFILLED' AND (due_at IS NULL OR completion_at IS NULL OR completion_at <= due_at))::bigint AS completed, COUNT(*) FILTER (WHERE status <> 'CANCELLED')::bigint AS "nonCancelled" FROM "Commitment" WHERE "relationshipId" = ${relationshipId} AND "deletedAt" IS NULL`),
+      this.prisma.$queryRaw<Array<{ total: bigint; completed: bigint; nonCancelled: bigint }>>(Prisma.sql`SELECT COUNT(*)::bigint AS total, COUNT(*) FILTER (WHERE status = 'FULFILLED' AND ("dueAt" IS NULL OR "completionAt" IS NULL OR "completionAt" <= "dueAt"))::bigint AS completed, COUNT(*) FILTER (WHERE status <> 'CANCELLED')::bigint AS "nonCancelled" FROM "Commitment" WHERE "relationshipId" = ${relationshipId} AND "deletedAt" IS NULL`),
       interactionTypeRows.length,
       interactionPeopleRows.length,
       this.prisma.interaction.count({ where: { relationshipId, deletedAt: null, occurredAt: { gte: since }, outcome: { not: null } } }),
