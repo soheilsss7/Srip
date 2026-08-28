@@ -28,6 +28,9 @@ export default function Organizations() {
     <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
         <Text style={styles.title}>Organizations</Text>
+        <Link href={{ pathname: '/create-organization' }} asChild>
+          <Pressable style={styles.button}><Text style={styles.buttonText}>+ New Organization</Text></Pressable>
+        </Link>
         {error && <Text style={styles.error}>{error}</Text>}
         {!rows.length && !error && <ActivityIndicator />}
         {rows.map((r) => (

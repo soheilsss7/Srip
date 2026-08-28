@@ -28,6 +28,9 @@ export default function People() {
     <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
         <Text style={styles.title}>People</Text>
+        <Link href={{ pathname: '/create-person' }} asChild>
+          <Pressable style={styles.button}><Text style={styles.buttonText}>+ New Person</Text></Pressable>
+        </Link>
         {error && <Text style={styles.error}>{error}</Text>}
         {!rows.length && !error && <ActivityIndicator />}
         {rows.map((r) => (
