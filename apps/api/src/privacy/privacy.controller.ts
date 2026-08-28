@@ -9,11 +9,11 @@ import { PrivacyService } from './privacy.service';
 export class PrivacyController {
   constructor(private readonly service: PrivacyService) {}
   @Get('policies') @RequirePermission('privacy.read') policies(@Req() r:any){ return this.service.policies(r.user.sub); }
-  @Get('consents') consents(@Req() r:any,@Query('page') page?:string,@Query('pageSize') pageSize?:string){ return this.service.consents(r.user.sub,Number(page)||1,Number(pageSize)||50); }
-  @Post('consents') grant(@Req() r:any,@Body() b:any){ return this.service.grantConsent(r.user.sub,b.purpose,b.version,b.source); }
-  @Post('consents/revoke') revoke(@Req() r:any,@Body() b:any){ return this.service.revokeConsent(r.user.sub,b.purpose,b.version); }
-  @Get('requests') requests(@Req() r:any,@Query('page') page?:string,@Query('pageSize') pageSize?:string){ return this.service.listRequests(r.user.sub,Number(page)||1,Number(pageSize)||50); }
-  @Post('requests') createRequest(@Req() r:any,@Body() b:any){ return this.service.request(r.user.sub,b.type,b.reason); }
+  @Get('consents') @RequirePermission('privacy.read') consents(@Req() r:any,@Query('page') page?:string,@Query('pageSize') pageSize?:string){ return this.service.consents(r.user.sub,Number(page)||1,Number(pageSize)||50); }
+  @Post('consents') @RequirePermission('privacy.access') grant(@Req() r:any,@Body() b:any){ return this.service.grantConsent(r.user.sub,b.purpose,b.version,b.source); }
+  @Post('consents/revoke') @RequirePermission('privacy.access') revoke(@Req() r:any,@Body() b:any){ return this.service.revokeConsent(r.user.sub,b.purpose,b.version); }
+  @Get('requests') @RequirePermission('privacy.read') requests(@Req() r:any,@Query('page') page?:string,@Query('pageSize') pageSize?:string){ return this.service.listRequests(r.user.sub,Number(page)||1,Number(pageSize)||50); }
+  @Post('requests') @RequirePermission('privacy.access') createRequest(@Req() r:any,@Body() b:any){ return this.service.request(r.user.sub,b.type,b.reason); }
   @Post('requests/:id/export') @RequirePermission('privacy.export') export(@Req() r:any,@Param('id') id:string){ return this.service.exportData(r.user.sub,id); }
   @Get('requests/:id/export/status') @RequirePermission('privacy.export') exportStatus(@Req() r:any,@Param('id') id:string){ return this.service.exportStatus(r.user.sub,id); }
   @Post('requests/:id/access') @RequirePermission('privacy.access') access(@Req() r:any,@Param('id') id:string){ return this.service.accessRequest(r.user.sub,id); }

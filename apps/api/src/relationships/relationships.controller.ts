@@ -19,7 +19,7 @@ export class RelationshipsController {
   @Get(':id') @RequirePermission('relationship.read') get(@Param('id') id: string, @Req() req: any) { return this.s.get(req.user.sub, id); }
   @Post() @RequirePermission('relationship.write') create(@Body() d: CreateRelationshipDto, @Req() req: any) { return this.s.create(req.user.sub, d); }
   @Patch(':id') @RequirePermission('relationship.write') update(@Param('id') id: string, @Body() d: UpdateRelationshipDto, @Req() req: any) { return this.s.update(req.user.sub, id, d as any); }
-  @Patch(':id/lifecycle') updateLifecycle(@Param('id') id: string, @Body() d: UpdateRelationshipLifecycleDto, @Req() req: any) { return this.s.updateLifecycle(req.user.sub, id, d.lifecycleStage); }
+  @Patch(':id/lifecycle') @RequirePermission('relationship.write') updateLifecycle(@Param('id') id: string, @Body() d: UpdateRelationshipLifecycleDto, @Req() req: any) { return this.s.updateLifecycle(req.user.sub, id, d.lifecycleStage); }
   @Patch(':id/archive') @RequirePermission('relationship.write') archive(@Param('id') id: string, @Req() req: any) { return this.s.archive(req.user.sub, id); }
   @Post(':id/restore') @RequirePermission('data.restore') restore(@Param('id') id: string, @Req() req: any) { return this.s.restore(req.user.sub, id); }
 }
