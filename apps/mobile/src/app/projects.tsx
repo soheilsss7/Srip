@@ -30,6 +30,7 @@ export default function Projects() {
     <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
         <Text style={styles.title}>Projects</Text>
+        <Link href="/create-project"><Text style={{ color: colors.accent, fontWeight: '700' }}>New Project →</Text></Link>
         {!!total && <Text style={styles.subtitle}>{total} project{total === 1 ? '' : 's'}</Text>}
         {error && <Text style={styles.error}>{error}</Text>}
         {!rows.length && !error && <ActivityIndicator />}

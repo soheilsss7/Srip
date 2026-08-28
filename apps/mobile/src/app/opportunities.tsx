@@ -30,6 +30,7 @@ export default function Opportunities() {
     <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
         <Text style={styles.title}>Opportunities</Text>
+        <Link href="/create-opportunity"><Text style={{ color: colors.accent, fontWeight: '700' }}>New Opportunity →</Text></Link>
         {!!total && <Text style={styles.subtitle}>{total} opportunity{total === 1 ? '' : 'ies'}</Text>}
         {error && <Text style={styles.error}>{error}</Text>}
         {!rows.length && !error && <ActivityIndicator />}

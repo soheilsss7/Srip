@@ -13,6 +13,7 @@ const LINKS: [string, string][] = [
   ['/commitments', 'Commitments'],
   ['/recommendations', 'Recommendations'],
   ['/network', 'Network'],
+  ['/documents', 'Documents'],
   ['/intelligence', 'Intelligence'],
   ['/data-quality', 'Data Quality'],
   ['/search', 'Search'],

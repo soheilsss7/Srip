@@ -30,6 +30,7 @@ export default function Commitments() {
     <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
         <Text style={styles.title}>Commitments</Text>
+        <Link href="/create-commitment" asChild><Pressable style={styles.button}><Text style={styles.buttonText}>New Commitment</Text></Pressable></Link>
         {!!total && <Text style={styles.subtitle}>{total} commitment{total === 1 ? '' : 's'}</Text>}
         {error && <Text style={styles.error}>{error}</Text>}
         {!rows.length && !error && <ActivityIndicator />}

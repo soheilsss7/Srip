@@ -12,6 +12,13 @@ const ROUTE: Record<string, (id: string) => { pathname: string; params: Record<s
   relationship: (id) => ({ pathname: '/relationship/[id]', params: { id } }),
   meeting: (id) => ({ pathname: '/meeting/[id]', params: { id } }),
   interaction: (id) => ({ pathname: '/interaction/[id]', params: { id } }),
+  project: (id) => ({ pathname: '/project/[id]', params: { id } }),
+  opportunity: (id) => ({ pathname: '/opportunity/[id]', params: { id } }),
+  commitment: (id) => ({ pathname: '/commitment/[id]', params: { id } }),
+  action: (id) => ({ pathname: '/action/[id]', params: { id } }),
+  recommendation: (id) => ({ pathname: '/recommendation/[id]', params: { id } }),
+  document: (id) => ({ pathname: '/documents', params: { focus: id } }),
+  note: (id) => ({ pathname: '/interactions', params: {} }),
 };
 
 export default function Search() {
