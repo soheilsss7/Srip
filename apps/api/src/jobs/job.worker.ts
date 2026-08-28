@@ -49,6 +49,9 @@ export class JobWorker implements OnModuleInit, OnModuleDestroy {
     const redisUrl = this.config.get<string>('REDIS_URL', 'redis://localhost:6379');
     this.connection = new IORedis(redisUrl, { maxRetriesPerRequest: null, enableReadyCheck: true });
     for (const queue of Object.values(QUEUE_NAMES)) {
+      if (queue === QUEUE_NAMES.deadLetter) continue;
+      if (queue === QUEUE_NAMES.default) continue;
+      if (queue === QUEUE_NAMES.dataImports) continue;
       const worker = new Worker(queue, (job) => this.process(job), {
         connection: this.connection,
         concurrency: Math.max(1, Number(this.config.get('QUEUE_CONCURRENCY', '5'))),
