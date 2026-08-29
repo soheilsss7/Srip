@@ -10,7 +10,7 @@ import {
   ShieldCheck, FolderKanban, Target, BrainCircuit, FileText, ThumbsUp, BarChart3, BookOpen,
   Bell, Search, Calendar, ListChecks, UserCheck, CheckCircle2, Settings, Settings2, Sparkles, Timer, Database,
   Shield, Plug, Workflow, LineChart, Gauge, Activity, Table2, Flag, FileDown, KeyRound,
-  DatabaseBackup, Archive, ScrollText, HeartPulse, ChevronDown, ChevronUp
+  DatabaseBackup, Archive, ScrollText, HeartPulse, ChevronDown, ChevronUp, AlertTriangle, Upload
 } from 'lucide-react';
 
 type Role = 'SUPER_ADMIN'|'HOLDING_ADMIN'|'HOLDING_EXECUTIVE'|'SUBSIDIARY_ADMIN'|'SUBSIDIARY_EXECUTIVE'|'RELATIONSHIP_MANAGER'|'PROJECT_MANAGER'|'ANALYST'|'STANDARD_USER'|'READ_ONLY';
@@ -93,6 +93,27 @@ const SYSTEM_NAV: Array<readonly [string, string, string]> = [
   ['/settings', 'تنظیمات', 'user.read'],
   ['/sessions', 'نشست‌ها', 'session.read'],
 ] as const;
+const NETWORK_MAIN_NAV: Array<readonly [string, string, string]> = [
+  ['/', 'Dashboard', 'dashboard.read'],
+  ['/organizations', 'Organizations', 'organization.read'],
+  ['/people', 'People', 'person.read'],
+  ['/relationships', 'Relationships', 'relationship.read'],
+  ['/network', 'Network', 'network.read'],
+  ['/calendar', 'Calendar', 'meeting.read'],
+] as const;
+const NETWORK_INTELLIGENCE_NAV: Array<readonly [string, string, string]> = [
+  ['/intelligence', 'Intelligence', 'analytics.read'],
+  ['/opportunities', 'Opportunities', 'opportunity.read'],
+  ['/network?view=risks', 'Risks', 'network.read'],
+  ['/reports', 'Reports', 'report.read'],
+] as const;
+const NETWORK_SYSTEM_NAV: Array<readonly [string, string, string]> = [
+  ['/data-management/import', 'Data Import', 'data.manage'],
+  ['/settings', 'Settings', 'user.read'],
+  ['/admin/users', 'Users', 'admin.users'],
+  ['/admin/audit', 'Audit Log', 'audit.read'],
+] as const;
+
 const ADMIN_NAV: Array<readonly [string, string, string]> = [
   ['/admin', 'مدیریت سیستم', 'admin.users'],
   ['/data-management', 'داده و کیفیت', 'data.manage'],
@@ -164,6 +185,10 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   '/enterprise': <Archive size={16}/>,
   '/data-lifecycle': <DatabaseBackup size={16}/>,
   '/health': <HeartPulse size={16}/>,
+  '/network?view=risks': <AlertTriangle size={16}/>,
+  '/data-management/import': <Upload size={16}/>,
+  '/admin/users': <Users size={16}/>,
+  '/admin/audit': <ScrollText size={16}/>,
 };
 
 function NavGroup({ title, items, pathname, collapsible = false, defaultOpen = true }: { title: string; items: Array<readonly [string, string, string]>; pathname: string; collapsible?: boolean; defaultOpen?: boolean }) {
@@ -234,8 +259,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     finally { clearSession(); router.replace('/login'); }
   }
 
+  const networkRoute = pathname === '/network';
+
   return (
-    <div className="app-shell">
+    <div className={`app-shell${networkRoute ? ' network-shell' : ''}`}>
       <aside className="sidebar" aria-label="ناوبری اصلی">
         <div className="brand">
           <div className="brand-mark">S</div>
@@ -250,10 +277,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {primaryMembership && <strong className="role-org">{primaryMembership.organizationName}</strong>}
         </div>
         <nav className="side-nav" aria-label="ناوبری Workspace">
-          <NavGroup title="Main" items={group(MAIN_NAV)} pathname={pathname} />
-          <NavGroup title="Intelligence" items={group(INTELLIGENCE_NAV)} pathname={pathname} />
-          <NavGroup title="System" items={group(SYSTEM_NAV)} pathname={pathname} />
-          {isAdmin && <NavGroup title="مدیریت سیستم" items={group(ADMIN_NAV)} pathname={pathname} collapsible defaultOpen={false} />}
+          {networkRoute ? <>
+            <NavGroup title="Main" items={group(NETWORK_MAIN_NAV)} pathname={pathname} />
+            <div className="network-nav-divider" />
+            <NavGroup title="Intelligence" items={group(NETWORK_INTELLIGENCE_NAV)} pathname={pathname} />
+            <div className="network-nav-divider" />
+            <NavGroup title="System" items={group(NETWORK_SYSTEM_NAV)} pathname={pathname} />
+          </> : <>
+            <NavGroup title="Main" items={group(MAIN_NAV)} pathname={pathname} />
+            <NavGroup title="Intelligence" items={group(INTELLIGENCE_NAV)} pathname={pathname} />
+            <NavGroup title="System" items={group(SYSTEM_NAV)} pathname={pathname} />
+            {isAdmin && <NavGroup title="مدیریت سیستم" items={group(ADMIN_NAV)} pathname={pathname} collapsible defaultOpen={false} />}
+          </>}
         </nav>
         <div className="engine-card">
           <div className="ec-top">
@@ -273,8 +308,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <header className="global-header" role="banner">
           <div className="global-search">
             <a href="/search">
-              <span>🔍</span> جستجوی سراسری…
-              <kbd className="kbd">⌘K</kbd>
+              <span>🔍</span> {networkRoute ? 'Search people, organizations, projects...' : 'جستجوی سراسری…'}
+              <kbd className="kbd">⌘ K</kbd>
             </a>
           </div>
           <div className="header-actions">
@@ -291,10 +326,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <AppShellEnhancement />
             <ThemeToggle />
             <a href="/admin" className="user-chip" aria-label="پروفایل">
-              <span className="avatar">{(me?.name ?? 'U').slice(0, 1)}</span>
+              <span className="avatar">{networkRoute ? 'A' : (me?.name ?? 'U').slice(0, 1)}</span>
               <span className="uc-meta">
-                <strong>{me?.name ?? 'User'}</strong>
-                <small>{ROLE_LABELS[role]}</small>
+                <strong>{networkRoute ? 'Admin' : (me?.name ?? 'User')}</strong>
+                <small>{networkRoute ? 'Super Admin' : ROLE_LABELS[role]}</small>
               </span>
               <span className="chev">▾</span>
             </a>
