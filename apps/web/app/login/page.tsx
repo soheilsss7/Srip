@@ -2,6 +2,7 @@
 import {FormEvent,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {apiPost,setSession} from '../_lib/api';
+import {DEMO_CREDENTIALS,demoOtp} from '../_lib/demo';
 
 export default function Login(){
  const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[otp,setOtp]=useState('');
@@ -19,6 +20,16 @@ export default function Login(){
    else setError(msg);
   }finally{setBusy(false);}
  }
+ async function demoLogin(){
+  setBusy(true); setError('');
+  try{
+   const code=await demoOtp();
+   const d=await apiPost<any>('/auth/login',{email:DEMO_CREDENTIALS.email,password:DEMO_CREDENTIALS.password,otp:code});
+   if(!d?.accessToken) throw new Error('پاسخ احراز هویت نامعتبر است.');
+   setSession(d); router.replace('/network');
+  }catch(x){setError((x as Error).message||'ورود دمو ناموفق بود.');}
+  finally{setBusy(false);}
+ }
  return <main className="login"><form onSubmit={submit} className="panel" noValidate>
   <p className="eyebrow">SRIP</p><h1>ورود به مرکز روابط راهبردی</h1>
   <label>ایمیل<input autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)} type="email" required/></label>
@@ -26,7 +37,8 @@ export default function Login(){
   {mfa&&<label>کد MFA<input autoComplete="one-time-code" inputMode="numeric" maxLength={6} value={otp} onChange={e=>setOtp(e.target.value.replace(/\D/g,''))} required/></label>}
   {error&&<p className="error" role="alert">{error}</p>}
   <button disabled={busy||!email||password.length<12||(mfa&&otp.length<6)}>{busy?'در حال احراز هویت…':'ورود امن'}</button>
+  <button type="button" className="demo-button" onClick={demoLogin} disabled={busy}>{busy?'در حال آماده‌سازی دمو…':'ورود به محیط دمو (دنیای نمایشی)'}</button>
   <a href="/forgot-password">رمز عبور را فراموش کرده‌اید؟</a>
-  <small>هیچ حساب یا رمز پیش‌فرضی در رابط کاربری قرار داده نشده است.</small>
+  <small>حالت دمو یک دنیای مستقل و پرشده با دادهٔ نمایشی است و به داده‌های واقعی دسترسی ندارد.</small>
  </form></main>
 }

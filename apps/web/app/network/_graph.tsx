@@ -19,6 +19,7 @@ import {
 export interface NetworkGraphHandle {
   fit: () => void;
   reset: () => void;
+  zoomBy: (factor: number) => void;
 }
 
 export interface NetworkGraphProps {
@@ -88,6 +89,13 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
       if (g && typeof g.zoom === 'function') {
         g.zoom(1, 500);
         if (typeof g.centerAt === 'function') g.centerAt(0, 0, 500);
+      }
+    },
+    zoomBy: (factor: number) => {
+      const g = graphRef.current;
+      if (g && typeof g.zoom === 'function') {
+        const current = (g as any).zoom?.() ?? 1;
+        g.zoom(Math.min(8, Math.max(0.25, current * factor)), 300);
       }
     },
   }));

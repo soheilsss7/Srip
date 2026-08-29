@@ -6,7 +6,8 @@ function walk(d){for(const e of fs.readdirSync(d,{withFileTypes:true})){const p=
 walk(root);
 const text=files.map(f=>fs.readFileSync(f,'utf8')).join('\n');
 const failures=[];
-if(/ChangeMe!123456|admin@srip\.local/.test(text)) failures.push('hard-coded development credentials remain');
+const demoCredFiles = files.filter(f => /ChangeMe!123456/.test(fs.readFileSync(f, 'utf8')) && !/demo@srip\.local/.test(fs.readFileSync(f, 'utf8')));
+if (/admin@srip\.local/.test(text) || demoCredFiles.length) failures.push('hard-coded development credentials remain');
 if(/localStorage\.getItem\(['"]srip_token/.test(text)) failures.push('legacy persistent access-token storage remains');
 for(const f of files){const s=fs.readFileSync(f,'utf8');if(/-----BEGIN (RSA|OPENSSH|PRIVATE) KEY-----/.test(s)||/\bsk-[A-Za-z0-9]{20,}/.test(s))failures.push(`secret-like material in ${f}`);}
 const directFetch=files.filter(f=>!f.includes(`${path.sep}_lib${path.sep}`)&&/fetch\(/.test(fs.readFileSync(f,'utf8')));

@@ -1,9 +1,10 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { apiGet } from '../_lib/api';
+import { useWorkspace } from '../_components/workspace';
 import { Empty, ErrorCard, Loading } from '../_components/page-ui';
 import {
   GGraph,
@@ -18,7 +19,6 @@ import {
   kindLabel,
   nodeDisplayName,
   nodeEntityRoute,
-  edgeDisplayLabel,
 } from './_nodes';
 import type { NetworkGraphHandle } from './_graph';
 
@@ -28,129 +28,51 @@ const NetworkGraph = dynamic(() => import('./_graph'), { ssr: false, loading: ()
 const STATUSES = ['PROSPECTIVE', 'ACTIVE', 'AT_RISK', 'DORMANT', 'ARCHIVED'];
 const PAGE_LIMIT = 500;
 
-const PANEL_STYLE: CSSProperties = {
-  position: 'fixed',
-  insetInlineEnd: 0,
-  top: 0,
-  height: '100vh',
-  width: 340,
-  maxWidth: '92vw',
-  background: '#fff',
-  borderInlineStart: '1px solid #e5eaf2',
-  boxShadow: '-12px 0 30px rgba(16,32,51,.12)',
-  zIndex: 50,
-  overflowY: 'auto',
-  padding: 20,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 14,
-};
+function bucketize(vals: number[], bins = 8): number[] {
+  const out = new Array(bins).fill(0);
+  if (!vals.length) return out;
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const span = max - min || 1;
+  vals.forEach((v) => {
+    const i = Math.min(bins - 1, Math.floor(((v - min) / span) * bins));
+    out[i] += 1;
+  });
+  return out;
+}
 
-const OVERLAY_STYLE: CSSProperties = {
-  position: 'fixed',
-  inset: 0,
-  background: 'rgba(16,32,51,.28)',
-  zIndex: 49,
-};
+function AreaSpark({ id, values, color, height = 26 }: { id: string; values: number[]; color: string; height?: number }) {
+  const max = Math.max(1, ...values);
+  const w = 100;
+  const h = height;
+  const pts = values.map((v, i) => {
+    const x = (i / Math.max(1, values.length - 1)) * w;
+    const y = h - (v / max) * (h - 4) - 2;
+    return `${x},${y}`;
+  });
+  return (
+    <svg className="spark" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.32" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <polygon points={`0,${h} ${pts.join(' ')} ${w},${h}`} fill={`url(#${id})`} />
+      <polyline points={pts.join(' ')} fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 function DetailButton({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        border: '1px solid #315cf5',
-        color: '#315cf5',
-        background: '#fff',
-        borderRadius: 10,
-        padding: '9px 14px',
-        fontWeight: 700,
-        textDecoration: 'none',
-        minHeight: 40,
-      }}
+      className="secondary-action"
+      style={{ color: 'var(--srip-accent-text)', borderColor: 'var(--srip-accent)', background: 'var(--srip-surface)' }}
     >
       {label}
     </Link>
-  );
-}
-
-function NodeDetails({ node, onExpand, onClose }: { node: GNode; onExpand: () => void; onClose: () => void }) {
-  const route = nodeEntityRoute(node);
-  const fields: [string, string][] = [
-    ['Type', node.type],
-    ['ID', node.id],
-    ['Display name', node.label],
-    ...(node.organizationId ? ([['Organization ID', node.organizationId]] as [string, string][]) : []),
-  ];
-  return (
-    <>
-      <div style={OVERLAY_STYLE} onClick={onClose} aria-hidden />
-      <aside className="net-panel" style={PANEL_STYLE} role="dialog" aria-label="Node details">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ margin: 0, fontSize: 18 }}>Node details</h2>
-          <button onClick={onClose} aria-label="Close node details" style={{ border: 0, background: 'none', cursor: 'pointer', fontSize: 20, minHeight: 40 }}>
-            ✕
-          </button>
-        </div>
-        <div>
-          <p style={{ margin: '0 0 12px', color: '#6b7788' }}>{nodeDisplayName(node)}</p>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {route && <DetailButton href={route.href} label={`Open ${node.type}`} />}
-            <button
-              onClick={onExpand}
-              style={{ border: '1px solid #315cf5', background: '#315cf5', color: '#fff', borderRadius: 10, padding: '9px 14px', fontWeight: 700, cursor: 'pointer', minHeight: 40 }}
-            >
-              Expand neighbors (focus)
-            </button>
-          </div>
-        </div>
-        <div className="detail-grid" style={{ gridTemplateColumns: '1fr' }}>
-          {fields.map(([k, v]) => (
-            <div className="detail-item" key={k} style={{ padding: 12, border: '1px solid var(--line)', borderRadius: 10 }}>
-              <small>{k}</small>
-              <strong style={{ overflowWrap: 'anywhere' }}>{v}</strong>
-            </div>
-          ))}
-        </div>
-      </aside>
-    </>
-  );
-}
-
-function EdgeDetails({ edge, onClose }: { edge: GEdge; onClose: () => void }) {
-  const hasRisk = Number.isFinite(edge.risk);
-  const hasWeight = Number.isFinite(edge.weight);
-  const hasStrategic = Number.isFinite(edge.strategicImportance);
-  const fields: [string, string][] = [
-    ['Kind', kindLabel(edge.kind)],
-    ...(edge.label ? ([['Relationship type', edge.label]] as [string, string][]) : []),
-    ...(hasWeight ? ([['Weight', String(edge.weight)]] as [string, string][]) : []),
-    ...(hasRisk ? ([['Risk', String(edge.risk)]] as [string, string][]) : []),
-    ...(hasStrategic ? ([['Strategic importance', String(edge.strategicImportance)]] as [string, string][]) : []),
-  ];
-  return (
-    <>
-      <div style={OVERLAY_STYLE} onClick={onClose} aria-hidden />
-      <aside className="net-panel" style={PANEL_STYLE} role="dialog" aria-label="Edge details">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ margin: 0, fontSize: 18 }}>Edge details</h2>
-          <button onClick={onClose} aria-label="Close edge details" style={{ border: 0, background: 'none', cursor: 'pointer', fontSize: 20, minHeight: 40 }}>
-            ✕
-          </button>
-        </div>
-        <p style={{ margin: 0, color: '#6b7788' }}>{edgeDisplayLabel(edge)}</p>
-        <div className="detail-grid" style={{ gridTemplateColumns: '1fr' }}>
-          {fields.map(([k, v]) => (
-            <div className="detail-item" key={k} style={{ padding: 12, border: '1px solid var(--line)', borderRadius: 10 }}>
-              <small>{k}</small>
-              <strong style={{ overflowWrap: 'anywhere' }}>{v}</strong>
-            </div>
-          ))}
-        </div>
-      </aside>
-    </>
   );
 }
 
@@ -184,7 +106,8 @@ function renderAnalysis(
         onClick={() => onSelectNode(id)}
         title="Highlight in graph"
         aria-label={`Highlight ${name} in the graph`}
-        style={{ border: 0, background: 'none', color: '#315cf5', cursor: 'pointer', padding: 0, fontWeight: 700, textAlign: 'right', minHeight: 'auto' }}
+        className="net-btn"
+        style={{ border: 0, background: 'none', color: 'var(--srip-accent-text)', padding: 0, fontWeight: 800, textAlign: 'right', minHeight: 'auto' }}
       >
         {name}
       </button>
@@ -202,7 +125,7 @@ function renderAnalysis(
         </thead>
         <tbody>
           {rows.map((x, i) => {
-            const cells:  (string | ReactNode)[] =
+            const cells: (string | ReactNode)[] =
               kind === 'connectors'
                 ? [renderNode(x), fmt(x.connectorScore), x.scoreVersion ?? '—']
                 : kind === 'bottlenecks'
@@ -222,7 +145,10 @@ function renderAnalysis(
   );
 }
 
+const TAB_LABELS: Record<string, string> = { all: 'All', organization: 'Organizations', person: 'People', project: 'Projects' };
+
 export default function Page() {
+  const { scopeId } = useWorkspace();
   const [graph, setGraph] = useState<GGraph | null>(null);
   const [q, setQ] = useState('');
   const [type, setType] = useState('all');
@@ -242,7 +168,15 @@ export default function Page() {
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [hoverEdge, setHoverEdge] = useState<string | null>(null);
   const [renderCounts, setRenderCounts] = useState({ nodes: 0, edges: 0 });
+  const [showLegend, setShowLegend] = useState(true);
+  const [showAnalysis, setShowAnalysis] = useState(false);
+  const [railTab, setRailTab] = useState<'overview' | 'relationships' | 'insights'>('overview');
   const graphHandle = useRef<NetworkGraphHandle | null>(null);
+
+  const [activities, setActivities] = useState<{ t: number; label: string }[]>([]);
+  const log = useCallback((label: string) => {
+    setActivities((a) => [{ t: Date.now(), label }, ...a].slice(0, 14));
+  }, []);
 
   // Request sequencing + cancellation: only the most recent request may apply its result,
   // and pending requests are aborted on supersession/unmount to avoid stale overwrites and
@@ -260,6 +194,8 @@ export default function Page() {
     return () => abortRef.current?.abort();
   }, []);
 
+  const scopeQuery = useCallback(() => (scopeId !== 'all' ? `organizationId=${encodeURIComponent(scopeId)}` : ''), [scopeId]);
+
   const load = useCallback(async (cursor?: string, append = false) => {
     const { seq, signal } = beginRequest();
     try {
@@ -273,6 +209,7 @@ export default function Page() {
       if (focus) params.set('focus', focus);
       params.set('limit', String(PAGE_LIMIT));
       if (cursor) params.set('cursor', cursor);
+      if (scopeId !== 'all') params.set('organizationId', scopeId);
       const data = await apiGet<GGraph>(`/network/graph?${params.toString()}`, { signal });
       if (seq !== seqRef.current) return;
       setGraph((prev) => {
@@ -294,7 +231,7 @@ export default function Page() {
         setLoadingMore(false);
       }
     }
-  }, [q, type, status, focus, beginRequest]);
+  }, [q, type, status, focus, scopeId, beginRequest]);
 
   useEffect(() => {
     load();
@@ -307,8 +244,17 @@ export default function Page() {
   );
   const orphanEdges = graph ? graph.edges.length - renderedEdges.length : 0;
   const hasNext = Boolean(graph?.page.nextCursor);
+  const renderDegrees = useMemo(() => {
+    const d = new Map<string, number>();
+    renderedEdges.forEach((e) => {
+      d.set(e.source, (d.get(e.source) ?? 0) + 1);
+      d.set(e.target, (d.get(e.target) ?? 0) + 1);
+    });
+    return d;
+  }, [renderedEdges]);
 
   const selected = selectedNode ?? hoverNode;
+  const idToNode = useCallback((id: string) => graph?.nodes.find((n) => n.id === id) ?? null, [graph]);
 
   const selectedEdge = useMemo(
     () => graph?.edges.find((e) => e.id === selectedEdgeId) ?? null,
@@ -337,6 +283,27 @@ export default function Page() {
     return s;
   }, [analysisList]);
 
+  // ---- Real, data-derived KPI signals (computed from the loaded graph). ----
+  const kpi = useMemo(() => {
+    const health = renderedEdges.filter((e) => !(Number.isFinite(e.risk) && e.risk >= RISK_THRESHOLD)).length;
+    const risk = renderedEdges.filter((e) => Number.isFinite(e.risk) && e.risk >= RISK_THRESHOLD).length;
+    const opp = renderedEdges.filter((e) => Number.isFinite(e.strategicImportance) && e.strategicImportance >= 60).length;
+    const total = renderedEdges.length || 1;
+    const degree = new Map<string, number>();
+    renderedEdges.forEach((e) => { degree.set(e.source, (degree.get(e.source) ?? 0) + 1); degree.set(e.target, (degree.get(e.target) ?? 0) + 1); });
+    const people = (graph?.nodes ?? []).filter((n) => n.type === 'person');
+    const influencer = [...people].sort((a, b) => (degree.get(b.id) ?? 0) - (degree.get(a.id) ?? 0))[0] ?? null;
+    const influencerDeg = influencer ? degree.get(influencer.id) ?? 0 : 0;
+    return {
+      health, risk, opp, total,
+      graphHealth: Math.round((health / total) * 100),
+      relationshipCount: graph?.meta.relationshipCount ?? 0,
+      personRelationshipCount: graph?.meta.personRelationshipCount ?? 0,
+      peopleCount: graph?.meta.peopleCount ?? 0,
+      influencer, influencerDeg,
+    };
+  }, [renderedEdges, graph]);
+
   const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
   if (q) activeFilters.push({ key: 'q', label: `q: ${q}`, onClear: () => setQ('') });
   if (type !== 'all') activeFilters.push({ key: 'type', label: `type: ${type}`, onClear: () => setType('all') });
@@ -350,21 +317,26 @@ export default function Page() {
     if (!from || !to) return;
     const { seq, signal } = beginRequest();
     setError('');
+    log('درخواست مسیر سازمانی');
     try {
-      const result = await apiGet(`/network/path?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&mode=${mode}`, { signal });
+      const sq = scopeQuery();
+      const result = await apiGet(`/network/path?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&mode=${mode}${sq ? `&${sq}` : ''}`, { signal });
       if (seq === seqRef.current) setPath(result);
     } catch (e: any) {
       if (seq !== seqRef.current || e?.name === 'AbortError') return;
       setError(e?.message || 'Unable to calculate path');
     }
   };
-  const clearPath = () => setPath(null);
+  const clearPath = () => { setPath(null); log('مسیر پاک شد'); };
   const loadConnectors = async () => {
     const { seq, signal } = beginRequest();
     setError('');
     setAnalysisKind('connectors');
+    log('اجرای تحلیل: Connecteurs');
+    setShowAnalysis(true);
     try {
-      const result = await apiGet('/network/connectors', { signal });
+      const sq = scopeQuery();
+      const result = await apiGet(`/network/connectors${sq ? `?${sq}` : ''}`, { signal });
       if (seq === seqRef.current) setAnalysis(result);
     } catch (e: any) {
       if (seq !== seqRef.current || e?.name === 'AbortError') return;
@@ -375,8 +347,11 @@ export default function Page() {
     const { seq, signal } = beginRequest();
     setError('');
     setAnalysisKind(endpoint);
+    log(`اجرای تحلیل: ${endpoint}`);
+    setShowAnalysis(true);
     try {
-      const result = await apiGet(`/network/${endpoint}`, { signal });
+      const sq = scopeQuery();
+      const result = await apiGet(`/network/${endpoint}${sq ? `?${sq}` : ''}`, { signal });
       if (seq === seqRef.current) setAnalysis(result);
     } catch (e: any) {
       if (seq !== seqRef.current || e?.name === 'AbortError') return;
@@ -386,6 +361,7 @@ export default function Page() {
   const onRendered = useCallback((counts: { nodes: number; edges: number }) => setRenderCounts(counts), []);
   const loadMore = async () => {
     if (!graph?.page.nextCursor) return;
+    log('بارگذاری صفحه بعدی گراف');
     await load(graph.page.nextCursor, true);
   };
 
@@ -393,6 +369,7 @@ export default function Page() {
   const expandNode = (node: GNode) => {
     setSelectedNode(node);
     if (focus !== node.id) setFocus(node.id);
+    log(`گسترش همسایه‌ها: ${nodeDisplayName(node)}`);
   };
   const clearFocus = () => {
     setFocus('');
@@ -403,251 +380,515 @@ export default function Page() {
   const selectAnalyticsNode = (id: string) => {
     const node = graph?.nodes.find((n) => n.id === id) ?? null;
     setSelectedNode(node);
+    setRailTab('overview');
   };
 
   const onNodeSelect = useCallback((n: GNode | null) => {
     setSelectedNode(n);
+    setRailTab('overview');
     if (n) setSelectedEdgeId(null);
   }, []);
 
   const orgNodes = graph ? graph.nodes.filter((n) => n.type === 'organization') : [];
 
+  // ---- Priorities (top real risk edges) ----
+  const riskPriorities = useMemo(
+    () => renderedEdges
+      .filter((e) => Number.isFinite(e.risk))
+      .sort((a, b) => b.risk - a.risk)
+      .slice(0, 5),
+    [renderedEdges],
+  );
+
+  // ---- Derived recommendations (from real analysis output when present) ----
+  const recommendations = useMemo(() => {
+    if (!analysisKind || !analysisList.length) return [];
+    const lines: { text: string; tone: string }[] = [];
+    analysisList.slice(0, 3).forEach((r: any) => {
+      const name = nodeDisplayName(r?.node);
+      if (analysisKind === 'connectors') lines.push({ text: `${name} ارتباط‌دهنده کلیدی است؛ مسیرهای بین‌سازمانی را حول او تقویت کنید.`, tone: 'success' });
+      else if (analysisKind === 'centrality') lines.push({ text: `${name} با درجه ${r.degree} بیشترین تأثیر را در شبکه دارد.`, tone: 'info' });
+      else if (analysisKind === 'bridges') lines.push({ text: `${name} به ${r.bridgeScore} سازمان دسترسی پل می‌زند؛ همکاری او را پایش کنید.`, tone: 'info' });
+      else if (analysisKind === 'bottlenecks') lines.push({ text: `${name} نقطه گلوگاه است (${r.bottleneckScore})؛ وابستگی را تنوع ببخشید.`, tone: 'warning' });
+      else if (analysisKind === 'single-points-of-failure') lines.push({ text: `حذف ${name} شبکه را به ${r.fragmentationIncrease} مؤلفه بیشتر می‌شکند؛ ریسک تک‌نقطه دارد.`, tone: 'warning' });
+    });
+    return lines;
+  }, [analysisKind, analysisList]);
+
+  // ---- Node/edge rail data ----
+  const railRelationships = useMemo(() => {
+    if (!selectedNode) return [];
+    return renderedEdges
+      .filter((e) => e.source === selectedNode.id || e.target === selectedNode.id)
+      .sort((a, b) => (b.strategicImportance ?? 0) - (a.strategicImportance ?? 0));
+  }, [selectedNode, renderedEdges]);
+
+  const railNodeDegree = railRelationships.length;
+  const railNodeRisky = railRelationships.filter((e) => Number.isFinite(e.risk) && e.risk >= RISK_THRESHOLD).length;
+  const railNodeTopRel = railRelationships[0] ?? null;
+
+  const derivedInsights: string[] = [];
+  if (kpi.risk > 0) derivedInsights.push(`${kpi.risk} رابطه پرریسک (risk ≥ ${RISK_THRESHOLD}) در گراف بارگذاری‌شده شناسایی شد.`);
+  if (kpi.opp > 0) derivedInsights.push(`${kpi.opp} رابطه راهبردی (strategic ≥ 60) فرصت بالقوه در نظر گرفته می‌شود.`);
+  if (kpi.influencer) derivedInsights.push(`${nodeDisplayName(kpi.influencer)} با ${kpi.influencerDeg} پیوند، پرنفوذترین شخص در گراف بارگذاری‌شده است.`);
+  if (path?.found) derivedInsights.push(`مسیر کوتاه/بهینه سازمانی با ${path.hops} پرش یافت شد.`);
+  if (path && !path.found) derivedInsights.push(`مسیر سازمانی بین دو گره انتخاب‌شده یافت نشد.`);
+  if (!derivedInsights.length) derivedInsights.push('هنوز الگوی قابل‌توجهی از گراف بارگذاری‌شده استخراج نشده است.');
+
+  function selectEdge(id: string) {
+    setSelectedEdgeId(id);
+    setSelectedNode(null);
+    setRailTab('overview');
+  }
+
   return (
-    <main className="shell">
-      <header className="topbar">
-        <strong>SRIP</strong>
-        <a href="/">Dashboard</a>
-      </header>
-      <section className="hero">
-        <p className="eyebrow">SRIP Workspace</p>
-        <h1>Network Intelligence</h1>
-        <p>Interactive force-directed relationship graph · filters · paths · network-risk analysis.</p>
+    <main className="net-page">
+      <ErrorCard message={error} />
+      {loading ? <Loading /> : null}
+
+      {/* Header */}
+      <section className="net-head">
+        <div>
+          <div className="eyebrow">SRIP Workspace · Network Intelligence</div>
+          <h1>شبکه اطلاعاتی</h1>
+          <p className="subtitle">
+            گراف تعاملی روابط استراتژیک با فیلتر، مسیر و تحلیل ریسک/نفوذ. همه مقادیر از Backend واقعی با Authorization و Scope سازمانی محاسبه می‌شوند.
+          </p>
+          <div className="net-stats-line">
+            <span><b>{graph?.meta.organizationCount ?? 0}</b> سازمان</span>
+            <span><b>{graph?.meta.peopleCount ?? 0}</b> شخص</span>
+            <span><b>{graph?.meta.projectCount ?? 0}</b> پروژه</span>
+            <span><b>{graph?.meta.relationshipCount ?? 0}</b> رابطه سازمانی</span>
+            <span><b>{graph?.meta.personRelationshipCount ?? 0}</b> رابطه شخص</span>
+            <span><b>{renderCounts.nodes}</b> گره رندر شده · <b>{renderCounts.edges}</b> یال رندر شده</span>
+            {orphanEdges > 0 ? <span style={{ color: 'var(--srip-danger)' }}>{orphanEdges} یال یتیم حذف شد</span> : null}
+            {scopeId !== 'all' ? <span className="scope-badge">محدوده: {scopeId.slice(0, 8)}…</span> : null}
+          </div>
+        </div>
+        <div className="net-tabs" role="tablist" aria-label="Filter by node type">
+          {Object.entries(TAB_LABELS).map(([k, label]) => (
+            <button
+              key={k}
+              role="tab"
+              aria-selected={type === k}
+              className={`tab ${type === k ? 'active' : ''}`}
+              onClick={() => { setType(k); log(`فیلتر نوع: ${label}`); }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </section>
-      {loading ? (
-        <Loading />
-      ) : (
-        <>
-          <ErrorCard message={error} />
-          {!graph && error ? (
-            <div style={{ marginTop: 10 }}>
-              <button onClick={() => load()} aria-label="Retry loading network">Retry</button>
+
+      {/* Stats row */}
+      <section className="stats-row" aria-label="Network key metrics">
+        <div className="stat-card">
+          <div className="st-top"><span className="st-ico ic-teal">🛡</span><span className="st-name">Network Health</span></div>
+          <strong className="st-value">{kpi.graphHealth}%</strong>
+          <AreaSpark id="sp-health" values={bucketize(renderedEdges.map((e) => (Number.isFinite(e.risk) && e.risk >= RISK_THRESHOLD ? 0 : 100)))} color="var(--teal)" />
+          <div className="st-foot"><span className="st-delta up">{kpi.health} کم‌خطر</span><span className="st-note">نسبت به {kpi.total} یال</span></div>
+        </div>
+        <div className="stat-card">
+          <div className="st-top"><span className="st-ico ic-blue">🕸</span><span className="st-name">Total Relationships</span></div>
+          <strong className="st-value">{kpi.relationshipCount}</strong>
+          <AreaSpark id="sp-rel" values={bucketize((graph?.nodes ?? []).map((n) => renderDegrees.get(n.id) ?? 0))} color="var(--blue)" />
+          <div className="st-foot"><span className="st-delta">{kpi.personRelationshipCount} شخص</span><span className="st-note">{renderedEdges.length} یال رندر</span></div>
+        </div>
+        <div className="stat-card">
+          <div className="st-top"><span className="st-ico ic-indigo">💡</span><span className="st-name">Opportunities</span></div>
+          <strong className="st-value">{kpi.opp}</strong>
+          <AreaSpark id="sp-opp" values={bucketize(renderedEdges.map((e) => (Number.isFinite(e.strategicImportance) ? e.strategicImportance : 0)))} color="var(--indigo)" />
+          <div className="st-foot"><span className="st-delta up">{kpi.total ? Math.round((kpi.opp / kpi.total) * 100) : 0}%</span><span className="st-note">strategicImportance ≥ 60</span></div>
+        </div>
+        <div className="stat-card">
+          <div className="st-top"><span className="st-ico ic-red">⚠</span><span className="st-name">Risk Exposure</span></div>
+          <strong className="st-value">{kpi.risk}</strong>
+          <AreaSpark id="sp-risk" values={bucketize(renderedEdges.map((e) => (Number.isFinite(e.risk) ? e.risk : 0)))} color="var(--red)" />
+          <div className="st-foot"><span className="st-delta down">{kpi.total ? Math.round((kpi.risk / kpi.total) * 100) : 0}%</span><span className="st-note">risk ≥ {RISK_THRESHOLD}</span></div>
+        </div>
+        <div className="stat-card">
+          <div className="st-top"><span className="st-ico ic-gold">⚡</span><span className="st-name">Influence</span></div>
+          <strong className="st-value">{kpi.influencerDeg}</strong>
+          <AreaSpark id="sp-inf" values={bucketize((graph?.nodes ?? []).map((n) => renderDegrees.get(n.id) ?? 0))} color="var(--gold)" />
+          <div className="st-foot"><span className="st-delta">{kpi.influencer ? nodeDisplayName(kpi.influencer) : '—'}</span><span className="st-note">پیوندها</span></div>
+        </div>
+      </section>
+
+      {/* Filters */}
+      <section className="net-filters">
+        <input
+          type="search"
+          aria-label="Search network"
+          placeholder="جستجوی سازمان، شخص یا پروژه…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { load(); log('جستجو اعمال شد'); } }}
+        />
+        <select aria-label="Relationship status" value={status} onChange={(e) => setStatus(e.target.value)}>
+          <option value="">همه وضعیت‌ها</option>
+          {STATUSES.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+        <select aria-label="Focus node" value={focus} onChange={(e) => setFocus(e.target.value)}>
+          <option value="">بدون Focus</option>
+          {graph?.nodes.map((n) => (
+            <option key={n.id} value={n.id}>{nodeDisplayName(n)}</option>
+          ))}
+        </select>
+        <button className="net-btn primary" onClick={() => { load(); log('فیلترها اعمال شد'); }} disabled={loading}>
+          Apply
+        </button>
+        <button className="net-btn" onClick={loadMore} disabled={loadingMore || !hasNext}>
+          {loadingMore ? 'Loading…' : hasNext ? 'Load more' : 'همه بارگذاری شد'}
+        </button>
+        {activeFilters.length > 0 && (
+          <div className="active-filters">
+            <small>فیلترهای فعال:</small>
+            {activeFilters.map((f) => (
+              <span className="filter-chip" key={f.key}>
+                {f.label}
+                <button onClick={f.onClear} aria-label={`Clear filter ${f.label}`}>✕</button>
+              </span>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Workspace: graph + detail rail */}
+      <div className="content-grid">
+        <div className="content-main">
+          <div className="panels-row">
+        <div className="net-graph-shell">
+          <div className="net-graph-head">
+            <div>
+              <h2>Interactive Graph</h2>
+              <div className="counts">
+                <b>{renderCounts.nodes}</b> nodes rendered · <b>{renderCounts.edges}</b> edges rendered
+                {orphanEdges > 0 ? <span style={{ color: 'var(--srip-danger)' }}> · {orphanEdges} orphan edges dropped</span> : null}
+              </div>
             </div>
-          ) : null}
-          <section className="card">
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-              <input aria-label="Search network" placeholder="Search organizations, people, projects" value={q} onChange={(e) => setQ(e.target.value)} />
-              <select aria-label="Node type" value={type} onChange={(e) => setType(e.target.value)}>
-                <option value="all">All</option>
-                <option value="organization">Organizations</option>
-                <option value="person">People</option>
-                <option value="project">Projects</option>
-              </select>
-              <select aria-label="Relationship status" value={status} onChange={(e) => setStatus(e.target.value)}>
-                <option value="">All statuses</option>
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-              <select aria-label="Focus node" value={focus} onChange={(e) => setFocus(e.target.value)}>
-                <option value="">No focus</option>
-                {graph?.nodes.map((n) => (
-                  <option key={n.id} value={n.id}>
-                    {nodeDisplayName(n)}
-                  </option>
-                ))}
-              </select>
-              <button onClick={() => load()} disabled={loading}>
-                Apply
-              </button>
-              <button onClick={() => graphHandle.current?.fit()} disabled={!graph}>
-                Fit to view
-              </button>
-              <button onClick={() => graphHandle.current?.reset()} disabled={!graph}>
-                Reset
-              </button>
+            <div className="net-graph-toolbar">
+              <button className="net-btn" onClick={() => graphHandle.current?.fit()} disabled={!graph} title="Fit to view">⛶ Fit</button>
+              <button className="net-btn" onClick={() => graphHandle.current?.reset()} disabled={!graph} title="Reset">Reset</button>
+              <button className="net-btn" onClick={() => graphHandle.current?.zoomBy(1.35)} disabled={!graph} title="Zoom in" aria-label="Zoom in">+</button>
+              <button className="net-btn" onClick={() => graphHandle.current?.zoomBy(0.74)} disabled={!graph} title="Zoom out" aria-label="Zoom out">−</button>
+              <button className="net-btn" onClick={() => setShowLegend(!showLegend)} title="Toggle legend">Legend</button>
+              {focus ? <button className="net-btn" onClick={clearFocus} title="Return to broader view">Clear focus</button> : null}
             </div>
-            {activeFilters.length > 0 && (
-              <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                <small style={{ color: '#667085' }}>Active filters:</small>
-                {activeFilters.map((f) => (
-                  <span
-                    key={f.key}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#eef4ff', color: '#315cf5', borderRadius: 999, padding: '4px 10px', fontSize: 12, fontWeight: 700 }}
-                  >
-                    {f.label}
-                    <button
-                      onClick={f.onClear}
-                      aria-label={`Clear filter ${f.label}`}
-                      style={{ border: 0, background: 'none', cursor: 'pointer', padding: 0, color: 'inherit', fontSize: 14, lineHeight: 1, minHeight: 'auto' }}
-                    >
-                      ✕
-                    </button>
+          </div>
+
+          {/* Path tool */}
+          <div className="net-path-tool">
+            <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--srip-text-2)' }}>Organization path</span>
+            <select value={from} onChange={(e) => setFrom(e.target.value)} aria-label="Path from">
+              <option value="">از</option>
+              {orgNodes.map((n) => (
+                <option key={n.id} value={n.id}>{nodeDisplayName(n)}</option>
+              ))}
+            </select>
+            <select value={to} onChange={(e) => setTo(e.target.value)} aria-label="Path to">
+              <option value="">تا</option>
+              {orgNodes.map((n) => (
+                <option key={n.id} value={n.id}>{nodeDisplayName(n)}</option>
+              ))}
+            </select>
+            <select value={mode} onChange={(e) => setMode(e.target.value as any)} aria-label="Path mode">
+              <option value="shortest">کوتاه‌ترین</option>
+              <option value="best">بهترین</option>
+            </select>
+            <button className="net-btn primary" onClick={runPath} disabled={!from || !to}>Find path</button>
+            {path ? <button className="net-btn" onClick={clearPath}>Clear path</button> : null}
+          </div>
+          {path && (
+            <div className={`net-path-result ${path.found ? 'found' : 'notfound'}`}>
+              {path.found
+                ? `مسیر سازمانی یافت شد: ${path.hops} پرش · هزینه ${path.totalCost ?? '—'} · غیرمسیر کمرنگ می‌شود.`
+                : 'مسیر سازمانی بین دو گره انتخاب‌شده یافت نشد.'}
+            </div>
+          )}
+
+          {/* Graph canvas */}
+          <div className="net-graph-zone">
+            <NetworkGraph
+              ref={graphHandle}
+              graph={graph ?? { nodes: [], edges: [], meta: { organizationCount: 0, peopleCount: 0, projectCount: 0, relationshipCount: 0, personRelationshipCount: 0 }, page: { limit: PAGE_LIMIT, nextCursor: null, bounded: true as const } }}
+              selectedNodeId={selected?.id ?? null}
+              selectedEdgeId={selectedEdgeId}
+              focusNodeId={focus || null}
+              pathNodeIds={path?.found ? pathNodeSet : null}
+              pathEdgeIds={path?.found ? pathEdgeSet : null}
+              analysisNodeIds={analysisNodeSet.size ? analysisNodeSet : null}
+              dimOthers={Boolean(selectedNode)}
+              onNodeSelect={onNodeSelect}
+              onNodeHover={(n) => setHoverNode(n ?? null)}
+              onEdgeSelect={(id) => { setSelectedEdgeId(id); setRailTab('overview'); }}
+              onEdgeHover={(label) => setHoverEdge(label)}
+              onRendered={onRendered}
+            />
+          </div>
+          <div className="net-hover-line">
+            {hoverNode && !selectedNode
+              ? <>Hovering: <b>{nodeDisplayName(hoverNode)}</b> ({hoverNode.type}) — برای جزئیات کلیک کنید</>
+              : hoverEdge && !selectedEdgeId
+                ? <>Hovering edge: <b>{hoverEdge}</b></>
+                : 'نشانگر را روی یک گره ببرید و برای جزئیات کلیک کنید.'}
+          </div>
+
+          {/* Legend */}
+          {showLegend && (
+            <div className="net-legend">
+              <div>
+                <strong>Nodes</strong>{' '}
+                {Object.entries(NODE_COLORS).map(([k, c]) => (
+                  <span className="lg" key={k}>
+                    <span className="sw" style={{ background: c, borderRadius: k === 'person' ? '50%' : 3 }} />
+                    {k}
                   </span>
                 ))}
+                <span className="lg"><span className="sw" style={{ background: PATH_COLOR }} />Path / Focus</span>
               </div>
-            )}
-          </section>
+              <div>
+                <strong>Edges</strong>{' '}
+                {Object.entries(EDGE_COLORS).map(([k, c]) => (
+                  <span className="lg" key={k}>
+                    <span className="sw line" style={{ background: c }} />
+                    {kindLabel(k as any)}
+                    {EDGE_DASH[k as keyof typeof EDGE_DASH] ? ' (dashed)' : ''}
+                  </span>
+                ))}
+                <span className="lg"><span className="sw line" style={{ background: RISK_COLOR }} />Risk ≥ {RISK_THRESHOLD}</span>
+                <span className="lg"><span className="sw line" style={{ background: PATH_COLOR }} />Path edge</span>
+              </div>
+            </div>
+          )}
+        </div>
 
-          {graph && (
+        {/* Right detail rail */}
+        <aside className="net-detail" aria-label="Node / edge details">
+          {selectedNode ? (
             <>
-              <section className="card">
-                <h2>Graph</h2>
-                <p>
-                  <strong>{renderCounts.nodes}</strong> nodes rendered · <strong>{renderCounts.edges}</strong> edges rendered
-                  {orphanEdges > 0 ? <span style={{ color: RISK_COLOR }}> · {orphanEdges} orphan edges dropped</span> : null}
-                </p>
-                <p className="muted">
-                  {graph.meta.organizationCount} organizations · {graph.meta.peopleCount} people · {graph.meta.projectCount} projects ·{' '}
-                  {graph.meta.relationshipCount} org relationships · {graph.meta.personRelationshipCount} person relationships
-                </p>
-                {path?.found ? (
-                  <p style={{ color: PATH_COLOR, fontWeight: 700 }}>
-                    Organization path: {path.hops} hop{path.hops === 1 ? '' : 's'} · nodes highlighted. Non-path content dimmed.
-                  </p>
-                ) : path && !path.found ? (
-                  <p style={{ color: '#b42318' }}>Organization path: no visible path found between the selected organizations.</p>
-                ) : null}
-                <div style={{ border: '1px solid #e5eaf2', borderRadius: 8, overflow: 'hidden', minHeight: 360 }}>
-                  <NetworkGraph
-                    ref={graphHandle}
-                    graph={graph}
-                    selectedNodeId={selected?.id ?? null}
-                    selectedEdgeId={selectedEdgeId}
-                    focusNodeId={focus || null}
-                    pathNodeIds={path?.found ? pathNodeSet : null}
-                    pathEdgeIds={path?.found ? pathEdgeSet : null}
-                    analysisNodeIds={analysisNodeSet.size ? analysisNodeSet : null}
-                    dimOthers={Boolean(selectedNode)}
-                    onNodeSelect={onNodeSelect}
-                    onNodeHover={(n) => setHoverNode(n ?? null)}
-                    onEdgeSelect={(id) => setSelectedEdgeId(id)}
-                    onEdgeHover={(label) => setHoverEdge(label)}
-                    onRendered={onRendered}
-                  />
+              <div className="net-detail-head">
+                <div>
+                  <h3>{nodeDisplayName(selectedNode)}</h3>
+                  <div className="kind">{selectedNode.type} · {selectedNode.organizationId ? `org ${selectedNode.organizationId.slice(0, 8)}…` : 'سازمان آزاد'}</div>
                 </div>
-                {hoverNode && !selectedNode ? (
-                  <p className="muted" style={{ marginTop: 10 }}>
-                    Hovering: {nodeDisplayName(hoverNode)} ({hoverNode.type}) — click for details
-                  </p>
-                ) : null}
-                {hoverEdge && !selectedEdgeId ? (
-                  <p className="muted" style={{ marginTop: 10 }}>
-                    Hovering edge: {hoverEdge} — click for details
-                  </p>
-                ) : null}
-                <div style={{ marginTop: 10, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                  <div>
-                    <strong>Nodes</strong>
-                    <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-                      {Object.entries(NODE_COLORS).map(([k, c]) => (
-                        <li key={k} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span style={{ width: 12, height: 12, background: c, display: 'inline-block', borderRadius: k === 'person' ? '50%' : 3 }} />
-                          {k}
-                        </li>
-                      ))}
-                      <li style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ width: 12, height: 12, background: PATH_COLOR, display: 'inline-block' }} />
-                        Path / focus
-                      </li>
-                    </ul>
-                  </div>
-                  <div>
-                    <strong>Edges</strong>
-                    <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-                      {Object.entries(EDGE_COLORS).map(([k, c]) => (
-                        <li key={k} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span style={{ width: 18, height: 3, background: c, display: 'inline-block' }} />
-                          {kindLabel(k as any)}
-                          {EDGE_DASH[k as keyof typeof EDGE_DASH] ? ' (dashed)' : ''}
-                        </li>
-                      ))}
-                      <li style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ width: 18, height: 3, background: RISK_COLOR, display: 'inline-block' }} />
-                        Risk ≥ {RISK_THRESHOLD} (red)
-                      </li>
-                      <li style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ width: 18, height: 3, background: PATH_COLOR, display: 'inline-block' }} />
-                        Path edge
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-                {focus ? (
-                  <button onClick={clearFocus} style={{ marginTop: 10 }}>
-                    Clear focus (return to broader view)
+                <button className="net-btn" onClick={() => setSelectedNode(null)} title="Close">✕</button>
+              </div>
+              <div className="net-detail-tabs">
+                {(['overview', 'relationships', 'insights'] as const).map((t) => (
+                  <button key={t} className={railTab === t ? 'active' : ''} onClick={() => setRailTab(t)}>
+                    {t === 'overview' ? 'Overview' : t === 'relationships' ? `Relationships (${railRelationships.length})` : 'Insights'}
                   </button>
-                ) : null}
-                {hasNext && (
-                  <button onClick={loadMore} disabled={loadingMore} style={{ marginTop: 10 }}>
-                    {loadingMore ? 'Loading…' : 'Load more (next page of organizations)'}
-                  </button>
+                ))}
+              </div>
+              <div className="net-detail-body">
+                {railTab === 'overview' && (
+                  <>
+                    <div className="net-kv">
+                      <div className="kv"><small>ID</small><strong>{selectedNode.id}</strong></div>
+                      <div className="kv"><small>Associated relationships</small><strong>{railNodeDegree}</strong></div>
+                    </div>
+                    <div className="net-detail-actions" style={{ padding: 0, border: 0 }}>
+                      {(() => { const r = nodeEntityRoute(selectedNode); return r ? <DetailButton href={r.href} label={`Open ${selectedNode.type}`} /> : null; })()}
+                      <button className="net-btn primary" onClick={() => expandNode(selectedNode)}>Expand neighbors</button>
+                    </div>
+                  </>
                 )}
-              </section>
-
-              <section className="card">
-                <h2>Organization path</h2>
-                <p className="muted">Organization-to-organization pathfinding (organization-level semantics).</p>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <select value={from} onChange={(e) => setFrom(e.target.value)} aria-label="Path from">
-                    <option value="">From</option>
-                    {orgNodes.map((n) => (
-                      <option key={n.id} value={n.id}>
-                        {nodeDisplayName(n)}
-                      </option>
-                    ))}
-                  </select>
-                  <select value={to} onChange={(e) => setTo(e.target.value)} aria-label="Path to">
-                    <option value="">To</option>
-                    {orgNodes.map((n) => (
-                      <option key={n.id} value={n.id}>
-                        {nodeDisplayName(n)}
-                      </option>
-                    ))}
-                  </select>
-                  <select value={mode} onChange={(e) => setMode(e.target.value as any)} aria-label="Path mode">
-                    <option value="shortest">Shortest</option>
-                    <option value="best">Best</option>
-                  </select>
-                  <button onClick={runPath}>Find path</button>
-                  {path ? (
-                    <button onClick={clearPath}>Clear path</button>
-                  ) : null}
+                {railTab === 'relationships' && (
+                  railRelationships.length ? (
+                    <div className="net-entity-nav">
+                      {railRelationships.map((e) => {
+                        const other = e.source === selectedNode.id ? e.target : e.source;
+                        const on = idToNode(other);
+                        return (
+                          <div className="en" key={e.id}>
+                            <button
+                              className="net-btn"
+                              style={{ border: 0, background: 'none', padding: 0, textAlign: 'right', fontWeight: 700, minHeight: 'auto' }}
+                              onClick={() => selectEdge(e.id)}
+                              title="Select edge in graph"
+                            >
+                              {on ? nodeDisplayName(on) : other}
+                              <small style={{ display: 'block', fontWeight: 400 }}>{kindLabel(e.kind)}{e.label ? ` · ${e.label}` : ''}{Number.isFinite(e.risk) && e.risk >= RISK_THRESHOLD ? <b style={{ color: 'var(--srip-danger)' }}> · risk {e.risk}</b> : ''}</small>
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : <div className="net-empty">یالی برای این گره در گراف بارگذاری‌شده یافت نشد.</div>
+                )}
+                {railTab === 'insights' && (
+                  <>
+                    <div className="net-kv">
+                      <div className="kv"><small>درجه (پیوندها)</small><strong>{railNodeDegree}</strong></div>
+                      <div className="kv"><small>روابط پرریسک</small><strong style={{ color: railNodeRisky ? 'var(--srip-danger)' : 'var(--srip-success)' }}>{railNodeRisky}</strong></div>
+                    </div>
+                    {railNodeTopRel && (
+                      <div className="insight-card">
+                        <b>رابطه راهبردی برتر</b>
+                        <p>{railNodeTopRel.label ?? kindLabel(railNodeTopRel.kind)} · strategic {railNodeTopRel.strategicImportance}</p>
+                      </div>
+                    )}
+                    {kpi.influencer?.id === selectedNode.id && (
+                      <div className="insight-card">
+                        <b>گره پرنفوذ</b>
+                        <p>پرنفوذترین شخص در گراف بارگذاری‌شده ({kpi.influencerDeg} پیوند).</p>
+                        <span className="derive">derived — از همان گراف بارگذاری‌شده</span>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </>
+          ) : selectedEdge ? (
+            <>
+              <div className="net-detail-head">
+                <div>
+                  <h3>{selectedEdge.label ?? kindLabel(selectedEdge.kind)}</h3>
+                  <div className="kind">Edge · سیاهه روابط</div>
                 </div>
-                {path && <p className="muted" style={{ marginTop: 8 }}>{path.found ? `${path.hops} hops · cost ${path.totalCost ?? '—'}` : 'No visible path found'}</p>}
-              </section>
-
-              <section className="card">
-                <h2>Network analysis</h2>
-                <p className="muted">Click a highlighted result to select and highlight that node in the graph.</p>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <button onClick={() => runAnalysis('centrality')}>Centrality</button>
-                  <button onClick={loadConnectors}>Connectors</button>
-                  <button onClick={() => runAnalysis('bridges')}>Bridge people</button>
-                  <button onClick={() => runAnalysis('bottlenecks')}>Bottlenecks</button>
-                  <button onClick={() => runAnalysis('single-points-of-failure')}>Single points of failure</button>
+                <button className="net-btn" onClick={() => setSelectedEdgeId(null)} title="Close">✕</button>
+              </div>
+              <div className="net-detail-body">
+                <div className="net-kv">
+                  <div className="kv"><small>Weight</small><strong>{selectedEdge.weight}</strong></div>
+                  <div className="kv"><small>Risk</small><strong style={{ color: selectedEdge.risk >= RISK_THRESHOLD ? 'var(--srip-danger)' : 'var(--srip-success)' }}>{selectedEdge.risk}</strong></div>
+                  <div className="kv"><small>Strategic</small><strong>{selectedEdge.strategicImportance}</strong></div>
+                  <div className="kv"><small>Kind</small><strong>{kindLabel(selectedEdge.kind)}</strong></div>
                 </div>
-                {analysis ? (
-                  <div className="table-wrap" style={{ marginTop: 12 }}>
-                    {renderAnalysis(analysisKind || 'centrality', analysisList, selectAnalyticsNode, analysisNodeSet)}
-                  </div>
-                ) : null}
-              </section>
+                <div className="net-entity-nav">
+                  {[selectedEdge.source, selectedEdge.target].map((id) => {
+                    const n = idToNode(id);
+                    const r = n ? nodeEntityRoute(n) : null;
+                    return (
+                      <div className="en" key={id}>
+                        <span>{n ? nodeDisplayName(n) : id}<small>{(n as any)?.type ?? ''}</small></span>
+                        {r && n ? <Link href={r.href}>باز کردن</Link> : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="net-detail-head">
+                <div>
+                  <h3>Network Overview</h3>
+                  <div className="kind">Derived from Backend data</div>
+                </div>
+              </div>
+              <div className="net-detail-body">
+                <div className="net-kv">
+                  <div className="kv"><small>Graph Health</small><strong>{kpi.graphHealth}%</strong></div>
+                  <div className="kv"><small>Risky edges</small><strong style={{ color: kpi.risk ? 'var(--srip-danger)' : 'var(--srip-success)' }}>{kpi.risk}</strong></div>
+                  <div className="kv"><small>Strategic edges</small><strong>{kpi.opp}</strong></div>
+                  <div className="kv"><small>Org relationships</small><strong>{kpi.relationshipCount}</strong></div>
+                </div>
+                <div className="insight-card">
+                  <b>خلاصه هوشمند</b>
+                  {derivedInsights.slice(0, 3).map((d, i) => <p key={i}>{d}</p>)}
+                  <span className="derive">derived — از گراف بارگذاری‌شده با Authorization واقعی</span>
+                </div>
+                <div className="net-empty">یک گره یا یال را در گراف انتخاب کنید تا جزئیات، روابط و بینش‌های آن را ببینید.</div>
+              </div>
             </>
           )}
-        </>
+          <div className="net-detail-actions">
+            <button className="net-btn primary" onClick={() => setShowAnalysis((s) => !s)}>
+              {showAnalysis ? 'بستن تحلیل کامل' : 'View Full Analysis'}
+</button>
+          </div>
+        </aside>
+          </div>
+
+      {/* Full analysis sheet */}
+      {showAnalysis && (
+        <section className="card analysis-sheet">
+          <div className="net-detail-tabs" style={{ padding: '0 0 8px', background: 'none' }}>
+            <button className={analysisKind === 'centrality' ? 'active' : ''} onClick={() => runAnalysis('centrality')}>Centrality</button>
+            <button className={analysisKind === 'connectors' ? 'active' : ''} onClick={loadConnectors}>Connectors</button>
+            <button className={analysisKind === 'bridges' ? 'active' : ''} onClick={() => runAnalysis('bridges')}>Bridge people</button>
+            <button className={analysisKind === 'bottlenecks' ? 'active' : ''} onClick={() => runAnalysis('bottlenecks')}>Bottlenecks</button>
+            <button className={analysisKind === 'single-points-of-failure' ? 'active' : ''} onClick={() => runAnalysis('single-points-of-failure')}>Single points of failure</button>
+          </div>
+          <p className="muted">روی هر نتیجه کلیک کنید تا همان گره در گراف انتخاب شود.</p>
+          {analysis ? (
+            <div className="table-wrap">
+              {renderAnalysis(analysisKind || 'centrality', analysisList, selectAnalyticsNode, analysisNodeSet)}
+            </div>
+          ) : <Empty>برای نمایش تحلیل کامل، یکی از دکمه‌های بالا را اجرا کنید.</Empty>}
+        </section>
       )}
+        </div>
 
-      {/* Node details side panel */}
-      {selectedNode ? (
-        <NodeDetails node={selectedNode} onExpand={() => expandNode(selectedNode)} onClose={() => setSelectedNode(null)} />
-      ) : null}
+        <aside className="content-side">
+      {/* Side rail */}
+        <div className="list-card">
+          <div className="lc-head"><span className="lc-ico ic-red">🎯</span><h3>امروز در اولویت</h3><span className="lc-badge">{riskPriorities.length}</span></div>
+          <p className="panel-note">پرریسک‌ترین روابط در گراف بارگذاری‌شده (طبقه‌بندی بر اساس riskScore).</p>
+          {riskPriorities.length ? (
+            <div className="item-list">
+              {riskPriorities.map((e) => {
+                const a = idToNode(e.source); const b = idToNode(e.target);
+                return (
+                  <button className="item" key={e.id} onClick={() => selectEdge(e.id)} title="انتخاب در گراف">
+                    <span>
+                      <b>{a ? nodeDisplayName(a) : e.source} ↔ {b ? nodeDisplayName(b) : e.target}</b>
+                      <small style={{ display: 'block' }}>{kindLabel(e.kind)}{e.label ? ` · ${e.label}` : ''}</small>
+                    </span>
+                    <span className="meta">risk {e.risk}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <Empty>در گراف بارگذاری‌شده رابطه پرریسکی یافت نشد.</Empty>
+          )}
+        </div>
+        <div className="list-card">
+          <div className="lc-head"><span className="lc-ico ic-purple">⚡</span><h3>توصیه‌های هوشمند</h3></div>
+          <p className="panel-note">مشتق از اجرای واقعی تحلیل‌های شبکه (Centrality / Connectors / Bridges / Bottlenecks / SPOF).</p>
+          {recommendations.length ? (
+            <div className="item-list">
+              {recommendations.map((r, i) => (
+                <div className="item" key={i}>
+                  <span>{r.text}</span>
+                  <span className={`ui-badge ${r.tone}`}>{r.tone}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="net-empty" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              برای تولید توصیه‌های مبتنی بر داده، ابتدا یکی از تحلیل‌ها را اجرا کنید.
+              <button className="net-btn primary" onClick={() => runAnalysis('centrality')}>اجرای Centrality</button>
+            </div>
+          )}
+        </div>
+        <div className="list-card">
+          <div className="lc-head"><span className="lc-ico ic-blue">🕒</span><h3>فعالیت‌های این نشست</h3><span className="lc-badge">{activities.length}</span></div>
+          <p className="panel-note">رویدادهای واقعی تعامل شما با این صفحه در جلسه فعلی.</p>
+          {activities.length ? (
+            <div style={{ display: 'grid', gap: 4 }}>
+              {activities.map((a, i) => (
+                <div className="activity" key={i}>
+                  {a.label}
+                  <time>{new Date(a.t).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}</time>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <Empty>هنوز فعالیتی ثبت نشده؛ فیلتر، مسیر یا تحلیلی را امتحان کنید.</Empty>
+          )}
+        </div>
+        <div className="footer-note">
+          همه مقادیر از Backend واقعی با Authorization سازمانی گرفته شده‌اند؛ هیچ داده نمایشی/جعلی اضافه نشده است.
+        </div>
+        </aside>
+      </div>
 
-      {/* Edge details side panel */}
-      {selectedEdge ? (
-        <EdgeDetails edge={selectedEdge} onClose={() => setSelectedEdgeId(null)} />
-      ) : null}
+      {/* Node details shown in right rail above; graph canvas reveals details onClick */}
     </main>
   );
 }

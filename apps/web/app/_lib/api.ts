@@ -17,18 +17,21 @@ let memoryAccessToken:string|null=null;
 let refreshPromise:Promise<string|null>|null=null;
 
 export function getAccessToken(){return typeof window==='undefined'?memoryAccessToken:memoryAccessToken??sessionStorage.getItem(ACCESS_KEY);}
+const SESSION_EVENT='srip:session';
 export function setSession(tokens:{accessToken:string;refreshToken?:string}){
   if(!tokens.accessToken) throw new Error('Authentication response has no access token.');
   memoryAccessToken=tokens.accessToken;
   if(typeof window!=='undefined'){
     sessionStorage.setItem(ACCESS_KEY,tokens.accessToken);
     if(tokens.refreshToken) sessionStorage.setItem(REFRESH_KEY,tokens.refreshToken);
+    try{window.dispatchEvent(new Event(SESSION_EVENT));}catch{}
   }
 }
 export function clearSession(){
   memoryAccessToken=null;
   if(typeof window!=='undefined'){
     sessionStorage.removeItem(ACCESS_KEY);sessionStorage.removeItem(REFRESH_KEY);localStorage.removeItem(SCOPE_KEY);
+    try{window.dispatchEvent(new Event(SESSION_EVENT));}catch{}
   }
 }
 export function getRefreshToken(){return typeof window==='undefined'?null:sessionStorage.getItem(REFRESH_KEY);}
@@ -90,7 +93,7 @@ export async function api<T=unknown>(path:string,init:ApiOptions={}):Promise<T>{
     const next=await refreshAccessToken();if(next)response=await raw(path,init,next);
   }
   const body:any=await readBody(response);
-  if(response.status===401){
+  if(response.status===401&&path!=='/auth/login'){
     clearSession();
     if(typeof window!=='undefined'&&!location.pathname.startsWith('/login'))location.assign('/login');
     throw new ApiError('نشست شما منقضی شده است.',401,body?.error??body);
