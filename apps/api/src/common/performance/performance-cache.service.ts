@@ -10,7 +10,10 @@ export class PerformanceCacheService {
   constructor() {
     const url = process.env.REDIS_URL;
     this.enabled = Boolean(url) && process.env.PERFORMANCE_CACHE_ENABLED !== 'false';
-    if (this.enabled && url) this.redis = new Redis(url, { maxRetriesPerRequest: 2, enableReadyCheck: true });
+    if (this.enabled && url) {
+      this.redis = new Redis(url, { maxRetriesPerRequest: 2, enableReadyCheck: true, enableOfflineQueue: false, connectTimeout: 1500 });
+      this.redis.on('error', () => undefined);
+    }
   }
 
   async get<T>(key: string): Promise<T | undefined> {

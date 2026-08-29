@@ -11,6 +11,7 @@ export class QueueMonitoringService implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly config:ConfigService,private readonly metrics:MetricsService){
     const redisUrl=this.config.get<string>('REDIS_URL','redis://localhost:6379');
     this.connection=new IORedis(redisUrl,{maxRetriesPerRequest:null,enableReadyCheck:true});
+    this.connection.on('error',()=>undefined);
     for(const name of Object.values(QUEUE_NAMES)) this.queues.set(name,new Queue(name,{connection:this.connection}));
   }
   onModuleInit(){void this.refresh();this.timer=setInterval(()=>void this.refresh(),Math.max(5000,Number(process.env.QUEUE_METRICS_INTERVAL_MS??15000)));this.timer.unref();}

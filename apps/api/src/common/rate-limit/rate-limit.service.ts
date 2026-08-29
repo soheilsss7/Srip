@@ -35,7 +35,8 @@ export class RateLimitService implements OnModuleDestroy {
   async onModuleDestroy(): Promise<void> { await this.redis.quit().catch(() => undefined); }
 
   constructor() {
-    this.redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379', { maxRetriesPerRequest: 1, enableReadyCheck: true, lazyConnect: true });
+    this.redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379', { maxRetriesPerRequest: 1, enableReadyCheck: true, lazyConnect: true, enableOfflineQueue: false, connectTimeout: 1500 });
+    this.redis.on('error', () => undefined);
   }
 
   async consume(context: RateLimitContext): Promise<RateLimitResult[]> {
@@ -56,8 +57,8 @@ export class RateLimitService implements OnModuleDestroy {
 
   private async increment(key:string, policy:Policy):Promise<RateLimitResult> {
     try {
-      if (this.redis.status === 'wait') await this.redis.connect();
-      const raw = await this.redis.eval(INCR_EXPIRE_SCRIPT, 1, key, String(policy.windowMs)) as [number|string, number|string];
+      const timeout = new Promise<never>((_resolve, reject) => { setTimeout(() => reject(new Error('rate-limit backend timeout')), 1500); });
+      const raw = await Promise.race([this.redis.eval(INCR_EXPIRE_SCRIPT, 1, key, String(policy.windowMs)), timeout]) as [number|string, number|string];
       const count = Number(raw[0]); const ttlMs = Math.max(1, Number(raw[1])); const allowed = count <= policy.limit;
       return { allowed, limit:policy.limit, remaining:Math.max(0,policy.limit-count), retryAfterSeconds:Math.max(1,Math.ceil(ttlMs/1000)), resetAt:Date.now()+ttlMs, key };
     } catch {

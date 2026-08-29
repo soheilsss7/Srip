@@ -16,6 +16,7 @@ export class QueueService implements OnModuleDestroy {
   constructor(private readonly config: ConfigService, private readonly metrics:MetricsService, private readonly trace:TraceService) {
     const redisUrl = this.config.get<string>('REDIS_URL', 'redis://localhost:6379');
     this.connection = new IORedis(redisUrl, { maxRetriesPerRequest: null, enableReadyCheck: true });
+    this.connection.on('error', () => undefined);
     this.defaultOptions = {
       attempts: Math.max(1, Number(this.config.get('QUEUE_MAX_ATTEMPTS', '5'))),
       backoff: { type: 'exponential', delay: Math.max(1000, Number(this.config.get('QUEUE_BACKOFF_MS', '2000'))) },

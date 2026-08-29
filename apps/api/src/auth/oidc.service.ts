@@ -13,15 +13,15 @@ export class OidcService {
   private readonly redis: Redis;
   private readonly providers = new Map<string, OidcProviderConfig>();
   constructor(private readonly prisma: PrismaService, private readonly auth: AuthService, private readonly audit: AuditService) {
-    this.redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379', { maxRetriesPerRequest: 2, lazyConnect: true });
+    this.redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379', { maxRetriesPerRequest: 2, lazyConnect: true, enableOfflineQueue: false, connectTimeout: 1500 });
+    this.redis.on('error', () => undefined);
     for (const p of ['OIDC_PRIMARY', 'OIDC_GOOGLE', 'OIDC_MICROSOFT']) this.loadProvider(p);
   }
-  private async readyRedis() { if (this.redis.status === 'wait') await this.redis.connect(); }
+  private async stateSet(key: string, value: any, ttl=600) { await this.redis.set(key, JSON.stringify(value), 'EX', ttl); }
+  private async stateTake(key: string) { const raw = await this.redis.get(key); if (raw) await this.redis.del(key); return raw ? JSON.parse(raw) : null; }
   private loadProvider(prefix: string) { const issuer = process.env[`${prefix}_ISSUER`], clientId = process.env[`${prefix}_CLIENT_ID`], clientSecret = process.env[`${prefix}_CLIENT_SECRET`]; if (!issuer || !clientId || !clientSecret) return; const key = prefix.replace(/^OIDC_/, '').toLowerCase(); this.providers.set(key, { key, issuer: issuer.replace(/\/$/, ''), clientId, clientSecret, scopes: (process.env[`${prefix}_SCOPES`] ?? 'openid profile email').split(/\s+/).filter(Boolean), authorizationEndpoint: process.env[`${prefix}_AUTHORIZATION_ENDPOINT`], tokenEndpoint: process.env[`${prefix}_TOKEN_ENDPOINT`], jwksUri: process.env[`${prefix}_JWKS_URI`] }); }
   private async discovery(provider: OidcProviderConfig) { const res = await fetch(`${provider.issuer}/.well-known/openid-configuration`); if (!res.ok) throw new BadRequestException('OIDC discovery failed'); const d = await res.json() as any; return { authorizationEndpoint: provider.authorizationEndpoint ?? d.authorization_endpoint, tokenEndpoint: provider.tokenEndpoint ?? d.token_endpoint, jwksUri: provider.jwksUri ?? d.jwks_uri }; }
   private b64(input: Buffer) { return input.toString('base64url'); }
-  private async stateSet(key: string, value: any, ttl=600) { await this.readyRedis(); await this.redis.set(key, JSON.stringify(value), 'EX', ttl); }
-  private async stateTake(key: string) { await this.readyRedis(); const raw = await this.redis.get(key); if (raw) await this.redis.del(key); return raw ? JSON.parse(raw) : null; }
 
   async authorize(providerKey: string, redirectUri: string) {
     const allowed = (process.env.OIDC_ALLOWED_REDIRECT_URIS ?? process.env.OIDC_DEFAULT_REDIRECT_URI ?? '').split(',').map(x => x.trim()).filter(Boolean);
