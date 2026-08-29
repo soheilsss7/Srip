@@ -1129,3 +1129,80 @@ textarea{resize:vertical}
 
 @media(max-width:1100px){.people-page .split-panels{grid-template-columns:1fr}}
 @media(max-width:700px){.table-toolbar{flex-direction:column;align-items:stretch}.search-box input{min-width:0}}
+
+/* ==========================================================================
+   RELATIONSHIPS (v2) — data-rich directory with health/strategic/risk gauges.
+   ========================================================================== */
+.relationships-page{display:flex;flex-direction:column;gap:18px}
+.rel-directory,.rel-create{display:flex;flex-direction:column;gap:14px;min-width:0;padding:20px}
+.rel-directory .panel-title{align-items:flex-start}
+.rel-pair{display:flex;align-items:center;gap:8px}
+.rel-org{display:flex;flex-direction:column;min-width:90px}
+.rel-org strong{color:var(--text-primary);font-weight:800;font-size:12.5px}
+.rel-org small{color:var(--text-muted);font-size:10px}
+.rel-swap{color:var(--srip-accent-text);opacity:.8;flex:0 0 auto}
+.rel-badges{display:flex;gap:4px;flex-wrap:wrap;min-width:150px}
+.rel-gauges{display:flex;gap:14px;align-items:flex-end;min-width:150px}
+.gauge-cell{display:flex;flex-direction:column;align-items:center;gap:4px}
+.gauge{width:22px;height:46px;border-radius:6px;background:var(--card-bg-soft);border:1px solid var(--card-border);position:relative;overflow:hidden}
+.gauge i{position:absolute;bottom:0;left:0;right:0;display:block;transition:height .4s ease}
+.gauge-hi i{background:linear-gradient(180deg,var(--srip-success),color-mix(in srgb,var(--srip-success) 60%,#000))}
+.gauge-mid i{background:linear-gradient(180deg,var(--srip-amber),color-mix(in srgb,var(--srip-amber) 60%,#000))}
+.gauge-lo i{background:linear-gradient(180deg,var(--srip-danger),color-mix(in srgb,var(--srip-danger) 60%,#000))}
+.gauge-cell b{font-size:11px;font-variant-numeric:tabular-nums}
+.gauge-cell b.hi{color:var(--srip-success)}
+.gauge-cell b.mid{color:var(--srip-amber)}
+.gauge-cell b.lo{color:var(--srip-danger)}
+.th-gauges{min-width:180px}
+.rel-owner{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text-secondary)}
+.rel-owner svg{color:var(--srip-accent-text);flex:0 0 auto}
+.rel-last{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--text-secondary);white-space:nowrap}
+.rel-last-dot{width:8px;height:8px;border-radius:50%;background:var(--text-muted)}
+.rel-last-dot.recent{background:var(--srip-success);box-shadow:0 0 0 3px color-mix(in srgb,var(--srip-success) 18%,transparent)}
+.people-page .split-panels,.relationships-page .split-panels{grid-template-columns:minmax(0,1.6fr) minmax(280px,360px)}
+
+/* ==========================================================================
+   INTERACTIONS (v2) — timeline feed with typed icons + right-hook form.
+   ========================================================================== */
+.interactions-page{display:flex;flex-direction:column;gap:18px}
+.interactions-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,380px);gap:16px;align-items:start}
+.interactions-feed{display:flex;flex-direction:column;gap:14px;min-width:0;padding:20px}
+.interactions-feed .panel-title{flex-wrap:wrap;align-items:flex-start}
+.seg-btn{display:inline-flex;background:var(--card-bg-soft);border:1px solid var(--card-border);border-radius:var(--radius-md);padding:3px;gap:2px}
+.seg-btn button{border:0;background:none;padding:6px 12px;font-size:11px;font-weight:800;border-radius:calc(var(--radius-md) - 3px);color:var(--text-muted);cursor:pointer}
+.seg-btn button.active{background:var(--srip-accent);color:#fff}
+.seg-btn button.warning.active{background:var(--srip-amber);color:#fff}
+
+.interaction-timeline{display:flex;flex-direction:column;gap:18px}
+.timeline-dayhead{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:.02em}
+.timeline-dayhead::after{content:'';flex:1;height:1px;background:var(--card-border)}
+.timeline-dayhead b{color:var(--srip-accent-text);background:color-mix(in srgb,var(--srip-accent) 10%,transparent);border-radius:999px;padding:1px 8px}
+.timeline-items{display:flex;flex-direction:column;gap:8px}
+.timeline-item{display:flex;gap:12px;padding:12px 14px;background:var(--card-bg-soft);border:1px solid var(--card-border);border-radius:var(--radius-md);position:relative;transition:border-color .15s}
+.timeline-item:hover{border-color:var(--card-border-strong)}
+.timeline-item.has-follow{border-inline-start:3px solid var(--srip-amber)}
+.type-dot{width:38px;height:38px;border-radius:12px;flex:0 0 auto;display:grid;place-items:center;color:#fff}
+.type-call{background:linear-gradient(135deg,#0ea5e9,#0284c7)}
+.type-email{background:linear-gradient(135deg,#8b5cf6,#7c3aed)}
+.type-meeting{background:linear-gradient(135deg,#14b8a6,#0d9488)}
+.type-note{background:linear-gradient(135deg,#f59e0b,#d97706)}
+.type-message{background:linear-gradient(135deg,#ef4444,#dc2626)}
+.type-other{background:linear-gradient(135deg,#64748b,#475569)}
+.ti-body{flex:1;min-width:0}
+.ti-head{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.ti-type{font-size:10px;font-weight:800;color:var(--srip-accent-text);background:color-mix(in srgb,var(--srip-accent) 12%,transparent);border-radius:999px;padding:2px 8px}
+.ti-time{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--text-muted);margin-inline-start:auto}
+.ti-subject{display:block;font-size:13.5px;font-weight:800;color:var(--text-primary);margin:2px 0;text-decoration:none}
+.ti-subject:hover{color:var(--srip-accent-text)}
+.ti-summary{margin:2px 0;font-size:12px;color:var(--text-secondary);line-height:1.6}
+.ti-meta{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px}
+.ti-meta span{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--text-muted)}
+.ti-meta svg{opacity:.7}
+.ti-rel{color:var(--srip-accent-text)!important}
+.ti-followup{display:flex;align-items:center;gap:6px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--card-border);font-size:11px;color:var(--srip-amber)}
+.interactions-form{display:flex;flex-direction:column;gap:14px;position:sticky;top:16px}
+.interactions-form .form-grid label textarea{min-height:70px}
+.check-line{flex-direction:row!important;align-items:center;gap:8px;font-weight:700!important}
+
+@media(max-width:1200px){.interactions-layout{grid-template-columns:1fr}.interactions-form{position:static}.people-page .split-panels,.relationships-page .split-panels{grid-template-columns:1fr}}
+@media(max-width:700px){.ti-meta{gap:8px}}
