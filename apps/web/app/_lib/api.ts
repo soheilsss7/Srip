@@ -1,4 +1,7 @@
-export const API=process.env.NEXT_PUBLIC_API_URL??'http://localhost:4000/api/v1';
+// Keep browser requests same-origin by default. Next.js proxies /api/v1 to the
+// private API service; an absolute URL is still supported for production setups
+// that intentionally expose the API on a separate origin.
+export const API=process.env.NEXT_PUBLIC_API_URL??'/api/v1';
 
 export type ApiErrorShape={code?:string;message?:string;requestId?:string;details?:unknown};
 export type ApiOptions=RequestInit&{idempotencyKey?:string;timeoutMs?:number};
@@ -124,4 +127,9 @@ export const apiPatch=<T=unknown>(path:string,body:unknown,opts:ApiOptions={})=>
 export const apiDelete=<T=unknown>(path:string,opts:ApiOptions={})=>api<T>(path,{...opts,method:'DELETE'});
 export function unwrapList<T=unknown>(value:any):T[]{ if(Array.isArray(value))return value as T[]; if(value&&value.items!==undefined&&Array.isArray(value.items))return value.items as T[]; if(value&&value.rows!==undefined&&Array.isArray(value.rows))return value.rows as T[]; if(value&&value.data!==undefined&&Array.isArray(value.data))return value.data as T[]; return []; }
 export function docsOrigin(){return API.replace(/\/api\/v1\/?$/,'');}
-export async function apiDocsJson(){const r=await fetch(`${docsOrigin()}/docs-json`,{cache:'no-store'});if(!r.ok)throw new ApiError(`GET /docs-json → ${r.status}`,r.status);return r.json();}
+export async function apiDocsJson(){
+  const docsUrl=API.startsWith('/')?'/docs-json':`${docsOrigin()}/docs-json`;
+  const r=await fetch(docsUrl,{cache:'no-store'});
+  if(!r.ok)throw new ApiError(`GET /docs-json → ${r.status}`,r.status);
+  return r.json();
+}
