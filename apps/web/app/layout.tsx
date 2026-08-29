@@ -1,6 +1,5 @@
 import React from 'react';
 import './globals.css';
-import '../styles.css';
 import ShellClient from './_components/shell-client';
 import {SkipLink} from './_components/route-state';
 import {PreferenceBootstrap} from './_components/preferences';
