@@ -23,7 +23,21 @@ bootstrap();
 
 
 function hardenOpenApi(document: OpenAPIObject) {
-  const publicPrefixes = ['/auth/login','/auth/refresh','/auth/forgot-password','/auth/reset-password','/auth/verify-email','/health','/liveness','/readiness'];
+  // Keep this list aligned with AuthController's intentionally public routes.
+  // These values only harden the generated OpenAPI metadata; runtime guards
+  // remain the source of truth.
+  const publicPrefixes = [
+    '/auth/oidc',
+    '/auth/register',
+    '/auth/login',
+    '/auth/refresh',
+    '/auth/logout',
+    '/auth/password-reset',
+    '/auth/email/verify',
+    '/health',
+    '/liveness',
+    '/readiness',
+  ];
   const paginationParams = [
     { name: 'page', in: 'query', required: false, description: '1-based page number. Use page or cursor, not both.', schema: { type: 'integer', minimum: 1, default: 1 } },
     { name: 'cursor', in: 'query', required: false, description: 'Opaque cursor returned as nextCursor.', schema: { type: 'string' } },

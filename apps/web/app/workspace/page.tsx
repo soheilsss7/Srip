@@ -1,4 +1,4 @@
 'use client';
 import {PageHeader} from '../_components/page-ui';
-const groups=[['Core','organizations','people','relationships','meetings'],['Execution','actions','commitments','projects','opportunities'],['Intelligence','network','search','intelligence','recommendations'],['Governance','admin','approvals','workflows','integrations'],['Operations','notifications','reports','data-management','knowledge']];
+const groups=[['Core','organizations','people','relationships','meetings'],['Execution','actions','commitments','projects','opportunities'],['Intelligence','network','search','intelligence','recommendations'],['Governance','admin','approvals','workflows','integrations'],['Operations','notifications','reports','data-management','notes']];
 export default function Workspace(){return <main className="feature-page"><PageHeader eyebrow="WORKSPACE" title="مرکز عملیات" description="نقطه ورود یکپارچه به تمام حوزه‌های عملیاتی پلتفرم تعاملات."/><div className="dashboard-grid">{groups.map(g=><section className="panel" key={g[0]}><h2>{g[0]}</h2><div className="workspace-links">{g.slice(1).map(x=><a key={x} href={'/'+x}>{x}</a>)}</div></section>)}</div></main>}

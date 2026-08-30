@@ -2,6 +2,7 @@
 import {use,useCallback,useEffect,useState} from 'react';
 import {api} from '../../_lib/api';
 import {Badge,ErrorCard,Loading,PageHeader} from '../../_components/page-ui';
+import {RelatedNotes} from '../../_components/related-notes';
 const LIFECYCLE=['IDENTIFIED','INTRODUCED','INITIAL_CONTACT','DEVELOPING','ACTIVE','STRATEGIC','DORMANT','AT_RISK','LOST'];
 const STATUS=['PROSPECTIVE','ACTIVE','AT_RISK','DORMANT','ARCHIVED'];
 export default function Page({params}:{params:Promise<{id:string}>}){
@@ -19,6 +20,7 @@ export default function Page({params}:{params:Promise<{id:string}>}){
   {!r&&!error?<Loading/>:r&&<>
    <section className="panel"><div className="panel-title"><div><h2>Scores & Ownership</h2><p>امتیازهای محاسبه‌شده Backend</p></div><div className="stat-row">{scores.map(s=><div className="stat-box" key={s}><span>{s}</span><strong>{pct(r[s])}</strong></div>)}</div></div><div className="detail-grid">{[['Owner',r.owner?.name],['Backup Owner',r.backupOwner?.name],['Lifecycle',r.lifecycleStage],['Status',r.status],['Relationship Type',r.relationshipType],['Source Org',r.sourceOrganization?.name],['Target Org',r.targetOrganization?.name]].filter(([,v])=>v!=null).map(([k,v])=> <div className="detail-item" key={String(k)}><small>{k}</small><strong>{String(v)}</strong></div>)}</div></section>
    <section className="panel"><div className="panel-title"><div><h2>Timeline</h2><Badge>{milestones.length}</Badge></div></div>{milestones.length?<div className="list">{milestones.map(({item}:any,i:number)=><div className="listRow" key={item.id??i}><span><Badge tone="neutral">{item.kind}</Badge></span><span><strong>{item.title||item.subject||item.description||item.name||item.status||'—'}</strong>{item.date?<small>{new Date(item.date).toLocaleString()}</small>:null}</span></div>)}</div>:<p className="empty-state">رویدادی در Timeline ثبت نشده است.</p>}</section>
+   <RelatedNotes notes={r.notes} title="یادداشت‌های رابطه" />
   </>}
  </main>;
 }

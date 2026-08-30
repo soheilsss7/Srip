@@ -17,7 +17,7 @@ export default function Page({params}:{params:Promise<{id:string}>}){
  async function showExplain(){setExplanation(null);setError('');try{setExplanation(await api(`/recommendations/${id}/explain`))}catch(e){setError((e as Error).message)}}
 
  return <main className="feature-page">
-  <PageHeader eyebrow="RECOMMENDATION" title={r?.title??'Recommendation'} description={`شناسه: ${id}`} actions={<div className="toolbar"><a className="secondary-action" href="/recommendations">بازگشت</a><button className="secondary-action" onClick={load} disabled={!!busy}>بازخوانی</button></div>}/>
+  <PageHeader eyebrow="RECOMMENDATION" title={r?.title??'Recommendation'} description="جزئیات پیشنهاد و وضعیت اجرای آن." actions={<div className="toolbar"><a className="secondary-action" href="/recommendations">بازگشت</a><button className="secondary-action" onClick={load} disabled={!!busy}>بازخوانی</button></div>}/>
   <ErrorCard message={error}/>
   {!r&&!error?<Loading/>:r&&<>
    <section className="panel">

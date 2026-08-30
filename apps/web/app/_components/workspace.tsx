@@ -10,7 +10,7 @@ import {
   ShieldCheck, FolderKanban, Target, BrainCircuit, FileText, ThumbsUp, BarChart3, BookOpen,
   Bell, Search, Calendar, ListChecks, UserCheck, CheckCircle2, Settings, Settings2, Sparkles, Timer, Database,
   Shield, Plug, Workflow, LineChart, Gauge, Activity, Table2, Flag, FileDown, KeyRound,
-  DatabaseBackup, Archive, ScrollText, HeartPulse, ChevronDown, ChevronUp, AlertTriangle, Upload
+  DatabaseBackup, Archive, ScrollText, HeartPulse, ChevronDown, ChevronUp, AlertTriangle, Upload, StickyNote
 } from 'lucide-react';
 
 type Role = 'SUPER_ADMIN'|'HOLDING_ADMIN'|'HOLDING_EXECUTIVE'|'SUBSIDIARY_ADMIN'|'SUBSIDIARY_EXECUTIVE'|'RELATIONSHIP_MANAGER'|'PROJECT_MANAGER'|'ANALYST'|'STANDARD_USER'|'READ_ONLY';
@@ -64,6 +64,7 @@ export function useWorkspace() {
    --------------------------------------------------------------------------- */
 const MAIN_NAV: Array<readonly [string, string, string]> = [
   ['/', 'داشبورد', 'dashboard.read'],
+  ['/today', 'مرکز عملیات امروز', 'action.read'],
   ['/organizations', 'سازمان‌ها', 'organization.read'],
   ['/people', 'اشخاص', 'person.read'],
   ['/relationships', 'روابط', 'relationship.read'],
@@ -83,8 +84,9 @@ const INTELLIGENCE_NAV: Array<readonly [string, string, string]> = [
   ['/reports', 'گزارش‌ها', 'report.read'],
 ] as const;
 const SYSTEM_NAV: Array<readonly [string, string, string]> = [
-  ['/documents', 'دانش', 'document.read'],
-  ['/notifications', 'اعلان‌ها', 'notification.read'],
+  ['/documents', 'اسناد', 'document.read'],
+  ['/notes', 'یادداشت‌ها', 'entity.read'],
+  ['/notifications', 'اعلان‌ها', 'entity.read'],
   ['/search', 'جستجو', 'search.read'],
   ['/calendar', 'تقویم', 'meeting.read'],
   ['/requirements', 'نیازمندی‌ها', 'project.read'],
@@ -140,6 +142,7 @@ const ADMIN_NAV: Array<readonly [string, string, string]> = [
 
 const NAV_ICONS: Record<string, React.ReactNode> = {
   '/': <LayoutDashboard size={16}/>,
+  '/today': <ListChecks size={16}/>,
   '/organizations': <Building2 size={16}/>,
   '/people': <Users size={16}/>,
   '/relationships': <Share2 size={16}/>,
@@ -156,6 +159,7 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   '/recommendations': <ThumbsUp size={16}/>,
   '/reports': <BarChart3 size={16}/>,
   '/documents': <BookOpen size={16}/>,
+  '/notes': <StickyNote size={16}/>,
   '/notifications': <Bell size={16}/>,
   '/search': <Search size={16}/>,
   '/calendar': <Calendar size={16}/>,

@@ -46,6 +46,7 @@ export const CONTROLLER_SECURITY_MATRIX: Record<string, ControllerSecurityRule> 
   'network.controller.ts': { category: 'AUTHORIZED', requiredGuards: ['AuthGuard','AuthorizationGuard'], requirePermission: true },
   'notifications.controller.ts': { category: 'AUTHENTICATED', requiredGuards: ['AuthGuard'] },
   'notification-alerts.controller.ts': { category: 'AUTHENTICATED', requiredGuards: ['AuthGuard'] },
+  'notes.controller.ts': { category: 'AUTHORIZED', requiredGuards: ['AuthGuard','AuthorizationGuard'], requirePermission: true },
   'observability.controller.ts': { category: 'INTERNAL', requiredGuards: ['InternalMetricsGuard'] },
   'opportunities.controller.ts': { category: 'AUTHORIZED', requiredGuards: ['AuthGuard','AuthorizationGuard'], requirePermission: true },
   'core-domain.controller.ts': { category: 'AUTHORIZED', requiredGuards: ['AuthGuard','AuthorizationGuard'], requirePermission: true },

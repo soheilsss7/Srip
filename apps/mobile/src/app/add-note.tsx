@@ -15,7 +15,7 @@ export default function AddNote() {
     if (!body.trim()) { setE('Note body is required.'); return; }
     setSaving(true); setE('');
     try {
-      await apiPostOffline('/interactions', { type: 'NOTE', subject: subject.trim() || body.trim().slice(0, 60), summary: body.trim() }, token);
+      await apiPostOffline('/notes', { title: subject.trim() || undefined, body: body.trim() }, token);
       setSubject(''); setBody(''); setE('Saved.');
     } catch (x) { setE((x as Error).message); } finally { setSaving(false); }
   }

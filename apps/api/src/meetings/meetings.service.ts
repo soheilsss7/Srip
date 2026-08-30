@@ -19,10 +19,10 @@ export class MeetingsService {
     if (row.ownerId !== userId) throw new NotFoundException('Meeting not found');
   }
 
-  async list(userId: string, relationshipId?: string, upcoming = false, page?: string, pageSize?: string) {
+  async list(userId: string, relationshipId?: string, upcoming = false, page?: string, pageSize?: string, organizationId?: string, search?: string) {
     const ids = await this.authorization.accessibleOrganizationIds(userId);
     const p = parsePagination(page, pageSize, { page: 1, pageSize: 50 });
-    const where: Prisma.MeetingWhereInput = { deletedAt: null, ...(relationshipId ? { relationshipId } : {}), ...(upcoming ? { startAt: { gte: new Date() } } : {}), ...(ids ? { OR: [{ organizationId: { in: ids } }, { ownerId: userId }, { relationship: { OR: [{ sourceOrganizationId: { in: ids } }, { targetOrganizationId: { in: ids } }] } }] } : { ownerId: userId }) };
+    const where: Prisma.MeetingWhereInput = { deletedAt: null, ...(relationshipId ? { relationshipId } : {}), ...(organizationId ? { organizationId } : {}), ...(upcoming ? { startAt: { gte: new Date() } } : {}), ...(ids ? { OR: [{ organizationId: { in: ids } }, { ownerId: userId }, { relationship: { OR: [{ sourceOrganizationId: { in: ids } }, { targetOrganizationId: { in: ids } }] } }] } : { ownerId: userId }), ...(search?.trim() ? { AND: [{ OR: [{ title: { contains: search.trim(), mode: 'insensitive' } }, { objective: { contains: search.trim(), mode: 'insensitive' } }, { agenda: { contains: search.trim(), mode: 'insensitive' } }] }] } : {}) };
     const [items, total] = await this.prisma.$transaction([
       this.prisma.meeting.findMany({ where, include: { organization: true, relationship: true, participants: { include: { person: true } }, actions: true, commitments: true }, orderBy: { startAt: 'desc' }, skip: p.skip, take: p.take }),
       this.prisma.meeting.count({ where }),

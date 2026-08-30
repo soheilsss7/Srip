@@ -12,7 +12,7 @@ import { RelationshipLifecycleStage } from '@prisma/client';
 export class RelationshipsService {
   constructor(private readonly prisma: PrismaService, private readonly authorization: AuthorizationService, private readonly audit: AuditService, private readonly eventBus: EventBusService, private readonly lifecycle: DataLifecycleService, private readonly presenter: RelationshipPresenter, private readonly approvals: ApprovalService) {}
 
-  async list(userId: string, organizationId?: string, status?: any, lifecycleStage?: RelationshipLifecycleStage, page = 1, pageSize = 50) {
+  async list(userId: string, organizationId?: string, status?: any, lifecycleStage?: RelationshipLifecycleStage, page = 1, pageSize = 50, q?: string) {
     page = Math.max(1, Math.min(page, 10000)); pageSize = Math.max(1, Math.min(pageSize, 100));
     const ids = await this.authorization.accessibleOrganizationIds(userId);
     if (organizationId) await this.authorization.assertPermission(userId, 'relationship.read', { organizationId: organizationId });
@@ -23,6 +23,11 @@ export class RelationshipsService {
         ...(organizationId ? { OR: [{ sourceOrganizationId: organizationId }, { targetOrganizationId: organizationId }] } : {}),
         ...(status ? { status } : {}),
         ...(lifecycleStage ? { lifecycleStage } : {}),
+        ...(q?.trim() ? { AND: [{ OR: [
+          { relationshipType: { contains: q.trim(), mode: 'insensitive' } },
+          { sourceOrganization: { name: { contains: q.trim(), mode: 'insensitive' } } },
+          { targetOrganization: { name: { contains: q.trim(), mode: 'insensitive' } } },
+        ] }] } : {}),
       },
       include: {
         sourceOrganization: { select: { id: true, name: true, type: true } },
@@ -33,7 +38,11 @@ export class RelationshipsService {
       orderBy: { updatedAt: 'desc' },
       skip: (page - 1) * pageSize,
       take: pageSize,
-    }), this.prisma.relationship.count({ where: { deletedAt: null, ...(ids ? { sourceOrganizationId: { in: ids }, targetOrganizationId: { in: ids } } : {}), ...(organizationId ? { OR: [{ sourceOrganizationId: organizationId }, { targetOrganizationId: organizationId }] } : {}), ...(status ? { status } : {}), ...(lifecycleStage ? { lifecycleStage } : {}) } })]);
+    }), this.prisma.relationship.count({ where: { deletedAt: null, ...(ids ? { sourceOrganizationId: { in: ids }, targetOrganizationId: { in: ids } } : {}), ...(organizationId ? { OR: [{ sourceOrganizationId: organizationId }, { targetOrganizationId: organizationId }] } : {}), ...(status ? { status } : {}), ...(lifecycleStage ? { lifecycleStage } : {}), ...(q?.trim() ? { AND: [{ OR: [
+        { relationshipType: { contains: q.trim(), mode: 'insensitive' } },
+        { sourceOrganization: { name: { contains: q.trim(), mode: 'insensitive' } } },
+        { targetOrganization: { name: { contains: q.trim(), mode: 'insensitive' } } },
+      ] }] } : {}) } })]);
     return { data: this.presenter.presentMany(userId, rows), page, pageSize, total, totalPages: Math.ceil(total / pageSize) };
   }
 
@@ -43,7 +52,8 @@ export class RelationshipsService {
     const resourceContext = { organizationId: r.sourceOrganizationId, relationshipOrganizationIds: [r.sourceOrganizationId, r.targetOrganizationId], entityType: 'Relationship', entityId: r.id, classification: r.sensitivity, sensitivity: r.sensitivity, ownerId: r.ownerId ?? undefined };
     await this.authorization.assertPermission(userId, 'relationship.read', resourceContext);
     await this.authorization.assertPermission(userId, 'relationship.read', { ...resourceContext, organizationId: r.targetOrganizationId });
-    return this.presenter.present(userId, r);
+    const notes = await this.prisma.note.findMany({ where: { organizationId: { in: [r.sourceOrganizationId, r.targetOrganizationId] }, deletedAt: null }, orderBy: { updatedAt: 'desc' }, take: 50, select: { id: true, title: true, body: true, organizationId: true, personId: true, createdAt: true, updatedAt: true } });
+    return this.presenter.present(userId, { ...r, notes });
   }
 
   async timeline(userId: string, id: string) {
@@ -52,12 +62,14 @@ export class RelationshipsService {
     const resourceContext = { organizationId: r.sourceOrganizationId, relationshipOrganizationIds: [r.sourceOrganizationId, r.targetOrganizationId], entityType: 'Relationship', entityId: r.id, classification: r.sensitivity, sensitivity: r.sensitivity, ownerId: r.ownerId ?? undefined };
     await this.authorization.assertPermission(userId, 'relationship.read', resourceContext);
     await this.authorization.assertPermission(userId, 'relationship.read', { ...resourceContext, organizationId: r.targetOrganizationId });
-    const [interactions, meetings, actions, commitments, opportunities] = await Promise.all([
+    const organizationIds = [r.sourceOrganizationId, r.targetOrganizationId];
+    const [interactions, meetings, actions, commitments, opportunities, notes] = await Promise.all([
       this.prisma.interaction.findMany({ where: { relationshipId: id, deletedAt: null }, orderBy: { occurredAt: 'desc' }, take: 50, select: { id: true, type: true, subject: true, summary: true, occurredAt: true } }),
       this.prisma.meeting.findMany({ where: { relationshipId: id, deletedAt: null }, orderBy: { startAt: 'desc' }, take: 50, select: { id: true, title: true, startAt: true, outcome: true } }),
       this.prisma.action.findMany({ where: { relationshipId: id, deletedAt: null }, orderBy: { createdAt: 'desc' }, take: 50, select: { id: true, title: true, status: true, dueAt: true, createdAt: true } }),
       this.prisma.commitment.findMany({ where: { relationshipId: id, deletedAt: null }, orderBy: { createdAt: 'desc' }, take: 50, select: { id: true, description: true, status: true, dueAt: true, createdAt: true } }),
       this.prisma.opportunity.findMany({ where: { relationshipId: id, deletedAt: null }, orderBy: { createdAt: 'desc' }, take: 50, select: { id: true, name: true, status: true, probability: true, createdAt: true } }),
+      this.prisma.note.findMany({ where: { organizationId: { in: organizationIds }, deletedAt: null }, orderBy: { updatedAt: 'desc' }, take: 50, select: { id: true, title: true, body: true, organizationId: true, personId: true, createdAt: true, updatedAt: true } }),
     ]);
     return { relationshipId: id, items: [
       ...interactions.map(x => ({ kind: 'interaction', date: x.occurredAt, ...x })),
@@ -65,6 +77,7 @@ export class RelationshipsService {
       ...actions.map(x => ({ kind: 'action', date: x.createdAt, ...x })),
       ...commitments.map(x => ({ kind: 'commitment', date: x.createdAt, ...x })),
       ...opportunities.map(x => ({ kind: 'opportunity', date: x.createdAt, ...x })),
+      ...notes.map(x => ({ kind: 'note', date: x.updatedAt, ...x })),
     ].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0,100) };
   }
 

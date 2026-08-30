@@ -45,7 +45,7 @@ class ExtractActionItemsDto { @IsOptional() @IsString() text?: string; }
 @UseGuards(AuthGuard, AuthorizationGuard)
 export class MeetingsController {
   constructor(private readonly service: MeetingsService) {}
-  @Get() @RequirePermission('meeting.read') list(@Req() req: any, @Query('relationshipId') relationshipId?: string, @Query('upcoming') upcoming?: string, @Query('page') page?: string, @Query('pageSize') pageSize?: string) { return this.service.list(req.user.sub, relationshipId, upcoming === 'true', page, pageSize); }
+  @Get() @RequirePermission('meeting.read') list(@Req() req: any, @Query('relationshipId') relationshipId?: string, @Query('organizationId') organizationId?: string, @Query('upcoming') upcoming?: string, @Query('page') page?: string, @Query('pageSize') pageSize?: string, @Query('search') search?: string) { return this.service.list(req.user.sub, relationshipId, upcoming === 'true', page, pageSize, organizationId, search); }
   @Get(':id') @RequirePermission('meeting.read') get(@Req() req: any, @Param('id') id: string) { return this.service.get(req.user.sub, id); }
   @Post() @RequirePermission('meeting.write') create(@Req() req: any, @Body() dto: MeetingDto) { return this.service.create(req.user.sub, dto); }
   @Patch(':id') @RequirePermission('meeting.write') update(@Req() req: any, @Param('id') id: string, @Body() dto: Partial<MeetingDto>) { return this.service.update(req.user.sub, id, dto); }
