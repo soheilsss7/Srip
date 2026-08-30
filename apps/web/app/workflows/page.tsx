@@ -19,7 +19,10 @@ function unwrap(value: any) { return unwrapList<any>(value); }
 function actionLabel(type: string) { return type.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, char => char.toUpperCase()); }
 
 export default function Workflows() {
-  const { scopeId } = useWorkspace();
+  const { scopeId, can } = useWorkspace();
+  const canRead = can('workflow.read');
+  const canWrite = can('workflow.write');
+  const canExecute = can('workflow.execute');
   const [items, setItems] = useState<any[]>([]);
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
@@ -34,18 +37,20 @@ export default function Workflows() {
   const [executionLabels, setExecutionLabels] = useState<Record<string, string>>({});
 
   async function load() {
+    if (!canRead) { setItems([]); setLoading(false); return; }
     setLoading(true); setError('');
     try { setItems(unwrap(await api('/workflows'))); }
     catch (value) { setError((value as Error).message); }
     finally { setLoading(false); }
   }
-  useEffect(() => { void load(); }, []);
+  useEffect(() => { void load(); }, [canRead]);
 
   function updateAction(index: number, patch: Partial<WorkflowAction>) {
     setActions(current => current.map((action, currentIndex) => currentIndex === index ? { ...action, ...patch } : action));
   }
 
   async function createWorkflow() {
+    if (!canWrite) return;
     if (!name.trim() || actions.length === 0) { setError('نام و حداقل یک action الزامی است.'); return; }
     setBusy('create'); setError(''); setStatus('');
     try {
@@ -56,6 +61,7 @@ export default function Workflows() {
   }
 
   async function executeWorkflow(workflow: any) {
+    if (!canExecute) return;
     const entityId = executionTargets[workflow.id];
     if (!entityId) { setError('ابتدا رکورد هدف را انتخاب کنید.'); return; }
     setBusy(`run:${workflow.id}`); setError(''); setStatus('');
@@ -67,12 +73,13 @@ export default function Workflows() {
   }
 
   const actionCount = useMemo(() => actions.length, [actions]);
+  if (!canRead) return <main className="feature-page"><PageHeader eyebrow="WORKFLOW AUTOMATION" title="Workflows" description="Workflowهای قابل اجرا با trigger، action و مجوزهای Backend."/><section className="panel"><p className="empty-state">مجوز مشاهده workflow برای شما فعال نیست.</p></section></main>;
   return <main className="feature-page">
-    <PageHeader eyebrow="WORKFLOW AUTOMATION" title="Workflows" description="Workflowهای قابل اجرا با trigger، action و مجوزهای Backend. رکوردهای هدف با جست‌وجوی نام انتخاب می‌شوند." actions={<button className="primary-action" onClick={() => setShowCreate(value => !value)}>{showCreate ? 'بستن' : '+ Workflow جدید'}</button>} />
+    <PageHeader eyebrow="WORKFLOW AUTOMATION" title="Workflows" description="Workflowهای قابل اجرا با trigger، action و مجوزهای Backend. رکوردهای هدف با جست‌وجوی نام انتخاب می‌شوند." actions={canWrite&&<button className="primary-action" onClick={() => setShowCreate(value => !value)}>{showCreate ? 'بستن' : '+ Workflow جدید'}</button>} />
     <ErrorCard message={error} />
     {status && <div className="notice" role="status">{status}</div>}
     {loading ? <Loading /> : <>
-      {showCreate && <section className="panel">
+      {canWrite&&showCreate && <section className="panel">
         <div className="panel-title"><div><h2>ساخت Workflow</h2><p>به‌جای JSON خام، مراحل workflow را به‌صورت فرم قابل اعتبارسنجی تعریف کنید.</p></div></div>
         <div className="form-grid">
           <label className="full">نام Workflow<input value={name} onChange={event => setName(event.target.value)} placeholder="مثلاً پیگیری رابطه پرریسک" required /></label>
@@ -98,10 +105,10 @@ export default function Workflows() {
         const workflowActions = Array.isArray(definition.actions) ? definition.actions.length : 0;
         return <article className="panel compact" key={workflow.id}>
           <div className="panel-title"><div><strong>{workflow.name}</strong><small className="muted">{workflow.entityType} · {workflowActions} action · Trigger: {definition.trigger?.type ?? 'MANUAL'}</small></div><Badge tone={workflow.isActive ? 'success' : 'neutral'}>{workflow.isActive ? 'Active' : 'Paused'}</Badge></div>
-          <div className="toolbar workflow-execute-row">
+          {canExecute&&<div className="toolbar workflow-execute-row">
             <EntityPicker label="رکورد هدف" endpoint={targetEndpoint} value={executionTargets[workflow.id] ?? ''} selectedLabel={executionLabels[workflow.id]} onChange={value => setExecutionTargets(current => ({ ...current, [workflow.id]: value }))} onLabelChange={(_, label) => setExecutionLabels(current => ({ ...current, [workflow.id]: label }))} scopeId={scopeId} disabled={Boolean(busy)} required />
             <button className="secondary-action" onClick={() => void executeWorkflow(workflow)} disabled={Boolean(busy) || !workflow.isActive}>{busy === `run:${workflow.id}` ? 'در حال اجرا…' : 'اجرای دستی'}</button>
-          </div>
+          </div>}
           {!workflow.isActive && <p className="muted">این workflow غیرفعال است.</p>}
         </article>;
       })}</div>}

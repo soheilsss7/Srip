@@ -2,6 +2,8 @@
 import {useState} from 'react';
 import {api} from '../_lib/api';
 import {PageHeader,ErrorCard} from '../_components/page-ui';
+import {Empty} from '../_components/page-ui';
+import {useWorkspace} from '../_components/workspace';
 
 const INTENTS=['SMART_SEARCH','MEETING_BRIEF','MEETING_SUMMARY','ACTION_EXTRACTION','COMMITMENT_EXTRACTION','RISK_DETECTION','OPPORTUNITY_DETECTION','NEXT_BEST_ACTION','EXECUTIVE_BRIEF'];
 
@@ -13,9 +15,12 @@ function renderValue(v:any):React.ReactNode{
 }
 
 export default function AI(){
+  const {can}=useWorkspace();
+  const canQuery=can('ai.query');
   const [intent,setIntent]=useState('SMART_SEARCH'),[query,setQuery]=useState(''),[result,setResult]=useState<any>(null),[error,setError]=useState(''),[busy,setBusy]=useState('');
-  async function ask(e:React.FormEvent){e.preventDefault();setBusy('query');setError('');setResult(null);try{const r:any=await api('/ai/query',{method:'POST',body:JSON.stringify({intent,query})});setResult(r)}catch(x){setError((x as Error).message)}finally{setBusy('')}}
+  async function ask(e:React.FormEvent){e.preventDefault();if(!canQuery)return;setBusy('query');setError('');setResult(null);try{const r:any=await api('/ai/query',{method:'POST',body:JSON.stringify({intent,query})});setResult(r)}catch(x){setError((x as Error).message)}finally{setBusy('')}}
   const body=result?.result??result?.answer??result;
+  if(!canQuery)return <main className="feature-page"><PageHeader eyebrow="AI ASSISTANT" title="AI Query" description="پرس‌وجوی permission-aware با intent مشخص روی داده‌های CRM."/><section className="panel"><Empty>مجوز استفاده از دستیار هوش مصنوعی برای شما فعال نیست.</Empty></section></main>;
   return <main className="feature-page">
     <PageHeader eyebrow="AI ASSISTANT" title="AI Query" description="پرس‌وجوی permission-aware با intent مشخص روی داده‌های CRM."/>
     <ErrorCard message={error}/>

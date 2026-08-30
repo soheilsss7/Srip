@@ -2,15 +2,19 @@
 import {useEffect,useState} from 'react';
 import {api} from '../_lib/api';
 import {Badge,DataTable,Empty,ErrorCard,Loading,PageHeader} from '../_components/page-ui';
+import {useWorkspace} from '../_components/workspace';
 const list=(x:any)=>Array.isArray(x)?x:x?.items??x?.rows??x?.data??[];
 export default function Analytics(){
+ const {can}=useWorkspace();
+ const canRead=can('analytics.read');
  const [data,setData]=useState<any>(null),[net,setNet]=useState<any>(null),[wf,setWf]=useState<any>(null),[funnel,setFunnel]=useState<any>(null),[e,setE]=useState('');
- useEffect(()=>{Promise.all([api('/analytics/summary'),api('/analytics/network'),api('/analytics/workflows'),api('/analytics/recommendations/funnel')]).then(([s,n,w,f])=>{setData(s);setNet(n);setWf(w);setFunnel(f)}).catch(x=>setE((x as Error).message))},[]);
+ useEffect(()=>{if(!canRead){setE('');return}Promise.all([api('/analytics/summary'),api('/analytics/network'),api('/analytics/workflows'),api('/analytics/recommendations/funnel')]).then(([s,n,w,f])=>{setData(s);setNet(n);setWf(w);setFunnel(f)}).catch(x=>setE((x as Error).message))},[canRead]);
 const counts=data?.counts??{}; const eng=data?.engagement??{}; const feature=list(eng.featureUsage);
 const netNm=net?.strategicNetworkMetrics??{}; const netKpis=[
   ['Network capital',netNm.networkCapital??'—'],['Strategic index',netNm.strategicRelationshipIndex??'—'],['Resilience',netNm.relationshipResilienceScore??'—'],['Weighted opportunity',netNm.weightedOpportunityValue??'—'],['Referral success',netNm.referralSuccessRate??'—']];
 const netSummary=`${netNm.relationshipCount??'—'} relationships · ${netNm.opportunityCount??'—'} opportunities · ${netNm.peopleCount??'—'} people`;
  const wfRows=list(wf?.executions); const stages=funnel?.stages??{}; const conv=funnel?.conversion??{}; const overall=funnel?.overall??{};
+ if(!canRead)return <main className="feature-page"><PageHeader eyebrow="PRODUCT ANALYTICS" title="Analytics" description="Tenant-scoped product and usage analytics."/><section className="panel"><Empty>مجوز مشاهده تحلیل‌ها برای شما فعال نیست.</Empty></section></main>;
  return <main className="feature-page"><PageHeader eyebrow="PRODUCT ANALYTICS" title="Analytics" description="Tenant-scoped usage, activity, strategic network، workflow execution و Recommendation Funnel."/>
  <ErrorCard message={e}/>{!data&&!e?<Loading/>:<>
  {data?.status&&<div className="notice">ماژول Analytics: <strong>{data.status}</strong></div>}

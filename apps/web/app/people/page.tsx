@@ -65,9 +65,11 @@ export default function PeoplePage() {
   const [department, setDepartment] = useState('');
   const [org, setOrg] = useState('');
 
+  const canRead = can('person.read');
   const writable = can('person.write');
 
   const load = useCallback(async () => {
+    if (!canRead) { setItems([]); setLoading(false); return; }
     try {
       setError('');
       if (!items.length) setLoading(true);
@@ -82,7 +84,7 @@ export default function PeoplePage() {
     } finally {
       setLoading(false);
     }
-  }, [appliedQ, scopeId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [appliedQ, scopeId, canRead]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { if (writable) api<{ data: Org[] }>('/organizations').then(d => setOrgs(Array.isArray(d) ? d as Org[] : d.data ?? [])).catch(() => {}); }, [writable]);
@@ -116,6 +118,8 @@ export default function PeoplePage() {
       return ib - ia;
     }), [items, statusFilter]);
 
+  if (!canRead) return <main className="feature-page"><section className="panel"><h1>اشخاص</h1><p className="empty-state">مجوز مشاهده اشخاص برای شما فعال نیست.</p></section></main>;
+
   return (
     <div className="people-page">
       {/* Header */}
@@ -127,7 +131,7 @@ export default function PeoplePage() {
         </div>
         <div className="heading-tools">
           <span className="scope-chip"><Building2 size={13}/> {scopeId === 'all' ? 'همه محدوده' : scopeLabel}</span>
-          <Link className="primary-action" href="#add-person"><Plus size={14}/> افزودن شخص</Link>
+          {writable && <Link className="primary-action" href="#add-person"><Plus size={14}/> افزودن شخص</Link>}
         </div>
       </section>
 

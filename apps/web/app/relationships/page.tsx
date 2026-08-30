@@ -51,6 +51,7 @@ function Gauge({ value, tone }: { value: number; tone: string }) {
 export default function RelationshipsPage() {
   const { scopeId, can, me } = useWorkspace();
   const scopeLabel = me?.memberships.find(m => m.organizationId === scopeId)?.organizationName ?? 'محدوده انتخاب‌شده';
+  const canRead = can('relationship.read');
   const writable = can('relationship.write');
 
   const [items, setItems] = useState<Rel[]>([]);
@@ -69,6 +70,7 @@ export default function RelationshipsPage() {
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
+    if (!canRead) { setItems([]); setLoading(false); return; }
     try {
       setError('');
       if (!items.length) setLoading(true);
@@ -82,7 +84,7 @@ export default function RelationshipsPage() {
     } finally {
       setLoading(false);
     }
-  }, [scopeId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [scopeId, canRead]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
@@ -129,6 +131,8 @@ export default function RelationshipsPage() {
       return (y[sortBy] ?? 0) - (x[sortBy] ?? 0);
     });
   }, [items, q, typeFilter, statusFilter, sortBy]);
+
+  if (!canRead) return <main className="feature-page"><section className="panel"><h1>روابط سازمانی</h1><p className="empty-state">مجوز مشاهده روابط برای شما فعال نیست.</p></section></main>;
 
   return (
     <div className="relationships-page">

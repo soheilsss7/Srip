@@ -8,16 +8,18 @@ function count(value: any) { return typeof value === 'number' ? value : Number(v
 function name(value: any, fallback: string) { return value?.name || value?.title || value?.displayName || fallback; }
 
 export default function DataManagement() {
-  const { scopeId } = useWorkspace();
+  const { scopeId, can } = useWorkspace();
+  const canRead = can('data.quality.read');
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState('');
   const load = useCallback(async () => {
+    if (!canRead) { setData(null); return; }
     try {
       const query = scopeId !== 'all' ? `?organizationId=${encodeURIComponent(scopeId)}` : '';
       setData(await api(`/data/quality${query}`));
     } catch (x) { setError((x as Error).message); }
-  }, [scopeId]);
-  useEffect(() => { load(); }, [load]);
+  }, [scopeId, canRead]);
+  useEffect(() => { void load(); }, [load]);
 
   const metrics = data?.metrics ?? data ?? {};
   const cards = [
@@ -32,6 +34,8 @@ export default function DataManagement() {
     ...(metrics.staleRelationships?.values ?? []).map((item: any) => ({ kind: 'Stale relationship', label: `${name(item.sourceOrganization, 'سازمان مبدأ')} ↔ ${name(item.targetOrganization, 'سازمان مقصد')}`, href: item?.id ? `/relationships/${item.id}` : '' })),
     ...(metrics.invalidEmails?.values ?? []).map((item: any) => ({ kind: 'Invalid email', label: name(item, 'رکورد دارای ایمیل نامعتبر'), href: item?.id ? (item.entityType === 'Person' ? `/people/${item.id}` : `/organizations/${item.id}`) : '' })),
   ];
+
+  if (!canRead) return <main className="admin-layout"><section className="panel"><h1>Data Management</h1><p className="empty-state">مجوز مشاهده کیفیت داده برای شما فعال نیست.</p></section></main>;
 
   return <main className="admin-layout">
     <PageHeader eyebrow="DATA GOVERNANCE" title="Data Management" description="کیفیت داده، Import، Duplicate Detection و Lifecycle در محدوده سازمانی فعلی." actions={<a className="primary-action" href="/data-management/quality">مشاهده Quality Workspace</a>} />

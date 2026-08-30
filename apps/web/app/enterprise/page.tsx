@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, apiDelete, apiPost, unwrapList } from '../_lib/api';
 import { Badge, DataTable, Empty, ErrorCard, Loading, PageHeader } from '../_components/page-ui';
+import { useWorkspace } from '../_components/workspace';
 
 type Overview = { governance?: { policies: number; securityEvents: number; featureFlags: number; enabledFeatureFlags: number; organizations: number }; exports?: { total: number }; classification?: { documents?: Record<string, number> } };
 type Flag = { id: string; key: string; description?: string | null; enabled: boolean; rollout?: number; organizationId?: string | null; updatedAt?: string; createdAt?: string };
@@ -9,6 +10,12 @@ type Policy = { id: string; key: string; permissionKey?: string; effect?: string
 type SecEvent = { id: string; type?: string; severity?: string; ipAddress?: string | null; userAgent?: string | null; createdAt?: string };
 
 export default function EnterprisePage() {
+  const { can } = useWorkspace();
+  const canRead = can('enterprise.read');
+  const canAdmin = can('enterprise.admin');
+  const canFlags = can('feature_flag.read');
+  const canFlagWrite = can('feature_flag.write');
+  const canSecurity = can('enterprise.security');
   const [overview, setOverview] = useState<Overview | null>(null);
   const [flags, setFlags] = useState<Flag[]>([]);
   const [policies, setPolicies] = useState<Policy[]>([]);
@@ -18,13 +25,14 @@ export default function EnterprisePage() {
   const [form, setForm] = useState({ key: '', description: '' });
 
   const loadAll = useCallback(async () => {
+    if (!canRead && !canFlags && !canSecurity) { setLoading(false); return; }
     setLoading(true); setError('');
     try {
       const [ov, fl, po, se] = await Promise.all([
-        api<Overview>('/enterprise/overview'),
-        api('/enterprise/feature-flags'),
-        api('/enterprise/policies'),
-        api('/enterprise/security-events'),
+        canRead ? api<Overview>('/enterprise/overview') : Promise.resolve(null),
+        canFlags ? api('/enterprise/feature-flags') : Promise.resolve([]),
+        canRead ? api('/enterprise/policies') : Promise.resolve([]),
+        canSecurity ? api('/enterprise/security-events') : Promise.resolve([]),
       ]);
       setOverview(ov);
       setFlags(unwrapList<Flag>(fl));
@@ -32,24 +40,25 @@ export default function EnterprisePage() {
       setSecurity(unwrapList<SecEvent>(se));
     } catch (e) { setError((e as Error).message); }
     finally { setLoading(false); }
-  }, []);
+  }, [canRead, canFlags, canSecurity]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
-  async function run(label: string, fn: () => Promise<unknown>) {
+  async function run(label: string, fn: () => Promise<unknown>, allowed = true) {
+    if (!allowed) return;
     setError('');
     try { await fn(); await loadAll(); } catch (e) { setError((e as Error).message); }
   }
 
   async function toggleFlag(f: Flag) {
-    await run('flag', () => apiPost('/enterprise/feature-flags', { key: f.key, enabled: !f.enabled }));
+    await run('flag', () => apiPost('/enterprise/feature-flags', { key: f.key, enabled: !f.enabled }), canFlagWrite);
   }
 
   async function togglePolicy(p: Policy) {
-    await run('policy', () => apiPost('/enterprise/policies', { key: p.key, permissionKey: p.permissionKey, effect: p.effect ?? 'ALLOW', enabled: !p.enabled }));
+    await run('policy', () => apiPost('/enterprise/policies', { key: p.key, permissionKey: p.permissionKey, effect: p.effect ?? 'ALLOW', enabled: !p.enabled }), canAdmin);
   }
 
-  async function deletePolicy(p: Policy) { await run('del-policy', () => apiDelete(`/enterprise/policies/${p.id}`)); }
+  async function deletePolicy(p: Policy) { await run('del-policy', () => apiDelete(`/enterprise/policies/${p.id}`), canAdmin); }
 
   const g: NonNullable<Overview['governance']> = overview?.governance ?? { policies: 0, securityEvents: 0, featureFlags: 0, enabledFeatureFlags: 0, organizations: 0 };
   const docs = overview?.classification?.documents ?? {};
@@ -61,6 +70,8 @@ export default function EnterprisePage() {
     ['Organizations', g.organizations ?? 0],
     ['Exports', overview?.exports?.total ?? 0],
   ];
+
+  if(!canRead&&!canFlags&&!canSecurity)return <main className="feature-page"><PageHeader eyebrow="ENTERPRISE" title="Enterprise Governance" description="کنترل‌های حاکمیت سازمانی."/><section className="panel"><Empty>مجوز مشاهده حاکمیت Enterprise برای شما فعال نیست.</Empty></section></main>;
 
   return (
     <main className="feature-page">
@@ -84,15 +95,16 @@ export default function EnterprisePage() {
                     { key: 'description', label: 'توضیح' },
                     { key: 'rollout', label: 'Rollout' },
                     { key: 'enabled', label: 'وضعیت' },
+                    { key: 'action', label: 'عملیات' },
                   ]}
-                  rows={flags.map((f) => ({ key: f.key, description: f.description ?? '—', rollout: `${f.rollout ?? 100}%`, enabled: <Badge tone={f.enabled ? 'success' : 'neutral'}>{f.enabled ? 'ON' : 'OFF'}</Badge> }))}
+                  rows={flags.map((f) => ({ key: f.key, description: f.description ?? '—', rollout: `${f.rollout ?? 100}%`, enabled: <Badge tone={f.enabled ? 'success' : 'neutral'}>{f.enabled ? 'ON' : 'OFF'}</Badge>, action: canFlagWrite ? <button onClick={() => void toggleFlag(f)}>تغییر وضعیت</button> : '—' }))}
                 />
               )}
-              <form className="form-grid" onSubmit={(e) => { e.preventDefault(); if (!form.key.trim()) return; run('flag-new', () => apiPost('/enterprise/feature-flags', { key: form.key.trim(), description: form.description || undefined })).then(() => { setForm({ key: '', description: '' }); }); }}>
+              {canFlagWrite&&<form className="form-grid" onSubmit={(e) => { e.preventDefault(); if (!form.key.trim()) return; run('flag-new', () => apiPost('/enterprise/feature-flags', { key: form.key.trim(), description: form.description || undefined }), canFlagWrite).then(() => { setForm({ key: '', description: '' }); }); }}>
                 <label className="inline-field">key<input placeholder="flag key" value={form.key} onChange={(e) => setForm((f) => ({ ...f, key: e.target.value }))} required /></label>
                 <label className="inline-field">توضیح <input placeholder="توضیح (اختیاری)" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} /></label>
                 <button className="primary-action">اضافه کردن Flag</button>
-              </form>
+              </form>}
             </div>
           </section>
 
@@ -107,8 +119,8 @@ export default function EnterprisePage() {
                       <Badge tone={p.effect === 'DENY' ? 'danger' : 'success'}>{p.effect ?? 'ALLOW'}</Badge>
                       <Badge tone={p.enabled ? 'success' : 'neutral'}>{p.enabled ? 'enabled' : 'disabled'}</Badge>
                       <span>{p.permissionKey ?? '—'}</span>
-                      <button onClick={() => togglePolicy(p)}>فعال/غیرفعال</button>
-                      <button onClick={() => deletePolicy(p)}>حذف</button>
+                      {canAdmin&&<><button onClick={() => togglePolicy(p)}>فعال/غیرفعال</button>
+                      <button onClick={() => deletePolicy(p)}>حذف</button></>}
                     </div>
                   ))}
                 </div>

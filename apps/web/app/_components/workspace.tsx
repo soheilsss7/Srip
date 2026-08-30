@@ -63,9 +63,9 @@ export function useWorkspace() {
    Permissions are the same real backend permission keys used elsewhere.
    --------------------------------------------------------------------------- */
 const MAIN_NAV: Array<readonly [string, string, string]> = [
-  ['/', 'داشبورد', 'dashboard.read'],
+  ['/', 'داشبورد', 'analytics.read'],
   ['/today', 'مرکز عملیات امروز', 'action.read'],
-  ['/organizations', 'سازمان‌ها', 'organization.read'],
+  ['/organizations', 'سازمان‌ها', 'org.read'],
   ['/people', 'اشخاص', 'person.read'],
   ['/relationships', 'روابط', 'relationship.read'],
   ['/network', 'شبکه اطلاعاتی', 'network.read'],
@@ -77,7 +77,7 @@ const INTELLIGENCE_NAV: Array<readonly [string, string, string]> = [
   ['/commitments', 'تعهدات', 'commitment.read'],
   ['/projects', 'پروژه‌ها', 'project.read'],
   ['/opportunities', 'فرصت‌ها', 'opportunity.read'],
-  ['/intelligence', 'هوشمندی', 'analytics.read'],
+  ['/intelligence', 'هوشمندی', 'relationship.read'],
   ['/ai', 'هوش مصنوعی', 'ai.query'],
   ['/ai-executive-brief', 'گزارش هوش مصنوعی', 'ai.executive_brief'],
   ['/recommendations', 'پیشنهادات', 'recommendation.read'],
@@ -92,12 +92,12 @@ const SYSTEM_NAV: Array<readonly [string, string, string]> = [
   ['/requirements', 'نیازمندی‌ها', 'project.read'],
   ['/referrals', 'معرفی‌ها', 'relationship.read'],
   ['/approvals', 'تأییدها', 'approval.read'],
-  ['/settings', 'تنظیمات', 'user.read'],
-  ['/sessions', 'نشست‌ها', 'session.read'],
+  ['/settings', 'تنظیمات', 'entity.read'],
+  ['/sessions', 'نشست‌ها', 'entity.read'],
 ] as const;
 const NETWORK_MAIN_NAV: Array<readonly [string, string, string]> = [
-  ['/', 'Dashboard', 'dashboard.read'],
-  ['/organizations', 'Organizations', 'organization.read'],
+  ['/', 'Dashboard', 'analytics.read'],
+  ['/organizations', 'Organizations', 'org.read'],
   ['/people', 'People', 'person.read'],
   ['/relationships', 'Relationships', 'relationship.read'],
   ['/network', 'Network', 'network.read'],
@@ -110,15 +110,15 @@ const NETWORK_INTELLIGENCE_NAV: Array<readonly [string, string, string]> = [
   ['/reports', 'Reports', 'report.read'],
 ] as const;
 const NETWORK_SYSTEM_NAV: Array<readonly [string, string, string]> = [
-  ['/data-management/import', 'Data Import', 'data.manage'],
-  ['/settings', 'Settings', 'user.read'],
-  ['/admin/users', 'Users', 'admin.users'],
+  ['/data-management/import', 'Data Import', 'data.import'],
+  ['/settings', 'Settings', 'entity.read'],
+  ['/admin/users', 'Users', 'enterprise.admin'],
   ['/admin/audit', 'Audit Log', 'audit.read'],
 ] as const;
 
 const ADMIN_NAV: Array<readonly [string, string, string]> = [
-  ['/admin', 'مدیریت سیستم', 'admin.users'],
-  ['/data-management', 'داده و کیفیت', 'data.manage'],
+  ['/admin', 'مدیریت سیستم', 'enterprise.admin'],
+  ['/data-management', 'داده و کیفیت', 'data.quality.read'],
   ['/privacy', 'حریم خصوصی', 'privacy.read'],
   ['/integrations', 'یکپارچه‌سازی', 'integration.read'],
   ['/workflows', 'Workflow', 'workflow.read'],
@@ -127,17 +127,17 @@ const ADMIN_NAV: Array<readonly [string, string, string]> = [
   ['/metrics', 'سنجه‌ها', 'metrics.read'],
   ['/observability', 'مشاهده‌پذیری', 'metrics.read'],
   ['/monitoring', 'Monitoring', 'metrics.read'],
-  ['/admin/master-data', 'Master Data', 'org.read'],
+  ['/admin/master-data', 'Master Data', 'enterprise.admin'],
   ['/admin/feature-flags', 'Feature Flags', 'feature_flag.read'],
   ['/admin/exports', 'Export Control', 'audit.read'],
-  ['/admin/sessions', 'Session Governance', 'session.read'],
+  ['/admin/sessions', 'Session Governance', 'session.admin.revoke'],
   ['/admin/retention', 'Retention', 'privacy.manage'],
   ['/security', 'امنیت', 'security.read'],
   ['/security-events', 'Security Events', 'security.read'],
   ['/governance', 'Governance', 'enterprise.security'],
   ['/enterprise', 'Enterprise Governance', 'enterprise.read'],
   ['/data-lifecycle', 'Data Lifecycle', 'data.lifecycle_status'],
-  ['/health', 'Runtime Health', 'health.read'],
+  ['/health', 'Runtime Health', 'metrics.read'],
 ] as const;
 
 const NAV_ICONS: Record<string, React.ReactNode> = {
@@ -246,7 +246,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (error && !me && !loading) { router.replace('/login'); return <div className="loading-strip" role="status">نشست معتبر نیست…</div>; }
 
   const group = (nav: Array<readonly [string, string, string]>): Array<readonly [string, string, string]> =>
-    nav.filter(([href, , permission]) => href === '/' || permission === 'dashboard.read' || can(permission));
+    nav.filter(([, , permission]) => can(permission));
 
   const memberships = me?.memberships ?? [];
   const primaryMembership = memberships.find(m => m.isPrimary) ?? memberships[0];
