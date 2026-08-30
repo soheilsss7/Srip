@@ -39,7 +39,7 @@
 - `[x]` inventory حدود ۸۲ Web page source
 - `[x]` inventory حدود ۵۷ Mobile route/file
 - `[x]` inventory ۸۹ مدل Prisma
-- `[x]` inventory حدود ۴۳ controller
+- `[x]` inventory واقعی ۴۵ controller و ۳۴۲ endpoint با verifier رسمی Phase 0
 - `[x]` شناسایی generic workspaceها
 - `[x]` شناسایی pickerها و Quick Create
 - `[x]` شناسایی browser `confirm()`های باقی‌مانده
@@ -116,43 +116,45 @@ Relationship Graph
 
 ## ۳.۱ Product mapping
 
-- `[ ]` استخراج تمام routeهای Web و Mobile
-- `[ ]` استخراج تمام controllerها و endpointهای API
-- `[ ]` اتصال هر endpoint به یکی از این وضعیت‌ها:
+- `[x]` استخراج تمام routeهای Web و Mobile در `docs/PRODUCT_CONTRACT_PHASE0.json`؛ ۸۲ Web page و ۵۷ Mobile source route/file
+- `[x]` استخراج تمام controllerها و endpointهای API؛ ۴۵ controller و ۳۴۲ endpoint از source واقعی
+- `[x]` اتصال هر endpoint به یکی از این وضعیت‌ها:
   - `User-facing workflow`
   - `Admin workflow`
   - `Background job`
   - `Integration-only`
   - `API-only`
-- `[ ]` مشخص‌کردن primary persona هر feature
-- `[ ]` مشخص‌کردن permission، scope و role موردنیاز
-- `[ ]` مشخص‌کردن empty/error/forbidden/offline state
-- `[ ]` تعیین owner فنی و owner محصول برای هر domain
+- `[x]` مشخص‌کردن primary persona هر endpoint و registry نقش‌ها
+- `[x]` مشخص‌کردن permission، scope و access؛ decoratorهای method/class و guardهای داخلی استخراج شده‌اند
+- `[x]` مشخص‌کردن loading/empty/error/forbidden/offline/success/conflict state برای هر endpoint
+- `[x]` تعیین owner فنی و owner محصول برای هر endpoint/domain
 
 ## ۳.۲ استانداردهای مشترک
 
-- `[ ]` تعریف status taxonomy مشترک
-- `[ ]` تعریف event taxonomy برای Timeline
-- `[ ]` تعریف severity taxonomy برای Data Quality و Risk
-- `[ ]` تعریف زبان و labelهای فارسی محصول
-- `[ ]` تعریف واژگان ثابت برای Action، Commitment، Follow-up، Relationship و Opportunity
-- `[ ]` تعریف naming convention برای endpoint، component، event و test
-- `[ ]` تعریف policy برای technical/admin labelها
+- `[x]` تعریف status taxonomy مشترک برای lifecycle، work، relationship، opportunity، meeting، job، quality، approval، sync و severity
+- `[x]` تعریف ۲۱ event taxonomy برای Timeline
+- `[x]` تعریف severity taxonomy برای Data Quality و Risk
+- `[x]` تعریف زبان و labelهای فارسی محصول با primary language `fa-IR` و direction `rtl`
+- `[x]` تعریف واژگان ثابت برای Organization، Person، Relationship، Interaction، Meeting، Action، Commitment، Follow-up و Opportunity
+- `[x]` تعریف naming convention برای endpoint، component، event و test
+- `[x]` تعریف policy برای UUID، JSON خام و technical/admin labelها
 
 ## ۳.۳ Visual baseline
 
-- `[ ]` ثبت screenshot مرجع از Network
-- `[ ]` تعیین viewportهای مرجع: 1440، 1280، 1024، 768 و mobile
-- `[ ]` ثبت palette، spacing، radius، typography و density مرجع
-- `[ ]` قفل‌کردن `network-preview.html` در checklist و CI
-- `[ ]` تعریف visual regression baseline برای Shell، Table، Picker، 360 و Network
+- `[x]` ثبت `network-preview.html` به‌عنوان Network visual reference محافظت‌شده و ثبت hash `25ab37bd85221cde540d47e9422af2bc59ce3de536be4cbc4a1f9a96aebeef78`
+- `[x]` تعیین viewportهای مرجع: 1440، 1280، 1024، 768 و mobile
+- `[x]` ثبت palette، spacing، radius، typography، layout و density مرجع در contract
+- `[x]` قفل‌کردن `network-preview.html` در verifier و CI؛ فایل untracked است و stage/commit نمی‌شود
+- `[x]` تعریف visual regression baseline برای Shell، Table، Picker، 360 و Network به‌عنوان policy اجرایی؛ مقایسه‌ی screenshot در route اپلیکیشن در phaseهای UI اجرا می‌شود
 
 ## ۳.۴ معیار قبولی Phase 0
 
-- `[ ]` هیچ endpoint اصلی بدون consumer یا تصمیم مستند باقی نماند.
-- `[ ]` هیچ feature P0 بدون permission و test plan باقی نماند.
-- `[ ]` matrix در repository ثبت و review شود.
-- `[ ]` protected file در git status بدون تغییر باقی بماند.
+- `[x]` هیچ endpoint اصلی بدون consumer یا تصمیم مستند باقی نماند؛ `webRouteGaps=[]` و consumer/decision برای هر ۳۴۲ endpoint ثبت شد.
+- `[x]` هیچ feature P0 بدون permission و test plan باقی نماند؛ invariantهای permission/scope و test plan عبور کردند.
+- `[x]` matrix در repository ثبت و review شود؛ خروجی رسمی `docs/PRODUCT_CONTRACT_PHASE0.json` و سند خوانای Phase 0 ثبت شد.
+- `[x]` protected file در git status بدون تغییر باقی بماند؛ hash verifier عبور کرد و `network-preview.html` stage/commit نشده است.
+
+**Evidence:** `node scripts/verify-product-phase0.mjs --check` با exit code صفر؛ آخرین نتیجه `controllers=45 endpoints=342 webPages=82 mobileFiles=57`, `missingFromCurrent=[]` و debt register برابر `32/16/50` است. جزئیات در [`PRODUCT_CONTRACT_PHASE0_2026.md`](./PRODUCT_CONTRACT_PHASE0_2026.md) و JSON machine-readable ثبت شده‌اند.
 
 ---
 

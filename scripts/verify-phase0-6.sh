@@ -2,6 +2,10 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
+
+# Phase 0 product contract is the first deterministic gate in this existing CI check.
+node scripts/verify-product-phase0.mjs --check
+
 fail(){ echo "PHASE0-6 VERIFICATION FAILED: $1" >&2; exit 1; }
 req(){ test -e "$1" || fail "missing $1"; }
 
