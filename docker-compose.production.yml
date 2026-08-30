@@ -183,6 +183,9 @@ services:
     build:
       context: .
       dockerfile: infra/docker/Dockerfile.web
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api/v1}
+        API_PROXY_TARGET: ${API_PROXY_TARGET:-http://api:4000}
     restart: unless-stopped
     environment:
       NODE_ENV: production

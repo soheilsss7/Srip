@@ -8,7 +8,8 @@ import { styles, colors } from '../lib/ui';
 type Item = { id: string; description?: string; status?: string; dueAt?: string; risk?: string };
 
 export default function Commitments() {
-  const { token } = useSession();
+  const { token, can } = useSession();
+  const canCreate = can('commitment.write');
   const [rows, setRows] = useState<Item[]>([]);
   const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +31,7 @@ export default function Commitments() {
     <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
         <Text style={styles.title}>Commitments</Text>
-        <Link href="/create-commitment" asChild><Pressable style={styles.button}><Text style={styles.buttonText}>New Commitment</Text></Pressable></Link>
+        {canCreate && <Link href="/create-commitment" asChild><Pressable style={styles.button}><Text style={styles.buttonText}>New Commitment</Text></Pressable></Link>}
         {!!total && <Text style={styles.subtitle}>{total} commitment{total === 1 ? '' : 's'}</Text>}
         {error && <Text style={styles.error}>{error}</Text>}
         {!rows.length && !error && <ActivityIndicator />}

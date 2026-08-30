@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { api } from '../_lib/api';
 import { useWorkspace } from '../_components/workspace';
 import { Card, Badge } from '@srip/design-system';
+import { EntityPicker } from '../_components/entity-picker';
 import {
   Phone, Mail, Users, StickyNote, MessageSquare, Plus, Search, CalendarDays,
   BellRing, Clock, Building2, User, ListFilter, Activity, ClipboardList,
@@ -39,7 +40,7 @@ function TypeDot({ type }: { type: string }) {
 }
 
 export default function InteractionsPage() {
-  const { can } = useWorkspace();
+  const { can, scopeId } = useWorkspace();
   const writable = can('interaction.write');
 
   const [items, setItems] = useState<Interaction[]>([]);
@@ -240,8 +241,9 @@ export default function InteractionsPage() {
                 <label className="full">موضوع <input required value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} /></label>
                 <label className="full">زمان <input type="datetime-local" value={form.occurredAt} onChange={(e) => setForm({ ...form, occurredAt: e.target.value })} /></label>
                 <label className="full">خلاصه <textarea value={form.summary} onChange={(e) => setForm({ ...form, summary: e.target.value })} /></label>
-                <label className="full">سازمان <input value={form.organizationId} onChange={(e) => setForm({ ...form, organizationId: e.target.value })} placeholder="شناسه سازمان (اختیاری)" /></label>
-                <label className="full">شخص <input value={form.personId} onChange={(e) => setForm({ ...form, personId: e.target.value })} placeholder="شناسه شخص (اختیاری)" /></label>
+                <EntityPicker label="سازمان (اختیاری)" endpoint="/organizations" value={form.organizationId} onChange={organizationId => setForm({ ...form, organizationId })} scopeId={scopeId} />
+                <EntityPicker label="شخص (اختیاری)" endpoint="/people" value={form.personId} onChange={personId => setForm({ ...form, personId })} scopeId={scopeId} />
+                <EntityPicker label="رابطه (اختیاری)" endpoint="/relationships" value={form.relationshipId} onChange={relationshipId => setForm({ ...form, relationshipId })} scopeId={scopeId} />
                 <label className="full check-line">
                   <input type="checkbox" checked={form.followUpRequired} onChange={(e) => setForm({ ...form, followUpRequired: e.target.checked })} />
                   نیازمند پیگیری

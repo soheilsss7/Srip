@@ -1,6 +1,9 @@
+import { Platform } from 'react-native';
 import { enqueueMutation } from './offline-queue';
 import { clearStoredTokens, getStoredTokens, setStoredTokens } from './auth-store';
-export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
+// Browser builds stay same-origin so they never try to call the user's localhost.
+// Native builds must set EXPO_PUBLIC_API_URL to the reachable API origin.
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? (Platform.OS === 'web' ? '/api/v1' : 'http://localhost:4000/api/v1');
 
 export class ApiClientError extends Error {
   status?: number;
@@ -14,7 +17,17 @@ export class ApiClientError extends Error {
 }
 
 let refreshPromise: Promise<string | null> | null = null;
+let activeScopeId = 'all';
 let keyCounter = 0;
+
+export function setApiScope(scopeId: string | null) {
+  activeScopeId = scopeId?.trim() || 'all';
+}
+
+function scopedPath(path: string, method: string): string {
+  if (method !== 'GET' || activeScopeId === 'all' || /[?&]organizationId=/.test(path) || path.startsWith('/auth/') || path.startsWith('/health')) return path;
+  return `${path}${path.includes('?') ? '&' : '?'}organizationId=${encodeURIComponent(activeScopeId)}`;
+}
 
 function makeIdempotencyKey(existing?: string | null): string {
   if (existing && existing.trim().length >= 16) return existing.trim();
@@ -32,25 +45,26 @@ async function refreshAccessToken(): Promise<string | null> {
   if (!tokens?.refreshToken) return null;
   if (refreshPromise) return refreshPromise;
   refreshPromise = (async () => {
-    let response: Response;
     try {
-      response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
         method: 'POST',
         headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: tokens.refreshToken }),
       });
+      const body = await response.json().catch(() => null);
+      if (!response.ok || !body?.accessToken) {
+        await clearStoredTokens();
+        return null;
+      }
+      await setStoredTokens(body.accessToken, body.refreshToken ?? tokens.refreshToken);
+      return body.accessToken as string;
     } catch {
       return null;
     } finally {
+      // Keep the lock until SecureStore has been updated. Otherwise concurrent 401s
+      // can rotate the same refresh token twice and trigger reuse detection.
       refreshPromise = null;
     }
-    const body = await response.json().catch(() => null);
-    if (!response.ok || !body?.accessToken) {
-      await clearStoredTokens();
-      return null;
-    }
-    await setStoredTokens(body.accessToken, body.refreshToken ?? tokens.refreshToken);
-    return body.accessToken as string;
   })();
   return refreshPromise;
 }
@@ -68,13 +82,14 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}, tok
   if (MUTATING_METHODS.has(method) && !headers.has('Idempotency-Key')) {
     headers.set('Idempotency-Key', makeIdempotencyKey(idempotencyKey));
   }
-  let response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
+  const requestPath = scopedPath(path, method);
+  let response = await fetch(`${API_BASE_URL}${requestPath}`, { ...options, headers });
   if (response.status === 401 && !path.startsWith('/auth/')) {
     const next = await refreshAccessToken();
     if (next) {
       headers = new Headers(headers);
       headers.set('Authorization', `Bearer ${next}`);
-      response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
+      response = await fetch(`${API_BASE_URL}${requestPath}`, { ...options, headers });
     }
   }
   if (!response.ok) {

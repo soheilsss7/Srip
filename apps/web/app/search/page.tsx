@@ -1,7 +1,8 @@
 'use client';
 import {useCallback,useEffect,useState} from 'react';
 import {api} from '../_lib/api';
-import {Badge,ErrorCard,Loading,PageHeader} from '../_components/page-ui';
+import {Badge,Empty,ErrorCard,Loading,PageHeader} from '../_components/page-ui';
+import {useWorkspace} from '../_components/workspace';
 
 const RESULT_TYPES=['organization','person','relationship','meeting','interaction','project','opportunity','document','note'];
 const DETAIL_URL:Record<string,(id:string)=>string>={
@@ -19,23 +20,27 @@ type Result={type:string;id:string;title:string;subtitle?:string;score:number;or
 type Saved={id:string;name:string;query:string;filters?:any;enabled:boolean;lastUsedAt?:string|null;createdAt:string;updatedAt:string};
 
 export default function Search(){
+  const {can}=useWorkspace();
+  const canRead=can('search.read');
+  const canWrite=can('search.write');
   const [q,setQ]=useState(''),[typeFilter,setTypeFilter]=useState(''),[data,setData]=useState<any>(null),[error,setError]=useState('');
   const [saved,setSaved]=useState<Saved[]>([]),[savedLoading,setSavedLoading]=useState(true),[busy,setBusy]=useState('');
   const [saveName,setSaveName]=useState(''),[editId,setEditId]=useState(''),[editName,setEditName]=useState(''),[editQuery,setEditQuery]=useState('');
 
-  const loadSaved=useCallback(async()=>{try{const r:any=await api('/search/saved');setSaved(Array.isArray(r)?r:r?.items??[]);}catch(e){setError(e instanceof Error?e.message:'خطا در دریافت جستجوهای ذخیره‌شده');}finally{setSavedLoading(false)}},[setSaved,setSavedLoading,setError]);
-  useEffect(()=>{loadSaved()},[loadSaved]);
+  const loadSaved=useCallback(async()=>{if(!canRead){setSaved([]);setSavedLoading(false);return}try{const r:any=await api('/search/saved');setSaved(Array.isArray(r)?r:r?.items??[]);}catch(e){setError(e instanceof Error?e.message:'خطا در دریافت جستجوهای ذخیره‌شده');}finally{setSavedLoading(false)}},[canRead]);
+  useEffect(()=>{void loadSaved()},[loadSaved]);
 
-  async function run(){if(q.trim().length<2){setError('حداقل دو نویسه برای جستجو وارد کنید.');return}try{setError('');const params=new URLSearchParams({q});if(typeFilter)params.set('type',typeFilter);setData(await api('/search?'+params.toString()))}catch(e){setError(e instanceof Error?e.message:String(e))}}
+  async function run(){if(!canRead)return;if(q.trim().length<2){setError('حداقل دو نویسه برای جستجو وارد کنید.');return}try{setError('');const params=new URLSearchParams({q});if(typeFilter)params.set('type',typeFilter);setData(await api('/search?'+params.toString()))}catch(e){setError(e instanceof Error?e.message:String(e))}}
   useEffect(()=>{if(q.trim().length<2)return;const t=setTimeout(()=>run(),350);return()=>clearTimeout(t)},[q,typeFilter]);
 
-  async function saveIt(){if(!saveName.trim()||q.trim().length<2){setError('برای ذخیره، نام و عبارت جستجو (حداقل ۲ نویسه) لازم است.');return}setBusy('save');try{await api('/search/saved',{method:'POST',body:JSON.stringify({name:saveName.trim(),query:q,enabled:true,filters:typeFilter?{type:typeFilter}:{}})});setSaveName('');setError('');await loadSaved();}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setBusy('')}}
-  async function runSaved(id:string){setBusy('run'+id);try{setError('');const r:any=await api(`/search/saved/${id}/run`,{method:'POST'});setQ(r?.q??'');setData(r);await loadSaved();}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setBusy('')}}
-  async function toggleSaved(s:Saved){setBusy('toggle'+s.id);try{await api(`/search/saved/${s.id}`,{method:'PATCH',body:JSON.stringify({enabled:!s.enabled})});await loadSaved();}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setBusy('')}}
-  async function saveEdit(s:Saved){if(!editName.trim()){setError('نام جستجو نمی‌تواند خالی باشد.');return}setBusy('edit'+s.id);try{await api(`/search/saved/${s.id}`,{method:'PATCH',body:JSON.stringify({name:editName.trim(),query:editQuery})});setEditId('');setError('');await loadSaved();}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setBusy('')}}
-  async function deleteSaved(s:Saved){if(!window.confirm(`حذف جستجوی ذخیره‌شده «${s.name}»؟`))return;setBusy('del'+s.id);try{await api(`/search/saved/${s.id}`,{method:'DELETE'});await loadSaved();}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setBusy('')}}
-  const startEdit=(s:Saved)=>{setEditId(s.id);setEditName(s.name);setEditQuery(s.query);};
+  async function saveIt(){if(!canWrite)return;if(!saveName.trim()||q.trim().length<2){setError('برای ذخیره، نام و عبارت جستجو (حداقل ۲ نویسه) لازم است.');return}setBusy('save');try{await api('/search/saved',{method:'POST',body:JSON.stringify({name:saveName.trim(),query:q,enabled:true,filters:typeFilter?{type:typeFilter}:{}})});setSaveName('');setError('');await loadSaved();}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setBusy('')}}
+  async function runSaved(id:string){if(!canRead)return;setBusy('run'+id);try{setError('');const r:any=await api(`/search/saved/${id}/run`,{method:'POST'});setQ(r?.q??'');setData(r);await loadSaved();}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setBusy('')}}
+  async function toggleSaved(s:Saved){if(!canWrite)return;setBusy('toggle'+s.id);try{await api(`/search/saved/${s.id}`,{method:'PATCH',body:JSON.stringify({enabled:!s.enabled})});await loadSaved();}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setBusy('')}}
+  async function saveEdit(s:Saved){if(!canWrite)return;if(!editName.trim()){setError('نام جستجو نمی‌تواند خالی باشد.');return}setBusy('edit'+s.id);try{await api(`/search/saved/${s.id}`,{method:'PATCH',body:JSON.stringify({name:editName.trim(),query:editQuery})});setEditId('');setError('');await loadSaved();}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setBusy('')}}
+  async function deleteSaved(s:Saved){if(!canWrite)return;if(!window.confirm(`حذف جستجوی ذخیره‌شده «${s.name}»؟`))return;setBusy('del'+s.id);try{await api(`/search/saved/${s.id}`,{method:'DELETE'});await loadSaved();}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setBusy('')}}
+  const startEdit=(s:Saved)=>{if(!canWrite)return;setEditId(s.id);setEditName(s.name);setEditQuery(s.query);};
 
+  if(!canRead)return <main className="feature-page"><PageHeader eyebrow="GLOBAL SEARCH" title="Search" description="جستجوی authorization-aware روی موجودیت‌های اصلی."/><section className="panel"><Empty>مجوز جستجو برای شما فعال نیست.</Empty></section></main>;
   return <main className="feature-page"><PageHeader eyebrow="GLOBAL SEARCH" title="Search" description="جستجوی authorization-aware روی موجودیت‌های اصلی و مدیریت جستجوهای ذخیره‌شده."/>
     <ErrorCard message={error}/>
     <section className="panel">
@@ -44,10 +49,10 @@ export default function Search(){
         <select aria-label="نوع موجودیت" value={typeFilter} onChange={e=>setTypeFilter(e.target.value)}><option value="">همه انواع</option>{RESULT_TYPES.map(t=><option key={t} value={t}>{t}</option>)}</select>
         <button className="primary-action" onClick={run} disabled={busy==='save'}>جستجو</button>
       </div>
-      <div className="entity-form">
+      {canWrite&&<div className="entity-form">
         <label>ذخیره جستجوی فعلی<input value={saveName} onChange={e=>setSaveName(e.target.value)} placeholder="نام جستجوی ذخیره‌شده"/></label>
         <button className="secondary-action" onClick={saveIt} disabled={!!busy}>{busy==='save'?'در حال ذخیره…':'ذخیره جستجو'}</button>
-      </div>
+      </div>}
     </section>
     {data&&<section className="panel">
       <div className="panel-title"><h2>نتایج</h2><span className="muted">({data.total??0} نتیجه)</span></div>
@@ -64,9 +69,9 @@ export default function Search(){
           <div className="toolbar"><button className="primary-action" onClick={()=>saveEdit(s)} disabled={!!busy}>ذخیره</button><button onClick={()=>setEditId('')} disabled={!!busy}>انصراف</button></div>
         </div>:<div className="toolbar">
           <button className="primary-action" onClick={()=>runSaved(s.id)} disabled={!!busy}>اجرا</button>
-          <button onClick={()=>toggleSaved(s)} disabled={!!busy}>{s.enabled?'غیرفعال‌کردن':'فعال‌کردن'}</button>
-          <button onClick={()=>startEdit(s)} disabled={!!busy}>ویرایش</button>
-          <button onClick={()=>deleteSaved(s)} disabled={!!busy}>حذف</button>
+          {canWrite&&<button onClick={()=>toggleSaved(s)} disabled={!!busy}>{s.enabled?'غیرفعال‌کردن':'فعال‌کردن'}</button>}
+          {canWrite&&<button onClick={()=>startEdit(s)} disabled={!!busy}>ویرایش</button>}
+          {canWrite&&<button onClick={()=>deleteSaved(s)} disabled={!!busy}>حذف</button>}
         </div>}
       </article>)}</div>}
     </section>

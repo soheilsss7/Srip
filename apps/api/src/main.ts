@@ -23,7 +23,21 @@ bootstrap();
 
 
 function hardenOpenApi(document: OpenAPIObject) {
-  const publicPrefixes = ['/auth/login','/auth/refresh','/auth/forgot-password','/auth/reset-password','/auth/verify-email','/health','/liveness','/readiness'];
+  // Keep this list aligned with AuthController's intentionally public routes.
+  // These values only harden the generated OpenAPI metadata; runtime guards
+  // remain the source of truth.
+  const publicPrefixes = [
+    '/auth/oidc',
+    '/auth/register',
+    '/auth/login',
+    '/auth/refresh',
+    '/auth/logout',
+    '/auth/password-reset',
+    '/auth/email/verify',
+    '/health',
+    '/liveness',
+    '/readiness',
+  ];
   const paginationParams = [
     { name: 'page', in: 'query', required: false, description: '1-based page number. Use page or cursor, not both.', schema: { type: 'integer', minimum: 1, default: 1 } },
     { name: 'cursor', in: 'query', required: false, description: 'Opaque cursor returned as nextCursor.', schema: { type: 'string' } },
@@ -102,7 +116,11 @@ function hardenOpenApi(document: OpenAPIObject) {
       for (const status of ['400','401','403','404','409','422','429','500','503']) {
         op.responses[status] ??= { $ref: `#/components/responses/Error${status}` };
       }
-      const isPublic = publicPrefixes.some((p) => path.startsWith('/api/v1' + p));
+      // Swagger may expose paths with or without the global-prefix segment,
+      // depending on the Nest adapter/version. Normalize both forms before
+      // applying the intentionally public Auth/Health allowlist.
+      const normalizedPath = path.replace(/^\/api\/v1(?=\/|$)/, '');
+      const isPublic = publicPrefixes.some((p) => normalizedPath === p || normalizedPath.startsWith(`${p}/`));
       if (!isPublic) op.security = [{ bearer: [] }]; else op.security = [];
       op.parameters ??= [];
       const addParam = (p: any) => { if (!op.parameters.some((x: any) => x.name === p.name && x.in === p.in)) op.parameters.push(p); };

@@ -39,6 +39,10 @@ export class NetworkService {
 
   async graph(userId: string, organizationId?: string, type?: string, status?: string, query?: string, focus?: string, limit = 250, cursor?: string): Promise<Graph & { page: { limit: number; nextCursor: string | null; bounded: true } }> {
     const allowed = await this.allowed(userId, organizationId);
+    const requestedType = type?.trim().toLowerCase();
+    if (requestedType && requestedType !== 'all' && !(['organization', 'person', 'project'] as const).includes(requestedType as any)) {
+      throw new BadRequestException(`Invalid network node type '${type}'`);
+    }
     const pageSize = Math.max(25, Math.min(Number(limit) || 250, 500));
     const q = query?.trim();
     const baseOrgScope: any = { deletedAt: null, ...(allowed ? { id: { in: allowed } } : {}) };
@@ -87,7 +91,7 @@ export class NetworkService {
       orderBy: { id: 'asc' }, take: Math.min(pageSize * 4, 1000),
     }) : [];
     const nodes: Node[] = []; const edges: Edge[] = [];
-    const want = (t: string) => !type || type === 'all' || type === t;
+    const want = (t: string) => !requestedType || requestedType === 'all' || requestedType === t;
     if (want('organization')) for (const o of visibleOrganizations) nodes.push({ id: `org:${o.id}`, label: o.displayName || o.name, type: 'organization', organizationId: o.id });
     if (want('person')) for (const p of scopedPeople) { nodes.push({ id: `person:${p.id}`, label: p.displayName || `${p.firstName} ${p.lastName}`.trim(), type: 'person', organizationId: p.organizationId }); if (want('organization')) edges.push({ id: `membership:${p.id}`, source: `person:${p.id}`, target: `org:${p.organizationId}`, kind: 'membership', weight: 60, risk: 0, strategicImportance: 0 }); }
     if (want('project')) for (const p of scopedProjects) { nodes.push({ id: `project:${p.id}`, label: p.name, type: 'project', organizationId: p.organizationId ?? undefined }); if (p.organizationId && want('organization')) edges.push({ id: `project-org:${p.id}`, source: `project:${p.id}`, target: `org:${p.organizationId}`, kind: 'project', weight: 70, risk: 0, strategicImportance: 0 }); }
@@ -140,7 +144,7 @@ export class NetworkService {
     return EntityResponseDto.fromUnknown(created);
   }
 
-  async updatePersonRelationship(userId: string, id: string, data: Record<string, unknown>) {
+  async updatePersonRelationship(userId: string, id: string, data: any) {
     const existing = await this.prisma.personRelationship.findFirst({ where: { id, deletedAt: null } });
     if (!existing) throw new NotFoundException('Person relationship not found');
     await this.authorization.assertPermission(userId, 'relationship.write', { organizationId: existing.sourceOrganizationId });

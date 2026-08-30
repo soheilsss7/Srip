@@ -45,7 +45,7 @@ async function requestApproval(kind: string, format: string): Promise<string> {
 export async function downloadReport(
   kind: string,
   format: 'csv' | 'xlsx' | 'pdf' | 'json',
-  onPending?: (approvalId: string) => void,
+  onPending?: () => void,
 ): Promise<ExportFlowResult> {
   const approvalId = storedExportApprovalId(kind);
   const url = `/reports/${encodeURIComponent(kind)}/export/${encodeURIComponent(format)}${approvalId ? `?approvalId=${encodeURIComponent(approvalId)}` : ''}`;
@@ -57,7 +57,7 @@ export async function downloadReport(
     if (error instanceof ApiError && error.status === 403) {
       try {
         const id = await requestApproval(kind, format);
-        onPending?.(id);
+        onPending?.();
         return { status: 'approval_pending', approvalId: id };
       } catch (inner) {
         return { status: 'error', message: inner instanceof Error ? inner.message : String(inner) };

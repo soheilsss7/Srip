@@ -21,7 +21,8 @@ const ROUTE: Record<string, (id: string) => { pathname: string; params: Record<s
 const arr = (x: any) => Array.isArray(x) ? x : (x?.items ?? []);
 
 export default function Search() {
-  const { token } = useSession();
+  const { token, can } = useSession();
+  const canWrite = can('search.write');
   const [q, setQ] = useState('');
   const [rows, setRows] = useState<Result[]>([]);
   const [total, setTotal] = useState(0);
@@ -39,6 +40,7 @@ export default function Search() {
   useEffect(() => { loadSaved(); }, [loadSaved]);
 
   async function act(label: string, fn: () => Promise<unknown>) {
+    if (!canWrite) { setError('You have read-only access to saved searches.'); return; }
     setBusy(label); setError('');
     try { await fn(); await loadSaved(); } catch (e) { setError(e instanceof Error ? e.message : String(e)); } finally { setBusy(''); }
   }
@@ -77,10 +79,10 @@ export default function Search() {
         <Text style={styles.title}>Search</Text>
         <TextInput value={q} onChangeText={setQ} onSubmitEditing={run} placeholder="Search organizations, people, relationships, meetings..." style={styles.input} />
         <Pressable style={styles.button} onPress={run} disabled={loading}><Text style={styles.buttonText}>{loading ? 'Searching…' : 'Search'}</Text></Pressable>
-        <View style={styles.row}>
+        {canWrite && <View style={styles.row}>
           <TextInput style={[styles.input, { flex: 1 }]} value={saveName} onChangeText={setSaveName} placeholder="نام جستجوی ذخیره‌شده" />
           <Pressable style={styles.button} onPress={saveIt} disabled={!!busy}><Text style={styles.buttonText}>ذخیره جستجو</Text></Pressable>
-        </View>
+        </View>}
         {error ? <Text style={styles.error}>{error}</Text> : null}
         {!!total && <Text style={styles.subtitle}>{total} result{total === 1 ? '' : 's'}</Text>}
         <ActivityIndicator animating={loading} />

@@ -8,7 +8,8 @@ import { styles, colors } from '../../lib/ui';
 const STATUS = ['OPEN', 'FULFILLED', 'OVERDUE', 'CANCELLED'];
 
 export default function CommitmentDetail() {
-  const { token } = useSession();
+  const { token, can } = useSession();
+  const canWrite = can('commitment.write');
   const { id } = useLocalSearchParams<{ id: string }>();
   const [c, setC] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +36,7 @@ export default function CommitmentDetail() {
 
   async function act(label: string, fn: () => Promise<unknown>) {
     if (!token) return;
+    if (!canWrite) { setError('You have read-only access to this commitment.'); return; }
     setBusy(label); setError(null);
     try { await fn(); await load(); } catch (e) { setError(e instanceof Error ? e.message : 'Request failed'); } finally { setBusy(''); }
   }

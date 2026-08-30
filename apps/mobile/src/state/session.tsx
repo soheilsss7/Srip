@@ -1,15 +1,19 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { apiGet, apiPost, ApiClientError, API_BASE_URL } from '../services/api-client';
-import { clearStoredTokens, getStoredTokens, setStoredScope, setStoredTokens } from '../services/auth-store';
+import { AppState } from 'react-native';
+import { apiGet, apiPost, apiRequest, ApiClientError, API_BASE_URL, setApiScope } from '../services/api-client';
+import { clearStoredTokens, getStoredScope, getStoredTokens, setStoredScope, setStoredTokens } from '../services/auth-store';
 import { flushMutations, QueuedMutation } from '../services/offline-queue';
 import { configureNotificationHandler, registerForPushNotifications } from '../services/push';
 
+type Me = { id: string; email: string; name: string; memberships?: any[]; permissions?: string[]; accessibleOrganizationIds?: string[] };
 type SessionContextValue = {
   token: string | null;
+  me: Me | null;
   loading: boolean;
   online: boolean;
   scopeId: string | null;
   setScopeId: (id: string | null) => Promise<void>;
+  can: (permission: string) => boolean;
   signIn: (email: string, password: string, otp?: string) => Promise<void>;
   signOut: () => Promise<void>;
   syncOffline: () => Promise<{ sent: number; remaining: number; failed: number }>;
@@ -17,26 +21,21 @@ type SessionContextValue = {
 
 const SessionContext = createContext<SessionContextValue | null>(null);
 
-function bearer(status: number, message: string) {
-  const err = new ApiClientError(message, status);
-  return err;
-}
-
 async function sendQueued(token: string, m: QueuedMutation) {
-  // Reuse the mutation's stable idempotency key across retries/reconnects so the backend
-  // replays the original result instead of creating a duplicate resource.
-  const headers: Record<string, string> = { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+  // Keep the header explicit for offline replay contracts; apiRequest also carries it
+  // through its retry/refresh path so the key remains stable after a token rotation.
+  const headers: Record<string, string> = {};
   if (m.idempotencyKey) headers['Idempotency-Key'] = m.idempotencyKey;
-  const response = await fetch(`${API_BASE_URL}${m.path}`, {
+  await apiRequest(m.path, {
     method: m.method,
     headers,
     body: m.body === undefined ? undefined : JSON.stringify(m.body),
-  });
-  if (!response.ok) throw bearer(response.status, `queued mutation failed ${response.status}`);
+  }, token, m.idempotencyKey);
 }
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
+  const [me, setMe] = useState<Me | null>(null);
   const [loading, setLoading] = useState(true);
   const [online, setOnline] = useState(true);
   const [scopeId, setScopeIdState] = useState<string | null>(null);
@@ -45,8 +44,19 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     configureNotificationHandler();
     (async () => {
       try {
-        const stored = await getStoredTokens();
-        setToken(stored?.accessToken ?? null);
+        const [stored, storedScope] = await Promise.all([getStoredTokens(), getStoredScope()]);
+            setScopeIdState(storedScope ?? 'all');
+            setApiScope(storedScope ?? 'all');
+            if (!stored?.accessToken) return;
+        try {
+          const profile = await apiGet<Me>('/auth/me', stored.accessToken);
+          setMe(profile);
+          setToken(stored.accessToken);
+        } catch (error) {
+          if (error instanceof ApiClientError && error.status === 401) await clearStoredTokens();
+          setMe(null);
+          setToken(null);
+        }
       } catch { /* no stored session */ }
       finally { setLoading(false); }
     })();
@@ -58,20 +68,41 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    if (!token) return;
+    let alive = true;
+    const checkConnectivity = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/health/live`, { method: 'GET' });
+        if (alive) setOnline(response.ok);
+      } catch {
+        if (alive) setOnline(false);
+      }
+    };
+    void checkConnectivity();
+    const timer = setInterval(() => { void checkConnectivity(); }, 30_000);
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') void checkConnectivity();
+    });
+    return () => { alive = false; clearInterval(timer); subscription.remove(); };
+  }, []);
+
+  useEffect(() => {
+    if (!token || !online) return;
     syncOffline().catch(() => {});
     registerForPushNotifications().catch(() => {});
-  }, [token]);
+  }, [token, online]);
 
   const value = useMemo<SessionContextValue>(() => ({
     token,
+    me,
     loading,
     online,
     scopeId,
-    async setScopeId(id) {
-      setScopeIdState(id);
-      await setStoredScope(id ?? 'all');
-    },
+    can(permission) { return !!me?.permissions?.includes(permission) || !!me?.permissions?.includes('*'); },
+        async setScopeId(id) {
+          setScopeIdState(id);
+          setApiScope(id ?? 'all');
+          await setStoredScope(id ?? 'all');
+        },
     async signIn(email, password, otp) {
       const result = await apiPost<{ accessToken?: string; token?: string; refreshToken?: string }>('/auth/login', {
         email,
@@ -81,7 +112,15 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       const next = result.accessToken ?? result.token;
       if (!next) throw new Error('Authentication response did not contain an access token');
       await setStoredTokens(next, result.refreshToken);
-      setToken(next);
+      try {
+        const profile = await apiGet<Me>('/auth/me', next);
+        setMe(profile);
+        setToken(next);
+      } catch (error) {
+        await clearStoredTokens();
+        setMe(null);
+        throw error;
+      }
     },
     async signOut() {
       if (token) {
@@ -91,11 +130,14 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         } catch { /* best effort */ }
       }
       await clearStoredTokens();
-      setScopeIdState(null);
+          await setStoredScope('all');
+          setApiScope('all');
+          setScopeIdState('all');
+      setMe(null);
       setToken(null);
     },
     syncOffline,
-  }), [token, loading, online, scopeId]);
+  }), [me, token, loading, online, scopeId]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

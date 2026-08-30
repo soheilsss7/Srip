@@ -10,7 +10,8 @@ const KINDS = ['CALL', 'EMAIL', 'MEETING', 'NOTE', 'MESSAGE', 'OTHER'];
 const SENTIMENTS = [{ v: 1, l: 'Positive' }, { v: 0, l: 'Neutral' }, { v: -1, l: 'Negative' }] as const;
 
 export default function InteractionDetail() {
-  const { token } = useSession();
+  const { token, can } = useSession();
+  const canWrite = can('interaction.write');
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [x, setX] = useState<any>(null);
@@ -35,6 +36,7 @@ export default function InteractionDetail() {
 
   async function act(label: string, fn: () => Promise<unknown>) {
     if (!token) return;
+    if (!canWrite) { setError('You have read-only access to this interaction.'); return; }
     setBusy(label); setError(null);
     try { await fn(); await load(); } catch (e) { setError(e instanceof Error ? e.message : 'Request failed'); } finally { setBusy(''); }
   }
@@ -82,7 +84,7 @@ export default function InteractionDetail() {
 
           <View style={styles.card}>
             <Text style={styles.label}>Details</Text>
-            {[['Type', x.type], ['Occurred', x.occurredAt ? new Date(x.occurredAt).toLocaleString() : ''], ['Duration (min)', x.durationMinutes], ['Relationship', x.relationshipId], ['Organization', x.organizationId], ['Person', x.personId]].filter(([, v]) => v != null && v !== '').map(([k, v]) => (
+            {[['Type', x.type], ['Occurred', x.occurredAt ? new Date(x.occurredAt).toLocaleString() : ''], ['Duration (min)', x.durationMinutes], ['Relationship', x.relationship?.relationshipType], ['Organization', x.organization?.name ?? x.person?.organization?.name ?? x.relationship?.sourceOrganization?.name], ['Person', x.person?.displayName ?? [x.person?.firstName, x.person?.lastName].filter(Boolean).join(' ') ]].filter(([, v]) => v != null && v !== '').map(([k, v]) => (
               <View key={String(k)} style={{ paddingVertical: 3 }}>
                 <Text style={styles.label}>{String(k)}</Text>
                 <Text style={styles.value}>{String(v)}</Text>

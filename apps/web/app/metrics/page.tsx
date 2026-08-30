@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import {api} from '../_lib/api';
-import {DataTable,Empty,ErrorCard,Loading,PageHeader} from '../_components/page-ui';
+import {DataTable,Empty,ErrorCard,Loading,PageHeader} from '../_components/page-ui';import{useWorkspace}from'../_components/workspace';
 
 type Hist = Record<string, { count?: number; sum?: number; buckets?: Record<string, number> }>;
 type Snapshot = { requests?: number; errors?: number; averageLatencyMs?: number; uptimeSeconds?: number; activeUsers?: number; availabilityPercent?: number; process?: { rssBytes?: number; heapUsedBytes?: number; heapTotalBytes?: number; cpuPercent?: number }; apiLatency?: Hist; dbLatency?: Hist; queue?: Record<string, number>; storage?: Record<string, number>; ai?: Record<string, number> };
@@ -9,11 +9,14 @@ type Snapshot = { requests?: number; errors?: number; averageLatencyMs?: number;
 function Mb(n?: number){return n===undefined?'—':(n/1048576).toFixed(1)+' MB';}
 
 export default function Metrics(){
+  const{can}=useWorkspace();
+  const allowed=can('metrics.read');
   const [d,setD]=useState<Snapshot|null>(null),[e,setE]=useState('');
-  useEffect(()=>{api<Snapshot>('/metrics/summary').then(setD).catch(x=>setE(x.message))},[]);
+  useEffect(()=>{if(!allowed)return;api<Snapshot>('/metrics/summary').then(setD).catch(x=>setE(x.message))},[allowed]);
   const histRows=(h?:Hist)=>Object.entries(h??{}).map(([k,v])=>({key:k,count:v?.count??0,sum:(v?.sum??0).toFixed(2)+'ms',avg:Math.max(0,Number(((v?.sum??0)/(v?.count||1)).toFixed(2)))+'ms'}));
   const kvRows=(o?:Record<string,number>)=>Object.entries(o??{}).map(([k,v])=>({key:k,value:String(v)}));
   const uptime=(s?:number)=>{if(s===undefined)return '—';const d=Math.floor(s/86400),h=Math.floor((s%86400)/3600),m=Math.floor((s%3600)/60);return `${d}d ${h}h ${m}m`;};
+  if(!allowed)return <main className="feature-page"><PageHeader eyebrow="PLATFORM METRICS" title="Metrics" description="شاخص‌های عملیاتی Backend."/><section className="panel"><Empty>مجوز مشاهده Metrics برای شما فعال نیست.</Empty></section></main>;
   return <main className="feature-page"><PageHeader eyebrow="PLATFORM METRICS" title="Metrics" description="شاخص‌های عملیاتی Backend: حجم درخواست‌ها، خطاها، latencyها، uptime و telemetry پردازش."/><ErrorCard message={e}/>{!d&&!e?<Loading/>:<>
     <section className="kpi-grid">
       <div className="kpi-card"><span>درخواست‌ها</span><strong>{d?.requests??0}</strong></div>

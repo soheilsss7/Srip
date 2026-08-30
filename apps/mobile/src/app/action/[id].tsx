@@ -4,12 +4,14 @@ import { useLocalSearchParams } from 'expo-router';
 import { apiGet, apiPatch, api } from '../../services/api-client';
 import { useSession } from '../../state/session';
 import { styles, colors } from '../../lib/ui';
+import { EntityPicker } from '../../features/entity-picker';
 
 const STATUS = ['OPEN', 'IN_PROGRESS', 'BLOCKED', 'DONE', 'CANCELLED'];
 const PRIORITY = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
 
 export default function ActionDetail() {
-  const { token } = useSession();
+  const { token, can } = useSession();
+  const canWrite = can('action.write');
   const { id } = useLocalSearchParams<{ id: string }>();
   const [a, setA] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -19,6 +21,7 @@ export default function ActionDetail() {
   const [outcome, setOutcome] = useState('');
   const [dueAt, setDueAt] = useState('');
   const [depIds, setDepIds] = useState('');
+  const [depLabel, setDepLabel] = useState('');
 
   const load = useCallback(async () => {
     if (!token || !id) return;
@@ -34,6 +37,7 @@ export default function ActionDetail() {
 
   async function act(label: string, fn: () => Promise<unknown>) {
     if (!token) return;
+    if (!canWrite) { setError('You have read-only access to this action.'); return; }
     setBusy(label); setError(null);
     try { await fn(); await load(); } catch (e) { setError(e instanceof Error ? e.message : 'Request failed'); } finally { setBusy(''); }
   }
@@ -51,10 +55,11 @@ export default function ActionDetail() {
     await act('del', () => api(`/actions/${id}`, { method: 'DELETE' }, token));
   };
   const addDep = async () => {
-    const depId = depIds.trim().split(/\s*,\s*/)[0];
-    if (!depId) { setError('Dependency action ID required.'); return; }
-    await act('dep', () => api(`/actions/${id}/dependencies/${depId}`, { method: 'POST' }, token));
-    setDepIds('');
+    const depId = depIds.trim();
+    if (!depId) { setError('Choose a dependency action.'); return; }
+    if (depId === String(id)) { setError('An action cannot depend on itself.'); return; }
+    await act('dep', () => api(`/actions/${id}/dependencies/${encodeURIComponent(depId)}`, { method: 'POST' }, token));
+    setDepIds(''); setDepLabel('');
   };
   const arr = (x: any) => x ?? [];
 
@@ -104,7 +109,7 @@ export default function ActionDetail() {
               <View key={d.id} style={{ paddingVertical: 4, borderTopWidth: 1, borderTopColor: colors.border }}>
                 <View style={styles.row}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.value}>{d.dependsOnAction?.title ?? d.dependsOnActionId}</Text>
+                    <Text style={styles.value}>{d.dependsOnAction?.title ?? 'Action'}</Text>
                     <Text style={styles.subtitle}>{d.dependsOnAction?.status ?? ''}</Text>
                   </View>
                   <Pressable onPress={() => act('dep', () => api(`/actions/${id}/dependencies/${d.dependsOnActionId}`, { method: 'DELETE' }, token))}>
@@ -113,15 +118,15 @@ export default function ActionDetail() {
                 </View>
               </View>
             ))}
-            <TextInput style={styles.input} placeholder="Depends-on action ID" value={depIds} onChangeText={setDepIds} />
-            <Pressable style={styles.button} disabled={!!busy} onPress={addDep}><Text style={styles.buttonText}>Add dependency</Text></Pressable>
+            <EntityPicker label="Add dependency" endpoint="/actions" value={depIds} selectedLabel={depLabel} onChange={(value, label) => { setDepIds(value); setDepLabel(label ?? ''); }} disabled={!!busy} />
+            <Pressable style={styles.button} disabled={!!busy || !depIds} onPress={addDep}><Text style={styles.buttonText}>Add dependency</Text></Pressable>
           </View>
 
           <View style={styles.card}>
             <Text style={styles.label}>Blocking</Text>
             {arr(a.blockedBy).length === 0 ? <Text style={{ color: colors.muted }}>Nothing depends on this action.</Text> : arr(a.blockedBy).map((b: any) => (
               <View key={b.id} style={{ paddingVertical: 4, borderTopWidth: 1, borderTopColor: colors.border }}>
-                <Text style={styles.value}>{b.action?.title ?? b.actionId}</Text>
+                <Text style={styles.value}>{b.action?.title ?? 'Action'}</Text>
                 <Text style={styles.subtitle}>{b.action?.status ?? ''}</Text>
               </View>
             ))}

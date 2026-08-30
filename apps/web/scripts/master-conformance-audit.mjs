@@ -42,10 +42,10 @@ const unsafeHtml=files.filter(x=>/dangerouslySetInnerHTML|innerHTML\s*=/.test(re
 
 // Routes expected by the non-AI Web scope from the master docs / prior baseline.
 const expected=[
- 'organizations','people','relationships','interactions','meetings','actions','commitments',
+ 'today','organizations','people','relationships','interactions','meetings','actions','commitments',
  'projects','opportunities','requirements','network','search','notifications','workflows',
  'reports','data-management','data-quality','documents','admin','authorization','approvals',
- 'integrations','privacy','security','sessions','health','monitoring','analytics','metrics','observability'
+ 'integrations','privacy','security','sessions','health','monitoring','analytics','metrics','observability','notes'
 ];
 const routes=walk(webRoot).filter(x=>x.endsWith('page.tsx')).map(x=>path.relative(webRoot,x).replaceAll(path.sep,'/'));
 const routeGaps=expected.filter(d=>!routes.some(r=>r===`${d}/page.tsx`||r.startsWith(`${d}/`)));

@@ -1,20 +1,23 @@
 'use client';
 import {useEffect,useState} from 'react';
 import {api} from '../_lib/api';
-import {Badge,DataTable,Empty,ErrorCard,Loading,PageHeader} from '../_components/page-ui';
+import {Badge,DataTable,Empty,ErrorCard,Loading,PageHeader} from '../_components/page-ui';import{useWorkspace}from'../_components/workspace';
 
 type Hist = Record<string, { count?: number; sum?: number; buckets?: Record<string, number> }>;
 type Snapshot = { requests?: number; errors?: number; averageLatencyMs?: number; uptimeSeconds?: number; activeUsers?: number; availabilityPercent?: number; process?: { rssBytes?: number; heapUsedBytes?: number; heapTotalBytes?: number; cpuPercent?: number }; apiLatency?: Hist; dbLatency?: Hist; queue?: Record<string, number>; storage?: Record<string, number>; ai?: Record<string, number> };
 function Mb(n?: number){return n===undefined?'—':(n/1048576).toFixed(1)+' MB';}
 
 export default function Observability(){
+  const{can}=useWorkspace();
+  const allowed=can('metrics.read');
   const [d,setD]=useState<Snapshot|null>(null),[q,setQ]=useState<Record<string,number>|null>(null),[e,setE]=useState('');
-  useEffect(()=>{Promise.all([api<Snapshot>('/observability/summary'),api('/observability/queue').catch(()=>null)]).then(([s,sqn]:any)=>{setD(s);if(sqn)setQ(Array.isArray(sqn)?Object.fromEntries(sqn.map((x:any)=>[x?.key??x?.name,x?.count??x?.pending??0])):sqn)}).catch(x=>setE((x as Error).message))},[]);
+  useEffect(()=>{if(!allowed)return;Promise.all([api<Snapshot>('/observability/summary'),api('/observability/queue').catch(()=>null)]).then(([s,sqn]:any)=>{setD(s);if(sqn)setQ(Array.isArray(sqn)?Object.fromEntries(sqn.map((x:any)=>[x?.key??x?.name,x?.count??x?.pending??0])):sqn)}).catch(x=>setE((x as Error).message))},[allowed]);
   const histRows=(h?:Hist)=>Object.entries(h??{}).map(([k,v])=>({key:k,count:v?.count??0,avg:Math.max(0,Number(((v?.sum??0)/(v?.count||1)).toFixed(2)))+'ms'}));
   const kvRows=(o?:Record<string,number>)=>Object.entries(o??{}).map(([k,v])=>({key:k,value:String(v)}));
   const uptime=(s?:number)=>{if(s===undefined)return '—';const d=Math.floor(s/86400),h=Math.floor((s%86400)/3600);return `${d}d ${h}h`;};
   const p=d?.process??{};
   const health = (d?.availabilityPercent??100)>=99 ? 'success' : ((d?.availabilityPercent??100)>=95?'warning':'danger');
+  if(!allowed)return <main className="feature-page"><PageHeader eyebrow="RUNTIME" title="Observability" description="سلامت لحظه‌ای سرویس."/><section className="panel"><Empty>مجوز مشاهده Observability برای شما فعال نیست.</Empty></section></main>;
   return <main className="feature-page"><PageHeader eyebrow="RUNTIME" title="Observability" description="API latency، DB latency، Queue و Runtime telemetry — snapshot لحظه‌ای سلامت سرویس." actions={<Badge tone={health as 'success'|'warning'|'danger'}>Availability {d?.availabilityPercent??100}%</Badge>}/><ErrorCard message={e}/>{!d?<Loading/>:<>
     <section className="kpi-grid">
       <div className="kpi-card"><span>درخواست‌ها</span><strong>{d?.requests??0}</strong></div>

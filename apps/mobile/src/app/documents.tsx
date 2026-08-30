@@ -4,16 +4,19 @@ import * as DocumentPicker from 'expo-document-picker';
 import { api, apiGet } from '../services/api-client';
 import { useSession } from '../state/session';
 import { styles, colors } from '../lib/ui';
+import { EntityPicker } from '../features/entity-picker';
 
 type Doc = { id: string; name: string; classification?: string; mimeType?: string; sizeBytes?: number; uploadStatus?: string; scanStatus?: string; createdAt?: string };
 
 export default function Documents() {
-  const { token } = useSession();
+  const { token, can } = useSession();
+  const canWrite = can('document.write');
   const [rows, setRows] = useState<Doc[]>([]);
   const [status, setStatus] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [orgId, setOrgId] = useState('');
+  const [orgLabel, setOrgLabel] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [indexText, setIndexText] = useState('');
@@ -31,7 +34,7 @@ export default function Documents() {
   const refresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
 
   async function pickAndUpload() {
-    if (!token) return;
+    if (!token || !canWrite) return;
     try {
       const picked = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, type: '*/*' });
       if (picked.canceled || !picked.assets?.length) return;
@@ -80,8 +83,9 @@ export default function Documents() {
             </> : <Text style={styles.value}>{String(status)}</Text>}
           </View>
         )}
-        <TextInput style={styles.input} placeholder="Organization ID (optional, for upload)" value={orgId} onChangeText={setOrgId} />
-        <Pressable style={styles.button} disabled={busy} onPress={pickAndUpload}><Text style={styles.buttonText}>{busy ? 'Uploading…' : 'Upload document'}</Text></Pressable>
+        {canWrite && <><EntityPicker label="Organization (optional)" endpoint="/organizations" value={orgId} selectedLabel={orgLabel} onChange={(value, label) => { setOrgId(value); setOrgLabel(label ?? ''); }} disabled={busy} />
+        <Pressable style={styles.button} disabled={busy} onPress={pickAndUpload}><Text style={styles.buttonText}>{busy ? 'Uploading…' : 'Upload document'}</Text></Pressable></>}
+        {!canWrite && <Text style={styles.subtitle}>You have read-only access to documents.</Text>}
         {msg ? <Text style={{ color: colors.success }}>{msg}</Text> : null}
         {error && <Text style={styles.error}>{error}</Text>}
         {!rows.length && !error && <ActivityIndicator />}
@@ -92,10 +96,10 @@ export default function Documents() {
               <Text style={styles.subtitle}>{d.classification} · {d.mimeType} · {(d.sizeBytes ?? 0) > 0 ? `${d.sizeBytes} B` : ''}</Text>
               <Text style={styles.label}>{d.uploadStatus} · {d.scanStatus} · tap to download</Text>
             </Pressable>
-            <View style={styles.row}>
+            {canWrite && <View style={styles.row}>
               <TextInput style={[styles.input, { flex: 1 }]} placeholder="Index content text" value={indexText} onChangeText={setIndexText} />
               <Pressable style={styles.button} onPress={() => indexDoc(d, indexText)}><Text style={styles.buttonText}>Index</Text></Pressable>
-            </View>
+            </View>}
           </View>
         ))}
         {!rows.length && !error && <Text style={{ color: colors.muted }}>No documents yet.</Text>}

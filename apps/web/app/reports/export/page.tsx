@@ -1,11 +1,14 @@
 'use client';
 import { useState } from 'react';
-import { PageHeader, ErrorCard } from '../../_components/page-ui';
+import { PageHeader, Empty, ErrorCard } from '../../_components/page-ui';
 import { clearStoredExportApproval, downloadReport, storedExportApprovalId } from '../../_lib/report-export';
+import { useWorkspace } from '../../_components/workspace';
 
 const KINDS = ['relationship-health', 'company', 'contact', 'meeting', 'commitment', 'action', 'opportunity', 'network', 'risk', 'influence', 'referral', 'project', 'subsidiary-comparison', 'holding', 'executive-summary'];
 
 export default function Export() {
+  const { can } = useWorkspace();
+  const canExport = can('report.export');
   const [kind, setKind] = useState('relationship-health');
   const [format, setFormat] = useState('csv');
   const [e, setE] = useState('');
@@ -13,17 +16,20 @@ export default function Export() {
   const [busy, setBusy] = useState(false);
 
   async function run() {
+    if (!canExport) return;
     setBusy(true); setE(''); setNotice('');
     try {
-      const result = await downloadReport(kind, format as 'csv' | 'xlsx' | 'pdf' | 'json', (approvalId) => {
-        setNotice(`درخواست تأیید خروجی ثبت شد (شناسه: ${approvalId}). یک کاربر دارای مجوز تأیید باید از صفحه «تأییدها» آن را تأیید کند؛ سپس دوباره «دریافت فایل» را بزنید.`);
+      const result = await downloadReport(kind, format as 'csv' | 'xlsx' | 'pdf' | 'json', () => {
+        setNotice('درخواست تأیید خروجی ثبت شد. یک کاربر دارای مجوز تأیید باید آن را از صفحه «تأییدها» تأیید کند؛ سپس دوباره «دریافت فایل» را بزنید.');
       });
       if (result.status === 'error') setE(result.message);
-      if (result.status === 'approval_pending') setNotice(result.approvalId ? `خروجی نیاز به تأیید دارد — درخواست ثبت شد (شناسه: ${result.approvalId}).` : 'خروجی نیاز به تأیید دارد.');
+      if (result.status === 'approval_pending') setNotice('خروجی نیاز به تأیید دارد. پس از تأیید درخواست، دوباره «دریافت فایل» را بزنید.');
     } finally { setBusy(false); }
   }
 
   const stored = storedExportApprovalId(kind);
+
+  if (!canExport) return <main className="feature-page"><PageHeader eyebrow="REPORTING" title="Export گزارش" description="خروجی گزارش‌ها فقط برای کاربران دارای مجوز در دسترس است." /><section className="panel"><Empty>مجوز تهیه خروجی گزارش برای شما فعال نیست.</Empty></section></main>;
 
   return (
     <main className="feature-page">

@@ -1,14 +1,28 @@
 import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
-import { IsArray, IsBoolean, IsInt, IsOptional, IsString, Min, Max, MinLength } from 'class-validator';
+import { IsArray, IsBoolean, IsEnum, IsInt, IsOptional, IsString, Min, Max, MinLength } from 'class-validator';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthorizationService } from '../common/authorization/authorization.service';
 import { AuthGuard } from '../common/guards/auth.guard';
 import { AuthorizationGuard } from '../common/guards/authorization.guard';
 import { RequirePermission } from '../common/decorators/require-permission.decorator';
 import { AuditService } from '../audit/audit.service';
+import { ReferralStatus } from '@prisma/client';
+import { EntityResponseDto } from '../common/dto/entity-response.dto';
 
 class ContactDto { @IsString() @MinLength(2) kind!: string; @IsString() @MinLength(1) value!: string; @IsString() @IsOptional() label?: string; @IsBoolean() @IsOptional() isPrimary?: boolean; }
 class UnitDto { @IsString() @MinLength(2) name!: string; @IsString() @IsOptional() type?: string; @IsString() @IsOptional() parentUnitId?: string; }
+class ReferralDto {
+  @IsString() @MinLength(2) title!: string;
+  @IsString() @IsOptional() message?: string;
+  @IsEnum(ReferralStatus) @IsOptional() status?: ReferralStatus;
+  @IsString() @IsOptional() sourceOrganizationId?: string;
+  @IsString() @IsOptional() targetOrganizationId?: string;
+  @IsString() @IsOptional() sourcePersonId?: string;
+  @IsString() @IsOptional() targetPersonId?: string;
+  @IsString() @IsOptional() relationshipId?: string;
+  @IsString() @IsOptional() recipientUserId?: string;
+  @IsString() @IsOptional() notes?: string;
+}
 
 @Controller('core-domain')
 @UseGuards(AuthGuard, AuthorizationGuard)
@@ -43,35 +57,61 @@ export class CoreDomainController {
   @Post('people/:personId/contacts') @RequirePermission('person.write')
   async createPersonContact(@Param('personId') personId: string, @Body() d: ContactDto, @Req() req: any) { const p = await this.prisma.person.findUniqueOrThrow({ where: { id: personId }, select: { organizationId: true } }); await this.authorization.assertPermission(req.user.sub, 'person.write', { organizationId: p.organizationId }); const created = await this.prisma.contactInformation.create({ data: { personId, ...d } }); await this.audit.logMutation({ userId: req.user.sub, action: 'CREATE', entityType: 'ContactInformation', entityId: created.id, organizationId: p.organizationId, after: created }); return created; }
 
+  private async referralOrganizationIds(referral: any) {
+    const personIds = [referral.sourcePersonId, referral.targetPersonId].filter(Boolean) as string[];
+    const people = personIds.length ? await this.prisma.person.findMany({ where: { id: { in: personIds }, deletedAt: null }, select: { id: true, organizationId: true } }) : [];
+    if (people.length !== personIds.length) throw new BadRequestException('Referral person not found');
+    return [...new Set([referral.sourceOrganizationId, referral.targetOrganizationId, ...people.map((person: any) => person.organizationId)].filter(Boolean))] as string[];
+  }
+
   @Get('referrals') @RequirePermission('relationship.read')
   async referrals(@Req() req: any) {
-    return this.prisma.referral.findMany({
-      where: { deletedAt: null, OR: [{ createdById: req.user.sub }, { recipientUserId: req.user.sub }] },
-      include: { sourceOrganization: true, targetOrganization: true, sourcePerson: true, targetPerson: true, relationship: true },
-      orderBy: { createdAt: 'desc' }, take: 200,
-    });
+    const ids = await this.authorization.accessibleOrganizationIds(req.user.sub);
+    const where: any = { deletedAt: null, ...(ids ? { OR: [{ createdById: req.user.sub }, { recipientUserId: req.user.sub }, { sourceOrganizationId: { in: ids } }, { targetOrganizationId: { in: ids } }, { sourcePerson: { organizationId: { in: ids } } }, { targetPerson: { organizationId: { in: ids } } }] } : { OR: [{ createdById: req.user.sub }, { recipientUserId: req.user.sub }] }) };
+    const rows = await this.prisma.referral.findMany({ where, include: { sourceOrganization: true, targetOrganization: true, sourcePerson: true, targetPerson: true, relationship: true }, orderBy: { createdAt: 'desc' }, take: 200 });
+    return EntityResponseDto.manyUnknown(rows);
   }
 
   @Post('referrals') @RequirePermission('relationship.write')
-  async createReferral(@Body() d: any, @Req() req: any) {
-    if (!d.title?.trim()) throw new BadRequestException('Referral title is required');
+  async createReferral(@Body() d: ReferralDto, @Req() req: any) {
     if (!d.sourceOrganizationId && !d.sourcePersonId) throw new BadRequestException('Referral source is required');
     if (!d.targetOrganizationId && !d.targetPersonId && !d.recipientUserId) throw new BadRequestException('Referral target is required');
+    const organizations = await this.referralOrganizationIds(d);
     if (d.sourceOrganizationId) await this.authorization.assertPermission(req.user.sub, 'relationship.write', { organizationId: d.sourceOrganizationId });
-    if (d.targetOrganizationId) await this.authorization.assertPermission(req.user.sub, 'relationship.read', { organizationId: d.targetOrganizationId });
-    const created = await this.prisma.referral.create({ data: { ...d, title: d.title.trim(), createdById: req.user.sub } });
+    if (d.sourcePersonId) await this.authorization.assertPermission(req.user.sub, 'relationship.write', { organizationId: organizations.find((id) => id === d.sourceOrganizationId) ?? organizations[0] });
+    for (const organizationId of organizations.filter((id) => id !== d.sourceOrganizationId)) await this.authorization.assertPermission(req.user.sub, 'relationship.read', { organizationId });
+    const payload = { title: d.title.trim(), message: d.message, status: d.status ?? ReferralStatus.PENDING, sourceOrganizationId: d.sourceOrganizationId, targetOrganizationId: d.targetOrganizationId, sourcePersonId: d.sourcePersonId, targetPersonId: d.targetPersonId, relationshipId: d.relationshipId, recipientUserId: d.recipientUserId, notes: d.notes, createdById: req.user.sub };
+    const created = await this.prisma.referral.create({ data: payload });
     await this.audit.logMutation({ userId: req.user.sub, action: 'CREATE', entityType: 'Referral', entityId: created.id, organizationId: d.sourceOrganizationId, after: created });
-    return created;
+    return EntityResponseDto.fromUnknown(created);
   }
 
   @Patch('referrals/:id') @RequirePermission('relationship.write')
-  async updateReferral(@Param('id') id: string, @Body() d: any, @Req() req: any) {
+  async updateReferral(@Param('id') id: string, @Body() d: Partial<ReferralDto>, @Req() req: any) {
     const current = await this.prisma.referral.findUnique({ where: { id } });
     if (!current || current.deletedAt) throw new BadRequestException('Referral not found');
+    const organizations = await this.referralOrganizationIds(current);
     if (current.sourceOrganizationId) await this.authorization.assertPermission(req.user.sub, 'relationship.write', { organizationId: current.sourceOrganizationId });
-    const updated = await this.prisma.referral.update({ where: { id }, data: { ...d, ...(d.status === 'COMPLETED' ? { completedAt: new Date() } : {}) } });
+    for (const organizationId of organizations.filter((value) => value !== current.sourceOrganizationId)) await this.authorization.assertPermission(req.user.sub, 'relationship.read', { organizationId });
+    const data: any = {};
+    for (const key of ['title', 'message', 'status', 'notes']) if ((d as any)[key] !== undefined) data[key] = key === 'title' ? String((d as any)[key]).trim() : (d as any)[key];
+    if (data.title === '') throw new BadRequestException('Referral title is required');
+    if (data.status === ReferralStatus.COMPLETED) data.completedAt = new Date();
+    const updated = await this.prisma.referral.update({ where: { id }, data });
     await this.audit.logMutation({ userId: req.user.sub, action: 'UPDATE', entityType: 'Referral', entityId: id, organizationId: current.sourceOrganizationId ?? undefined, before: current, after: updated });
-    return updated;
+    return EntityResponseDto.fromUnknown(updated);
+  }
+
+  @Delete('referrals/:id') @RequirePermission('relationship.write')
+  async removeReferral(@Param('id') id: string, @Req() req: any) {
+    const current = await this.prisma.referral.findUnique({ where: { id } });
+    if (!current || current.deletedAt) throw new BadRequestException('Referral not found');
+    const organizations = await this.referralOrganizationIds(current);
+    if (current.sourceOrganizationId) await this.authorization.assertPermission(req.user.sub, 'relationship.write', { organizationId: current.sourceOrganizationId });
+    for (const organizationId of organizations.filter((value) => value !== current.sourceOrganizationId)) await this.authorization.assertPermission(req.user.sub, 'relationship.read', { organizationId });
+    const archived = await this.prisma.referral.update({ where: { id }, data: { deletedAt: new Date(), deletedById: req.user.sub } });
+    await this.audit.logMutation({ userId: req.user.sub, action: 'DELETE', entityType: 'Referral', entityId: id, organizationId: current.sourceOrganizationId ?? undefined, before: current, after: archived });
+    return EntityResponseDto.fromUnknown(archived);
   }
 
   @Get('projects/:projectId/risks') @RequirePermission('project.read')

@@ -81,6 +81,7 @@ function FunnelVisual({ stages, conversion }: { stages?: Record<string, number>;
 
 export default function Dashboard() {
   const { me, role, scopeId, can } = useWorkspace();
+  const allowed = can('analytics.read');
   const [summary, setSummary] = useState<Summary | null>(null);
   const [network, setNetwork] = useState<Network | null>(null);
   const [funnel, setFunnel] = useState<Funnel | null>(null);
@@ -92,6 +93,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     let alive = true;
+    if (!allowed) { setLoading(false); return () => { alive = false; }; }
     setLoading(true); setError('');
     const q = scopeId === 'all' ? '' : '?organizationId=' + encodeURIComponent(scopeId);
     Promise.all([
@@ -106,7 +108,7 @@ export default function Dashboard() {
     }).catch(e => alive && setError((e as Error).message))
       .finally(() => alive && setLoading(false));
     return () => { alive = false; };
-  }, [scopeId, can]);
+  }, [scopeId, can, allowed]);
 
   const counts = summary?.counts ?? {};
   const capital = network?.networkCapital?.components ?? {};
@@ -120,6 +122,8 @@ export default function Dashboard() {
 
   const totalExecutions = workflows?.executions?.reduce((a, e) => a + e.count, 0) ?? 0;
 
+  if (!allowed) return <main className="feature-page"><div className="page-heading"><div><div className="eyebrow">EXECUTIVE / STRATEGIC INTELLIGENCE</div><h1>Command Center</h1><p className="subtitle">داشبورد راهبردی بر اساس داده‌های زنده Backend.</p></div></div><section className="panel"><EmptyState title="مجوز مشاهده داشبورد برای شما فعال نیست." description="برای مشاهده شاخص‌های راهبردی با مدیر سیستم تماس بگیرید." /></section></main>;
+
   return (
     <div className="dashboard-page dash">
       {/* HEADER */}
@@ -131,7 +135,8 @@ export default function Dashboard() {
         </div>
         <div className="heading-tools">
           <ScopeBadge />
-          <a className="primary-action" href="/organizations"><Building2 size={14}/> + سازمان</a>
+          <a className="primary-action" href="/today"><Activity size={14}/> عملیات امروز</a>
+          <a className="secondary-action" href="/organizations"><Building2 size={14}/> + سازمان</a>
           <a className="secondary-action" href="/people"><Users size={14}/> + شخص</a>
           <a className="secondary-action" href="/relationships"><Share2 size={14}/> + رابطه</a>
         </div>

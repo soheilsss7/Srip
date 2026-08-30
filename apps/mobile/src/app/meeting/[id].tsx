@@ -4,9 +4,11 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { apiGet, apiPatch, apiPost, api } from '../../services/api-client';
 import { useSession } from '../../state/session';
 import { styles, colors } from '../../lib/ui';
+import { EntityPicker } from '../../features/entity-picker';
 
 export default function MeetingDetail() {
-  const { token } = useSession();
+  const { token, can } = useSession();
+  const canWrite = can('meeting.write');
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [m, setM] = useState<any>(null);
@@ -21,6 +23,7 @@ export default function MeetingDetail() {
   const [checked, setChecked] = useState<Record<number, boolean>>({});
   const [edit, setEdit] = useState({ title: '', objective: '', agenda: '', location: '' });
   const [personId, setPersonId] = useState('');
+  const [personLabel, setPersonLabel] = useState('');
 
   const load = useCallback(async () => {
     if (!token || !id) return;
@@ -36,6 +39,7 @@ export default function MeetingDetail() {
   }
   async function act(label: string, fn: () => Promise<unknown>) {
     if (!token) return;
+    if (!canWrite) { setError('You have read-only access to this meeting.'); return; }
     setBusy(label); setError(null);
     try { await fn(); } catch (e) { setError(e instanceof Error ? e.message : 'Request failed'); } finally { setBusy(''); }
   }
@@ -74,13 +78,14 @@ export default function MeetingDetail() {
     });
   }
   async function addParticipant() {
-    if (!personId.trim()) { setError('Person ID required.'); return; }
+    if (!personId) { setError('Choose a person.'); return; }
     const current = (m?.participants ?? []).map((p: any) => p?.personId ?? p?.person?.id).filter(Boolean);
+    if (current.includes(personId)) { setError('This person is already a participant.'); return; }
     await act('pt', async () => {
-      await api(`/meetings/${id}/participants`, { method: 'PUT', body: JSON.stringify({ personIds: [...current, personId.trim()] }) }, token);
+      await api(`/meetings/${id}/participants`, { method: 'PUT', body: JSON.stringify({ personIds: [...current, personId] }) }, token);
       await load();
     });
-    setPersonId('');
+    setPersonId(''); setPersonLabel('');
   }
   async function deleteMeeting() {
     Alert.alert('حذف جلسه', `«${m?.title}» حذف شود؟`, [{ text: 'لغو', style: 'cancel' }, { text: 'حذف', style: 'destructive', onPress: async () => { setBusy('pdel'); setError(null); try { await api(`/meetings/${id}`, { method: 'DELETE' }, token); router.replace('/meetings'); } catch (e) { setError(e instanceof Error ? e.message : 'Request failed'); } finally { setBusy(''); } } }]);
@@ -129,11 +134,9 @@ export default function MeetingDetail() {
             <Pressable style={styles.button} disabled={!!busy} onPress={submitOutcome}>
               <Text style={styles.buttonText}>{busy === 'outcome' ? 'Saving…' : 'Save outcome'}</Text>
             </Pressable>
-            <Text style={styles.label}>Participants: {participants.map((p: any) => p?.person?.displayName ?? p?.person?.firstName ?? p?.personId ?? '').join(', ') || 'none'}</Text>
-            <View style={styles.row}>
-              <TextInput style={[styles.input, { flex: 1 }]} placeholder="Person ID to add" value={personId} onChangeText={setPersonId} />
-              <Pressable style={styles.button} onPress={addParticipant}><Text style={styles.buttonText}>Add</Text></Pressable>
-            </View>
+            <Text style={styles.label}>Participants: {participants.map((p: any) => p?.person?.displayName ?? ([p?.person?.firstName, p?.person?.lastName].filter(Boolean).join(' ') || 'Participant')).join(', ') || 'none'}</Text>
+            <EntityPicker label="Add participant" endpoint="/people" value={personId} selectedLabel={personLabel} onChange={(value, label) => { setPersonId(value); setPersonLabel(label ?? ''); }} disabled={!!busy} />
+            <Pressable style={styles.button} disabled={!!busy || !personId} onPress={addParticipant}><Text style={styles.buttonText}>Add participant</Text></Pressable>
           </View>
 
           <Pressable style={styles.button} disabled={!!busy} onPress={() => { extract(); }}>

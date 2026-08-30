@@ -30,10 +30,12 @@ grep -q "@RequirePermission('person.read')" "$root/apps/api/src/people/people.co
 test -f "$root/apps/api/prisma/migrations/20260210120000_phase5_authorization_multitenancy/migration.sql" || { echo 'Phase 5 migration missing'; exit 1; }
 test -f "$root/apps/api/src/common/authorization/access-policy.spec.ts" || { echo 'Phase 5 permission tests missing'; exit 1; }
 python - <<PY2
-from docx import Document
+from zipfile import ZipFile
+from xml.etree import ElementTree as ET
 p="$root/docs/source/reference-live-build-03.docx"
-d=Document(p)
-text="\n".join([x.text for x in d.paragraphs]+[c.text for t in d.tables for r in t.rows for c in r.cells])
+with ZipFile(p) as archive:
+    root=ET.fromstring(archive.read("word/document.xml"))
+text="\n".join(node.text or "" for node in root.iter("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}t"))
 assert text.count("☑")==0 and text.count("☐")==1564
 print("Live DOCX checklist verification OK: 0 checked / 1564 pending")
 PY2

@@ -13,7 +13,7 @@ class UpdateOrganizationDto { @IsString() @MinLength(2) @IsOptional() name?: str
 @UseGuards(AuthGuard, AuthorizationGuard)
 export class OrganizationsController {
   constructor(private readonly service: OrganizationsService) {}
-  @Get() @RequirePermission('org.read') list(@Req() req: any, @Query('parentOrganizationId') parentOrganizationId?: string, @Query('page') page?: string, @Query('pageSize') pageSize?: string) { return this.service.list(req.user.sub, parentOrganizationId, Number(page || 1), Number(pageSize || 50)); }
+  @Get() @RequirePermission('org.read') list(@Req() req: any, @Query('parentOrganizationId') parentOrganizationId?: string, @Query('page') page?: string, @Query('pageSize') pageSize?: string, @Query('q') q?: string) { return this.service.list(req.user.sub, parentOrganizationId, Number(page || 1), Number(pageSize || 50), q); }
   @Get(':id/timeline') @RequirePermission('org.read') timeline(@Param('id') id: string, @Req() req: any) { return this.service.timeline(req.user.sub, id); }
   @Get(':id') @RequirePermission('org.read') get(@Param('id') id: string, @Req() req: any) { return this.service.get(req.user.sub, id); }
   @Post() @RequirePermission('org.write') create(@Body() dto: CreateOrganizationDto, @Req() req: any) { return this.service.create(req.user.sub, dto); }

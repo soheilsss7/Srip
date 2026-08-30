@@ -57,8 +57,8 @@ export default function MeetingBrief() {
             <Text style={styles.label}>Relationship health</Text>
             {rel ? (
               <>
-                <Text style={styles.value}>{rel.healthScore ?? '—'} / 100 · {rel.status ?? rel.id}</Text>
-                <Text style={styles.subtitle}>source {rel.sourceOrganizationId} · target {rel.targetOrganizationId}</Text>
+                <Text style={styles.value}>{rel.healthScore ?? '—'} / 100 · {rel.status ?? 'Relationship'}</Text>
+                <Text style={styles.subtitle}>{rel.sourceOrganization?.name ?? 'Source organization'} · {rel.targetOrganization?.name ?? 'Target organization'}</Text>
               </>
             ) : <Text style={styles.value}>No related relationship.</Text>}
           </View>

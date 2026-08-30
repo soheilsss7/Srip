@@ -2,7 +2,8 @@
 import { useEffect, useState } from 'react';
 import { api } from '../_lib/api';
 import { clearStoredExportApproval, downloadReport, storedExportApprovalId } from '../_lib/report-export';
-import { DataTable, ErrorCard, Loading, PageHeader } from '../_components/page-ui';
+import { DataTable, Empty, ErrorCard, Loading, PageHeader } from '../_components/page-ui';
+import { useWorkspace } from '../_components/workspace';
 const kinds = ['relationship-health', 'company', 'contact', 'meeting', 'commitment', 'action', 'opportunity', 'network', 'risk', 'influence', 'referral', 'project', 'subsidiary-comparison', 'holding'];
 
 function flatten(value: unknown, prefix = ''): Record<string, unknown> {
@@ -27,28 +28,34 @@ function previewRows(payload: any): Array<Record<string, unknown>> {
 }
 
 export default function Reports() {
+  const { can } = useWorkspace();
+  const canRead = can('report.read');
+  const canExport = can('report.export');
   const [kind, setKind] = useState('relationship-health'), [data, setData] = useState<any>(null), [e, setE] = useState(''), [loading, setLoading] = useState(false), [exporting, setExporting] = useState(''), [notice, setNotice] = useState('');
   async function load(k = kind) {
+    if (!canRead) { setData(null); setLoading(false); return; }
     setLoading(true); setE('');
     try { setData(await api(`/reports/${encodeURIComponent(k)}`)); }
     catch (x) { setE((x as Error).message); } finally { setLoading(false); }
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { void load(); }, [canRead]);
   async function download(format: string) {
+    if (!canExport) return;
     setExporting(format); setE(''); setNotice('');
-    const onPending = (approvalId: string) => setNotice("Approval requested: " + approvalId);
+    const onPending = () => setNotice('درخواست تأیید خروجی ثبت شد. پس از تأیید درخواست، دوباره خروجی را دریافت کنید.');
     const fmt = format as 'csv' | 'xlsx' | 'pdf' | 'json';
     try {
       const result = await downloadReport(kind, fmt, onPending);
       if (result.status === 'error') setE(result.message);
-      if (result.status === 'approval_pending') setNotice("Export needs approval - request created: " + result.approvalId);
+      if (result.status === 'approval_pending') setNotice('خروجی نیاز به تأیید دارد. پس از تأیید درخواست، دوباره خروجی را دریافت کنید.');
     } catch (x) { setE((x as Error).message); } finally { setExporting(''); }
   }
   const rows = previewRows(data);
   const storedApproval = storedExportApprovalId(kind);
+  if (!canRead) return <main className="feature-page"><PageHeader eyebrow="REPORTING" title="گزارش‌ها" description="گزارش‌های محدوده مجاز شما."/><section className="panel"><Empty>مجوز مشاهده گزارش‌ها برای شما فعال نیست.</Empty></section></main>;
   return (
     <main className="feature-page">
-      <PageHeader eyebrow="REPORTING" title="گزارش‌ها" description="گزارش‌های Relationship، Organization، Contact، Meeting، Commitment، Action، Opportunity، Network، Risk، Influence، Referral، Project و Executive." actions={<div className="toolbar">{['csv', 'pdf', 'xlsx'].map((f) => <button className="secondary-action" key={f} disabled={!!exporting} onClick={() => download(f)}>{exporting === f ? 'در حال خروجی…' : `Export ${f.toUpperCase()}`}</button>)}</div>} />
+      <PageHeader eyebrow="REPORTING" title="گزارش‌ها" description="گزارش‌های Relationship، Organization، Contact، Meeting، Commitment، Action، Opportunity، Network، Risk، Influence، Referral، Project و Executive." actions={canExport&&<div className="toolbar">{['csv', 'pdf', 'xlsx'].map((f) => <button className="secondary-action" key={f} disabled={!!exporting} onClick={() => download(f)}>{exporting === f ? 'در حال خروجی…' : `Export ${f.toUpperCase()}`}</button>)}</div>} />
       <section className="panel"><label>نوع گزارش<select value={kind} onChange={(e2) => { setKind(e2.target.value); load(e2.target.value); }}>{kinds.map((k) => <option key={k}>{k}</option>)}</select></label></section>
       {notice && <div className="notice" role="status">{notice} <a href="/approvals">تأیید در صفحه تأییدها</a></div>}
       {storedApproval && <div className="notice">درخواست خروجی قبلی برای این گزارش ثبت شده است.<button className="secondary-action" onClick={async () => { await clearStoredExportApproval(kind); setNotice('درخواست قبلی پاک شد.'); }}>پاک کردن</button></div>}

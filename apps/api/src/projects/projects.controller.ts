@@ -12,7 +12,8 @@ class RiskDto { @IsString() @MinLength(2) title!:string; @IsString() @IsOptional
 class MilestoneDto { @IsString() @MinLength(2) title!:string; @IsString() @IsOptional() description?:string; @IsEnum(MilestoneStatus) @IsOptional() status?:MilestoneStatus; @IsDateString() @IsOptional() dueAt?:string; @IsDateString() @IsOptional() completedAt?:string; @IsString() @IsOptional() ownerId?:string; }
 @Controller('projects') @UseGuards(AuthGuard, AuthorizationGuard) export class ProjectsController {
  constructor(private readonly s:ProjectsService){}
- @Get() @RequirePermission('project.read') list(@Req() req:any,@Query('page') page?:string,@Query('pageSize') pageSize?:string){return this.s.list(req.user.sub,page,pageSize)}
+ @Get() @RequirePermission('project.read') list(@Req() req:any,@Query('page') page?:string,@Query('pageSize') pageSize?:string,@Query('organizationId') organizationId?:string,@Query('search') search?:string){return this.s.list(req.user.sub,page,pageSize,organizationId,search)}
+ @Get('requirements/picker') @RequirePermission('project.read') requirementPicker(@Req() req:any,@Query('projectId') projectId?:string,@Query('organizationId') organizationId?:string,@Query('search') search?:string){return this.s.requirementPicker(req.user.sub,projectId,organizationId,search)}
  @Get(':id') @RequirePermission('project.read') get(@Param('id') id:string,@Req() req:any){return this.s.get(req.user.sub,id)}
  @Post() @RequirePermission('project.write') create(@Body() d:ProjectDto,@Req() req:any){return this.s.create(req.user.sub,d)}
  @Patch(':id') @RequirePermission('project.write') update(@Param('id') id:string,@Body() d:Partial<ProjectDto>,@Req() req:any){return this.s.update(req.user.sub,id,d)}

@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { AuthGuard } from '../common/guards/auth.guard';
 import { AuthorizationGuard } from '../common/guards/authorization.guard';
@@ -6,8 +6,16 @@ import { RequirePermission } from '../common/decorators/require-permission.decor
 
 @Controller('users')
 @UseGuards(AuthGuard, AuthorizationGuard)
-@RequirePermission('admin.users')
 export class UsersController {
   constructor(private readonly service: UsersService) {}
-  @Get('status') status(){ return this.service.status(); }
+
+  @Get('status')
+  @RequirePermission('admin.users')
+  status() { return this.service.status(); }
+
+  @Get('picker')
+  @RequirePermission('entity.read')
+  picker(@Req() req: any, @Query('organizationId') organizationId?: string, @Query('search') search?: string) {
+    return this.service.picker(req.user.sub, organizationId, search);
+  }
 }

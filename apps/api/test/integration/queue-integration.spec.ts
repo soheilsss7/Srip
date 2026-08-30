@@ -17,48 +17,72 @@ const describeIntegration = enabled ? describe : describe.skip;
 
 describeIntegration('PHASE AG queue integration: Create Job → Redis → Worker → Process → Success', () => {
   let connection: IORedis;
+  let probe: IORedis;
   let queue: Queue;
   let worker: Worker;
   let events: QueueEvents;
   const queueName = `srip-ag-queue-${process.pid}-${Date.now()}`;
 
   beforeAll(async () => {
-    connection = new IORedis(process.env.REDIS_URL ?? 'redis://127.0.0.1:6379', {
-      maxRetriesPerRequest: null,
-      lazyConnect: false,
-    });
-    await connection.ping();
+    try {
+      const redisUrl = process.env.REDIS_URL ?? 'redis://127.0.0.1:6379';
+      // Probe with finite command retries first. BullMQ workers require a
+      // separate connection with maxRetriesPerRequest=null, which otherwise
+      // makes a missing Redis instance retry a health check forever.
+      probe = new IORedis(redisUrl, {
+        connectTimeout: 2000,
+        maxRetriesPerRequest: 1,
+        retryStrategy: () => null,
+        lazyConnect: false,
+      });
+      probe.on('error', () => undefined);
+      await probe.ping();
+      probe.disconnect();
 
-    queue = new Queue(queueName, {
-      connection,
-      defaultJobOptions: {
-        attempts: 1,
-        removeOnComplete: { age: 300, count: 100 },
-        removeOnFail: { age: 300, count: 100 },
-      },
-    });
-    events = new QueueEvents(queueName, { connection });
-    await events.waitUntilReady();
+      connection = new IORedis(redisUrl, {
+        connectTimeout: 2000,
+        maxRetriesPerRequest: null,
+        retryStrategy: (attempts) => Math.min(attempts * 100, 1000),
+        lazyConnect: false,
+      });
+      connection.on('error', () => undefined);
 
-    worker = new Worker(
-      queueName,
-      async (job: Job<{ value: string }>) => {
-        if (job.name !== 'phase-ag.queue.smoke') throw new Error(`Unexpected job: ${job.name}`);
-        if (job.data.value !== 'phase-ag') throw new Error('Unexpected job payload');
-        return { processed: true, value: job.data.value };
-      },
-      { connection, concurrency: 1 },
-    );
-    await worker.waitUntilReady();
-  });
+      queue = new Queue(queueName, {
+        connection,
+        defaultJobOptions: {
+          attempts: 1,
+          removeOnComplete: { age: 300, count: 100 },
+          removeOnFail: { age: 300, count: 100 },
+        },
+      });
+      events = new QueueEvents(queueName, { connection });
+      await events.waitUntilReady();
+
+      worker = new Worker(
+        queueName,
+        async (job: Job<{ value: string }>) => {
+          if (job.name !== 'phase-ag.queue.smoke') throw new Error(`Unexpected job: ${job.name}`);
+          if (job.data.value !== 'phase-ag') throw new Error('Unexpected job payload');
+          return { processed: true, value: job.data.value };
+        },
+        { connection, concurrency: 1 },
+      );
+      await worker.waitUntilReady();
+    } catch (error) {
+      probe?.disconnect();
+      connection?.disconnect();
+      throw error;
+    }
+  }, 15_000);
 
   afterAll(async () => {
-    await worker?.close();
-    await events?.close();
-    await queue?.obliterate({ force: true });
-    await queue?.close();
-    await connection?.quit();
-  });
+    await worker?.close().catch(() => undefined);
+    await events?.close().catch(() => undefined);
+    await queue?.obliterate({ force: true }).catch(() => undefined);
+    await queue?.close().catch(() => undefined);
+    probe?.disconnect();
+    connection?.disconnect();
+  }, 15_000);
 
   it('creates a job, persists it in Redis, processes it with a real Worker, and reaches completed state', async () => {
     const job = await queue.add('phase-ag.queue.smoke', { value: 'phase-ag' });

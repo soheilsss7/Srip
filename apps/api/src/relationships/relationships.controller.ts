@@ -14,7 +14,7 @@ class UpdateRelationshipLifecycleDto { @IsEnum(RelationshipLifecycleStage) lifec
 @UseGuards(AuthGuard, AuthorizationGuard)
 export class RelationshipsController {
   constructor(private readonly s: RelationshipsService, private readonly lifecycle: DataLifecycleService) {}
-  @Get() @RequirePermission('relationship.read') list(@Req() req: any, @Query('organizationId') organizationId?: string, @Query('status') status?: RelationshipStatus, @Query('lifecycleStage') lifecycleStage?: RelationshipLifecycleStage, @Query('page') page?: string, @Query('pageSize') pageSize?: string) { return this.s.list(req.user.sub, organizationId, status, lifecycleStage, Number(page || 1), Number(pageSize || 50)); }
+  @Get() @RequirePermission('relationship.read') list(@Req() req: any, @Query('organizationId') organizationId?: string, @Query('status') status?: RelationshipStatus, @Query('lifecycleStage') lifecycleStage?: RelationshipLifecycleStage, @Query('page') page?: string, @Query('pageSize') pageSize?: string, @Query('q') q?: string) { return this.s.list(req.user.sub, organizationId, status, lifecycleStage, Number(page || 1), Number(pageSize || 50), q); }
   @Get(':id/timeline') @RequirePermission('relationship.read') timeline(@Param('id') id: string, @Req() req: any) { return this.s.timeline(req.user.sub, id); }
   @Get(':id') @RequirePermission('relationship.read') get(@Param('id') id: string, @Req() req: any) { return this.s.get(req.user.sub, id); }
   @Post() @RequirePermission('relationship.write') create(@Body() d: CreateRelationshipDto, @Req() req: any) { return this.s.create(req.user.sub, d); }

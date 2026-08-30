@@ -8,7 +8,8 @@ import { styles, colors } from '../../lib/ui';
 const STATUS = ['IDENTIFIED', 'QUALIFYING', 'ACTIVE', 'WON', 'LOST'];
 
 export default function OpportunityDetail() {
-  const { token } = useSession();
+  const { token, can } = useSession();
+  const canWrite = can('opportunity.write');
   const { id } = useLocalSearchParams<{ id: string }>();
   const [o, setO] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +34,7 @@ export default function OpportunityDetail() {
 
   async function act(label: string, fn: () => Promise<unknown>) {
     if (!token) return;
+    if (!canWrite) { setError('You have read-only access to this opportunity.'); return; }
     setBusy(label); setError(null);
     try { await fn(); await load(); } catch (e) { setError(e instanceof Error ? e.message : 'Request failed'); } finally { setBusy(''); }
   }

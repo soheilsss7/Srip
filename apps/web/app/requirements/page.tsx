@@ -2,12 +2,15 @@
 import {useState} from 'react';
 import {api} from '../_lib/api';
 import {Badge,DataTable,Empty,ErrorCard,Loading,PageHeader} from '../_components/page-ui';
+import {EntityPicker} from '../_components/entity-picker';
+import {useWorkspace} from '../_components/workspace';
 
 type Conn = { targetOrganization?: { name?: string; industry?: string | null; type?: string; id?: string }; connectionType?: string; scope?: string; targetFit?: number; pathStrength?: number; successProbability?: number; path?: { hopCount?: number; organizationIds?: string[] } | null; connectorPerson?: { displayName?: string; firstName?: string; lastName?: string } | null; recommendation?: string };
 type Result = { requirement?: { title?: string; description?: string | null; category?: string | null; id?: string }; summary?: { direct?: number; indirect?: number; internal?: number; external?: number; gaps?: number }; bestConnection?: Conn | null; directConnections?: Conn[]; indirectConnections?: Conn[]; relationshipGaps?: Conn[]; recommendations?: Array<{ rank?: number; title?: string; rationale?: string; successProbability?: number; targetOrganizationId?: string }> };
 
 export default function Requirements(){
-  const [id,setId]=useState(''),[limit,setLimit]=useState('20'),[data,setData]=useState<Result|null>(null),[loading,setLoading]=useState(false),[e,setE]=useState('');
+  const {scopeId}=useWorkspace();
+  const [id,setId]=useState(''),[requirementLabel,setRequirementLabel]=useState(''),[limit,setLimit]=useState('20'),[data,setData]=useState<Result|null>(null),[loading,setLoading]=useState(false),[e,setE]=useState('');
   async function run(){setE('');setLoading(true);try{setData(await api<Result>(`/requirements/${encodeURIComponent(id)}/matches?limit=${encodeURIComponent(limit)}`))}catch(x){setE((x as Error).message);setData(null)}finally{setLoading(false)}}
   const card=(c:Conn,i:number)=>(
     <article className="panel compact" key={i}>
@@ -27,7 +30,7 @@ export default function Requirements(){
   return <main className="feature-page">
     <PageHeader eyebrow="PROJECT REQUIREMENTS" title="Requirement Matching" description="Requirement-to-Relationship: برای یک Requirement پروژه، پوشش ارتباطی قابل مشاهده و Permission-aware را محاسبه کنید." actions={<Badge tone="info">{data?`${s?.direct??0} direct / ${s?.indirect??0} indirect`:'انتظار query'}</Badge>}/>
     <section className="panel"><form className="form-grid" onSubmit={(e)=>{e.preventDefault();run();}}>
-      <label className="inline-field">Requirement ID<input value={id} onChange={e=>setId(e.target.value)} placeholder="شناسه Requirement" required disabled={loading}/></label>
+      <EntityPicker label="نیازمندی پروژه" endpoint="/projects/requirements/picker" value={id} selectedLabel={requirementLabel} onChange={value=>{setId(value);setData(null)}} onLabelChange={(_,label)=>setRequirementLabel(label)} scopeId={scopeId} required disabled={loading}/>
       <label className="inline-field">Limit<input type="number" min="1" max="100" value={limit} onChange={e=>setLimit(e.target.value)} disabled={loading}/></label>
       <button className="primary-action" disabled={!id||loading}>{loading?'در حال محاسبه…':'محاسبه Match'}</button>
     </form></section>

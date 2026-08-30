@@ -8,7 +8,8 @@ import { styles, colors } from '../../lib/ui';
 const arr = (x: any) => Array.isArray(x) ? x : (x?.items ?? x?.data ?? x?.rows ?? []);
 
 export default function OrganizationDetail() {
-  const { token } = useSession();
+  const { token, can } = useSession();
+  const canWrite = can('org.write');
   const { id } = useLocalSearchParams<{ id: string }>();
   const [o, setO] = useState<any>(null);
   const [units, setUnits] = useState<any[]>([]);
@@ -38,6 +39,7 @@ export default function OrganizationDetail() {
 
   async function act(label: string, fn: () => Promise<unknown>) {
     if (!token) return;
+    if (!canWrite) { setError('You have read-only access to this organization.'); return; }
     setBusy(label); setError(null);
     try { await fn(); await load(); } catch (e) { setError(e instanceof Error ? e.message : 'Request failed'); } finally { setBusy(''); }
   }

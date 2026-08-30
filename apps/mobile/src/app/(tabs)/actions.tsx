@@ -8,7 +8,8 @@ import { styles, colors } from '../../lib/ui';
 type Item = { id: string; title?: string; status?: string; priority?: string; dueAt?: string; owner?: { name?: string } };
 
 export default function ActionsTab() {
-  const { token } = useSession();
+  const { token, can } = useSession();
+  const canCreate = can('action.write');
   const router = useRouter();
   const [rows, setRows] = useState<Item[]>([]);
   const [total, setTotal] = useState(0);
@@ -32,7 +33,7 @@ export default function ActionsTab() {
       <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
         <Text style={styles.title}>Actions</Text>
         {!!total && <Text style={styles.subtitle}>{total} action{total === 1 ? '' : 's'}</Text>}
-        <Pressable style={styles.button} onPress={() => router.push('/create-action')}><Text style={styles.buttonText}>New action</Text></Pressable>
+        {canCreate && <Pressable style={styles.button} onPress={() => router.push('/create-action')}><Text style={styles.buttonText}>New action</Text></Pressable>}
         {error && <Text style={styles.error}>{error}</Text>}
         {!rows.length && !error && <ActivityIndicator />}
         {!rows.length && error && <Text style={{ color: colors.muted }}>No actions.</Text>}

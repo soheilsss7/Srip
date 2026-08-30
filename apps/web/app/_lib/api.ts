@@ -1,4 +1,7 @@
-export const API=process.env.NEXT_PUBLIC_API_URL??'http://localhost:4000/api/v1';
+// Keep browser requests same-origin by default. Next.js proxies /api/v1 to the
+// private API service; an absolute URL is still supported for production setups
+// that intentionally expose the API on a separate origin.
+export const API=process.env.NEXT_PUBLIC_API_URL??'/api/v1';
 
 export type ApiErrorShape={code?:string;message?:string;requestId?:string;details?:unknown};
 export type ApiOptions=RequestInit&{idempotencyKey?:string;timeoutMs?:number};
@@ -54,6 +57,19 @@ async function readBody(response:Response){
   if(len>MAX_ERROR_BYTES)return {error:{code:'RESPONSE_TOO_LARGE',message:'پاسخ خطا بیش از حد مجاز است.'}};
   return response.json().catch(()=>null);
 }
+function withRequestIdentity(init: ApiOptions = {}): ApiOptions {
+  // Keep the same identity across the automatic 401 refresh retry. Generating
+  // these headers inside raw() used to create a second idempotency key, so a
+  // request that succeeded just before token refresh could be applied twice.
+  const headers = new Headers(init.headers);
+  if (!headers.has('X-Request-ID')) headers.set('X-Request-ID', requestId());
+  const method = (init.method ?? 'GET').toUpperCase();
+  if (/^(POST|PUT|PATCH|DELETE)$/.test(method) && !headers.has('Idempotency-Key')) {
+    headers.set('Idempotency-Key', init.idempotencyKey ?? requestId());
+  }
+  return { ...init, headers };
+}
+
 async function raw(path:string,init:ApiOptions={},token?:string){
   const headers=new Headers(init.headers);
   const isForm=typeof FormData!=='undefined'&&init.body instanceof FormData;
@@ -71,6 +87,12 @@ async function raw(path:string,init:ApiOptions={},token?:string){
     else init.signal.addEventListener('abort',()=>controller.abort(),{once:true});
   }
   try{return await fetch(`${API}${path}`,{...init,headers,signal:controller.signal,cache:'no-store'});}
+  catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new ApiError('زمان پاسخ‌گویی سرویس تمام شد. دوباره تلاش کنید.', 408, { code: 'REQUEST_TIMEOUT' });
+    }
+    throw new ApiError('ارتباط با سرویس برقرار نشد. اتصال شبکه را بررسی و دوباره تلاش کنید.', 0, { code: 'NETWORK_ERROR' });
+  }
   finally{clearTimeout(timeout);}
 }
 async function refreshAccessToken():Promise<string|null>{
@@ -88,9 +110,10 @@ async function refreshAccessToken():Promise<string|null>{
   return refreshPromise;
 }
 export async function api<T=unknown>(path:string,init:ApiOptions={}):Promise<T>{
-  let response=await raw(path,init,getAccessToken()??undefined);
+  const stableInit = withRequestIdentity(init);
+  let response=await raw(path,stableInit,getAccessToken()??undefined);
   if(response.status===401&&!path.startsWith('/auth/')){
-    const next=await refreshAccessToken();if(next)response=await raw(path,init,next);
+    const next=await refreshAccessToken();if(next)response=await raw(path,stableInit,next);
   }
   const body:any=await readBody(response);
   if(response.status===401&&path!=='/auth/login'){
@@ -102,8 +125,9 @@ export async function api<T=unknown>(path:string,init:ApiOptions={}):Promise<T>{
   return body as T;
 }
 export async function apiBlob(path:string,init:ApiOptions={}):Promise<Blob>{
-  let response=await raw(path,init,getAccessToken()??undefined);
-  if(response.status===401){const next=await refreshAccessToken();if(next)response=await raw(path,init,next);}
+  const stableInit = withRequestIdentity(init);
+  let response=await raw(path,stableInit,getAccessToken()??undefined);
+  if(response.status===401){const next=await refreshAccessToken();if(next)response=await raw(path,stableInit,next);}
   if(!response.ok){
     const body=await readBody(response);
     if(response.status===401){clearSession();if(typeof window!=='undefined')location.assign('/login');}
@@ -124,4 +148,9 @@ export const apiPatch=<T=unknown>(path:string,body:unknown,opts:ApiOptions={})=>
 export const apiDelete=<T=unknown>(path:string,opts:ApiOptions={})=>api<T>(path,{...opts,method:'DELETE'});
 export function unwrapList<T=unknown>(value:any):T[]{ if(Array.isArray(value))return value as T[]; if(value&&value.items!==undefined&&Array.isArray(value.items))return value.items as T[]; if(value&&value.rows!==undefined&&Array.isArray(value.rows))return value.rows as T[]; if(value&&value.data!==undefined&&Array.isArray(value.data))return value.data as T[]; return []; }
 export function docsOrigin(){return API.replace(/\/api\/v1\/?$/,'');}
-export async function apiDocsJson(){const r=await fetch(`${docsOrigin()}/docs-json`,{cache:'no-store'});if(!r.ok)throw new ApiError(`GET /docs-json → ${r.status}`,r.status);return r.json();}
+export async function apiDocsJson(){
+  const docsUrl=API.startsWith('/')?'/docs-json':`${docsOrigin()}/docs-json`;
+  const r=await fetch(docsUrl,{cache:'no-store'});
+  if(!r.ok)throw new ApiError(`GET /docs-json → ${r.status}`,r.status);
+  return r.json();
+}

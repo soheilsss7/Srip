@@ -3,13 +3,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { api } from '../_lib/api';
 import { useWorkspace } from '../_components/workspace';
+import { EntityPicker } from '../_components/entity-picker';
 import { Card, Badge } from '@srip/design-system';
 import {
   Share2, Building2, Users, Search, Plus, Activity, ShieldAlert, Target, User,
   ChevronLeft, ArrowLeftRight, Clock, HeartPulse,
 } from 'lucide-react';
 
-type Org = { id: string; name: string; type: string };
 type Owner = { id: string; name: string; email?: string };
 type Rel = {
   id: string;
@@ -49,11 +49,12 @@ function Gauge({ value, tone }: { value: number; tone: string }) {
 }
 
 export default function RelationshipsPage() {
-  const { scopeId, can } = useWorkspace();
+  const { scopeId, can, me } = useWorkspace();
+  const scopeLabel = me?.memberships.find(m => m.organizationId === scopeId)?.organizationName ?? 'محدوده انتخاب‌شده';
+  const canRead = can('relationship.read');
   const writable = can('relationship.write');
 
   const [items, setItems] = useState<Rel[]>([]);
-  const [orgs, setOrgs] = useState<Org[]>([]);
   const [relTypes, setRelTypes] = useState<RelType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -69,6 +70,7 @@ export default function RelationshipsPage() {
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
+    if (!canRead) { setItems([]); setLoading(false); return; }
     try {
       setError('');
       if (!items.length) setLoading(true);
@@ -82,23 +84,18 @@ export default function RelationshipsPage() {
     } finally {
       setLoading(false);
     }
-  }, [scopeId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [scopeId, canRead]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
     if (!writable) return;
-    Promise.all([
-      api<{ data: Org[] }>('/organizations'),
-      api<{ data: RelType[] }>('/core-domain/relationship-types'),
-    ]).then(([o, t]) => {
-      setOrgs(Array.isArray(o) ? o as Org[] : o.data ?? []);
-      setRelTypes(Array.isArray(t) ? t as RelType[] : t.data ?? []);
-    }).catch(() => {});
+    api<{ data: RelType[] }>('/core-domain/relationship-types').then((t) => setRelTypes(Array.isArray(t) ? t as RelType[] : t.data ?? [])).catch(() => {});
   }, [writable]);
 
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!writable) return;
+    if (!source || !target || source === target) { setError('مبدأ و مقصد باید انتخاب شوند و نمی‌توانند یکسان باشند.'); return; }
     setSaving(true); setError('');
     try {
       await api('/relationships', { method: 'POST', body: JSON.stringify({ sourceOrganizationId: source, targetOrganizationId: target, relationshipType: kind }) });
@@ -135,6 +132,8 @@ export default function RelationshipsPage() {
     });
   }, [items, q, typeFilter, statusFilter, sortBy]);
 
+  if (!canRead) return <main className="feature-page"><section className="panel"><h1>روابط سازمانی</h1><p className="empty-state">مجوز مشاهده روابط برای شما فعال نیست.</p></section></main>;
+
   return (
     <div className="relationships-page">
       <section className="page-heading">
@@ -144,7 +143,7 @@ export default function RelationshipsPage() {
           <p className="subtitle">روابط بین‌سازمانی با سلامت، ارزش راهبردی و ریسک — از Backend واقعی با مالکیت، حساسیت و محدودهٔ سازمانی.</p>
         </div>
         <div className="heading-tools">
-          <span className="scope-chip"><Building2 size={13}/> {scopeId === 'all' ? 'همه محدوده' : scopeId.slice(0, 10)}</span>
+          <span className="scope-chip"><Building2 size={13}/> {scopeId === 'all' ? 'همه محدوده' : scopeLabel}</span>
           {writable && <Link className="primary-action" href="#create-relationship"><Plus size={14}/> ایجاد رابطه</Link>}
         </div>
       </section>
@@ -272,18 +271,8 @@ export default function RelationshipsPage() {
           <Card className="rel-create" id="create-relationship">
             <div className="panel-title"><div><h2>ایجاد رابطه</h2><p>مبدأ، مقصد و نوع رابطه</p></div></div>
             <form onSubmit={create} className="form-grid">
-              <label className="full">مبدأ
-                <select value={source} onChange={(e) => setSource(e.target.value)} required>
-                  <option value="">انتخاب کنید</option>
-                  {orgs.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-                </select>
-              </label>
-              <label className="full">مقصد
-                <select value={target} onChange={(e) => setTarget(e.target.value)} required>
-                  <option value="">انتخاب کنید</option>
-                  {orgs.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-                </select>
-              </label>
+              <EntityPicker label="مبدأ" endpoint="/organizations" value={source} onChange={setSource} scopeId={scopeId} required />
+              <EntityPicker label="مقصد" endpoint="/organizations" value={target} onChange={setTarget} scopeId={scopeId} required />
               <label className="full">نوع رابطه
                 <select value={kind} onChange={(e) => setKind(e.target.value)} required>
                   <option value="">انتخاب کنید</option>
