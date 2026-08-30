@@ -30,7 +30,15 @@ const entities: Entity[] = [
 ];
 
 function initialValues(entity: Entity, context?: Context) {
-  return Object.fromEntries(entity.fields.map(field => [field.name, context?.[field.name as keyof Context] ?? (field.name === 'type' && entity.key === 'interaction' ? 'NOTE' : '')]));
+  const nextHour = new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16);
+  const now = new Date().toISOString().slice(0, 16);
+  return Object.fromEntries(entity.fields.map(field => [
+    field.name,
+    context?.[field.name as keyof Context]
+      ?? (field.name === 'type' && entity.key === 'interaction' ? 'NOTE'
+        : field.name === 'occurredAt' && entity.key === 'interaction' ? now
+          : field.name === 'startAt' && entity.key === 'meeting' ? nextHour : ''),
+  ]));
 }
 
 export function QuickCreate({ open, onClose, onCreated, context }: { open: boolean; onClose: () => void; onCreated?: () => void; context?: Context }) {
