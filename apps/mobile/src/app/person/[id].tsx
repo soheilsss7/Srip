@@ -4,11 +4,13 @@ import { useLocalSearchParams } from 'expo-router';
 import { apiGet, apiPatch, apiPost, api } from '../../services/api-client';
 import { useSession } from '../../state/session';
 import { styles, colors } from '../../lib/ui';
+import { EntityPicker } from '../../features/entity-picker';
 
 const arr = (x: any) => Array.isArray(x) ? x : (x?.items ?? x?.data ?? x?.rows ?? []);
 
 export default function PersonDetail() {
-  const { token } = useSession();
+  const { token, can } = useSession();
+  const canWrite = can('person.write');
   const { id } = useLocalSearchParams<{ id: string }>();
   const [p, setP] = useState<any>(null);
   const [contacts, setContacts] = useState<any[]>([]);
@@ -19,6 +21,7 @@ export default function PersonDetail() {
   const [refreshing, setRefreshing] = useState(false);
   const [contactValue, setContactValue] = useState('');
   const [orgId, setOrgId] = useState('');
+  const [orgLabel, setOrgLabel] = useState('');
   const [roleTitle, setRoleTitle] = useState('');
 
   const load = useCallback(async () => {
@@ -39,6 +42,7 @@ export default function PersonDetail() {
 
   async function act(label: string, fn: () => Promise<unknown>) {
     if (!token) return;
+    if (!canWrite) { setError('You have read-only access to this person.'); return; }
     setBusy(label); setError(null);
     try { await fn(); await load(); } catch (e) { setError(e instanceof Error ? e.message : 'Request failed'); } finally { setBusy(''); }
   }
@@ -48,9 +52,9 @@ export default function PersonDetail() {
     setContactValue('');
   }
   async function addOrg() {
-    if (!orgId.trim()) { setError('Organization ID required.'); return; }
+    if (!orgId.trim()) { setError('Choose an organization.'); return; }
     await act('org', () => apiPost(`/people/${id}/organizations`, { organizationId: orgId.trim(), roleTitle: roleTitle.trim() || undefined }, token));
-    setOrgId(''); setRoleTitle('');
+    setOrgId(''); setOrgLabel(''); setRoleTitle('');
   }
   async function removeOrg(o: any) {
     const oid = o?.organizationId;
@@ -86,7 +90,7 @@ export default function PersonDetail() {
                 <Pressable onPress={() => removeOrg(o)}><Text style={{ color: colors.danger, fontWeight: '700' }}>Remove assignment</Text></Pressable>
               </View>
             ))}
-            <TextInput style={styles.input} placeholder="Organization ID" value={orgId} onChangeText={setOrgId} />
+            <EntityPicker label="Organization" endpoint="/organizations" value={orgId} selectedLabel={orgLabel} onChange={(value, label) => { setOrgId(value); setOrgLabel(label ?? ''); }} disabled={!!busy} required />
             <TextInput style={styles.input} placeholder="Role title (optional)" value={roleTitle} onChangeText={setRoleTitle} />
             <Pressable style={styles.button} disabled={!!busy} onPress={addOrg}><Text style={styles.buttonText}>Add assignment</Text></Pressable>
           </View>

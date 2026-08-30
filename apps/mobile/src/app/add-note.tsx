@@ -5,13 +5,15 @@ import { apiPostOffline } from '../services/api-client';
 import { styles, colors } from '../lib/ui';
 
 export default function AddNote() {
-  const { token } = useSession();
+  const { token, can } = useSession();
+  const canCreate = can('entity.write');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [e, setE] = useState('');
   const [saving, setSaving] = useState(false);
 
   async function save() {
+    if (!canCreate) { setE('You do not have permission to create notes.'); return; }
     if (!body.trim()) { setE('Note body is required.'); return; }
     setSaving(true); setE('');
     try {
@@ -19,6 +21,8 @@ export default function AddNote() {
       setSubject(''); setBody(''); setE('Saved.');
     } catch (x) { setE((x as Error).message); } finally { setSaving(false); }
   }
+
+  if (!canCreate) return <SafeAreaView style={styles.screen}><Text style={styles.title}>Add Note</Text><Text style={styles.error}>You do not have permission to create notes in the current workspace.</Text></SafeAreaView>;
 
   return (
     <SafeAreaView style={styles.screen}>

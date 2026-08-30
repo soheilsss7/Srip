@@ -6,7 +6,8 @@ import { useSession } from '../state/session';
 import { styles, colors } from '../lib/ui';
 
 export default function Dashboard() {
-  const { token } = useSession();
+  const { token, can } = useSession();
+  const canRead = can('report.read');
   const [data, setData] = useState<any>(null);
   const [overdueCommitments, setOverdueCommitments] = useState<any[]>([]);
   const [overdueActions, setOverdueActions] = useState<any[]>([]);
@@ -14,19 +15,19 @@ export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
-    if (!token) return;
+    if (!token || !canRead) return;
     setError(null);
     try {
       const [summary, commits, actions] = await Promise.all([
         apiGet<any>('/reports/executive-summary', token),
-        apiGet<any>('/commitments/follow-up/overdue', token),
-        apiGet<any>('/actions/follow-up/overdue', token),
+        can('commitment.read') ? apiGet<any>('/commitments/follow-up/overdue', token) : Promise.resolve({ items: [] }),
+        can('action.read') ? apiGet<any>('/actions/follow-up/overdue', token) : Promise.resolve({ items: [] }),
       ]);
       setData(summary);
       setOverdueCommitments(Array.isArray(commits) ? commits : (commits?.items ?? []));
       setOverdueActions(Array.isArray(actions) ? actions : (actions?.items ?? []));
     } catch (e) { setError(e instanceof Error ? e.message : 'Request failed'); }
-  }, [token]);
+  }, [can, canRead, token]);
   useEffect(() => { load(); }, [load]);
   const refresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
 
@@ -45,6 +46,8 @@ export default function Dashboard() {
     ['Avg relationship risk', kpi.averageRelationshipRisk],
     ['Weighted opportunity value', kpi.weightedOpportunityValue],
   ];
+
+  if (!canRead) return <SafeAreaView style={styles.screen}><View style={styles.content}><Text style={styles.title}>Dashboard</Text><Text style={styles.error}>You do not have permission to view the dashboard.</Text></View></SafeAreaView>;
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -72,7 +75,7 @@ export default function Dashboard() {
               <Text style={styles.label}>Relationships at risk</Text>
               {data.risks.slice(0, 10).map((r: any) => (
                 <View key={r.id} style={{ paddingVertical: 4, borderTopWidth: 1, borderTopColor: colors.border }}>
-                  <Text style={styles.value}>{r.sourceOrganization?.name ?? r.sourceOrganizationId} → {r.targetOrganization?.name ?? r.targetOrganizationId}</Text>
+                  <Text style={styles.value}>{r.sourceOrganization?.name ?? r.sourceOrganization ?? 'Source organization'} → {r.targetOrganization?.name ?? r.targetOrganization ?? 'Target organization'}</Text>
                   <Text style={styles.subtitle}>health {r.healthScore} · risk {r.riskScore}</Text>
                 </View>
               ))}

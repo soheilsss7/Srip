@@ -8,7 +8,8 @@ import { styles, colors } from '../../lib/ui';
 type Item = { id: string; title?: string; startAt?: string; objective?: string; status?: string };
 
 export default function MeetingsTab() {
-  const { token } = useSession();
+  const { token, can } = useSession();
+  const canCreate = can('meeting.write');
   const [rows, setRows] = useState<Item[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -28,7 +29,7 @@ export default function MeetingsTab() {
     <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
         <Text style={styles.title}>Meetings</Text>
-        <Link href="/create-meeting" asChild><Pressable style={styles.button}><Text style={styles.buttonText}>New meeting</Text></Pressable></Link>
+        {canCreate && <Link href="/create-meeting" asChild><Pressable style={styles.button}><Text style={styles.buttonText}>New meeting</Text></Pressable></Link>}
         {error && <Text style={styles.error}>{error}</Text>}
         {!rows.length && !error && <ActivityIndicator />}
         {rows.map((r) => (

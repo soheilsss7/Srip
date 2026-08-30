@@ -8,7 +8,8 @@ import { styles, colors } from '../lib/ui';
 type Item = { id: string; displayName?: string; firstName?: string; lastName?: string; title?: string; organization?: { name?: string } };
 
 export default function People() {
-  const { token } = useSession();
+  const { token, can } = useSession();
+  const canCreate = can('person.write');
   const [rows, setRows] = useState<Item[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -28,9 +29,9 @@ export default function People() {
     <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
         <Text style={styles.title}>People</Text>
-        <Link href={{ pathname: '/create-person' }} asChild>
+        {canCreate && <Link href={{ pathname: '/create-person' }} asChild>
           <Pressable style={styles.button}><Text style={styles.buttonText}>+ New Person</Text></Pressable>
-        </Link>
+        </Link>}
         {error && <Text style={styles.error}>{error}</Text>}
         {!rows.length && !error && <ActivityIndicator />}
         {rows.map((r) => (

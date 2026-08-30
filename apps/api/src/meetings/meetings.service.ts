@@ -31,7 +31,7 @@ export class MeetingsService {
   }
 
   private async fetch(userId: string, id: string) {
-    const row = await this.prisma.meeting.findUnique({ where: { id }, include: { organization: true, relationship: { select: { id: true, sourceOrganizationId: true, targetOrganizationId: true, status: true, healthScore: true } }, participants: { include: { person: true } }, actions: true, commitments: true } });
+    const row = await this.prisma.meeting.findUnique({ where: { id }, include: { organization: true, relationship: { select: { id: true, relationshipType: true, sourceOrganizationId: true, targetOrganizationId: true, sourceOrganization: { select: { name: true } }, targetOrganization: { select: { name: true } }, status: true, healthScore: true } }, participants: { include: { person: true } }, actions: true, commitments: true } });
     if (!row || row.deletedAt) throw new NotFoundException('Meeting not found');
     await this.assertAccess(userId, row);
     return row;

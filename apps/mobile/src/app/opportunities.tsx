@@ -8,7 +8,8 @@ import { styles, colors } from '../lib/ui';
 type Item = { id: string; name?: string; status?: string; probability?: number; value?: number };
 
 export default function Opportunities() {
-  const { token } = useSession();
+  const { token, can } = useSession();
+  const canCreate = can('opportunity.write');
   const [rows, setRows] = useState<Item[]>([]);
   const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +31,7 @@ export default function Opportunities() {
     <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
         <Text style={styles.title}>Opportunities</Text>
-        <Link href="/create-opportunity"><Text style={{ color: colors.accent, fontWeight: '700' }}>New Opportunity →</Text></Link>
+        {canCreate && <Link href="/create-opportunity"><Text style={{ color: colors.accent, fontWeight: '700' }}>New Opportunity →</Text></Link>}
         {!!total && <Text style={styles.subtitle}>{total} opportunity{total === 1 ? '' : 'ies'}</Text>}
         {error && <Text style={styles.error}>{error}</Text>}
         {!rows.length && !error && <ActivityIndicator />}

@@ -96,8 +96,7 @@ function NodeDetailsModal({
         >
           <Text style={[styles.subtitle, { textTransform: 'uppercase' }]}>{node.type}</Text>
           <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text }}>{nodeDisplayName(node)}</Text>
-          <DetailRow label="ID" value={node.id} />
-          {node.organizationId ? <DetailRow label="Organization ID" value={node.organizationId} /> : null}
+          <DetailRow label="Entity type" value={String(node.type)} />
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
             <Pressable
               style={styles.button}

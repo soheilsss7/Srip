@@ -8,7 +8,8 @@ import { styles, colors } from '../../lib/ui';
 type Item = { id: string; status?: string; healthScore?: number; strategicScore?: number; relationshipType?: string };
 
 export default function RelationshipsTab() {
-  const { token } = useSession();
+  const { token, can } = useSession();
+  const canCreate = can('relationship.write');
   const [rows, setRows] = useState<Item[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -28,7 +29,7 @@ export default function RelationshipsTab() {
     <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
         <Text style={styles.title}>Relationships</Text>
-        <Link href="/create-relationship" asChild><Pressable style={styles.button}><Text style={styles.buttonText}>New relationship</Text></Pressable></Link>
+        {canCreate && <Link href="/create-relationship" asChild><Pressable style={styles.button}><Text style={styles.buttonText}>New relationship</Text></Pressable></Link>}
         {error && <Text style={styles.error}>{error}</Text>}
         {!rows.length && !error && <ActivityIndicator />}
         {rows.map((r) => (

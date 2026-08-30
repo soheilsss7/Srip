@@ -8,7 +8,8 @@ import { styles, colors } from '../lib/ui';
 type Item = { id: string; name?: string; status?: string; priority?: string; targetAt?: string };
 
 export default function Projects() {
-  const { token } = useSession();
+  const { token, can } = useSession();
+  const canCreate = can('project.write');
   const [rows, setRows] = useState<Item[]>([]);
   const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +31,7 @@ export default function Projects() {
     <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
         <Text style={styles.title}>Projects</Text>
-        <Link href="/create-project"><Text style={{ color: colors.accent, fontWeight: '700' }}>New Project →</Text></Link>
+        {canCreate && <Link href="/create-project"><Text style={{ color: colors.accent, fontWeight: '700' }}>New Project →</Text></Link>}
         {!!total && <Text style={styles.subtitle}>{total} project{total === 1 ? '' : 's'}</Text>}
         {error && <Text style={styles.error}>{error}</Text>}
         {!rows.length && !error && <ActivityIndicator />}

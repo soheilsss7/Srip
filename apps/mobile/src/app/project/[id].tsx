@@ -4,14 +4,17 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { apiGet, apiPatch, apiPost, api } from '../../services/api-client';
 import { useSession } from '../../state/session';
 import { styles, colors } from '../../lib/ui';
+import { EntityPicker } from '../../features/entity-picker';
 
 const STATUS = ['PLANNED', 'ACTIVE', 'ON_HOLD', 'COMPLETED', 'CANCELLED'];
 const PRIORITY = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
-const REQ_STATUS = ['IDENTIFIED', 'ANALYZED', 'APPROVED', 'IN_PROGRESS', 'COMPLETED', 'BLOCKED', 'CANCELLED'];
+const REQ_STATUS = ['OPEN', 'IN_PROGRESS', 'SATISFIED', 'BLOCKED', 'CANCELLED'];
+const MILESTONE_STATUS = ['PLANNED', 'IN_PROGRESS', 'COMPLETED', 'BLOCKED', 'CANCELLED'];
 const arr = (x: any) => Array.isArray(x) ? x : [];
 
 export default function ProjectDetail() {
-  const { token } = useSession();
+  const { token, can } = useSession();
+  const canWrite = can('project.write');
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [p, setP] = useState<any>(null);
@@ -28,6 +31,7 @@ export default function ProjectDetail() {
   const [msDue, setMsDue] = useState('');
   const [reqTitle, setReqTitle] = useState('');
   const [relId, setRelId] = useState('');
+  const [relLabel, setRelLabel] = useState('');
 
   const load = useCallback(async () => {
     if (!token || !id) return;
@@ -42,6 +46,7 @@ export default function ProjectDetail() {
 
   async function act(label: string, fn: () => Promise<unknown>) {
     if (!token) return;
+    if (!canWrite) { setError('You have read-only access to this project.'); return; }
     setBusy(label); setError(null);
     try { await fn(); await load(); } catch (e) { setError(e instanceof Error ? e.message : 'Request failed'); } finally { setBusy(''); }
   }
@@ -50,12 +55,17 @@ export default function ProjectDetail() {
   }
   async function addRisk() {
     if (!riskTitle.trim()) { setError('Risk title required.'); return; }
-    await act('risk', () => apiPost(`/projects/${id}/risks`, { title: riskTitle.trim(), probability: Number(riskProb) || 0, impact: Number(riskImpact) || 0 }, token));
+    const probability = riskProb.trim() ? Number(riskProb) : 0;
+    const impact = riskImpact.trim() ? Number(riskImpact) : 0;
+    if (!Number.isInteger(probability) || probability < 0 || probability > 100 || !Number.isInteger(impact) || impact < 0 || impact > 100) { setError('Probability and impact must be whole numbers from 0 to 100.'); return; }
+    await act('risk', () => apiPost(`/projects/${id}/risks`, { title: riskTitle.trim(), probability, impact }, token));
     setRiskTitle(''); setRiskProb(''); setRiskImpact('');
   }
   async function addMilestone() {
     if (!msTitle.trim()) { setError('Milestone title required.'); return; }
-    await act('milestone', () => apiPost(`/projects/${id}/milestones`, { title: msTitle.trim(), dueAt: msDue ? new Date(msDue).toISOString() : undefined }, token));
+    const dueDate = msDue.trim() ? new Date(msDue) : null;
+    if (dueDate && Number.isNaN(dueDate.getTime())) { setError('Milestone due date is invalid.'); return; }
+    await act('milestone', () => apiPost(`/projects/${id}/milestones`, { title: msTitle.trim(), dueAt: dueDate?.toISOString() }, token));
     setMsTitle(''); setMsDue('');
   }
   async function addRequirement() {
@@ -76,9 +86,10 @@ export default function ProjectDetail() {
     Alert.alert('حذف نیازمندی', `«${rq.title}» حذف شود؟`, [{ text: 'لغو', style: 'cancel' }, { text: 'حذف', style: 'destructive', onPress: () => act('qdel', () => api(`/projects/requirements/${rq.id}`, { method: 'DELETE' }, token)) }]);
   }
   async function linkRel() {
-    if (!relId.trim()) { setError('Relationship ID required.'); return; }
+    if (!relId.trim()) { setError('Choose a relationship.'); return; }
     await act('link', () => apiPost(`/projects/${id}/relationships`, { relationshipId: relId.trim() }, token));
     setRelId('');
+    setRelLabel('');
   }
   async function unlinkRel(rl: any) {
     Alert.alert('حذف پیوند', 'ارتباط از پروژه حذف شود؟', [{ text: 'لغو', style: 'cancel' }, { text: 'حذف', style: 'destructive', onPress: () => act('unlink', () => api(`/projects/${id}/relationships/${rl.id ?? rl.relationshipId}`, { method: 'DELETE' }, token)) }]);
@@ -130,14 +141,12 @@ export default function ProjectDetail() {
             <Text style={styles.label}>Linked relationships</Text>
             {arr(p.relationships).length === 0 ? <Text style={{ color: colors.muted }}>No linked relationships.</Text> : arr(p.relationships).map((r: any) => (
               <View key={r.id ?? r.relationshipId} style={{ paddingVertical: 4, borderTopWidth: 1, borderTopColor: colors.border }}>
-                <Text style={styles.value}>{r.relationshipType ?? r.relationship?.relationshipType ?? r.id}</Text>
+                <Text style={styles.value}>{r.relationshipType ?? r.relationship?.relationshipType ?? 'Relationship'}</Text>
                 <Pressable onPress={() => unlinkRel(r)}><Text style={{ color: colors.danger, fontWeight: '700' }}>Unlink</Text></Pressable>
               </View>
             ))}
-            <View style={styles.row}>
-              <TextInput style={[styles.input, { flex: 1 }]} placeholder="Relationship ID" value={relId} onChangeText={setRelId} />
-              <Pressable style={styles.button} disabled={!!busy} onPress={linkRel}><Text style={styles.buttonText}>Link</Text></Pressable>
-            </View>
+            <EntityPicker label="Add relationship" endpoint="/relationships" value={relId} selectedLabel={relLabel} onChange={(value, label) => { setRelId(value); setRelLabel(label ?? ''); }} disabled={!!busy} />
+            <Pressable style={styles.button} disabled={!!busy || !relId} onPress={linkRel}><Text style={styles.buttonText}>Link</Text></Pressable>
           </View>
 
           <View style={styles.card}>
@@ -167,7 +176,7 @@ export default function ProjectDetail() {
                 <Text style={styles.value}>{m.title}</Text>
                 <Text style={styles.subtitle}>{m.status}{m.dueAt ? ` · due ${new Date(m.dueAt).toLocaleDateString()}` : ''}</Text>
                 <View style={styles.row}>
-                  {['PENDING', 'IN_PROGRESS', 'COMPLETED'].map(s => chip(s, m.status === s, () => changeMsStatus(m, s)))}
+                  {MILESTONE_STATUS.map(s => chip(s, m.status === s, () => changeMsStatus(m, s)))}
                   <Pressable onPress={() => deleteMs(m)}><Text style={{ color: colors.danger, fontWeight: '700' }}>Delete</Text></Pressable>
                 </View>
               </View>

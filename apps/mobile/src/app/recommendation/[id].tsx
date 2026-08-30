@@ -5,9 +5,11 @@ import { useLocalSearchParams } from 'expo-router';
 import { apiGet, apiPost, apiPatch } from '../../services/api-client';
 import { useSession } from '../../state/session';
 import { styles, colors } from '../../lib/ui';
+import { EntityPicker } from '../../features/entity-picker';
 
 export default function RecommendationDetail() {
-  const { token } = useSession();
+  const { token, can } = useSession();
+  const canWrite = can('recommendation.write');
   const { id } = useLocalSearchParams<{ id: string }>();
   const [r, setR] = useState<any>(null);
   const [explanation, setExplanation] = useState<any>(null);
@@ -18,6 +20,7 @@ export default function RecommendationDetail() {
   const [rationale, setRationale] = useState('');
   const [confidence, setConfidence] = useState('');
   const [assigneeId, setAssigneeId] = useState('');
+  const [assigneeLabel, setAssigneeLabel] = useState('');
   const [snoozeDays, setSnoozeDays] = useState('7');
 
   const load = useCallback(async () => {
@@ -25,7 +28,7 @@ export default function RecommendationDetail() {
     setError(null);
     try {
       const d = await apiGet<any>(`/recommendations/${id}`, token);
-      setR(d); setTitle(d.title ?? ''); setRationale(d.rationale ?? ''); setConfidence(d.confidence != null ? String(d.confidence) : '');
+      setR(d); setTitle(d.title ?? ''); setRationale(d.rationale ?? ''); setConfidence(d.confidence != null ? String(d.confidence) : ''); setAssigneeId(d.assignedToId ?? ''); setAssigneeLabel(d.assignedTo?.name ?? d.assignedTo?.email ?? '');
     } catch (e) { setError(e instanceof Error ? e.message : 'Request failed'); }
   }, [token, id]);
   useEffect(() => { load(); }, [load]);
@@ -33,6 +36,7 @@ export default function RecommendationDetail() {
 
   async function act(label: string, fn: () => Promise<unknown>) {
     if (!token) return;
+    if (!canWrite) { setError('You have read-only access to this recommendation.'); return; }
     setBusy(label); setError(null);
     try { await fn(); await load(); } catch (e) { setError(e instanceof Error ? e.message : 'Request failed'); } finally { setBusy(''); }
   }
@@ -68,7 +72,7 @@ export default function RecommendationDetail() {
                 ))}
               </View>
             )}
-            {[['Relationship', r.relationship?.relationshipType], ['Source org', r.relationship?.sourceOrganization?.name], ['Target org', r.relationship?.targetOrganization?.name], ['Assigned to', r.assignedToId], ['Decided by', r.decisionById], ['Decision at', r.decisionAt ? new Date(r.decisionAt).toLocaleDateString() : ''], ['Snoozed until', r.snoozedUntil ? new Date(r.snoozedUntil).toLocaleDateString() : '']].filter(([, v]) => v != null && v !== '').map(([k, v]) => (
+            {[['Relationship', r.relationship?.relationshipType], ['Source org', r.relationship?.sourceOrganization?.name], ['Target org', r.relationship?.targetOrganization?.name], ['Assigned to', r.assignedTo?.name ?? r.assignedTo?.email], ['Decided by', r.decisionBy?.name ?? r.decisionBy?.email], ['Decision at', r.decisionAt ? new Date(r.decisionAt).toLocaleDateString() : ''], ['Snoozed until', r.snoozedUntil ? new Date(r.snoozedUntil).toLocaleDateString() : '']].filter(([, v]) => v != null && v !== '').map(([k, v]) => (
               <View key={String(k)} style={{ paddingVertical: 3 }}>
                 <Text style={styles.label}>{String(k)}</Text>
                 <Text style={styles.value}>{String(v)}</Text>
@@ -100,8 +104,8 @@ export default function RecommendationDetail() {
               <TextInput style={[styles.input, { flex: 1 }]} value={snoozeDays} onChangeText={setSnoozeDays} placeholder="Days" keyboardType="numeric" />
               <Pressable style={styles.button} disabled={!!busy} onPress={() => act('snooze', () => apiPost(`/recommendations/${id}/snooze`, { until: new Date(Date.now() + (Math.max(1, Number(snoozeDays) || 7)) * 86400000).toISOString() }, token))}><Text style={styles.buttonText}>Snooze</Text></Pressable>
             </View>
-            <TextInput style={styles.input} value={assigneeId} onChangeText={setAssigneeId} placeholder="Assignee user ID" />
-            <Pressable style={styles.button} disabled={!!busy} onPress={() => act('assign', () => apiPost(`/recommendations/${id}/assign`, { assigneeId: assigneeId.trim() }, token))}><Text style={styles.buttonText}>Assign</Text></Pressable>
+            <EntityPicker label="Assignee" endpoint="/users/picker" value={assigneeId} selectedLabel={assigneeLabel} onChange={(value, label) => { setAssigneeId(value); setAssigneeLabel(label ?? ''); }} disabled={!!busy} />
+            <Pressable style={styles.button} disabled={!!busy || !assigneeId} onPress={() => act('assign', () => apiPost(`/recommendations/${id}/assign`, { assigneeId: assigneeId.trim() }, token))}><Text style={styles.buttonText}>Assign</Text></Pressable>
           </View>
 
           <View style={styles.card}>

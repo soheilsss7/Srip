@@ -8,7 +8,8 @@ import { styles, colors } from '../lib/ui';
 type Item = { id: string; name?: string; type?: string; status?: string; country?: string };
 
 export default function Organizations() {
-  const { token } = useSession();
+  const { token, can } = useSession();
+  const canCreate = can('org.write');
   const [rows, setRows] = useState<Item[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -28,9 +29,9 @@ export default function Organizations() {
     <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
         <Text style={styles.title}>Organizations</Text>
-        <Link href={{ pathname: '/create-organization' }} asChild>
+        {canCreate && <Link href={{ pathname: '/create-organization' }} asChild>
           <Pressable style={styles.button}><Text style={styles.buttonText}>+ New Organization</Text></Pressable>
-        </Link>
+        </Link>}
         {error && <Text style={styles.error}>{error}</Text>}
         {!rows.length && !error && <ActivityIndicator />}
         {rows.map((r) => (

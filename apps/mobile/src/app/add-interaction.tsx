@@ -3,21 +3,25 @@ import { SafeAreaView, Text, TextInput, Pressable, ScrollView, View } from 'reac
 import { useSession } from '../state/session';
 import { apiPostOffline } from '../services/api-client';
 import { styles, colors } from '../lib/ui';
+import { EntityPicker } from '../features/entity-picker';
 
 const TYPES = ['CALL', 'EMAIL', 'MEETING', 'NOTE', 'MESSAGE', 'OTHER'];
 const IMPORTANCE = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
 
 export default function AddInteraction() {
-  const { token } = useSession();
+  const { token, can } = useSession();
+  const canCreate = can('interaction.write');
   const [type, setType] = useState('CALL');
   const [subject, setSubject] = useState('');
   const [summary, setSummary] = useState('');
   const [importance, setImportance] = useState('MEDIUM');
   const [relationshipId, setRelationshipId] = useState('');
+  const [relationshipLabel, setRelationshipLabel] = useState('');
   const [e, setE] = useState('');
   const [saving, setSaving] = useState(false);
 
   async function save() {
+    if (!canCreate) { setE('You do not have permission to create interactions.'); return; }
     if (!subject.trim()) { setE('Subject is required.'); return; }
     setSaving(true); setE('');
     try {
@@ -25,9 +29,11 @@ export default function AddInteraction() {
         type, subject: subject.trim(), summary: summary.trim() || undefined,
         importance, relationshipId: relationshipId.trim() || undefined,
       }, token);
-      setSubject(''); setSummary(''); setRelationshipId(''); setE('Saved.');
+      setSubject(''); setSummary(''); setRelationshipId(''); setRelationshipLabel(''); setE('Saved.');
     } catch (x) { setE((x as Error).message); } finally { setSaving(false); }
   }
+
+  if (!canCreate) return <SafeAreaView style={styles.screen}><Text style={styles.title}>Add Interaction</Text><Text style={styles.error}>You do not have permission to create interactions in the current workspace.</Text></SafeAreaView>;
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -43,7 +49,7 @@ export default function AddInteraction() {
         <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
           {IMPORTANCE.map(t => chip(t, importance === t, () => setImportance(t)))}
         </View>
-        <TextInput style={styles.input} value={relationshipId} onChangeText={setRelationshipId} placeholder="Relationship ID (optional)" />
+        <EntityPicker label="Relationship (optional)" endpoint="/relationships" value={relationshipId} selectedLabel={relationshipLabel} onChange={(id, label) => { setRelationshipId(id); setRelationshipLabel(label ?? ''); }} disabled={saving} />
         {e ? <Text style={e === 'Saved.' ? { color: colors.success, fontSize: 14 } : styles.error}>{e}</Text> : null}
         <Pressable style={styles.button} disabled={saving} onPress={save}><Text style={styles.buttonText}>{saving ? 'Saving…' : 'Save'}</Text></Pressable>
       </ScrollView>

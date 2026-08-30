@@ -8,7 +8,7 @@ type Me = { id: string; email?: string; name?: string; memberships?: any[]; perm
 type Session = { id: string; deviceName?: string | null; ipAddress?: string | null; userAgent?: string | null; lastActivityAt?: string | null; createdAt?: string; revokedAt?: string | null };
 
 export default function Profile() {
-  const { token } = useSession();
+  const { token, me: sessionMe, scopeId, setScopeId } = useSession();
   const [me, setMe] = useState<Me | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +56,13 @@ export default function Profile() {
             <Text style={styles.value}>{(me.memberships ?? []).map((m) => m.organizationName ?? m.organizationId).join(', ') || '—'}</Text>
             <Text style={styles.label}>Permissions</Text>
             <Text style={styles.subtitle}>{(me.permissions ?? []).length} granted</Text>
+            <Text style={styles.label}>Active scope</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              <Pressable onPress={() => setScopeId(null)} style={[styles.chip, scopeId === 'all' || !scopeId ? styles.chipActive : null]}><Text style={scopeId === 'all' || !scopeId ? styles.chipTextActive : styles.chipText}>All authorized organizations</Text></Pressable>
+              {Array.from(new Map((sessionMe?.memberships ?? me.memberships ?? []).map((membership: any) => [membership.organizationId, membership.organizationName ?? 'Organization'])).entries()).map(([organizationId, organizationName]) => (
+                <Pressable key={organizationId} onPress={() => setScopeId(organizationId)} style={[styles.chip, scopeId === organizationId ? styles.chipActive : null]}><Text style={scopeId === organizationId ? styles.chipTextActive : styles.chipText}>{organizationName}</Text></Pressable>
+              ))}
+            </View>
           </View>
         )}
         <View style={{ flexDirection: 'row', gap: 10 }}>

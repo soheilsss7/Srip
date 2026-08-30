@@ -60,8 +60,8 @@ export default function DataQuality() {
             <Text style={styles.label}>Duplicate organizations</Text>
             {!m.duplicateOrganizations?.length ? <Text style={{ color: colors.muted }}>None found.</Text> : m.duplicateOrganizations.map((d: any, i: number) => (
               <View key={i} style={{ paddingVertical: 4, borderTopWidth: i ? 1 : 0, borderTopColor: colors.border }}>
-                <Text style={styles.value}>IDs: {d.ids.join(', ')}</Text>
-                <Text style={styles.subtitle}>Reasons: {d.reasons.join(', ')}</Text>
+                <Text style={styles.value}>Duplicate group {i + 1}</Text>
+                <Text style={styles.subtitle}>{d.ids?.length ?? 0} records · Reasons: {d.reasons.join(', ')}</Text>
               </View>
             ))}
           </View>

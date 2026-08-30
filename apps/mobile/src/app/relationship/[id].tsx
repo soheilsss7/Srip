@@ -26,7 +26,8 @@ function chip(label: string, active: boolean, onPress: () => void) {
 }
 
 export default function RelationshipDetail() {
-  const { token } = useSession();
+  const { token, can } = useSession();
+  const canWrite = can('relationship.write');
   const { id } = useLocalSearchParams<{ id: string }>();
   const [r, setR] = useState<any>(null);
   const [timeline, setTimeline] = useState<any[]>([]);
@@ -48,6 +49,7 @@ export default function RelationshipDetail() {
 
   async function doAction(label: string, fn: () => Promise<unknown>) {
     if (!token) return;
+    if (!canWrite) { setError('You have read-only access to this relationship.'); return; }
     setBusy(label); setError(null);
     try { await fn(); await load(); } catch (e) { setError(e instanceof Error ? e.message : 'Request failed'); } finally { setBusy(''); }
   }

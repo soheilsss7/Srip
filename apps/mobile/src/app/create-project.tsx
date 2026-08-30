@@ -4,12 +4,14 @@ import { useRouter } from 'expo-router';
 import { apiPostOffline } from '../services/api-client';
 import { useSession } from '../state/session';
 import { styles, colors } from '../lib/ui';
+import { EntityPicker } from '../features/entity-picker';
 
 const STATUS = ['PLANNED', 'ACTIVE', 'ON_HOLD', 'COMPLETED', 'CANCELLED'];
 const PRIORITY = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
 
 export default function CreateProject() {
-  const { token } = useSession();
+  const { token, can } = useSession();
+  const canCreate = can('project.write');
   const router = useRouter();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -19,11 +21,18 @@ export default function CreateProject() {
   const [startAt, setStartAt] = useState('');
   const [targetAt, setTargetAt] = useState('');
   const [orgId, setOrgId] = useState('');
+  const [orgLabel, setOrgLabel] = useState('');
   const [e, setE] = useState('');
   const [saving, setSaving] = useState(false);
 
   async function save() {
+    if (!canCreate) { setE('You do not have permission to create projects.'); return; }
     if (name.trim().length < 2) { setE('Name is required.'); return; }
+    const startDate = startAt.trim() ? new Date(startAt) : null;
+    const targetDate = targetAt.trim() ? new Date(targetAt) : null;
+    if (startDate && Number.isNaN(startDate.getTime())) { setE('Start date is invalid.'); return; }
+    if (targetDate && Number.isNaN(targetDate.getTime())) { setE('Target date is invalid.'); return; }
+    if (startDate && targetDate && targetDate < startDate) { setE('Target date must be after the start date.'); return; }
     setSaving(true); setE('');
     try {
       await apiPostOffline('/projects', {
@@ -32,13 +41,15 @@ export default function CreateProject() {
         objective: objective.trim() || undefined,
         status,
         priority,
-        startAt: startAt.trim() ? new Date(startAt).toISOString() : undefined,
-        targetAt: targetAt.trim() ? new Date(targetAt).toISOString() : undefined,
-        organizationId: orgId.trim() || undefined,
+        startAt: startDate?.toISOString(),
+        targetAt: targetDate?.toISOString(),
+        organizationId: orgId || undefined,
       }, token);
       router.back();
     } catch (x) { setE((x as Error).message); setSaving(false); }
   }
+
+  if (!canCreate) return <SafeAreaView style={styles.screen}><Text style={styles.title}>New Project</Text><Text style={styles.error}>You do not have permission to create projects in the current workspace.</Text></SafeAreaView>;
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -49,7 +60,7 @@ export default function CreateProject() {
         <TextInput style={styles.input} placeholder="Objective" value={objective} onChangeText={setObjective} multiline />
         <TextInput style={styles.input} placeholder="Start date (YYYY-MM-DD)" value={startAt} onChangeText={setStartAt} />
         <TextInput style={styles.input} placeholder="Target date (YYYY-MM-DD)" value={targetAt} onChangeText={setTargetAt} />
-        <TextInput style={styles.input} placeholder="Organization ID (optional)" value={orgId} onChangeText={setOrgId} />
+        <EntityPicker label="Organization (optional)" endpoint="/organizations" value={orgId} selectedLabel={orgLabel} onChange={(id, label) => { setOrgId(id); setOrgLabel(label ?? ''); }} disabled={saving} />
         <Text style={styles.label}>Status</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
           {STATUS.map((s) => (

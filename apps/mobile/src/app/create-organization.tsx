@@ -1,22 +1,21 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { SafeAreaView, Text, TextInput, Pressable, ScrollView, View, ActivityIndicator } from 'react-native';
+import React, { useState } from 'react';
+import { SafeAreaView, Text, TextInput, Pressable, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { apiGet, apiPostOffline } from '../services/api-client';
+import { apiPostOffline } from '../services/api-client';
 import { useSession } from '../state/session';
 import { styles, colors } from '../lib/ui';
+import { EntityPicker } from '../features/entity-picker';
 
 const TYPES = ['HOLDING', 'SUBSIDIARY', 'CUSTOMER', 'PARTNER', 'BANK', 'GOVERNMENT', 'INVESTOR', 'SUPPLIER', 'OTHER'];
 
-type Org = { id: string; name?: string };
-type Item = { id: string; name?: string };
-
 export default function CreateOrganization() {
-  const { token } = useSession();
+  const { token, can } = useSession();
+  const canCreate = can('org.write');
   const router = useRouter();
   const [name, setName] = useState('');
   const [legalName, setLegalName] = useState('');
   const [displayName, setDisplayName] = useState('');
-  const [type, setType] = useState('COMPANY');
+  const [type, setType] = useState('OTHER');
   const [industry, setIndustry] = useState('');
   const [country, setCountry] = useState('');
   const [city, setCity] = useState('');
@@ -25,21 +24,12 @@ export default function CreateOrganization() {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [parentOrgId, setParentOrgId] = useState('');
-  const [orgs, setOrgs] = useState<Org[]>([]);
+  const [parentOrgLabel, setParentOrgLabel] = useState('');
   const [e, setE] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const loadOrgs = useCallback(async () => {
-    if (!token) return;
-    try {
-      const x = await apiGet<any>('/organizations', token);
-      const list: Item[] = Array.isArray(x) ? x : (x?.items ?? []);
-      setOrgs(list.map((o) => ({ id: o.id, name: o.name ?? o.id })));
-    } catch { /* optional aid */ }
-  }, [token]);
-  useEffect(() => { loadOrgs(); }, [loadOrgs]);
-
   async function save() {
+    if (!canCreate) { setE('You do not have permission to create organizations.'); return; }
     if (name.trim().length < 2) { setE('Name is required (min 2 characters).'); return; }
     if (website.trim() && !/^https?:\/\//i.test(website.trim())) { setE('Website must start with http(s)://'); return; }
     setSaving(true); setE('');
@@ -61,6 +51,8 @@ export default function CreateOrganization() {
       router.back();
     } catch (x) { setE((x as Error).message); setSaving(false); }
   }
+
+  if (!canCreate) return <SafeAreaView style={styles.screen}><Text style={styles.title}>New Organization</Text><Text style={styles.error}>You do not have permission to create organizations in the current workspace.</Text></SafeAreaView>;
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -84,17 +76,7 @@ export default function CreateOrganization() {
         <TextInput style={styles.input} placeholder="Website (https://…)" value={website} onChangeText={setWebsite} autoCapitalize="none" />
         <TextInput style={styles.input} placeholder="Phone" value={phone} onChangeText={setPhone} />
         <TextInput style={styles.input} placeholder="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-        <Text style={styles.label}>Parent organization (optional)</Text>
-        {orgs.length ? (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-            {orgs.map((o) => (
-              <Pressable key={o.id} onPress={() => setParentOrgId(o.id)} style={{ paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8, marginRight: 6, marginBottom: 6, backgroundColor: parentOrgId === o.id ? colors.accent : colors.card, borderWidth: 1, borderColor: parentOrgId === o.id ? colors.accent : colors.border }}>
-                <Text style={{ color: parentOrgId === o.id ? '#fff' : colors.text, fontWeight: '600', fontSize: 12 }}>{o.name}</Text>
-              </Pressable>
-            ))}
-          </View>
-        ) : <ActivityIndicator />}
-        <TextInput style={styles.input} placeholder="Parent organization ID (or pick above)" value={parentOrgId} onChangeText={setParentOrgId} />
+        <EntityPicker label="Parent organization (optional)" endpoint="/organizations" value={parentOrgId} selectedLabel={parentOrgLabel} onChange={(id, label) => { setParentOrgId(id); setParentOrgLabel(label ?? ''); }} disabled={saving} />
         {e ? <Text style={styles.error}>{e}</Text> : null}
         <Pressable style={styles.button} disabled={saving} onPress={save}><Text style={styles.buttonText}>{saving ? 'Saving…' : 'Save'}</Text></Pressable>
       </ScrollView>
