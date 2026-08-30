@@ -1,6 +1,8 @@
-import { Injectable } from '@nestjs/common';
-import { ImportEntityType } from '@prisma/client';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { AuditAction, DataLifecycleState, ImportEntityType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuthorizationService } from '../common/authorization/authorization.service';
+import { AuditService } from '../audit/audit.service';
 
 type Candidate = { id: string; score: number; reasons: string[]; entityType: ImportEntityType };
 const text = (v: unknown) => String(v ?? '').trim();
@@ -30,7 +32,7 @@ function similarity(a: string, b: string) {
 export class DuplicateDetectionService {
   private readonly candidateLimit = Math.max(25, Math.min(250, Number(process.env.DUPLICATE_CANDIDATE_LIMIT || 100)));
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly authorization: AuthorizationService, private readonly audit: AuditService) {}
 
   async organizationCandidates(data: Record<string, unknown>, organizationId?: string, organizationScope?: string[] | null): Promise<Candidate[]> {
     const nm = name(data.name), dm = domain(data.website), rg = lower(data.registrationId), ph = phone(data.phone), ct = lower(data.country);
@@ -101,5 +103,204 @@ export class DuplicateDetectionService {
 
   async detect(entityType: ImportEntityType, data: Record<string, unknown>, organizationId?: string, organizationScope?: string[] | null) {
     return entityType === ImportEntityType.ORGANIZATION ? this.organizationCandidates(data, organizationId, organizationScope) : this.personCandidates(data, organizationId);
+  }
+
+  async mergePreview(userId: string, entityType: string, primaryId: string, duplicateId: string, organizationId?: string) {
+    const normalizedType = entityType.toUpperCase();
+    if (!['ORGANIZATION', 'PERSON'].includes(normalizedType)) throw new BadRequestException('entityType must be ORGANIZATION or PERSON');
+    if (!primaryId || !duplicateId || primaryId === duplicateId) throw new BadRequestException('primaryId and duplicateId must be different');
+    const accessibleIds = await this.authorization.accessibleOrganizationIds(userId);
+    // The controller permission is necessary but not sufficient: a caller must
+    // also be able to read both records that are being compared.
+    const allowed = (id: string) => accessibleIds === null || accessibleIds.includes(id);
+    if (organizationId && (accessibleIds !== null && !accessibleIds.includes(organizationId))) throw new ForbiddenException('Organization outside scope');
+    if (normalizedType === 'ORGANIZATION') {
+      const [primary, duplicate] = await Promise.all([
+        this.prisma.organization.findFirst({ where: { id: primaryId, deletedAt: null, ...(organizationId ? { id: primaryId } : {}) }, include: { _count: { select: { people: true, sourceRelationships: true, targetRelationships: true, projects: true, opportunities: true, notes: true } } } }),
+        this.prisma.organization.findFirst({ where: { id: duplicateId, deletedAt: null }, include: { _count: { select: { people: true, sourceRelationships: true, targetRelationships: true, projects: true, opportunities: true, notes: true } } } }),
+      ]);
+      if (!primary || !duplicate || !allowed(primary.id) || !allowed(duplicate.id)) throw new NotFoundException('Duplicate organization candidate not found');
+      return { entityType: normalizedType, primary: { id: primary.id, name: primary.name, type: primary.type, counts: primary._count }, duplicate: { id: duplicate.id, name: duplicate.name, type: duplicate.type, counts: duplicate._count }, proposedChanges: ['Keep the primary record', 'Repoint compatible relationships and activity to the primary record', 'Preserve the duplicate as an auditable archived record'], requiresExplicitConfirmation: true, writePerformed: false };
+    }
+    const [primary, duplicate] = await Promise.all([
+      this.prisma.person.findFirst({ where: { id: primaryId, deletedAt: null }, include: { _count: { select: { contacts: true, interactions: true, actions: true, commitments: true, notes: true } } } }),
+      this.prisma.person.findFirst({ where: { id: duplicateId, deletedAt: null }, include: { _count: { select: { contacts: true, interactions: true, actions: true, commitments: true, notes: true } } } }),
+    ]);
+    if (!primary || !duplicate) throw new NotFoundException('Duplicate person candidate not found');
+    if ((accessibleIds !== null && (!allowed(primary.organizationId) || !allowed(duplicate.organizationId))) || (organizationId && (primary.organizationId !== organizationId || duplicate.organizationId !== organizationId))) throw new ForbiddenException('Person outside organization scope');
+    return { entityType: normalizedType, primary: { id: primary.id, name: primary.displayName || `${primary.firstName} ${primary.lastName}`.trim(), organizationId: primary.organizationId, counts: primary._count }, duplicate: { id: duplicate.id, name: duplicate.displayName || `${duplicate.firstName} ${duplicate.lastName}`.trim(), organizationId: duplicate.organizationId, counts: duplicate._count }, proposedChanges: ['Keep the primary record', 'Repoint compatible contacts and activity to the primary record', 'Preserve the duplicate as an auditable archived record'], requiresExplicitConfirmation: true, writePerformed: false };
+  }
+
+  /**
+   * Merge is intentionally separate from preview and requires the literal
+   * confirmation phrase. All foreign-key moves and the duplicate archive run
+   * in one transaction so a partial merge can never be exposed as success.
+   */
+  async merge(userId: string, entityType: string, primaryId: string, duplicateId: string, organizationId?: string, confirmation?: string) {
+    if (confirmation !== 'MERGE') throw new BadRequestException('Explicit confirmation phrase MERGE is required');
+    const preview = await this.mergePreview(userId, entityType, primaryId, duplicateId, organizationId);
+    const now = new Date();
+    const type = String(entityType).toUpperCase();
+
+    return this.prisma.$transaction(async tx => {
+      const db: any = tx;
+      if (type === 'ORGANIZATION') {
+        const [primary, duplicate] = await Promise.all([
+          db.organization.findFirst({ where: { id: primaryId, deletedAt: null } }),
+          db.organization.findFirst({ where: { id: duplicateId, deletedAt: null } }),
+        ]);
+        if (!primary || !duplicate) throw new NotFoundException('Duplicate organization candidate is no longer available');
+        await this.mergeOrganizationRelations(db, userId, primary.id, duplicate.id, now);
+        await db.organization.updateMany({ where: { parentOrganizationId: duplicate.id }, data: { parentOrganizationId: primary.id } });
+        await this.archiveMergeRecord(db, userId, 'Organization', duplicate, primary.id, now, 'duplicate-merged');
+        await this.audit.logMutation({ userId, action: AuditAction.UPDATE, entityType: 'Organization', entityId: primary.id, organizationId: primary.id, before: { id: primary.id }, after: { mergedDuplicateId: duplicate.id, duplicateArchived: true }, reason: 'duplicate-merged' }, tx);
+        return { ...preview, writePerformed: true, mergedAt: now.toISOString(), archivedDuplicateId: duplicate.id, reassignedToId: primary.id };
+      }
+
+      const [primary, duplicate] = await Promise.all([
+        db.person.findFirst({ where: { id: primaryId, deletedAt: null } }),
+        db.person.findFirst({ where: { id: duplicateId, deletedAt: null } }),
+      ]);
+      if (!primary || !duplicate) throw new NotFoundException('Duplicate person candidate is no longer available');
+      await this.mergePersonRelations(db, userId, primary.id, duplicate.id, now);
+      await this.archiveMergeRecord(db, userId, 'Person', duplicate, primary.organizationId, now, 'duplicate-merged');
+      await this.audit.logMutation({ userId, action: AuditAction.UPDATE, entityType: 'Person', entityId: primary.id, organizationId: primary.organizationId, before: { id: primary.id }, after: { mergedDuplicateId: duplicate.id, duplicateArchived: true }, reason: 'duplicate-merged' }, tx);
+      return { ...preview, writePerformed: true, mergedAt: now.toISOString(), archivedDuplicateId: duplicate.id, reassignedToId: primary.id };
+    }, { timeout: 30000 });
+  }
+
+  private async archiveMergeRecord(db: any, userId: string, entityType: 'Organization' | 'Person' | 'Relationship' | 'PersonRelationship', row: any, organizationId: string | undefined, now: Date, reason: string) {
+    const delegate = entityType === 'Organization' ? 'organization' : entityType === 'Person' ? 'person' : entityType === 'PersonRelationship' ? 'personRelationship' : 'relationship';
+    const archived = await db[delegate].update({ where: { id: row.id }, data: { deletedAt: now, deletedById: userId } });
+    await db.dataLifecycleRecord.create({ data: { entityType, entityId: row.id, state: DataLifecycleState.DELETION, actorId: userId, reason, metadata: { mergedIntoId: organizationId } } });
+    await this.audit.logMutation({ userId, action: AuditAction.SOFT_DELETE, entityType, entityId: row.id, organizationId, before: row, after: archived, reason }, db);
+    return archived;
+  }
+
+  private async clearRelationshipLinks(db: any, relationshipId: string) {
+    await Promise.all([
+      db.interaction.updateMany({ where: { relationshipId }, data: { relationshipId: null } }),
+      db.meeting.updateMany({ where: { relationshipId }, data: { relationshipId: null } }),
+      db.action.updateMany({ where: { relationshipId }, data: { relationshipId: null } }),
+      db.commitment.updateMany({ where: { relationshipId }, data: { relationshipId: null } }),
+      db.opportunity.updateMany({ where: { relationshipId }, data: { relationshipId: null } }),
+      db.recommendation.updateMany({ where: { relationshipId }, data: { relationshipId: null } }),
+    ]);
+    await db.projectRelationship.deleteMany({ where: { relationshipId } });
+  }
+
+  private async moveRelationshipLinks(db: any, oldId: string, newId: string) {
+    await Promise.all([
+      db.interaction.updateMany({ where: { relationshipId: oldId }, data: { relationshipId: newId } }),
+      db.meeting.updateMany({ where: { relationshipId: oldId }, data: { relationshipId: newId } }),
+      db.action.updateMany({ where: { relationshipId: oldId }, data: { relationshipId: newId } }),
+      db.commitment.updateMany({ where: { relationshipId: oldId }, data: { relationshipId: newId } }),
+      db.opportunity.updateMany({ where: { relationshipId: oldId }, data: { relationshipId: newId } }),
+      db.recommendation.updateMany({ where: { relationshipId: oldId }, data: { relationshipId: newId } }),
+    ]);
+    const projectLinks = await db.projectRelationship.findMany({ where: { relationshipId: oldId }, select: { projectId: true } });
+    for (const link of projectLinks) {
+      const existing = await db.projectRelationship.findUnique({ where: { projectId_relationshipId: { projectId: link.projectId, relationshipId: newId } } });
+      if (existing) await db.projectRelationship.delete({ where: { projectId_relationshipId: { projectId: link.projectId, relationshipId: oldId } } });
+      else await db.projectRelationship.update({ where: { projectId_relationshipId: { projectId: link.projectId, relationshipId: oldId } }, data: { relationshipId: newId } });
+    }
+  }
+
+  private async mergeOrganizationRelations(db: any, userId: string, primaryId: string, duplicateId: string, now: Date) {
+    await Promise.all([
+      db.person.updateMany({ where: { organizationId: duplicateId, deletedAt: null }, data: { organizationId: primaryId } }),
+      db.contactInformation.updateMany({ where: { organizationId: duplicateId }, data: { organizationId: primaryId } }),
+      db.interaction.updateMany({ where: { organizationId: duplicateId, deletedAt: null }, data: { organizationId: primaryId } }),
+      db.meeting.updateMany({ where: { organizationId: duplicateId, deletedAt: null }, data: { organizationId: primaryId } }),
+      db.action.updateMany({ where: { organizationId: duplicateId, deletedAt: null }, data: { organizationId: primaryId } }),
+      db.project.updateMany({ where: { organizationId: duplicateId, deletedAt: null }, data: { organizationId: primaryId } }),
+      db.opportunity.updateMany({ where: { organizationId: duplicateId, deletedAt: null }, data: { organizationId: primaryId } }),
+      db.commitment.updateMany({ where: { organizationId: duplicateId, deletedAt: null }, data: { organizationId: primaryId } }),
+      db.note.updateMany({ where: { organizationId: duplicateId, deletedAt: null }, data: { organizationId: primaryId } }),
+      db.integrationConnection.updateMany({ where: { organizationId: duplicateId, deletedAt: null }, data: { organizationId: primaryId } }),
+      db.integrationExternalRecord.updateMany({ where: { organizationId: duplicateId }, data: { organizationId: primaryId } }),
+      db.workflow.updateMany({ where: { organizationId: duplicateId, deletedAt: null }, data: { organizationId: primaryId } }),
+      db.organizationUnit.updateMany({ where: { organizationId: duplicateId }, data: { organizationId: primaryId } }),
+      db.document.updateMany({ where: { organizationId: duplicateId, deletedAt: null }, data: { organizationId: primaryId } }),
+      db.aiDocumentChunk.updateMany({ where: { organizationId: duplicateId }, data: { organizationId: primaryId } }),
+      db.projectRequirement.updateMany({ where: { organizationId: duplicateId, deletedAt: null }, data: { organizationId: primaryId } }),
+      db.projectRisk.updateMany({ where: { organizationId: duplicateId, deletedAt: null }, data: { organizationId: primaryId } }),
+      db.dataImport.updateMany({ where: { organizationId: duplicateId }, data: { organizationId: primaryId } }),
+      db.dataQualitySnapshot.updateMany({ where: { organizationId: duplicateId }, data: { organizationId: primaryId } }),
+      db.referral.updateMany({ where: { sourceOrganizationId: duplicateId }, data: { sourceOrganizationId: primaryId } }),
+      db.referral.updateMany({ where: { targetOrganizationId: duplicateId }, data: { targetOrganizationId: primaryId } }),
+      db.tagAssignment.updateMany({ where: { organizationId: duplicateId }, data: { organizationId: primaryId } }),
+      db.connectionPath.updateMany({ where: { sourceOrganizationId: duplicateId }, data: { sourceOrganizationId: primaryId } }),
+      db.connectionPath.updateMany({ where: { targetOrganizationId: duplicateId }, data: { targetOrganizationId: primaryId } }),
+      db.connectionPath.updateMany({ where: { bestConnectorOrganizationId: duplicateId }, data: { bestConnectorOrganizationId: primaryId } }),
+      db.personRelationship.updateMany({ where: { sourceOrganizationId: duplicateId }, data: { sourceOrganizationId: primaryId } }),
+      db.personRelationship.updateMany({ where: { targetOrganizationId: duplicateId }, data: { targetOrganizationId: primaryId } }),
+    ]);
+
+    const memberships = await db.organizationPerson.findMany({ where: { organizationId: duplicateId } });
+    for (const membership of memberships) {
+      const existing = await db.organizationPerson.findUnique({ where: { organizationId_personId: { organizationId: primaryId, personId: membership.personId } } });
+      if (existing) await db.organizationPerson.delete({ where: { id: membership.id } });
+      else await db.organizationPerson.update({ where: { id: membership.id }, data: { organizationId: primaryId } });
+    }
+
+    const relationships = await db.relationship.findMany({ where: { deletedAt: null, OR: [{ sourceOrganizationId: duplicateId }, { targetOrganizationId: duplicateId }] } });
+    for (const relationship of relationships) {
+      const sourceOrganizationId = relationship.sourceOrganizationId === duplicateId ? primaryId : relationship.sourceOrganizationId;
+      const targetOrganizationId = relationship.targetOrganizationId === duplicateId ? primaryId : relationship.targetOrganizationId;
+      if (sourceOrganizationId === targetOrganizationId) {
+        await this.clearRelationshipLinks(db, relationship.id);
+        await this.archiveMergeRecord(db, userId, 'Relationship', relationship, primaryId, now, 'duplicate-merge-self-relationship');
+        continue;
+      }
+      const conflict = await db.relationship.findFirst({ where: { id: { not: relationship.id }, sourceOrganizationId, targetOrganizationId, relationshipType: relationship.relationshipType, deletedAt: null } });
+      if (conflict) {
+        await this.moveRelationshipLinks(db, relationship.id, conflict.id);
+        await this.archiveMergeRecord(db, userId, 'Relationship', relationship, primaryId, now, 'duplicate-merge-relationship-conflict');
+      } else {
+        await db.relationship.update({ where: { id: relationship.id }, data: { sourceOrganizationId, targetOrganizationId } });
+      }
+    }
+  }
+
+  private async mergePersonRelations(db: any, userId: string, primaryId: string, duplicateId: string, now: Date) {
+    await db.contactInformation.updateMany({ where: { personId: duplicateId }, data: { personId: primaryId } });
+    await Promise.all([
+      db.interaction.updateMany({ where: { personId: duplicateId, deletedAt: null }, data: { personId: primaryId } }),
+      db.action.updateMany({ where: { personId: duplicateId, deletedAt: null }, data: { personId: primaryId } }),
+      db.commitment.updateMany({ where: { personId: duplicateId, deletedAt: null }, data: { personId: primaryId } }),
+      db.note.updateMany({ where: { personId: duplicateId, deletedAt: null }, data: { personId: primaryId } }),
+      db.integrationExternalRecord.updateMany({ where: { personId: duplicateId }, data: { personId: primaryId } }),
+      db.connectionPath.updateMany({ where: { bestConnectorPersonId: duplicateId }, data: { bestConnectorPersonId: primaryId } }),
+      db.referral.updateMany({ where: { sourcePersonId: duplicateId }, data: { sourcePersonId: primaryId } }),
+      db.referral.updateMany({ where: { targetPersonId: duplicateId }, data: { targetPersonId: primaryId } }),
+    ]);
+
+    const participants = await db.meetingParticipant.findMany({ where: { personId: duplicateId } });
+    for (const participant of participants) {
+      const existing = await db.meetingParticipant.findUnique({ where: { meetingId_personId: { meetingId: participant.meetingId, personId: primaryId } } });
+      if (existing) await db.meetingParticipant.delete({ where: { meetingId_personId: { meetingId: participant.meetingId, personId: duplicateId } } });
+      else await db.meetingParticipant.update({ where: { meetingId_personId: { meetingId: participant.meetingId, personId: duplicateId } }, data: { personId: primaryId } });
+    }
+
+    const memberships = await db.organizationPerson.findMany({ where: { personId: duplicateId } });
+    for (const membership of memberships) {
+      const existing = await db.organizationPerson.findUnique({ where: { organizationId_personId: { organizationId: membership.organizationId, personId: primaryId } } });
+      if (existing) await db.organizationPerson.delete({ where: { id: membership.id } });
+      else await db.organizationPerson.update({ where: { id: membership.id }, data: { personId: primaryId } });
+    }
+
+    const relationships = await db.personRelationship.findMany({ where: { deletedAt: null, OR: [{ sourcePersonId: duplicateId }, { targetPersonId: duplicateId }] } });
+    for (const relationship of relationships) {
+      const sourcePersonId = relationship.sourcePersonId === duplicateId ? primaryId : relationship.sourcePersonId;
+      const targetPersonId = relationship.targetPersonId === duplicateId ? primaryId : relationship.targetPersonId;
+      if (sourcePersonId === targetPersonId) {
+        await this.archiveMergeRecord(db, userId, 'PersonRelationship', relationship, relationship.sourceOrganizationId, now, 'duplicate-merge-self-person-relationship');
+        continue;
+      }
+      const conflict = await db.personRelationship.findFirst({ where: { id: { not: relationship.id }, sourcePersonId, targetPersonId, relationshipType: relationship.relationshipType, deletedAt: null } });
+      if (conflict) await this.archiveMergeRecord(db, userId, 'PersonRelationship', relationship, relationship.sourceOrganizationId, now, 'duplicate-merge-person-relationship-conflict');
+      else await db.personRelationship.update({ where: { id: relationship.id }, data: { sourcePersonId, targetPersonId } });
+    }
   }
 }

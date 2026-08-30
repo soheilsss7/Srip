@@ -1,10 +1,48 @@
 'use client';
-import {useEffect,useState} from 'react';import{api}from'../_lib/api';import{DataTable,ErrorCard,PageHeader}from'../_components/page-ui';
-export default function DataManagement(){const[q,setQ]=useState<any>(null),[e,setE]=useState('');useEffect(()=>{api<any>('/data/quality').then(setQ).catch(x=>setE(x.message))},[]);const m=q?.metrics??q??{};const dups=Array.isArray(m.duplicateOrganizations)?m.duplicateOrganizations.length:m.duplicateOrganizations?.length??0;const num=(v:any)=>typeof v==='number'?v:typeof v==='object'&&v&&typeof v.total==='number'?v.total:0;const cards:[string,string,number][]=[['duplicates','Duplicate Candidates',dups],['missingOwners','Missing Owners',num(m.missingOwners)],['staleRelationships','Stale Relationships',num(m.staleRelationships)],['invalidEmails','Invalid Emails',num(m.invalidEmails)],['incomplete','Incomplete Profiles',num(m.incompleteProfiles?.organizations)+num(m.incompleteProfiles?.people)]];const issues=[...(Array.isArray(m.missingOwners?.values)?m.missingOwners.values.map((id:any)=>({kind:'Missing Owner',id})):[]),...(Array.isArray(m.staleRelationships?.values)?m.staleRelationships.values.map((r:any)=>({kind:'Stale Relationship',id:r.id})):[]),...(Array.isArray(m.invalidEmails?.values)?m.invalidEmails.values.map((v:any)=>({kind:'Invalid Email',entity:v.entityType,id:v.id})):[])];return <main className="admin-layout"><PageHeader eyebrow="DATA GOVERNANCE" title="Data Management" description="کیفیت داده، Import، Duplicate Detection و Lifecycle تحت یک Workspace." actions={<a className="primary-action" href="/data-management/import">+ Import</a>}/><ErrorCard message={e}/>{!q?null:<>
-<section className="stat-row">{cards.map(([k,l,v])=><div className="stat-box" key={k}><span>{l}</span><strong>{v}</strong></div>)}</section>
-<section className="split-panels">
-<article className="panel executive-card"><h2>Issues</h2>{issues.length===0?<p className="muted">هیچ مورد کیفیتی یافت نشد.</p>:<DataTable columns={['kind','id','entity'].map(k=>({key:k,label:k}))} rows={issues}/>}</article>
-<article className="panel executive-card"><h2>Governance</h2><p className="muted">Classification، Retention، Export Controls و Privacy از Backend enforce می‌شوند.</p><a className="secondary-action" href="/privacy">Privacy</a></article>
-</section>
-<section className="panel"><h2>Coverage</h2><div className="metric-list">{(Object.entries(m.coverage??{})).map(([k,v])=><div key={k}><span>{k}</span><strong>{String(v)}</strong></div>)}</div></section>
-</>}</main>}
+import { useCallback, useEffect, useState } from 'react';
+import { api } from '../_lib/api';
+import { useWorkspace } from '../_components/workspace';
+import { Badge, ErrorCard, PageHeader } from '../_components/page-ui';
+
+function count(value: any) { return typeof value === 'number' ? value : Number(value?.total ?? 0); }
+function name(value: any, fallback: string) { return value?.name || value?.title || value?.displayName || fallback; }
+
+export default function DataManagement() {
+  const { scopeId } = useWorkspace();
+  const [data, setData] = useState<any>(null);
+  const [error, setError] = useState('');
+  const load = useCallback(async () => {
+    try {
+      const query = scopeId !== 'all' ? `?organizationId=${encodeURIComponent(scopeId)}` : '';
+      setData(await api(`/data/quality${query}`));
+    } catch (x) { setError((x as Error).message); }
+  }, [scopeId]);
+  useEffect(() => { load(); }, [load]);
+
+  const metrics = data?.metrics ?? data ?? {};
+  const cards = [
+    ['Duplicate candidates', metrics.duplicateOrganizations?.length ?? 0],
+    ['Missing owners', count(metrics.missingOwners)],
+    ['Stale relationships', count(metrics.staleRelationships)],
+    ['Invalid emails', count(metrics.invalidEmails)],
+    ['Incomplete profiles', count(metrics.incompleteProfiles?.organizations) + count(metrics.incompleteProfiles?.people)],
+  ];
+  const issues = [
+    ...(metrics.missingOwners?.values ?? []).map((item: any) => ({ kind: 'Missing owner', label: name(item, 'سازمان بدون مالک'), href: item?.id ? `/organizations/${item.id}` : '' })),
+    ...(metrics.staleRelationships?.values ?? []).map((item: any) => ({ kind: 'Stale relationship', label: `${name(item.sourceOrganization, 'سازمان مبدأ')} ↔ ${name(item.targetOrganization, 'سازمان مقصد')}`, href: item?.id ? `/relationships/${item.id}` : '' })),
+    ...(metrics.invalidEmails?.values ?? []).map((item: any) => ({ kind: 'Invalid email', label: name(item, 'رکورد دارای ایمیل نامعتبر'), href: item?.id ? (item.entityType === 'Person' ? `/people/${item.id}` : `/organizations/${item.id}`) : '' })),
+  ];
+
+  return <main className="admin-layout">
+    <PageHeader eyebrow="DATA GOVERNANCE" title="Data Management" description="کیفیت داده، Import، Duplicate Detection و Lifecycle در محدوده سازمانی فعلی." actions={<a className="primary-action" href="/data-management/quality">مشاهده Quality Workspace</a>} />
+    <ErrorCard message={error} />
+    {data && <>
+      <section className="stat-row">{cards.map(([label, value]) => <div className="stat-box" key={String(label)}><span>{label}</span><strong>{value}</strong></div>)}</section>
+      <section className="split-panels">
+        <article className="panel executive-card"><div className="panel-title"><div><h2>Issues</h2><p>رکوردها با نام نمایش داده می‌شوند.</p></div><Badge tone={issues.length ? 'warning' : 'success'}>{issues.length}</Badge></div>{issues.length === 0 ? <p className="muted">هیچ مورد کیفیتی یافت نشد.</p> : <div className="action-list">{issues.slice(0, 20).map((issue: any, index: number) => <div className="listRow" key={`${issue.kind}-${index}`}><Badge tone="warning">{issue.kind}</Badge>{issue.href ? <a href={issue.href}>{issue.label}</a> : <span>{issue.label}</span>}</div>)}</div>}</article>
+        <article className="panel executive-card"><h2>Governance</h2><p className="muted">Classification، Retention، Export Controls و Privacy از Backend enforce می‌شوند.</p><div className="toolbar"><a className="secondary-action" href="/privacy">Privacy</a><a className="secondary-action" href="/data-management/import">Import</a></div></article>
+      </section>
+      <section className="panel"><h2>Coverage</h2><div className="metric-list">{Object.entries(metrics.coverage ?? {}).map(([key, value]) => <div key={key}><span>{key}</span><strong>{String(value)}</strong></div>)}</div></section>
+    </>}
+  </main>;
+}

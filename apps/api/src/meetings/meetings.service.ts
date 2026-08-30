@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { MeetingStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthorizationService } from '../common/authorization/authorization.service';
@@ -213,14 +213,60 @@ export class MeetingsService {
   async applyActionItems(userId: string, id: string, items: Array<{ title: string; dueAt?: string; asCommitment?: boolean; ownerId?: string; priority?: string; description?: string }>) {
     const row = await this.fetch(userId, id);
     if (!items?.length) return { created: [] as any[] };
+
+    // A picker must never become a tenant/organization escalation path. The
+    // selected owner must be active and a member of the meeting context.
+    const contextOrganizationIds = [...new Set([
+      row.organizationId,
+      row.relationship?.sourceOrganizationId,
+      row.relationship?.targetOrganizationId,
+    ].filter(Boolean))] as string[];
+    const validateOwner = async (ownerId: string) => {
+      if (ownerId === userId) return;
+      const owner = await this.prisma.user.findFirst({
+        where: {
+          id: ownerId,
+          isActive: true,
+          deletedAt: null,
+          ...(contextOrganizationIds.length ? { memberships: { some: { organizationId: { in: contextOrganizationIds } } } } : {}),
+        },
+        select: { id: true },
+      });
+      if (!owner) throw new ForbiddenException('Selected owner is outside the meeting organization scope');
+    };
+
     const created: any[] = [];
     for (const item of items) {
-      if (!item.title?.trim()) continue;
+      const title = item.title?.trim();
+      if (!title) continue;
+      const ownerId = item.ownerId ?? row.ownerId ?? userId;
+      await validateOwner(ownerId);
+      const dueAt = item.dueAt ? new Date(item.dueAt) : undefined;
+      if (dueAt && Number.isNaN(dueAt.getTime())) throw new ForbiddenException('Invalid follow-up due date');
       if (item.asCommitment) {
-        const commitment = await this.eventBus.transaction(async tx => { const createdCommitment=await tx.commitment.create({data:{description:item.description??item.title,status:'OPEN',dueAt:item.dueAt?new Date(item.dueAt):undefined,ownerId:item.ownerId??row.ownerId,meetingId:row.id,relationshipId:row.relationshipId??undefined,organizationId:row.organizationId??undefined}});await this.audit.logMutation({userId,action:'CREATE',entityType:'Commitment',entityId:createdCommitment.id,organizationId:row.organizationId??undefined,after:createdCommitment,reason:'meeting_follow_up_apply'},tx);await this.eventBus.publishInTransaction(tx,{eventType:DOMAIN_EVENT_TYPES.COMMITMENT_CREATED,aggregateType:'Commitment',aggregateId:createdCommitment.id,organizationId:(createdCommitment as any).organizationId??undefined,actorId:userId,payload:createdCommitment as any});return createdCommitment; });
+        const commitment = await this.eventBus.transaction(async tx => {
+          const createdCommitment = await tx.commitment.create({ data: {
+            description: item.description?.trim() || title,
+            status: 'OPEN', dueAt, ownerId, meetingId: row.id,
+            relationshipId: row.relationshipId ?? undefined,
+            organizationId: row.organizationId ?? undefined,
+          } });
+          await this.audit.logMutation({ userId, action: 'CREATE', entityType: 'Commitment', entityId: createdCommitment.id, organizationId: row.organizationId ?? undefined, after: createdCommitment, reason: 'meeting_follow_up_apply' }, tx);
+          await this.eventBus.publishInTransaction(tx, { eventType: DOMAIN_EVENT_TYPES.COMMITMENT_CREATED, aggregateType: 'Commitment', aggregateId: createdCommitment.id, organizationId: (createdCommitment as any).organizationId ?? undefined, actorId: userId, payload: createdCommitment as any });
+          return createdCommitment;
+        });
         created.push({ type: 'Commitment', record: commitment });
       } else {
-        const action = await this.eventBus.transaction(async tx => { const createdAction=await tx.action.create({data:{title:item.title,status:'OPEN',priority:(item.priority as any)??'MEDIUM',dueAt:item.dueAt?new Date(item.dueAt):undefined,ownerId:item.ownerId??row.ownerId,createdById:userId,meetingId:row.id,relationshipId:row.relationshipId??undefined,organizationId:row.organizationId??undefined}});await this.audit.logMutation({userId,action:'CREATE',entityType:'Action',entityId:createdAction.id,organizationId:row.organizationId??undefined,after:createdAction,reason:'meeting_follow_up_apply'},tx);await this.eventBus.publishInTransaction(tx,{eventType:DOMAIN_EVENT_TYPES.ACTION_CREATED,aggregateType:'Action',aggregateId:createdAction.id,organizationId:(createdAction as any).organizationId??undefined,actorId:userId,payload:createdAction as any});return createdAction; });
+        const action = await this.eventBus.transaction(async tx => {
+          const createdAction = await tx.action.create({ data: {
+            title, status: 'OPEN', priority: (item.priority as any) ?? 'MEDIUM', dueAt, ownerId,
+            createdById: userId, meetingId: row.id, relationshipId: row.relationshipId ?? undefined,
+            organizationId: row.organizationId ?? undefined,
+          } });
+          await this.audit.logMutation({ userId, action: 'CREATE', entityType: 'Action', entityId: createdAction.id, organizationId: row.organizationId ?? undefined, after: createdAction, reason: 'meeting_follow_up_apply' }, tx);
+          await this.eventBus.publishInTransaction(tx, { eventType: DOMAIN_EVENT_TYPES.ACTION_CREATED, aggregateType: 'Action', aggregateId: createdAction.id, organizationId: (createdAction as any).organizationId ?? undefined, actorId: userId, payload: createdAction as any });
+          return createdAction;
+        });
         created.push({ type: 'Action', record: action });
       }
     }

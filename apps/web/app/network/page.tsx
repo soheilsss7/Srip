@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import {
   AlertTriangle,
   Building2,
@@ -28,6 +29,9 @@ import {
 } from 'lucide-react';
 import { apiDelete, apiGet, apiPatch, apiPost } from '../_lib/api';
 import { useWorkspace } from '../_components/workspace';
+import { EntityPicker } from '../_components/entity-picker';
+import { QuickCreate } from '../_components/quick-create';
+import { nodeEntityRoute } from './_nodes';
 import type { GEdge, GGraph, GNode } from './_nodes';
 import './reference-network.css';
 
@@ -354,7 +358,8 @@ export default function NetworkPage() {
   const [personBusy, setPersonBusy] = useState(false);
   const [personManagerOpen, setPersonManagerOpen] = useState(false);
   const [editingPersonId, setEditingPersonId] = useState<string | null>(null);
-  const [personForm, setPersonForm] = useState({ sourcePersonId: '', targetPersonId: '', relationshipType: 'COLLEAGUE', status: 'ACTIVE', strategicScore: '', riskScore: '' });
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [personForm, setPersonForm] = useState({ sourcePersonId: '', sourcePersonName: '', targetPersonId: '', targetPersonName: '', relationshipType: 'COLLEAGUE', status: 'ACTIVE', strategicScore: '', riskScore: '' });
 
   const graphView = useMemo(() => makeGraphView(liveGraph), [liveGraph]);
   const selectedViewNode = graphView.nodes.find((node) => node.id === selectedNodeId) ?? graphView.nodes[0] ?? GRAPH_NODES[0];
@@ -461,7 +466,7 @@ export default function NetworkPage() {
 
   function editPersonRelationship(row: any) {
     setEditingPersonId(row.id);
-    setPersonForm({ sourcePersonId: row.sourcePersonId ?? '', targetPersonId: row.targetPersonId ?? '', relationshipType: row.relationshipType ?? 'COLLEAGUE', status: row.status ?? 'ACTIVE', strategicScore: row.strategicScore == null ? '' : String(row.strategicScore), riskScore: row.riskScore == null ? '' : String(row.riskScore) });
+    setPersonForm({ sourcePersonId: row.sourcePersonId ?? '', sourcePersonName: row.sourcePerson?.displayName ?? [row.sourcePerson?.firstName, row.sourcePerson?.lastName].filter(Boolean).join(' '), targetPersonId: row.targetPersonId ?? '', targetPersonName: row.targetPerson?.displayName ?? [row.targetPerson?.firstName, row.targetPerson?.lastName].filter(Boolean).join(' '), relationshipType: row.relationshipType ?? 'COLLEAGUE', status: row.status ?? 'ACTIVE', strategicScore: row.strategicScore == null ? '' : String(row.strategicScore), riskScore: row.riskScore == null ? '' : String(row.riskScore) });
     setPersonManagerOpen(true);
   }
 
@@ -476,7 +481,7 @@ export default function NetworkPage() {
       if (editingPersonId) await apiPatch(`/network/person-relationships/${encodeURIComponent(editingPersonId)}`, payload);
       else await apiPost('/network/person-relationships', payload);
       setEditingPersonId(null);
-      setPersonForm({ sourcePersonId: '', targetPersonId: '', relationshipType: 'COLLEAGUE', status: 'ACTIVE', strategicScore: '', riskScore: '' });
+      setPersonForm({ sourcePersonId: '', sourcePersonName: '', targetPersonId: '', targetPersonName: '', relationshipType: 'COLLEAGUE', status: 'ACTIVE', strategicScore: '', riskScore: '' });
       await loadPersonRelationships();
       await loadGraph();
     } catch (requestError: any) {
@@ -501,11 +506,20 @@ export default function NetworkPage() {
   }
 
   const selectedSummary = isLive
-    ? `${selectedKind.charAt(0).toUpperCase()}${selectedKind.slice(1)} · ${selectedLiveNode?.organizationId ? `Org ${selectedLiveNode.organizationId.slice(0, 8)}…` : 'Network node'}`
+    ? `${selectedKind.charAt(0).toUpperCase()}${selectedKind.slice(1)} · ${selectedRelationships.length} visible connections`
     : selectedLabel === 'Holding Company' ? 'Strategic Core Organization' : 'Strategic relationship node';
+  const selectedRoute = selectedLiveNode ? nodeEntityRoute(selectedLiveNode) : null;
   const selectedProperties = isLive
-    ? [{ label: 'Type', value: selectedKind }, { label: 'Node ID', value: selectedNodeId }, { label: 'Connections', value: String(selectedRelationships.length) }, { label: 'Visibility', value: scopeId === 'all' ? 'Global scope' : 'Scoped' }]
+    ? [{ label: 'Type', value: selectedKind }, { label: 'Record', value: selectedLabel }, { label: 'Connections', value: String(selectedRelationships.length) }, { label: 'Visibility', value: scopeId === 'all' ? 'Global scope' : 'Scoped' }]
     : [{ label: 'Type', value: 'Holding Company' }, { label: 'Industry', value: 'Investment' }, { label: 'Employees', value: '1,250+' }, { label: 'Founded', value: '2005' }, { label: 'Location', value: 'Tehran, Iran' }];
+  const personName = (row: any, side: 'sourcePerson' | 'targetPerson') => {
+    const person = row?.[side];
+    return person?.displayName || [person?.firstName, person?.lastName].filter(Boolean).join(' ') || 'شخص بدون نام';
+  };
+  const selectedContext = selectedLiveNode ? {
+    organizationId: selectedLiveNode.type === 'organization' ? selectedLiveNode.id.replace(/^org:/, '') : selectedLiveNode.organizationId,
+    personId: selectedLiveNode.type === 'person' ? selectedLiveNode.id.replace(/^person:/, '') : undefined,
+  } : undefined;
 
   return (
     <main className="network-reference-page">
@@ -566,6 +580,10 @@ export default function NetworkPage() {
               <div className="holding-identity"><span className="holding-logo"><Building2 size={27} /></span><span><h2>{selectedLabel}</h2><p>{selectedSummary}</p></span></div>
               <span className="active-pill">Active</span>
             </header>
+            <div className="toolbar reference-rail-actions">
+              {selectedRoute && <Link className="secondary-reference-button" href={selectedRoute.href}>Open record</Link>}
+              {isLive && <button className="primary-reference-button" onClick={() => setQuickOpen(true)}>Log follow-up</button>}
+            </div>
             <nav className="holding-tabs">
               <button className={railTab === 'overview' ? 'active' : ''} onClick={() => setRailTab('overview')}>Overview</button>
               <button className={railTab === 'relationships' ? 'active' : ''} onClick={() => setRailTab('relationships')}>Relationships <b>{isLive ? selectedRelationships.length : 12}</b></button>
@@ -603,8 +621,8 @@ export default function NetworkPage() {
         <div className="reference-manager-header"><div><h3>Person relationships</h3><p>Read, create, update and archive person-to-person relationships under relationship.write authorization.</p></div><button className="secondary-reference-button" onClick={() => void loadPersonRelationships()} disabled={personBusy}>{personBusy ? 'Loading…' : 'Load relationships'}</button></div>
         {personManagerOpen && <div className="person-relationship-manager">
           <form onSubmit={savePersonRelationship} className="person-relationship-form">
-            <input placeholder="Source person ID" value={personForm.sourcePersonId} onChange={(event) => setPersonForm({ ...personForm, sourcePersonId: event.target.value })} disabled={Boolean(editingPersonId)} required={!editingPersonId} />
-            <input placeholder="Target person ID" value={personForm.targetPersonId} onChange={(event) => setPersonForm({ ...personForm, targetPersonId: event.target.value })} disabled={Boolean(editingPersonId)} required={!editingPersonId} />
+            <EntityPicker label="Source person" endpoint="/people" value={personForm.sourcePersonId} selectedLabel={personForm.sourcePersonName} onChange={value => setPersonForm({ ...personForm, sourcePersonId: value })} onLabelChange={(_, label) => setPersonForm(form => ({ ...form, sourcePersonName: label }))} scopeId={scopeId} disabled={Boolean(editingPersonId) || personBusy} required={!editingPersonId} />
+            <EntityPicker label="Target person" endpoint="/people" value={personForm.targetPersonId} selectedLabel={personForm.targetPersonName} onChange={value => setPersonForm({ ...personForm, targetPersonId: value })} onLabelChange={(_, label) => setPersonForm(form => ({ ...form, targetPersonName: label }))} scopeId={scopeId} disabled={Boolean(editingPersonId) || personBusy} required={!editingPersonId} />
             <input placeholder="Relationship type" value={personForm.relationshipType} onChange={(event) => setPersonForm({ ...personForm, relationshipType: event.target.value })} required />
             <select value={personForm.status} onChange={(event) => setPersonForm({ ...personForm, status: event.target.value })}><option value="ACTIVE">ACTIVE</option><option value="DORMANT">DORMANT</option><option value="AT_RISK">AT_RISK</option></select>
             <input type="number" min="0" max="100" placeholder="Strategic score" value={personForm.strategicScore} onChange={(event) => setPersonForm({ ...personForm, strategicScore: event.target.value })} />
@@ -612,10 +630,11 @@ export default function NetworkPage() {
             <button className="primary-reference-button" disabled={personBusy}>{editingPersonId ? 'Update relationship' : 'Create relationship'}</button>
             {editingPersonId && <button type="button" onClick={() => setEditingPersonId(null)}>Cancel</button>}
           </form>
-          {personRows.length ? <div className="reference-person-list">{personRows.map((row) => <div className="reference-person-row" key={row.id}><span><b>{row.relationshipType ?? 'Relationship'}</b><small>{row.sourcePersonId} → {row.targetPersonId}</small></span><span><button onClick={() => editPersonRelationship(row)}>Edit</button><button onClick={() => void archivePersonRelationship(row.id)}>Archive</button></span></div>)}</div> : <p className="reference-analysis-state">No person relationships loaded.</p>}
+          {personRows.length ? <div className="reference-person-list">{personRows.map((row) => <div className="reference-person-row" key={row.id}><span><b>{row.relationshipType ?? 'Relationship'}</b><small>{personName(row, 'sourcePerson')} → {personName(row, 'targetPerson')}</small></span><span><button onClick={() => editPersonRelationship(row)}>Edit</button><button onClick={() => void archivePersonRelationship(row.id)}>Archive</button></span></div>)}</div> : <p className="reference-analysis-state">No person relationships loaded.</p>}
         </div>}
       </section>}
 
+      <QuickCreate open={quickOpen} onClose={() => setQuickOpen(false)} context={selectedContext} onCreated={() => { setQuickOpen(false); void loadGraph(); }} />
       <div className="reference-sr-only" aria-live="polite">{loading ? 'Loading authorized network data.' : error ? error : `Network graph loaded. ${stats.relationships} relationships and ${stats.risk} active risks.`}</div>
     </main>
   );
