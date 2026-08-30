@@ -32,6 +32,12 @@ export function EntityPicker({ value, onChange, endpoint, label, placeholder = '
 
   useEffect(() => {
     let cancelled = false;
+    if (disabled) {
+      setItems([]);
+      setLoading(false);
+      setError('');
+      return () => { cancelled = true; };
+    }
     const timer = window.setTimeout(async () => {
       setLoading(true); setError('');
       try {
@@ -45,7 +51,7 @@ export function EntityPicker({ value, onChange, endpoint, label, placeholder = '
       } finally { if (!cancelled) setLoading(false); }
     }, 180);
     return () => { cancelled = true; window.clearTimeout(timer); };
-  }, [endpoint, query, scopeId]);
+  }, [disabled, endpoint, query, scopeId]);
 
   return <label className="entity-picker">{label}<input value={query} onChange={event => setQuery(event.target.value)} placeholder="جست‌وجو با نام…" disabled={disabled} aria-label={`جست‌وجوی ${label}`} /><select value={value} required={required} disabled={disabled || loading} onChange={event => { const id = event.target.value; onChange(id); const item = items.find(candidate => candidate.id === id); if (item) onLabelChange?.(id, labelOf(item)); }}><option value="">{loading ? 'در حال بارگذاری…' : placeholder}</option>{value && !selected && <option value={value}>{selectedOptionLabel}</option>}{items.map(item => <option key={item.id} value={item.id}>{labelOf(item)}{item.organization?.name ? ` · ${item.organization.name}` : item.type ? ` · ${item.type}` : ''}</option>)}</select>{error && <small className="field-error">{error}</small>}</label>;
 }
