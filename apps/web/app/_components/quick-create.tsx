@@ -4,13 +4,13 @@ import { api } from '../_lib/api';
 import { EntityPicker } from './entity-picker';
 import { useWorkspace } from './workspace';
 
-type Field = { name: string; label: string; type?: 'text' | 'number' | 'datetime-local' | 'textarea' | 'select'; required?: boolean; entityEndpoint?: string; options?: string[] };
+type Field = { name: string; label: string; type?: 'text' | 'number' | 'datetime-local' | 'textarea' | 'select' | 'email'; required?: boolean; entityEndpoint?: string; options?: string[] };
 type Entity = { key: string; label: string; endpoint: string; fields: Field[]; permission: string };
 type Context = Partial<Record<'organizationId' | 'personId' | 'relationshipId' | 'projectId' | 'meetingId', string>>;
 
 const entities: Entity[] = [
   { key: 'interaction', permission: 'interaction.write', label: 'تعامل', endpoint: '/interactions', fields: [
-    { name: 'type', label: 'نوع تعامل', type: 'select', options: ['CALL', 'EMAIL', 'MEETING', 'NOTE', 'MESSAGE'], required: true },
+    { name: 'type', label: 'نوع تعامل', type: 'select', options: ['CALL', 'EMAIL', 'MEETING', 'NOTE', 'MESSAGE', 'OTHER'], required: true },
     { name: 'subject', label: 'موضوع', required: true }, { name: 'summary', label: 'خلاصه', type: 'textarea' },
     { name: 'occurredAt', label: 'زمان', type: 'datetime-local', required: true },
     { name: 'organizationId', label: 'سازمان', entityEndpoint: '/organizations' }, { name: 'personId', label: 'شخص', entityEndpoint: '/people' }, { name: 'relationshipId', label: 'رابطه', entityEndpoint: '/relationships' },
@@ -19,8 +19,8 @@ const entities: Entity[] = [
     { name: 'title', label: 'عنوان' }, { name: 'body', label: 'متن یادداشت', type: 'textarea', required: true },
     { name: 'organizationId', label: 'سازمان', entityEndpoint: '/organizations' }, { name: 'personId', label: 'شخص', entityEndpoint: '/people' },
   ] },
-  { key: 'organization', permission: 'org.write', label: 'سازمان', endpoint: '/organizations', fields: [{ name: 'name', label: 'نام', required: true }, { name: 'type', label: 'نوع' }] },
-  { key: 'person', permission: 'person.write', label: 'شخص', endpoint: '/people', fields: [{ name: 'firstName', label: 'نام', required: true }, { name: 'lastName', label: 'نام خانوادگی', required: true }, { name: 'organizationId', label: 'سازمان', required: true, entityEndpoint: '/organizations' }, { name: 'email', label: 'ایمیل', type: 'text' }] },
+  { key: 'organization', permission: 'org.write', label: 'سازمان', endpoint: '/organizations', fields: [{ name: 'name', label: 'نام', required: true }, { name: 'type', label: 'نوع', type: 'select', options: ['HOLDING', 'SUBSIDIARY', 'CUSTOMER', 'PARTNER', 'BANK', 'GOVERNMENT', 'INVESTOR', 'SUPPLIER', 'OTHER'] }] },
+  { key: 'person', permission: 'person.write', label: 'شخص', endpoint: '/people', fields: [{ name: 'firstName', label: 'نام', required: true }, { name: 'lastName', label: 'نام خانوادگی', required: true }, { name: 'organizationId', label: 'سازمان', required: true, entityEndpoint: '/organizations' }, { name: 'email', label: 'ایمیل', type: 'email' }] },
   { key: 'relationship', permission: 'relationship.write', label: 'ارتباط', endpoint: '/relationships', fields: [{ name: 'sourceOrganizationId', label: 'سازمان مبدأ', required: true, entityEndpoint: '/organizations' }, { name: 'targetOrganizationId', label: 'سازمان مقصد', required: true, entityEndpoint: '/organizations' }, { name: 'relationshipType', label: 'نوع ارتباط', required: true }] },
   { key: 'meeting', permission: 'meeting.write', label: 'جلسه', endpoint: '/meetings', fields: [{ name: 'title', label: 'عنوان', required: true }, { name: 'startAt', label: 'شروع', type: 'datetime-local', required: true }, { name: 'endAt', label: 'پایان', type: 'datetime-local' }, { name: 'organizationId', label: 'سازمان', entityEndpoint: '/organizations' }, { name: 'relationshipId', label: 'رابطه', entityEndpoint: '/relationships' }, { name: 'objective', label: 'هدف', type: 'textarea' }] },
   { key: 'action', permission: 'action.write', label: 'اقدام', endpoint: '/actions', fields: [{ name: 'title', label: 'عنوان', required: true }, { name: 'dueAt', label: 'موعد', type: 'datetime-local' }, { name: 'organizationId', label: 'سازمان', entityEndpoint: '/organizations' }, { name: 'personId', label: 'شخص', entityEndpoint: '/people' }, { name: 'relationshipId', label: 'رابطه', entityEndpoint: '/relationships' }] },

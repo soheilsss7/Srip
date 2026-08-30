@@ -42,12 +42,12 @@ export default function Reports() {
   async function download(format: string) {
     if (!canExport) return;
     setExporting(format); setE(''); setNotice('');
-    const onPending = (approvalId: string) => setNotice("Approval requested: " + approvalId);
+    const onPending = () => setNotice('درخواست تأیید خروجی ثبت شد. پس از تأیید درخواست، دوباره خروجی را دریافت کنید.');
     const fmt = format as 'csv' | 'xlsx' | 'pdf' | 'json';
     try {
       const result = await downloadReport(kind, fmt, onPending);
       if (result.status === 'error') setE(result.message);
-      if (result.status === 'approval_pending') setNotice("Export needs approval - request created: " + result.approvalId);
+      if (result.status === 'approval_pending') setNotice('خروجی نیاز به تأیید دارد. پس از تأیید درخواست، دوباره خروجی را دریافت کنید.');
     } catch (x) { setE((x as Error).message); } finally { setExporting(''); }
   }
   const rows = previewRows(data);

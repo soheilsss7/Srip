@@ -278,6 +278,7 @@ function RailKpi({ label, value, danger = false }: { label: string; value: strin
 
 export default function NetworkPage() {
   const { scopeId, can } = useWorkspace();
+  const canNetworkRead = can('network.read');
   const canRelationshipRead = can('relationship.read');
   const canRelationshipWrite = can('relationship.write');
   const [activeTab, setActiveTab] = useState('All');
@@ -329,6 +330,12 @@ export default function NetworkPage() {
   }, [liveGraph]);
 
   const loadGraph = useCallback(async () => {
+    if (!canNetworkRead) {
+      setLiveGraph(EMPTY_GRAPH);
+      setIsLive(false);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError('');
     const params = new URLSearchParams({ limit: '500' });
@@ -350,12 +357,12 @@ export default function NetworkPage() {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, appliedQuery, scopeId, status]);
+  }, [activeTab, appliedQuery, canNetworkRead, scopeId, status]);
 
   useEffect(() => { void loadGraph(); }, [loadGraph]);
 
   async function runPath(from: string, to: string, mode = pathMode) {
-    if (!from || !to || from === to) return;
+    if (!canNetworkRead || !from || !to || from === to) return;
     setPathBusy(true);
     setError('');
     const params = new URLSearchParams({ from, to, mode });
@@ -380,6 +387,7 @@ export default function NetworkPage() {
   }
 
   async function runAnalysis(kind: string) {
+    if (!canNetworkRead) return;
     setAnalysisKind(kind);
     setAnalysisOpen(true);
     setAnalysisBusy(true);
@@ -398,7 +406,7 @@ export default function NetworkPage() {
   }
 
   async function loadPersonRelationships() {
-    if (!canRelationshipRead) return;
+    if (!canNetworkRead || !canRelationshipRead) return;
     setPersonBusy(true);
     try {
       const result = await apiGet<any>(`/network/person-relationships?limit=100${scopeId !== 'all' ? `&organizationId=${encodeURIComponent(scopeId)}` : ''}`);
@@ -467,6 +475,8 @@ export default function NetworkPage() {
     organizationId: selectedLiveNode.type === 'organization' ? selectedLiveNode.id.replace(/^org:/, '') : selectedLiveNode.organizationId,
     personId: selectedLiveNode.type === 'person' ? selectedLiveNode.id.replace(/^person:/, '') : undefined,
   } : undefined;
+
+  if (!canNetworkRead) return <main className="feature-page"><section className="panel"><p className="empty-state">مجوز مشاهده شبکه برای شما فعال نیست.</p></section></main>;
 
   return (
     <main className="network-reference-page">
@@ -564,7 +574,7 @@ export default function NetworkPage() {
         <header><div><h2>Network Analysis</h2><p>Each result is calculated by the authorized Backend graph and can be selected in the network.</p></div><button onClick={() => setAnalysisOpen(false)}>Close</button></header>
         <nav className="analysis-tabs">{['centrality', 'connectors', 'bridges', 'bottlenecks', 'single-points-of-failure'].map((kind) => <button key={kind} className={analysisKind === kind ? 'active' : ''} onClick={() => void runAnalysis(kind)}>{kind.replaceAll('-', ' ')}</button>)}</nav>
         {analysisBusy ? <p className="reference-analysis-state">Loading analysis…</p> : analysisRows.length ? <div className="reference-analysis-table"><div className="reference-analysis-row heading"><span>Node</span><span>Score</span><span>Action</span></div>{analysisRows.map((row, index) => { const node = row.node ?? {}; const score = row.degree ?? row.connectorScore ?? row.bridgeScore ?? row.bottleneckScore ?? row.fragmentationIncrease ?? '—'; return <div className="reference-analysis-row" key={node.id ?? index}><span>{node.label ?? node.name ?? node.id ?? 'Unknown node'}</span><strong>{String(score)}</strong><button onClick={() => { if (node.id) { setSelectedNodeId(node.id); setRailTab('overview'); } }}>Highlight</button></div>; })}</div> : <p className="reference-analysis-state">Run an analysis to see Backend-derived results.</p>}
-        <div className="reference-manager-header"><div><h3>Person relationships</h3><p>Read, create, update and archive person-to-person relationships under relationship.write authorization.</p></div><button className="secondary-reference-button" onClick={() => void loadPersonRelationships()} disabled={!canRelationshipRead||personBusy}>{!canRelationshipRead ? 'Read access required' : personBusy ? 'Loading…' : 'Load relationships'}</button></div>
+        <div className="reference-manager-header"><div><h3>Person relationships</h3><p>Read, create, update and archive person-to-person relationships under relationship.write authorization.</p></div><button className="secondary-reference-button" onClick={() => void loadPersonRelationships()} disabled={!canNetworkRead||!canRelationshipRead||personBusy}>{!canNetworkRead||!canRelationshipRead ? 'Read access required' : personBusy ? 'Loading…' : 'Load relationships'}</button></div>
         {personManagerOpen && <div className="person-relationship-manager">
           {!canRelationshipWrite && <p className="reference-empty-copy">Relationship records are read-only in the current permission scope.</p>}
           {canRelationshipWrite && <form onSubmit={savePersonRelationship} className="person-relationship-form">

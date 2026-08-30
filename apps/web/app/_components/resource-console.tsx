@@ -13,7 +13,8 @@ export function ResourceConsole({config}:{config:ResourceConfig}){
  const {can}=useWorkspace();
  const readable=!config.permission||can(config.permission);
  const mutating=Boolean(config.create||config.update||config.remove||config.actions?.length);
- const writable=readable&&(!mutating||!config.writePermission&&!writePermission(config.permission)||can(config.writePermission??writePermission(config.permission)!));
+ const requiredWritePermission=config.writePermission??writePermission(config.permission);
+ const writable=readable&&(!mutating||!requiredWritePermission||can(requiredWritePermission));
  const [rows,setRows]=useState<any[]>([]),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[error,setError]=useState(''),[editing,setEditing]=useState<any|null>(null),[form,setForm]=useState<Record<string,any>>({});
  const qs=useMemo(()=>{const q=config.query??{};const s=Object.entries(q).filter(([,v])=>v!==undefined).map(([k,v])=>`${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`).join('&');return s?`?${s}`:''},[config.query]);
   const load=useCallback(async()=>{if(!readable){setRows([]);setLoading(false);return}setLoading(true);setError('');try{setRows(rowsOf(await api(config.endpoint+qs)))}catch(e){setError((e as Error).message)}finally{setLoading(false)}},[config.endpoint,qs,readable]);
