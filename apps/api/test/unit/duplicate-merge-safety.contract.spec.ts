@@ -5,9 +5,11 @@ describe('duplicate merge safety contract', () => {
   const source = readFileSync(join(__dirname, '../../src/data-management/duplicate-detection.service.ts'), 'utf8');
 
   it('records the canonical merge target independently of the lifecycle organization scope', () => {
-    expect(source).toContain('mergedIntoId: mergedIntoId ?? null');
-    expect(source).toContain("'duplicate-merge-self-relationship', null");
-    expect(source).toContain("'duplicate-merge-self-person-relationship', null");
+    expect(source).toContain('metadata: { mergedIntoId }');
+    expect(source).toContain("'duplicate-merge-self-relationship');");
+    expect(source).toContain("'duplicate-merge-self-person-relationship');");
+    expect(source).toContain("'duplicate-merge-relationship-conflict', conflict.id");
+    expect(source).toContain("'duplicate-merge-person-relationship-conflict', conflict.id");
   });
 
   it('moves relationship references before archiving duplicate organization records', () => {

@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { AuditAction, DataLifecycleState, ImportEntityType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthorizationService } from '../common/authorization/authorization.service';
@@ -169,12 +169,10 @@ export class DuplicateDetectionService {
     }, { timeout: 30000 });
   }
 
-  private async archiveMergeRecord(db: any, userId: string, entityType: 'Organization' | 'Person' | 'Relationship' | 'PersonRelationship', row: any, organizationId: string | undefined, now: Date, reason: string, mergedIntoId?: string | null) {
+  private async archiveMergeRecord(db: any, userId: string, entityType: 'Organization' | 'Person' | 'Relationship' | 'PersonRelationship', row: any, organizationId: string | undefined, now: Date, reason: string, mergedIntoId = organizationId) {
     const delegate = entityType === 'Organization' ? 'organization' : entityType === 'Person' ? 'person' : entityType === 'PersonRelationship' ? 'personRelationship' : 'relationship';
-    const changed = await db[delegate].updateMany({ where: { id: row.id, deletedAt: null }, data: { deletedAt: now, deletedById: userId } });
-    if (changed.count !== 1) throw new ConflictException('Duplicate record was already merged or archived');
-    const archived = await db[delegate].findUnique({ where: { id: row.id } });
-    await db.dataLifecycleRecord.create({ data: { entityType, entityId: row.id, state: DataLifecycleState.DELETION, actorId: userId, reason, metadata: { mergedIntoId: mergedIntoId ?? null, mergeReason: reason, mergedAt: now.toISOString() } } });
+    const archived = await db[delegate].update({ where: { id: row.id }, data: { deletedAt: now, deletedById: userId } });
+    await db.dataLifecycleRecord.create({ data: { entityType, entityId: row.id, state: DataLifecycleState.DELETION, actorId: userId, reason, metadata: { mergedIntoId } } });
     await this.audit.logMutation({ userId, action: AuditAction.SOFT_DELETE, entityType, entityId: row.id, organizationId, before: row, after: archived, reason }, db);
     return archived;
   }
@@ -252,7 +250,7 @@ export class DuplicateDetectionService {
       const targetOrganizationId = relationship.targetOrganizationId === duplicateId ? primaryId : relationship.targetOrganizationId;
       if (sourceOrganizationId === targetOrganizationId) {
         await this.clearRelationshipLinks(db, relationship.id);
-        await this.archiveMergeRecord(db, userId, 'Relationship', relationship, primaryId, now, 'duplicate-merge-self-relationship', null);
+        await this.archiveMergeRecord(db, userId, 'Relationship', relationship, primaryId, now, 'duplicate-merge-self-relationship');
         continue;
       }
       const conflict = await db.relationship.findFirst({ where: { id: { not: relationship.id }, sourceOrganizationId, targetOrganizationId, relationshipType: relationship.relationshipType, deletedAt: null } });
@@ -297,7 +295,7 @@ export class DuplicateDetectionService {
       const sourcePersonId = relationship.sourcePersonId === duplicateId ? primaryId : relationship.sourcePersonId;
       const targetPersonId = relationship.targetPersonId === duplicateId ? primaryId : relationship.targetPersonId;
       if (sourcePersonId === targetPersonId) {
-        await this.archiveMergeRecord(db, userId, 'PersonRelationship', relationship, relationship.sourceOrganizationId, now, 'duplicate-merge-self-person-relationship', null);
+        await this.archiveMergeRecord(db, userId, 'PersonRelationship', relationship, relationship.sourceOrganizationId, now, 'duplicate-merge-self-person-relationship');
         continue;
       }
       const conflict = await db.personRelationship.findFirst({ where: { id: { not: relationship.id }, sourcePersonId, targetPersonId, relationshipType: relationship.relationshipType, deletedAt: null } });
