@@ -163,16 +163,16 @@ export class DuplicateDetectionService {
       ]);
       if (!primary || !duplicate) throw new NotFoundException('Duplicate person candidate is no longer available');
       await this.mergePersonRelations(db, userId, primary.id, duplicate.id, now);
-      await this.archiveMergeRecord(db, userId, 'Person', duplicate, primary.organizationId, now, 'duplicate-merged');
+      await this.archiveMergeRecord(db, userId, 'Person', duplicate, primary.organizationId, now, 'duplicate-merged', primary.id);
       await this.audit.logMutation({ userId, action: AuditAction.UPDATE, entityType: 'Person', entityId: primary.id, organizationId: primary.organizationId, before: { id: primary.id }, after: { mergedDuplicateId: duplicate.id, duplicateArchived: true }, reason: 'duplicate-merged' }, tx);
       return { ...preview, writePerformed: true, mergedAt: now.toISOString(), archivedDuplicateId: duplicate.id, reassignedToId: primary.id };
     }, { timeout: 30000 });
   }
 
-  private async archiveMergeRecord(db: any, userId: string, entityType: 'Organization' | 'Person' | 'Relationship' | 'PersonRelationship', row: any, organizationId: string | undefined, now: Date, reason: string) {
+  private async archiveMergeRecord(db: any, userId: string, entityType: 'Organization' | 'Person' | 'Relationship' | 'PersonRelationship', row: any, organizationId: string | undefined, now: Date, reason: string, mergedIntoId = organizationId) {
     const delegate = entityType === 'Organization' ? 'organization' : entityType === 'Person' ? 'person' : entityType === 'PersonRelationship' ? 'personRelationship' : 'relationship';
     const archived = await db[delegate].update({ where: { id: row.id }, data: { deletedAt: now, deletedById: userId } });
-    await db.dataLifecycleRecord.create({ data: { entityType, entityId: row.id, state: DataLifecycleState.DELETION, actorId: userId, reason, metadata: { mergedIntoId: organizationId } } });
+    await db.dataLifecycleRecord.create({ data: { entityType, entityId: row.id, state: DataLifecycleState.DELETION, actorId: userId, reason, metadata: { mergedIntoId } } });
     await this.audit.logMutation({ userId, action: AuditAction.SOFT_DELETE, entityType, entityId: row.id, organizationId, before: row, after: archived, reason }, db);
     return archived;
   }
@@ -256,7 +256,7 @@ export class DuplicateDetectionService {
       const conflict = await db.relationship.findFirst({ where: { id: { not: relationship.id }, sourceOrganizationId, targetOrganizationId, relationshipType: relationship.relationshipType, deletedAt: null } });
       if (conflict) {
         await this.moveRelationshipLinks(db, relationship.id, conflict.id);
-        await this.archiveMergeRecord(db, userId, 'Relationship', relationship, primaryId, now, 'duplicate-merge-relationship-conflict');
+        await this.archiveMergeRecord(db, userId, 'Relationship', relationship, primaryId, now, 'duplicate-merge-relationship-conflict', conflict.id);
       } else {
         await db.relationship.update({ where: { id: relationship.id }, data: { sourceOrganizationId, targetOrganizationId } });
       }
@@ -299,7 +299,7 @@ export class DuplicateDetectionService {
         continue;
       }
       const conflict = await db.personRelationship.findFirst({ where: { id: { not: relationship.id }, sourcePersonId, targetPersonId, relationshipType: relationship.relationshipType, deletedAt: null } });
-      if (conflict) await this.archiveMergeRecord(db, userId, 'PersonRelationship', relationship, relationship.sourceOrganizationId, now, 'duplicate-merge-person-relationship-conflict');
+      if (conflict) await this.archiveMergeRecord(db, userId, 'PersonRelationship', relationship, relationship.sourceOrganizationId, now, 'duplicate-merge-person-relationship-conflict', conflict.id);
       else await db.personRelationship.update({ where: { id: relationship.id }, data: { sourcePersonId, targetPersonId } });
     }
   }
