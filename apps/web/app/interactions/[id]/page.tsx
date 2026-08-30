@@ -13,7 +13,7 @@ export default function Page({params}:{params:Promise<{id:string}>}){
  async function update(body:any){await doIt('patch',()=>api(`/interactions/${id}`,{method:'PATCH',body:JSON.stringify(body)}))}
  const info=x?Object.entries(x).filter(([k])=>!['organization','person','relationship'].includes(k)&&typeof x[k]!=='function').slice(0,26):[];
  return <main className="feature-page">
-  <PageHeader eyebrow="INTERACTION" title={x?.subject??'Interaction'} description={`شناسه: ${id}`} actions={<div className="toolbar"><button className="secondary-action" onClick={load} disabled={!!busy}>بازخوانی</button><button className="danger-action" disabled={!!busy} onClick={()=>{if(confirm('این تعامل حذف شود؟'))doIt('del',()=>api(`/interactions/${id}`,{method:'DELETE'}))}}>حذف</button></div>}/>
+  <PageHeader eyebrow="INTERACTION" title={x?.subject??'Interaction'} description="جزئیات تعامل، context سازمانی و رویدادهای مرتبط." actions={<div className="toolbar"><button className="secondary-action" onClick={load} disabled={!!busy}>بازخوانی</button><button className="danger-action" disabled={!!busy} onClick={()=>{if(confirm('این تعامل حذف شود؟'))doIt('del',()=>api(`/interactions/${id}`,{method:'DELETE'}))}}>حذف</button></div>}/>
   <ErrorCard message={error}/>
   {!x&&!error?<Loading/>:x&&<>
    <section className="panel"><div className="panel-title"><div><h2>جزئیات تعامل</h2><p>{x.type??''}</p></div><Badge tone={x.sentiment==='POSITIVE'?'success':x.sentiment==='NEGATIVE'?'danger':'neutral'}>{x.sentiment??'—'}</Badge></div><div className="detail-grid">{info.map(([k,v])=>{if(v==null||v==='')return null;return <div className="detail-item" key={k}><small>{k}</small><strong>{typeof v==='object'?JSON.stringify(v):String(v)}</strong></div>})}</div></section>

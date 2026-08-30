@@ -15,5 +15,5 @@ test -f apps/mobile/src/state/session.tsx
 test -f apps/mobile/src/services/api-client.ts
 grep -q 'expo-secure-store' apps/mobile/package.json
 grep -q 'Authorization' apps/mobile/src/services/api-client.ts
-grep -q 'SecureStore' apps/mobile/src/state/session.tsx
+grep -q 'SecureStore' apps/mobile/src/services/auth-store.ts
 echo 'PHASE 16 STATIC VERIFICATION OK'

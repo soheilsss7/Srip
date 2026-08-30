@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { MeetingStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthorizationService } from '../common/authorization/authorization.service';
@@ -19,10 +19,10 @@ export class MeetingsService {
     if (row.ownerId !== userId) throw new NotFoundException('Meeting not found');
   }
 
-  async list(userId: string, relationshipId?: string, upcoming = false, page?: string, pageSize?: string) {
+  async list(userId: string, relationshipId?: string, upcoming = false, page?: string, pageSize?: string, organizationId?: string, search?: string) {
     const ids = await this.authorization.accessibleOrganizationIds(userId);
     const p = parsePagination(page, pageSize, { page: 1, pageSize: 50 });
-    const where: Prisma.MeetingWhereInput = { deletedAt: null, ...(relationshipId ? { relationshipId } : {}), ...(upcoming ? { startAt: { gte: new Date() } } : {}), ...(ids ? { OR: [{ organizationId: { in: ids } }, { ownerId: userId }, { relationship: { OR: [{ sourceOrganizationId: { in: ids } }, { targetOrganizationId: { in: ids } }] } }] } : { ownerId: userId }) };
+    const where: Prisma.MeetingWhereInput = { deletedAt: null, ...(relationshipId ? { relationshipId } : {}), ...(organizationId ? { organizationId } : {}), ...(upcoming ? { startAt: { gte: new Date() } } : {}), ...(ids ? { OR: [{ organizationId: { in: ids } }, { ownerId: userId }, { relationship: { OR: [{ sourceOrganizationId: { in: ids } }, { targetOrganizationId: { in: ids } }] } }] } : { ownerId: userId }), ...(search?.trim() ? { AND: [{ OR: [{ title: { contains: search.trim(), mode: 'insensitive' } }, { objective: { contains: search.trim(), mode: 'insensitive' } }, { agenda: { contains: search.trim(), mode: 'insensitive' } }] }] } : {}) };
     const [items, total] = await this.prisma.$transaction([
       this.prisma.meeting.findMany({ where, include: { organization: true, relationship: true, participants: { include: { person: true } }, actions: true, commitments: true }, orderBy: { startAt: 'desc' }, skip: p.skip, take: p.take }),
       this.prisma.meeting.count({ where }),
@@ -48,13 +48,45 @@ export class MeetingsService {
     const allowedOrgs: string[] = [];
     if (organizationId) allowedOrgs.push(organizationId);
     if (relationshipId) { const r = await this.prisma.relationship.findUnique({ where: { id: relationshipId }, select: { sourceOrganizationId: true, targetOrganizationId: true } }); if (!r) throw new NotFoundException('Relationship not found'); allowedOrgs.push(r.sourceOrganizationId, r.targetOrganizationId); }
-    if (people.length) await this.authorization.assertAnyOrganizationAccess(userId, people.map(p => p.organizationId).filter((id): id is string => !!id));
+    if (people.length) {
+      const personOrganizationIds = people.map(p => p.organizationId).filter((id): id is string => !!id);
+      await this.authorization.assertAnyOrganizationAccess(userId, personOrganizationIds);
+      if (allowedOrgs.length && people.some((person) => person.organizationId && !allowedOrgs.includes(person.organizationId))) {
+        throw new ForbiddenException('Every participant must belong to the meeting organization or relationship context');
+      }
+    }
     return unique;
   }
 
+  private async validateDecisionOwners(userId: string, decisions: any, row: any) {
+    if (!Array.isArray(decisions)) return decisions;
+    const ownerIds = [...new Set(decisions.map((decision) => decision?.ownerId).filter((ownerId): ownerId is string => typeof ownerId === 'string' && ownerId.length > 0))];
+    if (!ownerIds.length) return decisions;
+    const contextOrganizations = [...new Set([row.organizationId, row.relationship?.sourceOrganizationId, row.relationship?.targetOrganizationId].filter(Boolean))] as string[];
+    const otherOwnerIds = ownerIds.filter((ownerId) => ownerId !== userId);
+    if (otherOwnerIds.length) {
+      const owners = await this.prisma.user.findMany({ where: { id: { in: otherOwnerIds }, isActive: true, deletedAt: null, ...(contextOrganizations.length ? { memberships: { some: { organizationId: { in: contextOrganizations } } } } : {}) }, select: { id: true } });
+      if (owners.length !== otherOwnerIds.length) throw new ForbiddenException('Decision owner is outside the meeting organization scope');
+    }
+    return decisions;
+  }
+
+  private validateMeetingTimes(startAt: unknown, endAt?: unknown) {
+    const start = new Date(String(startAt));
+    if (Number.isNaN(start.getTime())) throw new BadRequestException('Meeting startAt must be a valid date');
+    if (endAt !== undefined && endAt !== null && endAt !== '') {
+      const end = new Date(String(endAt));
+      if (Number.isNaN(end.getTime())) throw new BadRequestException('Meeting endAt must be a valid date');
+      if (end <= start) throw new BadRequestException('Meeting endAt must be after startAt');
+    }
+  }
+
   async create(userId: string, data: any) {
+    this.validateMeetingTimes(data.startAt, data.endAt);
     if (data.organizationId) await this.authorization.assertPermission(userId, 'meeting.write', { organizationId: data.organizationId });
-    if (data.relationshipId) { const r = await this.prisma.relationship.findUnique({ where: { id: data.relationshipId }, select: { sourceOrganizationId: true, targetOrganizationId: true } }); if (!r) throw new NotFoundException('Relationship not found'); await this.authorization.assertAnyOrganizationAccess(userId, [r.sourceOrganizationId, r.targetOrganizationId]); }
+    let relationshipContext: { sourceOrganizationId: string; targetOrganizationId: string } | null = null;
+    if (data.relationshipId) { const r = await this.prisma.relationship.findUnique({ where: { id: data.relationshipId }, select: { sourceOrganizationId: true, targetOrganizationId: true } }); if (!r) throw new NotFoundException('Relationship not found'); relationshipContext = r; await this.authorization.assertAnyOrganizationAccess(userId, [r.sourceOrganizationId, r.targetOrganizationId]); }
+    await this.validateDecisionOwners(userId, data.decisions, { organizationId: data.organizationId, relationship: relationshipContext });
     const participantIds = await this.validateParticipants(userId, data.participantPersonIds ?? [], data.relationshipId, data.organizationId);
     const { participantPersonIds, ...meeting } = data;
     const payload: any = { ...meeting, ownerId: userId, startAt: new Date(data.startAt), endAt: data.endAt ? new Date(data.endAt) : undefined };
@@ -71,8 +103,11 @@ export class MeetingsService {
     const row = await this.prisma.meeting.findUnique({ where: { id }, include: { relationship: { select: { sourceOrganizationId: true, targetOrganizationId: true } }, participants: true } });
     if (!row || row.deletedAt) throw new NotFoundException('Meeting not found');
     await this.assertAccess(userId, row);
+    this.validateMeetingTimes(data.startAt ?? row.startAt, data.endAt === undefined ? row.endAt : data.endAt);
     if (data.organizationId) await this.authorization.assertPermission(userId, 'meeting.write', { organizationId: data.organizationId });
-    if (data.relationshipId) { const r=await this.prisma.relationship.findUnique({where:{id:data.relationshipId},select:{sourceOrganizationId:true,targetOrganizationId:true}});if(!r)throw new NotFoundException('Relationship not found');await this.authorization.assertAnyOrganizationAccess(userId,[r.sourceOrganizationId,r.targetOrganizationId]); }
+    let relationshipContext: any = row.relationship;
+    if (data.relationshipId) { const r=await this.prisma.relationship.findUnique({where:{id:data.relationshipId},select:{sourceOrganizationId:true,targetOrganizationId:true}});if(!r)throw new NotFoundException('Relationship not found');relationshipContext = r;await this.authorization.assertAnyOrganizationAccess(userId,[r.sourceOrganizationId,r.targetOrganizationId]); }
+    if (data.decisions !== undefined) await this.validateDecisionOwners(userId, data.decisions, { organizationId: data.organizationId ?? row.organizationId, relationship: relationshipContext });
     const participantIds = data.participantPersonIds !== undefined ? await this.validateParticipants(userId, data.participantPersonIds, data.relationshipId ?? row.relationshipId, data.organizationId ?? row.organizationId ?? undefined) : undefined;
     const { participantPersonIds, ...raw } = data;
     const allowed = ['title','objective','agenda','status','startAt','endAt','notes','outcome','transcript','meetingUrl','location','decisions','preMeetingBrief','recordingReference','followUpCandidates','attachments','organizationId','relationshipId'];
@@ -92,8 +127,10 @@ export class MeetingsService {
     const row = await this.prisma.meeting.findUnique({ where: { id }, include: { relationship: { select: { sourceOrganizationId: true, targetOrganizationId: true } } } });
     if (!row || row.deletedAt) throw new NotFoundException('Meeting not found');
     await this.assertAccess(userId, row);
-    const allowed = ['notes','outcome','decisions','transcript','preMeetingBrief']; const update:any={status:MeetingStatus.COMPLETED,completedAt:new Date()}; for(const k of allowed)if(data[k]!==undefined)update[k]=data[k];
-    const updated = await this.eventBus.transaction(async tx => { const next=await tx.meeting.update({where:{id},data:update}); await this.audit.logMutation({userId,action:'UPDATE',entityType:'Meeting',entityId:id,organizationId:next.organizationId??undefined,before:row,after:next,reason:'meeting_completed'},tx); await this.eventBus.publishInTransaction(tx,{eventType:DOMAIN_EVENT_TYPES.MEETING_UPDATED,aggregateType:'Meeting',aggregateId:next.id,organizationId:next.organizationId??undefined,actorId:userId,payload:next as any}); await this.eventBus.publishInTransaction(tx,{eventType:DOMAIN_EVENT_TYPES.MEETING_COMPLETED,aggregateType:'Meeting',aggregateId:next.id,organizationId:next.organizationId??undefined,actorId:userId,payload:next as any}); return next; });
+    if (data.decisions !== undefined) await this.validateDecisionOwners(userId, data.decisions, row);
+    const wasCompleted = row.status === MeetingStatus.COMPLETED;
+    const allowed = ['notes','outcome','decisions','transcript','preMeetingBrief']; const update:any={status:MeetingStatus.COMPLETED,completedAt:row.completedAt ?? new Date()}; for(const k of allowed)if(data[k]!==undefined)update[k]=data[k];
+    const updated = await this.eventBus.transaction(async tx => { const next=await tx.meeting.update({where:{id},data:update}); await this.audit.logMutation({userId,action:'UPDATE',entityType:'Meeting',entityId:id,organizationId:next.organizationId??undefined,before:row,after:next,reason:wasCompleted?'meeting_completed_update':'meeting_completed'},tx); await this.eventBus.publishInTransaction(tx,{eventType:DOMAIN_EVENT_TYPES.MEETING_UPDATED,aggregateType:'Meeting',aggregateId:next.id,organizationId:next.organizationId??undefined,actorId:userId,payload:next as any}); if (!wasCompleted) await this.eventBus.publishInTransaction(tx,{eventType:DOMAIN_EVENT_TYPES.MEETING_COMPLETED,aggregateType:'Meeting',aggregateId:next.id,organizationId:next.organizationId??undefined,actorId:userId,payload:next as any}); return next; });
     return EntityResponseDto.from('Meeting',updated);
   }
 
@@ -213,18 +250,60 @@ export class MeetingsService {
   async applyActionItems(userId: string, id: string, items: Array<{ title: string; dueAt?: string; asCommitment?: boolean; ownerId?: string; priority?: string; description?: string }>) {
     const row = await this.fetch(userId, id);
     if (!items?.length) return { created: [] as any[] };
-    const created: any[] = [];
-    for (const item of items) {
-      if (!item.title?.trim()) continue;
-      if (item.asCommitment) {
-        const commitment = await this.eventBus.transaction(async tx => { const createdCommitment=await tx.commitment.create({data:{description:item.description??item.title,status:'OPEN',dueAt:item.dueAt?new Date(item.dueAt):undefined,ownerId:item.ownerId??row.ownerId,meetingId:row.id,relationshipId:row.relationshipId??undefined,organizationId:row.organizationId??undefined}});await this.audit.logMutation({userId,action:'CREATE',entityType:'Commitment',entityId:createdCommitment.id,organizationId:row.organizationId??undefined,after:createdCommitment,reason:'meeting_follow_up_apply'},tx);await this.eventBus.publishInTransaction(tx,{eventType:DOMAIN_EVENT_TYPES.COMMITMENT_CREATED,aggregateType:'Commitment',aggregateId:createdCommitment.id,organizationId:(createdCommitment as any).organizationId??undefined,actorId:userId,payload:createdCommitment as any});return createdCommitment; });
-        created.push({ type: 'Commitment', record: commitment });
-      } else {
-        const action = await this.eventBus.transaction(async tx => { const createdAction=await tx.action.create({data:{title:item.title,status:'OPEN',priority:(item.priority as any)??'MEDIUM',dueAt:item.dueAt?new Date(item.dueAt):undefined,ownerId:item.ownerId??row.ownerId,createdById:userId,meetingId:row.id,relationshipId:row.relationshipId??undefined,organizationId:row.organizationId??undefined}});await this.audit.logMutation({userId,action:'CREATE',entityType:'Action',entityId:createdAction.id,organizationId:row.organizationId??undefined,after:createdAction,reason:'meeting_follow_up_apply'},tx);await this.eventBus.publishInTransaction(tx,{eventType:DOMAIN_EVENT_TYPES.ACTION_CREATED,aggregateType:'Action',aggregateId:createdAction.id,organizationId:(createdAction as any).organizationId??undefined,actorId:userId,payload:createdAction as any});return createdAction; });
-        created.push({ type: 'Action', record: action });
+
+    const contextOrganizationIds = [...new Set([
+      row.organizationId,
+      row.relationship?.sourceOrganizationId,
+      row.relationship?.targetOrganizationId,
+    ].filter(Boolean))] as string[];
+    const validateOwner = async (ownerId: string) => {
+      if (ownerId === userId) return;
+      const owner = await this.prisma.user.findFirst({
+        where: {
+          id: ownerId,
+          isActive: true,
+          deletedAt: null,
+          ...(contextOrganizationIds.length ? { memberships: { some: { organizationId: { in: contextOrganizationIds } } } } : {}),
+        },
+        select: { id: true },
+      });
+      if (!owner) throw new ForbiddenException('Selected owner is outside the meeting organization scope');
+    };
+
+    // Apply the complete selection atomically. A failed owner/date/constraint
+    // validation must never leave only the first few follow-ups persisted.
+    return this.eventBus.transaction(async tx => {
+      const created: any[] = [];
+      for (const item of items) {
+        const title = item.title?.trim();
+        if (!title) continue;
+        const ownerId = item.ownerId ?? row.ownerId ?? userId;
+        await validateOwner(ownerId);
+        const dueAt = item.dueAt ? new Date(item.dueAt) : undefined;
+        if (dueAt && Number.isNaN(dueAt.getTime())) throw new BadRequestException('Invalid follow-up due date');
+        if (item.asCommitment) {
+          const createdCommitment = await tx.commitment.create({ data: {
+            description: item.description?.trim() || title,
+            status: 'OPEN', dueAt, ownerId, meetingId: row.id,
+            relationshipId: row.relationshipId ?? undefined,
+            organizationId: row.organizationId ?? undefined,
+          } });
+          await this.audit.logMutation({ userId, action: 'CREATE', entityType: 'Commitment', entityId: createdCommitment.id, organizationId: row.organizationId ?? undefined, after: createdCommitment, reason: 'meeting_follow_up_apply' }, tx);
+          await this.eventBus.publishInTransaction(tx, { eventType: DOMAIN_EVENT_TYPES.COMMITMENT_CREATED, aggregateType: 'Commitment', aggregateId: createdCommitment.id, organizationId: (createdCommitment as any).organizationId ?? undefined, actorId: userId, payload: createdCommitment as any });
+          created.push({ type: 'Commitment', record: createdCommitment });
+        } else {
+          const createdAction = await tx.action.create({ data: {
+            title, status: 'OPEN', priority: (item.priority as any) ?? 'MEDIUM', dueAt, ownerId,
+            createdById: userId, meetingId: row.id, relationshipId: row.relationshipId ?? undefined,
+            organizationId: row.organizationId ?? undefined,
+          } });
+          await this.audit.logMutation({ userId, action: 'CREATE', entityType: 'Action', entityId: createdAction.id, organizationId: row.organizationId ?? undefined, after: createdAction, reason: 'meeting_follow_up_apply' }, tx);
+          await this.eventBus.publishInTransaction(tx, { eventType: DOMAIN_EVENT_TYPES.ACTION_CREATED, aggregateType: 'Action', aggregateId: createdAction.id, organizationId: (createdAction as any).organizationId ?? undefined, actorId: userId, payload: createdAction as any });
+          created.push({ type: 'Action', record: createdAction });
+        }
       }
-    }
-    return { created };
+      return { created };
+    });
   }
 
   /**

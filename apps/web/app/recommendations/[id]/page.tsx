@@ -2,9 +2,12 @@
 import {use,useCallback,useEffect,useState} from 'react';
 import {api} from '../../_lib/api';
 import {Badge,ErrorCard,Loading,PageHeader} from '../../_components/page-ui';
+import {EntityPicker} from '../../_components/entity-picker';
+import {useWorkspace} from '../../_components/workspace';
 
 export default function Page({params}:{params:Promise<{id:string}>}){
  const {id}=use(params);
+ const {scopeId}=useWorkspace();
  const [r,setR]=useState<any>(null),[explanation,setExplanation]=useState<any>(null),[error,setError]=useState(''),[busy,setBusy]=useState('');
  const [title,setTitle]=useState(''),[rationale,setRationale]=useState(''),[confidence,setConfidence]=useState('');
  const [assigneeId,setAssigneeId]=useState(''),[snoozeDatetime,setSnoozeDatetime]=useState('');
@@ -17,13 +20,13 @@ export default function Page({params}:{params:Promise<{id:string}>}){
  async function showExplain(){setExplanation(null);setError('');try{setExplanation(await api(`/recommendations/${id}/explain`))}catch(e){setError((e as Error).message)}}
 
  return <main className="feature-page">
-  <PageHeader eyebrow="RECOMMENDATION" title={r?.title??'Recommendation'} description={`شناسه: ${id}`} actions={<div className="toolbar"><a className="secondary-action" href="/recommendations">بازگشت</a><button className="secondary-action" onClick={load} disabled={!!busy}>بازخوانی</button></div>}/>
+  <PageHeader eyebrow="RECOMMENDATION" title={r?.title??'Recommendation'} description="جزئیات پیشنهاد و وضعیت اجرای آن." actions={<div className="toolbar"><a className="secondary-action" href="/recommendations">بازگشت</a><button className="secondary-action" onClick={load} disabled={!!busy}>بازخوانی</button></div>}/>
   <ErrorCard message={error}/>
   {!r&&!error?<Loading/>:r&&<>
    <section className="panel">
     <div className="panel-title"><div><h2>{r.type??'Recommendation'}</h2><p>{r.rationale??''}</p></div><Badge tone={r.status==='APPROVED'?'success':r.status==='REJECTED'?'danger':'info'}>{r.status??'PROPOSED'}</Badge></div>
     <div className="metric-list"><div><span>Confidence</span><strong>{r.confidence??'—'}%</strong></div><div><span>Has Evidence</span><strong>{r.evidence?'بله':'خیر'}</strong></div></div>
-    <div className="detail-grid">{[['Relationship',r.relationship?.relationshipType],['Source org',r.relationship?.sourceOrganization?.name],['Target org',r.relationship?.targetOrganization?.name],['Assigned to',r.assignedToId],['Decided by',r.decisionById],['Decision at',r.decisionAt?new Date(r.decisionAt).toLocaleString():''],['Snoozed until',r.snoozedUntil?new Date(r.snoozedUntil).toLocaleString():'']].filter(([,v])=>v!=null&&v!=='').map(([k,v])=><div className="detail-item" key={String(k)}><small>{String(k)}</small><strong>{String(v)}</strong></div>)}</div>
+    <div className="detail-grid">{[['Relationship',r.relationship?.relationshipType],['Source org',r.relationship?.sourceOrganization?.name],['Target org',r.relationship?.targetOrganization?.name],['Assigned to',r.assignedTo?.name??r.assignedTo?.email??(r.assignedToId?'کاربر انتخاب‌شده':'')],['Decided by',r.decisionBy?.name??r.decisionBy?.email??(r.decisionById?'کاربر ثبت‌کننده':'')],['Decision at',r.decisionAt?new Date(r.decisionAt).toLocaleString():'' ],['Snoozed until',r.snoozedUntil?new Date(r.snoozedUntil).toLocaleString():'']].filter(([,v])=>v!=null&&v!=='').map(([k,v])=><div className="detail-item" key={String(k)}><small>{String(k)}</small><strong>{String(v)}</strong></div>)}</div>
     {r.evidence!=null&&typeof r.evidence==='object'&&Object.keys(r.evidence).length>0&&<div className="detail-grid">{Object.entries(r.evidence).map(([ek,ev])=><div className="detail-item" key={ek}><small>{ek}</small><strong>{typeof ev==='object'?JSON.stringify(ev).slice(0,400):String(ev)}</strong></div>)}</div>}
    </section>
 
@@ -36,9 +39,9 @@ export default function Page({params}:{params:Promise<{id:string}>}){
      <label>Snooze تا تاریخ<input type="datetime-local" value={snoozeDatetime} onChange={e=>setSnoozeDatetime(e.target.value)} aria-label="Snooze until"/></label>
      <button className="primary-action" disabled={!!busy}>Snooze</button>
     </form>
-    <form className="entity-form" onSubmit={e=>{e.preventDefault();if(!assigneeId.trim()){setError('Assignee نیاز است.');return}act('assign',{assigneeId:assigneeId.trim()})}}>
-     <label>Assignee (user ID)<input value={assigneeId} onChange={e=>setAssigneeId(e.target.value)} placeholder="user uuid"/></label>
-     <button className="primary-action" disabled={!!busy}>Assign</button>
+    <form className="entity-form" onSubmit={e=>{e.preventDefault();if(!assigneeId){setError('یک مسئول را انتخاب کنید.');return}act('assign',{assigneeId})}}>
+     <EntityPicker label="مسئول پیشنهاد" endpoint="/users/picker" value={assigneeId} onChange={setAssigneeId} scopeId={scopeId} required disabled={!!busy}/>
+     <button className="primary-action" disabled={!!busy||!assigneeId}>Assign</button>
     </form>
    </section>
 

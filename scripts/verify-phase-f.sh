@@ -17,7 +17,7 @@ grep -q "export class RelationshipPresenter" "$API/src/common/authorization/rela
 grep -q "this.presenter.present" "$API/src/relationships/relationships.service.ts"
 grep -q "relationshipOrganizationIds" "$API/src/relationships/relationships.service.ts"
 grep -q "entityType: 'Relationship'" "$API/src/relationships/relationships.service.ts"
-grep -q "FieldSecurityService" "$API/src/permissions/permissions.module.ts"
+grep -q "FieldSecurityService" "$API/src/common/authorization/authorization.module.ts"
 grep -q "RelationshipPresenter" "$API/src/relationships/relationships.module.ts"
 grep -q "relationship.notes.read" "$API/prisma/seed.ts"
 grep -q "relationship.risk.read" "$API/prisma/seed.ts"

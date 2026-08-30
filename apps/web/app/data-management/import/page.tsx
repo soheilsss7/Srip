@@ -2,8 +2,11 @@
 import {useState} from 'react';
 import {api,apiUpload} from '../../_lib/api';
 import {Badge,DataTable,Empty,ErrorCard,Loading,PageHeader} from '../../_components/page-ui';
+import {EntityPicker} from '../../_components/entity-picker';
+import {useWorkspace} from '../../_components/workspace';
 
 export default function ImportPage(){
+  const {scopeId}=useWorkspace();
   const[file,setFile]=useState<File|null>(null),[entityType,setEntityType]=useState('ORGANIZATION'),[organizationId,setOrganizationId]=useState(''),[preview,setPreview]=useState<any>(null),[busy,setBusy]=useState(false),[e,setE]=useState('');
   async function upload(){if(!file)return;setBusy(true);setE('');try{const d=await apiUpload('/data/import/preview',file,'file',{entityType,organizationId:organizationId||''});setPreview(d)}catch(x){setE((x as Error).message)}finally{setBusy(false)}}
   async function approve(){if(!preview?.id)return;setBusy(true);setE('');try{const d=await api(`/data/import/${encodeURIComponent(preview.id)}/approve`,{method:'POST',body:'{}'});setPreview(d)}catch(x){setE((x as Error).message)}finally{setBusy(false)}}
@@ -19,7 +22,7 @@ export default function ImportPage(){
           <option value="ORGANIZATION">ORGANIZATION</option>
           <option value="PERSON">PERSON</option>
         </select></label>
-      <label className="inline-field">Organization ID (اختیاری)<input value={organizationId} onChange={ev=>setOrganizationId(ev.target.value)} placeholder="شناسه سازمان مقصد" disabled={busy}/></label>
+      <EntityPicker label="سازمان مقصد (اختیاری)" endpoint="/organizations" value={organizationId} onChange={setOrganizationId} disabled={busy} scopeId={scopeId}/>
       <label className="inline-field">فایل<input type="file" accept=".csv,.xlsx,.xls,.json,.txt" onChange={ev=>setFile(ev.target.files?.[0]??null)} disabled={busy}/></label>
       <button className="primary-action" disabled={!file||busy}>{busy?'در حال پردازش…':'Preview'}</button>
     </form></section>

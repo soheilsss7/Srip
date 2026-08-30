@@ -44,9 +44,9 @@ class UpdateActionDto {
 @UseGuards(AuthGuard, AuthorizationGuard)
 export class ActionsController {
   constructor(private readonly s: ActionsService) {}
-  @Get() @RequirePermission('action.read') list(@Req() req: any, @Query('page') page?: string, @Query('pageSize') pageSize?: string) { return this.s.list(req.user.sub, page, pageSize); }
-  @Get('follow-up/overdue') @RequirePermission('action.read') overdue(@Req() req: any, @Query('page') page?: string, @Query('pageSize') pageSize?: string) { return this.s.listOverdue(req.user.sub, page, pageSize); }
-  @Get('follow-up/due-soon') @RequirePermission('action.read') dueSoon(@Req() req: any, @Query('days') days?: string, @Query('page') page?: string, @Query('pageSize') pageSize?: string) { return this.s.listDueSoon(req.user.sub, days ? Number(days) : undefined, page, pageSize); }
+  @Get() @RequirePermission('action.read') list(@Req() req: any, @Query('page') page?: string, @Query('pageSize') pageSize?: string, @Query('organizationId') organizationId?: string, @Query('search') search?: string) { return this.s.list(req.user.sub, page, pageSize, organizationId, search); }
+  @Get('follow-up/overdue') @RequirePermission('action.read') overdue(@Req() req: any, @Query('page') page?: string, @Query('pageSize') pageSize?: string, @Query('organizationId') organizationId?: string) { return this.s.listOverdue(req.user.sub, page, pageSize, organizationId); }
+  @Get('follow-up/due-soon') @RequirePermission('action.read') dueSoon(@Req() req: any, @Query('days') days?: string, @Query('page') page?: string, @Query('pageSize') pageSize?: string, @Query('organizationId') organizationId?: string) { return this.s.listDueSoon(req.user.sub, days ? Number(days) : undefined, page, pageSize, organizationId); }
   @Get(':id') @RequirePermission('action.read') get(@Param('id') id: string, @Req() req: any) { return this.s.get(req.user.sub, id); }
   @Post() @RequirePermission('action.write') create(@Body() d: ActionDto, @Req() req: any) { return this.s.create(req.user.sub, d); }
   @Patch(':id') @RequirePermission('action.write') update(@Param('id') id: string, @Body() d: UpdateActionDto, @Req() req: any) { return this.s.update(req.user.sub, id, d); }

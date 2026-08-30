@@ -47,5 +47,7 @@ describe('Phase 5 API Contract / Error / Idempotency / Health / Runtime', () => 
     expect(main).toContain('X-Request-Id');
     expect(main).toContain('X-Correlation-Id');
     expect(main).toContain("'/health'");
+    expect(main).toContain("path.replace(/^\\/api\\/v1(?=\\/|$)/, '')");
+    expect(main).toContain('normalizedPath === p || normalizedPath.startsWith(`${p}/`)');
   });
 });

@@ -38,6 +38,18 @@ export class DataManagementController {
   @RequirePermission('data.quality.read')
   duplicates(@Req() req: any, @Query('organizationId') organizationId?: string) { return this.qualityService.duplicates(req.user.sub, organizationId); }
 
+  @Post('duplicates/merge-preview')
+  @RequirePermission('data.quality.execute')
+  async mergePreview(@Req() req: any, @Body() body: any) {
+    return this.duplicateDetection.mergePreview(req.user.sub, String(body?.entityType || ''), String(body?.primaryId || ''), String(body?.duplicateId || ''), body?.organizationId ? String(body.organizationId) : undefined);
+  }
+
+  @Post('duplicates/merge')
+  @RequirePermission('data.quality.execute')
+  async merge(@Req() req: any, @Body() body: any) {
+    return this.duplicateDetection.merge(req.user.sub, String(body?.entityType || ''), String(body?.primaryId || ''), String(body?.duplicateId || ''), body?.organizationId ? String(body.organizationId) : undefined, String(body?.confirmation || ''));
+  }
+
   @Post('duplicates/detect')
   @RequirePermission('data.import')
   async detectDuplicates(@Req() req: any, @Body() body: any) {

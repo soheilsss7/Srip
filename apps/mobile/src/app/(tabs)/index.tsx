@@ -5,6 +5,7 @@ import { styles, colors } from '../../lib/ui';
 
 const LINKS: [string, string][] = [
   ['/dashboard', 'Dashboard'],
+  ['/today', 'Today'],
   ['/organizations', 'Organizations'],
   ['/people', 'People'],
   ['/relationships', 'Relationships'],

@@ -27,6 +27,7 @@ export class PeopleService {
           orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }],
           include: { organization: { select: { id: true, name: true, type: true, status: true } } },
         },
+        notes: { where: { deletedAt: null }, orderBy: { updatedAt: 'desc' }, take: 50, select: { id: true, title: true, body: true, organizationId: true, createdAt: true, updatedAt: true } },
       },
     });
     if (!person) throw new NotFoundException('Person not found');
@@ -71,17 +72,19 @@ export class PeopleService {
   async timeline(userId: string, id: string) {
     const person = await this.getRaw(id);
     await this.authorization.assertPermission(userId, 'person.read', { organizationId: person.organizationId, entityType: 'Person', entityId: id });
-    const [interactions, meetings, actions, commitments] = await Promise.all([
+    const [interactions, meetings, actions, commitments, notes] = await Promise.all([
       this.prisma.interaction.findMany({ where: { personId: id, deletedAt: null }, orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }], take: 50, select: { id: true, type: true, subject: true, summary: true, occurredAt: true } }),
       this.prisma.meetingParticipant.findMany({ where: { personId: id, meeting: { deletedAt: null } }, orderBy: { meeting: { startAt: 'desc' } }, take: 50, include: { meeting: { select: { id: true, title: true, startAt: true, outcome: true } } } }),
       this.prisma.action.findMany({ where: { personId: id, deletedAt: null }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 50, select: { id: true, title: true, status: true, dueAt: true, createdAt: true } }),
       this.prisma.commitment.findMany({ where: { personId: id, deletedAt: null }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 50, select: { id: true, description: true, status: true, dueAt: true, createdAt: true } }),
+      this.prisma.note.findMany({ where: { personId: id, deletedAt: null }, orderBy: { updatedAt: 'desc' }, take: 50, select: { id: true, title: true, body: true, organizationId: true, createdAt: true, updatedAt: true } }),
     ]);
     return { person: { id: person.id, displayName: person.displayName || `${person.firstName} ${person.lastName}` }, items: [
       ...interactions.map(x => ({ kind: 'interaction', date: x.occurredAt, ...x })),
       ...meetings.map(x => ({ kind: 'meeting', date: x.meeting.startAt, ...x.meeting })),
       ...actions.map(x => ({ kind: 'action', date: x.createdAt, ...x })),
       ...commitments.map(x => ({ kind: 'commitment', date: x.createdAt, ...x })),
+      ...notes.map(x => ({ kind: 'note', date: x.updatedAt, ...x })),
     ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 100) };
   }
 

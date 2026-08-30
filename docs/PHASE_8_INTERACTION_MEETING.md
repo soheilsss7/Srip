@@ -1,25 +1,15 @@
-# Phase 8 — Interaction & Meeting
+# Phase 8 — Interaction and Meeting Operations
 
-## Scope
-Call, email, meeting, note, timeline, follow-up; meeting participants, agenda, outcomes, decisions, transcript/brief fields, and links to actions/commitments.
+## Delivered
 
-## Implemented in this build
-- Interaction CRUD + soft delete.
-- Interaction validation for type, subject, dates, follow-up and sentiment.
-- Organization/person/relationship access checks.
-- Meeting CRUD + soft delete.
-- Meeting detail with participants, actions and commitments.
-- Meeting participant replacement endpoint.
-- Meeting outcome endpoint for notes/outcome/decisions/transcript/brief.
-- Meeting relationship filtering.
-- Participant existence and tenant-scope validation.
+- Interaction list, detail, create/update, and soft-delete workflows are exposed through permission-protected API routes.
+- Interaction follow-up fields are validated as a pair: enabling a follow-up requires a valid follow-up date.
+- Meeting list, detail, participant replacement, outcome completion, and soft-delete workflows are exposed through permission-protected API routes.
+- Meeting decisions use nested validated DTOs and support readable action/commitment follow-up handling in the web UI.
+- Participant and decision-owner checks are constrained to the meeting organization or relationship context.
+- Mutations use audit logging, lifecycle records, and domain events within transaction boundaries.
+- Web list and detail screens provide loading, error, empty, validation, permission, and success states.
 
-## Runtime gates still required
-- PostgreSQL migration and seed execution.
-- API runtime CRUD verification.
-- Browser E2E for interaction/meeting flows.
-- Authorization/IDOR E2E matrix.
-- Audit event persistence verification.
-- Mobile implementation.
-- Accessibility and responsive verification.
-- Staging/UAT verification.
+## Verification
+
+The static gate is `bash scripts/verify-phase8.sh`. Runtime verification additionally requires a generated Prisma Client and reachable PostgreSQL/Redis services.

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { api } from '../_lib/api';
 import { useWorkspace } from '../_components/workspace';
+import { EntityPicker } from '../_components/entity-picker';
 import { Card, Badge } from '@srip/design-system';
 import {
   Users, Building2, Search, Plus, Mail, Crown, Handshake, PersonStanding, Phone, ChevronLeft, Star,
@@ -39,7 +40,8 @@ function ScorePill({ icon, label, value, tone }: { icon: React.ReactNode; label:
 }
 
 export default function PeoplePage() {
-  const { scopeId, can } = useWorkspace();
+  const { scopeId, can, me } = useWorkspace();
+  const scopeLabel = me?.memberships.find(m => m.organizationId === scopeId)?.organizationName ?? 'محدوده انتخاب‌شده';
   const scopeQuery = useCallback((extra = true) => {
     const qs: string[] = [];
     if (scopeId !== 'all') qs.push(`organizationId=${encodeURIComponent(scopeId)}`);
@@ -124,7 +126,7 @@ export default function PeoplePage() {
           <p className="subtitle">فهرست اشخاص متصل به مالکیت سازمانی، امتیاز نفوذ، قدرت تصمیم و دسترس‌پذیری — همه از Backend واقعی با محدودهٔ سازمانی.</p>
         </div>
         <div className="heading-tools">
-          <span className="scope-chip"><Building2 size={13}/> {scopeId === 'all' ? 'همه محدوده' : scopeId.slice(0, 10)}</span>
+          <span className="scope-chip"><Building2 size={13}/> {scopeId === 'all' ? 'همه محدوده' : scopeLabel}</span>
           <Link className="primary-action" href="#add-person"><Plus size={14}/> افزودن شخص</Link>
         </div>
       </section>
@@ -260,12 +262,7 @@ export default function PeoplePage() {
               <label className="full">تلفن <input value={phone} onChange={(e) => setPhone(e.target.value)} /></label>
               <label className="full">سمت <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="مثلاً مدیر فروش" /></label>
               <label className="full">بخش <input value={department} onChange={(e) => setDepartment(e.target.value)} /></label>
-              <label className="full">سازمان
-                <select value={org} onChange={(e) => setOrg(e.target.value)} required>
-                  <option value="">انتخاب کنید</option>
-                  {orgs.map((o) => <option value={o.id} key={o.id}>{o.name}</option>)}
-                </select>
-              </label>
+              <EntityPicker label="سازمان" endpoint="/organizations" value={org} onChange={setOrg} scopeId={scopeId} required />
               <button className="srip-button primary full" type="submit" disabled={saving}>
                 {saving ? 'در حال ذخیره…' : 'ایجاد شخص'}
               </button>

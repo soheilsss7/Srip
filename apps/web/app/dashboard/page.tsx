@@ -131,7 +131,8 @@ export default function Dashboard() {
         </div>
         <div className="heading-tools">
           <ScopeBadge />
-          <a className="primary-action" href="/organizations"><Building2 size={14}/> + سازمان</a>
+          <a className="primary-action" href="/today"><Activity size={14}/> عملیات امروز</a>
+          <a className="secondary-action" href="/organizations"><Building2 size={14}/> + سازمان</a>
           <a className="secondary-action" href="/people"><Users size={14}/> + شخص</a>
           <a className="secondary-action" href="/relationships"><Share2 size={14}/> + رابطه</a>
         </div>

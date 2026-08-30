@@ -162,5 +162,5 @@ export function edgeDisplayLabel(e: GEdge): string {
 }
 
 export function nodeDisplayName(n: GNode): string {
-  return n.label || n.id;
+  return n.label || 'Unnamed node';
 }

@@ -21,6 +21,16 @@ describe('MeetingsService contract', () => {
   });
 });
 
+describe('MeetingsService time validation', () => {
+  const service = Object.create(MeetingsService.prototype) as MeetingsService;
+  it('rejects invalid and non-forward meeting windows', () => {
+    const validate = (service as any).validateMeetingTimes.bind(service);
+    expect(() => validate('not-a-date')).toThrow('Meeting startAt must be a valid date');
+    expect(() => validate('2026-01-01T10:00:00.000Z', '2026-01-01T10:00:00.000Z')).toThrow('Meeting endAt must be after startAt');
+    expect(() => validate('2026-01-01T10:00:00.000Z', '2026-01-01T11:00:00.000Z')).not.toThrow();
+  });
+});
+
 describe('MeetingsService.extractActionItems (deterministic, no AI/network dependency)', () => {
   const prisma: any = {};
   const authorization: any = {};

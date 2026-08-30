@@ -17,7 +17,7 @@ export class OrganizationsService {
     return organization;
   }
 
-  async list(userId: string, parentOrganizationId?: string, page = 1, pageSize = 50) {
+  async list(userId: string, parentOrganizationId?: string, page = 1, pageSize = 50, q?: string) {
     page = Math.max(1, Math.min(Number(page) || 1, 10000)); pageSize = Math.max(1, Math.min(Number(pageSize) || 50, 100));
     const ids = await this.authorization.accessibleOrganizationIds(userId);
     const [rows,total] = await Promise.all([this.prisma.organization.findMany({
@@ -25,6 +25,11 @@ export class OrganizationsService {
         deletedAt: null,
         ...(ids ? { id: { in: ids } } : {}),
         ...(parentOrganizationId ? { parentOrganizationId } : {}),
+        ...(q?.trim() ? { OR: [
+          { name: { contains: q.trim(), mode: 'insensitive' } },
+          { displayName: { contains: q.trim(), mode: 'insensitive' } },
+          { legalName: { contains: q.trim(), mode: 'insensitive' } },
+        ] } : {}),
       },
       orderBy: { name: 'asc' },
       include: {
@@ -34,7 +39,11 @@ export class OrganizationsService {
       },
       skip: (page - 1) * pageSize,
       take: pageSize,
-    }), this.prisma.organization.count({ where: { deletedAt: null, ...(ids ? { id: { in: ids } } : {}), ...(parentOrganizationId ? { parentOrganizationId } : {}) } })]);
+    }), this.prisma.organization.count({ where: { deletedAt: null, ...(ids ? { id: { in: ids } } : {}), ...(parentOrganizationId ? { parentOrganizationId } : {}), ...(q?.trim() ? { OR: [
+        { name: { contains: q.trim(), mode: 'insensitive' } },
+        { displayName: { contains: q.trim(), mode: 'insensitive' } },
+        { legalName: { contains: q.trim(), mode: 'insensitive' } },
+      ] } : {}) } })]);
     return { data: EntityResponseDto.many('Organization', rows), page, pageSize, total, totalPages: Math.ceil(total / pageSize) };
   }
 
@@ -49,22 +58,25 @@ export class OrganizationsService {
         people: { where: { deletedAt: null }, orderBy: { updatedAt: 'desc' }, take: 50 },
         sourceRelationships: { where: { deletedAt: null }, include: { targetOrganization: { select: { id: true, name: true, type: true } } }, take: 50 },
         targetRelationships: { where: { deletedAt: null }, include: { sourceOrganization: { select: { id: true, name: true, type: true } } }, take: 50 },
-        _count: { select: { people: true, sourceRelationships: true, targetRelationships: true, projects: true, opportunities: true, meetings: true, interactions: true } },
+        notes: { where: { deletedAt: null }, orderBy: { updatedAt: 'desc' }, take: 50, select: { id: true, title: true, body: true, personId: true, createdAt: true, updatedAt: true } },
+        _count: { select: { people: true, sourceRelationships: true, targetRelationships: true, projects: true, opportunities: true, meetings: true, interactions: true, notes: true } },
       },
     }));
   }
 
   async timeline(userId: string, id: string) {
     const org = await this.assertReadable(userId, id);
-    const [interactions, meetings, actions] = await Promise.all([
+    const [interactions, meetings, actions, notes] = await Promise.all([
       this.prisma.interaction.findMany({ where: { organizationId: id, deletedAt: null }, orderBy: { occurredAt: 'desc' }, take: 50, select: { id: true, type: true, subject: true, summary: true, occurredAt: true } }),
       this.prisma.meeting.findMany({ where: { organizationId: id, deletedAt: null }, orderBy: { startAt: 'desc' }, take: 50, select: { id: true, title: true, startAt: true, outcome: true } }),
       this.prisma.action.findMany({ where: { organizationId: id, deletedAt: null }, orderBy: { createdAt: 'desc' }, take: 50, select: { id: true, title: true, status: true, dueAt: true, createdAt: true } }),
+      this.prisma.note.findMany({ where: { organizationId: id, deletedAt: null }, orderBy: { updatedAt: 'desc' }, take: 50, select: { id: true, title: true, body: true, personId: true, createdAt: true, updatedAt: true } }),
     ]);
     return { organization: { id: org.id, name: org.name }, items: [
       ...interactions.map(x => ({ kind: 'interaction', date: x.occurredAt, ...x })),
       ...meetings.map(x => ({ kind: 'meeting', date: x.startAt, ...x })),
       ...actions.map(x => ({ kind: 'action', date: x.createdAt, ...x })),
+      ...notes.map(x => ({ kind: 'note', date: x.updatedAt, ...x })),
     ].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0,100) };
   }
 
