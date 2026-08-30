@@ -116,7 +116,11 @@ function hardenOpenApi(document: OpenAPIObject) {
       for (const status of ['400','401','403','404','409','422','429','500','503']) {
         op.responses[status] ??= { $ref: `#/components/responses/Error${status}` };
       }
-      const isPublic = publicPrefixes.some((p) => path.startsWith('/api/v1' + p));
+      // Swagger may expose paths with or without the global-prefix segment,
+      // depending on the Nest adapter/version. Normalize both forms before
+      // applying the intentionally public Auth/Health allowlist.
+      const normalizedPath = path.replace(/^\/api\/v1(?=\/|$)/, '');
+      const isPublic = publicPrefixes.some((p) => normalizedPath === p || normalizedPath.startsWith(`${p}/`));
       if (!isPublic) op.security = [{ bearer: [] }]; else op.security = [];
       op.parameters ??= [];
       const addParam = (p: any) => { if (!op.parameters.some((x: any) => x.name === p.name && x.in === p.in)) op.parameters.push(p); };
