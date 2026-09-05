@@ -1,0 +1,275 @@
+/* ============================================================================
+   SRIP · UI 3.0 — لایهٔ ارتقای بصری (فقط کلون srip2)
+   بر پایهٔ ترندهای ۲۰۲۵-۲۰۲۶ محصولات شاخص (Linear/Stripe/Vercel/Attio):
+   «کروم آرام، ارتفاعِ کم، خطوط مویی، یک رنگ عملکردی، تایپوگرافی قوی،
+   حالت‌های اسکلتون/خالی، هر دو تم روشن و تیره به‌عنوان شهروند درجه‌یک.»
+   ----------------------------------------------------------------------------
+   این فایل بعد از globals.css لود می‌شود و همان توکن‌ها/کلاس‌ها را پالایش
+   می‌کند؛ هیچ تغییری در ساختار DOM لازم نیست.
+   ============================================================================ */
+
+/* ------------------------------- فونت وزیرمتن ------------------------------- */
+@font-face{
+  font-family:'Vazirmatn';
+  src:url('/Srip/srip2/fonts/Vazirmatn-Variable.woff2') format('woff2 supports variations'),
+      url('/Srip/srip2/fonts/Vazirmatn-Variable.woff2') format('woff2-variations');
+  font-weight:100 900;
+  font-style:normal;
+  font-display:swap;
+}
+@font-face{
+  font-family:'Vazirmatn';
+  src:url('/Srip/srip2/fonts/Vazirmatn-Variable.woff2') format('woff2-variations');
+  font-weight:100 900;
+  font-style:normal;
+  font-display:swap;
+}
+
+/* ------------------------- بازتنظیم توکن‌های پایه ------------------------- */
+:root{
+  --font:'Vazirmatn','Inter',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+
+  /* کروم آرام‌تر: خطوط مویی + سایه‌های پلکانیِ کوتاه */
+  --card-border:color-mix(in srgb,#101828 7%,transparent);
+  --card-border-strong:color-mix(in srgb,#101828 12%,transparent);
+  --divider:color-mix(in srgb,#101828 5%,transparent);
+
+  --srip-bg:#f4f5fb;
+  --srip-canvas:#fafbfe;
+  --srip-sidebar-hover:color-mix(in srgb,var(--srip-accent) 8%,transparent);
+  --srip-line:#e9ebf3;
+  --srip-line-strong:#dfe2ee;
+
+  --shadow-sm:0 1px 2px rgba(16,24,40,.04),0 0 0 1px rgba(16,24,40,.03);
+  --shadow-md:0 1px 2px rgba(16,24,40,.05),0 6px 16px -6px rgba(20,30,70,.08);
+  --shadow-lg:0 2px 4px rgba(16,24,40,.05),0 18px 44px -14px rgba(20,30,70,.18);
+
+  --header-h:60px;
+}
+html[data-theme="dark"]{
+  --card-border:rgba(148,163,184,.13);
+  --card-border-strong:rgba(148,163,184,.24);
+  --srip-line:rgba(148,163,184,.10);
+  --srip-line-strong:rgba(148,163,184,.18);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3),0 0 0 1px rgba(255,255,255,.02);
+  --shadow-md:0 2px 4px rgba(0,0,0,.3),0 10px 26px -10px rgba(0,0,0,.5);
+  --shadow-lg:0 4px 8px rgba(0,0,0,.35),0 24px 60px -16px rgba(0,0,0,.65);
+}
+html[data-theme="dark"] body{color-scheme:dark}
+
+/* ------------------------------ پایه و پس‌زمینه ------------------------------ */
+body{
+  font-family:var(--font);
+  background:
+    radial-gradient(900px 420px at 85% -160px,color-mix(in srgb,var(--srip-accent) 5%,transparent),transparent 70%),
+    radial-gradient(700px 380px at 8% -120px,color-mix(in srgb,var(--srip-violet) 4%,transparent),transparent 70%),
+    var(--srip-bg);
+  background-attachment:fixed;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+::selection{background:color-mix(in srgb,var(--srip-accent) 22%,transparent)}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar,color-mix(in srgb,var(--text-muted) 45%,transparent)) transparent}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--text-muted) 40%,transparent);border-radius:99px;border:2px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--text-muted) 65%,transparent);background-clip:content-box;border:2px solid transparent}
+::-webkit-scrollbar-track{background:transparent}
+
+:focus-visible{outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--srip-accent) 26%,transparent);border-radius:inherit}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001s!important;transition-duration:.001s!important}
+}
+
+/* ------------------------------- پوستهٔ اصلی ------------------------------- */
+.app-shell{background:transparent}
+.sidebar{
+  background:color-mix(in srgb,var(--srip-sidebar) 92%,transparent);
+  backdrop-filter:blur(10px);
+  border-inline-end:1px solid var(--srip-line);
+}
+.sidebar .brand{padding-block:16px}
+.brand-mark{
+  background:linear-gradient(140deg,#5b6ef5,#8a5cf6);
+  box-shadow:0 6px 16px -6px color-mix(in srgb,var(--srip-accent) 60%,transparent),inset 0 0 0 1px rgba(255,255,255,.22);
+}
+.brand-title strong{letter-spacing:0;font-weight:800}
+.workspace-role{background:color-mix(in srgb,var(--srip-accent) 5%,transparent);border:1px solid color-mix(in srgb,var(--srip-accent) 12%,transparent);border-radius:14px}
+.nav-mode-switch{background:color-mix(in srgb,var(--text-muted) 10%,transparent)}
+.side-nav a{gap:10px;font-size:12.75px;font-weight:600;position:relative}
+.side-nav a svg{opacity:.85;transition:opacity .12s}
+.side-nav a:hover{color:var(--text-primary)}
+.side-nav a:hover svg{opacity:1}
+.side-nav a.active{
+  background:linear-gradient(90deg,color-mix(in srgb,var(--srip-accent) 13%,transparent),color-mix(in srgb,var(--srip-accent) 4%,transparent));
+  color:var(--text-primary);font-weight:800;
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--srip-accent) 14%,transparent);
+}
+.side-nav a.active svg{color:var(--srip-accent-text);opacity:1}
+.nav-zone-title span{
+  font-size:9.5px;letter-spacing:.04em;color:var(--text-muted);
+  display:inline-flex;align-items:center;gap:6px;font-weight:800
+}
+.nav-zone-title span::after{content:'';height:1px;flex:1;min-width:14px;background:var(--srip-line-strong);opacity:.7}
+.nav-zone-title small{font-size:8.5px}
+.engine-card{border:1px solid var(--srip-line);border-radius:16px;background:color-mix(in srgb,var(--card-bg-soft) 80%,transparent)}
+.sidebar-bottom-actions{border-top:1px solid var(--srip-line);padding-top:10px}
+
+/* نوار بالا — شیشه‌ای‌تر */
+.global-header{
+  background:color-mix(in srgb,var(--topbar-bg) 78%,transparent);
+  backdrop-filter:blur(14px) saturate(1.4);
+  -webkit-backdrop-filter:blur(14px) saturate(1.4);
+  box-shadow:0 1px 0 var(--srip-line),0 8px 26px -22px rgba(20,30,70,.25);
+  height:var(--header-h);
+}
+.global-search a{border-radius:12px;background:color-mix(in srgb,var(--text-muted) 7%,transparent);border:1px solid transparent}
+.global-search a:hover{border-color:var(--srip-line-strong);background:var(--card-bg)}
+.user-chip{border-radius:14px;border:1px solid transparent}
+.user-chip:hover{border-color:var(--srip-line-strong);background:var(--card-bg-soft)}
+.demo-chip,.scope-chip{border-radius:999px}
+
+/* ------------------------------ سطوح و کارت‌ها ------------------------------ */
+.card,.panel,.section-card,.dash-panel,.net-graph-shell,.table-wrap,.route-state{
+  border-radius:18px;
+  background:color-mix(in srgb,var(--card-bg) 97%,transparent);
+  box-shadow:var(--shadow-sm);
+  border-color:var(--card-border);
+}
+.panel-title{padding-bottom:2px}
+.panel-title h2,.section-head h2,.card h2{font-size:15.5px;font-weight:800;display:flex;align-items:center;gap:8px}
+.panel-title h2 svg,.section-head h2 svg{color:var(--srip-accent-text)}
+.panel-title p,.section-head p{font-size:11px;color:var(--text-muted);line-height:1.8}
+
+/* عنوان صفحات — تایپوگرافی قوی‌تر */
+.page-heading h1{font-size:30px;font-weight:800;letter-spacing:-.01em;margin:6px 0 6px}
+.eyebrow{font-size:10px;letter-spacing:.02em;color:var(--srip-accent-text);background:color-mix(in srgb,var(--srip-accent) 9%,transparent);border:1px solid color-mix(in srgb,var(--srip-accent) 16%,transparent);padding:4px 10px;border-radius:999px;display:inline-flex;align-items:center;gap:6px;width:fit-content;font-weight:800}
+.page-heading p.subtitle{font-size:12.5px;line-height:2}
+
+/* دکمه‌ها */
+.primary-action{
+  background:linear-gradient(135deg,#5b6ef5,#7c5cf6);
+  border:none;border-radius:12px;box-shadow:0 8px 18px -8px color-mix(in srgb,var(--srip-accent) 65%,transparent);
+  transition:transform .12s ease,box-shadow .12s ease,filter .12s ease;
+}
+.primary-action:hover{filter:brightness(1.06);box-shadow:0 10px 22px -8px color-mix(in srgb,var(--srip-accent) 75%,transparent);transform:translateY(-1px)}
+.primary-action:active{transform:scale(.985)}
+.secondary-action{border-radius:12px}
+.btn,.net-btn{
+  border-radius:11px;transition:border-color .12s,background .12s,transform .08s;
+}
+.btn:active,.net-btn:active,.icon-btn:active{transform:scale(.96)}
+.icon-btn{border-radius:10px;transition:background .12s,transform .08s,color .12s}
+.net-btn.primary{background:linear-gradient(135deg,#5b6ef5,#7c5cf6);border-color:transparent}
+a.btn-ghost{font-size:11px}
+
+/* فیلدها */
+input[type="text"],input[type="search"],input[type="email"],input[type="password"],input[type="number"],input[type="datetime-local"],input[type="date"],select,textarea{
+  border-radius:12px;background:var(--input-bg,var(--card-bg-soft));
+  border-color:var(--card-border-strong);transition:border-color .12s,box-shadow .12s,background .12s;
+}
+input:focus,select:focus,textarea:focus{
+  border-color:var(--srip-accent);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--srip-accent) 15%,transparent);
+  background:var(--card-bg);
+}
+.field-label{font-size:11.5px;font-weight:700;color:var(--text-secondary)}
+
+/* چیپ‌ها و نشان‌ها — شفاف‌تر */
+.chip,.ui-badge{font-size:10px;font-weight:800;border-radius:999px;letter-spacing:.01em}
+.chip{background:color-mix(in srgb,var(--text-muted) 9%,transparent);border-color:transparent}
+.chip.info{background:color-mix(in srgb,var(--blue) 11%,transparent)}
+.chip.success{background:color-mix(in srgb,var(--green) 11%,transparent)}
+.chip.warning{background:color-mix(in srgb,var(--amber) 12%,transparent)}
+.chip.purple{background:color-mix(in srgb,var(--purple) 11%,transparent)}
+.ui-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px}
+.Badge{font-family:var(--font)}
+
+/* کارت‌های KPI */
+.kpi-card{
+  border-radius:18px;border:1px solid var(--card-border);background:var(--card-bg);
+  box-shadow:var(--shadow-sm);transition:transform .14s ease,box-shadow .14s ease,border-color .14s;
+}
+.kpi-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-color:color-mix(in srgb,var(--srip-accent) 25%,transparent)}
+.kpi-card strong{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.kpi-ico{border-radius:12px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
+.kpi-card small{color:var(--text-muted);font-size:10px;font-weight:700}
+.kpi-card>span{font-size:11.5px;font-weight:800;color:var(--text-secondary)}
+
+/* مرکز اقدام / هشدارها */
+.action-center-head h2{font-size:16px;font-weight:800}
+.ac-card{border-radius:16px;border:1px solid var(--card-border);background:var(--card-bg-soft);transition:border-color .14s}
+.ac-card:hover{border-color:var(--card-border-strong)}
+.ac-item{border-radius:12px;transition:background .12s,transform .12s}
+.ac-item:hover{background:var(--card-bg);transform:translateX(-2px)}
+.ac-card-head b{font-size:12px}
+.ac-none{color:var(--text-muted)}
+.alert-pill{border-radius:16px}
+.alert-strip{border-radius:18px}
+
+/* اسکلتون */
+.skeleton,.skeleton-block{
+  background:linear-gradient(100deg,color-mix(in srgb,var(--text-muted) 8%,transparent) 20%,color-mix(in srgb,var(--text-muted) 16%,transparent) 40%,color-mix(in srgb,var(--text-muted) 8%,transparent) 60%);
+  background-size:200% 100%;animation:skeletonShine 1.3s linear infinite;
+}
+@keyframes skeletonShine{to{background-position:-200% 0}}
+
+/* جدول‌ها */
+.table-wrap{border-radius:18px;overflow:hidden}
+.table-wrap th{
+  background:color-mix(in srgb,var(--text-muted) 6%,transparent);
+  font-size:10px;font-weight:800;color:var(--text-secondary);letter-spacing:.01em;
+  padding:11px 14px;border-bottom:1px solid var(--card-border-strong);
+}
+.table-wrap td{padding:12px 14px;font-size:12px}
+.table-wrap tbody tr{transition:background .1s ease}
+.table-wrap tbody tr:hover{background:color-mix(in srgb,var(--srip-accent) 4%,transparent)}
+.table-wrap tbody tr:last-child td{border-bottom:0}
+
+/* حالت‌های خالی و خطا */
+.empty-state{border-radius:16px;border-style:dashed;color:var(--text-muted)}
+.error-card{border-radius:14px;border:1px solid color-mix(in srgb,var(--srip-danger) 25%,transparent);background:var(--srip-danger-soft)}
+
+/* نوار پایین و دیگر جزئیات */
+.footer-note{color:var(--text-muted)}
+.runtime-banner,.loading-strip{border-radius:12px;font-size:11.5px}
+
+/* شبکهٔ اطلاعاتی: نگاشت لطیف‌تر */
+.net-graph-zone{background:
+  radial-gradient(600px 300px at 70% 0%,color-mix(in srgb,var(--srip-accent) 4%,transparent),transparent 70%),
+  var(--bg-canvas)}
+.net-fs,.ego-fs{backdrop-filter:blur(8px)}
+.net-fs-bar{border-radius:16px;background:color-mix(in srgb,var(--card-bg) 92%,transparent);border:1px solid var(--srip-line);padding:10px 14px}
+.net-fs-canvas{border-radius:20px}
+
+/* اعلان‌ها */
+.notification-drawer{background:color-mix(in srgb,var(--card-bg) 96%,transparent);backdrop-filter:blur(12px)}
+.notification-item{border-radius:13px;transition:background .12s}
+.notification-item:hover{background:color-mix(in srgb,var(--srip-accent) 5%,transparent)}
+
+/* ============================ تم تیره ============================ */
+html[data-theme="dark"] body{
+  background:
+    radial-gradient(900px 420px at 85% -160px,color-mix(in srgb,var(--srip-accent) 9%,transparent),transparent 70%),
+    radial-gradient(700px 380px at 8% -120px,color-mix(in srgb,var(--srip-violet) 7%,transparent),transparent 70%),
+    var(--srip-bg);
+}
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .section-card,
+html[data-theme="dark"] .dash-panel,
+html[data-theme="dark"] .net-graph-shell,
+html[data-theme="dark"] .table-wrap{
+  background:linear-gradient(180deg,color-mix(in srgb,#ffffff 2.5%,transparent),transparent),var(--card-bg);
+}
+html[data-theme="dark"] .kpi-card:hover{border-color:color-mix(in srgb,var(--srip-accent) 40%,transparent)}
+html[data-theme="dark"] .ac-item:hover{background:color-mix(in srgb,#fff 4%,transparent)}
+html[data-theme="dark"] .side-nav a.active{
+  background:linear-gradient(90deg,color-mix(in srgb,var(--srip-accent) 20%,transparent),color-mix(in srgb,var(--srip-accent) 6%,transparent));
+}
+html[data-theme="dark"] .workspace-role{
+  background:color-mix(in srgb,var(--srip-accent) 10%,transparent);
+  border-color:color-mix(in srgb,var(--srip-accent) 20%,transparent);
+}
+
+/* حالت فشرده/موبایل — بدون تغییر رفتار */
+@media(max-width:900px){.page-heading h1{font-size:24px}}
