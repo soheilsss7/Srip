@@ -47,6 +47,7 @@ let RELS = [
   { id:'r-3', relationshipType:'CUSTOMER', status:'ACTIVE', healthScore:71, riskScore:35, strategicScore:74, influenceScore:66, opportunityScore:77, resilienceScore:58, nextActionAt:null, lastInteractionAt:'2026-08-10T09:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-5' },
   { id:'r-4', relationshipType:'SUPPLY', status:'WATCH', healthScore:41, riskScore:66, strategicScore:69, influenceScore:60, opportunityScore:45, resilienceScore:38, nextActionAt:'2026-09-01T09:00:00.000Z', lastInteractionAt:'2026-07-28T09:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-6' },
   { id:'r-5', relationshipType:'INVESTMENT', status:'ACTIVE', healthScore:82, riskScore:18, strategicScore:88, influenceScore:85, opportunityScore:90, resilienceScore:71, nextActionAt:null, lastInteractionAt:'2026-08-22T09:00:00.000Z', sourceOrganizationId:'org-1', targetOrganizationId:'org-7' },
+  { id:'r-6', relationshipType:'PARENT_SUBSIDIARY', status:'ACTIVE', healthScore:86, riskScore:12, strategicScore:84, influenceScore:70, opportunityScore:48, resilienceScore:82, nextActionAt:'2026-09-12T09:00:00.000Z', lastInteractionAt:'2026-09-02T09:00:00.000Z', sourceOrganizationId:'org-1', targetOrganizationId:'org-2' },
 ];
 let MEETINGS = [
   { id:'m-1', title:'جلسهٔ راهبردی Q3 با پترو صنعت', startAt:'2026-09-03T09:30:00.000Z', endAt:'2026-09-03T11:00:00.000Z', objective:'بررسی همکاری راهبردی و برنامه توسعه', agenda:'1) گزارش عملکرد ۲ فصل\n2) برنامه توسعه بازار\n3) زمان‌بندی قرارداد جدید', organizationId:'org-4', relationshipId:'r-1', participants:[{personId:'p-2'},{personId:'p-6'}], actions:[], commitments:[], preMeetingBrief:'تمرکز بر تمدید قرارداد و نرخ جدید.' },
@@ -299,6 +300,184 @@ const scopedPeople=(req)=>PEOPLE.filter(p=>inScope(req,p.organizationId));
 // (its own relationships with outside organizations remain visible).
 const scopedRels=(req)=>RELS.filter(r=>inScope(req,r.sourceOrganizationId)||inScope(req,r.targetOrganizationId));
 const relInScope=(req,r)=>inScope(req,r.sourceOrganizationId)||inScope(req,r.targetOrganizationId);
+
+/* ------------------------ network helpers (deterministic) ------------------------ */
+// org-org graph over visible relationships (edge ids match /network/graph export)
+function netOrgAdj(req){
+  const adj=new Map(); const byKey=new Map();
+  const rels=scopedRels(req);
+  const edgeOf=(r)=>({
+    id:`e-${r.id}`, source:`org:${r.sourceOrganizationId}`, target:`org:${r.targetOrganizationId}`,
+    kind:'relationship',
+    weight:Math.round(30+(r.healthScore??50)/2),
+    risk:r.riskScore??0,
+    strategicImportance:r.strategicScore??50,
+    status:r.status, health:r.healthScore, label:r.relationshipType,
+  });
+  const put=(u,v,rel)=>{
+    const key=[u,v].sort().join('|');
+    if(byKey.has(key)) return;
+    byKey.set(key,rel);
+    for(const [a,b] of [[u,v],[v,u]]){ if(!adj.has(a)) adj.set(a,[]); adj.get(a).push({v:b,w:edgeOf(rel).weight,risk:rel.riskScore??0}); }
+  };
+  for(const r of rels){ if(inScope(req,r.sourceOrganizationId)||inScope(req,r.targetOrganizationId)) put(r.sourceOrganizationId,r.targetOrganizationId,r); }
+  return {adj,byKey,rels,edgeOf};
+}
+// path search: shortest = BFS (hop count); best = Dijkstra over cost max(1,(101-weight)+risk*0.5)
+function netPathOrg(req,fromId,toId,mode){
+  const {adj,byKey,rels,edgeOf}=netOrgAdj(req);
+  const maxHops=8;
+  const name=(oid)=>orgById(oid)?.name??oid;
+  const nodeOf=(oid)=>({id:`org:${oid}`,label:name(oid),type:'organization',organizationId:oid});
+  const foundNode=(oid)=>ORGS.some(o=>o.id===oid)&&(inScope(req,oid)||[...byKey.keys()].some(k=>k.split('|').includes(oid)));
+  if(!foundNode(fromId)||!foundNode(toId)) return {found:false,mode,nodes:[],edges:[],hops:0,totalCost:null,bounded:true,maxHops};
+  if(fromId===toId) return {found:true,mode,nodes:[nodeOf(fromId)],edges:[],hops:0,totalCost:0,bounded:true,maxHops};
+  const cost=(u,v)=> mode==='best'
+    ? Math.max(1,(101-(byKey.get([u,v].sort().join('|')).healthScore??50))+((byKey.get([u,v].sort().join('|')).riskScore??0)*0.5))
+    : 1;
+  const prev=new Map([[fromId,null]]);
+  const dist=new Map([[fromId,0]]);
+  const q=[fromId];
+  let guard=0;
+  while(q.length&&guard++<20000){
+    q.sort((a,b)=>(dist.get(a)??1e9)-(dist.get(b)??1e9));
+    const u=q.shift();
+    if(u===toId) break;
+    if((dist.get(u)??0)>=maxHops+1) continue;
+    for(const n of (adj.get(u)??[])){
+      const c=(dist.get(u)??0)+cost(u,n.v);
+      if(c<(dist.get(n.v)??1e9)){ dist.set(n.v,c); prev.set(n.v,u); q.push(n.v); }
+    }
+  }
+  if(!prev.has(toId)) return {found:false,mode,nodes:[],edges:[],hops:0,totalCost:null,bounded:true,maxHops};
+  const chain=[]; let cur=toId;
+  while(cur!==null){ chain.unshift(cur); cur=prev.get(cur); }
+  const edgePath=[];
+  for(let i=0;i<chain.length-1;i++){
+    const rel=byKey.get([chain[i],chain[i+1]].sort().join('|'));
+    if(rel) edgePath.push(edgeOf(rel));
+  }
+  return {
+    found:true,mode,
+    nodes:chain.map(nodeOf),
+    edges:edgePath,
+    hops:edgePath.length,
+    totalCost:Math.round(edgePath.reduce((s,e)=>s+(mode==='best'?Math.max(1,(101-(e.health??50))+(e.risk??0)*0.5):1),0)*10)/10,
+    bounded:true,maxHops,
+  };
+}
+// full visible graph (orgs + people + memberships + meeting edges) for analytics
+function netGraphVisible(req){
+  const rels=scopedRels(req);
+  const relOrgIds=new Set();
+  rels.forEach(r=>{relOrgIds.add(r.sourceOrganizationId);relOrgIds.add(r.targetOrganizationId);});
+  const orgNodes=[],personNodes=[];
+  ORGS.forEach(o=>{ if(inScope(req,o.id)||relOrgIds.has(o.id)) orgNodes.push({id:`org:${o.id}`,label:o.name,type:'organization',organizationId:o.id}); });
+  scopedPeople(req).forEach(p=>personNodes.push({id:`person:${p.id}`,label:`${p.firstName} ${p.lastName}`,type:'person',organizationId:p.organizationId}));
+  const nodes=[...orgNodes,...personNodes];
+  const nodeIds=new Set(nodes.map(n=>n.id));
+  const edges=[];
+  const relEdge=(r)=>({id:`e-${r.id}`,source:`org:${r.sourceOrganizationId}`,target:`org:${r.targetOrganizationId}`,kind:'relationship',weight:Math.round(30+(r.healthScore??50)/2),risk:r.riskScore??0,strategicImportance:r.strategicScore??50,status:r.status,health:r.healthScore,label:r.relationshipType});
+  rels.forEach(r=>{const s=`org:${r.sourceOrganizationId}`,t=`org:${r.targetOrganizationId}`; if(nodeIds.has(s)&&nodeIds.has(t)) edges.push(relEdge(r));});
+  scopedPeople(req).forEach(p=>{const pid=`person:${p.id}`,oid=`org:${p.organizationId}`; if(nodeIds.has(pid)&&nodeIds.has(oid)) edges.push({id:`pm-${p.id}`,source:pid,target:oid,kind:'membership',weight:15,risk:0,strategicImportance:0});});
+  const personEdges=new Set();
+  MEETINGS.forEach(m=>{
+    const parts=(m.participants??[]).map(x=>`person:${x.personId}`).filter(pid=>nodeIds.has(pid));
+    for(let i=0;i<parts.length;i++)for(let j=i+1;j<parts.length;j++){
+      const key=[parts[i],parts[j]].sort().join('|');
+      if(personEdges.has(key))continue;
+      personEdges.add(key);
+      edges.push({id:`pp-${m.id}-${i}-${j}`,source:parts[i],target:parts[j],kind:'person_relationship',weight:12,risk:0,strategicImportance:35});
+    }
+  });
+  return {nodes,edges};
+}
+function netUndirected(nodes,edges){
+  const adj=new Map();
+  const push=(u,v)=>{ if(!adj.has(u))adj.set(u,[]); adj.get(u).push(v); };
+  nodes.forEach(n=>adj.set(n.id,[]));
+  edges.forEach(e=>{push(e.source,e.target);push(e.target,e.source);});
+  return adj;
+}
+function netComponents(nodes,adj){
+  const seen=new Set(); const comps=[];
+  for(const n of nodes){
+    if(seen.has(n.id))continue;
+    const comp=[]; const q=[n.id]; seen.add(n.id);
+    while(q.length){ const u=q.pop(); comp.push(u); for(const v of adj.get(u)??[]){ if(!seen.has(v)){seen.add(v);q.push(v);} } }
+    comps.push(comp);
+  }
+  return comps;
+}
+function netPairBc(nodes,edges){
+  // deterministic betweenness approximation: for every ordered node pair, walk one
+  // BFS path (stable tie-break) and count passages per node.
+  const adj=netUndirected(nodes,edges);
+  const bc=new Map(nodes.map(n=>[n.id,0]));
+  const ids=nodes.map(n=>n.id);
+  for(const s of ids){
+    for(const t of ids){
+      if(s===t)continue;
+      const prev=new Map([[s,null]]); const q=[s];
+      while(q.length){ const u=q.shift(); if(u===t)break; const vs=(adj.get(u)??[]).slice().sort(); for(const v of vs){ if(!prev.has(v)){prev.set(v,u);q.push(v);} } }
+      if(!prev.has(t))continue;
+      let c=t;
+      while(c!==s){ bc.set(c,(bc.get(c)??0)+1); c=prev.get(c); }
+    }
+  }
+  return bc;
+}
+function netAnalytics(req,kind){
+  const g=netGraphVisible(req);
+  const nodes=g.nodes,edges=g.edges;
+  const adj=netUndirected(nodes,edges);
+  const name=(n)=>n.label;
+  const row=(n,extra)=>({node:{id:n.id,label:name(n),name:name(n),type:n.type},...extra});
+  const pairs=(n-1)*(n-2)/2||1;
+  if(kind==='centrality'){
+    const deg=new Map(); edges.forEach(e=>{deg.set(e.source,(deg.get(e.source)??0)+1);deg.set(e.target,(deg.get(e.target)??0)+1);});
+    const items=nodes.map(n=>row(n,{degree:deg.get(n.id)??0})).sort((a,b)=>b.degree-a.degree).slice(0,8);
+    return {items,count:items.length,generatedAt:nowIso()};
+  }
+  if(kind==='connectors'){
+    const bc=netPairBc(nodes,edges);
+    const items=nodes.filter(n=>n.type==='person').map(n=>row(n,{connectorScore:Math.round((bc.get(n.id)??0)*100/pairs),scoreVersion:'نسخهٔ ۱ — گذر کوتاه‌ترین مسیرها'}))
+      .sort((a,b)=>b.connectorScore-a.connectorScore).filter(x=>x.connectorScore>0).slice(0,8);
+    return {items,count:items.length,generatedAt:nowIso()};
+  }
+  if(kind==='bridges'){
+    const base=netComponents(nodes,adj).length;
+    const out=[];
+    for(const p of nodes.filter(n=>n.type==='person')){
+      const sub=nodes.filter(n=>n.id!==p.id);
+      const subAdj=netUndirected(sub,edges.filter(e=>e.source!==p.id&&e.target!==p.id));
+      const increase=netComponents(sub,subAdj).length-base+1;
+      if(increase>0) out.push(row(p,{bridgeScore:increase}));
+    }
+    return {items:out.sort((a,b)=>b.bridgeScore-a.bridgeScore).slice(0,8),count:out.length,generatedAt:nowIso()};
+  }
+  if(kind==='single-points-of-failure'){
+    const base=netComponents(nodes,adj).length;
+    const out=[];
+    for(const n of nodes){
+      const sub=nodes.filter(x=>x.id!==n.id);
+      const subAdj=netUndirected(sub,edges.filter(e=>e.source!==n.id&&e.target!==n.id));
+      const increase=netComponents(sub,subAdj).length-base+1;
+      if(increase>0) out.push(row(n,{fragmentationIncrease:increase}));
+    }
+    return {items:out.sort((a,b)=>b.fragmentationIncrease-a.fragmentationIncrease).slice(0,8),count:out.length,generatedAt:nowIso()};
+  }
+  if(kind==='bottlenecks'){
+    const risky=new Set(edges.filter(e=>(e.kind==='relationship'||e.kind==='person_relationship')&&(e.risk??0)>=40).map(e=>e.id));
+    const deg=new Map(); edges.forEach(e=>{deg.set(e.source,(deg.get(e.source)??0)+1);deg.set(e.target,(deg.get(e.target)??0)+1);});
+    const riskyDeg=new Map(); edges.forEach(e=>{ if(risky.has(e.id)){riskyDeg.set(e.source,(riskyDeg.get(e.source)??0)+1);riskyDeg.set(e.target,(riskyDeg.get(e.target)??0)+1);} });
+    const items=nodes.map(n=>row(n,{bottleneckScore:Math.round((riskyDeg.get(n.id)??0)*40+(deg.get(n.id)??0)),riskyConnections:riskyDeg.get(n.id)??0}))
+      .filter(x=>x.riskyConnections>0).sort((a,b)=>b.bottleneckScore-a.bottleneckScore).slice(0,8);
+    return {items,count:items.length,generatedAt:nowIso()};
+  }
+  return {items:[],count:0,generatedAt:nowIso()};
+}
+
 const scopedMeetings=(req)=>MEETINGS.filter(m=>inScope(req,m.organizationId)||(m.relationshipId&&relInScope(req,RELS.find(r=>r.id===m.relationshipId))));
 const scopedInteractions=(req)=>INTERACTIONS.filter(x=>!x.deletedAt&&(inScope(req,x.organizationId)||(x.relationshipId&&relInScope(req,RELS.find(r=>r.id===x.relationshipId)))));
 const scopedActions=(req)=>ACTIONS.filter(a=>{const r=RELS.find(x=>x.id===a.relationshipId);return !r||inScope(req,r.sourceOrganizationId);});
@@ -2560,8 +2739,19 @@ async function __handler(req, res) {
       personRelationshipCount:0,
     }});
   }
-  if(is('/network/path')&&method==='GET') return json(res,200,{path:null,hops:0});
-  if(is('/network/connectors')&&method==='GET') return json(res,200,{connectors:[],count:0});
+  if(is('/network/path')&&method==='GET'){
+    const fromRaw=q.get('from')??'',toRaw=q.get('to')??'';
+    const fromId=fromRaw.startsWith('org:')?fromRaw.slice(4):fromRaw;
+    const toId=toRaw.startsWith('org:')?toRaw.slice(4):toRaw;
+    const mode=q.get('mode')==='best'?'best':'shortest';
+    if(!fromId||!toId) return json(res,400,{message:'مبدأ و مقصد مسیر الزامی است.'});
+    return json(res,200,netPathOrg(req,fromId,toId,mode));
+  }
+  if(is('/network/connectors')&&method==='GET') return json(res,200,netAnalytics(req,'connectors'));
+  if(is('/network/centrality')&&method==='GET') return json(res,200,netAnalytics(req,'centrality'));
+  if(is('/network/bridges')&&method==='GET') return json(res,200,netAnalytics(req,'bridges'));
+  if(is('/network/bottlenecks')&&method==='GET') return json(res,200,netAnalytics(req,'bottlenecks'));
+  if(is('/network/single-points-of-failure')&&method==='GET') return json(res,200,netAnalytics(req,'single-points-of-failure'));
   if(match('/network/:endpoint')&&method==='GET') return json(res,200,{count:0,items:[]});
 
   /* ----------------------------- documents ----------------------------- */

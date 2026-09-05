@@ -2,6 +2,7 @@
 import { ShieldCheck, Network, Lightbulb, AlertTriangle, Zap, Maximize, Maximize2, X, Target, Clock } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Component, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { apiGet } from '../_lib/api';
@@ -12,10 +13,6 @@ import {
   GGraph,
   GNode,
   GEdge,
-  EDGE_COLORS,
-  EDGE_DASH,
-  NODE_COLORS,
-  RISK_COLOR,
   RISK_THRESHOLD,
   PATH_COLOR,
   kindLabel,
@@ -175,6 +172,7 @@ const TAB_LABELS: Record<string, string> = { all: 'همه', organization: 'شر�
 
 export default function Page() {
   const { scopeId } = useWorkspace();
+  const router = useRouter();
   const [graph, setGraph] = useState<GGraph | null>(null);
   const [q, setQ] = useState('');
   const [type, setType] = useState('all');
@@ -337,7 +335,11 @@ export default function Page() {
   }, [path]);
   const pathEdgeSet = useMemo(() => {
     const s = new Set<string>();
-    (path?.edges ?? []).forEach((e: any) => s.add(e?.id));
+    (path?.edges ?? []).forEach((e: any) => {
+      if (!e?.id) return;
+      s.add(e.id);                       // real API returns raw relationship ids
+      if (!String(e.id).startsWith('e-')) s.add(`e-${e.id}`); // demo SW returns graph ids
+    });
     return s;
   }, [path]);
 
@@ -382,21 +384,35 @@ export default function Page() {
     activeFilters.push({ key: 'focus', label: `focus: ${focusNode ? nodeDisplayName(focusNode) : focus}`, onClear: () => setFocus('') });
   }
 
-  const runPath = async () => {
-    if (!from || !to) return;
+  const runPathFor = async (fromId: string, toId: string) => {
+    if (!fromId || !toId) return;
     const { seq, signal } = beginRequest();
     setError('');
-    log('درخواست مسیر سازمانی');
+    log(`درخواست مسیر سازمانی: ${fromId} ← ${toId}`);
     try {
       const sq = scopeQuery();
-      const result = await apiGet(`/network/path?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&mode=${mode}${sq ? `&${sq}` : ''}`, { signal });
+      const result = await apiGet(`/network/path?from=${encodeURIComponent(fromId)}&to=${encodeURIComponent(toId)}&mode=${mode}${sq ? `&${sq}` : ''}`, { signal, timeoutMs: 15000 });
       if (seq === seqRef.current) setPath(result);
     } catch (e: any) {
       if (seq !== seqRef.current || e?.name === 'AbortError') return;
       setError(e?.message || 'Unable to calculate path');
     }
   };
+  const runPath = () => { if (from && to) runPathFor(from, to); };
   const clearPath = () => { setPath(null); log('مسیر پاک شد'); };
+  // انتخاب سریع مبدأ/مقصد از روی خود گراف (کارت شناور گره) — با اجرای خودکار
+  const setPathEnd = (node: GNode, end: 'from' | 'to') => {
+    const id = node.id;
+    if (end === 'from') {
+      setFrom(id);
+      if (to && to !== id) runPathFor(id, to);
+    } else {
+      setTo(id);
+      if (from && from !== id) runPathFor(from, id);
+    }
+    log(end === 'from' ? `مبدأ مسیر: ${nodeDisplayName(node)}` : `مقصد مسیر: ${nodeDisplayName(node)}`);
+  };
+  const openNodePage = (href: string) => { router.push(href); };
   const loadConnectors = async () => {
     const { seq, signal } = beginRequest();
     setError('');
@@ -735,9 +751,23 @@ export default function Page() {
           </div>
           {path && (
             <div className={`net-path-result ${path.found ? 'found' : 'notfound'}`}>
-              {path.found
-                ? `مسیر سازمانی یافت شد: ${path.hops} پرش · هزینه ${path.totalCost ?? '—'} · غیرمسیر کمرنگ می‌شود.`
-                : 'مسیر سازمانی بین دو گره انتخاب‌شده یافت نشد.'}
+              <div className="net-path-msg">
+                {path.found
+                  ? `مسیر سازمانی یافت شد: ${path.hops} پرش · هزینه ${path.totalCost ?? '—'} · بقیهٔ گراف کمرنگ می‌شود.`
+                  : 'مسیر سازمانی بین این دو گره یافت نشد — در دادهٔ فعلی به هم متصل نیستند (سازمان دیگری بین آن‌ها نیست).'}
+              </div>
+              {path.found && Array.isArray(path.nodes) && path.nodes.length > 1 && (
+                <div className="net-path-chain">
+                  {path.nodes.map((n: any, i: number) => (
+                    <span key={n?.id ?? i} className="pc">
+                      {i > 0 ? <i className="pc-arrow">←</i> : null}
+                      {n?.label ?? n?.name ?? '—'}
+                    </span>
+                  ))}
+                  <span className="pc-arrow">←</span>
+                  <b className="pc pc-hops">{path.hops} پرش</b>
+                </div>
+              )}
             </div>
           )}
 
@@ -762,16 +792,25 @@ export default function Page() {
                 onEdgeSelect={(id) => { setSelectedEdgeId(id); setRailTab('overview'); }}
                 onEdgeHover={(label) => setHoverEdge(label)}
                 onRendered={onRendered}
+                onNodeOpen={openNodePage}
+                onPathEnd={setPathEnd}
               />
             </GraphBoundary>
             )}
           </div>
           <div className="net-hover-line">
             {hoverNode && !selectedNode
-              ? <>گرهٔ نشان‌شده: <b>{nodeDisplayName(hoverNode)}</b> ({fa(hoverNode.type)}) — برای جزئیات کلیک کنید</>
+              ? <>گرهٔ نشان‌شده: <b>{nodeDisplayName(hoverNode)}</b> ({fa(hoverNode.type)}) — کلیک = جزئیات · دابل‌کلیک = باز کردن صفحه</>
               : hoverEdge && !selectedEdgeId
-                ? <>یالِ نشان‌شده: <b>{fa(hoverEdge)}</b></>
-                : 'نشانگر را روی یک گره ببرید و برای جزئیات کلیک کنید.'}
+                ? (() => {
+                    const e = graph?.edges.find((x) => x.id === hoverEdge) ?? null;
+                    if (!e) return null;
+                    const a = idToNode(e.source);
+                    const b = idToNode(e.target);
+                    const st = statusMeta(edgeStatus(e));
+                    return <>یالِ نشان‌شده: <b>{a ? nodeDisplayName(a) : e.source} ↔ {b ? nodeDisplayName(b) : e.target}</b> · {e.label ? fa(e.label) : kindLabel(e.kind)} · <span style={{ color: st.color }}>{st.label}</span>{e.kind === 'relationship' && Number.isFinite(e.risk) ? ` · ریسک ${e.risk}` : ''}</>;
+                  })()
+                : 'نشانگر را روی گره ببرید (کلیک = جزئیات) یا روی خط رابطه (انتخاب خط).'}
           </div>
 
           {/* Legend */}
@@ -837,6 +876,44 @@ export default function Page() {
                       <div className="kv"><small>شناسه</small><strong>{selectedNode.id}</strong></div>
                       <div className="kv"><small>روابط مرتبط</small><strong>{railNodeDegree}</strong></div>
                     </div>
+                    {(() => {
+                      const tally = new Map<string, number>();
+                      let risky = 0;
+                      for (const e of railRelationships) {
+                        if (e.kind !== 'relationship' && e.kind !== 'person_relationship') continue;
+                        const s = edgeStatus(e);
+                        tally.set(s, (tally.get(s) ?? 0) + 1);
+                        if (Number.isFinite(e.risk) && (e.risk ?? 0) >= RISK_THRESHOLD) risky++;
+                      }
+                      const arr = [...tally.entries()].sort((a, b) => b[1] - a[1]);
+                      return (
+                        <div className="net-rail-block">
+                          {arr.length ? (
+                            <div className="net-rail-chips">
+                              {arr.map(([s, c]) => {
+                                const m = statusMeta(s);
+                                return (
+                                  <span key={s} className="rail-chip" style={{ color: m.color, borderColor: `${m.color}55`, background: `${m.color}12` }}>
+                                    <i style={{ background: m.color }} />
+                                    {m.label} · {c}
+                                  </span>
+                                );
+                              })}
+                              {risky > 0 && <span className="rail-chip danger">⚠ {risky} پرریسک</span>}
+                            </div>
+                          ) : (
+                            <div className="t-muted" style={{ fontSize: 10.5 }}>یال رابطه‌ای برای این گره در گراف بارگذاری‌شده نیست.</div>
+                          )}
+                          {selectedNode.type === 'organization' && (
+                            <div className="net-rail-actions">
+                              <span className="ra-label">مسیر سازمانی:</span>
+                              <button className="net-btn" disabled={from === selectedNode.id} onClick={() => setPathEnd(selectedNode, 'from')}>از اینجا</button>
+                              <button className="net-btn" disabled={to === selectedNode.id} onClick={() => setPathEnd(selectedNode, 'to')}>تا اینجا</button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                     <div className="net-detail-actions" style={{ padding: 0, border: 0 }}>
                       {(() => { const r = nodeEntityRoute(selectedNode); return r ? <DetailButton href={r.href} label={`باز کردن ${fa(selectedNode.type)}`} /> : null; })()}
                       <button className="net-btn primary" onClick={() => expandNode(selectedNode)}>گسترش همسایه‌ها</button>
@@ -1122,6 +1199,8 @@ export default function Page() {
                                   onEdgeSelect={(id) => { setSelectedEdgeId(id); setRailTab('overview'); }}
                                   onEdgeHover={(label) => setHoverEdge(label)}
                                   onRendered={onRendered}
+                                  onNodeOpen={openNodePage}
+                                  onPathEnd={setPathEnd}
                                 />
                 </GraphBoundary>
               </div>
