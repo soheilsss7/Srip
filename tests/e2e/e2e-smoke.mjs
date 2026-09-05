@@ -69,7 +69,7 @@ function idOf(value, keys = []) {
 }
 
 try {
-  const login = await api('/auth/login', { method: 'POST', body: { email, password }, idempotency: false });
+  const login = await api('/auth/login', { method: 'POST', body: { email, password, otp: '123456' }, idempotency: false });
   token = login?.accessToken || login?.token;
   if (!token) throw new Error('Login succeeded but no accessToken/token was returned');
   console.log('PASS Login');
@@ -151,8 +151,7 @@ try {
   const commitment = await api('/commitments', {
     method: 'POST',
     body: {
-      title: 'AG E2E Commitment',
-      description: 'Phase AG integration smoke commitment',
+      description: 'AG E2E Commitment — Phase AG integration smoke commitment',
       status: 'OPEN',
       ownerId: userId,
       relationshipId,

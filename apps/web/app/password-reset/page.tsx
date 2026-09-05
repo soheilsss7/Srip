@@ -1,13 +1,15 @@
 'use client';
-import {useState,useEffect} from 'react';
-import {useSearchParams} from 'next/navigation';
 import Link from 'next/link';
+import {useState,useEffect,Suspense} from 'react';
+import {useSearchParams} from 'next/navigation';
 import {api} from '../_lib/api';
+import {AuthShell} from '../_components/auth-shell';
+import {KeyRound, CheckCircle2, Mail} from 'lucide-react';
 
 const MIN=12;
 function invalidPw(p:string){if(p.length<MIN)return `رمز عبور باید حداقل ${MIN} کاراکتر باشد.`;return '';}
 
-export default function PasswordReset(){
+function PasswordReset(){
  const sp=useSearchParams();
  const initialToken=(typeof window!=='undefined'&&new window.URLSearchParams(window.location.search).get('token'))||'';
  const [token,setToken]=useState(initialToken);
@@ -24,23 +26,46 @@ export default function PasswordReset(){
 
  async function applyReset(e:React.FormEvent){e.preventDefault();setMsg('');setError('');const v=invalidPw(password);if(v){setError(v);return}if(password!==confirm){setError('رمز عبور و تکرار آن یکسان نیستند.');return}if(!token){setError('توکن بازیابی موجود نیست.');return}try{await api('/auth/password-reset/confirm',{method:'POST',body:JSON.stringify({token,password})});setStep('done')}catch(x){setError((x as Error).message)}}
 
- return <main className="auth-page"><section className="auth-card">
-   <p className="eyebrow">ACCOUNT RECOVERY</p><h1>بازیابی رمز عبور</h1>
-   {error&&<p className="error">{error}</p>}
-   {step==='done'?<>
-     <p className="success">رمز عبور با موفقیت تغییر کرد.</p>
-     <Link href="/login">ورود به حساب</Link>
-   </>:
-   step==='confirm'?<form onSubmit={applyReset}>
-     <label>رمز عبور جدید<input type="password" value={password} onChange={e=>setPassword(e.target.value)} minLength={MIN} required/></label>
-     <label>تکرار رمز عبور<input type="password" value={confirm} onChange={e=>setConfirm(e.target.value)} minLength={MIN} required/></label>
-     <button className="primary-action">ثبت رمز جدید</button>
-   </form>:
-   <form onSubmit={requestEmail}>
-     <label>ایمیل<input type="email" value={email} onChange={e=>setEmail(e.target.value)} required/></label>
-     <button className="primary-action">ارسال درخواست</button>
-   </form>}
-   {msg&&<p className="success">{msg}</p>}
-   <Link href="/login">بازگشت به ورود</Link>
- </section></main>;
+ return (
+  <AuthShell>
+    <h2>بازیابی رمز عبور</h2>
+    <p className="ac-sub">رمز عبور جدید خود را با استفاده از توکن بازیابی ثبت کنید.</p>
+    {error&&<p className="error" role="alert">{error}</p>}
+
+    {step==='done' ? (
+      <div className="auth-form" style={{alignItems:'center',textAlign:'center',gap:12}}>
+        <CheckCircle2 size={44} style={{color:'var(--srip-success)'}}/>
+        <b>رمز عبور با موفقیت تغییر کرد</b>
+        <Link className="btn btn-primary btn-block" href="/login">ورود به حساب</Link>
+      </div>
+    ) : step==='confirm' ? (
+      <form className="auth-form" onSubmit={applyReset} noValidate>
+        <div className="field">
+          <label className="field-label" htmlFor="pr-pass">رمز عبور جدید <span className="req">*</span></label>
+          <input id="pr-pass" type="password" value={password} onChange={e=>setPassword(e.target.value)} minLength={MIN} placeholder="حداقل ۱۲ کاراکتر" required/>
+        </div>
+        <div className="field">
+          <label className="field-label" htmlFor="pr-pass2">تکرار رمز عبور <span className="req">*</span></label>
+          <input id="pr-pass2" type="password" value={confirm} onChange={e=>setConfirm(e.target.value)} minLength={MIN} required/>
+        </div>
+        {token && <span className="chip info" dir="ltr" style={{alignSelf:'flex-start',maxWidth:'100%',overflow:'hidden',textOverflow:'ellipsis'}}>Token: {token}</span>}
+        <button className="btn btn-primary btn-block"><KeyRound size={16}/> ثبت رمز جدید</button>
+      </form>
+    ) : (
+      <form className="auth-form" onSubmit={requestEmail} noValidate>
+        <div className="field">
+          <label className="field-label" htmlFor="pr-email">ایمیل سازمانی <span className="req">*</span></label>
+          <input id="pr-email" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@company.com" required/>
+        </div>
+        <button className="btn btn-primary btn-block"><Mail size={16}/> ارسال درخواست بازیابی</button>
+      </form>
+    )}
+    {msg&&<p className="notice" role="status">{msg}</p>}
+    <div className="auth-links" style={{justifyContent:'center'}}><Link href="/login">بازگشت به ورود</Link></div>
+  </AuthShell>
+ );
+}
+
+export default function PasswordResetPage(){
+ return <Suspense fallback={null}><PasswordReset/></Suspense>;
 }

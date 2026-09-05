@@ -1,13 +1,16 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../_lib/api';
+import { fa } from '../_lib/fa';
 import { useWorkspace } from '../_components/workspace';
 import { Card, Badge } from '@srip/design-system';
+import { Modal } from '../_components/page-ui';
 import {
   Phone, Mail, Users, StickyNote, MessageSquare, Plus, Search, CalendarDays,
   BellRing, Clock, Building2, User, ListFilter, Activity, ClipboardList,
 } from 'lucide-react';
+import { JalaliDateField } from '../_components/jalali-date-field';
 
 type Interaction = {
   id: string;
@@ -45,6 +48,7 @@ export default function InteractionsPage() {
   const [items, setItems] = useState<Interaction[]>([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [followUps, setFollowUps] = useState(false);
   const [q, setQ] = useState('');
@@ -82,6 +86,7 @@ export default function InteractionsPage() {
         }),
       });
       setForm({ ...form, subject: '', summary: '', followUpAt: '' });
+      setCreateOpen(false);
       await load();
     } catch (err: any) {
       setError(err.message);
@@ -119,15 +124,16 @@ export default function InteractionsPage() {
   }, [visible]);
 
   return (
+    <>
     <div className="interactions-page">
       <section className="page-heading">
         <div>
-          <div className="eyebrow">SRIP Workspace · Interaction Timeline</div>
+          <div className="eyebrow">فضای کاری SRIP · خط زمانی تعاملات</div>
           <h1>تعاملات</h1>
-          <p className="subtitle">تماس‌ها، ایمیل‌ها، جلسات، یادداشت‌ها و پیگیری‌ها در یک تایم‌لاین یکپارچه — از Backend واقعی.</p>
+          <p className="subtitle">تماس‌ها، ایمیل‌ها، جلسات، یادداشت‌ها و پیگیری‌ها در یک خط زمانی یکپارچه — از سرور واقعی.</p>
         </div>
         <div className="heading-tools">
-          {writable && <Link className="primary-action" href="#log-interaction"><Plus size={14}/> ثبت تعامل</Link>}
+          {writable && <button type="button" className="primary-action" onClick={()=>{setError('');setCreateOpen(true)}}><Plus size={14}/> ثبت تعامل</button>}
         </div>
       </section>
 
@@ -152,22 +158,22 @@ export default function InteractionsPage() {
         <div className="stat-card">
           <div className="st-top"><span className="st-ico ic-purple"><ClipboardList size={18}/></span><span className="st-name">انواع</span></div>
           <strong className="st-value">{typesPresent.length}</strong>
-          <div className="st-foot"><span className="st-delta">{typesPresent.join(' · ') || '—'}</span></div>
+          <div className="st-foot"><span className="st-delta">{typesPresent.map(t=>TYPE_META[t]?.label??t).join(' · ') || '—'}</span></div>
         </div>
       </section>
 
       <div className="interactions-layout">
         <Card className="interactions-feed">
           <div className="panel-title">
-            <div><h2>Timeline</h2><p>جدیدترین‌ها در بالا</p></div>
+            <div><h2>خط زمانی</h2><p>جدیدترین‌ها در بالا</p></div>
             <div className="table-toolbar">
               <div className="search-box">
                 <Search size={15}/>
                 <input placeholder="جستجوی موضوع، خلاصه یا سازمان…" value={q} onChange={(e) => setQ(e.target.value)} />
               </div>
-              <select aria-label="Type filter" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+              <select aria-label="فیلتر نوع" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
                 <option value="">همه انواع</option>
-                {typesPresent.map((t) => <option key={t} value={t}>{t}</option>)}
+                {typesPresent.map((t) => <option key={t} value={t}>{TYPE_META[t]?.label ?? t}</option>)}
               </select>
             </div>
             <div className="seg-btn">
@@ -185,7 +191,7 @@ export default function InteractionsPage() {
                   <div className="timeline-dayhead"><span>{dayLabel(day)}</span><b>{list.length}</b></div>
                   <div className="timeline-items">
                     {list.map((i) => {
-                      const meta = TYPE_META[i.type] ?? { label: i.type, color: 'type-other' };
+                      const meta = TYPE_META[i.type] ?? { label: fa(i.type), color: 'type-other' };
                       return (
                         <article className={`timeline-item ${i.followUpRequired ? 'has-follow' : ''}`} key={i.id}>
                           <TypeDot type={i.type} />
@@ -193,7 +199,7 @@ export default function InteractionsPage() {
                             <div className="ti-head">
                               <span className="ti-type">{meta.label}</span>
                               <span className="ti-time"><Clock size={12}/>{timeLabel(i.occurredAt)}</span>
-                              {i.importance && i.importance !== 'MEDIUM' && <Badge className={i.importance === 'CRITICAL' || i.importance === 'HIGH' ? 'danger' : 'warning'}>{i.importance}</Badge>}
+                              {i.importance && i.importance !== 'MEDIUM' && <Badge className={i.importance === 'CRITICAL' || i.importance === 'HIGH' ? 'danger' : 'warning'}>{fa(i.importance)}</Badge>}
                             </div>
                             <Link className="ti-subject" href={`/interactions/${i.id}`}>{i.subject}</Link>
                             {i.summary ? <p className="ti-summary">{i.summary}</p> : null}
@@ -227,38 +233,38 @@ export default function InteractionsPage() {
           )}
         </Card>
 
-        {writable && (
-          <aside className="interactions-form" id="log-interaction">
-            <Card>
-              <div className="panel-title"><div><h2>ثبت تعامل</h2><p>تماس، ایمیل، جلسه یا یادداشت</p></div></div>
-              <form onSubmit={create} className="form-grid">
-                <label className="full">نوع
-                  <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
-                    {Object.keys(TYPE_META).map((t) => <option key={t} value={t}>{TYPE_META[t].label} ({t})</option>)}
-                  </select>
-                </label>
-                <label className="full">موضوع <input required value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} /></label>
-                <label className="full">زمان <input type="datetime-local" value={form.occurredAt} onChange={(e) => setForm({ ...form, occurredAt: e.target.value })} /></label>
-                <label className="full">خلاصه <textarea value={form.summary} onChange={(e) => setForm({ ...form, summary: e.target.value })} /></label>
-                <label className="full">سازمان <input value={form.organizationId} onChange={(e) => setForm({ ...form, organizationId: e.target.value })} placeholder="شناسه سازمان (اختیاری)" /></label>
-                <label className="full">شخص <input value={form.personId} onChange={(e) => setForm({ ...form, personId: e.target.value })} placeholder="شناسه شخص (اختیاری)" /></label>
-                <label className="full check-line">
-                  <input type="checkbox" checked={form.followUpRequired} onChange={(e) => setForm({ ...form, followUpRequired: e.target.checked })} />
-                  نیازمند پیگیری
-                </label>
-                {form.followUpRequired && (
-                  <label className="full">موعد پیگیری <input type="datetime-local" value={form.followUpAt} onChange={(e) => setForm({ ...form, followUpAt: e.target.value })} /></label>
-                )}
-                <button className="srip-button primary full" type="submit" disabled={busy}>{busy ? 'در حال ذخیره…' : 'ثبت تعامل'}</button>
-              </form>
-            </Card>
-          </aside>
-        )}
+
       </div>
     </div>
+    {/* Create modal */}
+    <Modal open={createOpen} title="ثبت تعامل" description="تماس، ایمیل، جلسه یا یادداشت — تعامل در تایم‌لاین شما ثبت می‌شود." onClose={() => setCreateOpen(false)}
+      footer={<>
+        <button type="button" className="btn btn-secondary" onClick={() => setCreateOpen(false)}>انصراف</button>
+        <button type="submit" form="interaction-create-form" className="srip-button primary" disabled={busy}>{busy ? 'در حال ذخیره…' : 'ثبت تعامل'}</button>
+      </>}>
+      <form id="interaction-create-form" className="entity-form" onSubmit={create}>
+        <div className="field full"><label className="field-label">نوع</label>
+          <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
+            {Object.keys(TYPE_META).map((t) => <option key={t} value={t}>{TYPE_META[t].label}</option>)}
+          </select>
+        </div>
+        <div className="field full"><label className="field-label">موضوع <span className="req">*</span></label><input required value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} /></div>
+        <div className="field full"><label className="field-label">زمان</label><JalaliDateField withTime value={form.occurredAt} onChange={(v) => setForm({ ...form, occurredAt: v })} /></div>
+        <div className="field full"><label className="field-label">خلاصه</label><textarea value={form.summary} onChange={(e) => setForm({ ...form, summary: e.target.value })} /></div>
+        <div className="field"><label className="field-label">سازمان</label><input value={form.organizationId} onChange={(e) => setForm({ ...form, organizationId: e.target.value })} placeholder="شناسه سازمان (اختیاری)" /></div>
+        <div className="field"><label className="field-label">شخص</label><input value={form.personId} onChange={(e) => setForm({ ...form, personId: e.target.value })} placeholder="شناسه شخص (اختیاری)" /></div>
+        <div className="field full check-line">
+          <input type="checkbox" checked={form.followUpRequired} onChange={(e) => setForm({ ...form, followUpRequired: e.target.checked })} />
+          نیازمند پیگیری
+        </div>
+        {form.followUpRequired && (
+          <div className="field full"><label className="field-label">موعد پیگیری</label><JalaliDateField withTime value={form.followUpAt} onChange={(v) => setForm({ ...form, followUpAt: v })} /></div>
+        )}
+      </form>
+    </Modal>
+    </>
   );
 }
-
 function dayLabel(day: string): string {
   const d = new Date(day);
   const today = new Date().toDateString();

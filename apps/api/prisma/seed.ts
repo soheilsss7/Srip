@@ -1,3 +1,4 @@
+import { makePrisma } from '../src/prisma/prisma-factory';
 import {
   PrismaClient,
   OrganizationType,
@@ -14,7 +15,7 @@ import {
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
-const prisma = new PrismaClient();
+const prisma = makePrisma();
 
 const IDS = {
   admin: '00000000-0000-0000-0000-000000000010',
@@ -60,7 +61,7 @@ async function main() {
     RELATIONSHIP_MANAGER: ['approval.request','approval.read','org.read','entity.read','entity.write','tag.read','tag.write','person.read','person.write','person.sensitive_contacts.read','relationship.read','relationship.write','relationship.notes.read','relationship.strategic.read','relationship.risk.read','relationship.internal.read','relationship.sensitive_contacts.read','interaction.read','interaction.write','meeting.read','meeting.write','action.read','action.write','commitment.read','commitment.write','project.read','opportunity.read','search.read','search.write','analytics.read','analytics.write','ai.executive_brief', 'ai.read', 'ai.query','network.read','report.read','recommendation.read','recommendation.write','integration.read','integration.write'],
     PROJECT_MANAGER: ['approval.request','approval.read','org.read','entity.read','entity.write','tag.read','tag.write','person.read','relationship.read','interaction.read','meeting.read','action.read','action.write','commitment.read','commitment.write','project.read','project.write','opportunity.read','search.read','search.write','analytics.read','analytics.write','ai.executive_brief', 'ai.read', 'ai.query','network.read','report.read','recommendation.read','recommendation.write','integration.read','integration.write'],
     ANALYST: ['approval.request','approval.read','org.read','entity.read','tag.read','person.read','relationship.read','relationship.strategic.read','relationship.risk.read','interaction.read','meeting.read','action.read','commitment.read','project.read','opportunity.read','search.read','search.write','analytics.read','analytics.write','ai.executive_brief', 'ai.read', 'ai.query','network.read','report.read','recommendation.read','recommendation.write','integration.read','integration.write'],
-    STANDARD_USER: ['approval.request','approval.read','report.read','org.read','entity.read','tag.read','person.read','relationship.read','interaction.read','meeting.read','action.read','commitment.read','project.read','search.read','search.write','analytics.read','ai.executive_brief', 'ai.read', 'ai.query','recommendation.read','integration.read'],
+    STANDARD_USER: ['approval.request','approval.read','report.read','org.read','entity.read','tag.read','person.read','relationship.read','interaction.read','meeting.read','action.read','commitment.read','project.read','search.read','search.write','analytics.read','ai.executive_brief', 'ai.read', 'ai.query','network.read','recommendation.read','integration.read'],
     READ_ONLY: ['approval.request','approval.read','report.read','org.read','entity.read','tag.read','person.read','relationship.read','interaction.read','meeting.read','action.read','commitment.read','project.read','opportunity.read','search.read','search.write','analytics.read','ai.executive_brief', 'ai.read', 'ai.query','recommendation.read','integration.read'],
   };
   const roles = [
@@ -106,7 +107,7 @@ async function main() {
     create: { userId: user.id, provider: 'LOCAL', providerAccountId: user.id },
   });
 
-  for (const t of [{key:'STRATEGIC',name:'Strategic'},{key:'COMMERCIAL',name:'Commercial'},{key:'PARTNER',name:'Partner'},{key:'SUPPLIER',name:'Supplier'},{key:'INVESTMENT',name:'Investment'}]) await prisma.relationshipType.upsert({ where:{key:t.key}, update:{name:t.name,isActive:true}, create:{key:t.key,name:t.name} });
+  for (const t of [{key:'STRATEGIC',name:'Strategic'},{key:'COMMERCIAL',name:'Commercial'},{key:'PARTNER',name:'Partner'},{key:'SUPPLIER',name:'Supplier'},{key:'INVESTMENT',name:'Investment'},{key:'BUSINESS',name:'Business'}]) await prisma.relationshipType.upsert({ where:{key:t.key}, update:{name:t.name,isActive:true}, create:{key:t.key,name:t.name} });
   const defaultTags = ['Strategic','VIP','Banking','Government','High Risk','Investor','Energy','International'];
   for (const name of defaultTags) await prisma.tag.upsert({ where: { name }, update: {}, create: { name } });
   for (const t of [{key:InteractionKind.CALL,name:'Call'},{key:InteractionKind.EMAIL,name:'Email'},{key:InteractionKind.MEETING,name:'Meeting'},{key:InteractionKind.NOTE,name:'Note'},{key:InteractionKind.MESSAGE,name:'Message'},{key:InteractionKind.OTHER,name:'Other'}]) await prisma.interactionType.upsert({ where:{key:t.key}, update:{name:t.name,isActive:true}, create:{key:t.key,name:t.name} });
@@ -129,8 +130,8 @@ async function main() {
 
   await prisma.membership.upsert({
     where: { userId_organizationId: { userId: user.id, organizationId: holding.id } },
-    update: { role: 'HOLDING_ADMIN', isPrimary: true },
-    create: { userId: user.id, organizationId: holding.id, role: 'HOLDING_ADMIN', isPrimary: true },
+    update: { role: 'SUPER_ADMIN', isPrimary: true },
+    create: { userId: user.id, organizationId: holding.id, role: 'SUPER_ADMIN', isPrimary: true },
   });
   await prisma.membership.upsert({
     where: { userId_organizationId: { userId: user.id, organizationId: subsidiary.id } },

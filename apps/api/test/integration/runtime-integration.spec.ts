@@ -1,12 +1,15 @@
 
 import { PrismaClient } from '@prisma/client';
 import IORedis from 'ioredis';
+import { makePrisma } from '../../src/prisma/prisma-factory';
 
 const enabled = process.env.RUN_INTEGRATION === '1';
 const describeIntegration = enabled ? describe : describe.skip;
 
 describeIntegration('runtime integration: PostgreSQL + Redis', () => {
-  const prisma = new PrismaClient();
+  // Engine-less Prisma build requires the pg driver adapter; construct lazily so
+  // the suite can still be skipped (RUN_INTEGRATION unset) without instantiating.
+  const prisma: PrismaClient = enabled ? makePrisma() : (null as unknown as PrismaClient);
   let redis: IORedis;
 
   beforeAll(async () => {
@@ -30,7 +33,7 @@ describeIntegration('runtime integration: PostgreSQL + Redis', () => {
 
   it('can read the Prisma schema-backed database', async () => {
     const result = await prisma.$queryRaw<Array<{ table_name: string }>>`
-      SELECT table_name
+      SELECT table_name::text AS table_name
       FROM information_schema.tables
       WHERE table_schema = 'public'
       ORDER BY table_name

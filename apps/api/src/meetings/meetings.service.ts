@@ -19,10 +19,22 @@ export class MeetingsService {
     if (row.ownerId !== userId) throw new NotFoundException('Meeting not found');
   }
 
-  async list(userId: string, relationshipId?: string, upcoming = false, page?: string, pageSize?: string) {
+  async list(userId: string, relationshipId?: string, organizationId?: string, upcoming = false, page?: string, pageSize?: string) {
     const ids = await this.authorization.accessibleOrganizationIds(userId);
     const p = parsePagination(page, pageSize, { page: 1, pageSize: 50 });
-    const where: Prisma.MeetingWhereInput = { deletedAt: null, ...(relationshipId ? { relationshipId } : {}), ...(upcoming ? { startAt: { gte: new Date() } } : {}), ...(ids ? { OR: [{ organizationId: { in: ids } }, { ownerId: userId }, { relationship: { OR: [{ sourceOrganizationId: { in: ids } }, { targetOrganizationId: { in: ids } }] } }] } : { ownerId: userId }) };
+    let where: Prisma.MeetingWhereInput = { deletedAt: null, ...(relationshipId ? { relationshipId } : {}), ...(upcoming ? { startAt: { gte: new Date() } } : {}) };
+    if (organizationId) {
+      // Owner/subsidiary scope selection: everything related to that organization
+      // (its own meetings + meetings of its relationships), permission-checked.
+      await this.authorization.assertAnyOrganizationAccess(userId, [organizationId]);
+      where = { ...where, OR: [{ organizationId }, { relationship: { OR: [{ sourceOrganizationId: organizationId }, { targetOrganizationId: organizationId }] } }] };
+    } else if (ids) {
+      where = { ...where, OR: [{ organizationId: { in: ids } }, { ownerId: userId }, { relationship: { OR: [{ sourceOrganizationId: { in: ids } }, { targetOrganizationId: { in: ids } }] } }] };
+    } else {
+      // Owner (super admin) default view: their own meetings; subsidiary scope is
+      // reached through the explicit organizationId selector.
+      where = { ...where, ownerId: userId };
+    }
     const [items, total] = await this.prisma.$transaction([
       this.prisma.meeting.findMany({ where, include: { organization: true, relationship: true, participants: { include: { person: true } }, actions: true, commitments: true }, orderBy: { startAt: 'desc' }, skip: p.skip, take: p.take }),
       this.prisma.meeting.count({ where }),
@@ -93,7 +105,7 @@ export class MeetingsService {
     if (!row || row.deletedAt) throw new NotFoundException('Meeting not found');
     await this.assertAccess(userId, row);
     const allowed = ['notes','outcome','decisions','transcript','preMeetingBrief']; const update:any={status:MeetingStatus.COMPLETED,completedAt:new Date()}; for(const k of allowed)if(data[k]!==undefined)update[k]=data[k];
-    const updated = await this.eventBus.transaction(async tx => { const next=await tx.meeting.update({where:{id},data:update}); await this.audit.logMutation({userId,action:'UPDATE',entityType:'Meeting',entityId:id,organizationId:next.organizationId??undefined,before:row,after:next,reason:'meeting_completed'},tx); await this.eventBus.publishInTransaction(tx,{eventType:DOMAIN_EVENT_TYPES.MEETING_UPDATED,aggregateType:'Meeting',aggregateId:next.id,organizationId:next.organizationId??undefined,actorId:userId,payload:next as any}); await this.eventBus.publishInTransaction(tx,{eventType:DOMAIN_EVENT_TYPES.MEETING_COMPLETED,aggregateType:'Meeting',aggregateId:next.id,organizationId:next.organizationId??undefined,actorId:userId,payload:next as any}); return next; });
+    const updated = await this.eventBus.transaction(async tx => { const next=await tx.meeting.update({where:{id},data:update}); await this.audit.logMutation({userId,action:'UPDATE',entityType:'Meeting',entityId:id,organizationId:next.organizationId??undefined,before:row,after:next,reason:'meeting_completed'},tx); await this.eventBus.publishInTransaction(tx,{eventType:DOMAIN_EVENT_TYPES.MEETING_UPDATED,aggregateType:'Meeting',aggregateId:next.id,organizationId:next.organizationId??undefined,actorId:userId,payload:next as any}); await this.eventBus.publishInTransaction(tx,{eventType:DOMAIN_EVENT_TYPES.MEETING_COMPLETED,aggregateType:'Meeting',aggregateId:next.id,organizationId:next.organizationId??undefined,actorId:userId,payload:next as any}); if (update.outcome) await tx.notification.create({data:{userId,type:'INFO',title:'نتیجه جلسه ثبت شد',body:`نتیجهٔ جلسهٔ «${next.title}» ثبت شد: ${String(update.outcome).slice(0,200)}`,channel:'IN_APP',priority:'MEDIUM'}}).catch(()=>undefined); return next; });
     return EntityResponseDto.from('Meeting',updated);
   }
 

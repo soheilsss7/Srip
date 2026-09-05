@@ -63,6 +63,44 @@ export const WIDTH_MAX = 6;
 // Highlight color used for path (organization path) and focused/analytics emphasis.
 export const PATH_COLOR = '#B45309';
 
+/* -------------------- relationship status visual encoding -------------------- */
+// The status of a relationship is encoded directly on its edge:
+// color + line pattern + a small icon pill at the midpoint of the line.
+export type StatusIcon = 'check' | 'alert' | 'pause' | 'x' | 'plus';
+
+export interface StatusMeta {
+  label: string;
+  color: string;
+  dash: number[] | null;
+  icon: StatusIcon;
+  width: number;
+}
+
+export const STATUS_META: Record<string, StatusMeta> = {
+  ACTIVE:      { label: 'فعال',     color: '#0E9F6E', dash: null,    icon: 'check',  width: 2.4 },
+  AT_RISK:     { label: 'در ریسک',  color: '#D97706', dash: [7, 4],  icon: 'alert',  width: 2.6 },
+  WATCH:       { label: 'در ریسک',  color: '#D97706', dash: [7, 4],  icon: 'alert',  width: 2.6 },
+  DORMANT:     { label: 'خواب',     color: '#8A94A6', dash: [2, 4],  icon: 'pause',  width: 2.0 },
+  ARCHIVED:    { label: 'بایگانی',  color: '#DC2626', dash: [4, 3],  icon: 'x',      width: 1.8 },
+  PROSPECTIVE: { label: 'آینده',    color: '#2563EB', dash: [5, 3],  icon: 'plus',   width: 2.2 },
+};
+
+export const DEFAULT_STATUS: StatusMeta = {
+  label: 'نامشخص', color: '#94A3B8', dash: null, icon: 'pause', width: 1.8,
+};
+
+/** Effective status of an edge — explicit status, else derived from risk. */
+export function edgeStatus(e: GEdge): string {
+  const s = (e as any)?.status;
+  if (s && STATUS_META[s]) return s;
+  if (Number.isFinite(e.risk) && e.risk >= RISK_THRESHOLD) return 'AT_RISK';
+  return 'ACTIVE';
+}
+
+export function statusMeta(status: string): StatusMeta {
+  return STATUS_META[status] ?? DEFAULT_STATUS;
+}
+
 // Nodes are prefixed by the backend graph engine: org:/person:/project:<uuid>.
 // The entity detail routes (/organizations/[id], /people/[id], /projects/[id])
 // expect the bare UUID, so strip the prefix when navigating.
@@ -142,13 +180,13 @@ export function drawNode(
 export function kindLabel(kind: GEdgeKind): string {
   switch (kind) {
     case 'membership':
-      return 'Membership (person→org)';
+      return 'عضویت (شخص→سازمان)';
     case 'project':
-      return 'Project (project→org)';
+      return 'پروژه (پروژه→سازمان)';
     case 'relationship':
-      return 'Organization relationship';
+      return 'رابطهٔ سازمانی';
     case 'person_relationship':
-      return 'Person relationship';
+      return 'رابطهٔ شخصی';
     default:
       return kind;
   }
@@ -158,7 +196,7 @@ export function edgeDisplayLabel(e: GEdge): string {
   const rel = e.label ? `${e.label}` : kindLabel(e.kind);
   const weight = Number.isFinite(e.weight) ? String(e.weight) : '—';
   const risk = Number.isFinite(e.risk) ? String(e.risk) : '—';
-  return `${rel} · wt ${weight} · risk ${risk}`;
+  return `${rel} · وزن ${weight} · ریسک ${risk}`;
 }
 
 export function nodeDisplayName(n: GNode): string {

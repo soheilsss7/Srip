@@ -1,9 +1,10 @@
 import 'dotenv/config';
 import { createCipheriv, createHash, randomBytes } from 'node:crypto';
+import { makePrisma } from '../src/prisma/prisma-factory';
 import { PrismaClient, AuditAction, DataClassification, InteractionKind, NotificationType, OpportunityStatus, OrganizationStatus, OrganizationType, Priority, ProjectStatus, RelationshipLifecycleStage, RelationshipStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
-const prisma = new PrismaClient();
+const prisma = makePrisma();
 
 const DEMO_ROOT = '20000000-0000-0000-0000-000000000001';
 const DEMO_USER = '20000000-0000-0000-0000-000000000002';

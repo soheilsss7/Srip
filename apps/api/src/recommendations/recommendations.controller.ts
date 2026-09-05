@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { IsDateString, IsIn, IsInt, IsObject, IsOptional, IsString, Max, Min, MinLength } from 'class-validator';
 import { AuthGuard } from '../common/guards/auth.guard';
 import { AuthorizationGuard } from '../common/guards/authorization.guard';
@@ -19,11 +19,11 @@ export class RecommendationsController {
  @Post(':id/accept') @RequirePermission('recommendation.write') accept(@Param('id') id:string,@Req() req:any){return this.service.accept(req.user.sub,id)}
  @Get(':id') @RequirePermission('recommendation.read') get(@Param('id') id:string,@Req() req:any){return this.service.get(req.user.sub,id)}
  @Get(':id/explain') @RequirePermission('recommendation.read') explain(@Param('id') id:string,@Req() req:any){return this.service.explain(req.user.sub,id)}
- @Post('generate') @RequirePermission('recommendation.write') generate(@Body() d:GenerateDto,@Req() req:any){return this.service.generate(req.user.sub,d.organizationId)}
- @Post(':id/approve') @RequirePermission('recommendation.write') approve(@Param('id') id:string,@Req() req:any){return this.service.approve(req.user.sub,id)}
- @Post(':id/reject') @RequirePermission('recommendation.write') reject(@Param('id') id:string,@Req() req:any){return this.service.reject(req.user.sub,id)}
+ @Post('generate') @HttpCode(200) @RequirePermission('recommendation.write') generate(@Body() d:GenerateDto,@Req() req:any){return this.service.generate(req.user.sub,d.organizationId)}
+ @Post(':id/approve') @HttpCode(200) @RequirePermission('recommendation.write') approve(@Param('id') id:string,@Req() req:any){return this.service.approve(req.user.sub,id)}
+ @Post(':id/reject') @HttpCode(200) @RequirePermission('recommendation.write') reject(@Param('id') id:string,@Req() req:any){return this.service.reject(req.user.sub,id)}
  @Patch(':id') @RequirePermission('recommendation.write') edit(@Param('id') id:string,@Body() d:EditDto,@Req() req:any){return this.service.edit(req.user.sub,id,d)}
- @Post(':id/snooze') @RequirePermission('recommendation.write') snooze(@Param('id') id:string,@Body() d:SnoozeDto,@Req() req:any){return this.service.snooze(req.user.sub,id,new Date(d.until))}
- @Post(':id/assign') @RequirePermission('recommendation.write') assign(@Param('id') id:string,@Body() d:AssignDto,@Req() req:any){return this.service.assign(req.user.sub,id,d.assigneeId)}
- @Post(':id/execute') @RequirePermission('recommendation.write') execute(@Param('id') id:string,@Req() req:any){return this.service.execute(req.user.sub,id)}
+ @Post(':id/snooze') @HttpCode(200) @RequirePermission('recommendation.write') snooze(@Param('id') id:string,@Body() d:SnoozeDto,@Req() req:any){return this.service.snooze(req.user.sub,id,new Date(d.until))}
+ @Post(':id/assign') @HttpCode(200) @RequirePermission('recommendation.write') assign(@Param('id') id:string,@Body() d:AssignDto,@Req() req:any){return this.service.assign(req.user.sub,id,d.assigneeId)}
+ @Post(':id/execute') @HttpCode(200) @RequirePermission('recommendation.write') execute(@Param('id') id:string,@Req() req:any){return this.service.execute(req.user.sub,id)}
 }

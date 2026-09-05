@@ -1,6 +1,6 @@
 'use client';
 const B32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-export const DEMO_CREDENTIALS = { email: 'demo@srip.local', password: 'ChangeMe!123456', secret: 'VEDETXJXC6U63QHDRC2Y3LPGS4' } as const;
+export const DEMO_CREDENTIALS = { email: 'demo@srip.local', username: 'demo', password: '123456', secret: 'VEDETXJXC6U63QHDRC2Y3LPGS4' } as const;
 
 function base32ToBytes(s: string): Uint8Array<ArrayBuffer> {
   const clean = s.replace(/=+$/, '').toUpperCase();

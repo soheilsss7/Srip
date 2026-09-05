@@ -1,5 +1,5 @@
 -- SRIP Phase 2 Infrastructure Foundation migration. Generated from apps/api/prisma/schema.prisma.
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+-- pgcrypto skipped (built-in gen_random_uuid in PG16)
 
 CREATE TYPE "OrganizationStatus" AS ENUM ('ACTIVE', 'INACTIVE', 'ARCHIVED');
 CREATE TYPE "OrganizationType" AS ENUM ('HOLDING', 'SUBSIDIARY', 'CUSTOMER', 'PARTNER', 'BANK', 'GOVERNMENT', 'INVESTOR', 'SUPPLIER', 'OTHER');

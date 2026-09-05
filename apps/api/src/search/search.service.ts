@@ -39,7 +39,31 @@ export class SearchService {
     };
     if (!(table in queries)) throw new Error(`Unsupported search table: ${table}`);
     const rows = await queries[table] as Array<{id:string}>;
-    return rows.map(r => r.id);
+    if (rows.length) return rows.map(r => r.id);
+    // Fallback: substring (ILIKE) search. Full-text search cannot tokenize
+    // Persian/Arabic words on clusters whose locale/encoding treats them as
+    // non-letters (e.g. SQL_ASCII); the substring path covers those cases
+    // while keeping the FTS fast path for everything else.
+    const likeCols: Record<string, string[]> = {
+      Organization: ['"name"', '"legalName"', '"englishName"', '"displayName"'],
+      Person: ['"firstName"', '"lastName"', '"email"'],
+      Relationship: ['"relationshipType"', '"status"::text'],
+      Meeting: ['"title"', '"objective"', '"agenda"', '"notes"', '"outcome"', '"transcript"'],
+      Interaction: ['"subject"', '"summary"', '"outcome"'],
+      Project: ['"name"', '"description"', '"objective"'],
+      Opportunity: ['"name"', '"description"'],
+      Document: ['"name"', '"mimeType"', '"storageKey"'],
+      Note: ['"title"', '"body"'],
+    };
+    const cols = likeCols[table] ?? [];
+    if (!cols.length) return [];
+    const conds = cols.map(c => Prisma.sql`coalesce(${Prisma.raw(c)},'') ILIKE ${`%${q}%`}`);
+    const likeExpr = conds.length > 1 ? Prisma.sql`(${Prisma.join(conds, ' OR ')})` : conds[0];
+    const scope = table === 'Organization' ? (scopedIds ? Prisma.sql` AND "id" = ANY(${scopedIds}::text[])` : Prisma.empty) : (table === 'Relationship' ? rel : org);
+    const likeRows = await this.prisma.$queryRaw<Array<{ id: string }>>(
+      Prisma.sql`SELECT id FROM ${Prisma.raw(`"${table}"`)} WHERE "deletedAt" IS NULL ${scope} AND ${likeExpr} ORDER BY "id" LIMIT 100`,
+    );
+    return likeRows.map(r => r.id);
   }
 
 

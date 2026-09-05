@@ -16,7 +16,13 @@ describe('PHASE AP idempotency contract', () => {
     expect(interceptor).toContain('isExport(path)');
     expect(swagger).toContain("/reports\\/[^/]+\\/export\\/[^/]+$");
     expect(reporting).toContain('@Get(\':kind/export/:format\')');
-    expect(reporting).toContain('return result.body;');
+    // Binary export must stream through as a StreamableFile — returning the raw
+    // body (or passing through @Res() without passthrough) corrupts CSV/JSON
+    // downloads with JSON-serialized Buffer payloads.
+    expect(reporting).toContain('new StreamableFile(result.body');
+    expect(reporting).not.toContain('return result.body;');
+    // The global response sanitizer must never JSON-serialize streamed files.
+    expect(interceptor).toContain('value instanceof StreamableFile');
   });
 
   it('covers signed webhook idempotency and hashes the raw body', () => {

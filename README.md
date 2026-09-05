@@ -57,3 +57,66 @@ The authoritative implementation roadmap is documented in `docs/BUILD_ROADMAP.md
 
 ## Pre-Test Hardening Baseline
 Package 8.4 is the current pre-test backend hardening baseline. See `docs/testing/PACKAGE8_4_PRETEST_AUDIT.md`.
+
+## Frontend demo mode (بدون Backend — UI development)
+
+The web app can run fully standalone against a **deterministic mock API** (no
+PostgreSQL/Redis needed). The mock mirrors the real NestJS contracts and its
+"AI" is a rule-based engine — exactly like the production
+`deterministic-gateway` mode, so no external LLM is required anywhere.
+
+```bash
+# 1) start the mock API on :4000  (production-shaped: persistent, JWT, audit)
+node apps/web/scripts/mock-api.mjs
+
+# 2) start the web app on :3000 (proxies /api/v1 → :4000 automatically)
+pnpm --filter @srip/web dev
+```
+
+Demo logins (any 6-digit OTP):
+- **مالک (Owner)** — `demo` / `123456` (هم‌چنین `demo@srip.local` / `123456`) — sees everything.
+- **مستأجر (Tenant)** — `client` / `123456` (هم‌چنین `client@arya-tech.ir` / `123456`) — only its own
+  organization (آریا فناوری), everything else is 403.
+
+### Mock backend capabilities (production-shaped)
+
+- **Persistence** — all data is stored in `apps/web/scripts/.data/srip-db.json`
+  and survives restarts. `node apps/web/scripts/mock-api.mjs --reset` (or
+  `pnpm --filter @srip/web mock:reset`) wipes and reseeds the demo data.
+- **Real authentication** — passwords hashed with **scrypt** (per-user salt,
+  timing-safe compare, never stored in plaintext); **JWT HS256** access tokens
+  (15 min) + rotating refresh tokens (7 days) with a persisted revocation list
+  (logout / rotation). `POST /api/v1/auth/refresh` drives the frontend's
+  automatic session refresh; expired/invalid tokens get 401 and the UI returns
+  to login.
+- **Audit log** — append-only, persisted, capped at 500 events; visible to the
+  owner at `GET /admin/audit-log` and feeds `/security/events`.
+- **Scope enforcement** — every endpoint filters by the caller's organization
+  scope; out-of-scope reads/writes return 403 (organizations, people,
+  relationships, recommendations, graph, CRUD creates…).
+- **Deterministic AI** — the assistant and recommendations run on a built-in
+  rule engine (`deterministic-gateway`), never an external LLM.
+- **Jalali calendar** — `/calendar` renders meetings on a Persian month grid
+  (Saturday-first, Persian digits/months, jalaali conversion in
+  `app/_lib/jalali.ts`).
+- **In-app user guide** — `/help` documents both roles, every section and FAQs.
+- **Data exchange** — `/data-exchange` exports entity lists to Excel-compatible
+  CSV (UTF-8 BOM) and imports people from a CSV template with preview +
+  validation; `/reports/:kind` + `/reports/:kind/export/{csv,json}` now return
+  real report payloads with a true BOM.
+
+### Automated tests
+
+```bash
+pnpm --filter @srip/web test:api       # 58-assertion API suite (auth/JWT/scope/CRUD/lifecycle/audit/persistence)
+pnpm --filter @srip/web crawl:links    # link-crawl: every route + every internal link must be 200
+```
+
+Both exit non-zero on any failure. Note: `test:api` mutates the store
+(creates demo entities); run `pnpm --filter @srip/web mock:reset` afterwards
+for a pristine demo dataset.
+
+- When `NEXT_PUBLIC_API_URL` is unset or relative (`/api/v1`), Next.js proxies
+  `/api/v1/*` to `API_PROXY_TARGET` (default `http://localhost:4000`).
+- For a real backend, set `NEXT_PUBLIC_API_URL=https://your-api/api/v1` (or
+  `API_PROXY_TARGET` + relative base).

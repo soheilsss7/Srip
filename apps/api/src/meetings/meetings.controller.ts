@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { IsArray, IsDateString, IsEnum, IsOptional, IsString, ArrayUnique } from 'class-validator';
 import { MeetingStatus } from '@prisma/client';
 import { MeetingsService } from './meetings.service';
@@ -45,11 +45,11 @@ class ExtractActionItemsDto { @IsOptional() @IsString() text?: string; }
 @UseGuards(AuthGuard, AuthorizationGuard)
 export class MeetingsController {
   constructor(private readonly service: MeetingsService) {}
-  @Get() @RequirePermission('meeting.read') list(@Req() req: any, @Query('relationshipId') relationshipId?: string, @Query('upcoming') upcoming?: string, @Query('page') page?: string, @Query('pageSize') pageSize?: string) { return this.service.list(req.user.sub, relationshipId, upcoming === 'true', page, pageSize); }
+  @Get() @RequirePermission('meeting.read') list(@Req() req: any, @Query('relationshipId') relationshipId?: string, @Query('organizationId') organizationId?: string, @Query('upcoming') upcoming?: string, @Query('page') page?: string, @Query('pageSize') pageSize?: string) { return this.service.list(req.user.sub, relationshipId, organizationId, upcoming === 'true', page, pageSize); }
   @Get(':id') @RequirePermission('meeting.read') get(@Req() req: any, @Param('id') id: string) { return this.service.get(req.user.sub, id); }
   @Post() @RequirePermission('meeting.write') create(@Req() req: any, @Body() dto: MeetingDto) { return this.service.create(req.user.sub, dto); }
   @Patch(':id') @RequirePermission('meeting.write') update(@Req() req: any, @Param('id') id: string, @Body() dto: Partial<MeetingDto>) { return this.service.update(req.user.sub, id, dto); }
-  @Post(':id/outcome') @RequirePermission('meeting.write') outcome(@Req() req: any, @Param('id') id: string, @Body() dto: MeetingOutcomeDto) { return this.service.complete(req.user.sub, id, dto); }
+  @Post(':id/outcome') @HttpCode(200) @RequirePermission('meeting.write') outcome(@Req() req: any, @Param('id') id: string, @Body() dto: MeetingOutcomeDto) { return this.service.complete(req.user.sub, id, dto); }
   @Put(':id/participants') @RequirePermission('meeting.write') participants(@Req() req: any, @Param('id') id: string, @Body() dto: ParticipantDto) { return this.service.replaceParticipants(req.user.sub, id, dto.personIds); }
   @Delete(':id') @RequirePermission('meeting.write') remove(@Req() req: any, @Param('id') id: string) { return this.service.remove(req.user.sub, id); }
 

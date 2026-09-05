@@ -35,9 +35,13 @@ describe('Stage 11 release-blocking fixes — idempotency & auth public mutation
     expect(interceptor).not.toContain("'/auth/*'");
   });
 
-  it('still enforces Idempotency-Key for protected mutation verbs', () => {
+  it('supports Idempotency-Key dedupe for protected mutation verbs (optional, mock parity)', () => {
+    // Mock-parity contract: the key is no longer REQUIRED (absence must never
+    // block a mutation), but dedupe still applies when a valid key is present.
     expect(interceptor).toContain("new Set(['POST', 'PUT', 'PATCH', 'DELETE'])");
-    expect(interceptor).toContain("'Idempotency-Key header is required for this retry-sensitive operation.'");
+    expect(interceptor).toContain("req.headers['idempotency-key']");
+    expect(interceptor).toContain("this.prisma.idempotencyRecord.findUnique({ where: { keyHash } })");
+    expect(interceptor).not.toContain("'Idempotency-Key header is required for this retry-sensitive operation.'");
   });
 
   it('mobile client auto-generates an Idempotency-Key for mutating methods', () => {

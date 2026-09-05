@@ -9,10 +9,20 @@ import { MetricsService } from '../observability/metrics.service';
 export type AiIntent = 'SMART_SEARCH'|'MEETING_BRIEF'|'MEETING_SUMMARY'|'ACTION_EXTRACTION'|'COMMITMENT_EXTRACTION'|'RISK_DETECTION'|'OPPORTUNITY_DETECTION'|'NEXT_BEST_ACTION'|'EXECUTIVE_BRIEF';
 export type AiRequest = { userId: string; intent: AiIntent; query: string; organizationId?: string; meetingId?: string; relationshipId?: string; };
 
+const DAY_MS = 86400000;
+const STALE_AFTER_DAYS = 60;
+
 @Injectable()
 export class AiGatewayService {
   constructor(private readonly prisma: PrismaService, private readonly authorization: AuthorizationService, private readonly pipeline: AiPipelineService, private readonly metrics:MetricsService, private readonly audit: AuditService) {}
 
+  /**
+   * Permission-aware retrieval. For conversational/stateful intents the query
+   * text is NOT used as a hard substring filter (it would never match natural
+   * language); instead real, scoped evidence (interactions, meetings, stale
+   * relationships, risky/opportunity relationships) is fetched from the DB so
+   * the built-in deterministic logic answers from actual data.
+   */
   private async retrieve(request: AiRequest) {
     const orgIds = await this.authorization.accessibleOrganizationIds(request.userId);
     if (request.organizationId) await this.authorization.assertAnyOrganizationAccess(request.userId, [request.organizationId]);
@@ -30,12 +40,59 @@ export class AiGatewayService {
     }
     const q = request.query.trim();
     const scope = orgIds ? { in: orgIds } : undefined;
+    const relScope = scope ? [{ sourceOrganizationId: scope }, { targetOrganizationId: scope }] : [];
+
+    // Stateful intents: answer from real relationship/interaction/meeting state.
+    if (request.intent === 'NEXT_BEST_ACTION' || request.intent === 'RISK_DETECTION' || request.intent === 'OPPORTUNITY_DETECTION') {
+      const now = new Date();
+      const staleCutoff = new Date(Date.now() - STALE_AFTER_DAYS * DAY_MS);
+      const [interactions, upcomingMeetings, staleRelationships, riskyRelationships, opportunityRelationships] = await Promise.all([
+        this.prisma.interaction.findMany({ where:{ deletedAt:null, ...(scope?{organizationId:scope}:{}) }, include:{ organization:{select:{id:true,name:true}} }, orderBy:{ occurredAt:'desc' }, take:15 }),
+        this.prisma.meeting.findMany({ where:{ deletedAt:null, ...(scope?{organizationId:scope}:{}), startAt:{ gte: now } }, include:{ organization:{select:{id:true,name:true}} }, orderBy:{ startAt:'asc' }, take:15 }),
+        this.prisma.relationship.findMany({
+          where:{ deletedAt:null, ...(relScope.length?{OR:relScope}:{}), AND:[{ OR:[{ nextActionAt:{ lte: now } },{ lastInteractionAt:{ lt: staleCutoff } },{ lastInteractionAt:null }] }] },
+          include:{ sourceOrganization:{select:{id:true,name:true}}, targetOrganization:{select:{id:true,name:true}} },
+          orderBy:{ lastInteractionAt:'asc' }, take:15,
+        }),
+        this.prisma.relationship.findMany({
+          where:{ deletedAt:null, ...(relScope.length?{OR:relScope}:{}), AND:[{ OR:[{ riskScore:{ gte:60 } },{ healthScore:{ lte:40 } }] }] },
+          include:{ sourceOrganization:{select:{id:true,name:true}}, targetOrganization:{select:{id:true,name:true}} },
+          orderBy:[{ riskScore:'desc' },{ healthScore:'asc' }], take:15,
+        }),
+        this.prisma.relationship.findMany({
+          where:{ deletedAt:null, ...(relScope.length?{OR:relScope}:{}), opportunityScore:{ gte:60 }, healthScore:{ gte:45 } },
+          include:{ sourceOrganization:{select:{id:true,name:true}}, targetOrganization:{select:{id:true,name:true}} },
+          orderBy:{ opportunityScore:'desc' }, take:15,
+        }),
+      ]);
+      const orgs = new Map<string,{id:string;name:string}>();
+      for (const ix of interactions) if (ix.organization) orgs.set(ix.organization.id, ix.organization);
+      for (const m of upcomingMeetings) if (m.organization) orgs.set(m.organization.id, m.organization);
+      return {
+        organizations: [...orgs.values()].slice(0,20),
+        meetings: upcomingMeetings,
+        interactions,
+        staleRelationships,
+        riskyRelationships,
+        opportunityRelationships,
+      };
+    }
+
     const [organizations, meetings, interactions] = await Promise.all([
       this.prisma.organization.findMany({ where:{deletedAt:null, ...(scope?{id:scope}:{}), ...(q?{name:{contains:q,mode:'insensitive'}}:{})}, select:{id:true,name:true,type:true}, take:20 }),
       this.prisma.meeting.findMany({ where:{deletedAt:null, ...(scope?{organizationId:scope}:{}), ...(q?{OR:[{title:{contains:q,mode:'insensitive'}},{objective:{contains:q,mode:'insensitive'}}]}:{})}, select:{id:true,title:true,objective:true,outcome:true,startAt:true,organizationId:true}, orderBy:{startAt:'desc'}, take:20 }),
       this.prisma.interaction.findMany({ where:{deletedAt:null, ...(scope?{organizationId:scope}:{}), ...(q?{OR:[{subject:{contains:q,mode:'insensitive'}},{summary:{contains:q,mode:'insensitive'}},{outcome:{contains:q,mode:'insensitive'}}]}:{})}, select:{id:true,subject:true,summary:true,outcome:true,occurredAt:true,organizationId:true}, orderBy:{occurredAt:'desc'}, take:20 })
     ]);
     return { organizations, meetings, interactions };
+  }
+
+  private relName(r: any): string {
+    return r?.targetOrganization?.name ?? r?.sourceOrganization?.name ?? 'رابطه';
+  }
+
+  private daysSince(iso?: string | Date | null): number {
+    if (!iso) return 365;
+    return Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / DAY_MS));
   }
 
   private draft(request: AiRequest, evidence: any) {
@@ -51,9 +108,51 @@ export class AiGatewayService {
       const candidates=sentences.filter(s=>/\b(will|must|need to|should|todo|follow up|deliver|send|prepare|schedule)\b/i.test(s)).slice(0,20);
       return { type:request.intent.toLowerCase(), candidates, requires_confirmation:true };
     }
-    if (request.intent === 'RISK_DETECTION') return { type:'risk_detection', signals: request.query.match(/\b(risk|blocked|delay|late|lost|concern|issue|problem|escalat\w*)\b/gi) ?? [], requires_confirmation:true };
-    if (request.intent === 'OPPORTUNITY_DETECTION') return { type:'opportunity_detection', signals: request.query.match(/\b(opportunit\w*|expand|grow|partner|renew|cross[- ]sell|upsell)\b/gi) ?? [], requires_confirmation:true };
-    if (request.intent === 'NEXT_BEST_ACTION') return { type:'next_best_action', suggestions:['Review the latest permitted interaction or meeting evidence.','Confirm any detected action/commitment before creating records.'], requires_confirmation:true };
+    if (request.intent === 'RISK_DETECTION') {
+      const textSignals = request.query.match(/\b(risk|blocked|delay|late|lost|concern|issue|problem|escalat\w*)\b/gi) ?? [];
+      const relSignals = (evidence.riskyRelationships ?? []).slice(0,8).map((r:any) => {
+        const name = this.relName(r);
+        if (r.riskScore >= 60 && r.healthScore <= 40) return `ریسک بالا (${r.riskScore}) و سلامت پایین (${r.healthScore}) — «${name}»`;
+        if (r.riskScore >= 60) return `ریسک بالا (${r.riskScore}) — «${name}»`;
+        return `سلامت پایین (${r.healthScore}) — «${name}»`;
+      });
+      return { type:'risk_detection', signals:[...new Set([...textSignals, ...relSignals])], requires_confirmation:true };
+    }
+    if (request.intent === 'OPPORTUNITY_DETECTION') {
+      const textSignals = request.query.match(/\b(opportunit\w*|expand|grow|partner|renew|cross[- ]sell|upsell)\b/gi) ?? [];
+      const relSignals = (evidence.opportunityRelationships ?? []).slice(0,8).map((r:any) =>
+        `فرصت بالا (${r.opportunityScore}) با سلامت ${r.healthScore} — «${this.relName(r)}»`);
+      return { type:'opportunity_detection', signals:[...new Set([...textSignals, ...relSignals])], requires_confirmation:true };
+    }
+    if (request.intent === 'NEXT_BEST_ACTION') {
+      const suggestions: string[] = [];
+      const seen = new Set<string>();
+      const push = (s: string) => { if (!seen.has(s)) { seen.add(s); suggestions.push(s); } };
+      const now = Date.now();
+      for (const r of (evidence.staleRelationships ?? []).slice(0,8)) {
+        const name = this.relName(r);
+        if (r.nextActionAt && new Date(r.nextActionAt).getTime() <= now) push(`پیگیری «${name}» — اقدام بعدی موعدش رسیده است.`);
+        else push(`برنامه‌ریزی تعامل با «${name}» — آخرین تعامل ${this.daysSince(r.lastInteractionAt)} روز پیش ثبت شده است.`);
+      }
+      const meetingSeen = new Set<string>();
+      for (const m of (evidence.meetings ?? []).filter((mm:any) => !mm.outcome)) {
+        if (meetingSeen.has(m.title)) continue;
+        meetingSeen.add(m.title);
+        push(`ثبت نتیجهٔ جلسهٔ «${m.title}» — هنوز نتیجه‌ای ثبت نشده است.`);
+        if (suggestions.filter(s => s.startsWith('ثبت نتیجهٔ')).length >= 3) break;
+      }
+      const orgSeen = new Set<string>();
+      for (const ix of (evidence.interactions ?? [])) {
+        const orgName = ix.organization?.name;
+        const key = orgName ?? 'other';
+        if (orgSeen.has(key)) continue;
+        orgSeen.add(key);
+        push(`ادامهٔ گفتگو با ${orgName ? `«${orgName}»` : 'طرفِ آخرین تعامل'} — بر اساس تعامل ${new Date(ix.occurredAt).toLocaleDateString('fa-IR')}.`);
+        if (suggestions.filter(s => s.startsWith('ادامهٔ گفتگو')).length >= 3) break;
+      }
+      if (!suggestions.length) suggestions.push('همهٔ روابط به‌روز هستند؛ یک تعامل یا جلسهٔ جدید برنامه‌ریزی کنید.');
+      return { type:'next_best_action', suggestions: suggestions.slice(0,10), requires_confirmation:true };
+    }
     return { type:'smart_search', matches:evidence };
   }
 

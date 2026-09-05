@@ -1,4 +1,5 @@
-export const API=process.env.NEXT_PUBLIC_API_URL??'http://localhost:4000/api/v1';
+export const API=process.env.NEXT_PUBLIC_API_URL??'/api/v1';
+import { MOCK_PAGES, waitForSwController } from './mock-ready';
 
 export type ApiErrorShape={code?:string;message?:string;requestId?:string;details?:unknown};
 export type ApiOptions=RequestInit&{idempotencyKey?:string;timeoutMs?:number};
@@ -54,7 +55,7 @@ async function readBody(response:Response){
   if(len>MAX_ERROR_BYTES)return {error:{code:'RESPONSE_TOO_LARGE',message:'پاسخ خطا بیش از حد مجاز است.'}};
   return response.json().catch(()=>null);
 }
-async function raw(path:string,init:ApiOptions={},token?:string){
+async function raw(path:string,init:ApiOptions={},token?:string,retried=false){
   const headers=new Headers(init.headers);
   const isForm=typeof FormData!=='undefined'&&init.body instanceof FormData;
   if(!isForm&&!headers.has('Content-Type'))headers.set('Content-Type','application/json');
@@ -70,9 +71,19 @@ async function raw(path:string,init:ApiOptions={},token?:string){
     if(init.signal.aborted)controller.abort();
     else init.signal.addEventListener('abort',()=>controller.abort(),{once:true});
   }
-  try{return await fetch(`${API}${path}`,{...init,headers,signal:controller.signal,cache:'no-store'});}
+  try{
+    if (MOCK_PAGES && !retried) await waitForSwController(2500); // first call may race SW install
+    const res = await fetch(`${API}${path}`,{...init,headers,signal:controller.signal,cache:'no-store'});
+    // Static host answered (404/HTML) because the SW had not claimed the page yet.
+    if (MOCK_PAGES && !retried && !swControlled()) {
+      const looksMissing = res.status === 404 || !(res.headers.get('content-type') ?? '').includes('application/json');
+      if (looksMissing) { await waitForSwController(3000); return raw(path, init, token, true); }
+    }
+    return res;
+  }
   finally{clearTimeout(timeout);}
 }
+function swControlled(){ return typeof navigator!=='undefined' && !!navigator.serviceWorker?.controller; }
 async function refreshAccessToken():Promise<string|null>{
   const refresh=getRefreshToken();if(!refresh)return null;
   if(refreshPromise)return refreshPromise;
@@ -95,7 +106,8 @@ export async function api<T=unknown>(path:string,init:ApiOptions={}):Promise<T>{
   const body:any=await readBody(response);
   if(response.status===401&&path!=='/auth/login'){
     clearSession();
-    if(typeof window!=='undefined'&&!location.pathname.startsWith('/login'))location.assign('/login');
+    const base=docsOrigin();
+    if(typeof window!=='undefined'&&!location.pathname.startsWith(base+'/login'))location.assign(base+'/login');
     throw new ApiError('نشست شما منقضی شده است.',401,body?.error??body);
   }
   if(!response.ok)throw new ApiError(messageOf(body,response.status),response.status,body?.error??body);
@@ -106,7 +118,7 @@ export async function apiBlob(path:string,init:ApiOptions={}):Promise<Blob>{
   if(response.status===401){const next=await refreshAccessToken();if(next)response=await raw(path,init,next);}
   if(!response.ok){
     const body=await readBody(response);
-    if(response.status===401){clearSession();if(typeof window!=='undefined')location.assign('/login');}
+    if(response.status===401){clearSession();if(typeof window!=='undefined')location.assign(docsOrigin()+'/login');}
     throw new ApiError(messageOf(body,response.status),response.status,body?.error??body);
   }
   return response.blob();
@@ -124,4 +136,6 @@ export const apiPatch=<T=unknown>(path:string,body:unknown,opts:ApiOptions={})=>
 export const apiDelete=<T=unknown>(path:string,opts:ApiOptions={})=>api<T>(path,{...opts,method:'DELETE'});
 export function unwrapList<T=unknown>(value:any):T[]{ if(Array.isArray(value))return value as T[]; if(value&&value.items!==undefined&&Array.isArray(value.items))return value.items as T[]; if(value&&value.rows!==undefined&&Array.isArray(value.rows))return value.rows as T[]; if(value&&value.data!==undefined&&Array.isArray(value.data))return value.data as T[]; return []; }
 export function docsOrigin(){return API.replace(/\/api\/v1\/?$/,'');}
+/** base path-aware app root ('' in dev, '/Srip' on GitHub Pages) */
+export function appBase(){return docsOrigin();}
 export async function apiDocsJson(){const r=await fetch(`${docsOrigin()}/docs-json`,{cache:'no-store'});if(!r.ok)throw new ApiError(`GET /docs-json → ${r.status}`,r.status);return r.json();}

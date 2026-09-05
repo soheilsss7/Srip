@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
+import { makeAdapter } from './prisma-factory';
 import { MetricsService } from '../observability/metrics.service';
 import { TraceService } from '../observability/trace.service';
 import { SensitiveDataSanitizer } from '../common/security/sensitive-data-sanitizer';
@@ -9,7 +10,7 @@ import { SensitiveDataSanitizer } from '../common/security/sensitive-data-saniti
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name);
   constructor(private readonly metrics:MetricsService, private readonly trace:TraceService, private readonly config: ConfigService){
-    super({log:[{emit:'event',level:'query'}] as any});
+    super({ adapter: makeAdapter(), log:[{emit:'event',level:'query'}] } as any);
     (this as any).$on('query',(event:any)=>{
       const duration=Number(event.duration??0);
       const slowThreshold=Number(this.config.get('DB_SLOW_QUERY_MS') ?? 250);

@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
@@ -27,11 +28,23 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [scopeId, setScopeIdState] = useState('all');
+  const applyMe = (v: Me) => {
+    setMe(v);
+    const owner = v.permissions?.includes('*');
+    if (!owner) {
+      // Tenant: default scope = their own organization; 'all' is not offered.
+      const prim = v.memberships?.find(m => m.isPrimary) ?? v.memberships?.[0];
+      const target = prim?.organizationId ?? '';
+      if (getScope() !== target) { setScopeIdState(target); setScope(target); }
+    } else if (!getScope()) {
+      setScopeIdState('all'); setScope('all');
+    }
+  };
   useEffect(() => {
     const stored = getScope(); if (stored) setScopeIdState(stored);
     const token = getAccessToken();
     if (!token && !getRefreshToken()) { setLoading(false); return; }
-    api<Me>('/auth/me').then(v => setMe(v)).catch(e => setError((e as Error).message)).finally(() => setLoading(false));
+    api<Me>('/auth/me').then(applyMe).catch(e => setError((e as Error).message)).finally(() => setLoading(false));
   }, []);
   useEffect(() => {
     const reload = () => {
@@ -40,7 +53,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       const token = getAccessToken();
       if (!token && !getRefreshToken()) { setLoading(false); return; }
       setLoading(true);
-      api<Me>('/auth/me').then(v => setMe(v)).catch(e => setError((e as Error).message)).finally(() => setLoading(false));
+      api<Me>('/auth/me').then(applyMe).catch(e => setError((e as Error).message)).finally(() => setLoading(false));
     };
     window.addEventListener('srip:session', reload);
     return () => window.removeEventListener('srip:session', reload);
@@ -86,35 +99,37 @@ const SYSTEM_NAV: Array<readonly [string, string, string]> = [
   ['/documents', 'دانش', 'document.read'],
   ['/notifications', 'اعلان‌ها', 'notification.read'],
   ['/search', 'جستجو', 'search.read'],
-  ['/calendar', 'تقویم', 'meeting.read'],
+  ['/calendar', 'تقویم جلسات', 'meeting.read'],
+  ['/data-exchange', 'تبادل داده', 'report.read'],
   ['/requirements', 'نیازمندی‌ها', 'project.read'],
   ['/referrals', 'معرفی‌ها', 'relationship.read'],
   ['/approvals', 'تأییدها', 'approval.read'],
   ['/settings', 'تنظیمات', 'user.read'],
   ['/sessions', 'نشست‌ها', 'session.read'],
+  ['/help', 'راهنما', 'help.read'],
 ] as const;
 const ADMIN_NAV: Array<readonly [string, string, string]> = [
   ['/admin', 'مدیریت سیستم', 'admin.users'],
   ['/data-management', 'داده و کیفیت', 'data.manage'],
   ['/privacy', 'حریم خصوصی', 'privacy.read'],
   ['/integrations', 'یکپارچه‌سازی', 'integration.read'],
-  ['/workflows', 'Workflow', 'workflow.read'],
+  ['/workflows', 'گردش کار', 'workflow.read'],
   ['/analytics', 'تحلیل محصول', 'analytics.read'],
   ['/data-quality', 'کیفیت داده', 'data.quality.read'],
   ['/metrics', 'سنجه‌ها', 'metrics.read'],
   ['/observability', 'مشاهده‌پذیری', 'metrics.read'],
-  ['/monitoring', 'Monitoring', 'metrics.read'],
-  ['/admin/master-data', 'Master Data', 'org.read'],
-  ['/admin/feature-flags', 'Feature Flags', 'feature_flag.read'],
-  ['/admin/exports', 'Export Control', 'audit.read'],
-  ['/admin/sessions', 'Session Governance', 'session.read'],
-  ['/admin/retention', 'Retention', 'privacy.manage'],
+  ['/monitoring', 'پایش', 'metrics.read'],
+  ['/admin/master-data', 'داده‌های مبنایی', 'org.read'],
+  ['/admin/feature-flags', 'پرچم‌های ویژگی', 'feature_flag.read'],
+  ['/admin/exports', 'کنترل خروجی داده', 'audit.read'],
+  ['/admin/sessions', 'مدیریت نشست‌ها', 'session.read'],
+  ['/admin/retention', 'نگهداری داده', 'privacy.manage'],
   ['/security', 'امنیت', 'security.read'],
-  ['/security-events', 'Security Events', 'security.read'],
-  ['/governance', 'Governance', 'enterprise.security'],
-  ['/enterprise', 'Enterprise Governance', 'enterprise.read'],
-  ['/data-lifecycle', 'Data Lifecycle', 'data.lifecycle_status'],
-  ['/health', 'Runtime Health', 'health.read'],
+  ['/security-events', 'رویدادهای امنیتی', 'security.read'],
+  ['/governance', 'حاکمیت', 'enterprise.security'],
+  ['/enterprise', 'حاکمیت سازمانی', 'enterprise.read'],
+  ['/data-lifecycle', 'چرخهٔ حیات داده', 'data.lifecycle_status'],
+  ['/health', 'سلامت زمان اجرا', 'health.read'],
 ] as const;
 
 const NAV_ICONS: Record<string, React.ReactNode> = {
@@ -176,7 +191,7 @@ function NavGroup({ title, items, pathname, collapsible = false, defaultOpen = t
         {collapsible && (open ? <ChevronUp size={13} aria-hidden="true"/> : <ChevronDown size={13} aria-hidden="true"/>)}
       </div>
       {(open || !collapsible) && items.map(([href, label]) => (
-        <a href={href} key={href} className={href === activeHref ? 'active' : ''}>{NAV_ICONS[href]}{label}</a>
+        <Link href={href} key={href} className={href === activeHref ? 'active' : ''}>{NAV_ICONS[href]}{label}</Link>
       ))}
     </>
   );
@@ -199,7 +214,7 @@ function ThemeToggle() {
       className={`icon-btn theme-toggle ${dark ? 'light' : 'dark'}`}
       onClick={toggle}
       title={dark ? 'پوسته روشن' : 'پوسته تیره'}
-      aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'}
+      aria-label={dark ? 'تغییر به پوستهٔ روشن' : 'تغییر به پوستهٔ تیره'}
     >
       <svg className="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
       <svg className="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></svg>
@@ -211,20 +226,61 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { me, loading, error, scopeId, setScopeId, role, can, isAdmin } = useWorkspace();
+  const [navOpen, setNavOpen] = useState(false);
+  // Close the mobile drawer on navigation
+  useEffect(() => { setNavOpen(false); }, [pathname]);
+  // Close on Escape
+  useEffect(() => {
+    if (!navOpen) return;
+    const f = (e: KeyboardEvent) => { if (e.key === 'Escape') setNavOpen(false); };
+    window.addEventListener('keydown', f);
+    return () => window.removeEventListener('keydown', f);
+  }, [navOpen]);
+  // Lock body scroll while the drawer is open
+  useEffect(() => {
+    if (navOpen) document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = '';
+    return () => { document.body.style.overflow = ''; };
+  }, [navOpen]);
+  // NOTE: every hook must run on EVERY render — keep all useState/useEffect
+  // above the early returns below (auth pages etc.), otherwise React throws
+  // "Rendered fewer hooks than expected" on login↔dashboard navigation.
+  const memberships = me?.memberships ?? [];
+  const primaryMembership = memberships.find(m => m.isPrimary) ?? memberships[0];
+  const isOwner = !!me?.permissions?.includes('*');
+  const [ownerOrgs, setOwnerOrgs] = useState<Array<{ id: string; name: string; type?: string }>>([]);
+  useEffect(() => {
+    if (!isOwner) { setOwnerOrgs([]); return; }
+    api('/organizations')
+      .then((d: any) => setOwnerOrgs(Array.isArray(d) ? d : (d?.data ?? [])))
+      .catch(() => {});
+  }, [isOwner]);
+
   const authPage = ['/login','/mfa','/forgot-password','/password-reset','/register'].some(p => pathname === p || pathname.startsWith(p + '/'));
+  // Session gate: an anonymous visitor must NEVER see (even for one frame) the
+  // platform.  The veil below is part of the first server-rendered paint, so it
+  // covers the shell until the identity probe settles — then it is removed for
+  // signed-in users, or we navigate to /login for anonymous ones.
+  const gated = !authPage && !me;
+  useEffect(() => {
+    if (!gated || loading) return;
+    router.replace('/login');
+  }, [gated, loading, router]);
+  // Lock page scroll while the gate veil is up (content behind must not move).
+  useEffect(() => {
+    if (!gated) return;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, [gated]);
   if (authPage) return <>{children}</>;
-  if (!me && !loading && !error) { router.replace('/login'); return <div className="loading-strip" role="status">در حال انتقال به صفحه ورود…</div>; }
-  if (error && !me && !loading) { router.replace('/login'); return <div className="loading-strip" role="status">نشست معتبر نیست…</div>; }
 
   const group = (nav: Array<readonly [string, string, string]>): Array<readonly [string, string, string]> =>
     nav.filter(([href, , permission]) => href === '/' || permission === 'dashboard.read' || can(permission));
-
-  const memberships = me?.memberships ?? [];
-  const primaryMembership = memberships.find(m => m.isPrimary) ?? memberships[0];
-  const selectedLabel = scopeId === 'all' ? 'همه محدوده مجاز' : memberships.find(m => m.organizationId === scopeId)?.organizationName ?? 'محدوده انتخاب‌شده';
+  const scopeOptions = [...memberships.map(m => ({ id: m.organizationId, name: m.organizationName })), ...ownerOrgs.filter(o => !memberships.some(m => m.organizationId === o.id))];
+  const selectedLabel = scopeId === 'all' ? 'همه محدوده مجاز' : scopeOptions.find(o => o.id === scopeId)?.name ?? 'محدوده انتخاب‌شده';
 
   const engineState = error ? 'degraded' : me ? 'online' : 'pending';
-  const engineLabel = error ? 'DEGRADED' : me ? 'ONLINE' : 'BOOTING';
+  const engineLabel = error ? 'ناکارآمد' : me ? 'آنلاین' : 'در حال راه‌اندازی';
 
   async function logout() {
     try {
@@ -235,31 +291,43 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar" aria-label="ناوبری اصلی">
+    <>
+      {gated && (
+        <div className="auth-gate" role="status" aria-live="polite">
+          <div className="auth-gate-card">
+            <div className="auth-gate-mark" aria-hidden="true">S</div>
+            <div className="auth-gate-title"><strong>SRIP</strong><span>هوش روابط راهبردی</span></div>
+            <div className="spinner" aria-hidden="true" />
+            <p>{loading ? 'در حال بررسی نشست و محدودهٔ دسترسی…' : 'نشست فعالی یافت نشد؛ انتقال به صفحهٔ ورود…'}</p>
+          </div>
+        </div>
+      )}
+      <div className="app-shell" aria-hidden={gated || undefined}>
+      {navOpen && <div className="nav-backdrop" onClick={() => setNavOpen(false)} aria-hidden="true" />}
+      <aside className={`sidebar ${navOpen ? 'open' : ''}`} aria-label="ناوبری اصلی">
         <div className="brand">
           <div className="brand-mark">S</div>
           <div className="brand-title">
             <strong>SRIP</strong>
-            <span>Strategic Intelligence</span>
+            <span>هوش راهبردی</span>
           </div>
         </div>
         <div className="workspace-role">
-          <span>Workspace</span>
+          <span>فضای کاری</span>
           <strong>{ROLE_LABELS[role]}</strong>
           {primaryMembership && <strong className="role-org">{primaryMembership.organizationName}</strong>}
         </div>
-        <nav className="side-nav" aria-label="ناوبری Workspace">
-          <NavGroup title="Main" items={group(MAIN_NAV)} pathname={pathname} />
-          <NavGroup title="Intelligence" items={group(INTELLIGENCE_NAV)} pathname={pathname} />
-          <NavGroup title="System" items={group(SYSTEM_NAV)} pathname={pathname} />
+        <nav className="side-nav" aria-label="ناوبری فضای کاری">
+          <NavGroup title="اصلی" items={group(MAIN_NAV)} pathname={pathname} />
+          <NavGroup title="هوشمندی" items={group(INTELLIGENCE_NAV)} pathname={pathname} />
+          <NavGroup title="سیستم" items={group(SYSTEM_NAV)} pathname={pathname} />
           {isAdmin && <NavGroup title="مدیریت سیستم" items={group(ADMIN_NAV)} pathname={pathname} collapsible defaultOpen={false} />}
         </nav>
         <div className="engine-card">
           <div className="ec-top">
             <span className={`dot ${engineState === 'online' ? '' : engineState}`} />
             <div>
-              <b>Intelligence Engine</b>
+              <b>موتور هوشمندی</b>
               <span>{engineLabel}</span>
             </div>
           </div>
@@ -271,45 +339,52 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
       <div className="app-main">
         <header className="global-header" role="banner">
-          <div className="global-search">
-            <a href="/search">
-              <span>🔍</span> جستجوی سراسری…
-              <kbd className="kbd">⌘K</kbd>
-            </a>
+          <div className="header-left">
+            <button className="icon-btn nav-toggle" onClick={() => setNavOpen(true)} aria-label="باز کردن منو" title="منو">
+              <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+            </button>
+            <div className="global-search">
+              <Link href="/search">
+                <Search size={13}/> جستجوی سراسری…
+                <kbd className="kbd">⌘K</kbd>
+              </Link>
+            </div>
           </div>
           <div className="header-actions">
-            {me?.email === 'demo@srip.local' && <span className="demo-chip" title="این یک محیط دمو با دادهٔ نمایشی است">حالت دمو</span>}
-            <label className="scope-chip" title="Global Admin scope — backend-enforced">
-              <span className="globe">🌐</span>
+            {me?.email === 'demo@srip.local' && <span className="demo-chip" title="این یک محیط دمو با دادهٔ نمایشی است">حالت دمو · مالک</span>}
+            {me?.email === 'client@arya-tech.ir' && <span className="demo-chip" title="مشتری که پلتفرم را تحویل گرفته — فقط محدودهٔ خودش">مستأجر · آریا فناوری</span>}
+            <label className="scope-chip" title="محدوده سازمانی — اعمال‌شده در سرور">
+              <span className="globe"><Network size={13}/></span>
               <span className="scope-label">{selectedLabel}</span>
               <select aria-label="محدوده سازمانی" value={scopeId} onChange={e => setScopeId(e.target.value)}>
-                <option value="all">همه محدوده مجاز</option>
-                {memberships.map(m => <option key={m.organizationId} value={m.organizationId}>{m.organizationName}</option>)}
+                {isOwner && <option value="all">همه محدوده مجاز (جلسات من)</option>}
+                {scopeOptions.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
               </select>
             </label>
-            <a className="ai-btn" href="/ai">✨ AI Assistant</a>
+            <Link className="ai-btn" href="/ai"><Sparkles size={14}/> دستیار هوش مصنوعی</Link>
             <AppShellEnhancement />
             <ThemeToggle />
-            <a href="/admin" className="user-chip" aria-label="پروفایل">
+            <Link href="/admin" className="user-chip" aria-label="پروفایل">
               <span className="avatar">{(me?.name ?? 'U').slice(0, 1)}</span>
               <span className="uc-meta">
-                <strong>{me?.name ?? 'User'}</strong>
+                <strong>{me?.name ?? 'کاربر'}</strong>
                 <small>{ROLE_LABELS[role]}</small>
               </span>
               <span className="chev">▾</span>
-            </a>
+            </Link>
           </div>
         </header>
-        {error && <div className="runtime-banner" role="status">اطلاعات نقش/محدوده از API دریافت نشد؛ Backend همچنان مرجع نهایی Authorization است.</div>}
+        {error && <div className="runtime-banner" role="status">اطلاعات نقش/محدوده از API دریافت نشد؛ سرور همچنان مرجع نهایی مجوزها است.</div>}
         {loading && <div className="loading-strip" aria-live="polite">در حال بارگذاری هویت و محدوده دسترسی…</div>}
         <main id="workspace-main" className="workspace-content" tabIndex={-1}>{children}</main>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 
 export function ScopeBadge() {
   const { scopeId, me } = useWorkspace();
   const label = scopeId === 'all' ? 'همه محدوده مجاز' : me?.memberships.find(m => m.organizationId === scopeId)?.organizationName ?? 'محدوده';
-  return <span className="scope-badge">Scope: {label}</span>;
+  return <span className="scope-badge">محدوده: {label}</span>;
 }

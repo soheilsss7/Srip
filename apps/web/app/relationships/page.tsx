@@ -1,51 +1,77 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../_lib/api';
+import { fa } from '../_lib/fa';
 import { useWorkspace } from '../_components/workspace';
-import { Card, Badge } from '@srip/design-system';
+import { Card } from '@srip/design-system';
+import { Badge } from '../_components/page-ui';
+import { Modal } from '../_components/page-ui';
 import {
-  Share2, Building2, Users, Search, Plus, Activity, ShieldAlert, Target, User,
-  ChevronLeft, ArrowLeftRight, Clock, HeartPulse,
+  Share2, Building2, Search, Plus, ShieldAlert, Target, ChevronLeft,
+  ArrowDownWideNarrow, AlertTriangle, CalendarClock,
 } from 'lucide-react';
 
 type Org = { id: string; name: string; type: string };
-type Owner = { id: string; name: string; email?: string };
 type Rel = {
   id: string;
   relationshipType: string;
   status: string;
-  lifecycleStage?: string;
   healthScore?: number;
   strategicScore?: number;
   riskScore?: number;
-  trustScore?: number;
-  influenceScore?: number;
-  sensitivity?: string;
   lastInteractionAt?: string;
+  nextActionAt?: string;
   sourceOrganizationId: string;
   targetOrganizationId: string;
   sourceOrganization?: { id: string; name: string; type: string };
   targetOrganization?: { id: string; name: string; type: string };
-  owner?: Owner;
-  backupOwner?: Owner;
+  owner?: { id: string; name: string };
+  backupOwner?: { id: string; name: string };
 };
 type RelType = { key: string; name?: string };
 
-const REL_TYPE_COLOR: Record<string, string> = {
-  STRATEGIC: 'info', COMMERCIAL: 'blue', PARTNER: 'success', SUPPLIER: 'warning', INVESTMENT: 'danger',
+const REL_TYPE_TONE: Record<string, 'success' | 'info' | 'warning' | 'danger' | 'neutral'> = {
+  STRATEGIC_PARTNERSHIP: 'success', BANKING: 'info', CUSTOMER: 'success',
+  SUPPLY: 'warning', SUPPLIER: 'warning', INVESTMENT: 'warning',
+  PARTNER: 'info', GOVERNMENT: 'neutral', INVESTOR: 'warning',
 };
-const STATUS_COLOR: Record<string, string> = {
-  ACTIVE: 'success', PROSPECTIVE: 'info', AT_RISK: 'danger', DORMANT: 'warning', ARCHIVED: 'neutral',
+const STATUS_TONE: Record<string, 'success' | 'info' | 'warning' | 'danger' | 'neutral'> = {
+  ACTIVE: 'success', PROSPECTIVE: 'info', WATCH: 'warning', AT_RISK: 'danger',
+  DORMANT: 'neutral', ARCHIVED: 'neutral',
 };
+const SORTS = [
+  { value: 'healthScore', label: 'ضعیف‌ترین سلامت اول' },
+  { value: 'riskScore', label: 'بیشترین ریسک اول' },
+  { value: 'strategicScore', label: 'بیشترین ارزش راهبردی' },
+  { value: 'lastInteractionAt', label: 'قدیمی‌ترین تعامل' },
+  { value: 'nextActionAt', label: 'نزدیک‌ترین اقدام بعدی' },
+] as const;
+type SortKey = typeof SORTS[number]['value'];
 
-function healthTone(v: number): string { return v >= 75 ? 'hi' : v >= 50 ? 'mid' : 'lo'; }
-function Gauge({ value, tone }: { value: number; tone: string }) {
-  return (
-    <span className={`gauge gauge-${tone}`} style={{ ['--g' as string]: `${Math.max(0, Math.min(100, value))}%` }}>
-      <i style={{ height: `${Math.max(0, Math.min(100, value))}%` }} />
-    </span>
-  );
+const fmtNum = (v: number | undefined | null): string =>
+  v == null ? '—' : new Intl.NumberFormat('fa-IR').format(v);
+
+function healthBand(h: number | null): { label: string; cls: string; tone: 'success' | 'info' | 'warning' | 'danger' | 'neutral' } {
+  if (h == null) return { label: 'ثبت نشده', cls: 'h-null', tone: 'neutral' };
+  if (h >= 75) return { label: 'سالم', cls: 'h-hi', tone: 'success' };
+  if (h >= 55) return { label: 'پایدار', cls: 'h-mid', tone: 'info' };
+  if (h >= 40) return { label: 'در معرض ریسک', cls: 'h-low', tone: 'warning' };
+  return { label: 'بحرانی', cls: 'h-crit', tone: 'danger' };
+}
+function timeAgo(iso?: string | null): string {
+  if (!iso) return '—';
+  const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  if (d < 0) return '—';
+  if (d === 0) return 'امروز';
+  if (d === 1) return 'دیروز';
+  if (d < 30) return fmtNum(d) + ' روز پیش';
+  if (d < 365) return fmtNum(Math.floor(d / 30)) + ' ماه پیش';
+  return fmtNum(Math.floor(d / 365)) + ' سال پیش';
+}
+function fmtDate(iso?: string | null): string {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('fa-IR', { month: 'short', day: 'numeric' });
 }
 
 export default function RelationshipsPage() {
@@ -61,12 +87,14 @@ export default function RelationshipsPage() {
   const [q, setQ] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [sortBy, setSortBy] = useState<'healthScore' | 'strategicScore' | 'riskScore' | 'lastInteractionAt'>('healthScore');
+  const [sortBy, setSortBy] = useState<SortKey>('healthScore');
 
   const [source, setSource] = useState('');
   const [target, setTarget] = useState('');
   const [kind, setKind] = useState('');
   const [saving, setSaving] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -99,10 +127,12 @@ export default function RelationshipsPage() {
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!writable) return;
+    setFormError('');
+    if (source === target) { setFormError('سازمان مبدأ و مقصد نمی‌توانند یکسان باشند.'); return; }
     setSaving(true); setError('');
     try {
       await api('/relationships', { method: 'POST', body: JSON.stringify({ sourceOrganizationId: source, targetOrganizationId: target, relationshipType: kind }) });
-      setSource(''); setTarget(''); setKind('');
+      setSource(''); setTarget(''); setKind(''); setCreateOpen(false);
       await load();
     } catch (err) {
       setError((err as Error).message);
@@ -110,13 +140,13 @@ export default function RelationshipsPage() {
   };
 
   const counts = useMemo(() => {
-    const health = items.filter(r => (r.healthScore ?? 0) >= 75).length;
-    const risk = items.filter(r => (r.riskScore ?? 0) >= 40).length;
+    const healthHi = items.filter(r => (r.healthScore ?? 0) >= 75).length;
+    const atRisk = items.filter(r => (r.riskScore ?? 0) >= 40 || (r.healthScore ?? 100) < 55).length;
     const strategic = items.filter(r => (r.strategicScore ?? 0) >= 75).length;
     const active = items.filter(r => r.status === 'ACTIVE').length;
-    const avgHealth = items.length ? Math.round(items.reduce((a, r) => a + (r.healthScore ?? 0), 0) / items.length) : 0;
-    const avgRisk = items.length ? Math.round(items.reduce((a, r) => a + (r.riskScore ?? 0), 0) / items.length) : 0;
-    return { total: items.length, health, risk, strategic, active, avgHealth, avgRisk };
+    const avgHealth = items.length ? Math.round(items.reduce((a, r) => a + (r.healthScore ?? 0), 0) / items.length) : null;
+    const overdueNext = items.filter(r => r.nextActionAt && new Date(r.nextActionAt).getTime() < Date.now()).length;
+    return { total: items.length, healthHi, atRisk, strategic, active, avgHealth, overdueNext };
   }, [items]);
 
   const visible = useMemo(() => {
@@ -130,73 +160,86 @@ export default function RelationshipsPage() {
       return true;
     });
     return [...filtered].sort((x, y) => {
-      if (sortBy === 'lastInteractionAt') return (y.lastInteractionAt ?? '').localeCompare(x.lastInteractionAt ?? '');
-      return (y[sortBy] ?? 0) - (x[sortBy] ?? 0);
+      switch (sortBy) {
+        case 'riskScore': return (y.riskScore ?? -1) - (x.riskScore ?? -1);
+        case 'strategicScore': return (y.strategicScore ?? -1) - (x.strategicScore ?? -1);
+        case 'lastInteractionAt': return (x.lastInteractionAt ?? '9999').localeCompare(y.lastInteractionAt ?? '9999');
+        case 'nextActionAt': return (x.nextActionAt ?? '9999').localeCompare(y.nextActionAt ?? '9999');
+        default: return (x.healthScore ?? 101) - (y.healthScore ?? 101);
+      }
     });
   }, [items, q, typeFilter, statusFilter, sortBy]);
 
+  const set = (k: 'source' | 'target' | 'kind') => (e: React.ChangeEvent<HTMLSelectElement>) => {
+    if (k === 'source') setSource(e.target.value);
+    else if (k === 'target') setTarget(e.target.value);
+    else setKind(e.target.value);
+  };
+  const orgName = (id: string) => orgs.find(o => o.id === id)?.name ?? '—';
+
   return (
-    <div className="relationships-page">
-      <section className="page-heading">
-        <div>
-          <div className="eyebrow">SRIP Workspace · Relationship First</div>
-          <h1>روابط سازمانی</h1>
-          <p className="subtitle">روابط بین‌سازمانی با سلامت، ارزش راهبردی و ریسک — از Backend واقعی با مالکیت، حساسیت و محدودهٔ سازمانی.</p>
-        </div>
-        <div className="heading-tools">
-          <span className="scope-chip"><Building2 size={13}/> {scopeId === 'all' ? 'همه محدوده' : scopeId.slice(0, 10)}</span>
-          {writable && <Link className="primary-action" href="#create-relationship"><Plus size={14}/> ایجاد رابطه</Link>}
-        </div>
-      </section>
+    <>
+      <div className="people-page">
+        <section className="page-heading">
+          <div>
+            <div className="eyebrow">فضای کاری · رابطه‌محور</div>
+            <h1>روابط سازمانی</h1>
+            <p className="subtitle">وضعیت واقعی هر رابطه: سلامت، ریسک، آخرین تعامل و اقدام بعدی — با مالکیت و محدودهٔ سازمانی شما.</p>
+          </div>
+          <div className="heading-tools">
+            <span className="scope-chip"><Building2 size={13} /> {scopeId === 'all' ? 'همهٔ محدوده' : scopeId.slice(0, 12)}</span>
+            {writable && <button type="button" className="primary-action" onClick={() => { setError(''); setFormError(''); setCreateOpen(true); }}><Plus size={14} /> ایجاد رابطه</button>}
+          </div>
+        </section>
 
-      {error && <div className="error-card" role="alert">{error}</div>}
+        {error && <div className="error-card" role="alert">{error}</div>}
 
-      <section className="stats-row" aria-label="Relationship metrics">
-        <div className="stat-card">
-          <div className="st-top"><span className="st-ico ic-teal"><Share2 size={18}/></span><span className="st-name">کل روابط</span></div>
-          <strong className="st-value">{counts.total}</strong>
-          <div className="st-foot"><span className="st-delta up">{counts.active} فعال</span></div>
-        </div>
-        <div className="stat-card">
-          <div className="st-top"><span className="st-ico ic-blue"><HeartPulse size={18}/></span><span className="st-name">سلامت متوسط</span></div>
-          <strong className="st-value">{counts.avgHealth}%</strong>
-          <div className="st-foot"><span className="st-delta up">{counts.health} سالم (≥75)</span></div>
-        </div>
-        <div className="stat-card">
-          <div className="st-top"><span className="st-ico ic-red"><ShieldAlert size={18}/></span><span className="st-name">ریسک</span></div>
-          <strong className="st-value">{counts.risk}</strong>
-          <div className="st-foot"><span className="st-delta down">{counts.avgRisk}% میانگین</span></div>
-        </div>
-        <div className="stat-card">
-          <div className="st-top"><span className="st-ico ic-gold"><Target size={18}/></span><span className="st-name">راهبردی</span></div>
-          <strong className="st-value">{counts.strategic}</strong>
-          <div className="st-foot"><span className="st-delta up">strategic ≥ 75</span></div>
-        </div>
-      </section>
+        <section className="stats-row" aria-label="شاخص‌های روابط">
+          <div className="stat-card">
+            <div className="st-top"><span className="st-ico ic-teal"><Share2 size={18} /></span><span className="st-name">کل روابط</span></div>
+            <strong className="st-value">{fmtNum(counts.total)}</strong>
+            <div className="st-foot"><span className="st-delta up">{fmtNum(counts.active)} فعال</span></div>
+          </div>
+          <div className="stat-card">
+            <div className="st-top"><span className="st-ico ic-blue"><Share2 size={18} /></span><span className="st-name">میانگین سلامت</span></div>
+            <strong className="st-value">{fmtNum(counts.avgHealth)}</strong>
+            <div className="st-foot"><span className="st-delta up">{fmtNum(counts.healthHi)} سالم</span></div>
+          </div>
+          <div className="stat-card">
+            <div className="st-top"><span className="st-ico ic-red"><ShieldAlert size={18} /></span><span className="st-name">در معرض ریسک</span></div>
+            <strong className="st-value">{fmtNum(counts.atRisk)}</strong>
+            <div className="st-foot"><span className="st-delta down">ریسک ۴۰+ یا سلامت زیر ۵۵</span></div>
+          </div>
+          <div className="stat-card">
+            <div className="st-top"><span className="st-ico ic-gold"><Target size={18} /></span><span className="st-name">راهبردی و معوق</span></div>
+            <strong className="st-value">{fmtNum(counts.strategic)}</strong>
+            <div className="st-foot"><span className="st-delta">{fmtNum(counts.overdueNext)} اقدام بعدی عقب‌افتاده</span></div>
+          </div>
+        </section>
 
-      <section className="split-panels">
         <Card className="rel-directory">
           <div className="panel-title">
-            <div><h2>Directory</h2><p>qsort بر اساس {sortBy} کاهشی</p></div>
+            <div><h2>فهرست روابط</h2><p>برای دیدن جزئیات و مدیریت، روی هر ردیف کلیک کنید</p></div>
             <div className="table-toolbar">
               <div className="search-box">
-                <Search size={15}/>
-                <input placeholder="جستجوی سازمان یا مالک…" value={q} onChange={(e) => setQ(e.target.value)} />
+                <Search size={15} />
+                <input placeholder="جستجوی نام سازمان یا مالک…" value={q} onChange={e => setQ(e.target.value)} aria-label="جستجوی نام سازمان یا مالک" />
               </div>
-              <select aria-label="Type filter" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
-                <option value="">همه انواع</option>
-                {[...new Set(items.map(r => r.relationshipType))].sort().map((t) => <option key={t} value={t}>{t}</option>)}
+              <select aria-label="فیلتر نوع رابطه" value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="toolbar-select">
+                <option value="">همهٔ انواع</option>
+                {[...new Set(items.map(r => r.relationshipType))].sort().map(t => <option key={t} value={t}>{fa(t)}</option>)}
               </select>
-              <select aria-label="Status filter" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                <option value="">همه وضعیت‌ها</option>
-                {[...new Set(items.map(r => r.status))].sort().map((s) => <option key={s} value={s}>{s}</option>)}
+              <select aria-label="فیلتر وضعیت" value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="toolbar-select">
+                <option value="">همهٔ وضعیت‌ها</option>
+                {[...new Set(items.map(r => r.status))].sort().map(s => <option key={s} value={s}>{fa(s)}</option>)}
               </select>
-              <select aria-label="Sort" value={sortBy} onChange={(e) => setSortBy(e.target.value as any)}>
-                <option value="healthScore">مرتب: سلامت</option>
-                <option value="strategicScore">مرتب: راهبردی</option>
-                <option value="riskScore">مرتب: ریسک</option>
-                <option value="lastInteractionAt">مرتب: آخرین تعامل</option>
-              </select>
+              <label className="toolbar-sort" aria-label="مرتب‌سازی">
+                <ArrowDownWideNarrow size={14} />
+                <select value={sortBy} onChange={e => setSortBy(e.target.value as SortKey)}>
+                  {SORTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                </select>
+              </label>
+              <span className="chip info">{fmtNum(visible.length)} نتیجه</span>
             </div>
           </div>
 
@@ -207,110 +250,120 @@ export default function RelationshipsPage() {
               <table>
                 <thead>
                   <tr>
-                    <th>رابطه</th>
+                    <th>رابطه (مبدأ ← مقصد)</th>
                     <th>نوع / وضعیت</th>
-                    <th className="th-gauges"><span>سلامت</span><span>راهبردی</span><span>ریسک</span></th>
-                    <th>مالک</th>
+                    <th>سلامت رابطه</th>
+                    <th>ریسک</th>
+                    <th>اقدام بعدی</th>
                     <th>آخرین تعامل</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {visible.map((r) => (
-                    <tr key={r.id}>
-                      <td>
-                        <div className="rel-pair">
-                          <div className="rel-org"><strong>{r.sourceOrganization?.name ?? '—'}</strong><small>{r.sourceOrganization?.type ?? ''}</small></div>
-                          <span className="rel-swap"><ArrowLeftRight size={13}/></span>
-                          <div className="rel-org"><strong>{r.targetOrganization?.name ?? '—'}</strong><small>{r.targetOrganization?.type ?? ''}</small></div>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="rel-badges">
-                          <Badge className={REL_TYPE_COLOR[r.relationshipType] ?? 'neutral'}>{r.relationshipType}</Badge>
-                          <Badge className={STATUS_COLOR[r.status] ?? 'neutral'}>{r.status}</Badge>
-                          {r.sensitivity && r.sensitivity !== 'INTERNAL' ? <Badge className="neutral">{r.sensitivity}</Badge> : null}
-                        </div>
-                      </td>
-                      <td>
-                        <div className="rel-gauges">
-                          <span className="gauge-cell"><Gauge value={r.healthScore ?? 0} tone={healthTone(r.healthScore ?? 0)} /><b className={healthTone(r.healthScore ?? 0)}>{r.healthScore ?? 0}</b></span>
-                          <span className="gauge-cell"><Gauge value={r.strategicScore ?? 0} tone={healthTone(r.strategicScore ?? 0)} /><b className={healthTone(r.strategicScore ?? 0)}>{r.strategicScore ?? 0}</b></span>
-                          <span className="gauge-cell"><Gauge value={r.riskScore ?? 0} tone={(r.riskScore ?? 0) >= 40 ? 'lo' : (r.riskScore ?? 0) >= 20 ? 'mid' : 'hi'} /><b className={(r.riskScore ?? 0) >= 40 ? 'lo' : (r.riskScore ?? 0) >= 20 ? 'mid' : 'hi'}>{r.riskScore ?? 0}</b></span>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="rel-owner">
-                          {r.owner?.name ? <><User size={13}/>{r.owner.name}</> : <span className="muted">—</span>}
-                        </div>
-                      </td>
-                      <td>
-                        <div className="rel-last">
-                          <span className={`rel-last-dot ${isRecent(r.lastInteractionAt) ? 'recent' : ''}`} />
-                          <span>{r.lastInteractionAt ? fmtDate(r.lastInteractionAt) : '—'}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <Link className="row-action" href={`/relationships/${r.id}`} aria-label={`Open ${r.sourceOrganization?.name} ↔ ${r.targetOrganization?.name}`}>
-                          <ChevronLeft size={16}/>
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
+                  {visible.map(r => {
+                    const band = healthBand(r.healthScore ?? null);
+                    const risk = r.riskScore ?? null;
+                    const nextDue = r.nextActionAt ? new Date(r.nextActionAt).getTime() : null;
+                    const overdue = nextDue != null && nextDue < Date.now();
+                    return (
+                      <tr key={r.id} className={risk != null && risk >= 60 ? 'row-alert' : ''}>
+                        <td>
+                          <Link className="t-primary" href={`/relationships/${r.id}`}>
+                            {r.sourceOrganization?.name ?? '—'} <span className="t-muted">↔</span> {r.targetOrganization?.name ?? '—'}
+                          </Link>
+                          <div className="t-muted">{r.owner?.name ? `مالک: ${r.owner.name}` : 'بدون مالک'}</div>
+                        </td>
+                        <td>
+                          <div className="rel-badges" style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+                            <Badge tone={REL_TYPE_TONE[r.relationshipType] ?? 'neutral'}>{fa(r.relationshipType)}</Badge>
+                            <Badge tone={STATUS_TONE[r.status] ?? 'neutral'}>{fa(r.status)}</Badge>
+                          </div>
+                        </td>
+                        <td>
+                          {r.healthScore == null ? <span className="t-muted">—</span> : (
+                            <span className="health-cell" title={`ارزش راهبردی ${fmtNum(r.strategicScore)}`}>
+                              <span className={`health-dot ${band.cls}`} />
+                              <span className="health-bar"><span className={`health-fill ${band.cls}`} style={{ width: `${r.healthScore}%` }} /></span>
+                              <b className={`health-num ${band.cls}`}>{fmtNum(r.healthScore)}</b>
+                              <small className={`health-band ${band.cls}`}>{band.label}</small>
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          {risk == null ? <span className="t-muted">—</span> : (
+                            <span className={`risk-cell ${risk >= 60 ? 'risk-hi' : risk >= 40 ? 'risk-mid' : 'risk-lo'}`}>
+                              {risk >= 40 && <AlertTriangle size={12} />}{fmtNum(risk)}
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          {r.nextActionAt ? (
+                            <span className={`cell-count ${overdue ? 'danger' : 'info'}`}>
+                              <CalendarClock size={12} /> {fmtDate(r.nextActionAt)}{overdue ? ' · عقب‌افتاده' : ''}
+                            </span>
+                          ) : <span className="t-muted">—</span>}
+                        </td>
+                        <td className="t-muted">{timeAgo(r.lastInteractionAt)}</td>
+                        <td>
+                          <Link className="row-action" href={`/relationships/${r.id}`} aria-label={`مشاهدهٔ رابطهٔ ${r.sourceOrganization?.name ?? ''} و ${r.targetOrganization?.name ?? ''}`}>
+                            <ChevronLeft size={16} />
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           ) : (
             <div className="empty-people">
-              <Share2 size={28}/>
-              <p>رابطه‌ای در محدودهٔ فعلی یافت نشد.</p>
+              <Share2 size={28} />
+              <p>{items.length === 0 ? 'رابطه‌ای در محدودهٔ فعلی ثبت نشده است.' : 'نتیجه‌ای با این فیلترها یافت نشد.'}</p>
+              {writable && items.length > 0 && (
+                <button type="button" className="srip-button primary" onClick={() => { setError(''); setFormError(''); setCreateOpen(true); }}><Plus size={14} /> ایجاد رابطه</button>
+              )}
             </div>
           )}
         </Card>
+      </div>
 
-        {writable && (
-          <Card className="rel-create" id="create-relationship">
-            <div className="panel-title"><div><h2>ایجاد رابطه</h2><p>مبدأ، مقصد و نوع رابطه</p></div></div>
-            <form onSubmit={create} className="form-grid">
-              <label className="full">مبدأ
-                <select value={source} onChange={(e) => setSource(e.target.value)} required>
-                  <option value="">انتخاب کنید</option>
-                  {orgs.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-                </select>
-              </label>
-              <label className="full">مقصد
-                <select value={target} onChange={(e) => setTarget(e.target.value)} required>
-                  <option value="">انتخاب کنید</option>
-                  {orgs.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-                </select>
-              </label>
-              <label className="full">نوع رابطه
-                <select value={kind} onChange={(e) => setKind(e.target.value)} required>
-                  <option value="">انتخاب کنید</option>
-                  {relTypes.map((t) => <option key={t.key} value={t.key}>{t.name || t.key}</option>)}
-                </select>
-              </label>
-              <button className="srip-button primary full" type="submit" disabled={saving}>{saving ? 'در حال ذخیره…' : 'ایجاد رابطه'}</button>
-            </form>
-          </Card>
-        )}
-      </section>
-    </div>
+      {/* Create modal */}
+      <Modal open={createOpen} title="ایجاد رابطه" description="دو سازمان و نوع رابطه را مشخص کنید — رابطه بلافاصله با وضعیت «فعال» و امتیازهای پیش‌فرض ثبت می‌شود." onClose={() => setCreateOpen(false)}
+        footer={<>
+          <button type="button" className="btn btn-secondary" onClick={() => setCreateOpen(false)}>انصراف</button>
+          <button type="submit" form="relationship-create-form" className="srip-button primary" disabled={saving || !source || !target || !kind}>{saving ? 'در حال ذخیره…' : 'ایجاد رابطه'}</button>
+        </>}>
+        <form id="relationship-create-form" className="entity-form org-form" onSubmit={create}>
+          {formError && <div className="error-card" role="alert">{formError}</div>}
+          <div className="form-section-head"><h3>طرفین رابطه</h3></div>
+          <div className="form-grid">
+            <div className="field">
+              <label className="field-label" htmlFor="rel-source">سازمان مبدأ <span className="req">*</span></label>
+              <select id="rel-source" value={source} onChange={set('source')} required>
+                <option value="">انتخاب کنید…</option>
+                {orgs.map(o => <option key={o.id} value={o.id}>{o.name}{o.type ? ` — ${fa(o.type)}` : ''}</option>)}
+              </select>
+            </div>
+            <div className="field">
+              <label className="field-label" htmlFor="rel-target">سازمان مقصد <span className="req">*</span></label>
+              <select id="rel-target" value={target} onChange={set('target')} required>
+                <option value="">انتخاب کنید…</option>
+                {orgs.map(o => <option key={o.id} value={o.id}>{o.name}{o.type ? ` — ${fa(o.type)}` : ''}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="form-section-head"><h3>نوع رابطه</h3></div>
+          <div className="form-grid">
+            <div className="field full">
+              <select id="rel-kind" value={kind} onChange={set('kind')} required>
+                <option value="">انتخاب کنید…</option>
+                {relTypes.map(t => <option key={t.key} value={t.key}>{t.name || fa(t.key)}</option>)}
+              </select>
+              <span className="field-hint">نوع رابطه تعیین می‌کند که امتیازهای سلامت، ریسک و راهبردی چگونه تفسیر شوند. رابطهٔ «{orgName(source)} ← {orgName(target)}» ثبت خواهد شد.</span>
+            </div>
+          </div>
+        </form>
+      </Modal>
+    </>
   );
-}
-
-function isRecent(d?: string): boolean {
-  if (!d) return false;
-  const days = (Date.now() - new Date(d).getTime()) / 86400000;
-  return days <= 30;
-}
-function fmtDate(d: string): string {
-  const date = new Date(d);
-  const now = new Date();
-  const diff = now.getTime() - date.getTime();
-  const days = Math.floor(diff / 86400000);
-  if (days <= 0) return 'امروز';
-  if (days === 1) return 'دیروز';
-  if (days < 30) return `${days} روز پیش`;
-  return date.toLocaleDateString('fa-IR', { year: 'numeric', month: 'short', day: 'numeric' });
 }

@@ -3,13 +3,13 @@ import {useEffect,useMemo,useState} from 'react';
 import {useRouter} from 'next/navigation';
 type Cmd={label:string;hint:string;href:string;keys?:string[]};
 const commands:Cmd[]=[
- {label:'داشبورد',hint:'Executive',href:'/'},{label:'سازمان‌ها',hint:'Organizations',href:'/organizations'},
- {label:'اشخاص',hint:'People',href:'/people'},{label:'ارتباطات',hint:'Relationships',href:'/relationships'},
- {label:'جلسات',hint:'Meetings',href:'/meetings'},{label:'تعهدات',hint:'Commitments',href:'/commitments'},
- {label:'اقدامات',hint:'Actions',href:'/actions'},{label:'پروژه‌ها',hint:'Projects',href:'/projects'},
- {label:'فرصت‌ها',hint:'Opportunities',href:'/opportunities'},{label:'شبکه',hint:'Network',href:'/network'},
- {label:'جستجو',hint:'Global Search',href:'/search'},{label:'گزارش‌ها',hint:'Reporting',href:'/reports'},
- {label:'اعلان‌ها',hint:'Notifications',href:'/notifications'},{label:'مدیریت',hint:'Administration',href:'/admin'},
+ {label:'داشبورد',hint:'مدیریت ارشد',href:'/'},{label:'سازمان‌ها',hint:'سازمان‌ها',href:'/organizations'},
+ {label:'اشخاص',hint:'اشخاص',href:'/people'},{label:'ارتباطات',hint:'روابط',href:'/relationships'},
+ {label:'جلسات',hint:'جلسات',href:'/meetings'},{label:'تعهدات',hint:'تعهدات',href:'/commitments'},
+ {label:'اقدامات',hint:'اقدامات',href:'/actions'},{label:'پروژه‌ها',hint:'پروژه‌ها',href:'/projects'},
+ {label:'فرصت‌ها',hint:'فرصت‌ها',href:'/opportunities'},{label:'شبکه',hint:'شبکه',href:'/network'},
+ {label:'جستجو',hint:'جستجوی سراسری',href:'/search'},{label:'گزارش‌ها',hint:'گزارش‌ها',href:'/reports'},
+ {label:'اعلان‌ها',hint:'اعلان‌ها',href:'/notifications'},{label:'مدیریت',hint:'مدیریت',href:'/admin'},
 ];
 export function CommandPalette({open,onClose}:{open:boolean;onClose:()=>void}){
  const [q,setQ]=useState('');const router=useRouter();

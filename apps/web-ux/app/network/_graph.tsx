@@ -269,8 +269,15 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
   const [pan, setPan] = useState<Pos>({ x: 0, y: 0 });
   const [hoverNode, setHoverNode] = useState<string | null>(null);
   const [hoverEdge, setHoverEdge] = useState<string | null>(null);
-  const [dragId, setDragId] = useState<string | null>(null);
-  const dragRef = useRef<{ id: string; dx: number; dy: number; moved: number } | null>(null);
+  const [panning, setPanning] = useState(false);
+  /** پرسِ فعال: یا روی گره (برای کلیک/دابل‌کلیک) یا روی زمینه (برای پن نما). */
+  const pressRef = useRef<
+    | { kind: 'node'; id: string; x: number; y: number; t: number }
+    | { kind: 'pan'; x: number; y: number; pan0: Pos }
+    | null
+  >(null);
+  const panRef = useRef<Pos>({ x: 0, y: 0 });
+  useEffect(() => { panRef.current = pan; }, [pan]);
   const lastTapRef = useRef<{ id: string; t: number } | null>(null);
 
   const clusters = useMemo(() => buildClusters(graph.nodes), [graph]);
@@ -292,18 +299,12 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
     onRenderedRef.current?.({ nodes: renderedNodeCount, edges: renderedEdgeCount });
   }, [renderedNodeCount, renderedEdgeCount]);
 
-  /** Drag deltas are stored in screen(ish) space; manual = base + delta per node. */
-  const [manual, setManual] = useState<Map<string, Pos> | null>(null);
-  const posOf = (id: string): Pos => {
-    const base = positions.get(id);
-    if (!base) return { x: 0, y: 0 };
-    const d = manual?.get(id);
-    return d ? { x: base.x + d.x, y: base.y + d.y } : base;
-  };
+  /** موقعیت هر گره = موقعیت قطعی چیدمان (گره‌ها قابل جابه‌جا کردن نیستند). */
+  const posOf = (id: string): Pos => positions.get(id) ?? { x: 0, y: 0 };
 
   useImperativeHandle(ref, () => ({
     fit: () => { setZoom(1); setPan({ x: 0, y: 0 }); },
-    reset: () => { setZoom(1); setPan({ x: 0, y: 0 }); setManual(null); },
+    reset: () => { setZoom(1); setPan({ x: 0, y: 0 }); },
     zoomBy: (factor: number) => setZoom((z) => Math.min(3, Math.max(0.3, z * factor))),
   }));
 
@@ -338,55 +339,54 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
     return statusMeta(edgeStatus(l)).color;
   };
 
-  /* ---------- click vs drag: deterministic select on pointer-up ---------- */
-  const onPointerDown = (e: React.PointerEvent, n: GNode) => {
-    dragRef.current = { id: n.id, dx: e.clientX, dy: e.clientY, moved: 0 };
-    setDragId(n.id);
-    (e.target as Element).setPointerCapture?.(e.pointerId);
+  /* ---------------------------------------------------------------------
+     تعامل پایدار: گره‌ها کشیدنی نیستند (کلیک = انتخاب، دابل‌کلیک = باز کردن).
+     کشیدن فقط روی «زمینهٔ خالی» = پن نما. هیچ پرتاب/پرشی رخ نمی‌دهد.
+     --------------------------------------------------------------------- */
+  const CLICK_SLOP = 9; // px — هر جابجایی بیشتر از این = پن، نه کلیک
+  const onSvgPointerDown = (e: React.PointerEvent) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if ((e.target as Element) !== (e.currentTarget as Element)) return; // فقط خودِ بوم
+    pressRef.current = { kind: 'pan', x: e.clientX, y: e.clientY, pan0: { ...panRef.current } };
+    setPanning(true);
   };
-  const applyDelta = (d: { id: string; dx: number; dy: number }, cx: number, cy: number) => {
-    setManual((prev) => {
-      const next = new Map(prev ?? []);
-      const base = positions.get(d.id);
-      if (!base) return prev ?? next;
-      // dragging an org moves its whole orbit cluster together
-      const cluster = clusters.find((c) => c.root.id === d.id || c.members.some((mm) => mm.id === d.id));
-      const ids = cluster && cluster.root.id === d.id
-        ? [d.id, ...cluster.members.map((mm) => mm.id)]
-        : [d.id];
-      let changed = false;
-      for (const id of ids) {
-        const b = positions.get(id);
-        if (!b) continue;
-        next.set(id, { x: b.x + (cx - d.dx), y: b.y + (cy - d.dy) });
-        changed = true;
-      }
-      return changed ? next : prev ?? next;
-    });
+  const onSvgPointerMove = (e: React.PointerEvent) => {
+    const p = pressRef.current;
+    if (!p) return;
+    if (p.kind === 'pan') {
+      const el = svgRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      if (!rect.width) return;
+      const unit = W / rect.width; // پیکسل صفحه → واحد بوم
+      setPan({
+        x: p.pan0.x + (e.clientX - p.x) * unit,
+        y: p.pan0.y + (e.clientY - p.y) * unit,
+      });
+      return;
+    }
+    // پرس روی گره: اگر ماوس بیش از آستانه جابه‌جا شد، کلیک منتفی و پن شروع می‌شود
+    const dist = Math.hypot(e.clientX - p.x, e.clientY - p.y);
+    if (dist > CLICK_SLOP) {
+      pressRef.current = { kind: 'pan', x: p.x, y: p.y, pan0: { ...panRef.current } };
+      setPanning(true);
+    }
   };
-  const onPointerMove = (e: React.PointerEvent) => {
-    const d = dragRef.current;
-    if (!d) return;
-    const dist = Math.hypot(e.clientX - d.dx, e.clientY - d.dy);
-    d.moved = Math.max(d.moved, dist);
-    if (d.moved < 4) return; // still a potential click
-    setDragId((cur) => (cur ? cur : d.id));
-    applyDelta(d, e.clientX, e.clientY);
-  };
-  const onPointerUp = (e: React.PointerEvent, n: GNode) => {
-    const d = dragRef.current;
-    const wasClick = d && d.moved < 4;
-    dragRef.current = null;
-    setDragId(null);
-    if (!wasClick) return;
-    // a real click → select (and remember for double-click detection)
+  const onSvgPointerUp = (e: React.PointerEvent) => {
+    const p = pressRef.current;
+    pressRef.current = null;
+    setPanning(false);
+    if (!p || p.kind === 'pan') return;
+    const dist = Math.hypot(e.clientX - p.x, e.clientY - p.y);
+    if (dist > CLICK_SLOP) return;
+    const n = idToNode.get(p.id);
+    if (!n) return;
     onNodeSelect?.(n);
     const now = Date.now();
     const last = lastTapRef.current;
-    if (last && last.id === n.id && now - last.t < 380) {
+    if (last && last.id === n.id && now - last.t < 420) {
       lastTapRef.current = null;
-      const route = n.id.startsWith('org:') || n.id.startsWith('person:') || n.id.startsWith('project:');
-      if (route && onNodeOpen) {
+      if (onNodeOpen) {
         const prefix = n.type === 'organization' ? 'organizations' : n.type === 'person' ? 'people' : 'projects';
         const bare = n.id.slice(n.id.indexOf(':') + 1);
         onNodeOpen(`/${prefix}/${bare}`);
@@ -394,6 +394,14 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
       return;
     }
     lastTapRef.current = { id: n.id, t: now };
+  };
+  const clearPress = () => { pressRef.current = null; setPanning(false); };
+
+  const onNodePointerDown = (e: React.PointerEvent, n: GNode) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    e.preventDefault(); // جلوی فوکوس/انتخاب متن/رفتار پیش‌فرض را می‌گیرد
+    e.stopPropagation(); // شروع پنِ بوم را لغو می‌کند
+    pressRef.current = { kind: 'node', id: n.id, x: e.clientX, y: e.clientY, t: Date.now() };
   };
 
   const nodeAccent = (id: string): string | null => {
@@ -444,7 +452,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
     });
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clusters, graph.nodes.length, manual]);
+  }, [clusters, graph.nodes.length]);
 
   const bubbleAlpha = (ids: Set<string>): number => {
     if (pathActive) {
@@ -468,11 +476,14 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
       height="100%"
       viewBox={`${-pan.x} ${-pan.y} ${W} ${H}`}
       preserveAspectRatio="xMidYMid meet"
-      style={{ display: 'block', touchAction: 'none', cursor: dragId ? 'grabbing' : 'default' }}
+      style={{ display: 'block', touchAction: 'none', cursor: panning ? 'grabbing' : 'default' }}
       role="img"
       aria-label="گراف شبکه روابط — خوشه‌های سازمانی"
-      onPointerMove={onPointerMove}
-      onPointerLeave={() => { dragRef.current = null; setDragId(null); }}
+      onPointerDown={onSvgPointerDown}
+      onPointerMove={onSvgPointerMove}
+      onPointerUp={onSvgPointerUp}
+      onPointerCancel={clearPress}
+      onPointerLeave={clearPress}
     >
       <defs>
         <linearGradient id="g-org" x1="0" y1="0" x2="1" y2="1">
@@ -620,17 +631,15 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
           const metaColor = st.hasRel ? statusMeta(st.status).color : null;
           const glow = focused || selected || (pathActive && pathNodeIds?.has(n.id));
           const ringColor = selected ? '#3B4252' : focused ? '#2563EB' : null;
-          const pointerCursor = hoveredLocal ? 'pointer' : 'default';
           const haloR = isOrg ? 30 : st.degree >= 3 ? PERSON_R + 6.5 : null;
           return (
             <g
               key={n.id}
               opacity={alpha}
-              style={{ cursor: pointerCursor, transition: 'opacity .18s ease' }}
+              style={{ cursor: 'pointer', transition: 'opacity .18s ease' }}
               onPointerEnter={() => { setHoverNode(n.id); onNodeHover && onNodeHover(n); }}
               onPointerLeave={() => { setHoverNode(null); onNodeHover && onNodeHover(null); }}
-              onPointerDown={(e) => onPointerDown(e, n)}
-              onPointerUp={(e) => onPointerUp(e, n)}
+              onPointerDown={(e) => onNodePointerDown(e, n)}
             >
               {/* soft influence halo (people with many links) */}
               {haloR && (

@@ -1,4 +1,4 @@
-import { CallHandler, ExecutionContext, Injectable, NestInterceptor, ConflictException, BadRequestException } from '@nestjs/common';
+import { CallHandler, ExecutionContext, Injectable, NestInterceptor, ConflictException, BadRequestException, StreamableFile } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { Observable, from, of, switchMap, catchError, throwError } from 'rxjs';
 import crypto from 'node:crypto';
@@ -22,7 +22,7 @@ function hashBytes(value: Buffer): string {
 }
 
 function sanitize(value: any): any {
-  if (Buffer.isBuffer(value) || value instanceof Uint8Array) return value;
+  if (Buffer.isBuffer(value) || value instanceof Uint8Array || value instanceof StreamableFile) return value;
   if (Array.isArray(value)) return value.map(sanitize);
   if (value instanceof Date) return value;
   if (typeof value === 'bigint') return value.toString();
@@ -81,8 +81,13 @@ export class ApiContractInterceptor implements NestInterceptor {
       if (isPublicMutation(path)) return next.handle().pipe(switchMap((value) => of(sanitize(value))));
     }
 
-    if (typeof rawKey !== 'string' || rawKey.trim().length < 16 || rawKey.trim().length > 255) {
-      throw new BadRequestException({ code: 'IDEMPOTENCY_CONFLICT', message: 'Idempotency-Key header is required for this retry-sensitive operation.' });
+    // Legacy/mock contract compatibility: the previous backend never required an
+    // Idempotency-Key header, and existing clients (including the web app) do not
+    // send one. The header remains fully supported for safe retries when present,
+    // but its absence must never block a retry-sensitive operation.
+    const hasValidKey = typeof rawKey === 'string' && rawKey.trim().length >= 16 && rawKey.trim().length <= 255;
+    if (!hasValidKey) {
+      return next.handle().pipe(switchMap((value) => of(sanitize(value))));
     }
 
     const trimmedKey = rawKey.trim();

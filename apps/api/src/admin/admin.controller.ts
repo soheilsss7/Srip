@@ -35,6 +35,7 @@ export class AdminController {
   @Get('workflows') workflows(@Req() req: any, @Query('organizationId') organizationId?: string) { return this.service.listWorkflows(req.user.sub, organizationId); }
   @Get('integrations') integrations(@Req() req: any, @Query('organizationId') organizationId?: string) { return this.service.listIntegrations(req.user.sub, organizationId); }
   @Get('audit') audit(@Req() req: any, @Query('organizationId') organizationId?: string, @Query('entityType') entityType?: string) { return this.service.listAudit(req.user.sub, organizationId, entityType); }
+  @Get('audit-log') auditLog(@Req() req: any, @Query('organizationId') organizationId?: string, @Query('entityType') entityType?: string) { return this.service.listAudit(req.user.sub, organizationId, entityType); }
 
   @Get('custom-fields') customFields(@Req() req: any, @Query('organizationId') organizationId?: string) { return this.service.listCustomFields(req.user.sub, organizationId); }
   @Post('custom-fields') upsertCustomField(@Req() req: any, @Body() body: any) { return this.service.upsertCustomField(req.user.sub, body); }
