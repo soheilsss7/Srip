@@ -104,6 +104,10 @@ if (hasImageMagick()) {
 }
 
 // manifest — مسیرها نسبی‌اند تا با basePath هر دو محیط (export و dev) درست حل شوند
+// در نسخۀ استاتیک (GitHub Pages) هر صفحه یک فایل .html است و بدون پسوند ۴۰۴ می‌گیرد،
+// پس میان‌بُرها (shortcuts) فقط در همان حالت پسوند می‌گیرند؛ در dev مسیر تمیز می‌ماند.
+const PAGES_MODE = process.env.SRIP_PAGES === '1';
+const page = (slug, query = '') => `./${slug}${PAGES_MODE ? '.html' : ''}${query}`;
 const manifest = {
   name: 'هوش روابط راهبردی — SRIP',
   short_name: 'SRIP',
@@ -123,9 +127,9 @@ const manifest = {
     { src: 'icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
   ],
   shortcuts: [
-    { name: 'ثبت تعامل', url: './interactions?new=1' },
-    { name: 'سازمان‌ها', url: './organizations' },
-    { name: 'شبکه', url: './network' },
+    { name: 'ثبت تعامل', url: page('interactions', '?new=1') },
+    { name: 'سازمان‌ها', url: page('organizations') },
+    { name: 'شبکه', url: page('network') },
   ],
 };
 fs.writeFileSync(path.join(pub, 'manifest.webmanifest'), JSON.stringify(manifest, null, 2) + '\n');
