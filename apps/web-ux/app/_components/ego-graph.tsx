@@ -81,8 +81,9 @@ function wrapLabel(
   const out: { text: string; textLength?: number }[] = best
     .filter(Boolean)
     .map((line, idx) => {
-      // همیشه «…» را به خط آخر بده تا پیوستگی جمله حفظ شود
-      return idx === best.length - 1
+      // هر خطی که از سقف عرض بگذرد fit می‌شود؛ «…» فقط به خط آخر می‌رسد
+      // تا پیوستگی جمله حفظ شود و هیچ متنی از پیل بیرون نزند.
+      return approxWidth(line, fontSize) > maxWidth || idx === best.length - 1
         ? fitText(line, fontSize, maxWidth)
         : { text: line };
     });
