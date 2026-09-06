@@ -29,6 +29,17 @@ const portIdx = process.argv.indexOf('--port');
 const PORT = String(portIdx >= 0 ? process.argv[portIdx + 1] : 4572);
 const BASE = `http://127.0.0.1:${PORT}/api/v1`;
 
+/* Derive the expected demo version from the mock source (not hardcoded),
+   so bumping DEMO_MOCK_VERSION never breaks this harness. */
+const mockSrcPath = join(repoRoot, 'apps', 'web-ux', 'scripts', 'mock-api.mjs');
+const MOCK_VER_MATCH = fs.readFileSync(mockSrcPath, 'utf8')
+  .match(/DEMO_MOCK_VERSION\s*=\s*'([^']+)'/);
+const MOCK_VER = MOCK_VER_MATCH ? MOCK_VER_MATCH[1] : '';
+if (!MOCK_VER) {
+  console.error('mock version not found in', mockSrcPath);
+  process.exit(1);
+}
+
 let pass = 0, fail = 0;
 const fails = [];
 const ok = (name, cond, detail = '') => {
@@ -96,7 +107,7 @@ async function main() {
     };
 
     const checks = [
-      ['/health', 200, (d) => d.mockVersion === '2026.09.06.4'],
+      ['/health', 200, (d) => d.mockVersion === MOCK_VER],
       ['/knowledge', 200, (d) => d.items?.length === 12],
       ['/relationships/capital', 200, (d) => d.items?.length === 6],
       ['/relationships/r-4/pulse', 200, (d) => !!d.trend && !!d.capital],
