@@ -87,12 +87,10 @@ export function useWorkspace() {
 }
 
 /* ---------------------------------------------------------------------------
-   Navigation model — grouped into MAIN / INTELLIGENCE / SYSTEM (+ ADMIN).
-   Permissions are the same real backend permission keys used elsewhere.
-   --------------------------------------------------------------------------- */
-/* ---------------------------------------------------------------------------
-   معماری اطلاعات ۲.۰ — «شش خانهٔ کاری» + مدیریت سیستم (فقط مدیران)
-   برچسب‌ها کاربرمحور شدند؛ hrefها و مجوزها دست‌نخورده‌اند.
+   معماری اطلاعات ۳.۰ — «شش خانهٔ کاری + مرکز سیستم»
+   - منوی واحد (بدون سوییچ ساده/کامل)؛ هر نقش فقط موارد مجازش را می‌بیند.
+   - گردش کار/تأییدها از انتهای منوی ادمین به «اتوماسیون و هماهنگی» منتقل شد.
+   - URLها دست‌نخورده‌اند؛ فقط جای‌گیری و گروه‌بندی تغییر کرده است.
    --------------------------------------------------------------------------- */
 type NavItem = readonly [string, string, string]; // href, label, permission
 
@@ -106,7 +104,6 @@ const NETWORK_NAV: NavItem[] = [
   ['/network', 'شبکهٔ روابط', 'network.read'],
   ['/interactions', 'تعاملات', 'interaction.read'],
   ['/referrals', 'معرفی‌ها', 'relationship.read'],
-  ['/intelligence', 'تحلیل روابط', 'analytics.read'],
 ];
 const WORK_NAV: NavItem[] = [
   ['/meetings', 'جلسات', 'meeting.read'],
@@ -115,42 +112,43 @@ const WORK_NAV: NavItem[] = [
   ['/commitments', 'تعهدات', 'commitment.read'],
   ['/projects', 'پروژه‌ها', 'project.read'],
   ['/opportunities', 'فرصت‌ها', 'opportunity.read'],
+  ['/requirements', 'نیازمندی‌ها', 'project.read'],
 ];
 const SMART_NAV: NavItem[] = [
+  ['/intelligence', 'هوشمندی و توصیه‌ها', 'analytics.read'],
   ['/ai', 'دستیار هوشمند', 'ai.query'],
-  ['/ai-executive-brief', 'بریف هفتگی', 'ai.executive_brief'],
-  ['/recommendations', 'توصیه‌ها', 'recommendation.read'],
-  ['/reports', 'گزارش‌ها', 'report.read'],
 ];
-const BASE_NAV: NavItem[] = [
+const COLLAB_NAV: NavItem[] = [
+  ['/workflows', 'گردش کار و تأییدها', 'workflow.read'],
   ['/documents', 'مرکز دانش', 'document.read'],
-  ['/requirements', 'نیازمندی‌ها', 'project.read'],
-  ['/approvals', 'تأییدها', 'approval.read'],
+  ['/data-management', 'داده و کیفیت', 'data.quality.read'],
   ['/data-exchange', 'تبادل داده', 'report.read'],
   ['/settings', 'تنظیمات من', 'user.read'],
   ['/sessions', 'نشست‌های من', 'session.read'],
 ];
-/** جستجو و اعلان‌ها به نوار بالا منتقل شدند؛ راهنما در «واژه‌نامه» پایین سایدبار است. */
-
-/** نمای «ساده» — فقط کارِ روزمره (پیش‌فرض نقش‌های عملیاتی/مستأجر) */
-const SIMPLE_NAV: Array<[string, string, NavItem[]]> = [
+/** منوی واحد — همهٔ خانه‌ها همیشه در دسترس‌اند (بر اساس مجوز، نه حالت نما) */
+const NAV_ZONES: Array<[string, string, NavItem[]]> = [
   ['خانه', 'کار امروز من', HOME_NAV],
-  ['اشخاص و سازمان‌ها', '', PEOPLE_NAV],
-  ['روابط و شبکه', '', NETWORK_NAV.filter(([, , p]) => ['relationship.read', 'network.read', 'interaction.read', 'network.read'].includes(p)).filter(([, l]) => ['روابط', 'شبکهٔ روابط', 'تعاملات'].includes(l))],
-  ['جریان کار', '', WORK_NAV.filter(([, l]) => ['جلسات', 'تقویم', 'اقدامات', 'تعهدات'].includes(l))],
+  ['مخاطب‌ها', 'سازمان‌ها و افراد کلیدی', PEOPLE_NAV],
+  ['روابط', 'وضعیت پیوندها و شبکه', NETWORK_NAV],
+  ['کار و اجرا', 'جلسه‌ها، قول‌ها و پروژه‌ها', WORK_NAV],
+  ['هوش', 'دستیار، بریف و تحلیل‌ها', SMART_NAV],
+  ['اتوماسیون و هماهنگی', 'گردش کار، اسناد و داده', COLLAB_NAV],
 ];
-const FULL_NAV: Array<[string, string, NavItem[]]> = [
-  ['خانه', 'کار امروز من', HOME_NAV],
-  ['اشخاص و سازمان‌ها', 'مخاطب‌های رابطه‌ها', PEOPLE_NAV],
-  ['روابط و شبکه', 'قلب پلتفرم: وضعیت پیوندها', NETWORK_NAV],
-  ['جریان کار', 'جلسه‌ها، قول‌ها و پروژه‌ها', WORK_NAV],
-  ['هوش و بینش', 'دستیار، بریف و تحلیل‌ها', SMART_NAV],
-  ['دانش و هماهنگی', 'اسناد، تأییدها و تنظیمات', BASE_NAV],
-];
+/** زیرصفحه‌های «مرکز سیستم» — از هاب /admin در دسترس‌اند (نه در سایدبار) */
 const ADMIN_SUBS: Array<[string, NavItem[]]> = [
   ['کاربران و مجوزها', [
-    ['/admin', 'مدیریت سیستم', 'admin.users'],
+    ['/admin', 'مرکز سیستم', 'admin.users'],
+    ['/admin/users', 'کاربران و دسترسی‌ها', 'admin.users'],
+    ['/admin/roles', 'نقش‌ها', 'admin.users'],
+    ['/admin/permissions', 'مجوزها', 'admin.users'],
+    ['/admin/audit', 'ممیزی', 'audit.read'],
     ['/admin/feature-flags', 'پرچم‌های ویژگی', 'feature_flag.read'],
+    ['/admin/scoring', 'قواعد امتیازدهی', 'admin.users'],
+    ['/admin/tags', 'برچسب‌ها', 'admin.users'],
+    ['/admin/custom-fields', 'فیلدهای سفارشی', 'admin.users'],
+    ['/admin/criteria', 'معیارهای ارزیابی', 'admin.users'],
+    ['/admin/notification-rules', 'قواعد اعلان', 'admin.users'],
     ['/admin/exports', 'کنترل خروجی داده', 'audit.read'],
     ['/admin/sessions', 'مدیریت نشست‌ها', 'session.read'],
     ['/admin/retention', 'نگهداری داده', 'privacy.manage'],
@@ -169,13 +167,14 @@ const ADMIN_SUBS: Array<[string, NavItem[]]> = [
     ['/admin/master-data', 'داده‌های مبنایی', 'org.read'],
     ['/integrations', 'یکپارچه‌سازی', 'integration.read'],
     ['/workflows', 'گردش کار', 'workflow.read'],
+    ['/approvals', 'تأییدها', 'approval.read'],
   ]],
   ['پایش و سلامت', [
+    ['/monitoring', 'مرکز پایش', 'metrics.read'],
     ['/analytics', 'تحلیل محصول', 'analytics.read'],
-    ['/metrics', 'سنجه‌ها', 'metrics.read'],
-    ['/observability', 'مشاهده‌پذیری', 'metrics.read'],
-    ['/monitoring', 'پایش', 'metrics.read'],
     ['/health', 'سلامت زمان اجرا', 'health.read'],
+    ['/observability', 'مشاهده‌پذیری', 'metrics.read'],
+    ['/metrics', 'سنجه‌ها', 'metrics.read'],
   ]],
 ];
 
@@ -190,7 +189,7 @@ const MOBILE_TABS: NavItem[] = [
 ];
 
 /** واژه‌نامهٔ یک‌خطی — «این بخش چیست؟» برای هر مسیر */
-const GLOSS_KEY_PERM: Record<string, string> = { '/': 'dashboard.read', '/organizations': 'organization.read', '/people': 'person.read', '/relationships': 'relationship.read', '/network': 'network.read', '/interactions': 'interaction.read', '/referrals': 'relationship.read', '/intelligence': 'analytics.read', '/meetings': 'meeting.read', '/calendar': 'meeting.read', '/actions': 'action.read', '/commitments': 'commitment.read', '/projects': 'project.read', '/opportunities': 'opportunity.read', '/ai': 'ai.query', '/ai-executive-brief': 'ai.executive_brief', '/recommendations': 'recommendation.read', '/reports': 'report.read', '/documents': 'document.read', '/requirements': 'project.read', '/approvals': 'approval.read', '/data-exchange': 'report.read', '/settings': 'user.read', '/sessions': 'session.read' };
+const GLOSS_KEY_PERM: Record<string, string> = { '/': 'dashboard.read', '/organizations': 'organization.read', '/people': 'person.read', '/relationships': 'relationship.read', '/network': 'network.read', '/interactions': 'interaction.read', '/referrals': 'relationship.read', '/intelligence': 'analytics.read', '/meetings': 'meeting.read', '/calendar': 'meeting.read', '/actions': 'action.read', '/commitments': 'commitment.read', '/projects': 'project.read', '/opportunities': 'opportunity.read', '/ai': 'ai.query', '/ai-executive-brief': 'ai.executive_brief', '/recommendations': 'recommendation.read', '/reports': 'report.read', '/documents': 'document.read', '/requirements': 'project.read', '/approvals': 'approval.read', '/data-exchange': 'report.read', '/settings': 'user.read', '/sessions': 'session.read', '/data-management': 'data.quality.read', '/workflows': 'workflow.read' };
 const ADMIN_PERM: Record<string, string> = { '/admin': 'admin.users', '/admin/feature-flags': 'feature_flag.read', '/admin/exports': 'audit.read', '/admin/sessions': 'session.read', '/admin/retention': 'privacy.manage', '/security': 'security.read', '/security-events': 'security.read', '/governance': 'enterprise.security', '/enterprise': 'enterprise.read', '/privacy': 'privacy.read', '/data-lifecycle': 'data.lifecycle_status', '/data-management': 'data.manage', '/data-quality': 'data.quality.read', '/admin/master-data': 'org.read', '/integrations': 'integration.read', '/workflows': 'workflow.read', '/analytics': 'analytics.read', '/metrics': 'metrics.read', '/observability': 'metrics.read', '/monitoring': 'metrics.read', '/health': 'health.read' };
 
 const GLOSS: Record<string, string> = {
@@ -218,6 +217,8 @@ const GLOSS: Record<string, string> = {
   '/data-exchange': 'ورود/خروج و تبادل داده بین سامانه‌ها',
   '/settings': 'تنظیمات حساب و ترجیحات شما',
   '/sessions': 'نشست‌های فعال ورود شما در دستگاه‌ها',
+  '/data-management': 'مرکز داده: کیفیت، ورود و حاکمیت داده در یک نگاه',
+  '/workflows': 'زنجیره‌های خودکار تصمیم، اجرا و تأییدها',
 };
 
 const NAV_ICONS: Record<string, React.ReactNode> = {
@@ -299,20 +300,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { me, loading, error, scopeId, setScopeId, role, can, isAdmin } = useWorkspace();
   const [navOpen, setNavOpen] = useState(false);
-  // نمای منو: «کامل» یا «ساده» (کارِ روزمره) — پیش‌فرض: مالک/مدیر → کامل، بقیه → ساده
-  const [navMode, setNavMode] = useState<'full' | 'simple'>('full');
   const [dictOpen, setDictOpen] = useState(false);
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('srip2_nav');
-      if (saved === 'full' || saved === 'simple') { setNavMode(saved); return; }
-    } catch {}
-    setNavMode(isAdmin || isOwner ? 'full' : 'simple');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [me]);
-  useEffect(() => {
-    try { localStorage.setItem('srip2_nav', navMode); } catch {}
-  }, [navMode]);
   // Close the mobile drawer on navigation
   useEffect(() => { setNavOpen(false); }, [pathname]);
   // Close on Escape
@@ -404,13 +392,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <strong>{ROLE_LABELS[role]}</strong>
           {primaryMembership && <strong className="role-org">{primaryMembership.organizationName}</strong>}
         </div>
-        <div className="nav-mode-switch" role="group" aria-label="نمای ناوبری">
-          <button className={navMode === 'simple' ? 'on' : ''} onClick={() => setNavMode('simple')} title="فقط کارهای روزمره">نمای ساده</button>
-          <button className={navMode === 'full' ? 'on' : ''} onClick={() => setNavMode('full')} title="همهٔ بخش‌ها">نمای کامل</button>
-        </div>
         <nav className="side-nav" aria-label="ناوبری فضای کاری">
-          {(navMode === 'simple' ? SIMPLE_NAV : FULL_NAV).map(([title, sub, items]) => {
-            const vis = items.filter(([href, , perm]) => href === '/' || perm === 'dashboard.read' || can(perm));
+          {NAV_ZONES.map(([title, sub, items]) => {
+            const vis = items.filter(([href, , perm]) => href === '/' || perm === 'dashboard.read' || can(perm) || (isAdmin && perm === 'admin.users'));
             if (!vis.length) return null;
             return (
               <div className="nav-zone" key={title}>
@@ -426,28 +410,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </div>
             );
           })}
-          {navMode === 'full' && isAdmin && (
+          {isAdmin && (
             <div className="nav-zone nav-admin">
-              <div className="nav-zone-title"><span>مدیریت سیستم</span><small>فقط مدیران</small></div>
-              {ADMIN_SUBS.map(([subTitle, items]) => {
-                const vis = items.filter(([, , perm]) => can(perm));
-                if (!vis.length) return null;
-                return (
-                  <div className="nav-admin-sub" key={subTitle}>
-                    <span className="nav-admin-subtitle">{subTitle}</span>
-                    {vis.map(([href, label]) => (
-                      <Link href={href} key={href} className={pathname === href || pathname.startsWith(href + '/') ? 'active' : ''} title={GLOSS[href] ?? label}>
-                        {NAV_ICONS[href]}{label}
-                      </Link>
-                    ))}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          {navMode === 'simple' && (
-            <div className="nav-simple-hint">
-              همهٔ بخش‌ها (تحلیل، ادمین، …) با «نمای کامل» یا میان‌بر ⌘K در دسترس‌اند.
+              <div className="nav-zone-title"><span>سیستم</span><small>مرکز مدیریت</small></div>
+              <Link href="/admin" className={pathname === '/admin' || pathname.startsWith('/admin/') ? 'active' : ''} title="کاربران، حاکمیت، داده و پایش">
+                {NAV_ICONS['/admin']}مرکز سیستم
+              </Link>
             </div>
           )}
         </nav>
@@ -495,7 +463,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link className="ai-btn" href="/ai"><Sparkles size={14}/> دستیار هوشمند</Link>
             <AppShellEnhancement />
             <ThemeToggle />
-            <Link href="/admin" className="user-chip" aria-label="پروفایل">
+            <Link href="/settings" className="user-chip" aria-label="پروفایل">
               <span className="avatar">{(me?.name ?? 'U').slice(0, 1)}</span>
               <span className="uc-meta">
                 <strong>{me?.name ?? 'کاربر'}</strong>
@@ -534,7 +502,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <button onClick={() => setDictOpen(false)} aria-label="بستن">×</button>
             </header>
             <div className="dict-list">
-              {(navMode === 'simple' ? SIMPLE_NAV : FULL_NAV).flatMap(([, , items]) => items)
+              {NAV_ZONES.flatMap(([, , items]) => items)
                 .filter(([href]) => href === '/' || can(GLOSS_KEY_PERM[href] ?? ''))
                 .map(([href, label]) => (
                   <div className="dict-row" key={href}>
@@ -542,7 +510,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <span>{GLOSS[href] ?? ''}</span>
                   </div>
                 ))}
-              {navMode === 'full' && isAdmin && ADMIN_SUBS.flatMap(([sub, items]) => items.map(([href, label]) => ({ href, label, sub })))
+              {isAdmin && ADMIN_SUBS.flatMap(([sub, items]) => items.map(([href, label]) => ({ href, label, sub })))
                 .filter(({ href }) => href === '/admin' || can(ADMIN_PERM[href] ?? ''))
                 .map(({ href, label, sub }) => (
                   <div className="dict-row" key={href}>

@@ -1,3 +1,3 @@
 'use client';
-import QualityDashboard from '../../_components/quality-dashboard';
-export default function Page(){ return <QualityDashboard mode="ops" />; }
+import LegacyRedirect from '../../_components/legacy-redirect';
+export default function LegacyPage(){ return <LegacyRedirect to="/data-quality" />; }

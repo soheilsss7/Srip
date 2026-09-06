@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import HubTabs from '../_components/hub-tabs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../_lib/api';
 import { useWorkspace } from '../_components/workspace';
@@ -148,6 +149,14 @@ export default function Security() {
           </div>
         }
       />
+      <HubTabs base tabs={[
+        {href:'/security',label:'نمای کلی'},
+        {href:'/security-events',label:'رویدادهای امنیتی'},
+        {href:'/governance',label:'حاکمیت'},
+        {href:'/enterprise',label:'حاکمیت سازمانی'},
+        {href:'/privacy',label:'حریم خصوصی'},
+        {href:'/data-lifecycle',label:'چرخهٔ حیات داده'},
+      ]}/>
       <ErrorCard message={error} />
       {notice && <div className="flash-banner" role="status"><CheckCircle2 size={15} /> {notice}</div>}
 

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import {
   BookOpen, Crown, Building2, Share2, Network, CalendarDays, Sparkles, BrainCircuit,
   Download, Upload, ShieldCheck, Search, HelpCircle, MessageCircleQuestion, KeyRound, LayoutDashboard,
+  Code2, Server, Workflow, Database, HeartPulse,
 } from 'lucide-react';
 
 const SECTIONS = [
@@ -37,6 +38,18 @@ const SECTIONS = [
   {
     icon: <BrainCircuit size={16} />, title: 'هوش مصنوعی', id: 'ai',
     body: 'دستیار داخلی با ۹ قابلیت: جستجوی هوشمند، آمادگی جلسه، خلاصه‌سازی، استخراج اقدام و تعهد، تشخیص ریسک و فرصت، و «بهترین اقدام بعدی». همهٔ پاسخ‌ها از موتور قطعی می‌آیند و در محیط دمو هیچ LLM خارجی فراخوانی نمی‌شود.',
+  },
+  {
+    icon: <Workflow size={16} />, title: 'اتوماسیون و هماهنگی', id: 'automation',
+    body: 'گردش کار و تأییدها یک خانهٔ مشترک دارند: گردش کارها (محرک دستی/رویداد، شرط‌ها، گام‌ها)، اجراها و تأییدهای دوم‌نفره با تب‌های «گردش کار / اجراها / تأییدها».',
+  },
+  {
+    icon: <Database size={16} />, title: 'داده و کیفیت', id: 'data',
+    body: 'مرکز داده: نمای کلی کیفیت، ورود گروهی داده، داده‌های مبنایی و تبادل با سامانه‌های دیگر در تب‌های یک هاب.',
+  },
+  {
+    icon: <HeartPulse size={16} />, title: 'مرکز پایش', id: 'monitoring',
+    body: 'سلامت، سنجه‌ها، مشاهده‌پذیری و تحلیل محصول در یک هاب پایش؛ جزئیات هر کدام یک تب جداگانه دارد.',
   },
   {
     icon: <Download size={16} />, title: 'خروجی و ورودی داده', id: 'exchange',
@@ -130,6 +143,15 @@ export default function HelpPage() {
               <p>{f.a}</p>
             </details>
           ))}
+        </div>
+      </section>
+
+      {/* Developer tools */}
+      <section className="panel">
+        <div className="panel-title"><div><h2><Code2 size={15}/> برای توسعه‌دهندگان</h2><p>رجیستری زندهٔ قراردادها و پوشش کنترلرها</p></div></div>
+        <div className="help-footer">
+          <Link className="btn btn-ghost" href="/help/api-coverage"><Code2 size={15}/> پوشش API</Link>
+          <Link className="btn btn-ghost" href="/help/backend-coverage"><Server size={15}/> پوشش سرور</Link>
         </div>
       </section>
 

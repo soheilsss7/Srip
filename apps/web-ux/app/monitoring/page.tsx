@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '../_lib/api';
 import { Badge, ErrorCard, Loading, PageHeader, StatCard } from '../_components/page-ui';
 import Link from 'next/link';
+import HubTabs from '../_components/hub-tabs';
 import {
   Activity, ArrowLeft, BarChart3, Boxes, Database, Gauge, HeartPulse, Layers,
   RefreshCw, ScrollText, ServerCog, ShieldAlert, Timer, TriangleAlert, Users,
@@ -67,6 +68,13 @@ export default function Monitoring() {
         description="نمای واحد از سلامت، سنجه‌ها و مشاهده‌پذیری پلتفرم — با لینک به چهار نمای تخصصی (نیازمند مجوز metrics.read و health.read)."
         actions={<button className="btn btn-secondary" onClick={() => load(true)} disabled={refreshing}><RefreshCw size={15} className={refreshing ? 'spin' : ''} /> بازخوانی</button>}
       />
+      <HubTabs base tabs={[
+        {href:'/monitoring',label:'نمای کلی'},
+        {href:'/metrics',label:'سنجه‌ها'},
+        {href:'/observability',label:'مشاهده‌پذیری'},
+        {href:'/health',label:'سلامت زمان اجرا'},
+        {href:'/analytics',label:'تحلیل محصول'},
+      ]}/>
       <ErrorCard message={error} />
       {loading && !d ? <Loading label="در حال جمع‌آوری نمای پایش…" /> : d && (
         <>

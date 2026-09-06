@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import HubTabs from '../_components/hub-tabs';
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../_lib/api';
 import { fa } from '../_lib/fa';
@@ -122,6 +123,13 @@ export default function IntelligencePage() {
           </>
         }
       />
+      <HubTabs base tabs={[
+        {href:'/intelligence',label:'هوش رابطه'},
+        {href:'/ai',label:'دستیار هوشمند'},
+        {href:'/recommendations',label:'پیشنهادها'},
+        {href:'/ai-executive-brief',label:'بریف هفتگی'},
+        {href:'/reports',label:'گزارش‌ها'},
+      ]}/>
       <ErrorCard message={error} />
 
       {loading ? (

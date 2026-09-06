@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import HubTabs from '../_components/hub-tabs';
 import { api } from '../_lib/api';
 import { useWorkspace } from '../_components/workspace';
 import { Badge, ErrorCard, Loading, Modal, PageHeader, SectionCard, StatCard } from '../_components/page-ui';
@@ -136,7 +137,7 @@ function ExecStatus({ status }: { status: string }) {
   return <Badge tone={tone}>{label[status] ?? status}</Badge>;
 }
 
-export default function WorkflowsPage() {
+export default function WorkflowsPage({ initialTab = 'workflows' }: { initialTab?: 'workflows' | 'executions' }) {
   const { me, can } = useWorkspace();
   const isOwner = !!me?.permissions?.includes('*');
   const canWrite = isOwner || can('workflow.write');
@@ -144,7 +145,6 @@ export default function WorkflowsPage() {
 
   const [rows, setRows] = useState<WfRow[]>([]);
   const [execs, setExecs] = useState<Record<string, ExecRow[]>>({});
-  const [tab, setTab] = useState<'workflows' | 'executions'>('workflows');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [flash, setFlash] = useState('');
@@ -426,12 +426,13 @@ export default function WorkflowsPage() {
         <StatCard icon={<GitMerge size={18} />} label="محرک‌ها" value={<span>{fmtNum(counts.manual)} <span style={{ fontSize: 11 }}>/</span> {fmtNum(counts.ev)}</span>} iconClass="ic-indigo" sub="دستی / رویدادی" />
       </div>
 
-      <div className="tabs" role="tablist">
-        <button className={tab === 'workflows' ? 'tab-active' : ''} onClick={() => setTab('workflows')}><Workflow size={14} /> گردش کارها ({fmtNum(rows.length)})</button>
-        <button className={tab === 'executions' ? 'tab-active' : ''} onClick={() => setTab('executions')}><History size={14} /> اجراها ({fmtNum(Object.values(execs).flat().length)})</button>
-      </div>
+      <HubTabs base tabs={[
+        { href: '/workflows', label: `گردش کارها (${fmtNum(rows.length)})` },
+        { href: '/workflows/executions', label: `اجراها (${fmtNum(Object.values(execs).flat().length)})` },
+        { href: '/approvals', label: 'تأییدها' },
+      ]}/>
 
-      {tab === 'workflows' && (
+      {initialTab === 'workflows' && (
         <>
           {rows.length === 0 && !loading && <div className="empty-state">گردش کاری تعریف نشده است. با «گردش کار جدید» شروع کنید.</div>}
           <div className="wf-grid">
@@ -459,7 +460,7 @@ export default function WorkflowsPage() {
                   {pending > 0 && (
                     <div className="notice" style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '6px 10px' }}>
                       <Clock3 size={14} /> <span style={{ flex: 1 }}>{pending} اجرای در انتظار تصمیم یا مهلت</span>
-                      <button className="btn btn-ghost btn-sm" onClick={() => setTab('executions')}>مشاهده</button>
+                      <Link className="btn btn-ghost btn-sm" href="/workflows/executions">مشاهده</Link>
                     </div>
                   )}
                   <footer style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
@@ -485,7 +486,7 @@ export default function WorkflowsPage() {
         </>
       )}
 
-      {tab === 'executions' && (
+      {initialTab === 'executions' && (
         <section className="panel">
           {Object.keys(execs).length === 0 ? (
             <div className="empty-state">هنوز اجرایی ثبت نشده است — از دکمهٔ «اجرا» روی یک گردش کار شروع کنید (گام‌ها اثر واقعی روی داده دارند).</div>

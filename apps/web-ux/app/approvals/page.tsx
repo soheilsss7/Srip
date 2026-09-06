@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../_lib/api';
 import { useWorkspace } from '../_components/workspace';
+import HubTabs from '../_components/hub-tabs';
 import {
   Badge, ErrorCard, Modal, PageHeader, StatCard, Toolbar,
 } from '../_components/page-ui';
@@ -234,6 +235,11 @@ export default function ApprovalsPage() {
           </>
         }
       />
+      <HubTabs base tabs={[
+        {href:'/approvals',label:'تأییدها'},
+        {href:'/workflows',label:'گردش کار'},
+        {href:'/workflows/executions',label:'اجراها'},
+      ]}/>
       <ErrorCard message={error} />
       {flash && <div className="flash-banner" role="status"><CheckCircle2 size={15} /> {flash}</div>}
 
