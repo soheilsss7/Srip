@@ -5,6 +5,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import { usePathname, useRouter } from 'next/navigation';
 import { api, clearSession, getAccessToken, getRefreshToken, apiPost, setScope, getScope } from '../_lib/api';
 import { AppShellEnhancement } from './app-shell-enhancement';
+import Portal from './portal';
 import { Button } from '@srip/design-system';
 import {
   LayoutDashboard, Building2, Users, Share2, Network, MessagesSquare,   CalendarDays, Zap,
@@ -495,6 +496,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </button>
       </nav>
       {dictOpen && (
+        <Portal>
         <div className="command-overlay" onClick={() => setDictOpen(false)} role="dialog" aria-modal="true" aria-label="واژه‌نامه">
           <div className="dict-card" onClick={(e) => e.stopPropagation()}>
             <header>
@@ -526,6 +528,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </footer>
           </div>
         </div>
+        </Portal>
       )}
     </>
   );

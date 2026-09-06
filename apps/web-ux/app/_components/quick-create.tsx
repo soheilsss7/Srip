@@ -1,5 +1,5 @@
 'use client';
-import {useState} from 'react';
+import {useEffect,useState} from 'react';
 import {api} from '../_lib/api';
 import { JalaliDateField } from './jalali-date-field';
 type Entity={key:string;label:string;endpoint:string;fields:{name:string;label:string;type?:string;required?:boolean}[]};
@@ -15,7 +15,9 @@ const entities:Entity[]=[
 ];
 export function QuickCreate({open,onClose}:{open:boolean;onClose:()=>void}){
  const [entity,setEntity]=useState(entities[0]),[v,setV]=useState<Record<string,string>>({}),[busy,setBusy]=useState(false),[msg,setMsg]=useState('');
+ useEffect(()=>{if(!open)return;const f=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose()};window.addEventListener('keydown',f);return()=>window.removeEventListener('keydown',f)},[open,onClose]);
+ useEffect(()=>{if(!open)return;document.body.style.overflow='hidden';return()=>{document.body.style.overflow=''}},[open]);
  if(!open)return null;
  async function submit(e:React.FormEvent){e.preventDefault();setBusy(true);setMsg('');try{const body:any={};entity.fields.forEach(f=>{if(v[f.name])body[f.name]=f.type==='number'?Number(v[f.name]):v[f.name]});await api(entity.endpoint,{method:'POST',body:JSON.stringify(body)});setMsg('با موفقیت ایجاد شد.');setV({})}catch(x){setMsg((x as Error).message)}finally{setBusy(false)}}
- return <div className="quick-overlay"><section className="quick-card"><header><div><span className="eyebrow">اقدام سریع</span><h2>ایجاد سریع</h2></div><button onClick={onClose}>×</button></header><div className="quick-types">{entities.map(x=><button className={x.key===entity.key?'active':''} onClick={()=>{setEntity(x);setV({})}} key={x.key}>{x.label}</button>)}</div><form className="entity-form" onSubmit={submit}>{entity.fields.map(f=><label key={f.name}>{f.label}{f.type==='date'||f.type==='datetime-local'?<JalaliDateField withTime={f.type==='datetime-local'} value={v[f.name]??''} onChange={x=>setV({...v,[f.name]:x})} required={f.required}/>:<input type={f.type??'text'} required={f.required} value={v[f.name]??''} onChange={e=>setV({...v,[f.name]:e.target.value})}/>}</label>)}<button className="primary-action" disabled={busy}>{busy?'در حال ثبت…':'ایجاد '+entity.label}</button></form>{msg&&<div className="status-message">{msg}</div>}</section></div>
+ return <div className="quick-overlay" onClick={e=>{if(e.target===e.currentTarget)onClose()}}><section className="quick-card"><header><div><span className="eyebrow">اقدام سریع</span><h2>ایجاد سریع</h2></div><button onClick={onClose}>×</button></header><div className="quick-types">{entities.map(x=><button className={x.key===entity.key?'active':''} onClick={()=>{setEntity(x);setV({})}} key={x.key}>{x.label}</button>)}</div><form className="entity-form" onSubmit={submit}>{entity.fields.map(f=><label key={f.name}>{f.label}{f.type==='date'||f.type==='datetime-local'?<JalaliDateField withTime={f.type==='datetime-local'} value={v[f.name]??''} onChange={x=>setV({...v,[f.name]:x})} required={f.required}/>:<input type={f.type??'text'} required={f.required} value={v[f.name]??''} onChange={e=>setV({...v,[f.name]:e.target.value})}/>}</label>)}<button className="primary-action" disabled={busy}>{busy?'در حال ثبت…':'ایجاد '+entity.label}</button></form>{msg&&<div className="status-message">{msg}</div>}</section></div>
 }
