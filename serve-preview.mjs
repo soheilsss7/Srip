@@ -71,17 +71,17 @@ const LANDING = `<!doctype html>
 <body>
 <main>
   <h1>پیش‌نمایش SRIP</h1>
-  <p class="sub">دو نسخه در دسترس است — نسخهٔ جدید (UI 3.0) را با نسخهٔ اصلی مقایسه کنید.<br>ورود دمو در هر دو: <b>demo</b> / <b>123456</b></p>
+  <p class="sub">یک اپ روی این دامنه هست: <b>srip2</b>. ریشۀ <code>/Srip/</code> هم به همان‌جا ریدایرکت می‌شود.<br>ورود دمو: <b>client@arya-tech.ir</b> یا <b>demo</b> / رمز <b>123456</b></p>
   <div class="cards">
     <a class="card v-new" href="/Srip/srip2/login.html">
-      <span class="tag">نسخهٔ جدید — UI 3.0 (کلون)</span>
-      <h2>srip2 · رابط بازطراحی‌شده</h2>
+      <span class="tag">تنها اپ منتشرشده</span>
+      <h2>srip2 · رابط موبایل v5</h2>
       <p>کروم آرام، فونت وزیرمتن، کارت و جدول مدرن، تم روشن/تیره<br><b>demo / 123456</b></p>
     </a>
-    <a class="card v-old" href="/Srip/login.html">
-      <span class="tag">نسخهٔ اصلی (دست‌نخورده)</span>
-      <h2>SRIP · نسخهٔ فعلی</h2>
-      <p>همان ظاهر پیشین برای مقایسه<br><b>demo / 123456</b></p>
+    <a class="card v-old" href="/Srip/">
+      <span class="tag">ریدایرکت ریشۀ دامنه</span>
+      <h2>/Srip/ → srip2</h2>
+      <p>ریشۀ دامنه دیگر اپ جداگانه ندارد؛ این پیوند باید خودش به srip2 برود.</p>
     </a>
   </div>
   <div class="hint">نسخهٔ لایو GitHub Pages: <a href="https://soheilsss7.github.io/Srip/srip2/">soheilsss7.github.io/Srip/srip2</a></div>
@@ -169,5 +169,5 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`SRIP preview listening on http://0.0.0.0:${PORT}`);
-  console.log(`Landing: /  |  جدید: /Srip/srip2/login.html  |  اصلی: /Srip/login.html`);
+  console.log(`Landing: /  |  اپ: /Srip/srip2/login.html  |  ریدایرکت ریشه: /Srip/`);
 });

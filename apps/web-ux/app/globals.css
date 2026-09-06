@@ -2431,3 +2431,99 @@ tr.row-muted td{opacity:.6}
 @media (prefers-reduced-motion:reduce){
   .sidebar,.sidebar.open{transition:none}
 }
+
+/* ==========================================================================
+   موبایل v5 — چهار اصلاح ساختاری برای گوشی/تبلت
+   --------------------------------------------------------------------------
+   ۱) اسکرول افقی کل صفحه حذف می‌شود (overflow-x:clip) و هر چیزی داخل
+      .workspace-content می‌تواند جمع شود (min-width:0) — صفحه دیگر به چپ نمی‌رود.
+   ۲) جدول‌ها داخل ظرفِ خودشان اسکرول افقی می‌گیرند (نه صفحه) و سرستون/ستون اول
+      می‌چسبند تا ستون‌های چپ با کشیدن انگشت دیده شوند.
+   ۳) نوار تب پایین (.mobile-tabs) — هدف ضربه ≥ ۴۴px + safe-area؛ محتوا با
+      padding-bottom کنارش جا باز می‌کند.
+   ۴) مودال‌ها شیت پایین می‌شوند (انگشت‌شست) و ورودی‌ها ۱۶px می‌مانند تا iOS زوم نکند.
+
+   دو بلوک داریم: ≤900px «ایمنی لمس» (نوار تب، هدف ضربه، جدول، ورودی ۱۶px) که
+   همان‌جاست که سایدبار دراور می‌شود، و ≤760px «بازچیدن چیدمان» که گوشی است.
+   این بلوک باید همیشه آخرین بلوک globals.css بماند.
+   ========================================================================== */
+html,body{overflow-x:clip;max-width:100%}
+.mobile-tabs{display:none}
+.auth-gate-escape{display:inline-flex;align-items:center;justify-content:center;min-height:44px;margin-top:6px;
+  padding:0 18px;border-radius:12px;border:1px solid var(--card-border-strong);background:var(--card-bg);
+  color:var(--text-secondary);font-size:12.5px;font-weight:800;text-decoration:none}
+.auth-gate-escape:hover{color:var(--srip-accent-text);border-color:var(--srip-accent)}
+
+@media(max-width:900px){
+  /* ۱) هیچ فرزندی صفحه را عریض‌تر از ویوپورت نکند */
+  .workspace-content,.workspace-content *{min-width:0}
+  .workspace-content img,.workspace-content svg,.workspace-content canvas,.workspace-content video{max-width:100%;height:auto}
+  /* محتوا از نوار تب پایین فاصله می‌گیرد */
+  .workspace-content{padding:14px 12px calc(84px + env(safe-area-inset-bottom))}
+
+  /* ۲) جدول‌ها — اسکرول افقی داخل ظرف، سرستون و ستون اول چسبان.
+        سلکتور دوتایی لازم است چون .table-wrap{overflow:hidden} در globals.css
+        (خط ~1511) و در ui-v3.css (خط ~217) بعد از این قاعده می‌آیند. */
+  .table-wrap.table-wrap{overflow-x:auto;overflow-y:hidden;max-width:100%;
+    -webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scrollbar-width:thin}
+  .table-wrap.table-wrap th{position:sticky;top:0;z-index:3}
+  .table-wrap.table-wrap th:first-child,.table-wrap.table-wrap td:first-child{
+    position:sticky;inset-inline-start:0;z-index:2;background:var(--card-bg)}
+  .table-wrap.table-wrap thead th:first-child{z-index:4;background:var(--card-bg-soft)}
+  .card.table-wrap,.panel.table-wrap{padding:0}
+
+  /* ۴) هدف ضربهٔ بزرگ‌تر + ورودی ۱۶px (ضد زوم اجباری iOS) */
+  .btn,.net-btn,.srip-button,.icon-btn,.modal-close,.dict-btn{min-height:44px;min-width:44px}
+  input,select,textarea{font-size:16px}
+
+  /* ── نوار تب پایین ── */
+  .mobile-tabs{
+    display:flex;align-items:stretch;gap:2px;
+    position:fixed;inset-inline:0;bottom:0;z-index:95;
+    padding:6px 6px calc(6px + env(safe-area-inset-bottom));
+    background:color-mix(in srgb,var(--card-bg) 94%,transparent);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    border-top:1px solid var(--card-border);
+    box-shadow:0 -8px 24px -14px rgba(7,12,28,.45);
+  }
+  .mobile-tabs a,.mobile-tabs-more{
+    flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    min-height:52px;padding:4px 2px;border:0;background:transparent;cursor:pointer;
+    color:var(--text-muted);font:inherit;font-size:10px;font-weight:700;text-decoration:none;
+    border-radius:12px;transition:background .12s,color .12s}
+  .mobile-tabs a.active{color:var(--srip-accent-text);background:color-mix(in srgb,var(--srip-accent) 12%,transparent)}
+  .mobile-tabs .mt-ico,.mobile-tabs-more .mt-ico{display:grid;place-items:center;height:18px}
+  .mobile-tabs .mt-label{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+}
+
+@media(max-width:760px){
+  /* ۳) هدر فشرده — سطر اول: منو + جست‌وجو، سطر دوم: اکشن‌ها به‌صورت ریل افقی */
+  .global-header{flex-direction:column;align-items:stretch;gap:8px;padding-block-end:8px}
+  .global-header .header-left{width:100%;gap:8px}
+  .global-header .global-search{flex:1 1 auto;max-width:none}
+  .global-header .global-search a{height:38px}
+  .global-header .header-actions{width:100%;justify-content:flex-start;gap:6px;
+    overflow-x:auto;overscroll-behavior-x:contain;padding-bottom:2px;scrollbar-width:none}
+  .global-header .header-actions::-webkit-scrollbar{display:none}
+  .global-header .header-actions>*{flex:0 0 auto}
+  .header-actions .ai-btn{height:34px;font-size:11.5px;padding:0 10px}
+
+  /* چیدمان‌ها یک‌ستونه؛ آمار دونفره */
+  .grid,.grid2,.entity-layout,.split-panels,.form-grid,.detail-grid,.content-grid,
+  .panels-row,.dashboard-grid,.cal-layout,.ai-layout,.action-center-grid,
+  .people-page .split-panels,.relationships-page .split-panels{grid-template-columns:1fr}
+  .content-side{flex-direction:column}
+  .stats-row,.kpi-grid,.stat-row,.metric-list,.mini-metrics,.dash-grid-mid,.dash-grid-bottom{grid-template-columns:1fr 1fr}
+  .rel-status-metrics{grid-template-columns:1fr 1fr}
+  .table-wrap.table-wrap table{min-width:520px;width:100%}
+  .card,.panel,.section-card,.dash-panel{padding:14px}
+  .page-heading h1{font-size:22px}
+
+  /* مودال‌ها → شیت پایین با safe-area */
+  .modal-backdrop,.command-overlay{align-items:flex-end;place-items:end stretch;padding:0}
+  .modal-card,.dict-card,.tour-card,.notification-drawer{
+    width:100%;max-width:none;max-height:88dvh;border-radius:18px 18px 0 0;border-inline-width:0;border-bottom-width:0;
+    padding:18px 16px calc(18px + env(safe-area-inset-bottom));animation:sheetUp .2s ease}
+  .dict-card,.tour-card{margin:0}
+  @keyframes sheetUp{from{opacity:.4;transform:translateY(24px)}to{opacity:1;transform:none}}
+}

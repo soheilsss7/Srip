@@ -323,3 +323,24 @@ html[data-theme="dark"] .workspace-role{
 .net-fs-canvas .net-graph-zone{aspect-ratio:auto;min-height:calc(100dvh - 130px);height:auto}
 .net-fs{padding:12px}
 .net-fs-canvas{height:calc(100dvh - 116px);min-height:430px;overflow:hidden;position:relative}
+
+/* ==========================================================================
+   موبایل v5 — این فایل بعد از globals.css بارگذاری می‌شود و قاعدۀ
+   `.table-wrap{overflow:hidden}` (بالا، خط ~217) روی موبایل جدول را می‌بُرد:
+   ستون‌های چپ دیده نمی‌شدند. بلوک موبایل v5 در globals.css با سلکتور دوتایی
+   .table-wrap.table-wrap (اولویت ۰٫۲٫۰) بر این قاعده (۰٫۱٫۰) غلبه می‌کند؛
+   این‌جا همان قواعد تکرار شده‌اند تا اگر ترتیب bundle عوض شد باز هم درست بماند.
+   ========================================================================== */
+html,body{overflow-x:clip;max-width:100%}
+@media(max-width:900px){
+  .table-wrap.table-wrap{overflow-x:auto;overflow-y:hidden;max-width:100%;
+    -webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+  .table-wrap.table-wrap th{position:sticky;top:0;z-index:3}
+  .table-wrap.table-wrap th:first-child,.table-wrap.table-wrap td:first-child{
+    position:sticky;inset-inline-start:0;z-index:2;background:var(--card-bg)}
+  .table-wrap.table-wrap thead th:first-child{z-index:4;background:var(--card-bg-soft)}
+  .card.table-wrap,.panel.table-wrap{padding:0}
+}
+@media(max-width:760px){
+  .table-wrap.table-wrap table{min-width:520px;width:100%}
+}
