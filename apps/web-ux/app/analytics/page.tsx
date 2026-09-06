@@ -455,10 +455,10 @@ export default function Analytics() {
             <section className="panel">
               <div className="panel-title">
                 <div>
-                  <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><CalendarDays size={16} /> قهرمان‌ها و رویدادهای شغلی</h2>
-                  <p>هشدار جابه‌جایی قهرمان + «چه کسی در سازمان جدید او را می‌شناسد» + مسیر گرم به سازمان مقصد</p>
+                  <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><CalendarDays size={16} /> حامی‌ها و رویدادهای شغلی</h2>
+                  <p>هشدار جابه‌جایی حامی + «چه کسی در سازمان جدید او را می‌شناسد» + مسیر گرم به سازمان مقصد</p>
                 </div>
-                <Badge tone="info">{fmt.format(career.champions?.length ?? 0)} قهرمان</Badge>
+                <Badge tone="info">{fmt.format(career.champions?.length ?? 0)} حامی</Badge>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
                 {(career.alerts ?? []).map((a: any) => (

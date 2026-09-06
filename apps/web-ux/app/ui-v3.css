@@ -348,3 +348,54 @@ html,body{overflow-x:clip;max-width:100%}
 @media(max-width:760px){
   .table-wrap.table-wrap table{min-width:max-content}
 }
+
+/* ==========================================================================
+   NETWORK PAGE v6 — mirror of globals overrides (این فایل بعد از globals لود
+   می‌شود، پس قواعد هم‌نام این‌جا باید هماهنگ باشند)
+   ========================================================================== */
+.net-page .panel{background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);padding:16px 18px}
+.net-page .panel .panel-title h2{font-size:15px;font-weight:800;margin:0}
+.net-page .panel .panel-title p{font-size:11.5px;color:var(--text-muted);line-height:1.8;margin:5px 0 0}
+.net-graph-zone{aspect-ratio:800/400;background:
+  radial-gradient(720px 300px at 50% -120px,color-mix(in srgb,var(--srip-accent) 7%,transparent),transparent 70%),var(--bg-canvas)}
+.net-graph-shell .net-graph-head{padding:13px 16px}
+.net-path-tool{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:11px 16px;border-top:1px solid var(--srip-line);border-bottom:1px solid var(--srip-line);background:var(--card-bg-soft)}
+.net-path-tool select{min-height:33px;padding:3px 9px;font-size:11.5px;border-radius:9px}
+.net-path-tool .net-btn{min-height:33px}
+.net-path-result{border-radius:12px;margin:11px 16px 0;padding:9px 13px;font-size:12px;line-height:2}
+.net-path-result.found{background:color-mix(in srgb,#0E9F6E 8%,transparent);border:1px solid color-mix(in srgb,#0E9F6E 30%,transparent);color:var(--text-primary)}
+.net-path-result.notfound{background:color-mix(in srgb,#D97706 8%,transparent);border:1px solid color-mix(in srgb,#D97706 30%,transparent);color:var(--text-primary)}
+.net-path-msg{font-weight:700}
+.net-hover-line{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0;padding:9px 16px;border-top:1px solid var(--srip-line);background:transparent;border-radius:0;font-size:11.5px;color:var(--text-muted)}
+.net-legend{border-top:1px solid var(--srip-line);margin-top:0;padding:11px 16px 12px;gap:14px;background:var(--card-bg-soft)}
+.net-legend strong{font-size:11px}
+.net-legend .lg{font-size:11px;color:var(--text-secondary)}
+.net-legend .sw.line{border-radius:2px;height:3px}
+.net-detail-head{border-bottom:1px solid var(--srip-line)}
+.net-rail-block{display:flex;flex-direction:column;gap:9px}
+.net-rail-chips{display:flex;flex-wrap:wrap;gap:5px}
+.rail-chip{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:800;padding:3px 10px;border-radius:999px;border:1px solid transparent}
+.rail-chip i{width:6px;height:6px;border-radius:50%;display:inline-block}
+.rail-chip.danger{color:var(--srip-danger);border-color:color-mix(in srgb,var(--srip-danger) 40%,transparent);background:color-mix(in srgb,var(--srip-danger) 8%,transparent)}
+.net-rail-actions .ra-label{font-size:11px;font-weight:800;color:var(--text-muted)}
+.net-rail-actions .net-btn{min-height:28px;padding:2px 11px;font-size:10.5px;border-radius:9px}
+.net-priorities{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start}
+.net-priorities .footer-note{grid-column:1/-1}
+.net-fs-canvas .net-graph-zone{aspect-ratio:auto;min-height:calc(100dvh - 130px);height:auto}
+@media(max-width:900px){
+  .net-nav{width:100%}
+  .net-nav-tab{flex:1 1 0;justify-content:center;padding:9px 10px}
+  .net-filters{flex-direction:column;align-items:stretch}
+  .net-filters input[type="search"],.net-filters select{max-width:none;width:100%}
+  .net-filters .net-btn{align-items:center;justify-content:center}
+  .net-graph-zone{aspect-ratio:auto;min-height:330px}
+}
+@media(max-width:760px){
+  .net-page .panel{padding:13px 14px}
+  .net-page .panel .panel-title h2{font-size:14px}
+  .net-page .panel .panel-title p{font-size:11px}
+  .net-priorities{grid-template-columns:1fr}
+  .net-path-tool{flex-direction:column;align-items:stretch}
+  .net-path-tool select{width:100%}
+  .net-path-tool .net-btn{justify-content:center;width:100%}
+}

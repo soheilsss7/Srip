@@ -405,7 +405,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                     <div style={{ marginTop: 8 }}>
                       <b style={{ fontSize: 11.5 }}>چه کسی چه کسی را می‌شناسد</b>
                       <div className="list" style={{ marginTop: 6 }}>
-                        {(transfer.whoKnowsWho ?? []).length === 0 && <p className="t-muted" style={{ fontSize: 11 }}>شناخت متقابل ثبت‌نشده‌ای نیست؛ برای معرفی، از پیشنهاد یال شبکه استفاده کنید.</p>}
+                        {(transfer.whoKnowsWho ?? []).length === 0 && <p className="t-muted" style={{ fontSize: 11 }}>شناخت متقابل ثبت‌نشده‌ای نیست؛ برای معرفی، از پیشنهاد پیوند شبکه استفاده کنید.</p>}
                         {(transfer.whoKnowsWho ?? []).map((w: any) => (
                           <div className="listRow" key={w.person.id}>
                             <span style={{ flex: 1, minWidth: 0 }}>
@@ -425,7 +425,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                     {(transfer.contacts ?? []).map((c: any) => (
                       <div className="listRow" key={c.id}>
                         <span style={{ flex: 1, minWidth: 0 }}>
-                          <b style={{ fontSize: 12.5 }}>{c.name}</b> {c.champion && <span className="chip success" style={{ marginInlineStart: 4 }}>قهرمان</span>}
+                          <b style={{ fontSize: 12.5 }}>{c.name}</b> {c.champion && <span className="chip success" style={{ marginInlineStart: 4 }}>حامی</span>}
                           <small className="t-muted" style={{ display: 'block' }}>{c.title} · {c.organization}{c.role ? ` · نقش تصمیم: ${c.role}` : ''}</small>
                         </span>
                       </div>

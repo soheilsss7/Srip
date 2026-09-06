@@ -31,7 +31,7 @@ const SOURCE_META: Record<string, { label: string; cls: string }> = {
   EVENT: { label: 'رویداد', cls: 'src-ev' }, COLD: { label: 'سرد', cls: 'src-cold' },
 };
 const ROLE_FA: Record<string, string> = {
-  ECONOMIC_BUYER: 'خریدار اقتصادی', CHAMPION: 'قهرمان', TECH_EVALUATOR: 'ارزیاب فنی',
+  ECONOMIC_BUYER: 'خریدار اقتصادی', CHAMPION: 'حامی', TECH_EVALUATOR: 'ارزیاب فنی',
   END_USER: 'کاربر نهایی', PROCUREMENT: 'تدارکات', BLOCKER: 'بلاکر',
 };
 const ROLE_ORDER = ['ECONOMIC_BUYER', 'CHAMPION', 'TECH_EVALUATOR', 'END_USER', 'PROCUREMENT', 'BLOCKER'];

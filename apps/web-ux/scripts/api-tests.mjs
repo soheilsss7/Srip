@@ -183,7 +183,7 @@ section('شبکه، جستجو و ممیزی');
   const T = globalThis.__owner2.body.accessToken;
   const CT = globalThis.__client.body.accessToken;
   const g = await api('/network/graph', { token: T });
-  check('گراف مالک → گره و یال دارد', g.status === 200 && g.body?.nodes?.length > 0 && g.body?.edges?.length > 0);
+  check('گراف مالک → گره و پیوند دارد', g.status === 200 && g.body?.nodes?.length > 0 && g.body?.edges?.length > 0);
   const gp = await api('/network/graph?type=person', { token: T });
   check('گراف اشخاص → گره شخص دارد', gp.status === 200 && gp.body?.nodes?.some(n => n.type === 'person'));
   const cg = await api('/network/graph', { token: CT });

@@ -41,7 +41,7 @@ const SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S} ${S}" rol
   <circle cx="256" cy="176" r="24" fill="${NAVY}"/>
 </svg>`;
 
-/** فرمان‌های ترسیم PNG مرجع ( گرادیان + یال‌ها + گره‌ها ) */
+/** فرمان‌های ترسیم PNG مرجع ( گرادیان + پیوند‌ها + گره‌ها ) */
 function masterCmds() {
   const drawEdges = `stroke '${LINE}' stroke-linecap round stroke-width 22 fill none `
     + `line 150,330 256,176 line 256,176 366,318 line 150,330 366,318`;

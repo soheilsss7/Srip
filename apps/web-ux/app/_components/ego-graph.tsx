@@ -138,7 +138,7 @@ export function EgoGraph({ center, centerHref, nodes, height = 360 }: {
    *    به اندازه‌ای دور می‌شود که جعبهٔ متن هرگز با دایرهٔ گره تداخل نکند
    *  - جعبهٔ متن همیشه داخل حاشیهٔ امن بوم clamp می‌شود و با textLength
    *    فشرده می‌شود → هرگز بیرون زدن/بریدن متن رخ نمی‌دهد
-   *  - نشانِ رابطه در میانهٔ یال با حباب سفید رسم می‌شود (نه روی مرکز/گره)
+   *  - نشانِ رابطه در میانهٔ پیوند با حباب سفید رسم می‌شود (نه روی مرکز/گره)
    */
   const ring = useMemo(() => {
     const list = nodes.slice(0, MAX_NODES);
@@ -183,7 +183,7 @@ export function EgoGraph({ center, centerHref, nodes, height = 360 }: {
         const gapY = Math.max(0, Math.abs(ly - y) - boxHalfH);
         if (Math.hypot(gapX, gapY) >= r + LABEL_DR) break;
       }
-      // نقطهٔ میانهٔ یال: در فاصلهٔ امن میان مرکز و گره — نه روی مرکز، نه روی گره
+      // نقطهٔ میانهٔ پیوند: در فاصلهٔ امن میان مرکز و گره — نه روی مرکز، نه روی گره
       const dist = len || 1;
       const tm = Math.max(0.52, Math.min(0.75, (CENTER_R + 12) / dist));
       return {
@@ -258,7 +258,7 @@ export function EgoGraph({ center, centerHref, nodes, height = 360 }: {
             opacity={0.6} style={{ pointerEvents: 'none' }} />
         ))}
 
-        {/* میانهٔ یال: نشانِ نوع گره در حباب سفید، هم‌رنگ وضعیت رابطه */}
+        {/* میانهٔ پیوند: نشانِ نوع گره در حباب سفید، هم‌رنگ وضعیت رابطه */}
         {ring.map(nd => {
           const ec = edgeColorOf(nd);
           return (

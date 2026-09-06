@@ -194,7 +194,7 @@ export default function Page() {
   const [sna, setSna] = useState<any | null>(null);
   const [snaBusy, setSnaBusy] = useState('');
   const [predict, setPredict] = useState<any | null>(null);
-  // گراف ۴ ستونی: ستون هر یال از edgeCategory روی گراف/یال می‌آید
+  // گراف ۴ ستونی: ستون هر پیوند از edgeCategory روی گراف/پیوند می‌آید
   useEffect(() => {
     let alive = true;
     apiGet<any>('/network/columns').then((d: any) => {
@@ -203,15 +203,15 @@ export default function Page() {
     }).catch(() => {});
     return () => { alive = false; };
   }, []);
-  // P2-2: SNA پیشرفته — تراکم/خوشه/PageRank/ایزوله/سوراخ ساختاری + پیشنهاد یال
+  // P2-2: SNA پیشرفته — تراکم/خوشه/PageRank/ایزوله/شکاف ارتباطی + پیشنهاد معرفی
   const loadSna = useCallback(async () => { try { setSna(await apiGet<any>('/network/sna')); } catch { /* بدون SNA هم گراف کار می‌کند */ } }, []);
   useEffect(() => { loadSna(); }, [loadSna]);
-  // P3-3: GNN سبک — پیش‌بینی یال/خوشه/مسیر گرم
+  // P3-3: GNN سبک — پیش‌بینی پیوند/خوشه/مسیر گرم
   useEffect(() => { apiGet<any>('/network/predict').then(setPredict).catch(() => {}); }, []);
   const acceptEdge = async (id: string) => {
     setSnaBusy(id);
     try { setSna(await apiPost<any>(`/network/edge-suggestions/${encodeURIComponent(id)}/accept`, {})); }
-    catch (e: any) { setError(e?.message || 'پذیرش یال ناموفق بود'); }
+    catch (e: any) { setError(e?.message || 'پذیرش پیوند ناموفق بود'); }
     finally { setSnaBusy(''); }
   };
   const [analysis, setAnalysis] = useState<any>(null);
@@ -236,6 +236,7 @@ export default function Page() {
     return () => { window.removeEventListener('keydown', f); document.body.style.overflow = ''; };
   }, [graphFs]);
   const [railTab, setRailTab] = useState<'overview' | 'relationships' | 'insights'>('overview');
+  const [view, setView] = useState<'overview' | 'analysis' | 'priorities'>('overview');
   const graphHandle = useRef<NetworkGraphHandle | null>(null);
 
   const [activities, setActivities] = useState<{ t: number; label: string }[]>([]);
@@ -497,6 +498,7 @@ export default function Page() {
     const node = graph?.nodes.find((n) => n.id === id) ?? null;
     setSelectedNode(node);
     setRailTab('overview');
+    setView('overview');
   };
 
   const onNodeSelect = useCallback((n: GNode | null) => {
@@ -581,7 +583,7 @@ export default function Page() {
   const derivedInsights: string[] = [];
   if (kpi.risk > 0) derivedInsights.push(`${kpi.risk} رابطه پرریسک (risk ≥ ${RISK_THRESHOLD}) در گراف بارگذاری‌شده شناسایی شد.`);
   if (kpi.opp > 0) derivedInsights.push(`${kpi.opp} رابطه راهبردی (امتیاز راهبردی ≥ 60) فرصت بالقوه در نظر گرفته می‌شود.`);
-  if (kpi.influencer) derivedInsights.push(`${nodeDisplayName(kpi.influencer)} با ${kpi.influencerDeg} پیوند، پرنفوذترین شخص در گراف بارگذاری‌شده است.`);
+  if (kpi.influencer) derivedInsights.push(`${nodeDisplayName(kpi.influencer)} با ${kpi.influencerDeg} پیوند، تأثیرگذارترین شخص در گراف بارگذاری‌شده است.`);
   if (path?.found) derivedInsights.push(`مسیر کوتاه/بهینه سازمانی با ${path.hops} پرش یافت شد.`);
   if (path && !path.found) derivedInsights.push(`مسیر سازمانی بین دو گره انتخاب‌شده یافت نشد.`);
   if (!derivedInsights.length) derivedInsights.push('هنوز الگوی قابل‌توجهی از گراف بارگذاری‌شده استخراج نشده است.');
@@ -603,7 +605,7 @@ export default function Page() {
           <div className="eyebrow">شبکه اطلاعاتی SRIP</div>
           <h1>شبکهٔ روابط</h1>
           <p className="subtitle">
-            گراف تعاملی روابط استراتژیک با فیلتر، مسیر و تحلیل ریسک/نفوذ. همه مقادیر از سرور واقعی با مجوز و محدودهٔ سازمانی محاسبه می‌شوند.
+            گراف تعاملی روابط استراتژیک با فیلتر، مسیر و تحلیل ریسک/تأثیرگذاری. همهٔ مقادیر از دادهٔ واقعیِ همان محدودهٔ سازمانی محاسبه می‌شوند.
           </p>
           <div className="net-stats-line">
             <span><b>{graph?.meta?.organizationCount ?? 0}</b> سازمان</span>
@@ -611,8 +613,8 @@ export default function Page() {
             <span><b>{graph?.meta?.projectCount ?? 0}</b> پروژه</span>
             <span><b>{graph?.meta?.relationshipCount ?? 0}</b> رابطه سازمانی</span>
             <span><b>{graph?.meta?.personRelationshipCount ?? 0}</b> رابطه شخص</span>
-            <span><b>{renderCounts.nodes}</b> گره رندر شده · <b>{renderCounts.edges}</b> یال رندر شده</span>
-            {orphanEdges > 0 ? <span style={{ color: 'var(--srip-danger)' }}>{orphanEdges} یال یتیم حذف شد</span> : null}
+            <span><b>{renderCounts.nodes}</b> گره رندر شده · <b>{renderCounts.edges}</b> پیوند رندر شده</span>
+            {orphanEdges > 0 ? <span style={{ color: 'var(--srip-danger)' }}>{orphanEdges} پیوند یتیم حذف شد</span> : null}
             {scopeId !== 'all' ? <span className="scope-badge">محدوده: {scopeId.slice(0, 8)}…</span> : null}
           </div>
         </div>
@@ -631,13 +633,34 @@ export default function Page() {
         </div>
       </section>
 
+      {/* منوی داخلی صفحه (v6) — صفحه را کوتاه و قابل‌پیمایش می‌کند */}
+      <nav className="net-nav" role="tablist" aria-label="بخش‌های صفحهٔ شبکه روابط">
+        {([
+          ['overview', 'نمای کلی', Network],
+          ['analysis', 'تحلیل و بینش', BrainCircuit],
+          ['priorities', 'اولویت‌ها و توصیه‌ها', Target],
+        ] as const).map(([k, label, Icon]) => (
+          <button
+            key={k}
+            role="tab"
+            aria-selected={view === k}
+            className={`net-nav-tab ${view === k ? 'active' : ''}`}
+            onClick={() => { if (view !== k) log(`بخش: ${label}`); setView(k); }}
+          >
+            <Icon size={14} /> <span>{label}</span>
+          </button>
+        ))}
+      </nav>
+
+      {view === 'analysis' && (
+        <>
       {/* 4-column network (P1-6): edgeCategory from /network/columns */}
       {columns && columns.length > 0 && (
         <section className="panel" style={{ margin: 0, marginBottom: 14 }} aria-label="ستون‌های شبکه">
           <div className="panel-title">
             <div>
               <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Network size={16} /> شبکهٔ چهارستونی</h2>
-              <p>ستون هر یال روی گراف از نوع سازمان مبدأ/مقصد تعیین می‌شود — برای پیمایش مسیر «داخل تیم ← مشتری ← هیئت» و حاکمیت معرف.</p>
+              <p>ستون هر پیوند روی گراف از نوع سازمان مبدأ/مقصد تعیین می‌شود — برای پیمایش مسیر «داخل تیم ← مشتری ← هیئت» و حاکمیت معرف.</p>
             </div>
             <Badge tone="info">{columns.length} ستون</Badge>
           </div>
@@ -645,8 +668,8 @@ export default function Page() {
             {columns.map((c: any) => (
               <div key={c.key} className="kpi-card" style={{ margin: 0 }}>
                 <small>{COLUMN_LABELS[c.key] ?? c.key}</small>
-                <strong>{fmtNum(c.nodeCount)} گره · {fmtNum(c.edgeCount)} یال</strong>
-                <span className="t-muted" style={{ fontSize: 10 }}>{c.key} — {c.edges?.length ? 'حاضر در گراف' : 'ستون خالی'}</span>
+                <strong>{fmtNum(c.nodeCount)} گره · {fmtNum(c.edgeCount)} پیوند</strong>
+                <span className="t-muted" style={{ fontSize: 11 }}>{c.key} — {c.edges?.length ? 'حاضر در گراف' : 'ستون خالی'}</span>
               </div>
             ))}
           </div>
@@ -659,20 +682,20 @@ export default function Page() {
           <div className="panel-title">
             <div>
               <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Layers size={16} /> تحلیل پیشرفته SNA</h2>
-              <p>تراکم، خوشه‌ها، PageRank، ایزوله‌ها و سوراخ‌های ساختاری — خروجی کاملاً قطعی از یال‌های همین گراف</p>
+              <p>تراکم، خوشه‌ها، PageRank، گره‌های منفرد و شکاف‌های ارتباطی — خروجی کاملاً قطعی از پیوند‌های همین گراف</p>
             </div>
             <Badge tone="info">تراکم سازمانی {fmtNum(sna.kpis?.densityOrg)}٪ · {fmtNum(sna.kpis?.componentCount)} مؤلفه</Badge>
           </div>
           <div className="kpi-grid" style={{ marginBottom: 10 }}>
             <div className="kpi-card" style={{ margin: 0 }}><small>تراکم (سازمانی)</small><strong>{fmtNum(sna.kpis?.densityOrg)}٪</strong></div>
             <div className="kpi-card" style={{ margin: 0 }}><small>تراکم کل گراف</small><strong>{fmtNum(sna.kpis?.densityFull)}٪</strong></div>
-            <div className="kpi-card" style={{ margin: 0 }}><small>ایزوله‌ها</small><strong>{fmtNum(sna.kpis?.isolatedCount)}</strong></div>
-            <div className="kpi-card" style={{ margin: 0 }}><small>یال پیشنهادی</small><strong>{fmtNum(sna.kpis?.proposedEdges)}</strong></div>
+            <div className="kpi-card" style={{ margin: 0 }}><small>گره‌های منفرد</small><strong>{fmtNum(sna.kpis?.isolatedCount)}</strong></div>
+            <div className="kpi-card" style={{ margin: 0 }}><small>پیوند پیشنهادی</small><strong>{fmtNum(sna.kpis?.proposedEdges)}</strong></div>
             <div className="kpi-card" style={{ margin: 0 }}><small>پذیرفته‌شده</small><strong>{fmtNum(sna.kpis?.acceptedEdges)}</strong></div>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {(sna.isolates ?? []).map((x: any) => (
-              <span key={x.node?.id} className="chip danger">ایزوله: {x.node?.label}</span>
+              <span key={x.node?.id} className="chip danger">منفرد: {x.node?.label}</span>
             ))}
             {(sna.clusters ?? []).map((c: any, i: number) => (
               <span key={c.id} className="chip neutral" title={c.nodes.map((n: any) => n.label).slice(0, 8).join('، ')}>
@@ -685,7 +708,7 @@ export default function Page() {
           </div>
           {(sna.structuralHoles ?? []).length > 0 && (
             <div style={{ marginTop: 12, display: 'grid', gap: 6 }}>
-              <b style={{ fontSize: 11.5 }}>پیشنهاد یال (معرفی از روی سوراخ ساختاری)</b>
+              <b style={{ fontSize: 12 }}>پیشنهاد معرفی (اتصال شکاف‌های ارتباطی)</b>
               {(sna.structuralHoles ?? []).map((h: any) => (
                 <div key={h.id} className="wf-alert" role="note" style={{ alignItems: 'center' }}>
                   <UserPlus size={14} />
@@ -694,7 +717,7 @@ export default function Page() {
                     <small className="t-muted" style={{ display: 'block' }}>{h.reason}</small>
                   </span>
                   {h.expectedValue > 0 && <span className="chip info">{fmtNum(h.expectedValue / 1e9)} میلیارد تومان</span>}
-                  <button className="btn btn-primary" style={{ minHeight: 0, padding: '5px 12px', fontSize: 10.5 }} disabled={snaBusy === h.id}
+                  <button className="btn btn-primary" style={{ minHeight: 0, padding: '5px 12px', fontSize: 12 }} disabled={snaBusy === h.id}
                     onClick={() => acceptEdge(h.id)}>
                     {snaBusy === h.id ? '…' : 'پذیرش و پیگیری معرفی'}
                   </button>
@@ -711,10 +734,10 @@ export default function Page() {
           <div className="panel-title">
             <div>
               <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><BrainCircuit size={16} /> پیش‌بینی شبکه (GNN سبک)</h2>
-              <p>پیش‌بینی یال بین سازمان‌های بی‌رابطه، خوشه‌های گراف و مسیر گرم به سازمان‌های دارای فرصت باز — همه قطعی و بدون مدل خارجی</p>
+              <p>پیش‌بینی پیوند بین سازمان‌های بی‌رابطه، خوشه‌های گراف و مسیر گرم به فرصت‌های باز — همه از روی داده‌های همان شبکه محاسبه شده‌اند</p>
             </div>
             <div className="toolbar">
-              <Badge tone="info">{fmtNum(predict.kpis?.predictedLinks)} یال پیش‌بینی‌شده</Badge>
+              <Badge tone="info">{fmtNum(predict.kpis?.predictedLinks)} پیوند پیش‌بینی‌شده</Badge>
               <Badge tone={predict.kpis?.warmPaths ? 'success' : 'neutral'}>{fmtNum(predict.kpis?.warmPaths)} مسیر گرم</Badge>
             </div>
           </div>
@@ -723,13 +746,13 @@ export default function Page() {
               <div key={l.id} className="kpi-card" style={{ margin: 0 }}>
                 <small>{l.fromOrgName} ↔ {l.toOrgName}</small>
                 <strong>{fmtNum(l.score)}</strong>
-                <span className="t-muted" style={{ fontSize: 10 }}>{(l.reason ?? []).join(' · ')}</span>
+                <span className="t-muted" style={{ fontSize: 11 }}>{(l.reason ?? []).join(' · ')}</span>
               </div>
             ))}
           </div>
           {(predict.warmPaths ?? []).length > 0 && (
             <div style={{ marginTop: 12 }}>
-              <b style={{ fontSize: 11.5 }}>مسیر گرم به فرصت‌های باز</b>
+              <b style={{ fontSize: 12 }}>مسیر گرم به فرصت‌های باز</b>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
                 {(predict.warmPaths ?? []).map((w: any) => (
                   <span key={w.organizationId} className={w.found ? 'chip success' : 'chip danger'} title={w.path?.join(' ← ') ?? ''}>
@@ -741,20 +764,42 @@ export default function Page() {
           )}
         </section>
       )}
+      {/* Full analysis sheet */}
+      {showAnalysis && (
+        <section className="card analysis-sheet">
+          <div className="net-detail-tabs" style={{ padding: '0 0 8px', background: 'none' }}>
+            <button className={analysisKind === 'centrality' ? 'active' : ''} onClick={() => runAnalysis('centrality')}>مرکزیت</button>
+            <button className={analysisKind === 'connectors' ? 'active' : ''} onClick={loadConnectors}>اتصال‌دهنده‌ها</button>
+            <button className={analysisKind === 'bridges' ? 'active' : ''} onClick={() => runAnalysis('bridges')}>افراد پل</button>
+            <button className={analysisKind === 'bottlenecks' ? 'active' : ''} onClick={() => runAnalysis('bottlenecks')}>گلوگاه‌ها</button>
+            <button className={analysisKind === 'single-points-of-failure' ? 'active' : ''} onClick={() => runAnalysis('single-points-of-failure')}>نقاط تک‌خطا</button>
+          </div>
+          <p className="muted">روی هر نتیجه کلیک کنید تا همان گره در گراف انتخاب شود.</p>
+          {analysis ? (
+            <div className="table-wrap">
+              {renderAnalysis(analysisKind || 'centrality', analysisList, selectAnalyticsNode, analysisNodeSet)}
+            </div>
+          ) : <Empty>برای نمایش تحلیل کامل، یکی از دکمه‌های بالا را اجرا کنید.</Empty>}
+        </section>
+      )}
+        </>
+      )}
 
+      {view === 'overview' && (
+        <>
       {/* Stats row */}
       <section className="stats-row" aria-label="شاخص‌های کلیدی شبکه">
         <div className="stat-card">
           <div className="st-top"><span className="st-ico ic-teal"><ShieldCheck size={14}/></span><span className="st-name">سلامت شبکه</span></div>
           <strong className="st-value">{kpi.graphHealth}%</strong>
           <AreaSpark id="sp-health" values={bucketize(renderedEdges.map((e) => (Number.isFinite(e.risk) && e.risk >= RISK_THRESHOLD ? 0 : 100)))} color="var(--teal)" />
-          <div className="st-foot"><span className="st-delta up">{kpi.health} کم‌خطر</span><span className="st-note">نسبت به {kpi.total} یال</span></div>
+          <div className="st-foot"><span className="st-delta up">{kpi.health} کم‌خطر</span><span className="st-note">نسبت به {kpi.total} پیوند</span></div>
         </div>
         <div className="stat-card">
           <div className="st-top"><span className="st-ico ic-blue"><Network size={14}/></span><span className="st-name">کل روابط</span></div>
           <strong className="st-value">{kpi.relationshipCount}</strong>
           <AreaSpark id="sp-rel" values={bucketize((graph?.nodes ?? []).map((n) => renderDegrees.get(n.id) ?? 0))} color="var(--blue)" />
-          <div className="st-foot"><span className="st-delta">{kpi.personRelationshipCount} شخص</span><span className="st-note">{renderedEdges.length} یال رندر</span></div>
+          <div className="st-foot"><span className="st-delta">{kpi.personRelationshipCount} شخص</span><span className="st-note">{renderedEdges.length} پیوند رندر</span></div>
         </div>
         <div className="stat-card">
           <div className="st-top"><span className="st-ico ic-indigo"><Lightbulb size={14}/></span><span className="st-name">فرصت‌ها</span></div>
@@ -769,7 +814,7 @@ export default function Page() {
           <div className="st-foot"><span className="st-delta down">{kpi.total ? Math.round((kpi.risk / kpi.total) * 100) : 0}%</span><span className="st-note">risk ≥ {RISK_THRESHOLD}</span></div>
         </div>
         <div className="stat-card">
-          <div className="st-top"><span className="st-ico ic-gold"><Zap size={14}/></span><span className="st-name">نفوذ</span></div>
+          <div className="st-top"><span className="st-ico ic-gold"><Zap size={14}/></span><span className="st-name">تأثیرگذاری</span></div>
           <strong className="st-value">{kpi.influencerDeg}</strong>
           <AreaSpark id="sp-inf" values={bucketize((graph?.nodes ?? []).map((n) => renderDegrees.get(n.id) ?? 0))} color="var(--gold)" />
           <div className="st-foot"><span className="st-delta">{kpi.influencer ? nodeDisplayName(kpi.influencer) : '—'}</span><span className="st-note">پیوندها</span></div>
@@ -854,8 +899,8 @@ export default function Page() {
             <div>
               <h2>شبکهٔ خوشه‌ای ارتباطات</h2>
               <div className="counts">
-                <b>{renderCounts.nodes}</b> گره نمایش داده شده · <b>{renderCounts.edges}</b> یال
-                {orphanEdges > 0 ? <span style={{ color: 'var(--srip-danger)' }}> · {orphanEdges} یالِ نامرتبط حذف شد</span> : null}
+                <b>{renderCounts.nodes}</b> گره نمایش داده شده · <b>{renderCounts.edges}</b> پیوند
+                {orphanEdges > 0 ? <span style={{ color: 'var(--srip-danger)' }}> · {orphanEdges} پیوندِ نامرتبط حذف شد</span> : null}
               </div>
             </div>
             <div className="net-graph-toolbar">
@@ -968,7 +1013,7 @@ export default function Page() {
                     const a = idToNode(e.source);
                     const b = idToNode(e.target);
                     const st = statusMeta(edgeStatus(e));
-                    return <>یالِ نشان‌شده: <b>{a ? nodeDisplayName(a) : e.source} ↔ {b ? nodeDisplayName(b) : e.target}</b> · {e.label ? fa(e.label) : kindLabel(e.kind)} · <span style={{ color: st.color }}>{st.label}</span>{e.kind === 'relationship' && Number.isFinite(e.risk) ? ` · ریسک ${e.risk}` : ''}</>;
+                    return <>پیوندِ نشان‌شده: <b>{a ? nodeDisplayName(a) : e.source} ↔ {b ? nodeDisplayName(b) : e.target}</b> · {e.label ? fa(e.label) : kindLabel(e.kind)} · <span style={{ color: st.color }}>{st.label}</span>{e.kind === 'relationship' && Number.isFinite(e.risk) ? ` · ریسک ${e.risk}` : ''}</>;
                   })()
                 : 'نشانگر را روی گره ببرید (کلیک = جزئیات) یا روی خط رابطه (انتخاب خط).'}
           </div>
@@ -1005,14 +1050,14 @@ export default function Page() {
                   );
                 })}
                 <span className="lg"><span className="sw line" style={{ background: '#94A3B8' }} />عضویت (شخص ← سازمان)</span>
-                <span className="lg"><span className="sw line" style={{ background: PATH_COLOR }} />یال مسیر</span>
+                <span className="lg"><span className="sw line" style={{ background: PATH_COLOR }} />پیوند مسیر</span>
               </div>
             </div>
           )}
         </div>
 
         {/* Right detail rail */}
-        <aside className="net-detail" aria-label="جزئیات گره / یال">
+        <aside className="net-detail" aria-label="جزئیات گره / پیوند">
           {selectedNode ? (
             <>
               <div className="net-detail-head">
@@ -1068,7 +1113,7 @@ export default function Page() {
                               {risky > 0 && <span className="rail-chip danger">⚠ {risky} پرریسک</span>}
                             </div>
                           ) : (
-                            <div className="t-muted" style={{ fontSize: 10.5 }}>یال رابطه‌ای برای این گره در گراف بارگذاری‌شده نیست.</div>
+                            <div className="t-muted" style={{ fontSize: 12 }}>پیوند رابطه‌ای برای این گره در گراف بارگذاری‌شده نیست.</div>
                           )}
                           {selectedNode.type === 'organization' && (
                             <div className="net-rail-actions">
@@ -1107,7 +1152,7 @@ export default function Page() {
                         );
                       })}
                     </div>
-                  ) : <div className="net-empty">یالی برای این گره در گراف بارگذاری‌شده یافت نشد.</div>
+                  ) : <div className="net-empty">پیوندی برای این گره در گراف بارگذاری‌شده یافت نشد.</div>
                 )}
                 {railTab === 'insights' && (
                   <>
@@ -1123,8 +1168,8 @@ export default function Page() {
                     )}
                     {kpi.influencer?.id === selectedNode.id && (
                       <div className="insight-card">
-                        <b>گره پرنفوذ</b>
-                        <p>پرنفوذترین شخص در گراف بارگذاری‌شده ({kpi.influencerDeg} پیوند).</p>
+                        <b>گره تأثیرگذار</b>
+                        <p>تأثیرگذارترین شخص در گراف بارگذاری‌شده ({kpi.influencerDeg} پیوند).</p>
                         <span className="derive">derived — از همان گراف بارگذاری‌شده</span>
                       </div>
                     )}
@@ -1206,8 +1251,8 @@ export default function Page() {
               <div className="net-detail-body">
                 <div className="net-kv">
                   <div className="kv"><small>سلامت گراف</small><strong>{kpi.graphHealth}%</strong></div>
-                  <div className="kv"><small>یال‌های پرریسک</small><strong style={{ color: kpi.risk ? 'var(--srip-danger)' : 'var(--srip-success)' }}>{kpi.risk}</strong></div>
-                  <div className="kv"><small>یال‌های راهبردی</small><strong>{kpi.opp}</strong></div>
+                  <div className="kv"><small>پیوند‌های پرریسک</small><strong style={{ color: kpi.risk ? 'var(--srip-danger)' : 'var(--srip-success)' }}>{kpi.risk}</strong></div>
+                  <div className="kv"><small>پیوند‌های راهبردی</small><strong>{kpi.opp}</strong></div>
                   <div className="kv"><small>روابط سازمان</small><strong>{kpi.relationshipCount}</strong></div>
                 </div>
                 <div className="insight-card">
@@ -1215,14 +1260,14 @@ export default function Page() {
                   {derivedInsights.slice(0, 3).map((d, i) => <p key={i}>{d}</p>)}
                   <span className="derive">derived — از گراف بارگذاری‌شده با Authorization واقعی</span>
                 </div>
-                <div className="net-empty">یک گره یا یال را در گراف انتخاب کنید تا جزئیات، روابط و بینش‌های آن را ببینید.</div>
+                <div className="net-empty">یک گره یا پیوند را در گراف انتخاب کنید تا جزئیات، روابط و بینش‌های آن را ببینید.</div>
               </div>
             </>
           )}
           <div className="net-detail-actions">
-            <button className="net-btn primary" onClick={() => setShowAnalysis((s) => !s)}>
-              {showAnalysis ? 'بستن تحلیل کامل' : 'مشاهدهٔ تحلیل کامل'}
-</button>
+            <button className="net-btn primary" onClick={() => { setShowAnalysis(true); setView('analysis'); }}>
+              تحلیل کامل شبکه
+            </button>
           </div>
         </aside>
           </div>
@@ -1246,8 +1291,12 @@ export default function Page() {
         </section>
       )}
         </div>
+        </div>
+        </>
+      )}
 
-        <aside className="content-side">
+      {view === 'priorities' && (
+        <aside className="content-side net-priorities">
       {/* Side rail */}
         <div className="list-card">
           <div className="lc-head"><span className="lc-ico ic-red"><Target size={14}/></span><h3>امروز در اولویت</h3><span className="lc-badge">{riskPriorities.length}</span></div>
@@ -1284,7 +1333,7 @@ export default function Page() {
                         : <Lightbulb size={14} style={{ flex: '0 0 auto', marginTop: 2, color: 'var(--srip-success)' }} />}
                     <b style={{ fontSize: 12, lineHeight: 1.7 }}>{r.text}</b>
                   </span>
-                  {r.sub && <span className="t-muted" style={{ fontSize: 10.5, lineHeight: 1.7 }}>{r.sub}</span>}
+                  {r.sub && <span className="t-muted" style={{ fontSize: 12, lineHeight: 1.7 }}>{r.sub}</span>}
                   {r.href && (
                     <Link href={r.href} style={{ alignSelf: 'flex-start', fontSize: 11, fontWeight: 800, color: 'var(--srip-accent-text)', textDecoration: 'none' }}>
                       مشاهدهٔ رابطه ←
@@ -1298,11 +1347,11 @@ export default function Page() {
             ))}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 2 }}>
-            <span className="t-muted" style={{ fontSize: 10.5 }}>تحلیل شبکه:</span>
-            <button className="net-btn" style={{ padding: '3px 9px', fontSize: 10.5 }} onClick={() => runAnalysis('centrality')}>مرکزیت</button>
-            <button className="net-btn" style={{ padding: '3px 9px', fontSize: 10.5 }} onClick={loadConnectors}>اتصال‌دهنده‌ها</button>
-            <button className="net-btn" style={{ padding: '3px 9px', fontSize: 10.5 }} onClick={() => runAnalysis('bridges')}>افراد پل</button>
-            <button className="net-btn" style={{ padding: '3px 9px', fontSize: 10.5 }} onClick={() => runAnalysis('bottlenecks')}>گلوگاه‌ها</button>
+            <span className="t-muted" style={{ fontSize: 12 }}>تحلیل شبکه:</span>
+            <button className="net-btn" style={{ padding: '3px 9px', fontSize: 12 }} onClick={() => runAnalysis('centrality')}>مرکزیت</button>
+            <button className="net-btn" style={{ padding: '3px 9px', fontSize: 12 }} onClick={loadConnectors}>اتصال‌دهنده‌ها</button>
+            <button className="net-btn" style={{ padding: '3px 9px', fontSize: 12 }} onClick={() => runAnalysis('bridges')}>افراد پل</button>
+            <button className="net-btn" style={{ padding: '3px 9px', fontSize: 12 }} onClick={() => runAnalysis('bottlenecks')}>گلوگاه‌ها</button>
           </div>
         </div>
         <div className="list-card">
@@ -1325,7 +1374,7 @@ export default function Page() {
           همه مقادیر از سرور واقعی با مجوز سازمانی گرفته شده‌اند؛ هیچ داده نمایشی/جعلی اضافه نشده است.
         </div>
         </aside>
-      </div>
+        )}
 
       {typeof document !== 'undefined' && graphFs
         ? createPortal(
@@ -1335,7 +1384,7 @@ export default function Page() {
                   <Network size={16} />
                   <div>
                     <b>شبکهٔ خوشه‌ای ارتباطات</b>
-                    <span className="counts">{renderCounts.nodes} گره · {renderCounts.edges} یال</span>
+                    <span className="counts">{renderCounts.nodes} گره · {renderCounts.edges} پیوند</span>
                   </div>
                 </div>
                 <div className="net-graph-toolbar">

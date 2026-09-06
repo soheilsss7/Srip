@@ -739,57 +739,103 @@ textarea{resize:vertical}
 .demo-chip{background:linear-gradient(90deg,#f59e0b,#e58a06);color:#111;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:800;white-space:nowrap}
 
 /* ==========================================================================
-   NETWORK PAGE (v3) — mockup layout: stats-row / panels-row / content-side
+   NETWORK PAGE (v6) — شبکهٔ روابط، فشرده و تخصصی
+   --------------------------------------------------------------------------
+   v6: منوی داخلی (نمای کلی / تحلیل / اولویت‌ها) → صفحه کوتاه، تایپوگرافی
+   بزرگ‌تر و منظم، کارت‌های شاخص فشرده، جزئیات شبکه با اولویت محتوا.
    ========================================================================== */
-.net-page{display:flex;flex-direction:column;gap:16px}
-.net-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap}
-.net-head h1{margin:4px 0 8px;font-size:30px;font-weight:800;color:var(--text-primary)}
-.net-head .subtitle{margin:0;color:var(--text-muted);font-size:12.5px;max-width:720px;line-height:1.7}
-.net-stats-line{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:var(--text-muted)}
-.net-stats-line b{color:var(--text-primary)}
+.net-page{display:flex;flex-direction:column;gap:14px;max-width:1560px}
+.net-head{display:flex;flex-direction:column;gap:10px}
+.net-head .eyebrow{font-size:10.5px;font-weight:800;color:var(--srip-accent-text);letter-spacing:.02em}
+.net-head h1{margin:2px 0 2px;font-size:26px;font-weight:800;color:var(--text-primary);line-height:1.3}
+.net-head .subtitle{margin:0;color:var(--text-muted);font-size:12.5px;max-width:780px;line-height:1.9}
+.net-head .net-tabs{align-self:flex-start;margin-top:4px}
+
+/* پیل‌های آمار بالای صفحه */
+.net-stats-line{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;font-size:11.5px;color:var(--text-secondary)}
+.net-stats-line>span{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:999px;
+  background:var(--card-bg);border:1px solid var(--card-border);box-shadow:var(--shadow-sm);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.net-stats-line b{color:var(--text-primary);font-weight:800}
+
+/* منوی داخلی صفحه (v6) */
+.net-nav{display:flex;gap:4px;padding:4px;width:max-content;max-width:100%;overflow-x:auto;
+  background:var(--card-bg-soft);border:1px solid var(--card-border);border-radius:13px;
+  box-shadow:var(--shadow-sm);scrollbar-width:none}
+.net-nav::-webkit-scrollbar{display:none}
+.net-nav-tab{display:inline-flex;align-items:center;gap:7px;border:0;background:transparent;cursor:pointer;
+  padding:9px 16px;border-radius:10px;font-size:12px;font-weight:800;color:var(--text-muted);
+  white-space:nowrap;min-height:38px;transition:background .12s,color .12s}
+.net-nav-tab:hover{color:var(--text-primary);background:color-mix(in srgb,var(--card-bg) 70%,transparent)}
+.net-nav-tab.active{background:var(--card-bg);color:var(--srip-accent-text);box-shadow:var(--shadow-sm);
+  border:1px solid var(--card-border-strong)}
+.net-nav-tab svg{flex:0 0 auto}
+
+/* تب‌های نوع گره */
 .net-tabs{display:flex;gap:4px;background:var(--card-bg-soft);border:1px solid var(--card-border);border-radius:var(--radius-md);padding:4px;width:max-content;max-width:100%;overflow:auto}
 .net-tabs .tab{border:0;background:transparent;color:var(--text-muted);border-radius:var(--radius-sm);padding:8px 16px;font-size:12px;font-weight:800;white-space:nowrap;cursor:pointer;min-height:34px}
 .net-tabs .tab:hover{color:var(--text-primary)}
 .net-tabs .tab.active{background:var(--card-bg);color:var(--srip-accent-text);box-shadow:var(--shadow-sm);border:1px solid var(--card-border-strong)}
 
-/* Stats row — 5 col, mockup .stat-card ----------------------------------- */
-.stats-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
-.stat-card{
-  background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius-md);
-  padding:15px 16px 13px;display:flex;flex-direction:column;gap:9px;min-width:0;
-  box-shadow:var(--shadow-sm);transition:transform .15s ease,box-shadow .15s ease;
-}
-.stat-card:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
-.stat-card .st-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.stat-card .st-ico{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;flex:0 0 auto}
-.stat-card .st-ico svg{width:16px;height:16px}
+/* کارت‌های شاخص (KPI) */
+.stats-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.stat-card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius-lg);
+  padding:14px 16px 12px;display:flex;flex-direction:column;gap:8px;min-width:0;
+  box-shadow:var(--shadow-sm);transition:transform .15s ease,box-shadow .15s ease,border-color .15s}
+.stat-card:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:var(--card-border-strong)}
+.stat-card .st-top{display:flex;align-items:center;gap:8px}
+.stat-card .st-ico{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;flex:0 0 auto}
+.stat-card .st-ico svg{width:15px;height:15px}
 .stat-card .st-ico.ic-teal{background:color-mix(in srgb,var(--teal) 14%,transparent);color:var(--teal)}
 .stat-card .st-ico.ic-blue{background:color-mix(in srgb,var(--blue) 14%,transparent);color:var(--blue)}
-.stat-card .st-ico.ic-purple{background:color-mix(in srgb,var(--purple) 14%,transparent);color:var(--purple)}
+.stat-card .st-ico.ic-indigo{background:color-mix(in srgb,var(--indigo) 14%,transparent);color:var(--indigo)}
 .stat-card .st-ico.ic-red{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--red)}
 .stat-card .st-ico.ic-gold{background:color-mix(in srgb,var(--gold) 15%,transparent);color:var(--orange)}
-.stat-card .st-name{font-size:11px;color:var(--text-muted);font-weight:700}
-.stat-card .st-value{font-size:30px;font-weight:800;letter-spacing:-.02em;line-height:1;color:var(--text-primary);font-variant-numeric:tabular-nums}
-.stat-card .spark{height:30px;width:100%}
+.stat-card .st-name{font-size:11.5px;color:var(--text-secondary);font-weight:700}
+.stat-card .st-value{font-size:27px;font-weight:800;letter-spacing:-.02em;line-height:1;color:var(--text-primary);font-variant-numeric:tabular-nums}
+.stat-card .spark{height:28px;width:100%}
 .stat-card .st-foot{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-top:auto;padding-top:4px}
-.stat-card .st-delta{font-size:10px;font-weight:800;border-radius:999px;padding:3px 9px;min-width:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1;font-variant-numeric:tabular-nums}
+.stat-card .st-delta{font-size:10.5px;font-weight:800;border-radius:999px;padding:3px 9px;min-width:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1;font-variant-numeric:tabular-nums}
 .stat-card .st-delta.up{color:var(--green);background:color-mix(in srgb,var(--green) 12%,transparent)}
 .stat-card .st-delta.down{color:var(--red);background:color-mix(in srgb,var(--red) 12%,transparent)}
 .stat-card .st-delta.flat{color:var(--text-muted);background:var(--card-bg-soft)}
-.stat-card .st-note{font-size:10px;color:var(--text-muted);line-height:1.4}
+.stat-card .st-note{font-size:10.5px;color:var(--text-muted);line-height:1.4}
 
-/* Filters ---------------------------------------------------------------- */
-.net-filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius-lg);padding:11px 13px;box-shadow:var(--shadow-sm)}
-.net-filters input[type="search"]{flex:1;min-width:180px}
-.net-filters select{max-width:200px}
+/* پنل‌های تحلیل (شبکهٔ چهارستونی / SNA / GNN) */
+.net-page .panel{background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-sm);padding:16px 18px}
+.net-page .panel .panel-title h2{font-size:15px;font-weight:800;margin:0;color:var(--text-primary)}
+.net-page .panel .panel-title p{font-size:11.5px;color:var(--text-muted);line-height:1.8;margin:5px 0 0;max-width:72ch}
+.attr-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.attr-grid .kpi-card{background:var(--card-bg-soft);border:1px solid var(--card-border);border-radius:12px;
+  padding:12px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.attr-grid .kpi-card small{font-size:11px;color:var(--text-secondary);font-weight:700;overflow-wrap:anywhere}
+.attr-grid .kpi-card strong{font-size:14px;font-weight:800;color:var(--text-primary);font-variant-numeric:tabular-nums}
+.attr-grid .kpi-card .t-muted{font-size:11px!important}
+.net-page .panel .toolbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.net-page .panel .toolbar .badge,.net-page .panel>div>.badge{font-size:11px}
+
+/* پیام‌های پیشنهاد/هشدار داخل پنل تحلیل */
+.wf-alert{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--card-bg-soft);
+  border:1px solid var(--card-border);border-radius:12px;padding:10px 13px;font-size:12px}
+.wf-alert svg{flex:0 0 auto;color:var(--srip-accent-text)}
+.wf-alert b{font-size:12.5px}
+.wf-alert small{font-size:11px;line-height:1.7}
+
+/* فیلترها */
+.net-filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:var(--card-bg);
+  border:1px solid var(--card-border);border-radius:var(--radius-lg);padding:12px 14px;box-shadow:var(--shadow-sm)}
+.net-filters input[type="search"]{flex:1;min-width:200px;min-height:37px;border-radius:10px}
+.net-filters select{max-width:210px;min-height:37px;border-radius:10px}
+.net-filters .net-btn{min-height:37px}
 .active-filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .active-filters>small{color:var(--text-muted);font-size:11px}
 .filter-chip{display:inline-flex;align-items:center;gap:6px;background:var(--srip-accent-soft);color:var(--srip-accent-text);border-radius:999px;padding:5px 12px;font-size:11px;font-weight:800}
 .filter-chip button{border:0;background:none;cursor:pointer;padding:0;color:inherit;font-size:13px;line-height:1}
 
-/* Status chips (relationship status filter) ------------------------------ */
+/* چیپ‌های وضعیت */
 .status-chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.status-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:999px;border:1px solid var(--card-border,#E3E8F0);background:#fff;font-size:11px;font-weight:700;cursor:pointer;color:var(--srip-text,#1F2937);transition:all .15s ease;line-height:1}
+.status-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid var(--card-border,#E3E8F0);background:#fff;font-size:11.5px;font-weight:700;cursor:pointer;color:var(--srip-text,#1F2937);transition:all .15s ease;line-height:1;min-height:32px}
 .status-chip:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 10px -4px rgba(15,23,42,.18)}
 .status-chip:disabled{opacity:.45;cursor:not-allowed}
 .status-chip.active{color:#fff;box-shadow:0 4px 12px -4px rgba(15,23,42,.25)}
@@ -798,95 +844,114 @@ textarea{resize:vertical}
 .status-count{background:rgba(15,23,42,.07);border-radius:999px;padding:0 6px;font-size:10px;font-weight:800;min-width:16px;text-align:center}
 .status-chip.active .status-count{background:rgba(255,255,255,.22);color:#fff}
 
-/* Legend counts */
-.lg-count{background:var(--srip-accent-soft,#EEF2FF);border-radius:999px;padding:0 6px;font-size:10px;color:var(--srip-accent-text,#4338CA);margin-inline-start:2px}
-
-/* Edge detail — score banner & bars -------------------------------------- */
-.score-banner{display:flex;align-items:center;gap:10px;border-radius:12px;padding:10px 12px;margin-bottom:12px}
-.score-banner>div{display:flex;flex-direction:column;gap:1px}
-.score-banner b{font-size:13px}
-.score-banner small{font-size:10px;color:var(--text-muted,#6B7280)}
-.score-banner .status-type{margin-inline-start:auto;font-size:10px;font-weight:800;color:var(--text-muted,#6B7280);background:rgba(255,255,255,.7);border-radius:999px;padding:4px 9px;border:1px solid var(--card-border,#E3E8F0)}
-.score-bars{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
-.score-bar{display:grid;grid-template-columns:92px 1fr 30px;gap:8px;align-items:center;font-size:11px;color:var(--srip-text-2,#4B5563)}
-.score-bar .bar{height:6px;border-radius:999px;background:#EDF0F6;overflow:hidden}
-.score-bar .bar>i{display:block;height:100%;border-radius:999px;transition:width .3s ease}
-.score-bar b{font-size:11px;text-align:end;color:var(--srip-text,#1F2937)}
-
-/* Content grid: main (1fr) + side rail (296px) --------------------------- */
-.content-grid{display:grid;grid-template-columns:minmax(0,1fr) 296px;gap:16px;align-items:start}
+/* چیدمان اصلی: گراف + جزئیات */
+.content-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
 .content-main{display:flex;flex-direction:column;gap:16px;min-width:0}
 .content-side{display:flex;flex-direction:column;gap:14px;min-width:0}
+.panels-row{display:grid;grid-template-columns:minmax(0,1.9fr) minmax(300px,360px);gap:14px;align-items:stretch}
 
-/* Panels row: network canvas (1.62fr) + company detail (1fr) ------------- */
-.panels-row{display:grid;grid-template-columns:minmax(0,1.62fr) minmax(300px,1fr);gap:16px;align-items:stretch}
-.net-graph-shell{background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);overflow:hidden;display:flex;flex-direction:column;min-width:0}
-.net-graph-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--card-border);flex-wrap:wrap}
-.net-graph-head h2{margin:0;font-size:15px}
-.net-graph-head .counts{font-size:11px;color:var(--text-muted)}
+/* پوستهٔ گراف */
+.net-graph-shell{background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-sm);overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.net-graph-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--card-border);flex-wrap:wrap}
+.net-graph-head h2{margin:0;font-size:15.5px;font-weight:800}
+.net-graph-head .counts{font-size:11.5px;color:var(--text-muted)}
 .net-graph-head .counts b{color:var(--text-primary);font-variant-numeric:tabular-nums}
 .net-graph-toolbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.net-btn{border:1px solid var(--card-border-strong);background:var(--card-bg);color:var(--text-secondary);border-radius:var(--radius-sm);padding:6px 11px;font-size:11px;font-weight:800;cursor:pointer;min-height:32px;display:inline-flex;align-items:center;gap:6px}
+.net-btn{border:1px solid var(--card-border-strong);background:var(--card-bg);color:var(--text-secondary);
+  border-radius:9px;padding:6px 12px;font-size:11.5px;font-weight:800;cursor:pointer;min-height:33px;
+  display:inline-flex;align-items:center;gap:6px;transition:border-color .12s,color .12s}
 .net-btn:hover{border-color:var(--srip-accent);color:var(--srip-accent-text)}
-.net-btn.primary{background:var(--srip-accent);border-color:var(--srip-accent);color:#fff}
-.net-btn.primary:hover{background:var(--srip-accent-strong)}
+.net-btn.primary{background:linear-gradient(135deg,#5b6ef5,#7c5cf6);border-color:transparent;color:#fff}
+.net-btn.primary:hover{background:linear-gradient(135deg,#4b5ee5,#6a4ce6)}
 .net-badge{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;color:var(--text-muted)}
 .net-badge-dot{width:7px;height:7px;border-radius:50%}
 
-.net-graph-zone{position:relative;background:var(--bg-canvas);aspect-ratio:800/380;min-height:300px;overflow:hidden}
+.net-graph-zone{position:relative;background:var(--bg-canvas);aspect-ratio:800/400;min-height:330px;overflow:hidden}
 .net-graph-zone::before{content:'';position:absolute;inset:0;background-image:radial-gradient(var(--card-border-strong) 1px,transparent 1px);background-size:22px 22px;opacity:.5;pointer-events:none}
-.net-hover-line{font-size:11px;color:var(--text-muted);padding:8px 14px;border-top:1px solid var(--card-border);min-height:34px}
+.net-hover-line{font-size:11.5px;color:var(--text-muted);padding:9px 16px;border-top:1px solid var(--card-border);min-height:36px;line-height:1.8}
 
-.net-path-tool{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:11px 14px;border-top:1px solid var(--card-border);background:var(--card-bg-soft)}
-.net-path-tool .net-btn select{background:transparent}
-.net-path-result{padding:10px 14px;border-top:1px solid var(--card-border);font-size:12px}
+/* ابزار مسیر */
+.net-path-tool{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:11px 16px;
+  border-top:1px solid var(--card-border);background:var(--card-bg-soft)}
+.net-path-tool>span{font-size:11.5px;font-weight:800;color:var(--text-secondary)}
+.net-path-tool select{min-height:33px;border-radius:9px;font-size:11.5px}
+.net-path-tool .net-btn{min-height:33px}
+.net-path-result{padding:11px 16px;border-top:1px solid var(--card-border);font-size:12px}
 .net-path-result.found{color:var(--srip-success);font-weight:800}
 .net-path-result.notfound{color:var(--srip-danger)}
+.net-path-chain{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-top:8px}
+.net-path-chain .pc{display:inline-flex;align-items:center;background:var(--card-bg);border:1px solid var(--card-border-strong);
+  border-radius:999px;padding:2px 10px;font-size:10.5px;font-weight:700;white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis}
+.net-path-chain .pc-arrow{color:#B45309;font-weight:900;font-style:normal;font-size:11px}
+.net-path-chain .pc-hops{background:linear-gradient(135deg,#B45309,#D97706);color:#fff;border-color:transparent}
 
-.net-legend{display:flex;flex-wrap:wrap;gap:14px;padding:11px 14px;border-top:1px solid var(--card-border);background:var(--card-bg-soft);font-size:11px;color:var(--text-muted)}
+/* راهنما */
+.net-legend{display:flex;flex-wrap:wrap;gap:14px;padding:11px 16px;border-top:1px solid var(--card-border);
+  background:var(--card-bg-soft);font-size:11.5px;color:var(--text-muted)}
 .net-legend legend{display:contents}
+.net-legend strong{font-size:11px;color:var(--text-secondary)}
 .net-legend .lg{display:flex;align-items:center;gap:6px}
 .net-legend .sw{width:12px;height:12px;border-radius:3px;display:inline-block}
-.net-legend .sw.round{border-radius:50%}
 .net-legend .sw.line{height:3px;border-radius:2px;width:20px}
+.lg-count{background:var(--srip-accent-soft,#EEF2FF);border-radius:999px;padding:0 6px;font-size:10px;color:var(--srip-accent-text,#4338CA);margin-inline-start:2px}
 
-/* Company detail card ---------------------------------------------------- */
-.net-detail{background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;overflow:hidden;min-width:0}
+/* جزئیات گره / یال */
+.net-detail{background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-sm);display:flex;flex-direction:column;overflow:hidden;min-width:0}
 .net-detail-head{padding:14px 16px;border-bottom:1px solid var(--card-border);display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
-.net-detail-head h3{margin:0;font-size:15px}
-.net-detail-head .kind{font-size:11px;color:var(--text-muted);margin-top:2px}
+.net-detail-head h3{margin:0;font-size:15px;font-weight:800}
+.net-detail-head .kind{font-size:11px;color:var(--text-muted);margin-top:3px}
 .net-detail-tabs{display:flex;gap:2px;padding:7px 12px 0;border-bottom:1px solid var(--card-border);background:var(--card-bg-soft)}
-.net-detail-tabs button{border:0;background:transparent;padding:8px 13px;font-size:11.5px;font-weight:800;color:var(--text-muted);border-bottom:2px solid transparent;cursor:pointer;min-height:34px;border-radius:0}
+.net-detail-tabs button{border:0;background:transparent;padding:8px 13px;font-size:11.5px;font-weight:800;color:var(--text-muted);border-bottom:2px solid transparent;cursor:pointer;min-height:36px;border-radius:0}
 .net-detail-tabs button.active{color:var(--srip-accent-text);border-bottom-color:var(--srip-accent)}
 .net-detail-body{padding:13px 15px;overflow-y:auto;display:flex;flex-direction:column;gap:11px;flex:1}
 .net-field{display:flex;flex-direction:column;gap:2px}
 .net-field small{font-size:10px;color:var(--text-muted)}
 .net-field strong{font-size:12.5px;overflow-wrap:break-word}
 .net-kv{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.net-kv .kv{background:var(--card-bg-soft);border:1px solid var(--card-border);border-radius:var(--radius-sm);padding:8px 10px;display:flex;flex-direction:column;gap:2px}
-.net-kv .kv small{font-size:9.5px;color:var(--text-muted)}
-.net-kv .kv strong{font-size:13px;font-variant-numeric:tabular-nums}
-.net-empty{color:var(--text-muted);font-size:12px;text-align:center;padding:26px 12px;border:1px dashed var(--card-border-strong);border-radius:var(--radius-md)}
-.insight-card{background:var(--ai-box-bg);border:1px solid var(--ai-box-border);border-radius:var(--radius-md);padding:12px 14px;font-size:12px}
-.insight-card b{color:var(--purple-soft);font-size:11px;display:block;margin-bottom:4px;font-weight:800}
-.insight-card p{color:var(--text-secondary);line-height:1.7}
-.insight-card .derive{font-size:9.5px;color:var(--text-muted);display:block;margin-top:6px}
+.net-kv .kv{background:var(--card-bg-soft);border:1px solid var(--card-border);border-radius:10px;padding:9px 11px;display:flex;flex-direction:column;gap:2px}
+.net-kv .kv small{font-size:10px;color:var(--text-muted)}
+.net-kv .kv strong{font-size:13.5px;font-variant-numeric:tabular-nums}
+.net-kv .kv.kv-wide{grid-column:1/-1}
+.net-empty{color:var(--text-muted);font-size:12px;text-align:center;padding:26px 12px;border:1px dashed var(--card-border-strong);border-radius:12px}
+.insight-card{background:var(--ai-box-bg);border:1px solid var(--ai-box-border);border-radius:12px;padding:13px 15px;font-size:12px}
+.insight-card b{color:var(--purple-soft);font-size:11.5px;display:block;margin-bottom:5px;font-weight:800}
+.insight-card p{color:var(--text-secondary);line-height:1.9;font-size:12px}
+.insight-card .derive{font-size:10px;color:var(--text-muted);display:block;margin-top:7px}
 .net-detail-actions{display:flex;gap:8px;flex-wrap:wrap;padding:11px 14px;border-top:1px solid var(--card-border)}
 .net-entity-nav{display:grid;gap:6px}
-.net-entity-nav .en{display:flex;justify-content:space-between;align-items:center;gap:8px;border:1px solid var(--card-border);background:var(--card-bg-soft);border-radius:var(--radius-sm);padding:8px 10px;font-size:11.5px}
+.net-entity-nav .en{display:flex;justify-content:space-between;align-items:center;gap:8px;border:1px solid var(--card-border);background:var(--card-bg-soft);border-radius:10px;padding:9px 11px;font-size:12px}
 .net-entity-nav .en small{color:var(--text-muted)}
 .net-entity-nav .en a{color:var(--srip-accent-text);font-weight:800;font-size:11px}
 
-/* AI insight score (mockup .score-track) -------------------------------- */
-.ai-score{display:flex;align-items:center;gap:10px;margin-top:4px}
-.ai-score .track{flex:1;height:6px;border-radius:999px;background:var(--card-bg);overflow:hidden}
-.ai-score .fill{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--purple),var(--blue))}
-.ai-score b{font-size:12px;font-variant-numeric:tabular-nums;color:var(--purple-soft)}
-.ai-full-btn{display:inline-flex;align-items:center;gap:6px;border-radius:var(--radius-md);background:linear-gradient(135deg,var(--purple),var(--indigo));color:#fff;padding:9px 13px;font-size:11.5px;font-weight:800;border:0;cursor:pointer;justify-content:center}
+/* ریل جزئیات — چیپ‌های وضعیت */
+.net-rail-block{display:flex;flex-direction:column;gap:9px}
+.net-rail-chips{display:flex;flex-wrap:wrap;gap:5px}
+.rail-chip{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:800;padding:3px 10px;border-radius:999px;border:1px solid transparent}
+.rail-chip i{width:6px;height:6px;border-radius:50%;display:inline-block}
+.rail-chip.danger{color:var(--srip-danger);border-color:color-mix(in srgb,var(--srip-danger) 40%,transparent);background:color-mix(in srgb,var(--srip-danger) 8%,transparent)}
+.net-rail-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.net-rail-actions .ra-label{font-size:11px;font-weight:800;color:var(--text-muted)}
+.net-rail-actions .net-btn{min-height:28px;padding:2px 11px;font-size:10.5px;border-radius:9px}
 
-/* Side rail list cards --------------------------------------------------- */
-.net-bottom{display:flex;flex-direction:column;gap:14px}
-.list-card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);padding:14px 15px;display:flex;flex-direction:column;gap:10px;min-width:0}
+/* امتیازها (جزئیات یال) */
+.score-banner{display:flex;align-items:center;gap:10px;border-radius:12px;padding:10px 12px;margin-bottom:12px}
+.score-banner>div{display:flex;flex-direction:column;gap:1px}
+.score-banner b{font-size:13px}
+.score-banner small{font-size:10.5px;color:var(--text-muted,#6B7280)}
+.score-banner .status-type{margin-inline-start:auto;font-size:10.5px;font-weight:800;color:var(--text-muted,#6B7280);background:rgba(255,255,255,.7);border-radius:999px;padding:4px 9px;border:1px solid var(--card-border,#E3E8F0)}
+.score-bars{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.score-bar{display:grid;grid-template-columns:96px 1fr 32px;gap:8px;align-items:center;font-size:11.5px;color:var(--srip-text-2,#4B5563)}
+.score-bar .bar{height:6px;border-radius:999px;background:#EDF0F6;overflow:hidden}
+.score-bar .bar>i{display:block;height:100%;border-radius:999px;transition:width .3s ease}
+.score-bar b{font-size:11.5px;text-align:end;color:var(--srip-text,#1F2937)}
+
+/* برگهٔ اولویت‌ها و توصیه‌ها */
+.net-priorities{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start}
+.net-priorities .footer-note{grid-column:1/-1}
+.list-card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-sm);padding:16px 17px;display:flex;flex-direction:column;gap:10px;min-width:0}
 .list-card .lc-head{display:flex;align-items:center;gap:9px}
 .list-card .lc-ico{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;flex:0 0 auto}
 .list-card .lc-ico svg{width:15px;height:15px}
@@ -896,20 +961,25 @@ textarea{resize:vertical}
 .list-card .lc-ico.ic-red{background:color-mix(in srgb,var(--red) 13%,transparent);color:var(--red)}
 .list-card .lc-ico.ic-gold{background:color-mix(in srgb,var(--gold) 14%,transparent);color:var(--orange)}
 .list-card .lc-ico.ic-indigo{background:color-mix(in srgb,var(--indigo) 13%,transparent);color:var(--indigo)}
-.list-card h3{margin:0;font-size:13px;font-weight:800;color:var(--text-primary);flex:1}
-.list-card .lc-badge{font-size:10px;font-weight:800;color:var(--text-muted);background:var(--card-bg-soft);border:1px solid var(--card-border);border-radius:999px;padding:2px 8px;font-variant-numeric:tabular-nums}
-.list-card .panel-note{font-size:10.5px;color:var(--text-muted);line-height:1.6;margin:0;order:2}
+.list-card h3{margin:0;font-size:13.5px;font-weight:800;color:var(--text-primary);flex:1}
+.list-card .lc-badge{font-size:10.5px;font-weight:800;color:var(--text-muted);background:var(--card-bg-soft);border:1px solid var(--card-border);border-radius:999px;padding:2px 9px;font-variant-numeric:tabular-nums}
+.list-card .panel-note{font-size:11px;color:var(--text-muted);line-height:1.8;margin:0;order:2}
 .item-list{display:grid;gap:7px}
-.item{display:flex;justify-content:space-between;align-items:center;gap:8px;border:1px solid var(--card-border);background:var(--card-bg-soft);border-radius:10px;padding:8px 10px;font-size:11.5px;cursor:pointer;text-align:right;transition:border-color .12s;width:100%}
+.item{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--card-border);
+  background:var(--card-bg-soft);border-radius:11px;padding:9px 11px;font-size:12px;cursor:pointer;text-align:right;
+  transition:border-color .12s;width:100%}
 .item:hover{border-color:var(--srip-accent)}
-.item b{font-size:11.5px;color:var(--text-primary)}
-.item small{color:var(--text-muted);font-size:10px}
-.item .meta{color:var(--srip-danger);font-weight:800;font-size:10px;white-space:nowrap;font-variant-numeric:tabular-nums}
-.activity{font-size:11px;color:var(--text-secondary);border-inline-start:2px solid var(--srip-accent);padding:2px 8px;line-height:1.55}
-.activity time{color:var(--text-muted);font-size:10px;margin-inline-start:6px;direction:ltr;display:inline-block}
-.footer-note{font-size:10.5px;color:var(--text-muted);line-height:1.7;border:1px dashed var(--card-border-strong);border-radius:var(--radius-md);padding:10px 12px;background:var(--card-bg-soft)}
+.item b{font-size:12.5px;color:var(--text-primary);line-height:1.7}
+.item small{color:var(--text-muted);font-size:11px}
+.item .meta{color:var(--srip-danger);font-weight:800;font-size:10.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.activity{font-size:11.5px;color:var(--text-secondary);border-inline-start:2px solid var(--srip-accent);padding:3px 9px;line-height:1.8}
+.activity time{color:var(--text-muted);font-size:10.5px;margin-inline-start:6px;direction:ltr;display:inline-block}
+.footer-note{font-size:11px;color:var(--text-muted);line-height:1.8;border:1px dashed var(--card-border-strong);
+  border-radius:12px;padding:11px 13px;background:var(--card-bg-soft)}
 .footer-note a{color:var(--srip-accent-text);font-weight:800}
 .analysis-sheet{margin-top:0;border-top:1px solid var(--card-border);padding-top:14px}
+.analysis-sheet .net-detail-tabs{background:none;padding:0 0 8px}
+.analysis-sheet .muted{font-size:11.5px}
 
 /* --------------------------------------------------------------------------
    RESPONSIVE
@@ -2713,4 +2783,48 @@ html,body{overflow-x:clip;max-width:100%}
     padding:18px 16px calc(18px + env(safe-area-inset-bottom));animation:sheetUp .2s ease}
   .dict-card,.tour-card{margin:0}
   @keyframes sheetUp{from{opacity:.4;transform:translateY(24px)}to{opacity:1;transform:none}}
+}
+
+/* ==========================================================================
+   NETWORK PAGE v6 — responsive (باید آخرین بلوکِ شبکه بماند)
+   ========================================================================== */
+@media(max-width:1400px){
+  .net-priorities{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .net-priorities .footer-note{grid-column:1/-1}
+}
+@media(max-width:900px){
+  .net-head h1{font-size:22px}
+  .net-stats-line>span{padding:4px 9px;font-size:11px}
+  .net-nav{width:100%}
+  .net-nav-tab{flex:1 1 0;justify-content:center;padding:9px 10px}
+  .net-filters{flex-direction:column;align-items:stretch}
+  .net-filters input[type="search"],.net-filters select{max-width:none;width:100%}
+  .net-filters .net-btn{align-items:center;justify-content:center}
+  .status-chips{width:100%}
+  .net-graph-zone{aspect-ratio:auto;min-height:330px}
+}
+@media(max-width:760px){
+  .net-page{gap:12px}
+  .net-page .panel{padding:13px 14px}
+  .net-page .panel .panel-title h2{font-size:14px}
+  .net-page .panel .panel-title p{font-size:11px}
+  .stats-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stat-card .st-value{font-size:23px}
+  .stat-card{min-height:118px}
+  /* ترتیب منطقی روی موبایل: سلامت → کل روابط → فرصت‌ها → ریسک → نفوذ */
+  .stat-card:nth-child(1){order:1}
+  .stat-card:nth-child(2){order:2}
+  .stat-card:nth-child(3){order:3}
+  .stat-card:nth-child(4){order:4}
+  .stat-card:nth-child(5){order:5;grid-column:1/-1}
+  .net-priorities{grid-template-columns:1fr}
+  .net-graph-head{flex-direction:column;align-items:stretch}
+  .net-graph-toolbar{overflow-x:auto;padding-bottom:2px;flex-wrap:nowrap;scrollbar-width:none}
+  .net-graph-toolbar::-webkit-scrollbar{display:none}
+  .net-graph-toolbar .net-btn{flex:0 0 auto}
+  .net-path-tool{flex-direction:column;align-items:stretch}
+  .net-path-tool select{width:100%}
+  .net-path-tool .net-btn{justify-content:center;width:100%}
+  .net-legend{gap:10px}
+  .net-detail-head h3{font-size:14px}
 }
