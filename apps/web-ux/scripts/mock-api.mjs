@@ -856,7 +856,7 @@ function criteriaSummaryLite(a) {
   return {
     score: a.score, rawScore: a.rawScore, coverage: a.coverage, confidence: a.confidence, uncertainty: a.uncertainty,
     rangeLow: a.rangeLow, rangeHigh: a.rangeHigh, rankable: a.rankable, rankingScore: a.rankingScore, gateCap: a.gateCap,
-    verdict: a.verdict, verdictLabel: a.verdictLabel, known: a.knownCriteria, total: a.totalCriteria,
+    verdict: a.verdict, verdictLabel: a.verdictLabel, verdictHint: a.verdictHint, known: a.knownCriteria, total: a.totalCriteria,
     flags: a.flags.map((f) => ({ code: f.code, severity: f.severity, criterionCode: f.criterionCode })),
     families: a.families.map((f) => ({ family: f.family, name: f.name, score: f.score, weightPct: f.weightPct, coveragePct: f.coveragePct })),
     version: a.criteriaVersion, computedAt: a.computedAt,
