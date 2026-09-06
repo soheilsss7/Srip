@@ -27,6 +27,10 @@ const config:NextConfig={
   reactStrictMode:true,
   output:isPages?'export':undefined,
   basePath:isPages?'/Srip/srip2':'',
+  // buildId تصادفی Next هر release را به یک diff ۶۰۰+ فایلی (فقط تغییر نام
+  // پوشهٔ _next/static) تبدیل می‌کرد؛ ثابت‌کردن آن، diff را به تغییر واقعی
+  // محتوا محدود می‌کند — برای نسخهٔ استاتیک (GitHub Pages) کاملاً امن است.
+  generateBuildId: async () => (isPages ? 'srip2' : 'dev'),
   images:{unoptimized:true},
   async headers(){return [{source:'/:path*',headers:securityHeaders}]},
   ...(useSameOriginProxy && !isPages ? {
