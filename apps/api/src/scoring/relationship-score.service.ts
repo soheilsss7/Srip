@@ -5,6 +5,9 @@ import { EventBusService } from '../event-bus/event-bus.service';
 import { ScoringBaseService, clampScore } from './scoring-base.service';
 import { AuditService } from '../audit/audit.service';
 import { Prisma } from '@prisma/client';
+import { CriteriaService } from '../criteria/criteria.service';
+import { factorAssessment, summarizeAssessment } from '../criteria/criteria.engine';
+import { CRITERIA_VERSION } from '../criteria/criteria.engine';
 
 export const RELATIONSHIP_SCORE_FACTORS = [
   'strategicValue',
@@ -76,6 +79,7 @@ export class CanonicalRelationshipScoreService extends ScoringBaseService {
     eventBus: EventBusService,
     private readonly authorization: AuthorizationService,
     audit: AuditService,
+    private readonly criteria: CriteriaService,
   ) { super(prisma, eventBus, audit); }
 
   private async resolveWeights(versionWeights: unknown, organizationId: string, sourceIndustry?: string | null, targetIndustry?: string | null): Promise<WeightMap> {
@@ -176,7 +180,47 @@ export class CanonicalRelationshipScoreService extends ScoringBaseService {
       strategicValue, economicValue, influence, trust, access, engagement, recency, diversity,
       responsiveness, commitmentReliability, opportunityPotential, risk,
     };
-    const score = clampScore(RELATIONSHIP_SCORE_FACTORS.reduce((sum, factor) => sum + factors[factor] * weights[factor], 0));
+
+    /*
+     * مدل ترکیبی: معیارهای ارزیابی‌شده و رفتار مشاهده‌شده هر دو وارد می‌شوند، اما با
+     * وزنِ پویا. در ابتدای رابطه (دادهٔ صفر) ارزیابی انسانی حاکم است و هرچه رفتار
+     * واقعی بیشتر ثبت شود، وزن مشاهدات بالا می‌رود. برای معیار بی‌داده عدد ساخته نمی‌شود.
+     */
+    const criteriaAssessment = await this.criteria
+      .assessWithContext({
+        subjectType: 'RELATIONSHIP',
+        subjectId: relationshipId,
+        organizationId: relationship.sourceOrganizationId ?? null,
+        answersOverride: undefined,
+        includeObserved: undefined,
+      })
+      .catch(() => null);
+    const behavioralEvidence = interactionCount + meetings * 2 + reliabilityDenominator + opportunityCount;
+    const evidenceShare = behavioralEvidence / (behavioralEvidence + 6);
+    const factorValues = criteriaAssessment ? factorAssessment(criteriaAssessment) : null;
+    const blended: Record<RelationshipFactor, number> = { ...factors };
+    const blend: Partial<Record<RelationshipFactor, { basis: string; assessed: number | null; confidence: number }>> = {};
+    if (factorValues) {
+      for (const factor of RELATIONSHIP_SCORE_FACTORS) {
+        const assessed = factorValues[factor];
+        if (!assessed || assessed.value == null) continue;
+        const assessedShare = (1 - evidenceShare) * (0.35 + 0.65 * (assessed.confidence / 100));
+        const total = evidenceShare + assessedShare;
+        if (total <= 0) continue;
+        blended[factor] = clampScore((factors[factor] * evidenceShare + assessed.value * assessedShare) / total);
+        blend[factor] = {
+          basis: assessedShare > evidenceShare * 1.15 ? 'ASSESSED_DOMINANT' : evidenceShare > assessedShare * 1.15 ? 'OBSERVED_DOMINANT' : 'BALANCED',
+          assessed: assessed.value,
+          confidence: assessed.confidence,
+        };
+      }
+    }
+    const coldStart = behavioralEvidence === 0 && !!criteriaAssessment && criteriaAssessment.coverage < 25;
+    const gateCap = criteriaAssessment?.gateCap ?? null;
+    let score = clampScore(RELATIONSHIP_SCORE_FACTORS.reduce((sum, factor) => sum + blended[factor] * weights[factor], 0));
+    if (gateCap != null) score = Math.min(score, gateCap);
+    // در شروع سرد که هیچ رفتاری ثبت نشده، فقط تصویر ارزیابی واقعی معتبر است.
+    if (coldStart && criteriaAssessment) score = clampScore(criteriaAssessment.score);
 
     const result = {
       score,
@@ -185,9 +229,13 @@ export class CanonicalRelationshipScoreService extends ScoringBaseService {
       type: 'RELATIONSHIP' as const,
       subjectType: 'Relationship',
       subjectId: relationshipId,
-      explanation: 'Relationship score combines all canonical relationship factors using normalized, configurable weights from the active score version and applicable admin scoring rules.',
+      explanation:
+        `امتیاز رابطه از ${RELATIONSHIP_SCORE_FACTORS.length} فاکتور رفتاری` +
+        (criteriaAssessment ? ` و ${criteriaAssessment.knownCriteria}/${criteriaAssessment.totalCriteria} معیار ارزیابی (پوشش ${criteriaAssessment.coverage}٪، اطمینان ${criteriaAssessment.confidence}٪)` : '') +
+        ` با وزن‌های نرمال‌شده از نسخۀ فعال و قواعد مدیریتی محاسبه شده است. سهم مشاهدات رفتاری ${Math.round(evidenceShare * 100)}٪` +
+        (gateCap != null ? ` و سقف پرچم ریسک ${gateCap} اعمال شد.` : '.'),
       factors: {
-        ...factors,
+        ...blended,
         weights,
         interactions180d: interactionCount,
         meetings180d: meetings,
@@ -196,6 +244,13 @@ export class CanonicalRelationshipScoreService extends ScoringBaseService {
         connectedPeople180d: peopleCount,
         opportunityCount,
         commitmentCount: reliabilityDenominator,
+        behavioralEvidence,
+        observedShare: Math.round(evidenceShare * 100),
+        coldStart,
+        scoreBasis: coldStart ? 'COLD_START_ASSESSED' : criteriaAssessment ? 'BLENDED' : 'OBSERVED_ONLY',
+        criteriaVersion: CRITERIA_VERSION,
+        ...(criteriaAssessment ? { criteria: summarizeAssessment(criteriaAssessment), criteriaFamilies: criteriaAssessment.families.map((f) => ({ family: f.family, name: f.name, score: f.score, coveragePct: f.coveragePct, confidence: f.confidence, weightPct: f.weightPct })) } : {}),
+        factorBlend: blend,
       },
     };
     return persist ? this.persist(userId, result, relationship.sourceOrganizationId) : result;

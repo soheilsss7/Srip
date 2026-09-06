@@ -1,11 +1,12 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { IsEmail, IsInt, IsOptional, IsString, Max, Min, MinLength } from 'class-validator';
 import { PeopleService } from './people.service';
+import { CriteriaIntakeDto } from '../criteria/criteria-intake.dto';
 import { AuthGuard } from '../common/guards/auth.guard';
 import { AuthorizationGuard } from '../common/guards/authorization.guard';
 import { RequirePermission } from '../common/decorators/require-permission.decorator';
 
-class CreatePersonDto {
+class CreatePersonDto extends CriteriaIntakeDto {
   @IsString() @MinLength(1) firstName!: string;
   @IsString() @MinLength(1) lastName!: string;
   @IsString() organizationId!: string;

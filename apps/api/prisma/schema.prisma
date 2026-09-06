@@ -421,6 +421,8 @@ model User {
   dataImportsRequested DataImport[] @relation("DataImportRequestedBy")
   dataImportsApproved DataImport[] @relation("DataImportApprovedBy")
   dataQualitySnapshots DataQualitySnapshot[]
+  criteriaAnswers CriteriaAnswer[] @relation("CriteriaAnsweredBy")
+  criteriaSnapshots CriteriaSnapshot[] @relation("CriteriaSnapshotCreatedBy")
 }
 
 model Account {
@@ -525,6 +527,8 @@ model Organization {
   projectRisks ProjectRisk[]
   connectionPathsFrom ConnectionPath[] @relation("ConnectionPathSourceOrganization")
   connectionPathsTo ConnectionPath[] @relation("ConnectionPathTargetOrganization")
+  criteriaAnswers CriteriaAnswer[] @relation("CriteriaAnswerOrganization")
+  criteriaSnapshots CriteriaSnapshot[] @relation("CriteriaSnapshotOrganization")
 }
 model OrganizationUnit {
   id String @id @default(uuid())
@@ -2190,4 +2194,113 @@ model DomainEventOutbox {
   @@index([organizationId, occurredAt])
   @@index([requestId, createdAt])
   @@index([correlationId, createdAt])
+}
+
+enum CriteriaSubjectType {
+  ORGANIZATION
+  PERSON
+  RELATIONSHIP
+  OPPORTUNITY
+}
+
+enum CriteriaAnswerMethod {
+  SELF_REPORTED
+  OWNER_ASSESSED
+  DOCUMENT
+  VERIFIED
+  INFERRED
+}
+
+enum CriteriaReviewStatus {
+  UNREVIEWED
+  REVIEWED
+  DISPUTED
+}
+
+/// پاسخ ثبت‌شده به یک معیار ارزیابی (cold-start intake یا بازبینی دوره‌ای).
+model CriteriaAnswer {
+  id String @id @default(uuid())
+  subjectType CriteriaSubjectType
+  subjectId String
+  organizationId String?
+  criterionCode String
+  family String
+  level Int?
+  value Int?
+  note String?
+  evidence String?
+  evidenceRefs Json?
+  method CriteriaAnswerMethod @default(OWNER_ASSESSED)
+  reviewStatus CriteriaReviewStatus @default(UNREVIEWED)
+  source String?
+  answeredById String?
+  answeredAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  organization Organization? @relation("CriteriaAnswerOrganization", fields: [organizationId], references: [id])
+  answeredBy User? @relation("CriteriaAnsweredBy", fields: [answeredById], references: [id])
+  @@unique([subjectType, subjectId, criterionCode])
+  @@index([organizationId, subjectType])
+  @@index([subjectType, subjectId])
+  @@index([criterionCode])
+  @@index([answeredAt])
+}
+
+/// تصویر کامل یک ارزیابی (برای «چرا امتیاز عوض شد» و مقایسهٔ دوره‌ای).
+model CriteriaSnapshot {
+  id String @id @default(uuid())
+  subjectType CriteriaSubjectType
+  subjectId String
+  organizationId String?
+  modelVersion String
+  score Int
+  rawScore Int
+  coverage Int
+  confidence Int
+  uncertainty Int
+  rankable Boolean @default(false)
+  flags Json?
+  payload Json
+  createdById String?
+  createdAt DateTime @default(now())
+  organization Organization? @relation("CriteriaSnapshotOrganization", fields: [organizationId], references: [id])
+  createdBy User? @relation("CriteriaSnapshotCreatedBy", fields: [createdById], references: [id])
+  @@index([subjectType, subjectId, createdAt])
+  @@index([organizationId, createdAt])
+}
+
+/// تنظیم محلی مدل معیارها (وزن خانواده‌ها/آستانه‌ها) برای یک سازمان.
+model CriteriaOverride {
+  id String @id @default(uuid())
+  organizationId String?
+  subjectType CriteriaSubjectType
+  scope String @default("DEFAULT")
+  familyWeights Json?
+  criterionWeights Json?
+  minCoverageForRanking Int @default(40)
+  enabled Boolean @default(true)
+  updatedById String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([organizationId, subjectType, scope])
+  @@index([subjectType])
+}
+
+/// رویداد بازبینی دوره‌ای معیارها (تقویم ارزیابی).
+model CriteriaReviewTask {
+  id String @id @default(uuid())
+  subjectType CriteriaSubjectType
+  subjectId String
+  organizationId String?
+  criterionCode String
+  reason String
+  severity String @default("MEDIUM")
+  dueAt DateTime
+  status String @default("OPEN")
+  createdAt DateTime @default(now())
+  closedAt DateTime?
+  @@unique([subjectType, subjectId, criterionCode])
+  @@index([status, dueAt])
+  @@index([organizationId])
 }

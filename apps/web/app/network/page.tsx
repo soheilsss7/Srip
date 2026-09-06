@@ -8,6 +8,7 @@ import { apiGet } from '../_lib/api';
 import {fa} from '../_lib/fa';
 import { useWorkspace } from '../_components/workspace';
 import { Empty, ErrorCard, Loading } from '../_components/page-ui';
+import { CriteriaRailChip } from '../_components/criteria';
 import {
   GGraph,
   GNode,
@@ -836,6 +837,12 @@ export default function Page() {
                     <div className="net-kv">
                       <div className="kv"><small>شناسه</small><strong>{selectedNode.id}</strong></div>
                       <div className="kv"><small>روابط مرتبط</small><strong>{railNodeDegree}</strong></div>
+                      {selectedNode.type !== 'project' && (
+                        <div className="kv kv-wide">
+                          <small>ارزیابی معیارمحور</small>
+                          <CriteriaRailChip subjectType={selectedNode.type === 'person' ? 'PERSON' : 'ORGANIZATION'} subjectId={selectedNode.id} />
+                        </div>
+                      )}
                     </div>
                     <div className="net-detail-actions" style={{ padding: 0, border: 0 }}>
                       {(() => { const r = nodeEntityRoute(selectedNode); return r ? <DetailButton href={r.href} label={`باز کردن ${fa(selectedNode.type)}`} /> : null; })()}

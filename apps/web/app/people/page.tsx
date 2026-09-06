@@ -6,12 +6,14 @@ import { fa } from '../_lib/fa';
 import { useWorkspace } from '../_components/workspace';
 import { Card, Badge } from '@srip/design-system';
 import { Modal } from '../_components/page-ui';
+import { CriteriaBadge, CriteriaIntake, intakePayload, type AnswerMap, type Summary as CriteriaSummary } from '../_components/criteria';
 import {
   Users, Building2, Search, Plus, Crown, Handshake, ChevronLeft, Star,
   ArrowDownWideNarrow, CalendarDays, Zap, AlertTriangle,
 } from 'lucide-react';
 
 type Person = {
+  criteria?: CriteriaSummary | null;
   id: string;
   firstName: string;
   lastName: string;
@@ -40,6 +42,7 @@ const SORTS = [
   { value: 'name', label: 'نام (الف‌با)' },
   { value: 'actions', label: 'بیشترین اقدام باز' },
   { value: 'stale', label: 'قدیمی‌ترین جلسه' },
+  { value: 'coverage', label: 'ارزیابی ناقص‌تر اول' },
 ] as const;
 type SortKey = typeof SORTS[number]['value'];
 
@@ -89,6 +92,8 @@ export default function PeoplePage() {
   const [error, setError] = useState('');
 
   const [form, setForm] = useState({ first: '', last: '', email: '', phone: '', org: '', title: '', department: '' });
+  /* پرسش‌نامای اختیاری — همان معیارهایی که امتیاز شخص از آن‌ها ساخته می‌شود */
+  const [intake, setIntake] = useState<AnswerMap>({});
   const setF = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -166,6 +171,8 @@ export default function PeoplePage() {
       case 'stale':
         return [...out].sort((a, b) =>
           (engagement.get(a.id)?.lastMeetingAt ?? '').localeCompare(engagement.get(b.id)?.lastMeetingAt ?? ''));
+      case 'coverage':
+        return [...out].sort((a, b) => (a.criteria?.coverage ?? -1) - (b.criteria?.coverage ?? -1));
       default:
         return [...out].sort((a, b) =>
           ((b.influenceScore ?? 0) + (b.decisionPower ?? 0)) - ((a.influenceScore ?? 0) + (a.decisionPower ?? 0)));
@@ -191,8 +198,10 @@ export default function PeoplePage() {
         email: form.email.trim() || undefined, phone: form.phone.trim() || undefined,
         title: form.title.trim() || undefined, department: form.department.trim() || undefined,
         organizationId: form.org,
+        criteriaAnswers: intakePayload(intake),
       }) });
       setForm({ first: '', last: '', email: '', phone: '', org: '', title: '', department: '' });
+      setIntake({});
       setCreateOpen(false);
       await load();
     } catch (err) {
@@ -300,6 +309,7 @@ export default function PeoplePage() {
                             <div>
                               <strong>{p.firstName} {p.lastName}</strong>
                               <small>{p.department ? p.department : (p.title || '—')}</small>
+                              <CriteriaBadge criteria={p.criteria} />
                             </div>
                           </div>
                         </td>
@@ -400,6 +410,8 @@ export default function PeoplePage() {
               <input id="p-dept" value={form.department} onChange={setF('department')} placeholder="مثلاً: فروش" />
             </div>
           </div>
+          <div className="form-section-head"><h3>معیارهای ارزیابی</h3></div>
+          <CriteriaIntake subjectType="PERSON" answers={intake} onChange={setIntake} heading="آنچه همین حالا دربارهٔ او می‌دانید (اختیاری)" />
         </form>
       </Modal>
     </>

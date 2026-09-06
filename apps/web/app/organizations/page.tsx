@@ -3,9 +3,11 @@ import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { api, unwrapList } from '../_lib/api';
 import { ErrorCard, Modal, PageHeader, Skeleton, StatCard, StatusBadge, Toolbar } from '../_components/page-ui';
+import { CriteriaBadge, CriteriaIntake, intakePayload, type AnswerMap, type Summary as CriteriaSummary } from '../_components/criteria';
 import { Building2, Users, Share2, FolderKanban, Target, Plus, Layers, SearchX, RefreshCw, HeartPulse, AlertTriangle, ArrowDownWideNarrow, ArrowUpWideNarrow } from 'lucide-react';
 
-type Org = { id:string; name:string; type:string; industry?:string|null; country?:string|null; parentOrganizationId?:string|null; owner?:{name:string}|null; _count:{people:number;sourceRelationships:number;targetRelationships:number;projects:number;opportunities:number} };
+type Criteria = CriteriaSummary | null;
+type Org = { criteria?:Criteria; id:string; name:string; type:string; industry?:string|null; country?:string|null; parentOrganizationId?:string|null; owner?:{name:string}|null; _count:{people:number;sourceRelationships:number;targetRelationships:number;projects:number;opportunities:number} };
 type Rel = { id:string; sourceOrganizationId?:string|null; targetOrganizationId?:string|null; status?:string|null; healthScore?:number|null; riskScore?:number|null; strategicScore?:number|null; nextActionAt?:string|null; relationshipType?:string|null };
 type Interaction = { id:string; organizationId?:string|null; occurredAt?:string|null };
 
@@ -23,6 +25,8 @@ const SORTS = [
   { value:'health', label:'وضعیت رابطه (ضعیف‌ترین اول)' },
   { value:'risk', label:'بیشترین ریسک' },
   { value:'stale', label:'قدیمی‌ترین تعامل' },
+  { value:'coverage', label:'ارزیابی ناقص‌تر اول' },
+  { value:'criteria', label:'امتیاز معیارها (کم‌تر اول)' },
 ] as const;
 type SortKey = typeof SORTS[number]['value'];
 
@@ -78,6 +82,8 @@ export default function Page(){
  const [sort,setSort]=useState<SortKey>('name');
  const [createOpen,setCreateOpen]=useState(false);
  const [form,setForm]=useState({ name:'', type:'OTHER', industry:'', country:'', parent:'' });
+ /* پاسخ‌های پرسش‌نامای اختیاری — همان معیارهایی که امتیاز از آن‌ها ساخته می‌شود */
+ const [intake,setIntake]=useState<AnswerMap>({});
  const [saving,setSaving]=useState(false);
 
  async function load(){
@@ -128,6 +134,8 @@ export default function Page(){
      case 'health': return [...out].sort((a,b)=>(a.health ?? 101)-(b.health ?? 101));
      case 'risk':   return [...out].sort((a,b)=>(b.risk ?? -1)-(a.risk ?? -1));
      case 'stale':  return [...out].sort((a,b)=>(a.lastInter ?? '').localeCompare(b.lastInter ?? ''));
+    case 'coverage': return [...out].sort((a,b)=>(a.criteria?.coverage ?? -1)-(b.criteria?.coverage ?? -1));
+    case 'criteria': return [...out].sort((a,b)=>(a.criteria?.score ?? -1)-(b.criteria?.score ?? -1));
      default:       return [...out].sort((a,b)=>a.name.localeCompare(b.name,'fa'));
    }
  },[enriched,query,typeFilter,sort]);
@@ -155,8 +163,10 @@ export default function Page(){
        industry:form.industry.trim() || undefined,
        country:form.country.trim() || undefined,
        parentOrganizationId:form.parent || undefined,
+       criteriaAnswers: intakePayload(intake),
      })});
      setForm({ name:'', type:'OTHER', industry:'', country:'', parent:'' });
+     setIntake({});
      setCreateOpen(false); await load();
    }catch(err){ setError((err as Error).message); }
    finally{ setSaving(false); }
@@ -224,6 +234,7 @@ export default function Page(){
               <th>نام سازمان</th><th>نوع</th>
               <th>وضعیت رابطه</th><th>ریسک</th>
               <th>آخرین تعامل</th><th>اقدام بعدی</th>
+              <th>ارزیابی معیارها</th>
               <th>اشخاص</th><th>روابط</th><th>پروژه/فرصت</th>
             </tr>
           </thead>
@@ -247,6 +258,7 @@ export default function Page(){
                 </td>
                 <td className="t-muted">{timeAgo(o.lastInter)}</td>
                 <td className="t-muted">{o.nextAt ? fmtDate(o.nextAt) : '—'}</td>
+                <td><CriteriaBadge criteria={o.criteria}/></td>
                 <td className="t-num">{fmtNum(o._count?.people??0)}</td>
                 <td className="t-num">{fmtNum(o.relCount)}</td>
                 <td className="t-num">{fmtNum((o._count?.projects??0)+(o._count?.opportunities??0))}</td>
@@ -301,6 +313,13 @@ export default function Page(){
             <span className="field-hint">برای ساخت سلسله‌مراتب هلدینگ، سازمان مادر را انتخاب کنید؛ این سازمان به‌صورت «زیرمجموعه» در نمای گروه نمایش داده می‌شود.</span>
           </div>
         </div>
+        <div className="form-section-head"><h3>معیارهای ارزیابی</h3></div>
+        <CriteriaIntake
+          subjectType="ORGANIZATION"
+          answers={intake}
+          onChange={setIntake}
+          heading="چیزی که همین حالا می‌دانید (اختیاری)"
+        />
       </form>
     </Modal>
   </main>

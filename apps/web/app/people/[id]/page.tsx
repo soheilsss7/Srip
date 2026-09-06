@@ -6,6 +6,7 @@ import { fa } from '../../_lib/fa';
 import { Badge, ErrorCard, Loading, PageHeader } from '../../_components/page-ui';
 import { EgoGraph, type EgoNode } from '../../_components/ego-graph';
 import { suggestConnections } from '../../_lib/connections';
+import { CriteriaScoreCard } from '../../_components/criteria';
 import { Building2, Mail, Star, Crown, Sparkles, Link2, CalendarDays, HeartPulse, UserCheck, Zap, AlarmClock, ChevronLeft } from 'lucide-react';
 
 const arr = (x: any): any[] => Array.isArray(x) ? x : Array.isArray(x?.items) ? x.items : Array.isArray(x?.data) ? x.data : Array.isArray(x?.rows) ? x.rows : [];
@@ -228,6 +229,8 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
               </div>
             )}
           </section>
+
+          <CriteriaScoreCard subjectType="PERSON" subjectId={id} onEdit={load} />
 
           <div className="split-panels">
             {/* Ego graph */}

@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { apiGet, apiPostOffline } from '../services/api-client';
 import { useSession } from '../state/session';
 import { styles, colors } from '../lib/ui';
+import { CriteriaIntake, intakePayload, type AnswerMap } from '../features/criteria';
 
 const STATUS = ['ACTIVE', 'INACTIVE', 'ARCHIVED', 'LEAD', 'CUSTOMER'];
 
@@ -37,6 +38,9 @@ export default function CreatePerson() {
   }, [token]);
   useEffect(() => { loadOrgs(); }, [loadOrgs]);
 
+  /* optional intake — the same criteria the score is later computed from */
+  const [intake, setIntake] = useState<AnswerMap>({});
+
   async function save() {
     if (firstName.trim().length < 1) { setE('First name is required.'); return; }
     if (lastName.trim().length < 1) { setE('Last name is required.'); return; }
@@ -54,6 +58,7 @@ export default function CreatePerson() {
         country: country.trim() || undefined,
         notes: notes.trim() || undefined,
         status,
+        criteriaAnswers: intakePayload(intake),
       }, token);
       router.back();
     } catch (x) { setE((x as Error).message); setSaving(false); }
@@ -90,7 +95,8 @@ export default function CreatePerson() {
           </View>
         ) : <ActivityIndicator />}
         <TextInput style={styles.input} placeholder="Organization ID (or pick above)" value={orgId} onChangeText={setOrgId} />
-        {e ? <Text style={styles.error}>{e}</Text> : null}
+                <CriteriaIntake subjectType="PERSON" answers={intake} onChange={setIntake} token={token} />
+{e ? <Text style={styles.error}>{e}</Text> : null}
         <Pressable style={styles.button} disabled={saving} onPress={save}><Text style={styles.buttonText}>{saving ? 'Saving…' : 'Save'}</Text></Pressable>
       </ScrollView>
     </SafeAreaView>

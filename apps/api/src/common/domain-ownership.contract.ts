@@ -12,8 +12,13 @@ export const DOMAIN_OWNERSHIP = Object.freeze({
   },
   ScoringModule: {
     owns: ['score formulas', 'score weights', 'score versioning'],
-    delegatesTo: [],
-    forbidden: ['relationship CRUD'],
+    delegatesTo: ['CriteriaService'],
+    forbidden: ['relationship CRUD', 'criteria catalog definition'],
+  },
+  CriteriaModule: {
+    owns: ['criteria catalog', 'intake questionnaire', 'assessment computation', 'confidence and coverage rules', 'red-flag gates', 'review cadence'],
+    delegatesTo: ['AuthorizationService', 'AuditService', 'EventBusService', 'PrismaService'],
+    forbidden: ['score formula weights', 'relationship CRUD', 'AI provider calls'],
   },
   WorkflowsService: {
     owns: ['workflow definition', 'workflow execution', 'workflow resume'],

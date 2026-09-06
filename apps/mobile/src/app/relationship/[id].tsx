@@ -4,6 +4,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { apiGet, apiPatch, apiPost } from '../../services/api-client';
 import { useSession } from '../../state/session';
 import { styles, colors } from '../../lib/ui';
+import { CriteriaScore } from '../../features/criteria';
 
 const LIFECYCLE = ['IDENTIFIED','INTRODUCED','INITIAL_CONTACT','DEVELOPING','ACTIVE','STRATEGIC','DORMANT','AT_RISK','LOST'];
 const STATUS = ['PROSPECTIVE','ACTIVE','AT_RISK','DORMANT','ARCHIVED'];
@@ -74,6 +75,8 @@ export default function RelationshipDetail() {
               ))}
             </View>
           </View>
+
+          <CriteriaScore subjectType="RELATIONSHIP" subjectId={String(id)} token={token} onSaved={load} />
 
           <View style={styles.card}>
             <Text style={styles.label}>Ownership & Details</Text>
