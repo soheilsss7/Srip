@@ -63,9 +63,13 @@ const CHECK_GROUP_FA: Record<string, { label: string; note: string }> = {
 const fmtDT = (iso?: string | null) => iso
   ? new Date(iso).toLocaleString('fa-IR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
   : '—';
+const fmtNum = (v: any): string => v == null || Number.isNaN(Number(v)) ? '—' : new Intl.NumberFormat('fa-IR').format(Number(v));
 
 export default function Governance() {
   const [d, setD] = useState<Preflight | null>(null);
+  const [comp, setComp] = useState<any | null>(null);
+  const [compBusy, setCompBusy] = useState('');
+  const [info, setInfo] = useState('');
   const [error, setError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -77,6 +81,31 @@ export default function Governance() {
     finally { setRefreshing(false); }
   }, []);
   useEffect(() => { load(); }, [load]);
+
+  /* P3-1: پایش انطباق — غربالگری دوره‌ای + UBO + پروندهٔ تصمیم */
+  const loadCompliance = useCallback(async () => {
+    try { setComp(await api<any>('/governance/compliance')); }
+    catch (x) { setError((x as Error).message); }
+  }, []);
+  useEffect(() => { loadCompliance(); }, [loadCompliance]);
+  async function runScreen() {
+    setCompBusy('screen'); setError(''); setInfo('');
+    try {
+      const out: any = await api('/governance/compliance/screen', { method: 'POST', body: '{}' });
+      setComp(out.view);
+      setInfo(`غربالگری دوره‌ای اجرا شد — ${out.createdFindings} یافتهٔ جدید.`);
+    } catch (x) { setError((x as Error).message); }
+    finally { setCompBusy(''); }
+  }
+  async function decide(subject: string, decision: string) {
+    setCompBusy(subject + '|' + decision); setError(''); setInfo('');
+    try {
+      const out: any = await api(`/governance/compliance/${subject}/decide`, { method: 'POST', body: JSON.stringify({ decision, rationale: decision === 'ESCALATED' ? 'برای بررسی کمیتهٔ انطباق ارجاع شد.' : 'پروندهٔ انطباق بازبینی و تأیید شد.' }) });
+      setComp(out.view);
+      setInfo(`تصمیم «${decision}» برای ${out.view?.ubos?.find((u: any) => u.organizationId === subject)?.organization?.name ?? subject} ثبت شد.`);
+    } catch (x) { setError((x as Error).message); }
+    finally { setCompBusy(''); }
+  }
 
   const checks = d?.checks ?? [];
   const overall = d?.overall ?? 'PASS';
@@ -102,6 +131,87 @@ export default function Governance() {
         }
       />
       <ErrorCard message={error} />
+      {info && <div className="success-card" role="status">{info}</div>}
+
+      {/* P3-1: پایش انطباق */}
+      {comp && (
+        <section className="panel" aria-label="پایش انطباق">
+          <div className="panel-title">
+            <div>
+              <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><ShieldCheck size={16} /> پایش انطباق — غربالگری، UBO و پروندهٔ تصمیم</h2>
+              <p>غربالگری دوره‌ای سازمان‌ها + مالک نهایی (UBO) + یافته‌های رویداد-محور + پروندهٔ تصمیم برای هر تغییر</p>
+            </div>
+            <div className="toolbar">
+              <Badge tone={comp.kpis?.openFindings ? 'warning' : 'success'}>{comp.kpis?.openFindings} یافتهٔ باز</Badge>
+              <button className="btn btn-secondary" style={{ minHeight: 0, padding: '6px 12px', fontSize: 11 }} onClick={runScreen} disabled={compBusy === 'screen'}>
+                <RefreshCw size={13} className={compBusy === 'screen' ? 'spin' : ''} /> غربالگری دوره‌ای
+              </button>
+            </div>
+          </div>
+          <div className="kpi-grid" style={{ marginBottom: 12 }}>
+            <div className="kpi-card" style={{ margin: 0 }}><small>سازمان‌های تحت پوشش</small><strong>{fmtNum(comp.kpis?.organizations)}</strong><span className="t-muted" style={{ fontSize: 10 }}>پوشش UBO {fmtNum(comp.kpis?.uboCoverage)}٪</span></div>
+            <div className="kpi-card" style={{ margin: 0 }}><small>UBO پرچم‌دار</small><strong>{fmtNum(comp.kpis?.flaggedUbo)}</strong><span className="t-muted" style={{ fontSize: 10 }}>PEP یا منابع خارجی</span></div>
+            <div className="kpi-card" style={{ margin: 0 }}><small>غربالگری معوق</small><strong>{fmtNum(comp.kpis?.overdueScreens)}</strong><span className="t-muted" style={{ fontSize: 10 }}>بعد از مهلت دوره</span></div>
+            <div className="kpi-card" style={{ margin: 0 }}><small>پروندهٔ تصمیم</small><strong>{fmtNum(comp.kpis?.dossiers)}</strong><span className="t-muted" style={{ fontSize: 10 }}>ممیزی‌پذیر</span></div>
+          </div>
+          <div style={{ display: 'grid', gap: 12 }}>
+            <div>
+              <p className="t-muted" style={{ margin: '0 0 6px', fontSize: 10.5, fontWeight: 800 }}>مالک نهایی (UBO)</p>
+              <div className="table-wrap">
+                <table>
+                  <thead><tr><th>سازمان</th><th>UBO</th><th>نقش</th><th>سهم</th><th>ملیت</th><th>PEP</th><th>ریسک</th><th>آخرین راستی‌آزمایی</th></tr></thead>
+                  <tbody>
+                    {(comp.ubos ?? []).map((u: any) => (
+                      <tr key={u.id}>
+                        <td><Link className="t-primary" href={`/organizations/${u.organizationId}`}>{u.organization?.name ?? u.organizationId}</Link></td>
+                        <td>{u.name}</td><td>{u.role}</td><td>{fmtNum(u.ownershipPercent)}٪</td><td>{u.nationality}</td>
+                        <td>{u.pep ? <Badge tone="danger">بله</Badge> : <span className="t-muted">خیر</span>}</td>
+                        <td><Badge tone={u.riskTier === 'HIGH' ? 'danger' : u.riskTier === 'MEDIUM' ? 'warning' : 'success'}>{u.riskTier === 'HIGH' ? 'بالا' : u.riskTier === 'MEDIUM' ? 'متوسط' : 'پایین'}</Badge></td>
+                        <td className="t-muted" style={{ fontSize: 10.5 }}>{fmtDT(u.verifiedAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div>
+              <p className="t-muted" style={{ margin: '0 0 6px', fontSize: 10.5, fontWeight: 800 }}>یافته‌های باز (دوره‌ای + رویداد-محور)</p>
+              <div className="list">
+                {(comp.findings ?? []).filter((f: any) => f.status === 'OPEN').map((f: any) => (
+                  <div className="listRow" key={f.id} style={{ alignItems: 'flex-start' }}>
+                    <Badge tone={f.severity === 'HIGH' ? 'danger' : f.severity === 'MEDIUM' ? 'warning' : 'info'}>{f.severity === 'HIGH' ? 'بالا' : f.severity === 'MEDIUM' ? 'متوسط' : 'ملایم'}</Badge>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <b style={{ fontSize: 12.5 }}>{f.title}</b>
+                      <small className="t-muted" style={{ display: 'block', marginTop: 2 }}>{f.detail}</small>
+                      <small className="t-muted" style={{ display: 'block', marginTop: 2 }}>{f.type} · {f.trigger === 'periodic' ? 'دوره‌ای' : 'رویداد-محور'} · {fmtDT(f.createdAt)}</small>
+                    </span>
+                    <span style={{ display: 'flex', gap: 6, flexDirection: 'column', alignItems: 'stretch' }}>
+                      <button className="btn btn-primary" style={{ minHeight: 0, padding: '4px 12px', fontSize: 10.5 }} disabled={compBusy !== ''} onClick={() => decide(f.subject, 'CLEARED')}>تأیید</button>
+                      <button className="btn btn-ghost" style={{ minHeight: 0, padding: '4px 12px', fontSize: 10.5 }} disabled={compBusy !== ''} onClick={() => decide(f.subject, 'ESCALATED')}>ارتقا به کمیته</button>
+                    </span>
+                  </div>
+                ))}
+                {(comp.findings ?? []).filter((f: any) => f.status === 'OPEN').length === 0 && <p className="empty-state">یافتهٔ بازی وجود ندارد.</p>}
+              </div>
+            </div>
+            <div>
+              <p className="t-muted" style={{ margin: '0 0 6px', fontSize: 10.5, fontWeight: 800 }}>پروندهٔ تصمیم (ممیزی)</p>
+              <div className="list">
+                {(comp.dossiers ?? []).map((x: any) => (
+                  <div className="listRow" key={x.id} style={{ alignItems: 'flex-start' }}>
+                    <Badge tone={x.decision === 'ESCALATED' ? 'warning' : 'success'}>{x.decision === 'ESCALATED' ? 'ارجاع‌شده' : x.decision === 'REJECTED' ? 'ردشده' : 'تأییدشده'}</Badge>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <b style={{ fontSize: 12.5 }}>{x.subject} — {x.type === 'UBO_CHANGE' ? 'تغییر UBO' : x.type === 'SCREENING' ? 'غربالگری' : x.type}</b>
+                      <small className="t-muted" style={{ display: 'block', marginTop: 2 }}>{x.decidedBy} · {fmtDT(x.decidedAt)}</small>
+                      <small className="t-muted" style={{ display: 'block' }}>{x.rationale ?? '—'}</small>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {!d && !error ? <Loading label="در حال اجرای بررسی‌های مقدماتی…" /> : (
         <>

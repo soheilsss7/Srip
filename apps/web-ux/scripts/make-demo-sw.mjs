@@ -139,8 +139,14 @@ const assert = (idx, what) => { if (idx < 0) throw new Error(`anchor not found: 
 {
   const a = find('در Mock API وجود ندارد');
   assert(a, '404 tail');
+  /* The 404 is the last route statement. If the handler's catch sits right
+     after it (404 inside try), carry that line into the generated code so the
+     try is closed properly; otherwise (404 after catch) the closing brace in
+     the tail closes the handler. */
+  const catchLine = (a + 1 < lines.length && lines[a + 1].includes('} catch')) ? lines[a + 1] : null;
   const tail = [
     "  json(res,404,{message:`مسیر ${method} ${path} در Mock API وجود ندارد.`});",
+    ...(catchLine ? [catchLine] : []),
     '}',
     '',
     'loadDb();',

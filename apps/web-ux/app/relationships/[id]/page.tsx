@@ -4,7 +4,7 @@ import { use, useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../../_lib/api';
 import { fa } from '../../_lib/fa';
 import { Badge, ErrorCard, Loading, PageHeader } from '../../_components/page-ui';
-import { CalendarDays, HeartPulse, RefreshCw, Archive, RotateCcw, AlertTriangle, ChevronLeft, TrendingUp, Gauge, FileClock, MessageCircle } from 'lucide-react';
+import { CalendarDays, HeartPulse, RefreshCw, Archive, RotateCcw, AlertTriangle, ChevronLeft, TrendingUp, Gauge, FileClock, MessageCircle, Users } from 'lucide-react';
 import { CriteriaScoreCard } from '../../_components/criteria';
 
 const arr = (x: any): any[] => Array.isArray(x) ? x : Array.isArray(x?.items) ? x.items : Array.isArray(x?.data) ? x.data : Array.isArray(x?.rows) ? x.rows : [];
@@ -50,6 +50,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const [pulse, setPulse] = useState<any>(null);
   const [survey, setSurvey] = useState<any>(null);
   const [surveyAnswers, setSurveyAnswers] = useState<Record<string, number>>({});
+  const [transfer, setTransfer] = useState<any>(null);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [busy, setBusy] = useState('');
@@ -57,13 +58,14 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const load = useCallback(async () => {
     setError('');
     try {
-      const [a, b, p, s] = await Promise.all([
+      const [a, b, p, s, t] = await Promise.all([
         api<any>(`/relationships/${id}`),
         api<any>(`/relationships/${id}/timeline`),
         api<any>(`/relationships/${id}/pulse`).catch(() => null),
         api<any>(`/relationships/${id}/pulse-survey`).catch(() => null),
+        api<any>(`/intelligence/knowledge-transfer?relationshipId=${id}`).catch(() => null),
       ]);
-      setR(a); setTl(arr(b)); setPulse(p); setSurvey(s);
+      setR(a); setTl(arr(b)); setPulse(p); setSurvey(s); setTransfer(t);
       if (s?.last) setSurveyAnswers(Object.fromEntries(((s.last as any)?.answers ?? []).map((x: any) => [x.questionId, x.score])));
     } catch (e) { setError((e as Error).message); }
   }, [id]);
@@ -382,6 +384,69 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                   ))}
                 </div>
               )}
+            </section>
+          )}
+
+          {/* P3-2: حافظهٔ نهادی و انتقال دانش */}
+          {transfer && (
+            <section className="panel" style={{ marginTop: 14 }}>
+              <div className="panel-title">
+                <div>
+                  <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Users size={16} /> حافظهٔ نهادی و انتقال دانش</h2>
+                  <p>«چه کسی چه کسی را می‌شناسد» + بستهٔ انتقال + بریف جانشین — برای خروج/جابه‌جایی بدون از دست رفتن دانش رابطه</p>
+                </div>
+                <Badge tone={transfer.transferred ? 'success' : 'info'}>{transfer.transferred ? `تحویل شده در ${fmtDate(transfer.transferred.handedOverAt)}` : 'در انتظار تحویل'}</Badge>
+              </div>
+              <div className="split-panels" style={{ marginTop: 4 }}>
+                <section>
+                  <b style={{ fontSize: 11.5 }}>بریف جانشین</b>
+                  <pre className="notice" role="note" style={{ whiteSpace: 'pre-line', fontFamily: 'inherit', fontSize: 11.5, marginTop: 6 }}>{transfer.brief}</pre>
+                  {transfer.access === 'full' && (
+                    <div style={{ marginTop: 8 }}>
+                      <b style={{ fontSize: 11.5 }}>چه کسی چه کسی را می‌شناسد</b>
+                      <div className="list" style={{ marginTop: 6 }}>
+                        {(transfer.whoKnowsWho ?? []).length === 0 && <p className="t-muted" style={{ fontSize: 11 }}>شناخت متقابل ثبت‌نشده‌ای نیست؛ برای معرفی، از پیشنهاد یال شبکه استفاده کنید.</p>}
+                        {(transfer.whoKnowsWho ?? []).map((w: any) => (
+                          <div className="listRow" key={w.person.id}>
+                            <span style={{ flex: 1, minWidth: 0 }}>
+                              <b style={{ fontSize: 12.5 }}>{w.person.name}</b> <small className="t-muted">{w.person.title} · {w.org}</small>
+                              <small className="t-muted" style={{ display: 'block' }}>ما می‌شناسیم: {w.ourContacts.join('، ')}</small>
+                            </span>
+                            <Badge tone="info">{fmtNum(w.meetingCount)} جلسه</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </section>
+                <section>
+                  <b style={{ fontSize: 11.5 }}>مخاطبین کلیدی</b>
+                  <div className="list" style={{ marginTop: 6 }}>
+                    {(transfer.contacts ?? []).map((c: any) => (
+                      <div className="listRow" key={c.id}>
+                        <span style={{ flex: 1, minWidth: 0 }}>
+                          <b style={{ fontSize: 12.5 }}>{c.name}</b> {c.champion && <span className="chip success" style={{ marginInlineStart: 4 }}>قهرمان</span>}
+                          <small className="t-muted" style={{ display: 'block' }}>{c.title} · {c.organization}{c.role ? ` · نقش تصمیم: ${c.role}` : ''}</small>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                    <Link className="btn btn-primary" href={`/people`} style={{ minHeight: 0, padding: '8px 14px' }}>مدیریت اشخاص</Link>
+                    {!transfer.transferred && (
+                      <button className="btn btn-secondary" style={{ minHeight: 0, padding: '8px 14px' }} disabled={busy === 'handoff'} onClick={async () => {
+                        setBusy('handoff'); setError(''); setInfo('');
+                        try {
+                          const out: any = await api(`/intelligence/knowledge-transfer/${id}/handoff`, { method: 'POST', body: '{}' });
+                          setTransfer(out.view);
+                          setInfo(`انتقال دانش ثبت شد — بریف برای ${out.transfer?.toName ?? 'جانشین'} ارسال شد.`);
+                        } catch (x) { setError((x as Error).message); }
+                        finally { setBusy(''); }
+                      }}>{busy === 'handoff' ? 'در حال ثبت…' : 'ثبت تحویل دانش'}</button>
+                    )}
+                  </div>
+                </section>
+              </div>
             </section>
           )}
 

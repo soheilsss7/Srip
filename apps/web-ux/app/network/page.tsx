@@ -1,5 +1,5 @@
 'use client';
-import { ShieldCheck, Network, Lightbulb, AlertTriangle, Zap, Maximize, Maximize2, X, Target, Clock, Layers, UserPlus } from 'lucide-react';
+import { ShieldCheck, Network, Lightbulb, AlertTriangle, Zap, Maximize, Maximize2, X, Target, Clock, Layers, UserPlus, BrainCircuit } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -193,6 +193,7 @@ export default function Page() {
   const [columns, setColumns] = useState<any[] | null>(null);
   const [sna, setSna] = useState<any | null>(null);
   const [snaBusy, setSnaBusy] = useState('');
+  const [predict, setPredict] = useState<any | null>(null);
   // گراف ۴ ستونی: ستون هر یال از edgeCategory روی گراف/یال می‌آید
   useEffect(() => {
     let alive = true;
@@ -205,6 +206,8 @@ export default function Page() {
   // P2-2: SNA پیشرفته — تراکم/خوشه/PageRank/ایزوله/سوراخ ساختاری + پیشنهاد یال
   const loadSna = useCallback(async () => { try { setSna(await apiGet<any>('/network/sna')); } catch { /* بدون SNA هم گراف کار می‌کند */ } }, []);
   useEffect(() => { loadSna(); }, [loadSna]);
+  // P3-3: GNN سبک — پیش‌بینی یال/خوشه/مسیر گرم
+  useEffect(() => { apiGet<any>('/network/predict').then(setPredict).catch(() => {}); }, []);
   const acceptEdge = async (id: string) => {
     setSnaBusy(id);
     try { setSna(await apiPost<any>(`/network/edge-suggestions/${encodeURIComponent(id)}/accept`, {})); }
@@ -697,6 +700,43 @@ export default function Page() {
                   </button>
                 </div>
               ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* P3-3: GNN سبک — پیش‌بینی */}
+      {predict && (
+        <section className="panel" style={{ margin: 0, marginBottom: 14 }} aria-label="پیش‌بینی شبکه">
+          <div className="panel-title">
+            <div>
+              <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><BrainCircuit size={16} /> پیش‌بینی شبکه (GNN سبک)</h2>
+              <p>پیش‌بینی یال بین سازمان‌های بی‌رابطه، خوشه‌های گراف و مسیر گرم به سازمان‌های دارای فرصت باز — همه قطعی و بدون مدل خارجی</p>
+            </div>
+            <div className="toolbar">
+              <Badge tone="info">{fmtNum(predict.kpis?.predictedLinks)} یال پیش‌بینی‌شده</Badge>
+              <Badge tone={predict.kpis?.warmPaths ? 'success' : 'neutral'}>{fmtNum(predict.kpis?.warmPaths)} مسیر گرم</Badge>
+            </div>
+          </div>
+          <div className="attr-grid">
+            {(predict.predictedLinks ?? []).map((l: any) => (
+              <div key={l.id} className="kpi-card" style={{ margin: 0 }}>
+                <small>{l.fromOrgName} ↔ {l.toOrgName}</small>
+                <strong>{fmtNum(l.score)}</strong>
+                <span className="t-muted" style={{ fontSize: 10 }}>{(l.reason ?? []).join(' · ')}</span>
+              </div>
+            ))}
+          </div>
+          {(predict.warmPaths ?? []).length > 0 && (
+            <div style={{ marginTop: 12 }}>
+              <b style={{ fontSize: 11.5 }}>مسیر گرم به فرصت‌های باز</b>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                {(predict.warmPaths ?? []).map((w: any) => (
+                  <span key={w.organizationId} className={w.found ? 'chip success' : 'chip danger'} title={w.path?.join(' ← ') ?? ''}>
+                    {w.organizationName}: {w.found ? `${w.hops} پرش · امتیاز ${w.score}` : 'مسیری در ۳ پرش نیست'}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
         </section>
