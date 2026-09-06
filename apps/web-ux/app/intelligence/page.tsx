@@ -94,18 +94,39 @@ function EyeIcon() {
 export default function IntelligencePage() {
   const { can } = useWorkspace();
   const [data, setData] = useState<Intel | null>(null);
+  const [nba, setNba] = useState<any>(null);
+  const [leverage, setLeverage] = useState<any>(null);
+  const [nbaBusy, setNbaBusy] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
   const nudges = useNudges();
 
   const load = useCallback(async () => {
     if (!can('analytics.read')) { setLoading(false); return; }
     setLoading(true); setError('');
-    try { setData(await api<Intel>('/intelligence/overview')); }
+    try {
+      const [d, nb, lv] = await Promise.all([
+        api<Intel>('/intelligence/overview'),
+        api<any>('/intelligence/nba').catch(() => null),
+        api<any>('/intelligence/risk-leverage').catch(() => null),
+      ]);
+      setData(d); setNba(nb); setLeverage(lv);
+    }
     catch (e) { setError((e as Error).message); }
     finally { setLoading(false); }
   }, [can]);
   useEffect(() => { load(); }, [load]);
+
+  async function nbaAct(id: string, status: 'EXECUTED' | 'DISMISSED') {
+    setNbaBusy(id); setError(''); setInfo('');
+    try {
+      const out: any = await api(`/intelligence/nba/${id}/${status === 'EXECUTED' ? 'execute' : 'dismiss'}`, { method: 'POST', body: '{}' });
+      setNba(out);
+      setInfo(status === 'EXECUTED' ? 'اقدام وارد صف اجرا شد (یک اقدام باز روی همان رابطه ساخته شد).' : 'پیشنهاد رد شد و در KPI پذیرش شمرده نمیشود.');
+    } catch (e) { setError((e as Error).message); }
+    finally { setNbaBusy(''); }
+  }
 
   const k = data?.kpis;
   const coverage = data?.coverage;
@@ -134,6 +155,7 @@ export default function IntelligencePage() {
         {href:'/reports',label:'گزارش‌ها'},
       ]}/>
       <ErrorCard message={error} />
+      {info && <div className="success-card" role="status">{info}</div>}
       <NudgeBanner items={nudges.items} loading={nudges.loading} onRefresh={nudges.refresh} compact />
 
       {loading ? (
@@ -152,6 +174,112 @@ export default function IntelligencePage() {
             <StatCard icon={<AlertTriangle size={18} />} label="عقب‌افتادهٔ باز" value={fmtNum(k?.lateCount)} iconClass="ic-red" sub="اقدامات و تعهداتِ موعدگذشته" />
             <StatCard icon={<Activity size={18} />} label="سیگنال فعال" value={fmtNum(data.riskSignals.length)} iconClass="ic-teal" sub="روابطِ نیازمند توجه" />
           </div>
+
+          {/* P2-1: صف قدم بعدی (NBA) */}
+          {nba && (
+            <section className="panel" aria-label="صف قدم بعدی">
+              <div className="panel-title">
+                <div>
+                  <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Zap size={16} /> صف «قدم بعدی» — باید الان</h2>
+                  <p>اولویت: باید الان ← امروز ← این هفته؛ هر ردیف «چرا» و کانال دارد و اجرا = ساخت اقدام باز روی همان رابطه</p>
+                </div>
+                <Badge tone={nba.kpis?.acceptanceRate != null && nba.kpis.acceptanceRate >= 50 ? 'success' : 'info'}>
+                  نرخ اجرا: {fmtNum(nba.kpis?.acceptanceRate)}٪
+                </Badge>
+              </div>
+              <div className="kpi-grid" style={{ marginBottom: 12 }}>
+                <div className="kpi-card" style={{ margin: 0 }}><small>فعال</small><strong>{fmtNum(nba.kpis?.active)}</strong></div>
+                <div className="kpi-card" style={{ margin: 0 }}><small>اجرا شده</small><strong>{fmtNum(nba.kpis?.executed)}</strong></div>
+                <div className="kpi-card" style={{ margin: 0 }}><small>رد شده</small><strong>{fmtNum(nba.kpis?.dismissed)}</strong></div>
+              </div>
+              <div className="list">
+                {(nba.items ?? []).map((it: any) => (
+                  <div className="listRow" key={it.id} style={{ alignItems: 'flex-start' }}>
+                    <Badge tone={it.urgency === 'NOW' ? 'danger' : it.urgency === 'TODAY' ? 'warning' : 'info'}>{it.urgencyLabel}</Badge>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <strong style={{ fontSize: 13 }}>
+                        {it.relationshipId
+                          ? <Link className="t-primary" href={`/relationships/${it.relationshipId}`}>{it.title}</Link>
+                          : it.title}
+                      </strong>
+                      <small style={{ display: 'block', marginTop: 2 }}>{it.text}</small>
+                      <small style={{ display: 'block', marginTop: 3 }}>
+                        <span className="chip neutral">کانال: {it.channelLabel}</span>
+                        {it.expectedValue != null && <span className="chip info">بازده موردانتظار: {fmtMoney(it.expectedValue)}</span>}
+                        {Array.isArray(it.why) && it.why.map((w: string, i: number) => <span key={i} className="chip neutral">{w}</span>)}
+                      </small>
+                    </span>
+                    {it.executed ? (
+                      <Badge tone="success">اجرا شد</Badge>
+                    ) : (
+                      <span style={{ display: 'flex', gap: 6 }}>
+                        <button className="btn btn-primary" style={{ minHeight: 0, padding: '6px 12px', fontSize: 11 }} disabled={nbaBusy === it.id} onClick={() => nbaAct(it.id, 'EXECUTED')}>
+                          {nbaBusy === it.id ? '…' : 'اجرا'}
+                        </button>
+                        <button className="btn btn-ghost" style={{ minHeight: 0, padding: '6px 10px', fontSize: 11 }} disabled={nbaBusy === it.id} onClick={() => nbaAct(it.id, 'DISMISSED')}>رد</button>
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* P2-4: ریسک متمرکز و اهرم */}
+          {leverage && (
+            <section className="panel" aria-label="ریسک متمرکز و اهرم">
+              <div className="panel-title">
+                <div>
+                  <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><ShieldAlert size={16} /> ریسک متمرکز و اهرم</h2>
+                  <p>درآمد در معرض ریسک = ارزش موزون فرصت‌های باز × ریسک رابطه؛ وابستگی تک‌رابطه/تک‌شخص + اقدام جایگزین</p>
+                </div>
+                <Badge tone={leverage.kpis?.singleRelationshipCount > 0 ? 'danger' : 'success'}>در معرض ریسک: {fmtMoney(leverage.kpis?.totalRevenueAtRisk)}</Badge>
+              </div>
+              <div className="kpi-grid" style={{ marginBottom: 12 }}>
+                <div className="kpi-card" style={{ margin: 0 }}><small>سبد باز (موزون)</small><strong>{fmtMoney(leverage.kpis?.totalExpectedValue)}</strong></div>
+                <div className="kpi-card" style={{ margin: 0 }}><small>درآمد در معرض ریسک</small><strong>{fmtMoney(leverage.kpis?.totalRevenueAtRisk)}</strong></div>
+                <div className="kpi-card" style={{ margin: 0 }}><small>وابستگی تک‌رابطه</small><strong>{fmtNum(leverage.kpis?.singleRelationshipCount)}</strong></div>
+                <div className="kpi-card" style={{ margin: 0 }}><small>وابستگی تک‌شخص</small><strong>{fmtNum(leverage.kpis?.singlePersonCount)}</strong></div>
+              </div>
+              <div className="attr-grid">
+                {(leverage.exposures ?? []).map((x: any) => (
+                  <div key={x.relationshipId} className="kpi-card" style={{ margin: 0, borderColor: x.share >= 40 ? 'color-mix(in srgb, var(--red,#dc2626) 40%, transparent)' : undefined }}>
+                    <small>{x.relationshipName}</small>
+                    <strong>{fmtMoney(x.revenueAtRisk)}</strong>
+                    <span className="t-muted" style={{ fontSize: 10 }}>
+                      {fmtNum(x.openCount)} فرصت باز · سهم {fmtNum(x.share)}٪ از سبد · ریسک {fmtNum(x.riskScore)} · {x.classLabel}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {(leverage.singlePeople ?? []).length > 0 && (
+                <div style={{ marginTop: 12 }}>
+                  <b style={{ fontSize: 11.5 }}>تک‌شخص‌ها (اگر بروند؟)</b>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                    {(leverage.singlePeople ?? []).map((p: any) => (
+                      <span key={p.personId} className="chip danger" title={`${p.relationships.length} رابطه · ${fmtMoney(p.revenueAtRisk)} در معرض ریسک`}>
+                        {p.name} ({p.organization}) — {fmtMoney(p.revenueAtRisk)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {(leverage.alternatives ?? []).length > 0 && (
+                <div style={{ marginTop: 12, display: 'grid', gap: 6 }}>
+                  <b style={{ fontSize: 11.5 }}>اقدام جایگزین</b>
+                  {(leverage.alternatives ?? []).map((a: any) => (
+                    <div key={a.relationshipId} className="wf-alert" role="note">
+                      <Link className="t-primary" href={`/relationships/${a.relationshipId}`}>{a.relationshipName}</Link>
+                      <span style={{ flex: 1 }} />
+                      {a.originalKeyPerson && <span className="chip neutral">مالک: {a.originalKeyPerson.name}</span>}
+                      {Array.isArray(a.backupKeyPersons) && a.backupKeyPersons.length > 0 && <span className="chip info">جانشین: {a.backupKeyPersons.map((p: any) => p.name).join('، ')}</span>}
+                      {a.alternatePath && <span className="chip success">{a.alternatePath.hops} پرش · امتیاز {a.alternatePath.score}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
 
           {/* ۱) سیگنال‌های ریسک */}
           <section className="panel">

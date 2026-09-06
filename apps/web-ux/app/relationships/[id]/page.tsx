@@ -4,7 +4,7 @@ import { use, useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../../_lib/api';
 import { fa } from '../../_lib/fa';
 import { Badge, ErrorCard, Loading, PageHeader } from '../../_components/page-ui';
-import { CalendarDays, HeartPulse, RefreshCw, Archive, RotateCcw, AlertTriangle, ChevronLeft, TrendingUp, Gauge, FileClock } from 'lucide-react';
+import { CalendarDays, HeartPulse, RefreshCw, Archive, RotateCcw, AlertTriangle, ChevronLeft, TrendingUp, Gauge, FileClock, MessageCircle } from 'lucide-react';
 import { CriteriaScoreCard } from '../../_components/criteria';
 
 const arr = (x: any): any[] => Array.isArray(x) ? x : Array.isArray(x?.items) ? x.items : Array.isArray(x?.data) ? x.data : Array.isArray(x?.rows) ? x.rows : [];
@@ -48,6 +48,8 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const [r, setR] = useState<any>(null);
   const [tl, setTl] = useState<any[]>([]);
   const [pulse, setPulse] = useState<any>(null);
+  const [survey, setSurvey] = useState<any>(null);
+  const [surveyAnswers, setSurveyAnswers] = useState<Record<string, number>>({});
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [busy, setBusy] = useState('');
@@ -55,12 +57,14 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const load = useCallback(async () => {
     setError('');
     try {
-      const [a, b, p] = await Promise.all([
-        api(`/relationships/${id}`),
-        api(`/relationships/${id}/timeline`),
-        api(`/relationships/${id}/pulse`).catch(() => null),
+      const [a, b, p, s] = await Promise.all([
+        api<any>(`/relationships/${id}`),
+        api<any>(`/relationships/${id}/timeline`),
+        api<any>(`/relationships/${id}/pulse`).catch(() => null),
+        api<any>(`/relationships/${id}/pulse-survey`).catch(() => null),
       ]);
-      setR(a); setTl(arr(b)); setPulse(p);
+      setR(a); setTl(arr(b)); setPulse(p); setSurvey(s);
+      if (s?.last) setSurveyAnswers(Object.fromEntries(((s.last as any)?.answers ?? []).map((x: any) => [x.questionId, x.score])));
     } catch (e) { setError((e as Error).message); }
   }, [id]);
   useEffect(() => { load(); }, [load]);
@@ -322,6 +326,64 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
               <p className="t-muted">برنامهٔ ۹۰ روزه برای این رابطه ثبت نشده — از فهرست روابط یا صفحهٔ تحلیل، برنامه بسازید.</p>
             )}
           </section>
+
+          {/* P2-5: پالس ۹۰ روزه — پرسش، پیوند به معیار و حلقهٔ بسته */}
+          {survey && (
+            <section className="panel" style={{ marginTop: 14 }}>
+              <div className="panel-title">
+                <div>
+                  <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><MessageCircle size={16} /> پالس ۹۰ روزه</h2>
+                  <p>۳ پرسش کوتاه از وضعیت رابطه — هر پاسخ به یک خانوادهٔ معیار پیوند می‌خورد و نتیجه در حلقهٔ بسته به اقدام بدل می‌شود</p>
+                </div>
+                {survey.last ? (
+                  <span className={`chip ${survey.last.avgScore >= 70 ? 'success' : survey.last.avgScore >= 45 ? 'warning' : 'danger'}`}>آخرین پالس: {fmtNum(survey.last.avgScore)} از ۱۰۰</span>
+                ) : <Badge tone="info">هنوز پاسخ داده نشده</Badge>}
+              </div>
+              {survey.last && (
+                <div className="info-card" role="status">
+                  آخرین پاسخ {fmtDate(survey.last.answeredAt)} — {survey.last.interpretation} · موعد بعدی: {fmtDate(survey.last.nextDueAt)} ({fmtNum(survey.cycleDays ?? 90)} روز پس از پاسخ).
+                  {!survey.canSubmit && <span style={{ display: 'block', marginTop: 4 }}>برای پاسخ جدید تا موعد بعدی صبر کنید (حلقهٔ بسته: یک پاسخ در هر ۹۰ روز).</span>}
+                </div>
+              )}
+              {survey.canSubmit && (
+                <form className="entity-form" style={{ marginTop: 10, gap: 14 }} onSubmit={async (e) => {
+                  e.preventDefault();
+                  setBusy('survey'); setError(''); setInfo('');
+                  try {
+                    const answers = (survey.questions ?? []).map((q: any) => ({ questionId: q.id, score: surveyAnswers[q.id] ?? 50 }));
+                    const out: any = await api(`/relationships/${id}/pulse-survey`, { method: 'POST', body: JSON.stringify({ answers }) });
+                    setSurvey(out.view); setInfo(`پالس ثبت شد: ${fmtNum(out.result.avgScore)} از ۱۰۰ — ${out.result.interpretation} · موعد بعدی ${fmtDate(out.result.nextDueAt)}`);
+                  } catch (x) { setError((x as Error).message); }
+                  finally { setBusy(''); }
+                }}>
+                  {(survey.questions ?? []).map((q: any) => (
+                    <div key={q.id} className="field" style={{ width: '100%' }}>
+                      <label className="field-label" htmlFor={`q-${q.id}`}>{q.text} <span className="t-muted" style={{ fontWeight: 400 }}>— {q.criteriaFamily}</span></label>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        {[0, 25, 50, 75, 100].map((v) => (
+                          <button key={v} type="button" className={`btn ${surveyAnswers[q.id] === v ? 'btn-primary' : 'btn-ghost'}`}
+                            style={{ minHeight: 0, padding: '5px 12px', fontSize: 11 }} onClick={() => setSurveyAnswers((s) => ({ ...s, [q.id]: v }))}>
+                            {v === 0 ? '۰' : v === 100 ? '۱۰۰' : fmtNum(v)}
+                          </button>
+                        ))}
+                        <span className="t-muted" style={{ fontSize: 10.5, flex: 1 }}>{q.anchor}</span>
+                      </div>
+                    </div>
+                  ))}
+                  <button className="btn btn-primary" style={{ justifySelf: 'start' }} disabled={busy === 'survey'}>{busy === 'survey' ? 'در حال ثبت…' : 'ثبت پالس'}</button>
+                </form>
+              )}
+              {(survey.history ?? []).length > 1 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+                  {(survey.history ?? []).map((h: any) => (
+                    <span key={h.id} className={`chip ${h.avgScore >= 70 ? 'success' : h.avgScore >= 45 ? 'warning' : 'danger'}`}>
+                      {fmtDate(h.answeredAt)}: {fmtNum(h.avgScore)}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
 
           <div className="split-panels">
             {/* امتیازها */}

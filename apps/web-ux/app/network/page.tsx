@@ -1,11 +1,11 @@
 'use client';
-import { ShieldCheck, Network, Lightbulb, AlertTriangle, Zap, Maximize, Maximize2, X, Target, Clock } from 'lucide-react';
+import { ShieldCheck, Network, Lightbulb, AlertTriangle, Zap, Maximize, Maximize2, X, Target, Clock, Layers, UserPlus } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Component, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { apiGet } from '../_lib/api';
+import { apiGet, apiPost } from '../_lib/api';
 import {fa} from '../_lib/fa';
 import { useWorkspace } from '../_components/workspace';
 import { Badge, Empty, ErrorCard, Loading } from '../_components/page-ui';
@@ -191,6 +191,8 @@ export default function Page() {
   const [to, setTo] = useState('');
   const [path, setPath] = useState<any>(null);
   const [columns, setColumns] = useState<any[] | null>(null);
+  const [sna, setSna] = useState<any | null>(null);
+  const [snaBusy, setSnaBusy] = useState('');
   // گراف ۴ ستونی: ستون هر یال از edgeCategory روی گراف/یال می‌آید
   useEffect(() => {
     let alive = true;
@@ -200,6 +202,15 @@ export default function Page() {
     }).catch(() => {});
     return () => { alive = false; };
   }, []);
+  // P2-2: SNA پیشرفته — تراکم/خوشه/PageRank/ایزوله/سوراخ ساختاری + پیشنهاد یال
+  const loadSna = useCallback(async () => { try { setSna(await apiGet<any>('/network/sna')); } catch { /* بدون SNA هم گراف کار می‌کند */ } }, []);
+  useEffect(() => { loadSna(); }, [loadSna]);
+  const acceptEdge = async (id: string) => {
+    setSnaBusy(id);
+    try { setSna(await apiPost<any>(`/network/edge-suggestions/${encodeURIComponent(id)}/accept`, {})); }
+    catch (e: any) { setError(e?.message || 'پذیرش یال ناموفق بود'); }
+    finally { setSnaBusy(''); }
+  };
   const [analysis, setAnalysis] = useState<any>(null);
   const [analysisKind, setAnalysisKind] = useState('');
   const [loading, setLoading] = useState(true);
@@ -636,6 +647,58 @@ export default function Page() {
               </div>
             ))}
           </div>
+        </section>
+      )}
+
+      {/* P2-2: SNA پیشرفته */}
+      {sna && (
+        <section className="panel" style={{ margin: 0, marginBottom: 14 }} aria-label="تحلیل پیشرفته شبکه">
+          <div className="panel-title">
+            <div>
+              <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Layers size={16} /> تحلیل پیشرفته SNA</h2>
+              <p>تراکم، خوشه‌ها، PageRank، ایزوله‌ها و سوراخ‌های ساختاری — خروجی کاملاً قطعی از یال‌های همین گراف</p>
+            </div>
+            <Badge tone="info">تراکم سازمانی {fmtNum(sna.kpis?.densityOrg)}٪ · {fmtNum(sna.kpis?.componentCount)} مؤلفه</Badge>
+          </div>
+          <div className="kpi-grid" style={{ marginBottom: 10 }}>
+            <div className="kpi-card" style={{ margin: 0 }}><small>تراکم (سازمانی)</small><strong>{fmtNum(sna.kpis?.densityOrg)}٪</strong></div>
+            <div className="kpi-card" style={{ margin: 0 }}><small>تراکم کل گراف</small><strong>{fmtNum(sna.kpis?.densityFull)}٪</strong></div>
+            <div className="kpi-card" style={{ margin: 0 }}><small>ایزوله‌ها</small><strong>{fmtNum(sna.kpis?.isolatedCount)}</strong></div>
+            <div className="kpi-card" style={{ margin: 0 }}><small>یال پیشنهادی</small><strong>{fmtNum(sna.kpis?.proposedEdges)}</strong></div>
+            <div className="kpi-card" style={{ margin: 0 }}><small>پذیرفته‌شده</small><strong>{fmtNum(sna.kpis?.acceptedEdges)}</strong></div>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {(sna.isolates ?? []).map((x: any) => (
+              <span key={x.node?.id} className="chip danger">ایزوله: {x.node?.label}</span>
+            ))}
+            {(sna.clusters ?? []).map((c: any, i: number) => (
+              <span key={c.id} className="chip neutral" title={c.nodes.map((n: any) => n.label).slice(0, 8).join('، ')}>
+                خوشهٔ {i + 1} ({fmtNum(c.size)} گره)
+              </span>
+            ))}
+            {(sna.pageRank ?? []).slice(0, 4).map((x: any) => (
+              <span key={x.node?.id} className="chip" title="مرکزیت PageRank">PR {x.node?.label}: {fmtNum(x.score)}</span>
+            ))}
+          </div>
+          {(sna.structuralHoles ?? []).length > 0 && (
+            <div style={{ marginTop: 12, display: 'grid', gap: 6 }}>
+              <b style={{ fontSize: 11.5 }}>پیشنهاد یال (معرفی از روی سوراخ ساختاری)</b>
+              {(sna.structuralHoles ?? []).map((h: any) => (
+                <div key={h.id} className="wf-alert" role="note" style={{ alignItems: 'center' }}>
+                  <UserPlus size={14} />
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <b style={{ fontSize: 12 }}>{h.fromOrgName} ↔ {h.toOrgName}</b>
+                    <small className="t-muted" style={{ display: 'block' }}>{h.reason}</small>
+                  </span>
+                  {h.expectedValue > 0 && <span className="chip info">{fmtNum(h.expectedValue / 1e9)} میلیارد تومان</span>}
+                  <button className="btn btn-primary" style={{ minHeight: 0, padding: '5px 12px', fontSize: 10.5 }} disabled={snaBusy === h.id}
+                    onClick={() => acceptEdge(h.id)}>
+                    {snaBusy === h.id ? '…' : 'پذیرش و پیگیری معرفی'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       )}
 

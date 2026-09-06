@@ -19,7 +19,7 @@ const PORT = Number(process.env.MOCK_API_PORT || 4000);
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.06.2';
+const DEMO_MOCK_VERSION = '2026.09.06.3';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -627,6 +627,312 @@ function networkColumns(req){
   }));
   return {generatedAt:nowIso(),columns,edgesTotal:edges.length,nodesTotal:nodes.length,labels:COLUMN_LABELS,meta:{organizationCount:orgNodes.length,peopleCount:personNodes.length,relationshipCount:rels.length}};
 }
+
+/* ============================== P2 — هوشمندی ============================== */
+/* --------------------------------------------------------------------------
+   P2-1 NBA: صف «قدم بعدی» — باید الان/امروز/این هفته + کانال + بازده + چرا
+   خانوادهٔ اولویت‌ها: موعدگذشته → ریسک بدون پوشش → کیدنس → فرصت بزرگ → برنامه
+   -------------------------------------------------------------------------- */
+const NBA_URGENCY={NOW:'باید الان',TODAY:'امروز',WEEK:'این هفته'};
+const NBA_CHANNEL={MEETING:'جلسه',PHONE:'تماس تلفنی',EMAIL:'ایمیل'};
+const NBA_URGENCY_W={NOW:0,TODAY:1,WEEK:2};
+function nbaView(req){
+  const now=Date.now();
+  const rels=scopedRels(req);
+  const relOf=(id)=>rels.find(r=>r.id===id);
+  const relName=(id)=>{const r=relOf(id);return r?`${orgById(r.sourceOrganizationId)?.name??'—'} ↔ ${orgById(r.targetOrganizationId)?.name??'—'}`:null;};
+  const acts=scopedActions(req);
+  const coms=scopedCommitments(req);
+  const opps=scopedOpps(req).filter(o=>!o.deletedAt&&!['WON','LOST'].includes(o.status));
+  const evOf=(o)=>o.expectedValue??Math.round(((o.value??0)*(o.probability??0))/100);
+  const items=[]; const seen=new Set();
+  const add=(x)=>{ if(!x.relationshipId||seen.has(x.key))return; seen.add(x.key);
+    items.push({id:x.id,kind:x.kind,refId:x.refId,relationshipId:x.relationshipId,relationshipName:relName(x.relationshipId)??x.relationshipName,
+      title:x.title,text:x.text,urgency:x.urgency,urgencyLabel:NBA_URGENCY[x.urgency],channel:x.channel,channelLabel:NBA_CHANNEL[x.channel],
+      expectedValue:x.expectedValue??null,why:x.why.filter(Boolean),status:'PROPOSED',createdAt:nowIso()}); };
+  /* ۱) اقدامات و تعهدات موعدگذشته یا مسدود */
+  acts.filter(a=>['OPEN','IN_PROGRESS','BLOCKED'].includes(a.status)&&(isLateAt(a.dueAt,now)||a.status==='BLOCKED'))
+    .sort((a,b)=>(a.dueAt??'9999').localeCompare(b.dueAt??'9999')).forEach(a=>{
+      add({key:`a-${a.id}`,id:`nba-a-${a.id}`,kind:'ACTION',refId:a.id,relationshipId:a.relationshipId,relationshipName:relName(a.relationshipId),
+        title:a.title,text:`اقدام «${a.title}» را همین امروز پیگیری کنید`,urgency:'NOW',channel:'PHONE',expectedValue:null,
+        why:[`موعد ${a.dueAt?faDate(a.dueAt):'ثبت نشده'}${isLateAt(a.dueAt,now)?' گذشته است':''}`,a.status==='BLOCKED'?'اقدام مسدود است':`اولویت ${a.priority??'MEDIUM'}`]});
+    });
+  coms.filter(c=>['OPEN','OVERDUE'].includes(c.status)&&isLateAt(c.dueAt,now)).forEach(c=>{
+      add({key:`c-${c.id}`,id:`nba-c-${c.id}`,kind:'COMMITMENT',refId:c.id,relationshipId:c.relationshipId,relationshipName:relName(c.relationshipId),
+        title:c.description.slice(0,80),text:`تعهد «${c.description.length>60?c.description.slice(0,60)+'…':c.description}» سررسید گذشته — پیگیری و راستی‌آزمایی کنید`,
+        urgency:'NOW',channel:'PHONE',expectedValue:null,
+        why:[`سررسید ${c.dueAt?faDate(c.dueAt):'—'}`,c.direction==='THEIRS'?'تعهد طرف مقابل است — راستی‌آزمایی کنید':`ریسک ${c.risk??'MEDIUM'}`]});
+    });
+  /* ۲) روابط در خطر بدون پوشش اقدام/تعهد */
+  rels.filter(r=>r.status==='WATCH'||(r.riskScore??0)>=60).forEach(r=>{
+    const hasOpen=acts.some(a=>a.relationshipId===r.id&&['OPEN','IN_PROGRESS','BLOCKED'].includes(a.status))||coms.some(c=>c.relationshipId===r.id&&['OPEN','OVERDUE'].includes(c.status));
+    if(hasOpen)return;
+    const relOpps=opps.filter(o=>o.relationshipId===r.id);
+    add({key:`r-${r.id}`,id:`nba-r-${r.id}`,kind:'RISK',refId:r.id,relationshipId:r.id,relationshipName:relName(r.id),
+      title:`اقدام اصلاحی: ${relName(r.id)??r.id}`,text:'برنامهٔ کاهش ریسک را ثبت کنید — ریسک بالا بدون هرگونه اقدام باز است',
+      urgency:'NOW',channel:'MEETING',expectedValue:relOpps.reduce((s,o)=>s+evOf(o),0),
+      why:[`ریسک ${r.riskScore} · سلامت ${r.healthScore} · تاب‌آوری ${r.resilienceScore}`,r.status==='WATCH'?'رابطه در وضعیت «تحت نظر»':'فرصت‌های باز این رابطه در معرض ریسک‌اند']});
+  });
+  /* ۳) کیدنس عقب/شکسته */
+  rels.forEach(r=>{ const cad=relCadence(r); if(cad.status==='FRESH')return;
+    add({key:`cad-${r.id}`,id:`nba-cad-${r.id}`,kind:'CADENCE',refId:r.id,relationshipId:r.id,relationshipName:relName(r.id),
+      title:`تعامل با ${relName(r.id)??r.id}`,text:`آخرین تعامل ${cad.daysSinceLastInteraction} روز پیش ثبت شده؛ هدف کیدنس ${cad.cadenceDays} روز است`,
+      urgency:cad.status==='CRITICAL'?'TODAY':'WEEK',channel:'EMAIL',expectedValue:null,
+      why:[`${cad.daysSinceLastInteraction} روز سکوت`,cad.status==='CRITICAL'?'کیدنس شکسته':'کیدنس عقب افتاده']});
+  });
+  /* ۴) فرصت‌های بزرگ — گام بعدی */
+  opps.sort((a,b)=>evOf(b)-evOf(a)).slice(0,3).forEach(o=>{
+    add({key:`o-${o.id}`,id:`nba-o-${o.id}`,kind:'OPPORTUNITY',refId:o.id,relationshipId:o.relationshipId??null,relationshipName:relName(o.relationshipId),
+      title:`گام بعدی «${o.name}»`,text:'قدم بعدی فرصت را با صاحب‌رابطه برنامه‌ریزی و موعد بگذارید',
+      urgency:'WEEK',channel:'MEETING',expectedValue:evOf(o),
+      why:[`احتمال ${o.probability??0}٪ · ارزش موزون ${(evOf(o)/1e9).toFixed(1)} میلیارد تومان`,o.relationshipId?`رابطهٔ ${relName(o.relationshipId)}`:null]});
+  });
+  /* ۵) اقدامات معوق برنامهٔ ۹۰ روزه (P1-3) */
+  Object.values(DB.accountPlans??{}).forEach((plan)=>{
+    (plan?.items??[]).filter(i=>!['DONE','CANCELLED','COMPLETED'].includes(i.status)&&isLateAt(i.dueAt,now)).slice(0,1).forEach(i=>{
+      add({key:`ap-${i.id}`,id:`nba-ap-${i.id}`,kind:'PLAN',refId:i.id,relationshipId:plan.relationshipId,relationshipName:relName(plan.relationshipId),
+        title:`برنامهٔ ۹۰ روزه: ${i.title}`,text:`اقدام برنامهٔ حساب موعدش گذشته است — وضعیت را به‌روز کنید`,
+        urgency:'TODAY',channel:'EMAIL',expectedValue:null,why:[`مهلت ${faDate(i.dueAt)}`,i.focus??'']});
+    });
+  });
+  /* ۶) جابه‌جایی قهرمان (P1-5) — مسیر گرم */
+  const careerView=careerEventsView(req);
+  careerView.alerts.forEach(e=>{
+    const wp=(e.warmPaths??[])[0];
+    const r=wp?.relationshipId; if(!r)return;
+    const p=personById(e.personId);
+    add({key:`ce-${e.id}`,id:`nba-ce-${e.id}`,kind:'CAREER',refId:e.id,relationshipId:r,relationshipName:relName(r),
+      title:`تمدید شناخت: ${p?`${p.firstName} ${p.lastName}`:e.personId}`,text:`قهرمان جابه‌جا/ارتقا یافت — از مسیر گرمِ ${relName(r)??''} تماس تبریک و تازه‌سازی شناخت بزنید`,
+      urgency:'NOW',channel:'MEETING',expectedValue:null,why:[e.note??'',`مسیر گرم از ${relName(r)}`]});
+  });
+  items.sort((a,b)=>(NBA_URGENCY_W[a.urgency]-NBA_URGENCY_W[b.urgency])||((b.expectedValue??0)-(a.expectedValue??0)));
+  const exes=(DB.nbaExecutions??[]).filter(x=>x.userId===(currentUser(req)?.id??'u-demo'));
+  const executed=exes.filter(x=>x.status==='EXECUTED');
+  const dismissed=exes.filter(x=>x.status==='DISMISSED');
+  const active=items.length;
+  const proposed=active+executed.length; // dismissals counted separately in kpis
+  return {generatedAt:nowIso(),
+    kpis:{active,executed:executed.length,dismissed:dismissed.length,acceptanceRate:proposed?Math.round(100*executed.length/proposed):null},
+    items:items.slice(0,12).map(x=>({...x,executed:executed.some(e=>e.suggestionId===x.id)})),
+    channels:NBA_CHANNEL,urgencyLabels:NBA_URGENCY};
+}
+/* اجرای/ردِ NBA: اجرا = ثبت اقدام باز روی رابطه */
+function nbaAct(req,id,status){
+  if(!['EXECUTED','DISMISSED'].includes(status)) return {code:400,msg:'وضعیت نامعتبر است.'};
+  const uid=currentUser(req)?.id??'u-demo';
+  DB.nbaExecutions=Array.isArray(DB.nbaExecutions)?DB.nbaExecutions:[];
+  const prev=DB.nbaExecutions.find(x=>x.suggestionId===id&&x.status==='EXECUTED');
+  if(prev) return {code:409,msg:'این پیشنهاد قبلاً اجرا شده است.'};
+  DB.nbaExecutions.push({suggestionId:id,status,userId:uid,at:nowIso()});
+  saveDb();
+  if(status==='EXECUTED'){
+    const item=nbaView(req).items.find(x=>x.id===id);
+    if(item?.relationshipId){
+      ACTIONS.unshift({id:`a-${Date.now()}`,title:item.title,status:'OPEN',priority:'HIGH',dueAt:new Date(Date.now()+3*86400000).toISOString(),ownerId:uid,relationshipId:item.relationshipId,createdAt:nowIso()});
+      saveDb();
+    }
+  }
+  return {code:200,ok:true};
+}
+/* --------------------------------------------------------------------------
+   P2-2 SNA پیشرفته: تراکم، خوشه (label propagation)، PageRank، ایزوله،
+   سوراخ ساختاری + «پیشنهاد یال» (معرفی) با پذیرش و شمارش KPI
+   -------------------------------------------------------------------------- */
+function snaView(req){
+  const g=netGraphVisible(req);
+  const {nodes,edges}=g;
+  const adj=netUndirected(nodes,edges);
+  const n=nodes.length;
+  const uniqEdges=new Set(); edges.forEach(e=>uniqEdges.add([e.source,e.target].sort().join('|')));
+  /* تراکم روی گراف سازمانی (روابط واقعی) — KPI اصلی */
+  const orgNodes=nodes.filter(x=>x.type==='organization');
+  const orgIds=new Set(orgNodes.map(x=>x.id));
+  const orgEdges=new Set(); edges.forEach(e=>{if(orgIds.has(e.source)&&orgIds.has(e.target)&&e.kind==='relationship')orgEdges.add([e.source,e.target].sort().join('|'));});
+  const orgPossible=Math.max(1,orgNodes.length*(orgNodes.length-1)/2);
+  const densityOrg=Math.round(100*orgEdges.size/orgPossible);
+  const densityFull=n>1?Math.round(100*uniqEdges.size/(n*(n-1)/2)):null;
+  /* PageRank (گراف بدون جهت، تکرار توانی قطعی) */
+  const pr=new Map(nodes.map(x=>[x.id,1/Math.max(1,n)]));
+  const damp=0.85;
+  for(let it=0;it<40;it++){
+    const next=new Map(nodes.map(x=>[x.id,(1-damp)/Math.max(1,n)]));
+    nodes.forEach(u=>{const outs=adj.get(u.id)??[];const s=pr.get(u.id)??0;
+      if(!outs.length){nodes.forEach(v=>next.set(v.id,(next.get(v.id)??0)+damp*s/Math.max(1,n)));}
+      else outs.forEach(v=>next.set(v,(next.get(v)??0)+damp*s/outs.length));});
+    next.forEach((v,k)=>pr.set(k,v));
+  }
+  const maxPr=Math.max(1,...[...pr.values()]);
+  const pageRank=nodes.map(x=>({node:{id:x.id,label:x.label,type:x.type},score:Math.round(10000*((pr.get(x.id)??0)/maxPr))/100}))
+    .sort((a,b)=>b.score-a.score).slice(0,6);
+  /* خوشه‌بندی: برچسب‌گذاری قطعی با ترتیب واژه‌ای */
+  const label=new Map(nodes.map(x=>[x.id,x.id]));
+  for(let it=0;it<12;it++){
+    let changed=0;
+    [...nodes.map(x=>x.id)].sort().forEach(u=>{
+      const counts=new Map();
+      (adj.get(u)??[]).forEach(v=>{const l=label.get(v)??v;counts.set(l,(counts.get(l)??0)+1);});
+      const best=[...counts.entries()].sort((a,b)=>b[1]-a[1]||(a[0]<b[0]?-1:1))[0];
+      const nextL=best?best[0]:u;
+      if(nextL!==label.get(u)){label.set(u,nextL);changed++;}
+    });
+    if(!changed)break;
+  }
+  const clusters=new Map(); label.forEach((l,id)=>{if(!clusters.has(l))clusters.set(l,[]);clusters.get(l).push(id);});
+  const clusterList=[...clusters.entries()].map(([root,ids])=>({
+    id:`cl-${String(root).replace(/[^a-zA-Z0-9-]/g,'-')}`,root,size:ids.length,
+    nodes:ids.map(id=>({id,label:(nodes.find(x=>x.id===id)?.label??id),type:(nodes.find(x=>x.id===id)?.type??'')}))
+  })).sort((a,b)=>b.size-a.size).slice(0,6);
+  /* ایزوله‌ها */
+  const isolates=orgNodes.filter(x=>!(adj.get(x.id)??[]).some(v=>orgIds.has(v))).map(x=>({node:{id:x.id,label:x.label,type:'organization'}}));
+  /* سوراخ ساختاری + پیشنهاد یال (معرفی) */
+  const personOrg=new Map(); const orgPersons=new Map();
+  nodes.forEach(x=>{if(x.type==='person'){const o=edges.find(e=>e.kind==='membership'&&(e.source===x.id||e.target===x.id));const oid=o?(o.source===x.id?o.target:o.source).slice(4):null;personOrg.set(x.id,oid);if(oid){if(!orgPersons.has(oid))orgPersons.set(oid,[]);orgPersons.get(oid).push(x.id);}}});
+  const ppEdges=new Set(); edges.forEach(e=>{if(e.kind!=='person_relationship')return;ppEdges.add([e.source,e.target].sort().join('|'));});
+  const accepted=new Set((DB.edgeSuggestionAccepts??[]).map(x=>x.suggestionId));
+  const suggestions=[];
+  const metaById=new Map(nodes.map(x=>[x.id,x]));
+  const seenPairs=new Set();
+  nodes.filter(x=>x.type==='person').forEach(p=>{
+    const oa=personOrg.get(p.id); if(!oa)return;
+    nodes.filter(x=>x.type==='person'&&x.id>p.id).forEach(q=>{
+      const ob=personOrg.get(q.id); if(!ob||oa===ob)return;
+      const pairKey=[oa,ob].sort().join('|');
+      if(seenPairs.has(pairKey))return;
+      if(orgEdges.has([`org:${oa}`,`org:${ob}`].sort().join('|')))return; // رابطهٔ مستقیم هست؛ سوراخ نیست
+      if(ppEdges.has([p.id,q.id].sort().join('|')))return; // همدیگر را می‌شناسند
+      // سوراخ واقعی: رابطهٔ مستقیم سازمانی نیست و این دو شخص هرگز ملاقات نکرده‌اند
+      seenPairs.add(pairKey);
+      const pName=metaById.get(p.id)?.label??p.id, qName=metaById.get(q.id)?.label??q.id;
+      const aName=orgById(oa)?.name??oa, bName=orgById(ob)?.name??ob;
+      const pInf=personById(p.id.slice(7))?.influenceScore??55, qInf=personById(q.id.slice(7))?.influenceScore??55;
+      const score=Math.round((pInf+qInf)/2+10);
+      const targetOrg=orgColumn(ob)==='TEAM'?oa:ob;
+      const targetOpps=scopedOpps(req).filter(o=>o.organizationId===targetOrg&&!['WON','LOST'].includes(o.status));
+      const ev=targetOpps.reduce((s,o)=>s+(o.expectedValue??Math.round((o.value??0)*(o.probability??0)/100)),0);
+      const sid=`es-${oa}-${ob}-${p.id.slice(7)}-${q.id.slice(7)}`;
+      if(accepted.has(sid))return;
+      suggestions.push({id:sid,fromOrg:oa,toOrg:ob,fromOrgName:aName,toOrgName:bName,viaPersonId:p.id.slice(7),viaPerson:pName,toPersonId:q.id.slice(7),toPerson:qName,
+        score,expectedValue:ev,
+        reason:`سوراخ ساختاری بین «${aName}» و «${bName}»: ${pName} و ${qName} هنوز همدیگر را نمی‌شناسند ولی در خوشه‌های متفاوتی‌اند — یک معرفی می‌تواند یال سازمانی جدید بسازد.`});
+    });
+  });
+  suggestions.sort((a,b)=>b.score-a.score||(b.expectedValue-a.expectedValue));
+  return {generatedAt:nowIso(),
+    kpis:{nodes:n,edges:uniqEdges.size,densityOrg,densityFull,componentCount:netComponents(nodes,adj).length,isolatedCount:isolates.length,
+      clusterCount:clusterList.length,acceptedEdges:accepted.size,proposedEdges:suggestions.length},
+    density:{org:densityOrg,full:densityFull},pageRank,clusters:clusterList,isolates,
+    structuralHoles:suggestions.slice(0,5).map(s=>({...s,accepted:accepted.has(s.id)}))};
+}
+/* --------------------------------------------------------------------------
+   P2-3 هوشمندی جلسه: خلاصهٔ قاعده‌مبنا + احساسات + برچسب انسانی
+   (بدون وعدهٔ LLM کامل — خروجی قطعی از متن حقیقی جلسه)
+   -------------------------------------------------------------------------- */
+function meetingIntel(m){
+  const src=[m.outcome,m.notes,m.transcript,(m.decisions??[]).join('\n'),m.agenda].filter(Boolean).join('\n');
+  const sentences=src.split(/[\n.!؟]+/).map(s=>s.trim()).filter(s=>s.length>3);
+  const POS=['موفق','عالی','پیشرفت','رضایت','توافق','امضا','تأیید','مثبت','جذب','مطمئن','پایدار','رشد','توسعه','به‌موقع'];
+  const NEG=['نگران','ریسک','مشکل','تأخیر','تاخیر','لغو','مسدود','کمبود','نقدینگی','اعتراض','اختلاف','کاهش','نامطمئن','نقص','انحراف','عقب'];
+  const hits=(words)=>words.filter(w=>src.includes(w));
+  const posHits=hits(POS), negHits=hits(NEG);
+  const tone=posHits.length>negHits.length&&posHits.length?'POSITIVE':negHits.length>posHits.length?'CONCERNED':negHits.length&&posHits.length===negHits.length?'CONCERNED':'NEUTRAL';
+  const confidence=Math.min(95,20+10*(posHits.length+negHits.length));
+  const decisions=(m.decisions??[]).map(String);
+  const actionSents=sentences.filter(s=>/(باید|لازم است|نیاز است|می‌بایست|پیگیری|ارسال|تحویل|بررسی|هماهنگی|آماده کنیم|زمان‌بندی|استعلام|ثبت|امضا|تمدید|ارائه)/.test(s)).slice(0,5);
+  const openActs=(m.actions??[]).filter(a=>!['DONE','COMPLETED','CANCELLED'].includes(a.status));
+  const summary=[];
+  if(m.objective) summary.push(`هدف: ${m.objective}`);
+  summary.push(`${(m.participants??[]).length} شرکت‌کننده · ${new Date(m.startAt).toLocaleDateString('fa-IR')}`);
+  if(decisions.length) summary.push(`${decisions.length} تصمیم ثبت شده است.`);
+  summary.push(openActs.length?`${openActs.length} اقدام باز از این جلسه در جریان است.`:'اقدام بازِ مانده‌ای از این جلسه نیست.');
+  if(negHits.length) summary.push(`${negHits.length} نشانهٔ نگرانی در متن شناسایی شد (${negHits.slice(0,3).join('، ')}).`);
+  else if(posHits.length) summary.push(`نشانهٔ مثبت: ${posHits.slice(0,3).join('، ')}.`);
+  return {generatedAt:nowIso(),meetingId:m.id,summary:summary.join('\n'),tone,toneLabel:tone==='POSITIVE'?'مثبت':tone==='CONCERNED'?'نگران‌کننده':'خنثی',
+    confidence,signals:{positive:posHits.slice(0,4),negative:negHits.slice(0,4)},
+    decisions,detectedActions:actionSents,openActions:openActs.map(a=>({id:a.id,title:a.title,status:a.status,dueAt:a.dueAt})),
+    humanLabel:m.intelTone??null,ruleBased:true};
+}
+/* --------------------------------------------------------------------------
+   P2-4 ریسک متمرکز و اهرم: درآمد در معرض ریسک، وابستگی تک‌رابطه/تک‌شخص، اقدام جایگزین
+   -------------------------------------------------------------------------- */
+function riskLeverageView(req){
+  const now=Date.now();
+  const rels=scopedRels(req);
+  const open=scopedOpps(req).filter(o=>!o.deletedAt&&!['WON','LOST'].includes(o.status));
+  const evOf=(o)=>o.expectedValue??Math.round((o.value??0)*(o.probability??0)/100);
+  const totalEv=open.reduce((s,o)=>s+evOf(o),0);
+  const byRel=new Map(); open.forEach(o=>{if(!o.relationshipId)return;const k=o.relationshipId;if(!byRel.has(k))byRel.set(k,[]);byRel.get(k).push(o);});
+  const exposures=rels.map(r=>{
+    const os=byRel.get(r.id)??[]; const ev=os.reduce((s,o)=>s+evOf(o),0);
+    const riskW=Math.min(1,(r.riskScore??0)/100);
+    return {relationshipId:r.id,relationshipName:`${orgById(r.sourceOrganizationId)?.name??'—'} ↔ ${orgById(r.targetOrganizationId)?.name??'—'}`,
+      openCount:os.length,expectedValue:ev,share:totalEv?Math.round(100*ev/totalEv):0,riskScore:r.riskScore??0,healthScore:r.healthScore??0,
+      revenueAtRisk:Math.round(ev*riskW),classKey:relClass(r),classLabel:REL_CLASS_LABELS[relClass(r)]};
+  }).filter(x=>x.openCount>0).sort((a,b)=>b.revenueAtRisk-a.revenueAtRisk);
+  const totalAtRisk=exposures.reduce((s,x)=>s+x.revenueAtRisk,0);
+  const singleRel=exposures.filter(x=>x.share>=40);
+  /* وابستگی تک‌شخص: قهرمان/پلِ روی روابطِ دارای درآمد در معرض ریسک */
+  const riskyRelIds=new Set(exposures.filter(x=>x.revenueAtRisk>0).map(x=>x.relationshipId));
+  const peopleByRel=new Map();
+  rels.filter(r=>riskyRelIds.has(r.id)).forEach(r=>{
+    const opps=byRel.get(r.id)??[];
+    opps.forEach(o=>{if(o.ownerId){if(!peopleByRel.has(o.ownerId))peopleByRel.set(o.ownerId,[]);peopleByRel.get(o.ownerId).push(r.id);}});
+  });
+  const singlePeople=[...peopleByRel.entries()].map(([pid,relIds])=>{
+    const p=personById(pid); if(!p)return null;
+    const ev=relIds.reduce((s,rid)=>s+((exposures.find(x=>x.relationshipId===rid)?.revenueAtRisk)??0),0);
+    return {personId:pid,name:`${p.firstName} ${p.lastName}`,title:p.title,organizationId:p.organizationId,organization:orgById(p.organizationId)?.name??'—',
+      relationships:relIds,relationshipCount:relIds.length,revenueAtRisk:ev,champion:!!p.champion?.flag,power:p.champion?.power??null,influence:p.influenceScore??0};
+  }).filter(Boolean).sort((a,b)=>b.revenueAtRisk-a.revenueAtRisk).slice(0,5);
+  /* اقدام جایگزین برای بالاترین مواجهه‌ها */
+  const alternatives=exposures.slice(0,3).map(x=>{
+    const rel=rels.find(r=>r.id===x.relationshipId); if(!rel)return null;
+    const ourOrg=rel.sourceOrganizationId,targetOrg=rel.targetOrganizationId;
+    const path=netPathOrg(req,ourOrg,targetOrg,'best',{maxHops:3});
+    const owners=byRel.get(x.relationshipId)??[];
+    const keyOwner=owners[0]?.ownerId?personById(owners[0].ownerId):null;
+    const backupOwners=owners.slice(1).map(o=>personById(o.ownerId)).filter(Boolean);
+    return {relationshipId:x.relationshipId,relationshipName:x.relationshipName,revenueAtRisk:x.revenueAtRisk,riskScore:x.riskScore,
+      originalKeyPerson:keyOwner?{id:keyOwner.id,name:`${keyOwner.firstName} ${keyOwner.lastName}`,title:keyOwner.title}:null,
+      backupKeyPersons:backupOwners.map(p=>({id:p.id,name:`${p.firstName} ${p.lastName}`,title:p.title})),
+      alternatePath:path.found?{hops:path.hops,score:path.score,nodes:path.nodes.map(n=>n.label??n.name??n.id)}:null,
+      action:`${path.found?`مسیر جایگزین با ${path.hops} پرش (امتیاز ${path.score}) برای این سازمان وجود دارد.`:'مسیر جایگزین سازمانی در ۳ پرش یافت نشد.'}${keyOwner?` مالک فعلی: ${keyOwner.firstName} ${keyOwner.lastName}.`:''}`};
+  }).filter(Boolean);
+  return {generatedAt:nowIso(),
+    kpis:{totalExpectedValue:totalEv,totalRevenueAtRisk:totalAtRisk,exposureCount:exposures.length,singleRelationshipCount:singleRel.length,singlePersonCount:singlePeople.length,alternativeCount:alternatives.length},
+    exposures:exposures.slice(0,6),singleRelationships:singleRel,singlePeople,alternatives};
+}
+/* --------------------------------------------------------------------------
+   P2-5 پالس ۹۰ روزه: ۲–۳ پرسش، پیوند به خانوادهٔ معیار، حلقهٔ بسته (پاسخ → اقدام → موعد بعدی)
+   -------------------------------------------------------------------------- */
+const PULSE_QUESTIONS=[
+  {id:'pq-opportunity',text:'در ۳ ماه گذشته، این سازمان تقاضا/فرصت جدیدی برای ما مطرح کرده است؟',criteriaFamily:'OPPORTUNITY',anchor:'پیوند مستقیم به معیار «پتانسیل فرصت» — ۰=هیچ، ۵۰=متوسط، ۱۰۰=فرصت مشخص و جدی'},
+  {id:'pq-collaboration',text:'کیفیت همکاری و پایبندی به قول‌ها در این ۳ ماه چطور بوده است؟',criteriaFamily:'RELIABILITY',anchor:'۰=شکایت/قول‌های عقب‌افتاده، ۵۰=طبیعی، ۱۰۰=بدون تأخیر و قابل اعتماد'},
+  {id:'pq-access',text:'دسترسی ما به تصمیم‌گیرندهٔ کلیدی این سازمان چقدر است؟',criteriaFamily:'ACCESS',anchor:'۰=فقط واسطه، ۵۰=گاهی مستقیم، ۱۰۰=دسترسی مستقیم و منظم'},
+];
+function pulseSurveyView(req,r){
+  const list=(DB.pulseSurveys??[]).filter(x=>x.relationshipId===r.id).sort((a,b)=>b.answeredAt.localeCompare(a.answeredAt));
+  const last=list[0]??null;
+  const now=Date.now();
+  return {relationship:relWithOrgs(r),questions:PULSE_QUESTIONS,last,
+    nextDueAt:last?.nextDueAt??null,
+    canSubmit:!last||new Date(last.nextDueAt).getTime()<=now,
+    history:list.slice(0,6),cycleDays:90};
+}
+function pulseSurveySubmit(req,r,answers){
+  const byId=new Map((answers??[]).map(a=>[a.questionId,Number(a.score)]));
+  const rows=PULSE_QUESTIONS.map(q=>({questionId:q.id,criteriaFamily:q.criteriaFamily,score:byId.has(q.id)?Math.max(0,Math.min(100,Math.round(byId.get(q.id)))):null}));
+  if(rows.some(x=>x.score==null)) return {code:400,msg:'هر سه پرسش باید پاسخ داده شوند.'};
+  const avg=Math.round(rows.reduce((s,x)=>s+x.score,0)/rows.length);
+  const row={id:`ps-${Date.now()}`,relationshipId:r.id,user:currentUser(req)?.id??'u-demo',answers:rows,avgScore:avg,interpretation:avg>=70?'پالس مثبت — رابطه در مسیر رشد است':avg>=45?'پالس متوسط — چند اقدام مشخص کافی است':'پالس ضعیف — مداخلهٔ ساختاری لازم است',answeredAt:nowIso(),nextDueAt:new Date(Date.now()+90*86400000).toISOString()};
+  DB.pulseSurveys=Array.isArray(DB.pulseSurveys)?DB.pulseSurveys:[];
+  DB.pulseSurveys.unshift(row); saveDb();
+  /* حلقهٔ بسته: اقدام بازبینی + اعلان */
+  ACTIONS.unshift({id:`a-${Date.now()}`,title:`بازبینی نتیجهٔ پالس ۹۰ روزهٔ ${orgById(r.targetOrganizationId)?.name??''}`,status:'OPEN',priority:avg<45?'CRITICAL':'MEDIUM',dueAt:row.nextDueAt,ownerId:row.user,relationshipId:r.id,createdAt:nowIso()});
+  NOTIFICATIONS.unshift({id:`n-${Date.now()}`,userId:row.user,title:'پالس ۹۰ روزه ثبت شد',body:`${avg} از ۱۰۰ — ${row.interpretation}`,type:'INFO',priority:avg<45?'HIGH':'MEDIUM',isRead:false,createdAt:nowIso()});
+  saveDb();
+  return {code:200,ok:true,row};
+}
+
 // full visible graph (orgs + people + memberships + meeting edges) for analytics
 function netGraphVisible(req){
   const rels=scopedRels(req);
@@ -1343,6 +1649,10 @@ function loadDb() {
       if (!DB.accountPlans) DB.accountPlans = seedAccountPlans();
       if (!Array.isArray(DB.careerEvents)) DB.careerEvents = seedCareerEvents();
       if (!DB.calibrationSettings) DB.calibrationSettings = seedCalibrationSettings();
+      if (!Array.isArray(DB.nbaExecutions)) DB.nbaExecutions = [];
+      if (!Array.isArray(DB.edgeSuggestionAccepts)) DB.edgeSuggestionAccepts = [];
+      if (!Array.isArray(DB.pulseSurveys)) DB.pulseSurveys = [];
+      if (!DB.meetingIntelLabels) DB.meetingIntelLabels = {};
     }
   } catch { DB = null; }
   if (!DB) {
@@ -1352,7 +1662,8 @@ function loadDb() {
       recs: RECS, aiUsage: AI_USAGE, personOrgs: PERSON_ORGS, audit: [], revokedJtis: [], nextId: 1,
       assessments: seedCriteriaAssessments(), criteriaManual: [], knowledge: seedKnowledge(), documents: seedDocuments(),
       scoreSnapshots: seedScoreSnapshots(), accountPlans: seedAccountPlans(), careerEvents: seedCareerEvents(),
-      calibrationSettings: seedCalibrationSettings() };
+      calibrationSettings: seedCalibrationSettings(), nbaExecutions: [], edgeSuggestionAccepts: [],
+      pulseSurveys: [], meetingIntelLabels: {} };
   }
   // seed identities with real scrypt hashes (kept on disk afterwards)
   for (const [email, u] of Object.entries(SEED_USERS)) {
@@ -3147,6 +3458,29 @@ const server=http.createServer(async(req,res)=>{
       openOpportunities:openOpps.map(o=>({id:o.id,name:o.name,status:o.status,probability:o.probability,value:o.value})),
       riskDrivers:riskDrivers(req,r)});
   }
+  /* P2-5: پالس ۹۰ روزه — پرسش، پاسخ و حلقهٔ بسته */
+  const relPulseSurvey=match('/relationships/:id/pulse-survey');
+  if(relPulseSurvey&&method==='GET'){
+    const r=RELS.find(x=>x.id===relPulseSurvey[0]);
+    if(!r) return json(res,404,{message:'رابطه یافت نشد'}); 
+    if(!inScope(req,r.sourceOrganizationId)&&!inScope(req,r.targetOrganizationId)) return json(res,403,{message:'دسترسی مجاز نیست.'});
+    return json(res,200,pulseSurveyView(req,r));
+  }
+  if(relPulseSurvey&&method==='POST'){
+    const r=RELS.find(x=>x.id===relPulseSurvey[0]);
+    if(!r) return json(res,404,{message:'رابطه یافت نشد'}); 
+    if(!inScope(req,r.sourceOrganizationId)&&!inScope(req,r.targetOrganizationId)) return json(res,403,{message:'دسترسی مجاز نیست.'});
+    const b=await readBody(req);
+    const given=(b.answers??[]).filter(a=>a.questionId&&String(a.score)!==''&&a.score!=null);
+    if(given.length<PULSE_QUESTIONS.length) return json(res,400,{message:'هر سه پرسش باید پاسخ داده شوند.'});
+    const lastPulse=(DB.pulseSurveys??[]).filter(x=>x.relationshipId===r.id).sort((a,b)=>b.answeredAt.localeCompare(a.answeredAt))[0];
+    if(lastPulse&&new Date(lastPulse.nextDueAt).getTime()>Date.now())
+      return json(res,409,{code:'PULSE_WINDOW_OPEN',message:`پاسخ بعدی از ${faDate(lastPulse.nextDueAt)} مجاز است — حلقهٔ ۹۰ روزه.`});
+    const out=pulseSurveySubmit(req,r,b.answers??[]);
+    if(out.code!==200) return json(res,out.code,{message:out.msg});
+    audit(req,'PULSE_SURVEY','relationship',r.id,'OK',{avgScore:out.row.avgScore});
+    return json(res,201,{ok:true,result:out.row,view:pulseSurveyView(req,r)});
+  }
   const relPlan=match('/relationships/:id/account-plan');
   if(relPlan&&method==='GET'){
     const r=RELS.find(x=>x.id===relPlan[0]);
@@ -3271,6 +3605,26 @@ const server=http.createServer(async(req,res)=>{
     const linkedActions=ACTIONS.filter(a=>a.relationshipId===m.relationshipId||(m.actions??[]).some(x=>x.id===a.id));
     const open=linkedActions.filter(a=>!['DONE','COMPLETED','CANCELLED'].includes(a.status??''));
     return json(res,200,{title:m.title,objective:m.objective??'—',startAt:m.startAt,endAt:m.endAt??null,location:m.location??'—',notes:m.notes??'',outcome:m.outcome??null,decisions:m.decisions??[],generatedAt:nowIso(),actionItems:{open:open.map(a=>a.title),overdueOpen:open.filter(a=>a.dueAt&&new Date(a.dueAt).getTime()<now).map(a=>a.title),completed:linkedActions.filter(a=>['DONE','COMPLETED'].includes(a.status??'')).map(a=>a.title)},commitments:{open:[],overdue:[],fulfilled:[]},isFinalized:!!m.isFinalized});
+  }
+  /* P2-3: هوشمندی جلسه (قاعده‌مبنا + برچسب انسانی) */
+  const meetingIntelGet=match('/meetings/:id/intel');
+  const meetingIntelLabel=match('/meetings/:id/intel/label');
+  if(meetingIntelGet&&method==='GET'){
+    const g=meetingGuard(meetingIntelGet[0]); if(g.code) return json(res,g.code,{message:g.msg});
+    const out=meetingIntel(g.m);
+    out.humanLabel=DB.meetingIntelLabels?.[g.m.id]??g.m.intelTone??null;
+    return json(res,200,out);
+  }
+  if(meetingIntelLabel&&method==='POST'){
+    const g=meetingGuard(meetingIntelLabel[0]); if(g.code) return json(res,g.code,{message:g.msg});
+    const b=await readBody(req);
+    const tone=String(b.tone??'');
+    if(!['POSITIVE','NEUTRAL','CONCERNED'].includes(tone)) return json(res,400,{message:'برچسب باید POSITIVE، NEUTRAL یا CONCERNED باشد.'});
+    DB.meetingIntelLabels=DB.meetingIntelLabels??{};
+    DB.meetingIntelLabels[g.m.id]=tone; g.m.intelTone=tone;
+    saveDb();
+    audit(req,'MEETING_INTEL_LABEL','meeting',g.m.id,'OK',{tone});
+    return json(res,200,{ok:true,tone,humanLabel:tone});
   }
   const meetingExtract=match('/meetings/:id/action-items/extract');
   if(meetingExtract&&method==='POST'){
@@ -3765,6 +4119,21 @@ const server=http.createServer(async(req,res)=>{
   }
   /* گراف ۴ ستون (P1-6) */
   if(is('/network/columns')&&method==='GET') return json(res,200,networkColumns(req));
+  /* P2-2: SNA پیشرفته + پذیرش پیشنهاد یال */
+  if(is('/network/sna')&&method==='GET') return json(res,200,snaView(req));
+  {
+    const esAccept=match('/network/edge-suggestions/:id/accept');
+    if(esAccept&&method==='POST'){
+      const id=esAccept[0];
+      DB.edgeSuggestionAccepts=Array.isArray(DB.edgeSuggestionAccepts)?DB.edgeSuggestionAccepts:[];
+      if(!DB.edgeSuggestionAccepts.some(x=>x.suggestionId===id)){
+        DB.edgeSuggestionAccepts.push({suggestionId:id,userId:currentUser(req)?.id??'u-demo',at:nowIso()});
+        saveDb();
+        NOTIFICATIONS.unshift({id:`n-${Date.now()}`,userId:currentUser(req)?.id??'u-demo',title:'پیشنهاد معرفی پذیرفته شد',body:`یال پیشنهادی ${id} برای پیگیری معرفی ثبت شد.`,type:'INFO',priority:'MEDIUM',isRead:false,createdAt:nowIso()});
+      }
+      return json(res,200,{ok:true,...snaView(req)});
+    }
+  }
   if(is('/network/connectors')&&method==='GET') return json(res,200,netAnalytics(req,'connectors'));
   if(is('/network/centrality')&&method==='GET') return json(res,200,netAnalytics(req,'centrality'));
   if(is('/network/bridges')&&method==='GET') return json(res,200,netAnalytics(req,'bridges'));
@@ -4042,6 +4411,24 @@ const server=http.createServer(async(req,res)=>{
   if(is('/intelligence/opportunity-detection')) return json(res,200,intelEngine(req).opportunities);
   if(is('/intelligence/strategic-coverage')) return json(res,200,intelEngine(req).coverage);
   if(is('/intelligence/network')) return json(res,200,intelEngine(req).network);
+  /* P2-1: صف قدم بعدی (NBA) + اجرا/رد */
+  if(is('/intelligence/nba')&&method==='GET') return json(res,200,nbaView(req));
+  {
+    const nbaRun=match('/intelligence/nba/:id/execute');
+    const nbaSkip=match('/intelligence/nba/:id/dismiss');
+    if(nbaRun&&method==='POST'){
+      const out=nbaAct(req,nbaRun[0],'EXECUTED');
+      if(out.code!==200) return json(res,out.code,{message:out.msg});
+      return json(res,200,{ok:true,...nbaView(req)});
+    }
+    if(nbaSkip&&method==='POST'){
+      const out=nbaAct(req,nbaSkip[0],'DISMISSED');
+      if(out.code!==200) return json(res,out.code,{message:out.msg});
+      return json(res,200,{ok:true,...nbaView(req)});
+    }
+  }
+  /* P2-4: ریسک متمرکز و اهرم */
+  if(is('/intelligence/risk-leverage')&&method==='GET') return json(res,200,riskLeverageView(req));
 
   /* ======================================================================
      Supplementary endpoints — complete UI coverage (no 404 for nav pages)

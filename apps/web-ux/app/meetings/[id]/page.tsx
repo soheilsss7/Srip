@@ -20,6 +20,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [m, setM] = useState<any>(null);
   const [minutes, setMinutes] = useState<any>(null);
+  const [intel, setIntel] = useState<any>(null);
   const [people, setPeople] = useState<any[]>([]);
   const [rels, setRels] = useState<any[]>([]);
   const [error, setError] = useState('');
@@ -35,12 +36,27 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const load = useCallback(async () => {
     setError('');
     try {
-      const mt: any = await api(`/meetings/${id}`);
+      const [mt, it] = await Promise.all([
+        api<any>(`/meetings/${id}`),
+        api<any>(`/meetings/${id}/intel`).catch(() => null),
+      ]);
       setM(mt);
+      setIntel(it);
       setFinalized(!!mt.isFinalized);
     } catch (e) { setError((e as Error).message); }
   }, [id]);
   useEffect(() => { load(); }, [load]);
+
+  /* P2-3: برچسب انسانی روی خوانش احساسات جلسه */
+  async function labelTone(tone: string) {
+    setBusy('label'); setError(''); setInfo('');
+    try {
+      const out: any = await api(`/meetings/${id}/intel/label`, { method: 'POST', body: JSON.stringify({ tone }) });
+      setIntel((x: any) => ({ ...x, humanLabel: out.tone }));
+      setInfo('برچسب انسانی ثبت شد — از این پس خوانش دستی مقدم است.');
+    } catch (e) { setError((e as Error).message); }
+    finally { setBusy(''); }
+  }
 
   /* اشخاص (برای افزودن شرکت‌کننده) و روابط (برای نام رابطه) */
   useEffect(() => {
@@ -196,6 +212,50 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
               </div>
             </div>
           </section>
+
+          {/* P2-3: هوشمندی جلسه — قاعده‌مبنا + برچسب انسانی */}
+          {intel && (
+            <section className="panel" aria-label="هوشمندی جلسه">
+              <div className="panel-title">
+                <div>
+                  <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Sparkles size={16} /> هوشمندی جلسه</h2>
+                  <p>خلاصه و خوانش احساسات از متن واقعی جلسه (نتیجه/یادداشت/مصوبات) — بدون مدل خارجی؛ برچسب انسانی مقدم است</p>
+                </div>
+                <span className={`chip ${intel.humanLabel ? 'info' : intel.tone === 'POSITIVE' ? 'success' : intel.tone === 'CONCERNED' ? 'danger' : 'neutral'}`}>
+                  {intel.humanLabel ? `برچسب انسانی: ${intel.humanLabel === 'POSITIVE' ? 'مثبت' : intel.humanLabel === 'CONCERNED' ? 'نگران‌کننده' : 'خنثی'}` : `${intel.toneLabel} (قطعی)`}
+                </span>
+              </div>
+              <div className="notice" role="note" style={{ whiteSpace: 'pre-line' }}>{intel.summary}</div>
+              {typeof intel.confidence === 'number' && (
+                <p className="t-muted" style={{ fontSize: 10.5, margin: '6px 0 0' }}>
+                  اطمینان خوانش {fmtNum(intel.confidence)}٪ — {intel.ruleBased ? 'موتور قطعی داخلی' : '—'}
+                </p>
+              )}
+              {(intel.signals?.positive?.length > 0 || intel.signals?.negative?.length > 0) && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+                  {intel.signals.positive.map((s: string) => <span key={'p' + s} className="chip success">+ {s}</span>)}
+                  {intel.signals.negative.map((s: string) => <span key={'n' + s} className="chip danger">− {s}</span>)}
+                </div>
+              )}
+              {intel.detectedActions?.length > 0 && (
+                <div style={{ marginTop: 10 }}>
+                  <b style={{ fontSize: 11.5 }}>اقدامات شناسایی‌شده در متن</b>
+                  <ul style={{ margin: '6px 0 0', paddingInlineStart: 18, fontSize: 11.5 }}>
+                    {intel.detectedActions.map((a: string, i: number) => <li key={i}>{a}</li>)}
+                  </ul>
+                </div>
+              )}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 12, alignItems: 'center' }}>
+                <b style={{ fontSize: 11 }}>برچسب انسانی:</b>
+                {['POSITIVE', 'NEUTRAL', 'CONCERNED'].map((t) => (
+                  <button key={t} className={`btn ${intel.humanLabel === t ? 'btn-primary' : 'btn-ghost'}`} style={{ minHeight: 0, padding: '4px 12px', fontSize: 10.5 }}
+                    disabled={busy === 'label'} onClick={() => labelTone(t)}>
+                    {t === 'POSITIVE' ? 'مثبت' : t === 'CONCERNED' ? 'نگران‌کننده' : 'خنثی'}
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
 
           <div className="split-panels">
             {/* جزئیات */}
