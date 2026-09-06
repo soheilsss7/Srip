@@ -351,6 +351,14 @@ h1{font-size:40px;margin:0 0 10px}
 body h1,body h2,body h3,body h4,body h5,body h6,body p,body a,body span,body small,
 body strong,body b,body em,body i,body td,body th,body label,body li,body dt,body dd,
 body legend,body button{overflow-wrap:break-word}
+/* pill-like labels that keep nowrap must clip inside their container instead of
+   pushing the row wider (covers .cell-count/.confidence-num/.criteria-badge/
+   .src-chip/.health-band/.funnel-conv/.ac-card-head span/.rel-last/.demo-chip/
+   .alert-pill-meta/.scope-badge and similar single-line meta) */
+body .cell-count,body .confidence-num,body .criteria-badge,body .src-chip,
+body .health-band,body .funnel-conv,body .ac-card-head span,body .rel-last,
+body .demo-chip,body .alert-pill-meta,body .scope-badge,body .ai-btn,
+body .holding-row>div,body .alert-strip-head{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .listRow small{display:block;opacity:.7;margin-top:.2rem}
 
 .badge{display:inline-flex;align-items:center;gap:5px;background:var(--card-bg-soft);color:var(--text-secondary);border:1px solid var(--card-border-strong);border-radius:999px;padding:4px 10px;font-size:11px;font-weight:800}
