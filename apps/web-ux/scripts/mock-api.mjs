@@ -17,6 +17,9 @@ import crypto from 'node:crypto';
 
 const PORT = Number(process.env.MOCK_API_PORT || 4000);
 const V1 = '/api/v1';
+/* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
+   مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
+const DEMO_MOCK_VERSION = '2026.09.06.1';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -1918,7 +1921,7 @@ function synthHist(count, avgMs){
   return { count, sum, buckets };
 }
 function healthStatusNow(){
-  return { status:'ok', service:'srip-api', timestamp: new Date().toISOString(), dependencies:{
+  return { status:'ok', service:'srip-api', mockVersion: DEMO_MOCK_VERSION, timestamp: new Date().toISOString(), dependencies:{
     database:{ status:'ok', latencyMs:6 }, redis:{ status:'ok', latencyMs:1 },
     queue:{ status:'ok' }, storage:{ status:'ok', configured:false, optional:true },
   }};
