@@ -245,9 +245,9 @@ export default function InteractionsPage() {
                               </div>
                             )}
                             {i.nextStep && (
-                              <div className="ti-followup">
+                              <div className="ti-followup" style={i.nextStepAt && new Date(i.nextStepAt).getTime() < Date.now() ? { borderColor: 'color-mix(in srgb, var(--danger, #e5484d) 45%, var(--border))' } : undefined}>
                                 <ClipboardList size={12}/>
-                                <span>قدم بعدی: {i.nextStep}{i.nextStepAt ? ` — ${dateTimeLabel(i.nextStepAt)}` : ''}</span>
+                                <span>قدم بعدی: {i.nextStep}{i.nextStepAt ? ` — ${dateTimeLabel(i.nextStepAt)}` : ''}{i.nextStepAt && new Date(i.nextStepAt).getTime() < Date.now() ? ' (موعد گذشته)' : ''}</span>
                               </div>
                             )}
                           </div>

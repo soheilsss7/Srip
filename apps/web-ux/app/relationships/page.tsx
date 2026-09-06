@@ -30,7 +30,7 @@ type Rel = {
   targetOrganization?: { id: string; name: string; type: string };
   owner?: { id: string; name: string };
   backupOwner?: { id: string; name: string };
-  cadence?: { cadenceDays: number; daysSinceLastInteraction: number; status: 'FRESH' | 'WARN' | 'CRITICAL'; overdueDays: number };
+  cadence?: { cadenceDays: number; daysSinceLastInteraction: number; status: 'FRESH' | 'WARN' | 'CRITICAL'; overdueDays: number; dueAt?: string };
 };
 type RelType = { key: string; name?: string };
 
@@ -319,7 +319,7 @@ export default function RelationshipsPage() {
                         <td>
                           <div className="t-muted">{timeAgo(r.lastInteractionAt)}</div>
                           {r.cadence && (
-                            <span className={`cell-count ${r.cadence.status === 'CRITICAL' ? 'danger' : r.cadence.status === 'WARN' ? 'warning' : 'info'}`} title={`هدف کیدنس: هر ${fmtNum(r.cadence.cadenceDays)} روز یک تعامل`}>
+                            <span className={`cell-count ${r.cadence.status === 'CRITICAL' ? 'danger' : r.cadence.status === 'WARN' ? 'warning' : 'info'}`} title={`هدف کیدنس: هر ${fmtNum(r.cadence.cadenceDays)} روز یک تعامل · مهلت بعدی ${r.cadence.dueAt ? new Date(r.cadence.dueAt).toLocaleDateString('fa-IR') : '—'}`}>
                               <CalendarClock size={11} /> {r.cadence.status === 'FRESH' ? `در کیدنس (هدف ${fmtNum(r.cadence.cadenceDays)}روز)` : r.cadence.status === 'WARN' ? `${fmtNum(r.cadence.overdueDays)} روز عقب از کیدنس` : `کیدنس شکسته (${fmtNum(r.cadence.daysSinceLastInteraction)} روز)`}
                             </span>
                           )}

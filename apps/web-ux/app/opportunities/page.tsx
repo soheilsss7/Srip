@@ -22,7 +22,7 @@ type Opportunity = {
   criteria?: CriteriaSummary | null;
   sourceType?: string;
   sourceReferralId?: string | null;
-  committee?: { presentRoles: number; engagedRoles: number; coverage: number; multiThreaded: boolean; requiredRoles?: number; present?: string[]; missing: string[] };
+  committee?: { presentRoles: number; engagedRoles: number; coverage: number; multiThreaded: boolean; requiredRoles?: number; present?: string[]; missing: string[]; blockers?: number; blockerNames?: string[] };
 };
 type Person = { id: string; firstName: string; lastName: string; organization?: { id?: string; name?: string } | null };
 type Org = { id: string; name: string };
@@ -299,8 +299,8 @@ export default function OpportunitiesPage() {
                   </td>
                   <td>
                     {o.committee ? (
-                      <span className={o.committee.multiThreaded ? 'src-chip src-rel' : 'src-chip src-ev'} title={`نقش‌های حاضر: ${(o.committee.present ?? []).join('، ') || '—'}${o.committee.missing.length ? ` · غایب: ${o.committee.missing.map((m: string) => ROLE_FA[m] ?? m).join('، ')}` : ''}`}>
-                        {fmtNum(o.committee.presentRoles)}/{fmtNum(o.committee.requiredRoles ?? 6)} نقش{o.committee.multiThreaded ? ' · چندلایه' : ''}
+                      <span className={o.committee.multiThreaded ? 'src-chip src-rel' : 'src-chip src-ev'} title={`نقش‌های حاضر: ${(o.committee.present ?? []).map((r: string) => ROLE_FA[r] ?? r).join('، ') || '—'}${o.committee.missing.length ? ` · غایب: ${o.committee.missing.map((m: string) => ROLE_FA[m] ?? m).join('، ')}` : ''}${o.committee.blockerNames?.length ? ` · بلاکر: ${o.committee.blockerNames.join('، ')}` : ''}`}>
+                        {fmtNum(o.committee.presentRoles)}/{fmtNum(o.committee.requiredRoles ?? 5)} نقش{o.committee.multiThreaded ? ' · چندلایه' : ''}
                       </span>
                     ) : <span className="t-muted">—</span>}
                   </td>

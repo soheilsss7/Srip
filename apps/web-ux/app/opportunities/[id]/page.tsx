@@ -6,7 +6,7 @@ import { api } from '../../_lib/api';
 import { fa } from '../../_lib/fa';
 import { Badge, ErrorCard, Loading, PageHeader } from '../../_components/page-ui';
 import { CriteriaScoreCard } from '../../_components/criteria';
-import { Award, CalendarClock, CheckCircle2, ChevronLeft, Coins, Handshake, RefreshCw, Save, ShieldX, Target, Trash2, TrendingUp, User, XCircle } from 'lucide-react';;
+import { Award, Ban, CalendarClock, CheckCircle2, ChevronLeft, Coins, Handshake, RefreshCw, Save, ShieldX, Target, Trash2, TrendingUp, User, XCircle } from 'lucide-react';
 
 const arr = (x: any): any[] => Array.isArray(x) ? x : Array.isArray(x?.items) ? x.items : Array.isArray(x?.data) ? x.data : Array.isArray(x?.rows) ? x.rows : [];
 const fmtNum = (v: any): string => v == null || v === '' || Number.isNaN(v) ? '—' : new Intl.NumberFormat('fa-IR').format(v);
@@ -311,13 +311,18 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                     <Badge tone={committee.coverage >= 80 ? 'success' : committee.coverage >= 50 ? 'warning' : 'danger'}>پوشش {fmtNum(committee.coverage)}٪</Badge>
                     <Badge>{fmtNum(committee.presentRoles)}/{fmtNum(committee.requiredRoles)} نقش حاضر</Badge>
                     {committee.multiThreaded && <Badge tone="success">چندلایه (۳+ درگیر)</Badge>}
-                    {committee.blockers > 0 && <Badge tone="danger">{fmtNum(committee.blockers)} بلاکر</Badge>}
+                    {committee.blockers > 0 && <span title={(committee.blockerNames ?? []).join('، ')}><Badge tone="danger">{fmtNum(committee.blockers)} بلاکر</Badge></span>}
                   </>
                 )}
               </div>
             </div>
+            {(committee?.blockerNames?.length ?? 0) > 0 && (
+              <div className="info-card" style={{ marginTop: 10 }}>
+                <Ban size={13} /> بلاکر (خارج از پوشش): {committee.blockerNames.join('، ')} — برای خنثی‌سازی نقشهٔ جداگانه لازم است.
+              </div>
+            )}
             <div className="detail-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-              {ROLE_ORDER.map(role => {
+              {ROLE_ORDER.filter(r => r !== 'BLOCKER').map(role => {
                 const members = committee?.items?.filter((c: any) => c.role === role) ?? [];
                 return (
                   <div key={role} className="detail-item" style={{ border: members.length ? '1px solid var(--border)' : '1px dashed var(--border)', background: members.some((c: any) => c.status === 'ENGAGED') ? 'color-mix(in srgb, var(--srip-accent) 5%, transparent)' : undefined, padding: 10 }}>

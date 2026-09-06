@@ -38,6 +38,11 @@ let PEOPLE = [
   { id:'p-6', firstName:'امیر', lastName:'صادقی', email:'amir@arya-holding.ir', title:'مدیر استراتژی', department:'استراتژی', phone:'+98 21 88770011', organizationId:'org-1', status:'ACTIVE', influenceScore:88 },
   { id:'p-7', firstName:'نازنین', lastName:'کاظمی', email:'naz@arya-tech.ir', title:'مدیر محصول', department:'فنی', phone:'+98 21 88009988', organizationId:'org-2', status:'ACTIVE', influenceScore:77 },
   { id:'p-8', firstName:'حمید', lastName:'توکلی', email:'hamid@arya-tech.ir', title:'مدیر توسعه کسب‌وکار', department:'فروش', phone:'+98 21 88005566', organizationId:'org-2', status:'ACTIVE', influenceScore:71 },
+  { id:'p-9', firstName:'مهران', lastName:'صادقی', email:'mehran@bankpars.ir', title:'معاون اعتباری', department:'اعتبارات', phone:'+98 21 82110044', organizationId:'org-3', status:'ACTIVE', influenceScore:86 },
+  { id:'p-10', firstName:'فرهاد', lastName:'یوسفی', email:'farhad@bankpars.ir', title:'مدیر فناوری اطلاعات', department:'فناوری', phone:'+98 21 82110055', organizationId:'org-3', status:'ACTIVE', influenceScore:79 },
+  { id:'p-11', firstName:'کیان', lastName:'مرادی', email:'kian@petro-sanat.ir', title:'مدیر مالی', department:'مالی', phone:'+98 21 44556677', organizationId:'org-4', status:'ACTIVE', influenceScore:72 },
+  { id:'p-12', firstName:'آیدا', lastName:'شریفی', email:'aida@sadena.ir', title:'مدیر مالی', department:'مالی', phone:'+98 21 88445577', organizationId:'org-5', status:'ACTIVE', influenceScore:69 },
+  { id:'p-13', firstName:'بهنام', lastName:'اقبالی', email:'behnam@sadena.ir', title:'مدیر فنی', department:'فنی', phone:'+98 21 88445588', organizationId:'org-5', status:'ACTIVE', influenceScore:64 },
 ];
 let RELS = [
   { id:'r-1', relationshipType:'STRATEGIC_PARTNERSHIP', status:'ACTIVE', healthScore:78, riskScore:22, strategicScore:86, influenceScore:80, opportunityScore:72, resilienceScore:64, nextActionAt:'2026-09-05T09:00:00.000Z', lastInteractionAt:'2026-08-20T09:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-4' },
@@ -108,12 +113,13 @@ let OPPORTUNITIES = [
 /* کمیتهٔ خرید (P0-2) */
 let COMMITTEE = [
   { id:'cm-1', opportunityId:'o-1', personId:'p-3', role:'ECONOMIC_BUYER', status:'ENGAGED', note:'مدیر روابط بانک؛ تصمیم‌گیرندهٔ نهایی خط اعتباری.' },
-  { id:'cm-2', opportunityId:'o-1', personId:'p-6', role:'CHAMPION', status:'ENGAGED', note:'مدیر استراتژی هلدینگ؛ حامی داخلی پروژه.' },
-  { id:'cm-3', opportunityId:'o-1', personId:'p-4', role:'END_USER', status:'IDENTIFIED', note:'واحد زیرساخت مصرف‌کنندهٔ خدمات.' },
+  { id:'cm-2', opportunityId:'o-1', personId:'p-9', role:'CHAMPION', status:'ENGAGED', note:'معاون اعتباری؛ حامی داخلی پروژه در هیئت اعتبارات.' },
+  { id:'cm-3', opportunityId:'o-1', personId:'p-10', role:'TECH_EVALUATOR', status:'ENGAGED', note:'مدیر فناوری اطلاعات؛ ارزیاب فنی سرویس مانیتورینگ.' },
   { id:'cm-4', opportunityId:'o-2', personId:'p-4', role:'ECONOMIC_BUYER', status:'ENGAGED', note:'مدیر پروژهٔ سدنا؛ سفارش‌دهندهٔ قرارداد نگهداری.' },
-  { id:'cm-5', opportunityId:'o-2', personId:'p-1', role:'CHAMPION', status:'ENGAGED', note:'رابط دوسویهٔ آریا و سدنا.' },
-  { id:'cm-6', opportunityId:'o-3', personId:'p-2', role:'ECONOMIC_BUYER', status:'ENGAGED', note:'مدیر خرید پترو؛ امضاکنندهٔ قرارداد دوساله.' },
-  { id:'cm-7', opportunityId:'o-3', personId:'p-6', role:'CHAMPION', status:'ENGAGED', note:'حامی راهبردی در هیئت‌مدیره.' },
+  { id:'cm-5', opportunityId:'o-2', personId:'p-12', role:'CHAMPION', status:'ENGAGED', note:'مدیر مالی؛ حامی پیگیر تمدید قرارداد.' },
+  { id:'cm-6', opportunityId:'o-2', personId:'p-13', role:'TECH_EVALUATOR', status:'IDENTIFIED', note:'مدیر فنی؛ ارزیابی کیفیت پشتیبانی.' },
+  { id:'cm-7', opportunityId:'o-3', personId:'p-2', role:'ECONOMIC_BUYER', status:'ENGAGED', note:'مدیر خرید پترو؛ امضاکنندهٔ قرارداد دوساله.' },
+  { id:'cm-8', opportunityId:'o-3', personId:'p-11', role:'CHAMPION', status:'ENGAGED', note:'مدیر مالی؛ حامی راهبردی در هیئت‌مدیره.' },
 ];
 let INTERACTIONS = [
   { id:'i-1', type:'CALL', subject:'تماس با مدیر خرید پترو صنعت', summary:'در خصوص زمان‌بندی قرارداد و نرخ جدید گفت‌وگو شد؛ مدیر خرید آمادهٔ مذاکره نهایی است.', outcome:'قرار شد پیش‌فاکتور همراه جدول تخفیف ارسال شود.', durationMinutes:18, importance:'HIGH', sentiment:1, followUpRequired:true, followUpAt:'2026-09-06T09:00:00.000Z', occurredAt:'2026-08-24T10:00:00.000Z', userId:'u-1', organizationId:'org-4', relationshipId:'r-1', personId:'p-2' },
@@ -190,6 +196,7 @@ const INTERACTION_RESULT_LIST=['ADVANCED','STABLE','REGRESSED'];
 const INTERACTION_DIRECTION_LIST=['WE','THEM','MUTUAL'];
 /* --------------------- کمیته خرید (P0-2) --------------------- */
 const BUYING_ROLE_LIST=['ECONOMIC_BUYER','CHAMPION','TECH_EVALUATOR','END_USER','PROCUREMENT','BLOCKER'];
+const DECISION_ROLE_LIST=BUYING_ROLE_LIST.filter(r=>r!=='BLOCKER');
 const COMMITTEE_MEMBER_STATUS=['IDENTIFIED','ENGAGED','LOST'];
 /* --------------------- میشن معرفی (P0-3) --------------------- */
 const REF_REQUEST_STATUS_LIST=['REQUESTED','RESPONDED_YES','RESPONDED_NO','NO_RESPONSE'];
@@ -203,10 +210,23 @@ function relCadence(r){
   const last=r.lastInteractionAt??r.createdAt??nowIso();
   const daysSinceLastInteraction=Math.max(0,Math.floor((Date.now()-new Date(last).getTime())/86400000));
   const status=daysSinceLastInteraction>cadenceDays*2?'CRITICAL':daysSinceLastInteraction>cadenceDays?'WARN':'FRESH';
-  return {cadenceDays,daysSinceLastInteraction,status,overdueDays:Math.max(0,daysSinceLastInteraction-cadenceDays)};
+  const dueAt=new Date(new Date(last).getTime()+cadenceDays*86400000).toISOString();
+  return {cadenceDays,daysSinceLastInteraction,status,overdueDays:Math.max(0,daysSinceLastInteraction-cadenceDays),dueAt};
 }
 
 const orgById=(id)=>ORGS.find(o=>o.id===id);
+/* P0-1 دقت: ثبت/ویرایش تعامل باید روی رابطهٔ پیوند اثر بگذارد تا کیدنس واقعی شود. */
+function applyInteractionToRel(rel, x){
+  if(!rel) return;
+  const at=x.occurredAt??nowIso();
+  if(!rel.lastInteractionAt||new Date(at)>new Date(rel.lastInteractionAt)) rel.lastInteractionAt=at;
+  if(x.nextStepAt){ rel.nextActionAt=x.nextStepAt; delete rel.nextActionNote; if(x.nextStep) rel.nextActionNote=String(x.nextStep).slice(0,200); }
+  else if(x.nextStep===undefined&&!x.nextStepAt&&rel.nextActionNote){
+    const others=(INTERACTIONS??[]).filter(i=>i.relationshipId===rel.id&&i.id!==x.id&&i.nextStepAt).sort((a,b)=>String(a.nextStepAt).localeCompare(String(b.nextStepAt)));
+    if(!others.length){ rel.nextActionAt=null; delete rel.nextActionNote; }
+    else { rel.nextActionAt=others[0].nextStepAt; rel.nextActionNote=others[0].nextStep??null; }
+  }
+}
 const personById=(id)=>PEOPLE.find(p=>p.id===id);
 const relWithOrgs=(r)=>({...r, cadence:relCadence(r), sourceOrganization:{id:r.sourceOrganizationId,name:orgById(r.sourceOrganizationId)?.name}, targetOrganization:{id:r.targetOrganizationId,name:orgById(r.targetOrganizationId)?.name}});
 
@@ -299,18 +319,25 @@ const projectView=(p)=>{
     requirements,risks,milestones,relationships,
   };
 };
+/* خلاصهٔ دقیق کمیتهٔ خرید: بلاکرها از پوشش/نقش‌های حاضر جدا هستند و فقط وضعیت ENGAGED در چندلایه شمرده می‌شود. */
+function committeeSummary(oppId){
+  const rows=(COMMITTEE??[]).filter(c=>c.opportunityId===oppId);
+  const present=DECISION_ROLE_LIST.filter(role=>rows.some(c=>c.role===role&&c.status!=='LOST'));
+  const presentRows=rows.filter(c=>c.role!=='BLOCKER'&&c.status!=='LOST');
+  const engaged=DECISION_ROLE_LIST.filter(role=>rows.some(c=>c.role===role&&c.status==='ENGAGED'));
+  const blockers=rows.filter(c=>c.role==='BLOCKER');
+  return {total:rows.length,requiredRoles:DECISION_ROLE_LIST.length,presentRoles:present.length,engagedRoles:engaged.length,
+    coverage:DECISION_ROLE_LIST.length?Math.round(present.length/DECISION_ROLE_LIST.length*100):0,
+    multiThreaded:engaged.length>=3,blockers:blockers.length,blockerNames:blockers.map(c=>personById(c.personId)?`${personById(c.personId).firstName} ${personById(c.personId).lastName??''}`.trim():null).filter(Boolean),
+    present,missing:DECISION_ROLE_LIST.filter(role=>!present.includes(role)),engaged,items:presentRows};
+}
 /* نمای غنی فرصت: سازمان + مالک + رابطه + پروژه + ارزش موزون */
 const opportunityView=(o)=>{
   const owner=personById(o.ownerId);
   const rel=o.relationshipId?RELS.find(r=>r.id===o.relationshipId):null;
   const pr=o.projectId?PROJECTS.find(p=>p.id===o.projectId):null;
   const expectedValue=Math.round(((o.value??0)*(o.probability??0))/100);
-  const cmRows=(COMMITTEE??[]).filter(c=>c.opportunityId===o.id);
-  const cmPresent=BUYING_ROLE_LIST.filter(role=>cmRows.some(c=>c.role===role));
-  const cmEngaged=BUYING_ROLE_LIST.filter(role=>cmRows.some(c=>c.role===role&&c.status==='ENGAGED'));
-  const committee={total:cmRows.length,presentRoles:cmPresent.length,engagedRoles:cmEngaged.length,
-    coverage:BUYING_ROLE_LIST.length?Math.round(cmPresent.length/BUYING_ROLE_LIST.length*100):0,
-    multiThreaded:cmEngaged.length>=3,present:cmPresent,missing:BUYING_ROLE_LIST.filter(role=>!cmPresent.includes(role))};
+  const committee=committeeSummary(o.id);
   return {...o,committee,
     owner:owner?{id:owner.id,name:`${owner.firstName} ${owner.lastName??''}`.trim()}:null,
     organization:orgById(o.organizationId)?{id:o.organizationId,name:orgById(o.organizationId).name}:null,
@@ -495,7 +522,7 @@ function netAnalytics(req,kind){
   const adj=netUndirected(nodes,edges);
   const name=(n)=>n.label;
   const row=(n,extra)=>({node:{id:n.id,label:name(n),name:name(n),type:n.type},...extra});
-  const pairs=(n-1)*(n-2)/2||1;
+  const pairs=Math.max(1,(nodes.length-1)*(nodes.length-2)/2);
   if(kind==='centrality'){
     const deg=new Map(); edges.forEach(e=>{deg.set(e.source,(deg.get(e.source)??0)+1);deg.set(e.target,(deg.get(e.target)??0)+1);});
     const items=nodes.map(n=>row(n,{degree:deg.get(n.id)??0})).sort((a,b)=>b.degree-a.degree).slice(0,8);
@@ -2561,6 +2588,7 @@ const readBody=(req)=>new Promise((resolve)=>{
 const nowIso=()=>new Date().toISOString();
 
 const server=http.createServer(async(req,res)=>{
+  try {
   const url=new URL(req.url,'http://x');
   const path=url.pathname.replace(/\/+$/,'')||'/';
   const method=req.method??'GET';
@@ -3022,10 +3050,13 @@ const server=http.createServer(async(req,res)=>{
       if(k==='result'&&b[k]&&!INTERACTION_RESULT_LIST.includes(String(b[k]).toUpperCase())) return json(res,400,{message:'نتیجهٔ تعامل نامعتبر است.'});
       if(k==='direction'&&b[k]&&!INTERACTION_DIRECTION_LIST.includes(String(b[k]).toUpperCase())) return json(res,400,{message:'جهت نامعتبر است.'});
       if(k==='quality'&&b[k]!=null&&(!Number.isFinite(Number(b[k]))||Number(b[k])<1||Number(b[k])>5)) return json(res,400,{message:'کیفیت باید بین ۱ تا ۵ باشد.'});
+      if(k==='nextStepAt'&&b[k]!==''&&b[k]!=null&&Number.isNaN(new Date(b[k]).getTime())) return json(res,400,{message:'موعد قدم بعدی نامعتبر است.'});
       x[k]=k==='importance'?String(b[k]).toUpperCase():k==='type'?String(b[k]).toUpperCase():b[k];
       if(k==='followUpAt'&&b[k]==='') x.followUpAt=null;
+      if(k==='nextStepAt'&&b[k]==='') x.nextStepAt=null;
     }
     if(b.followUpRequired===false) x.followUpAt=null;
+    applyInteractionToRel(x.relationshipId?RELS.find(r=>r.id===x.relationshipId):null,x);
     audit(req,'UPDATE','Interaction',x.id,'OK',{meta:{before:{subject:before.subject,importance:before.importance,sentiment:before.sentiment,followUpRequired:before.followUpRequired},after:{subject:x.subject,importance:x.importance,sentiment:x.sentiment,followUpRequired:x.followUpRequired}}});
     saveDb();
     return json(res,200,interactionDetailView(x));
@@ -3747,8 +3778,10 @@ const server=http.createServer(async(req,res)=>{
     const direction=b.direction?String(b.direction).toUpperCase():null;
     if(direction&&!INTERACTION_DIRECTION_LIST.includes(direction)) return json(res,400,{message:'جهت تعامل نامعتبر است.'});
     if(b.quality!=null&&(!Number.isFinite(Number(b.quality))||Number(b.quality)<1||Number(b.quality)>5)) return json(res,400,{message:'کیفیت باید عددی بین ۱ تا ۵ باشد.'});
+    if(b.nextStepAt!=null&&b.nextStepAt!==''&&Number.isNaN(new Date(b.nextStepAt).getTime())) return json(res,400,{message:'موعد قدم بعدی نامعتبر است.'});
     const x={id:`i-${Date.now()}`,type,subject:String(b.subject).trim(),summary:b.summary??'',outcome:b.outcome??null,durationMinutes:b.durationMinutes?Number(b.durationMinutes):null,importance,followUpRequired:!!b.followUpRequired,followUpAt:b.followUpAt??null,sentiment:b.sentiment!=null?Number(b.sentiment):null,purpose,channel,quality:b.quality!=null?Number(b.quality):null,result,direction,nextStep:b.nextStep?String(b.nextStep).trim():null,nextStepAt:b.nextStepAt??null,occurredAt:b.occurredAt??nowIso(),userId:authUser.id,organizationId:orgId,relationshipId:b.relationshipId??null,personId:b.personId??null};
     INTERACTIONS.unshift(x);
+    applyInteractionToRel(rel,x);
     audit(req,'CREATE','Interaction',x.id,'OK',{meta:{subject:x.subject,type:x.type,organizationId:orgId}});
     saveDb();
     return json(res,201,interactionCardView(x));
@@ -3817,13 +3850,9 @@ const server=http.createServer(async(req,res)=>{
 
   /* ---- کمیتهٔ خرید (P0-2) ---- */
   const committeeOf=(opp)=>{
-    const items=(COMMITTEE??[]).filter(c=>c.opportunityId===opp.id).map(c=>({...c,person:personById(c.personId)?{id:c.personId,firstName:personById(c.personId).firstName,lastName:personById(c.personId).lastName??'',title:personById(c.personId).title??null,organizationId:personById(c.personId).organizationId}:null}));
-    const present=BUYING_ROLE_LIST.filter(role=>items.some(c=>c.role===role));
-    const engaged=BUYING_ROLE_LIST.filter(role=>items.some(c=>c.role===role&&c.status==='ENGAGED'));
-    const blockers=items.filter(c=>c.role==='BLOCKER');
-    return {total:items.length,requiredRoles:BUYING_ROLE_LIST.length,presentRoles:present.length,engagedRoles:engaged.length,
-      coverage:BUYING_ROLE_LIST.length?Math.round(present.length/BUYING_ROLE_LIST.length*100):0,
-      multiThreaded:engaged.length>=3,blockers:blockers.length,present,missing:BUYING_ROLE_LIST.filter(role=>!present.includes(role)),engaged,items};
+    const sum=committeeSummary(opp.id);
+    const items=(COMMITTEE??[]).filter(c=>c.opportunityId===opp.id).map(c=>({...c,person:personById(c.personId)?{id:c.personId,firstName:personById(c.personId).firstName,lastName:personById(c.personId).lastName??'',title:personById(c.personId).title??null,organizationId:personById(c.personId).organizationId,organization:personById(c.personId).organizationId?{id:personById(c.personId).organizationId,name:orgById(personById(c.personId).organizationId)?.name}:null}:null}));
+    return {...sum,items};
   };
   const committee=match('/opportunities/:id/committee');
   if(committee&&method==='GET'){
@@ -3845,6 +3874,7 @@ const server=http.createServer(async(req,res)=>{
     const status=String(b.status??'IDENTIFIED').toUpperCase();
     if(!COMMITTEE_MEMBER_STATUS.includes(status)) return json(res,400,{message:'وضعیت عضو نامعتبر است.'});
     if((COMMITTEE??[]).some(c=>c.opportunityId===o.id&&c.personId===b.personId&&c.role===role)) return json(res,409,{message:'این شخص از قبل با همین نقش در کمیته ثبت شده است.'});
+    if(p.organizationId&&o.organizationId&&p.organizationId!==o.organizationId) return json(res,400,{message:`عضو کمیته باید از سازمانِ خریدار باشد (${p.organizationId} ≠ ${o.organizationId}).`});
     const row={id:`cm-${Date.now()}`,opportunityId:o.id,personId:b.personId,role,status,note:b.note?String(b.note).slice(0,200):null,updatedAt:nowIso()};
     COMMITTEE.push(row); saveDb();
     audit(req,'CREATE','committee',row.id,'OK',{opportunityId:o.id,role});
@@ -3860,7 +3890,7 @@ const server=http.createServer(async(req,res)=>{
     if(b.role!==undefined){const role=String(b.role).toUpperCase(); if(!BUYING_ROLE_LIST.includes(role)) return json(res,400,{message:'نقش نامعتبر است.'}); row.role=role;}
     if(b.status!==undefined){const status=String(b.status).toUpperCase(); if(!COMMITTEE_MEMBER_STATUS.includes(status)) return json(res,400,{message:'وضعیت نامعتبر است.'}); row.status=status;}
     if(b.note!==undefined) row.note=b.note?String(b.note).slice(0,200):null;
-    if(b.personId!==undefined){const np=personById(b.personId); if(!np) return json(res,404,{message:'شخص یافت نشد.'}); row.personId=b.personId;}
+    if(b.personId!==undefined){const np=personById(b.personId); if(!np) return json(res,404,{message:'شخص یافت نشد.'}); if(np.organizationId&&o.organizationId&&np.organizationId!==o.organizationId) return json(res,400,{message:'عضو کمیته باید از سازمانِ خریدار باشد.'}); row.personId=b.personId;}
     row.updatedAt=nowIso(); saveDb();
     audit(req,'UPDATE','committee',row.id,'OK',{opportunityId:row.opportunityId});
     return json(res,200,row);
@@ -5949,6 +5979,7 @@ const server=http.createServer(async(req,res)=>{
     }
   }
 
+  } catch(e){ try { if(!res.headersSent) json(res,500,{message:'خطای داخلی سرور: '+String(e?.message??e)}); else res.end(); } catch {} }
   json(res,404,{message:`مسیر ${method} ${path} در Mock API وجود ندارد.`});
 });
 

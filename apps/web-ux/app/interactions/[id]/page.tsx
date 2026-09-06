@@ -173,7 +173,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                 </div>
                 <p style={{ fontSize: 13.5, lineHeight: 1.8, marginTop: 8, whiteSpace: 'pre-wrap' }}>{d.summary || <span className="t-muted">خلاصه‌ای ثبت نشده است.</span>}</p>
                 {d.nextStep && (
-                  <div className="success-card" style={{ marginTop: 10 }}><ClipboardList size={13} /> قدم بعدی: {d.nextStep}{d.nextStepAt ? ` — ${fmtDT(d.nextStepAt)}` : ''}</div>
+                  <div className="success-card" style={{ marginTop: 10, borderColor: d.nextStepAt && new Date(d.nextStepAt).getTime() < Date.now() ? 'color-mix(in srgb, var(--danger, #e5484d) 45%, var(--border))' : undefined }}><ClipboardList size={13} /> قدم بعدی: {d.nextStep}{d.nextStepAt ? ` — ${fmtDT(d.nextStepAt)}` : ''}{d.nextStepAt && new Date(d.nextStepAt).getTime() < Date.now() ? ' (موعد گذشته)' : ''}</div>
                 )}
               </div>
             </div>
