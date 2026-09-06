@@ -197,17 +197,30 @@ export default function Page() {
   // گراف ۴ ستونی: ستون هر پیوند از edgeCategory روی گراف/پیوند می‌آید
   useEffect(() => {
     let alive = true;
-    apiGet<any>('/network/columns').then((d: any) => {
-      if (!alive) return;
-      setColumns(Array.isArray(d) ? d : (d?.columns ?? d?.items ?? []));
-    }).catch(() => {});
+    const retry = (tryN = 0) => {
+      apiGet<any>('/network/columns')
+        .then((d: any) => { if (!alive) return; setColumns(Array.isArray(d) ? d : (d?.columns ?? d?.items ?? [])); })
+        .catch(() => { if (alive && tryN < 3) setTimeout(() => retry(tryN + 1), 1200); });
+    };
+    retry();
     return () => { alive = false; };
   }, []);
   // P2-2: SNA پیشرفته — تراکم/خوشه/PageRank/ایزوله/شکاف ارتباطی + پیشنهاد معرفی
-  const loadSna = useCallback(async () => { try { setSna(await apiGet<any>('/network/sna')); } catch { /* بدون SNA هم گراف کار می‌کند */ } }, []);
+  const loadSna = useCallback(async (tryN = 0) => {
+    try { setSna(await apiGet<any>('/network/sna')); }
+    catch { if (tryN < 3) setTimeout(() => loadSna(tryN + 1), 1200); }
+  }, []);
   useEffect(() => { loadSna(); }, [loadSna]);
   // P3-3: GNN سبک — پیش‌بینی پیوند/خوشه/مسیر گرم
-  useEffect(() => { apiGet<any>('/network/predict').then(setPredict).catch(() => {}); }, []);
+  useEffect(() => {
+    let alive = true;
+    const retry = (tryN = 0) => {
+      apiGet<any>('/network/predict').then((d) => { if (alive) setPredict(d); })
+        .catch(() => { if (alive && tryN < 3) setTimeout(() => retry(tryN + 1), 1200); });
+    };
+    retry();
+    return () => { alive = false; };
+  }, []);
   const acceptEdge = async (id: string) => {
     setSnaBusy(id);
     try { setSna(await apiPost<any>(`/network/edge-suggestions/${encodeURIComponent(id)}/accept`, {})); }
@@ -1265,7 +1278,10 @@ export default function Page() {
             </>
           )}
           <div className="net-detail-actions">
-            <button className="net-btn primary" onClick={() => { setShowAnalysis(true); setView('analysis'); }}>
+            <button className="net-btn primary" onClick={() => {
+              setShowAnalysis(true); setView('analysis');
+              if (!analysis || !analysisList.length) runAnalysis('centrality');
+            }}>
               تحلیل کامل شبکه
             </button>
           </div>

@@ -15,7 +15,7 @@
 /* Service-Worker-safe shims (replaces node built-ins) */
 globalThis.__SRIP_CRITERIA_DATA__ = {
  "generatedFrom": "apps/api/src/criteria/criteria.catalog.ts",
- "generatedAt": "2026-09-05T18:42:57.577Z",
+ "generatedAt": "2026-09-06T11:03:19.958Z",
  "scales": {
   "MATURITY": {
    "label": "بلوغ نظام‌مند",
@@ -1491,7 +1491,7 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "family": "NETWORK",
    "name": "قدرت مسیر تا هدف",
    "nameEn": "Path strength to target",
-   "why": "اعتبار مسیر معرفی‌شده (محصول قدرت یال‌ها) تعیین می‌کند یک تماس غیرمستقیم چقدر وزن دارد.",
+   "why": "اعتبار مسیر معرفی‌شده (محصول قدرت پیوندها) تعیین می‌کند یک تماس غیرمستقیم چقدر وزن دارد.",
    "appliesTo": [
     "ORGANIZATION",
     "PERSON",
@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.06.9';
+const DEMO_MOCK_VERSION = '2026.09.06.10';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [

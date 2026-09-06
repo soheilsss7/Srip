@@ -1005,7 +1005,7 @@ export const CRITERIA: Criterion[] = [
     family: 'NETWORK',
     name: 'قدرت مسیر تا هدف',
     nameEn: 'Path strength to target',
-    why: 'اعتبار مسیر معرفی‌شده (محصول قدرت یال‌ها) تعیین می‌کند یک تماس غیرمستقیم چقدر وزن دارد.',
+    why: 'اعتبار مسیر معرفی‌شده (محصول قدرت پیوندها) تعیین می‌کند یک تماس غیرمستقیم چقدر وزن دارد.',
     appliesTo: ['ORGANIZATION', 'PERSON', 'RELATIONSHIP', 'OPPORTUNITY'],
     polarity: 'GOOD',
     weight: 2,
