@@ -472,6 +472,14 @@ export default function Page() {
     }
     log(end === 'from' ? `مبدأ مسیر: ${nodeDisplayName(node)}` : `مقصد مسیر: ${nodeDisplayName(node)}`);
   };
+  // گام پیشنهادی در فقدان مسیر: مسیر تا گام میانی را نشان بده
+  const goStep = (sg: any) => {
+    if (!sg?.viaOrg) return;
+    const target = `org:${sg.viaOrg}`;
+    setTo(target);
+    runPathFor(from, target);
+    log(`گام پیشنهادی: نمایش مسیر تا ${sg.viaOrgName ?? faEntityId(sg.viaOrg)}`);
+  };
   const openNodePage = (href: string) => { router.push(href); };
   const loadConnectors = async () => {
     const { seq, signal } = beginRequest();
@@ -1000,6 +1008,67 @@ export default function Page() {
                   <span className="pc-arrow">←</span>
                   <b className="pc pc-hops">{fmtNum(path.hops)} پرش</b>
                 </div>
+              )}
+              {/* پیشنهادها: مسیری یافت نشد → مسیرهای برقراری ارتباط */}
+              {!path.found && Array.isArray(path.suggestions) && path.suggestions.length > 0 && (
+                <div className="npf-block npf-suggest">
+                  <div className="npf-title">مسیرهای پیشنهادی برای برقراری این ارتباط</div>
+                  {path.suggestions.map((sg: any) => (
+                    <div className={`npf-card sg-${String(sg.kind ?? '').toLowerCase()}`} key={sg.id}>
+                      <div className="npf-top">
+                        <span className="npf-kind">
+                          {sg.kind === 'DIRECT' ? 'پیوند مستقیم' : sg.kind === 'INTRO' ? 'معرفی' : sg.kind === 'STEP' ? 'گام اول' : 'ایجاد رابطه'}
+                        </span>
+                        {Number.isFinite(Number(sg.score)) && <span className="chip info">امتیاز پتانسیل {fmtNum(sg.score)}</span>}
+                      </div>
+                      <div className="npf-route">«{sg.fromOrgName ?? '—'}» ← «{sg.toOrgName ?? '—'}»</div>
+                      {sg.viaPerson ? <div className="npf-via">از طریق {sg.viaPerson} و {sg.toPerson}</div> : null}
+                      {Number.isFinite(Number(sg.sharedMeetings)) && (
+                        <div className="npf-ev">{fmtNum(sg.sharedMeetings)} جلسهٔ مشترک بین دو سازمان</div>
+                      )}
+                      {sg.reason ? <div className="npf-reason">{sg.reason}</div> : null}
+                      {sg.kind === 'STEP' && sg.viaOrg && (
+                        <button className="net-btn primary npf-go" onClick={() => goStep(sg)}>
+                          نمایش مسیر تا {sg.viaOrgName ?? faEntityId(sg.viaOrg)}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* مسیر یافت شد ولی پرریسک → بهبودها + جایگزین‌ها */}
+              {path.found && (
+                <>
+                  {Array.isArray(path.improvements) && path.improvements.length > 0 && (
+                    <div className="npf-block npf-improve">
+                      <div className="npf-title">پیشنهادهای بهبود مسیر {path.isRisky ? '· مسیر پرریسک' : ''}</div>
+                      {path.improvements.map((im: any) => (
+                        <div className="npf-card npf-improve-item" key={im.id}>
+                          <div className="npf-top">
+                            <span className="npf-kind">
+                              {im.kind === 'STRENGTHEN' ? 'تقویت پیوند' : im.kind === 'GOVERNANCE' ? 'حاکمیت معرف' : im.kind === 'BACKUP' ? 'مسیر پشتیبان' : im.kind === 'BRIDGE' ? 'ایجاد پل' : 'راهکار'}
+                            </span>
+                            {(im.fromOrgName || im.toOrgName) && <span className="npf-where">«{im.fromOrgName ?? '—'}» ← «{im.toOrgName ?? '—'}»</span>}
+                          </div>
+                          <div className="npf-reason">{im.action}</div>
+                          {im.impact ? <div className="npf-impact">{im.impact}</div> : null}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {Array.isArray(path.alternatives) && path.alternatives.length > 0 && (
+                    <div className="npf-block npf-alts">
+                      <div className="npf-title">مسیرهای جایگزین (برای مقایسه کلیک کنید)</div>
+                      <div className="npf-alt-row">
+                        {path.alternatives.map((alt: any) => (
+                          <button key={alt.id} className="net-btn npf-alt-btn" onClick={() => setPath(alt)}>
+                            {fmtNum(alt.hops)} پرش · امتیاز {fmtNum(alt.score)} · {alt.scoreLabel ?? '—'}{alt.isRisky ? ' · پرریسک' : ''}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}

@@ -64,6 +64,31 @@ const CLUSTER_PAD = 66;
 
 const TYPE_FA: Record<string, string> = { organization: 'سازمان', person: 'شخص', project: 'پروژه' };
 
+/* ---------- اندازه‌گیری واقعی عرض متن (تصویربردار SVG از کادر بیرون نزند) ---------- */
+let _mctx: CanvasRenderingContext2D | null = null;
+function textWidth(s: string, fontWeight: number, fontPx: number): number {
+  if (!s) return 0;
+  /* تخمین محافظه‌کارانه برای حروف فارسی: canvas ممکن است فونت واقعی را هنوز بارگذاری نکرده باشد */
+  const perChar = s.split('').reduce((acc, ch) => (ch.trim() === '' ? acc + fontPx * 0.35 : acc + fontPx * 0.92), 0);
+  if (typeof document === 'undefined' || !document.createElement) return perChar;
+  if (!_mctx) _mctx = document.createElement('canvas').getContext('2d');
+  if (!_mctx) return perChar;
+  _mctx.font = `${fontWeight} ${fontPx}px Vazirmatn, Inter, ui-sans-serif, system-ui, sans-serif`;
+  return Math.max(perChar, _mctx.measureText(s).width * 1.12);
+}
+const safeId = (s: string) => String(s).replace(/[^a-zA-Z0-9_-]/g, '');
+/** برش متن با «…» وقتی از عرض مجاز بیشتر است. */
+function fitText(s: string, maxW: number, fontWeight: number, fontPx: number): string {
+  if (textWidth(s, fontWeight, fontPx) <= maxW) return s;
+  let lo = 0, hi = s.length;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (textWidth(s.slice(0, mid) + '…', fontWeight, fontPx) <= maxW) lo = mid;
+    else hi = mid - 1;
+  }
+  return lo <= 0 ? '…' : s.slice(0, lo) + '…';
+}
+
 /** Per-cluster pastel tint (fill + stroke). */
 const CLUSTER_TINTS = [
   { fill: 'rgba(99,102,241,0.06)', stroke: 'rgba(99,102,241,0.4)' },   // indigo
@@ -589,22 +614,27 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
             <g key={b.key} opacity={bubbleAlpha(b.ids)} style={{ transition: 'opacity .18s ease' }} pointerEvents="none">
               <rect x={b.x} y={b.y} width={b.w} height={b.h} rx={32} fill={b.tint.fill} stroke={b.tint.stroke} strokeWidth={1.3} />
               <rect x={b.x} y={b.y} width={b.w} height={6} rx={3} fill={b.tint.stroke} opacity={0.28} />
-              {/* label pill */}
-              <rect
-                x={b.labelX - Math.max(54, nodeDisplayName(b.root).length * 6 + 36) / 2}
-                y={b.y + 13}
-                width={Math.max(108, nodeDisplayName(b.root).length * 6 + 36)}
-                height={23}
-                rx={12}
-                fill="var(--card-bg, #FFFFFF)"
-                stroke={b.tint.stroke}
-                strokeWidth={1}
-              />
-              {dotColor && <circle cx={b.labelX - (Math.max(54, nodeDisplayName(b.root).length * 6 + 36) / 2) + 13} cy={b.y + 24.5} r={3.4} fill={dotColor} />}
+              {/* label pill — عرض از اندازهٔ واقعی متن محاسبه می‌شود و متن داخل کادر کلاپ می‌شود */}
+              {(() => {
+                const labelText = nodeDisplayName(b.root).length > 26 ? nodeDisplayName(b.root).slice(0, 25) + '…' : nodeDisplayName(b.root);
+                const pillW = Math.max(108, Math.ceil(textWidth(labelText, 800, 11)) + 40 + (dotColor ? 14 : 0));
+                const pillX = b.labelX - pillW / 2;
+                return (
+                  <>
+                    <clipPath id={`pill-clip-${safeId(b.key)}`}>
+                      <rect x={pillX} y={b.y + 12} width={pillW} height={25} rx={12} />
+                    </clipPath>
+                    <rect x={pillX} y={b.y + 13} width={pillW} height={23} rx={12}
+                      fill="var(--card-bg, #FFFFFF)" stroke={b.tint.stroke} strokeWidth={1} />
+                    {dotColor && <circle cx={pillX + 13} cy={b.y + 24.5} r={3.4} fill={dotColor} />}
+                  </>
+                );
+              })()}
               <text
                 x={b.labelX + (dotColor ? 6 : 0)} y={b.y + 28.5}
                 textAnchor="middle" fontSize={11} fontWeight={800}
                 fill="var(--text-secondary, #667085)"
+                clipPath={`url(#pill-clip-${safeId(b.key)})`}
                 style={{ pointerEvents: 'none', userSelect: 'none' }}
               >
                 {nodeDisplayName(b.root).length > 26 ? nodeDisplayName(b.root).slice(0, 25) + '…' : nodeDisplayName(b.root)}
@@ -661,8 +691,8 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
                         fill="var(--card-bg, #FFFFFF)" stroke={meta.color} strokeWidth={1.1}
                       />
                       <circle cx={geo.mx - 24} cy={geo.my - 15.5} r={3} fill={selected ? '#3B4252' : meta.color} />
-                      <text x={geo.mx - 16} y={geo.my - 11.5} fontSize={8.6} fontWeight={800} fill={meta.color}
-                        style={{ userSelect: 'none' }}>
+                      <text x={geo.mx + 3} y={geo.my - 11.5} fontSize={8.6} fontWeight={800} fill={meta.color}
+                        textAnchor="middle" style={{ userSelect: 'none' }}>
                         {statusMeta(edgeStatus(l)).label}
                       </text>
                     </>
@@ -828,8 +858,23 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
           const line2 = st.hasRel
             ? `${st.relCount} رابطه${st.riskCount ? ` · ${st.riskCount} پرریسک ⚠` : ''} · ${st.degree} پیوند`
             : `${st.degree} پیوند`;
-          const hint = isOrgCard ? 'کلیک = جزئیات · دابل‌کلیک = صفحه' : 'کلیک = جزئیات · دابل‌کلیک = صفحه';
-          const wCard = Math.max(196, name.length * 7.2 + 56, line1.length * 6 + 48);
+          const hint = 'کلیک = جزئیات · دابل‌کلیک = صفحه';
+          const nameRaw = name.length > 30 ? name.slice(0, 29) + '…' : name;
+          /* عرض کارت از اندازهٔ واقعی هر خط محاسبه می‌شود تا متن از کادر بیرون نزند */
+          const wName = textWidth(nameRaw, 800, 11.5);
+          const wLine1 = textWidth(line1, 700, 9.2);
+          const wLine2 = textWidth(line2, 600, 9.6);
+          const hintW = textWidth(hint, 800, 8.6);
+          const hintWc = Math.min(hintW, 110);
+          const showHint = !(selectedNodeId === cardNode.id) && (wName + 24 + hintWc + 26) <= 320;
+          const padL = 24, padR = showHint ? 16 : 14;
+          const wCard = Math.min(340, Math.max(196, Math.ceil(Math.max(wName, wLine1, wLine2) + padL + padR + (showHint ? hintWc : 0))));
+          /* به‌خاطر راست‌به‌چپ: متن از لبهٔ راست شروع می‌شود، پس فاصلهٔ داخلیِ راست باید شامل راهنما هم باشد */
+          const rightInset = showHint ? padR + hintWc : padR;
+          const innerW = wCard - padL - rightInset;
+          const nameFinal = fitText(nameRaw, innerW, 800, 11.5);
+          const line1Final = fitText(line1, innerW, 700, 9.2);
+          const line2Final = fitText(line2, innerW, 600, 9.6);
           const hCard = isOrgCard ? 92 : 64;
           let cx = Math.min(Math.max(p.x, 100 + wCard / 2), W - 100 - wCard / 2);
           const above = p.y > 260;
@@ -837,35 +882,42 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
           const x0 = cx - wCard / 2;
           const y0 = cy;
           const selectedCard = selectedNodeId === cardNode.id;
+          const cardClip = `card-clip-${safeId(cardNode.id)}`;
           return (
             <g
               key={`card-${cardNode.id}`}
               style={{ pointerEvents: 'none' }}
               opacity={selectedCard ? 1 : 0.96}
             >
+              <clipPath id={cardClip}>
+                <rect x={x0} y={y0} width={wCard} height={hCard} rx={14} />
+              </clipPath>
               <rect x={x0} y={y0} width={wCard} height={hCard} rx={14}
                 fill="var(--card-bg, #FFFFFF)"
                 stroke={metaC ?? 'var(--card-border-strong, #DDE3EE)'} strokeWidth={1.2}
                 style={{ filter: 'url(#node-shadow)' }} />
               <circle cx={x0 + 13} cy={y0 + (isOrgCard ? 15 : 14)} r={4} fill={metaC ?? '#94A3B8'} />
-              <text x={x0 + 24} y={y0 + (isOrgCard ? 19 : 18)} fontSize={11.5} fontWeight={800}
-                fill="var(--text-primary, #222)" style={{ userSelect: 'none' }}>
-                {name.length > 30 ? name.slice(0, 29) + '…' : name}
-              </text>
-              <text x={x0 + 24} y={y0 + (isOrgCard ? 37 : 34)} fontSize={9.2} fontWeight={700}
-                fill={metaC ?? 'var(--text-muted, #667085)'} style={{ userSelect: 'none' }}>
-                {line1}
-              </text>
-              <text x={x0 + 24} y={y0 + (isOrgCard ? 52 : 48)} fontSize={9.6} fontWeight={600}
-                fill="var(--text-secondary, #555)" style={{ userSelect: 'none' }}>
-                {line2}
-              </text>
-              {!selectedCard && (
-                <text x={x0 + wCard - 12} y={y0 + (isOrgCard ? 19 : 18)} textAnchor="end" fontSize={8.6}
-                  fill="var(--text-muted, #8892A6)" style={{ userSelect: 'none' }}>
-                  {hint}
+              <g clipPath={`url(#${cardClip})`}>
+                {/* جهت فارسی راست‌به‌چپ: لنگر متن در لبهٔ راستِ کادر است تا از چپ بیرون نزند */}
+                <text x={x0 + wCard - rightInset} y={y0 + (isOrgCard ? 19 : 18)} fontSize={11.5} fontWeight={800}
+                  fill="var(--text-primary, #222)" style={{ userSelect: 'none' }}>
+                  {nameFinal}
                 </text>
-              )}
+                <text x={x0 + wCard - rightInset} y={y0 + (isOrgCard ? 37 : 34)} fontSize={9.2} fontWeight={700}
+                  fill={metaC ?? 'var(--text-muted, #667085)'} style={{ userSelect: 'none' }}>
+                  {line1Final}
+                </text>
+                <text x={x0 + wCard - rightInset} y={y0 + (isOrgCard ? 52 : 48)} fontSize={9.6} fontWeight={600}
+                  fill="var(--text-secondary, #555)" style={{ userSelect: 'none' }}>
+                  {line2Final}
+                </text>
+                {showHint && (
+                  <text x={x0 + wCard - padR - hintWc} y={y0 + (isOrgCard ? 19 : 18)} textAnchor="end" fontSize={8.6}
+                    fill="var(--text-muted, #8892A6)" style={{ userSelect: 'none' }}>
+                    {hint}
+                  </text>
+                )}
+              </g>
               {isOrgCard && selectedCard && onPathEnd && (
                 <g style={{ pointerEvents: 'auto', cursor: 'pointer' }}>
                   <rect

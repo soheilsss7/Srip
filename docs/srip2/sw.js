@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.06.15';
+const DEMO_MOCK_VERSION = '2026.09.06.16';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -2118,8 +2118,10 @@ function netOrgAdj(req){
   for(const r of rels){ if(inScope(req,r.sourceOrganizationId)||inScope(req,r.targetOrganizationId)) put(r.sourceOrganizationId,r.targetOrganizationId,r); }
   return {adj,byKey,rels,edgeOf};
 }
+const PATH_RISK_THRESHOLD=60; // آستانهٔ ریسک پیوند (هم‌راستا با بقیهٔ ماژول)
 // path search: shortest = BFS (hop count); best = Dijkstra over cost max(1,(101-weight)+risk*0.5)
 // P1-6: سقف پرش (پیش‌فرض ۳)، امتیاز گرمای کل مسیر، دستهٔ پیوند و حاکمیت معرف
+let _pathSuggesting=false; // جلوگیری از بازگشت بی‌پایان (predict → path → predict)
 function netPathOrg(req,fromId,toId,mode,opts={}){
   const {adj,byKey,rels,edgeOf}=netOrgAdj(req);
   const maxHops=Math.max(1,Math.min(6,Number(opts.maxHops)||3));
@@ -2127,11 +2129,48 @@ function netPathOrg(req,fromId,toId,mode,opts={}){
   const name=(oid)=>orgById(oid)?.name??oid;
   const nodeOf=(oid)=>({id:`org:${oid}`,label:name(oid),type:'organization',organizationId:oid});
   const foundNode=(oid)=>ORGS.some(o=>o.id===oid)&&(inScope(req,oid)||[...byKey.keys()].some(k=>k.split('|').includes(oid)));
-  if(!foundNode(fromId)||!foundNode(toId)) return {found:false,mode,nodes:[],edges:[],hops:0,totalCost:null,score:null,bounded:true,maxHops};
-  if(fromId===toId) return {found:true,mode,nodes:[nodeOf(fromId)],edges:[],hops:0,totalCost:0,score:100,bounded:true,maxHops};
-  const cost=(u,v)=> mode==='best'
-    ? Math.max(1,(101-(byKey.get([u,v].sort().join('|')).healthScore??50))+((byKey.get([u,v].sort().join('|')).riskScore??0)*0.5))
-    : 1;
+
+  /* ---- مسیرهای سادهٔ ممکن (DFS با سقف) برای جایگزین‌ها و بینش ریسک ---- */
+  function allSimplePaths(a,b,limit){
+    const out=[]; const seen=new Set([a]);
+    const walk=(u,chain)=>{
+      if(out.length>=12) return;
+      if(u===b){ out.push([...chain]); return; }
+      if(chain.length>limit) return;
+      for(const nx of (adj.get(u)??[])){
+        if(seen.has(nx.v)) continue;
+        seen.add(nx.v); chain.push(nx.v);
+        walk(nx.v,chain);
+        chain.pop(); seen.delete(nx.v);
+      }
+    };
+    walk(a,[a]);
+    return out;
+  }
+  const pathView=(chain)=>{
+    const ep=[];
+    for(let i=0;i<chain.length-1;i++){
+      const rel=byKey.get([chain[i],chain[i+1]].sort().join('|'));
+      if(rel) ep.push(edgeOf(rel));
+    }
+    const avgHeat=ep.length?ep.reduce((s,e)=>s+(e.heat??50),0)/ep.length:100;
+    const riskEdges=ep.filter(e=>(e.risk??0)>=PATH_RISK_THRESHOLD||(e.heat??50)<55);
+    const score=Math.max(0,Math.min(100,Math.round(avgHeat-(ep.length-1)*5)));
+    return {nodes:chain.map(nodeOf),edges:ep,hops:ep.length,score,
+      totalCost:Math.round(ep.reduce((s,e)=>s+(mode==='best'?Math.max(1,(101-(e.health??50))+(e.risk??0)*0.5):1),0)*10)/10,
+      scoreLabel:score>=85?'عالی':score>=70?'خوب':score>=55?'متوسط':'شکننده',
+      isRisky:riskEdges.length>0,riskEdges:riskEdges.length};
+  };
+  const scoreLabelOf=(score)=>score==null?'—':score>=85?'عالی':score>=70?'خوب':score>=55?'متوسط':'شکننده';
+
+  if(!foundNode(fromId)||!foundNode(toId)) return {found:false,mode,nodes:[],edges:[],hops:0,totalCost:null,score:null,scoreLabel:null,bounded:true,maxHops,capped:false,suggestions:[],reason:'not-found-node'};
+  if(fromId===toId) return {found:true,mode,nodes:[nodeOf(fromId)],edges:[],hops:0,totalCost:0,score:100,scoreLabel:'عالی',capped:false,bounded:true,maxHops,governance:{capacityPer30Days:1,loads:[],allowed:true,blockedCount:0}};
+
+  const cost=(u,v)=> {
+    const rel=byKey.get([u,v].sort().join('|'));
+    return mode==='best' ? Math.max(1,(101-(rel?.healthScore??50))+((rel?.riskScore??0)*0.5)) : 1;
+  };
+  /* انتخاب مسیر بهینه با Dijkstra (کوتاه‌ترین یا کم‌هزینه) */
   const prev=new Map([[fromId,null]]);
   const dist=new Map([[fromId,0]]);
   const depth=new Map([[fromId,0]]);
@@ -2148,30 +2187,108 @@ function netPathOrg(req,fromId,toId,mode,opts={}){
       if(c<(dist.get(n.v)??1e9)){ dist.set(n.v,c); depth.set(n.v,du+1); prev.set(n.v,u); q.push(n.v); }
     }
   }
-  if(!prev.has(toId)) return {found:false,mode,nodes:[],edges:[],hops:0,totalCost:null,bounded:true,maxHops};
+  if(!prev.has(toId)){
+    /* ---------- مسیر یافت نشد → پیشنهادهای برقراری ارتباط ---------- */
+    const suggestions=[];
+    if(!_pathSuggesting){
+      _pathSuggesting=true;
+      try{
+        const pred=(predictView(req).predictedLinks??[]);
+        const holes=(snaView(req).structuralHoles??[]);
+        const both=(x)=>(x.fromOrg===fromId&&x.toOrg===toId)||(x.fromOrg===toId&&x.toOrg===fromId);
+        for(const pl of pred.filter(both)){
+          suggestions.push({id:`sg-direct-${pl.id}`,kind:'DIRECT',score:pl.score,fromOrg:pl.fromOrg,toOrg:pl.toOrg,
+            fromOrgName:pl.fromOrgName,toOrgName:pl.toOrgName,sharedMeetings:pl.sharedMeetings,expectedValue:pl.expectedValue,
+            reason:pl.reason?.join('؛ ')??`ایجاد پیوند مستقیم بین «${pl.fromOrgName}» و «${pl.toOrgName}» — پتانسیل همکاری شناسایی شده است.`});
+        }
+        for(const h of holes.filter(both)){
+          suggestions.push({id:`sg-intro-${h.id}`,kind:'INTRO',score:h.score,fromOrg:h.fromOrg,toOrg:h.toOrg,
+            fromOrgName:h.fromOrgName,toOrgName:h.toOrgName,viaPerson:h.viaPerson,viaPersonId:h.viaPersonId,
+            toPerson:h.toPerson,toPersonId:h.toPersonId,reason:h.reason});
+        }
+        for(const pl of pred.filter(x=>x.fromOrg===fromId||x.toOrg===fromId).slice(0,2)){
+          const other=pl.fromOrg===fromId?pl.toOrg:pl.fromOrg;
+          suggestions.push({id:`sg-step-${pl.id}`,kind:'STEP',score:pl.score,fromOrg:pl.fromOrg,toOrg:pl.toOrg,
+            fromOrgName:pl.fromOrgName,toOrgName:pl.toOrgName,viaOrg:other,viaOrgName:orgById(other)?.name??other,
+            reason:`گام اول: پیوند «${name(fromId)}» با «${orgById(other)?.name??other}» را برقرار کنید؛ این گام، فاصلهٔ شبکه تا «${name(toId)}» را کم می‌کند (امتیاز پتانسیل ${pl.score}).`});
+        }
+        if(!suggestions.length){
+          suggestions.push({id:'sg-create',kind:'CREATE',score:40,fromOrg:fromId,toOrg:toId,fromOrgName:name(fromId),toOrgName:name(toId),
+            reason:`بین «${name(fromId)}» و «${name(toId)}» هیچ رابطهٔ مستقیم یا واسطه‌ای ثبت نشده است؛ پیشنهاد: تشکیل جلسهٔ معرفی و ثبت رابطهٔ مستقیم.`});
+        }
+      }finally{ _pathSuggesting=false; }
+    }
+    if(!suggestions.length){
+      suggestions.push({id:'sg-create',kind:'CREATE',score:40,fromOrg:fromId,toOrg:toId,fromOrgName:name(fromId),toOrgName:name(toId),
+        reason:`پیوند مستقیم بین این دو سازمان ثبت نشده است؛ یک جلسهٔ معرفی با ثبت رابطه می‌تواند شبکه را کامل کند.`});
+    }
+    suggestions.sort((a,b)=>b.score-a.score);
+    return {found:false,mode,nodes:[],edges:[],hops:0,totalCost:null,score:null,scoreLabel:null,
+      bounded:true,maxHops,capped:false,reason:'no-path',suggestions:suggestions.slice(0,4)};
+  }
+
   const chain=[]; let cur=toId;
   while(cur!==null){ chain.unshift(cur); cur=prev.get(cur); }
-  const edgePath=[];
-  for(let i=0;i<chain.length-1;i++){
-    const rel=byKey.get([chain[i],chain[i+1]].sort().join('|'));
-    if(rel) edgePath.push(edgeOf(rel));
-  }
-  const avgHeat=edgePath.length?edgePath.reduce((s,e)=>s+(e.heat??50),0)/edgePath.length:100;
-  const score=Math.max(0,Math.min(100,Math.round(avgHeat-(edgePath.length-1)*5)));
+  const primary=pathView(chain);
+  const capped=primary.hops>=maxHops;
+
   /* حاکمیت معرف (P1-6): ظرفیت هر شخص واسط — حداکثر ۱ درخواست فعال در ۳۰ روز */
   const pathOrgIds=new Set(chain);
   const loads=PEOPLE.filter(p=>!p.deletedAt&&pathOrgIds.has(p.organizationId)).map(p=>{
     const active=REFERRALS.filter(r=>r.sourcePersonId===p.id&&!['CANCELLED','DECLINED'].includes(r.status)&&new Date(r.createdAt??0).getTime()>Date.now()-30*86400000).length;
     return {personId:p.id,name:`${p.firstName} ${p.lastName}`,title:p.title,organizationId:p.organizationId,load:active,capacity:1,allowed:active<1};
   });
+  const blockedCount=loads.filter(l=>!l.allowed).length;
+
+  /* ---------- جایگزین‌ها و بهبودها (همان مسیر ریسک‌دار) ---------- */
+  const alternatives=[];
+  const primSig=chain.join('>');
+  for(const cp of allSimplePaths(fromId,toId,maxHops)){
+    const sig=cp.join('>');
+    if(sig===primSig) continue;
+    const v=pathView(cp);
+    alternatives.push({id:`alt-${sig.replace(/[^a-zA-Z0-9]/g,'-')}`,found:true,mode,nodes:v.nodes,edges:v.edges,hops:v.hops,
+      totalCost:v.totalCost,score:v.score,scoreLabel:v.scoreLabel,isRisky:v.isRisky,riskEdges:v.riskEdges,
+      capped:false,bounded:true,maxHops,governance:{capacityPer30Days:1,loads,blockedCount,allowed:blockedCount===0}});
+  }
+  alternatives.sort((a,b)=>b.score-a.score);
+  const improvements=[];
+  primary.edges.forEach((e,idx)=>{
+    if((e.risk??0)>=PATH_RISK_THRESHOLD||(e.heat??50)<55){
+      const a=e.source.slice(4),b=e.target.slice(4);
+      improvements.push({id:`imp-${e.id}-${idx}`,kind:'STRENGTHEN',relationshipId:String(e.id).replace(/^e-/,''),
+        fromOrg:a,toOrg:b,fromOrgName:name(a),toOrgName:name(b),risk:e.risk??0,health:e.health??0,heat:e.heat??0,
+        action:'برنامهٔ ۹۰ روزهٔ این رابطه را اجرا کنید و سلامت/اعتماد را بالا ببرید؛ در صورتی که ریسک بالای ۶۰ است ابتدا علت ریسک را ببندید.',
+        impact:`با بهبود این پیوند، امتیاز مسیر از ${primary.score} به حدود ${Math.min(100,primary.score+12)} می‌رسد.`});
+    }
+  });
+  if(primary.isRisky&&alternatives.length){
+    const best=alternatives[0];
+    improvements.push({id:'imp-backup',kind:'BACKUP',relationshipId:null,fromOrg:fromId,toOrg:toId,
+      fromOrgName:name(fromId),toOrgName:name(toId),risk:0,health:0,heat:best.score,
+      action:`یک مسیر جایگزین آماده کنید («${best.nodes.map(n=>n.label).join(' ← ')}») تا شبکهٔ ارتباطی به یک پیوند ریسک‌دار وابسته نماند.`,
+      impact:`مسیر دوم با امتیاز ${best.score} و ${best.hops} پرش به‌عنوان پشتیبان در دسترس است.`});
+  }
+  if(primary.isRisky&&!alternatives.length){
+    improvements.push({id:'imp-bridge',kind:'BRIDGE',relationshipId:null,fromOrg:fromId,toOrg:toId,
+      fromOrgName:name(fromId),toOrgName:name(toId),risk:0,health:0,heat:0,
+      action:'در دادهٔ فعلی مسیر جایگزینی با همین تعداد پرش وجود ندارد؛ پیشنهاد: ایجاد رابطهٔ مستقیم بین این دو سازمان یا گسترش شبکه با معرف‌های جدید تا یک مسیر دوم شکل بگیرد.',
+      impact:'با داشتن مسیر دوم، ریسک تک‌نقطهٔ این ارتباط از بین می‌رود و انتخاب مسیر آزادتر می‌شود.'});
+  }
+  if(blockedCount>0){
+    improvements.push({id:'imp-gov',kind:'GOVERNANCE',relationshipId:null,fromOrg:fromId,toOrg:toId,
+      fromOrgName:name(fromId),toOrgName:name(toId),risk:0,health:0,heat:0,
+      action:'ظرفیت معرف‌های واسط در ۳۰ روز تکمیل است؛ از شخص واسط دیگری استفاده کنید یا چند روز بعد دوباره تلاش کنید.',
+      impact:'حاکمیت معرف مانع اجرای فعلی مسیر می‌شود؛ با انتخاب مسیر جایگزین می‌توانید از این صف عبور کنید.'});
+  }
   return {
-    found:true,mode,
-    nodes:chain.map(nodeOf),
-    edges:edgePath,
-    hops:edgePath.length,
-    totalCost:Math.round(edgePath.reduce((s,e)=>s+(mode==='best'?Math.max(1,(101-(e.health??50))+(e.risk??0)*0.5):1),0)*10)/10,
-    score,governance:{capacityPer30Days:1,loads,blockedCount:loads.filter(l=>!l.allowed).length},
-    bounded:true,maxHops,
+    found:true,mode,nodes:primary.nodes,edges:primary.edges,hops:primary.hops,
+    totalCost:primary.totalCost,score:primary.score,scoreLabel:primary.scoreLabel,
+    capped,bounded:true,maxHops,
+    isRisky:primary.isRisky,
+    alternatives:alternatives.slice(0,3),
+    improvements:improvements.slice(0,4),
+    governance:{capacityPer30Days:1,loads,blockedCount,allowed:blockedCount===0},
   };
 }
 /* ─────────────── P1: سرمایهٔ رابطه، روند، اعتماد، برنامهٔ ۹۰ روزه ─────────────── */
