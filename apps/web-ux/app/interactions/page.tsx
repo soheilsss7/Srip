@@ -23,6 +23,13 @@ type Interaction = {
   followUpAt?: string;
   importance?: string;
   sentiment?: number;
+  purpose?: string;
+  channel?: string;
+  quality?: number;
+  result?: string;
+  direction?: string;
+  nextStep?: string;
+  nextStepAt?: string;
   organization?: { name: string };
   person?: { firstName: string; lastName: string };
   relationship?: { sourceOrganization?: { name: string }; targetOrganization?: { name: string } };
@@ -35,6 +42,15 @@ const TYPE_META: Record<string, { icon: React.ReactNode; color: string; label: s
   NOTE: { icon: <StickyNote size={16}/>, color: 'type-note', label: 'یادداشت' },
   MESSAGE: { icon: <MessageSquare size={16}/>, color: 'type-message', label: 'پیام' },
 };
+
+const PURPOSE_META: Record<string, string> = {
+  DISCOVERY: 'کشف', TRUST_BUILDING: 'اعتمادسازی', DECISION: 'تصمیم', NEGOTIATION: 'مذاکره', PROBLEM_SOLVING: 'حل مسئله', APPRECIATION: 'تجلیل',
+};
+const RESULT_META: Record<string, { label: string; cls: string }> = {
+  ADVANCED: { label: 'پیشرفت', cls: 'success' }, STABLE: { label: 'ثابت', cls: 'info' }, REGRESSED: { label: 'عقب‌گرد', cls: 'danger' },
+};
+const DIRECTION_META: Record<string, string> = { WE: 'از ما', THEM: 'از طرف مقابل', MUTUAL: 'دوطرفه' };
+const QUALITY_LABEL: Record<number, string> = { 1: 'بسیار ضعیف', 2: 'ضعیف', 3: 'قابل قبول', 4: 'خوب', 5: 'عالی' };
 
 function TypeDot({ type }: { type: string }) {
   const meta = TYPE_META[type] ?? { icon: <Activity size={16}/>, color: 'type-other', label: type };
@@ -59,6 +75,7 @@ export default function InteractionsPage() {
     occurredAt: new Date().toISOString().slice(0, 16),
     followUpRequired: false, followUpAt: '',
     organizationId: '', personId: '', relationshipId: '',
+    purpose: '', channel: '', quality: '', result: '', direction: '', nextStep: '', nextStepAt: '',
   });
 
   const load = useCallback(() => {
@@ -80,6 +97,13 @@ export default function InteractionsPage() {
           ...form,
           occurredAt: new Date(form.occurredAt).toISOString(),
           followUpAt: form.followUpRequired && form.followUpAt ? new Date(form.followUpAt).toISOString() : undefined,
+          purpose: form.purpose || undefined,
+          channel: form.channel || undefined,
+          quality: form.quality ? Number(form.quality) : undefined,
+          result: form.result || undefined,
+          direction: form.direction || undefined,
+          nextStep: form.nextStep || undefined,
+          nextStepAt: form.nextStep && form.nextStepAt ? new Date(form.nextStepAt).toISOString() : undefined,
           organizationId: form.organizationId || undefined,
           personId: form.personId || undefined,
           relationshipId: form.relationshipId || undefined,
@@ -200,6 +224,9 @@ export default function InteractionsPage() {
                               <span className="ti-type">{meta.label}</span>
                               <span className="ti-time"><Clock size={12}/>{timeLabel(i.occurredAt)}</span>
                               {i.importance && i.importance !== 'MEDIUM' && <Badge className={i.importance === 'CRITICAL' || i.importance === 'HIGH' ? 'danger' : 'warning'}>{fa(i.importance)}</Badge>}
+                              {i.purpose && <Badge>{PURPOSE_META[i.purpose] ?? i.purpose}</Badge>}
+                              {i.result && RESULT_META[i.result] && <Badge className={RESULT_META[i.result].cls}>{RESULT_META[i.result].label}</Badge>}
+                              {i.quality != null && <Badge>{i.quality}★ {QUALITY_LABEL[i.quality] ?? ''}</Badge>}
                             </div>
                             <Link className="ti-subject" href={`/interactions/${i.id}`}>{i.subject}</Link>
                             {i.summary ? <p className="ti-summary">{i.summary}</p> : null}
@@ -215,6 +242,12 @@ export default function InteractionsPage() {
                                 <BellRing size={12}/>
                                 <span>پیگیری {i.followUpAt ? `در ${dateTimeLabel(i.followUpAt)}` : 'لازم'}</span>
                                 {i.followUpAt && new Date(i.followUpAt).getTime() < Date.now() ? <Badge className="danger">سررسید گذشته</Badge> : null}
+                              </div>
+                            )}
+                            {i.nextStep && (
+                              <div className="ti-followup">
+                                <ClipboardList size={12}/>
+                                <span>قدم بعدی: {i.nextStep}{i.nextStepAt ? ` — ${dateTimeLabel(i.nextStepAt)}` : ''}</span>
                               </div>
                             )}
                           </div>
@@ -251,6 +284,42 @@ export default function InteractionsPage() {
         <div className="field full"><label className="field-label">موضوع <span className="req">*</span></label><input required value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} /></div>
         <div className="field full"><label className="field-label">زمان</label><JalaliDateField withTime value={form.occurredAt} onChange={(v) => setForm({ ...form, occurredAt: v })} /></div>
         <div className="field full"><label className="field-label">خلاصه</label><textarea value={form.summary} onChange={(e) => setForm({ ...form, summary: e.target.value })} /></div>
+        <div className="form-grid">
+          <div className="field"><label className="field-label">هدف تعامل</label>
+            <select value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })}>
+              <option value="">—</option>
+              {Object.entries(PURPOSE_META).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </div>
+          <div className="field"><label className="field-label">کانال</label>
+            <select value={form.channel} onChange={(e) => setForm({ ...form, channel: e.target.value })}>
+              <option value="">—</option>
+              {['MEETING','PHONE','EMAIL','MESSAGE','EVENT','OTHER'].map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div className="field"><label className="field-label">کیفیت گفت‌وگو</label>
+            <select value={form.quality} onChange={(e) => setForm({ ...form, quality: e.target.value })}>
+              <option value="">—</option>
+              {[1,2,3,4,5].map(q => <option key={q} value={q}>{q} — {QUALITY_LABEL[q]}</option>)}
+            </select>
+          </div>
+          <div className="field"><label className="field-label">نتیجه</label>
+            <select value={form.result} onChange={(e) => setForm({ ...form, result: e.target.value })}>
+              <option value="">—</option>
+              {Object.entries(RESULT_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+            </select>
+          </div>
+          <div className="field"><label className="field-label">جهت</label>
+            <select value={form.direction} onChange={(e) => setForm({ ...form, direction: e.target.value })}>
+              <option value="">—</option>
+              {Object.entries(DIRECTION_META).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </div>
+          <div className="field"><label className="field-label">قدم بعدی</label><input value={form.nextStep} onChange={(e) => setForm({ ...form, nextStep: e.target.value })} placeholder="مثلاً ارسال پیش‌فاکتور" /></div>
+          {form.nextStep && (
+            <div className="field full"><label className="field-label">موعد قدم بعدی</label><JalaliDateField withTime value={form.nextStepAt} onChange={(v) => setForm({ ...form, nextStepAt: v })} /></div>
+          )}
+        </div>
         <div className="field"><label className="field-label">سازمان</label><input value={form.organizationId} onChange={(e) => setForm({ ...form, organizationId: e.target.value })} placeholder="شناسه سازمان (اختیاری)" /></div>
         <div className="field"><label className="field-label">شخص</label><input value={form.personId} onChange={(e) => setForm({ ...form, personId: e.target.value })} placeholder="شناسه شخص (اختیاری)" /></div>
         <div className="field full check-line">

@@ -47,6 +47,8 @@ let RELS = [
   { id:'r-5', relationshipType:'INVESTMENT', status:'ACTIVE', healthScore:82, riskScore:18, strategicScore:88, influenceScore:85, opportunityScore:90, resilienceScore:71, nextActionAt:null, lastInteractionAt:'2026-08-22T09:00:00.000Z', sourceOrganizationId:'org-1', targetOrganizationId:'org-7' },
   { id:'r-6', relationshipType:'PARENT_SUBSIDIARY', status:'ACTIVE', healthScore:86, riskScore:12, strategicScore:84, influenceScore:70, opportunityScore:48, resilienceScore:82, nextActionAt:'2026-09-12T09:00:00.000Z', lastInteractionAt:'2026-09-02T09:00:00.000Z', sourceOrganizationId:'org-1', targetOrganizationId:'org-2' },
 ];
+/* کیدنس دمو بر اساس نوع رابطه (P0-4) */
+[['r-1',30],['r-2',30],['r-3',45],['r-4',30],['r-5',60],['r-6',30]].forEach(([id,cd])=>{const r=RELS.find(v=>v.id===id); if(r) r.cadenceDays=cd;});
 let MEETINGS = [
   { id:'m-1', title:'جلسهٔ راهبردی Q3 با پترو صنعت', startAt:'2026-09-03T09:30:00.000Z', endAt:'2026-09-03T11:00:00.000Z', objective:'بررسی همکاری راهبردی و برنامه توسعه', agenda:'1) گزارش عملکرد ۲ فصل\n2) برنامه توسعه بازار\n3) زمان‌بندی قرارداد جدید', organizationId:'org-4', relationshipId:'r-1', participants:[{personId:'p-2'},{personId:'p-6'}], actions:[], commitments:[], preMeetingBrief:'تمرکز بر تمدید قرارداد و نرخ جدید.' },
   { id:'m-2', title:'مذاکره با بانک ملّی پارس', startAt:'2026-09-07T10:00:00.000Z', endAt:'2026-09-07T11:30:00.000Z', objective:'افتتاح خط اعتباری', agenda:'ارائه صورت‌های مالی و طرح توجیهی', organizationId:'org-3', relationshipId:'r-2', participants:[{personId:'p-3'}], actions:[], commitments:[], preMeetingBrief:null },
@@ -102,6 +104,17 @@ let OPPORTUNITIES = [
   { id:'o-3', name:'توسعه بازار با پترو صنعت', description:'قرارداد دوسالهٔ پشتیبانی و توسعهٔ محصولات با شرکت پترو صنعت', status:'WON', probability:100, value:45000000000, expectedDate:'2026-09-10T00:00:00.000Z', organizationId:'org-4', relationshipId:'r-1', projectId:null, ownerId:'p-1', createdAt:'2026-08-10T09:00:00.000Z', wonAt:'2026-08-25T10:00:00.000Z' },
   { id:'o-4', name:'سرویس پایش امنیت بانک پارس', description:'مانیتورینگ امنیتی و گزارش‌های رگولاتوری برای بانک ملّی پارس', status:'IDENTIFIED', probability:20, value:30000000000, expectedDate:'2026-11-30T00:00:00.000Z', organizationId:'org-3', relationshipId:'r-2', projectId:null, ownerId:'p-7', createdAt:'2026-09-01T08:00:00.000Z' },
 ];
+[{id:'o-1',sourceType:'EXISTING_RELATIONSHIP'},{id:'o-2',sourceType:'EXISTING_RELATIONSHIP'},{id:'o-3',sourceType:'REFERRAL',sourceReferralId:'ref-1'},{id:'o-4',sourceType:'EVENT'}].forEach(x=>{const o=OPPORTUNITIES.find(v=>v.id===x.id); if(o) Object.assign(o,x);});
+/* کمیتهٔ خرید (P0-2) */
+let COMMITTEE = [
+  { id:'cm-1', opportunityId:'o-1', personId:'p-3', role:'ECONOMIC_BUYER', status:'ENGAGED', note:'مدیر روابط بانک؛ تصمیم‌گیرندهٔ نهایی خط اعتباری.' },
+  { id:'cm-2', opportunityId:'o-1', personId:'p-6', role:'CHAMPION', status:'ENGAGED', note:'مدیر استراتژی هلدینگ؛ حامی داخلی پروژه.' },
+  { id:'cm-3', opportunityId:'o-1', personId:'p-4', role:'END_USER', status:'IDENTIFIED', note:'واحد زیرساخت مصرف‌کنندهٔ خدمات.' },
+  { id:'cm-4', opportunityId:'o-2', personId:'p-4', role:'ECONOMIC_BUYER', status:'ENGAGED', note:'مدیر پروژهٔ سدنا؛ سفارش‌دهندهٔ قرارداد نگهداری.' },
+  { id:'cm-5', opportunityId:'o-2', personId:'p-1', role:'CHAMPION', status:'ENGAGED', note:'رابط دوسویهٔ آریا و سدنا.' },
+  { id:'cm-6', opportunityId:'o-3', personId:'p-2', role:'ECONOMIC_BUYER', status:'ENGAGED', note:'مدیر خرید پترو؛ امضاکنندهٔ قرارداد دوساله.' },
+  { id:'cm-7', opportunityId:'o-3', personId:'p-6', role:'CHAMPION', status:'ENGAGED', note:'حامی راهبردی در هیئت‌مدیره.' },
+];
 let INTERACTIONS = [
   { id:'i-1', type:'CALL', subject:'تماس با مدیر خرید پترو صنعت', summary:'در خصوص زمان‌بندی قرارداد و نرخ جدید گفت‌وگو شد؛ مدیر خرید آمادهٔ مذاکره نهایی است.', outcome:'قرار شد پیش‌فاکتور همراه جدول تخفیف ارسال شود.', durationMinutes:18, importance:'HIGH', sentiment:1, followUpRequired:true, followUpAt:'2026-09-06T09:00:00.000Z', occurredAt:'2026-08-24T10:00:00.000Z', userId:'u-1', organizationId:'org-4', relationshipId:'r-1', personId:'p-2' },
   { id:'i-2', type:'MEETING', subject:'بازدید از بانک ملّی پارس', summary:'بررسی نیازمندی‌های خط اعتباری ۲۰۰ میلیاردی و زیرساخت بانکداری شرکتی.', outcome:'مدارک تکمیلی درخواست شد؛ بانک منتظر طرح توجیهی است.', durationMinutes:75, importance:'HIGH', sentiment:0, followUpRequired:false, followUpAt:null, occurredAt:'2026-08-26T11:00:00.000Z', userId:'u-1', organizationId:'org-3', relationshipId:'r-2', personId:'p-3' },
@@ -113,6 +126,19 @@ let INTERACTIONS = [
   { id:'i-8', type:'NOTE', subject:'یادداشت بررسی سبد صندوق امید', summary:'بررسی گزارش فصلی صندوق؛ تصمیم دربارهٔ افزایش همکاری به جلسهٔ بعد موکول شد.', outcome:'پیش‌نویس پیشنهاد همکاری تهیه شود.', durationMinutes:null, importance:'LOW', sentiment:0, followUpRequired:true, followUpAt:'2026-09-20T08:00:00.000Z', occurredAt:'2026-08-30T13:00:00.000Z', userId:'u-1', organizationId:'org-7', relationshipId:'r-5', personId:'p-8' },
   { id:'i-9', type:'MEETING', subject:'جلسهٔ ارزیابی عملکرد تأمین‌کننده البرز', summary:'ارزیابی شاخص‌های کیفیت و زمان تحویل پس از تعهد جبرانی.', outcome:'توافق شد شاخص‌ها ماهانه بازبینی شود.', durationMinutes:45, importance:'MEDIUM', sentiment:0, followUpRequired:false, followUpAt:null, occurredAt:'2026-09-03T08:30:00.000Z', userId:'u-1', organizationId:'org-6', relationshipId:'r-4', personId:'p-5' },
 ];
+/* غنی‌سازی دمو: رویداد تعامل (هدف/کانال/کیفیت/نتیجه/جهت/قدم بعدی) */
+const EVENT_SEED={
+  'i-1':{purpose:'DECISION',channel:'PHONE',quality:4,result:'ADVANCED',direction:'MUTUAL',nextStep:'ارسال پیش‌فاکتور نهایی همراه جدول تخفیف',nextStepAt:'2026-09-05T09:00:00.000Z'},
+  'i-2':{purpose:'TRUST_BUILDING',channel:'MEETING',quality:4,result:'STABLE',direction:'WE',nextStep:'ارسال مدارک تکمیلی و طرح توجیهی',nextStepAt:'2026-09-02T09:00:00.000Z'},
+  'i-3':{purpose:'DECISION',channel:'PHONE',quality:3,result:'STABLE',direction:'MUTUAL',nextStep:null,nextStepAt:null},
+  'i-4':{purpose:'NEGOTIATION',channel:'MEETING',quality:2,result:'REGRESSED',direction:'THEM',nextStep:'تأیید نهایی هیئت‌مدیره پترو',nextStepAt:'2026-09-08T09:00:00.000Z'},
+  'i-5':{purpose:'PROBLEM_SOLVING',channel:'EMAIL',quality:2,result:'REGRESSED',direction:'THEM',nextStep:'بازبینی برنامهٔ جبرانی تأمین',nextStepAt:'2026-09-03T08:00:00.000Z'},
+  'i-6':{purpose:'DECISION',channel:'MESSAGE',quality:3,result:'ADVANCED',direction:'WE',nextStep:null,nextStepAt:null},
+  'i-7':{purpose:'TRUST_BUILDING',channel:'PHONE',quality:3,result:'STABLE',direction:'WE',nextStep:'پیگیری بررسی اعتبارات',nextStepAt:'2026-09-12T09:00:00.000Z'},
+  'i-8':{purpose:'APPRECIATION',channel:'NOTE',quality:3,result:'STABLE',direction:'WE',nextStep:'تهیه پیش‌نویس پیشنهاد همکاری',nextStepAt:'2026-09-20T08:00:00.000Z'},
+  'i-9':{purpose:'PROBLEM_SOLVING',channel:'MEETING',quality:4,result:'ADVANCED',direction:'MUTUAL',nextStep:'بازبینی ماهانه شاخص‌های کیفیت',nextStepAt:null},
+};
+for(const [k,v] of Object.entries(EVENT_SEED)){const x=INTERACTIONS.find(i=>i.id===k); if(x) Object.assign(x,v);}
 let NOTIFICATIONS = [
   { id:'n-1', title:'موعد اقدام نزدیک است', body:'اقدام «پیگیری امضای قرارداد پترو صنعت» تا ۲ روز دیگر موعد دارد.', type:'REMINDER', priority:'important', isRead:false, createdAt:'2026-08-29T06:00:00.000Z' },
   { id:'n-2', title:'پیشنهاد هوشمند جدید', body:'پیشنهاد «مدیریت ریسک رابطه با البرز» تولید شد.', type:'RECOMMENDATION', priority:'recommendation', isRead:false, createdAt:'2026-08-29T05:00:00.000Z' },
@@ -137,6 +163,7 @@ let REFERRALS = [
     instruction:null, baselineCriteria:null, postCheckins:{} },
 ];
 
+[{id:'ref-1',requestStatus:'RESPONDED_YES',requestedAt:'2026-08-18T10:00:00.000Z',outcome:'MEET_BOOKED',outcomeNote:'جلسهٔ مقدماتی برگزار شد',opportunityId:'o-3'},{id:'ref-2',requestStatus:'REQUESTED',requestedAt:'2026-08-22T11:00:00.000Z',outcome:null,outcomeNote:null,opportunityId:'o-1'},{id:'ref-3',requestStatus:'RESPONDED_YES',requestedAt:'2026-08-10T09:00:00.000Z',outcome:'MEET_BOOKED',outcomeNote:'ارزیابی انجام و قرارداد اولیه امضا شد',opportunityId:null}].forEach(x=>{const r=REFERRALS.find(v=>v.id===x.id); if(r) Object.assign(r,x);});
 let RECS = [
   { id:'rec-1', type:'FOLLOW_UP', title:'پیگیری رابطه با بانک ملّی پارس', rationale:'اقدام بعدی ثبت‌شده برای این رابطه مهلتش رسیده است.', confidence:82, status:'PROPOSED', evidence:{nextActionAt:'2026-09-02T09:00:00.000Z', daysSinceLastInteraction:4}, relationshipId:'r-2', userId:'u-1', createdAt:'2026-08-28T08:00:00.000Z' },
   { id:'rec-2', type:'RISK_MITIGATION', title:'مدیریت ریسک رابطه با تأمین‌کننده البرز', rationale:'ریسک رابطه ۶۶ و سلامت ۴۱ است — نیاز به اقدام اصلاحی.', confidence:88, status:'PROPOSED', evidence:{riskScore:66,healthScore:41,resilienceScore:38}, relationshipId:'r-4', userId:'u-1', createdAt:'2026-08-28T08:00:00.000Z' },
@@ -156,10 +183,32 @@ const TYPE_KEYS = {
   DIVERSIFICATION:'تنوع‌بخشی', OPPORTUNITY:'فرصت', RISK_MITIGATION:'کاهش ریسک',
   PROJECT_CONNECTION:'پیوند پروژه', EXECUTIVE_ESCALATION:'ارجاع اجرایی',
 };
+/* --------------------- رویداد تعامل (P0-1) --------------------- */
+const INTERACTION_PURPOSE_LIST=['DISCOVERY','TRUST_BUILDING','DECISION','NEGOTIATION','PROBLEM_SOLVING','APPRECIATION'];
+const INTERACTION_CHANNEL_LIST=['MEETING','PHONE','EMAIL','MESSAGE','EVENT','OTHER'];
+const INTERACTION_RESULT_LIST=['ADVANCED','STABLE','REGRESSED'];
+const INTERACTION_DIRECTION_LIST=['WE','THEM','MUTUAL'];
+/* --------------------- کمیته خرید (P0-2) --------------------- */
+const BUYING_ROLE_LIST=['ECONOMIC_BUYER','CHAMPION','TECH_EVALUATOR','END_USER','PROCUREMENT','BLOCKER'];
+const COMMITTEE_MEMBER_STATUS=['IDENTIFIED','ENGAGED','LOST'];
+/* --------------------- میشن معرفی (P0-3) --------------------- */
+const REF_REQUEST_STATUS_LIST=['REQUESTED','RESPONDED_YES','RESPONDED_NO','NO_RESPONSE'];
+const REF_OUTCOME_LIST=['MEET_BOOKED','NO_REPLY','DECLINED','BAD_FIT'];
+/* --------------------- منبع فرصت (P0-5) --------------------- */
+const OPPORTUNITY_SOURCE_LIST=['REFERRAL','EXISTING_RELATIONSHIP','EVENT','COLD'];
+/* کیدنس هدف بر اساس نوع رابطه (P0-4): چند روز یک بار باید تعامل معنادار ثبت شود */
+const CADENCE_DEFAULT={STRATEGIC_PARTNERSHIP:30,BANKING:30,CUSTOMER:45,SUPPLY:30,INVESTMENT:60,PARENT_SUBSIDIARY:30,OTHER:60};
+function relCadence(r){
+  const cadenceDays=r.cadenceDays??CADENCE_DEFAULT[r.relationshipType]??60;
+  const last=r.lastInteractionAt??r.createdAt??nowIso();
+  const daysSinceLastInteraction=Math.max(0,Math.floor((Date.now()-new Date(last).getTime())/86400000));
+  const status=daysSinceLastInteraction>cadenceDays*2?'CRITICAL':daysSinceLastInteraction>cadenceDays?'WARN':'FRESH';
+  return {cadenceDays,daysSinceLastInteraction,status,overdueDays:Math.max(0,daysSinceLastInteraction-cadenceDays)};
+}
 
 const orgById=(id)=>ORGS.find(o=>o.id===id);
 const personById=(id)=>PEOPLE.find(p=>p.id===id);
-const relWithOrgs=(r)=>({...r, sourceOrganization:{id:r.sourceOrganizationId,name:orgById(r.sourceOrganizationId)?.name}, targetOrganization:{id:r.targetOrganizationId,name:orgById(r.targetOrganizationId)?.name}});
+const relWithOrgs=(r)=>({...r, cadence:relCadence(r), sourceOrganization:{id:r.sourceOrganizationId,name:orgById(r.sourceOrganizationId)?.name}, targetOrganization:{id:r.targetOrganizationId,name:orgById(r.targetOrganizationId)?.name}});
 
 /* دلایل «چرا این رابطه در معرض ریسک است؟» — از امتیازها و سیگنال‌های واقعی همان رابطه
    (بدون دادهٔ جعلی): امتیاز ریسک/سلامت/تاب‌آوری، رکود تعامل، عقب‌افتادگی قدم بعدی،
@@ -175,10 +224,10 @@ function riskDrivers(req, r){
   else if(health<55) push('warning','سلامت رابطه پایین',`سلامت ${health} از ۱۰۰؛ محدودهٔ سالم از ۵۵ به بالاست.`);
   if(res<45) push('warning','تاب‌آوری ضعیف',`تاب‌آوری ${res} از ۱۰۰ — عمق شبکهٔ پشتیبان و مسیرهای جایگزین کم است.`);
   if(r.status==='WATCH') push('warning','تحت نظر (WATCH)','وضعیت رابطه توسط مالک/مدیر روابط به نظارت فعال درآمده است.');
-  if(r.lastInteractionAt){
-    const days=Math.floor((now-new Date(r.lastInteractionAt).getTime())/86400000);
-    if(days>60) push('critical','رکود تعامل',`آخرین تعامل ${days} روز پیش بود (بیش از ۲ ماه) — رابطه رو به سردی است.`);
-    else if(days>30) push('warning','فاصلهٔ طولانی از تعامل',`آخرین تعامل ${days} روز پیش بود؛ بازهٔ سالم زیر ۳۰ روز است.`);
+  {
+    const cad=relCadence(r);
+    if(cad.status==='CRITICAL') push('critical','کیدنس رابطه شکسته',`آخرین تعامل ${cad.daysSinceLastInteraction} روز پیش؛ هدف ${cad.cadenceDays} روز — بیش از ۲ برابر عقب است.`);
+    else if(cad.status==='WARN') push('warning','کیدنس رابطه عقب افتاده',`آخرین تعامل ${cad.daysSinceLastInteraction} روز پیش؛ هدف ${cad.cadenceDays} روز است.`);
   }
   if(r.nextActionAt&&new Date(r.nextActionAt).getTime()<now) push('warning','قدمِ برنامه‌ریزی‌شده عقب افتاده',`قدم بعدی برای ${faDate(r.nextActionAt)} تعیین شده و هنوز انجام نشده است.`);
   const openActs=scopedActions(req).filter(a=>a.relationshipId===r.id&&['OPEN','IN_PROGRESS','BLOCKED'].includes(a.status));
@@ -256,7 +305,13 @@ const opportunityView=(o)=>{
   const rel=o.relationshipId?RELS.find(r=>r.id===o.relationshipId):null;
   const pr=o.projectId?PROJECTS.find(p=>p.id===o.projectId):null;
   const expectedValue=Math.round(((o.value??0)*(o.probability??0))/100);
-  return {...o,
+  const cmRows=(COMMITTEE??[]).filter(c=>c.opportunityId===o.id);
+  const cmPresent=BUYING_ROLE_LIST.filter(role=>cmRows.some(c=>c.role===role));
+  const cmEngaged=BUYING_ROLE_LIST.filter(role=>cmRows.some(c=>c.role===role&&c.status==='ENGAGED'));
+  const committee={total:cmRows.length,presentRoles:cmPresent.length,engagedRoles:cmEngaged.length,
+    coverage:BUYING_ROLE_LIST.length?Math.round(cmPresent.length/BUYING_ROLE_LIST.length*100):0,
+    multiThreaded:cmEngaged.length>=3,present:cmPresent,missing:BUYING_ROLE_LIST.filter(role=>!cmPresent.includes(role))};
+  return {...o,committee,
     owner:owner?{id:owner.id,name:`${owner.firstName} ${owner.lastName??''}`.trim()}:null,
     organization:orgById(o.organizationId)?{id:o.organizationId,name:orgById(o.organizationId).name}:null,
     relationship:rel?{id:rel.id,relationshipType:rel.relationshipType,sourceOrganization:orgById(rel.sourceOrganizationId)?{id:rel.sourceOrganizationId,name:orgById(rel.sourceOrganizationId).name}:null,targetOrganization:orgById(rel.targetOrganizationId)?{id:rel.targetOrganizationId,name:orgById(rel.targetOrganizationId).name}:null}:null,
@@ -2758,7 +2813,7 @@ const server=http.createServer(async(req,res)=>{
     const relIntake=normalizeCriteriaAnswers(b.criteriaAnswers??b.assessment);
     const relIntakeScope=criteriaScopeError('RELATIONSHIP',relIntake);
     if(relIntakeScope) return json(res,400,{message:relIntakeScope});
-        const r={id:`r-${Date.now()}`,relationshipType:b.relationshipType??'OTHER',status:b.status??'ACTIVE',healthScore:b.healthScore??60,riskScore:b.riskScore??30,strategicScore:b.strategicScore??50,influenceScore:b.influenceScore??50,opportunityScore:b.opportunityScore??50,resilienceScore:b.resilienceScore??50,nextActionAt:null,lastInteractionAt:nowIso(),sourceOrganizationId:b.sourceOrganizationId,targetOrganizationId:b.targetOrganizationId};
+        const r={id:`r-${Date.now()}`,relationshipType:b.relationshipType??'OTHER',status:b.status??'ACTIVE',cadenceDays:CADENCE_DEFAULT[b.relationshipType]??60,healthScore:b.healthScore??60,riskScore:b.riskScore??30,strategicScore:b.strategicScore??50,influenceScore:b.influenceScore??50,opportunityScore:b.opportunityScore??50,resilienceScore:b.resilienceScore??50,nextActionAt:null,lastInteractionAt:nowIso(),sourceOrganizationId:b.sourceOrganizationId,targetOrganizationId:b.targetOrganizationId};
     RELS.push(r); saveDb();
     if(relIntake.length) saveStoredAnswers('RELATIONSHIP',r.id,relIntake);
     audit(req,'CREATE','relationship',r.id,'OK',{source:r.sourceOrganizationId,target:r.targetOrganizationId,answers:relIntake.length});
@@ -2954,7 +3009,7 @@ const server=http.createServer(async(req,res)=>{
     if(!interactionWritableScope(x)) return json(res,403,{message:'تعامل خارج از محدودهٔ دسترسی شماست.'});
     if(!(authUser?.permissions??[]).includes('interaction.write')&&!authUser?.isOwner) return json(res,403,{message:'شما مجوز «ثبت تعامل» (interaction.write) را ندارید.'});
     const b=await readBody(req);
-    const allowed=['subject','summary','outcome','durationMinutes','importance','sentiment','followUpRequired','followUpAt','type','occurredAt'];
+    const allowed=['subject','summary','outcome','durationMinutes','importance','sentiment','followUpRequired','followUpAt','type','occurredAt','purpose','channel','quality','result','direction','nextStep','nextStepAt'];
     const before={...x};
     for(const k of allowed){
       if(b[k]===undefined) continue;
@@ -2962,6 +3017,11 @@ const server=http.createServer(async(req,res)=>{
       if(k==='type'&&b[k]&&!INTERACTION_KIND_LIST.includes(String(b[k]).toUpperCase())) return json(res,400,{message:`نوع «${b[k]}» نامعتبر است.`});
       if(k==='sentiment'&&b[k]!=null&&![ -1, 0, 1].includes(Number(b[k]))) return json(res,400,{message:'احساس باید یکی از مقادیر ‎-۱، ۰ یا ۱ باشد.'});
       if(k==='durationMinutes'&&b[k]!=null&&(!Number.isFinite(Number(b[k]))||Number(b[k])<1)) return json(res,400,{message:'مدت باید عددی بزرگ‌تر از صفر باشد.'});
+      if(k==='purpose'&&b[k]&&!INTERACTION_PURPOSE_LIST.includes(String(b[k]).toUpperCase())) return json(res,400,{message:'هدف تعامل نامعتبر است.'});
+      if(k==='channel'&&b[k]&&!INTERACTION_CHANNEL_LIST.includes(String(b[k]).toUpperCase())) return json(res,400,{message:'کانال نامعتبر است.'});
+      if(k==='result'&&b[k]&&!INTERACTION_RESULT_LIST.includes(String(b[k]).toUpperCase())) return json(res,400,{message:'نتیجهٔ تعامل نامعتبر است.'});
+      if(k==='direction'&&b[k]&&!INTERACTION_DIRECTION_LIST.includes(String(b[k]).toUpperCase())) return json(res,400,{message:'جهت نامعتبر است.'});
+      if(k==='quality'&&b[k]!=null&&(!Number.isFinite(Number(b[k]))||Number(b[k])<1||Number(b[k])>5)) return json(res,400,{message:'کیفیت باید بین ۱ تا ۵ باشد.'});
       x[k]=k==='importance'?String(b[k]).toUpperCase():k==='type'?String(b[k]).toUpperCase():b[k];
       if(k==='followUpAt'&&b[k]==='') x.followUpAt=null;
     }
@@ -3094,12 +3154,20 @@ const server=http.createServer(async(req,res)=>{
     const weightedOpportunityValue=opps.length?Math.round(opps.reduce((s,o)=>s+(Number(o.value)||0),0)*(opps.reduce((s,o)=>s+(Number(o.probability)||0),0)/opps.length)/100):0;
     const refs=orgIds?REFERRALS.filter(r=>(r.sourceOrganizationId&&orgSet.has(r.sourceOrganizationId))||(r.targetOrganizationId&&orgSet.has(r.targetOrganizationId))):REFERRALS;
     const successful=refs.filter(r=>r.status==='COMPLETED').length;
+    function sourceRows(types){return opps.filter(o=>types.includes(o.sourceType??''));}
+    function srcRate(rows){return rows.length?Math.round(rows.filter(o=>o.status==='WON').length/rows.length*100):0;}
+    const warmRows=sourceRows(['REFERRAL','EXISTING_RELATIONSHIP']);
+    const coldRows=sourceRows(['EVENT','COLD']);
+    const attribution={bySource:OPPORTUNITY_SOURCE_LIST.map(t=>{const rows=opps.filter(o=>(o.sourceType??'COLD')===t); return {type:t,count:rows.length,won:rows.filter(o=>o.status==='WON').length,value:rows.reduce((s,o)=>s+(Number(o.value)||0),0)};}),
+      warm:{count:warmRows.length,won:warmRows.filter(o=>o.status==='WON').length,value:warmRows.reduce((s,o)=>s+(Number(o.value)||0),0),rate:srcRate(warmRows)},
+      cold:{count:coldRows.length,won:coldRows.filter(o=>o.status==='WON').length,value:coldRows.reduce((s,o)=>s+(Number(o.value)||0),0),rate:srcRate(coldRows)}};
     return json(res,200,{
       generatedAt:nowIso(),organizationId:qOrg??null,relationshipCount:rels.length,peopleCount:people.length,opportunityCount:opps.length,
       networkCapital:{score:capital,components},
       strategicRelationshipIndex:{score:sri,breakdown:{coverage,strength:quality,influence,opportunity:opportunityPotential,resilience}},
       relationshipResilienceScore:resilience,weightedOpportunityValue,
-      referralSuccessRate:{total:refs.length,successful,rate:anPct(successful,refs.length)},bounded:true,
+      referralSuccessRate:{total:refs.length,successful,rate:anPct(successful,refs.length)},
+      attribution,bounded:true,
     });
   }
   if(is('/analytics/workflows')&&method==='GET'){
@@ -3439,8 +3507,9 @@ const server=http.createServer(async(req,res)=>{
       coms.filter(c=>c.relationshipId===r.id&&c.status==='OVERDUE').forEach(c=>evidence.push({type:'COMMITMENT_OVERDUE',refId:c.id,title:c.description,at:c.dueAt}));
       if(r.status==='WATCH') evidence.push({type:'RELATIONSHIP_WATCH',refId:r.id,title:'رابطه در وضعیت «تحت نظر» قرار دارد',at:null});
       if(r.healthScore<45) evidence.push({type:'LOW_HEALTH',refId:r.id,title:`سلامت رابطه ${r.healthScore} از ۱۰۰ — زیر آستانهٔ ۴۵`,at:null});
-      const stale=daysBetween(r.lastInteractionAt);
-      if(stale!=null&&stale>30) evidence.push({type:'STALE_INTERACTION',refId:r.id,title:`آخرین تعامل ${stale} روز پیش بوده است`,at:r.lastInteractionAt});
+      const cad=relCadence(r);
+      if(cad.status==='CRITICAL') evidence.push({type:'CADENCE_BREACH',refId:r.id,title:`کیدنس شکسته: آخرین تعامل ${cad.daysSinceLastInteraction} روز پیش (هدف ${cad.cadenceDays})`,at:r.lastInteractionAt});
+      else if(cad.status==='WARN') evidence.push({type:'CADENCE_BREACH',refId:r.id,title:`کیدنس عقب افتاده: آخرین تعامل ${cad.daysSinceLastInteraction} روز پیش (هدف ${cad.cadenceDays})`,at:r.lastInteractionAt});
       if(!evidence.length) continue;
       const overdue=evidence.filter(x=>x.type==='COMMITMENT_OVERDUE'||x.type==='ACTION_OVERDUE').length;
       let severity=r.riskScore>=60?'HIGH':r.riskScore>=40?'MEDIUM':'LOW';
@@ -3485,10 +3554,12 @@ const server=http.createServer(async(req,res)=>{
       if(!openActs.length&&!openComs.length&&!futureNext) gaps.push({type:'NO_OPEN_ITEMS',title:'اقدام یا تعهد بازی ندارد و موعد بعدی ثبت نشده است'});
       if((r.healthScore??0)<60) gaps.push({type:'LOW_HEALTH',title:`سلامت ${r.healthScore} زیر آستانهٔ ۶۰`});
       if(openComs.some(c=>c.status==='OVERDUE')) gaps.push({type:'OVERDUE_COMMITMENT',title:'تعهد عقب‌افتاده دارد'});
+      const cad=relCadence(r);
+      if(cad.status!=='FRESH') gaps.push(cad.status==='CRITICAL'?{type:'CADENCE_BREAK',title:`کیدنس شکسته: ${cad.daysSinceLastInteraction} روز (هدف ${cad.cadenceDays})`}:{type:'CADENCE_WARN',title:`کیدنس عقب افتاده: ${cad.daysSinceLastInteraction} روز (هدف ${cad.cadenceDays})`});
       return {id:r.id,name:relName(r),status:r.status,strategicScore:r.strategicScore,healthScore:r.healthScore,
         criteria:safeCriteriaLite('RELATIONSHIP',r.id),
         resilienceScore:r.resilienceScore,riskScore:r.riskScore,opportunityScore:r.opportunityScore,
-        covered,coverageGaps:gaps,openActions:openActs.length,openCommitments:openComs.length,
+        cadence:cad,covered,coverageGaps:gaps,openActions:openActs.length,openCommitments:openComs.length,
         nextActionAt:r.nextActionAt??null};
     });
     const coveredCount=rows.filter(r=>r.covered).length;
@@ -3556,6 +3627,7 @@ const server=http.createServer(async(req,res)=>{
       avgOpportunity:rels.length?Math.round(rels.reduce((s,r)=>s+(r.opportunityScore??0),0)/rels.length):null,
       openActions:acts.filter(a=>!CLOSED_ACT.includes(a.status)).length,
       openCommitments:coms.filter(c=>OPEN_COM.includes(c.status)).length,
+      cadenceBreaches:rels.filter(r=>relCadence(r).status!=='FRESH').length,
       lateCount:acts.filter(a=>['OPEN','IN_PROGRESS'].includes(a.status)&&isLate(a.dueAt)).length+coms.filter(c=>c.status==='OPEN'&&isLate(c.dueAt)).length,
     };
     return {generatedAt:nowIso(),kpis,riskSignals,opportunities,coverage,network};
@@ -3666,7 +3738,16 @@ const server=http.createServer(async(req,res)=>{
     if(!(authUser?.permissions??[]).includes('interaction.write')&&!authUser?.isOwner) return json(res,403,{message:'شما مجوز «ثبت تعامل» (interaction.write) را ندارید.'});
     const rel=b.relationshipId?RELS.find(x=>x.id===b.relationshipId):null;
     const orgId=b.organizationId??(rel?rel.sourceOrganizationId:null)??(b.personId?personById(b.personId)?.organizationId??null:null)??null;
-    const x={id:`i-${Date.now()}`,type,subject:String(b.subject).trim(),summary:b.summary??'',outcome:b.outcome??null,durationMinutes:b.durationMinutes?Number(b.durationMinutes):null,importance,followUpRequired:!!b.followUpRequired,followUpAt:b.followUpAt??null,sentiment:b.sentiment!=null?Number(b.sentiment):null,occurredAt:b.occurredAt??nowIso(),userId:authUser.id,organizationId:orgId,relationshipId:b.relationshipId??null,personId:b.personId??null};
+    const purpose=b.purpose?String(b.purpose).toUpperCase():null;
+    if(purpose&&!INTERACTION_PURPOSE_LIST.includes(purpose)) return json(res,400,{message:'هدف تعامل نامعتبر است (کشف/اعتمادسازی/تصمیم/مذاکره/حل مسئله/تجلیل).'});
+    const channel=b.channel?String(b.channel).toUpperCase():null;
+    if(channel&&!INTERACTION_CHANNEL_LIST.includes(channel)) return json(res,400,{message:'کانال تعامل نامعتبر است.'});
+    const result=b.result?String(b.result).toUpperCase():null;
+    if(result&&!INTERACTION_RESULT_LIST.includes(result)) return json(res,400,{message:'نتیجهٔ تعامل نامعتبر است (پیشرفت/ثابت/عقب‌گرد).'});
+    const direction=b.direction?String(b.direction).toUpperCase():null;
+    if(direction&&!INTERACTION_DIRECTION_LIST.includes(direction)) return json(res,400,{message:'جهت تعامل نامعتبر است.'});
+    if(b.quality!=null&&(!Number.isFinite(Number(b.quality))||Number(b.quality)<1||Number(b.quality)>5)) return json(res,400,{message:'کیفیت باید عددی بین ۱ تا ۵ باشد.'});
+    const x={id:`i-${Date.now()}`,type,subject:String(b.subject).trim(),summary:b.summary??'',outcome:b.outcome??null,durationMinutes:b.durationMinutes?Number(b.durationMinutes):null,importance,followUpRequired:!!b.followUpRequired,followUpAt:b.followUpAt??null,sentiment:b.sentiment!=null?Number(b.sentiment):null,purpose,channel,quality:b.quality!=null?Number(b.quality):null,result,direction,nextStep:b.nextStep?String(b.nextStep).trim():null,nextStepAt:b.nextStepAt??null,occurredAt:b.occurredAt??nowIso(),userId:authUser.id,organizationId:orgId,relationshipId:b.relationshipId??null,personId:b.personId??null};
     INTERACTIONS.unshift(x);
     audit(req,'CREATE','Interaction',x.id,'OK',{meta:{subject:x.subject,type:x.type,organizationId:orgId}});
     saveDb();
@@ -3683,7 +3764,10 @@ const server=http.createServer(async(req,res)=>{
     const orgReach=!orgId||inScope(req,orgId)||(rel&&relInScope(req,rel)&&(orgId===rel.targetOrganizationId||orgId===rel.sourceOrganizationId));
     if(!orgReach) return json(res,403,{message:'سازمانِ فرصت در محدودهٔ دسترسی شما نیست.'});
     const status=b.status??'IDENTIFIED';
-    const o={id:`o-${Date.now()}`,name:b.name,description:b.description??null,status,probability:Math.max(0,Math.min(100,Number(b.probability)||0)),value:b.value==null?null:Number(b.value)||0,expectedDate:b.expectedDate??null,organizationId:orgId,relationshipId:b.relationshipId??null,projectId:b.projectId??null,ownerId:b.ownerId??null,createdAt:nowIso(),wonAt:status==='WON'?nowIso():null,lostAt:status==='LOST'?nowIso():null};
+    const sourceType=b.sourceType?String(b.sourceType).toUpperCase():'COLD';
+    if(!OPPORTUNITY_SOURCE_LIST.includes(sourceType)) return json(res,400,{message:'منبع فرصت نامعتبر است (معرفی/رابطهٔ موجود/رویداد/سرد).'});
+    if(sourceType==='REFERRAL'&&b.sourceReferralId&&!(DB.referrals??[]).some(x=>x.id===b.sourceReferralId)) return json(res,404,{message:'معرفیٔ مبدأ یافت نشد.'});
+    const o={id:`o-${Date.now()}`,name:b.name,description:b.description??null,status,sourceType,sourceReferralId:b.sourceReferralId??null,probability:Math.max(0,Math.min(100,Number(b.probability)||0)),value:b.value==null?null:Number(b.value)||0,expectedDate:b.expectedDate??null,organizationId:orgId,relationshipId:b.relationshipId??null,projectId:b.projectId??null,ownerId:b.ownerId??null,createdAt:nowIso(),wonAt:status==='WON'?nowIso():null,lostAt:status==='LOST'?nowIso():null};
     OPPORTUNITIES.push(o);
     audit(req,'CREATE','opportunity',o.id,'OK',{name:o.name});
     return json(res,201,opportunityView(o));
@@ -3716,6 +3800,8 @@ const server=http.createServer(async(req,res)=>{
       if(o.status==='WON'&&b.status!=='WON') o.wonAt=null;
       if(o.status==='LOST'&&b.status!=='LOST') o.lostAt=null;
     }
+    if(b.sourceType!==undefined){const st=String(b.sourceType).toUpperCase(); if(!OPPORTUNITY_SOURCE_LIST.includes(st)) return json(res,400,{message:'منبع فرصت نامعتبر است.'}); o.sourceType=st; delete b.sourceType;}
+    if(b.sourceReferralId!==undefined){ o.sourceReferralId=b.sourceReferralId??null; delete b.sourceReferralId; }
     Object.assign(o,b);
     audit(req,'UPDATE','opportunity',o.id,'OK',{name:o.name});
     return json(res,200,opportunityView(o));
@@ -3726,6 +3812,66 @@ const server=http.createServer(async(req,res)=>{
     if(!scopedOpps(req).includes(o)) return json(res,403,{message:'دسترسی به این فرصت مجاز نیست.'});
     OPPORTUNITIES=OPPORTUNITIES.filter(x=>x.id!==o.id);
     audit(req,'DELETE','opportunity',o.id,'OK',{name:o.name});
+    return json(res,200,{ok:true});
+  }
+
+  /* ---- کمیتهٔ خرید (P0-2) ---- */
+  const committeeOf=(opp)=>{
+    const items=(COMMITTEE??[]).filter(c=>c.opportunityId===opp.id).map(c=>({...c,person:personById(c.personId)?{id:c.personId,firstName:personById(c.personId).firstName,lastName:personById(c.personId).lastName??'',title:personById(c.personId).title??null,organizationId:personById(c.personId).organizationId}:null}));
+    const present=BUYING_ROLE_LIST.filter(role=>items.some(c=>c.role===role));
+    const engaged=BUYING_ROLE_LIST.filter(role=>items.some(c=>c.role===role&&c.status==='ENGAGED'));
+    const blockers=items.filter(c=>c.role==='BLOCKER');
+    return {total:items.length,requiredRoles:BUYING_ROLE_LIST.length,presentRoles:present.length,engagedRoles:engaged.length,
+      coverage:BUYING_ROLE_LIST.length?Math.round(present.length/BUYING_ROLE_LIST.length*100):0,
+      multiThreaded:engaged.length>=3,blockers:blockers.length,present,missing:BUYING_ROLE_LIST.filter(role=>!present.includes(role)),engaged,items};
+  };
+  const committee=match('/opportunities/:id/committee');
+  if(committee&&method==='GET'){
+    const o=OPPORTUNITIES.find(x=>x.id===committee[0]);
+    if(!o) return json(res,404,{message:'فرصت یافت نشد'});
+    if(!scopedOpps(req).includes(o)) return json(res,403,{message:'دسترسی به این فرصت مجاز نیست.'});
+    return json(res,200,{opportunityId:o.id,opportunity:{id:o.id,name:o.name},...committeeOf(o)});
+  }
+  if(committee&&method==='POST'){
+    const o=OPPORTUNITIES.find(x=>x.id===committee[0]);
+    if(!o) return json(res,404,{message:'فرصت یافت نشد'});
+    if(!scopedOpps(req).includes(o)) return json(res,403,{message:'دسترسی به این فرصت مجاز نیست.'});
+    const b=await readBody(req);
+    if(!b.personId) return json(res,400,{message:'شخص لازم است.'});
+    const p=personById(b.personId);
+    if(!p) return json(res,404,{message:'شخص یافت نشد.'});
+    const role=String(b.role??'').toUpperCase();
+    if(!BUYING_ROLE_LIST.includes(role)) return json(res,400,{message:'نقش نامعتبر است (خریدار اقتصادی/قهرمان/ارزیاب فنی/کاربر نهایی/تدارکات/بلاکر).'});
+    const status=String(b.status??'IDENTIFIED').toUpperCase();
+    if(!COMMITTEE_MEMBER_STATUS.includes(status)) return json(res,400,{message:'وضعیت عضو نامعتبر است.'});
+    if((COMMITTEE??[]).some(c=>c.opportunityId===o.id&&c.personId===b.personId&&c.role===role)) return json(res,409,{message:'این شخص از قبل با همین نقش در کمیته ثبت شده است.'});
+    const row={id:`cm-${Date.now()}`,opportunityId:o.id,personId:b.personId,role,status,note:b.note?String(b.note).slice(0,200):null,updatedAt:nowIso()};
+    COMMITTEE.push(row); saveDb();
+    audit(req,'CREATE','committee',row.id,'OK',{opportunityId:o.id,role});
+    return json(res,201,row);
+  }
+  const committeeItem=match('/opportunities/:id/committee/:cid');
+  if(committeeItem&&method==='PATCH'){
+    const row=(COMMITTEE??[]).find(c=>c.id===committeeItem[1]&&c.opportunityId===committeeItem[0]);
+    if(!row) return json(res,404,{message:'عضو کمیته یافت نشد.'});
+    const o=OPPORTUNITIES.find(x=>x.id===row.opportunityId);
+    if(!o||!scopedOpps(req).includes(o)) return json(res,403,{message:'دسترسی به این فرصت مجاز نیست.'});
+    const b=await readBody(req);
+    if(b.role!==undefined){const role=String(b.role).toUpperCase(); if(!BUYING_ROLE_LIST.includes(role)) return json(res,400,{message:'نقش نامعتبر است.'}); row.role=role;}
+    if(b.status!==undefined){const status=String(b.status).toUpperCase(); if(!COMMITTEE_MEMBER_STATUS.includes(status)) return json(res,400,{message:'وضعیت نامعتبر است.'}); row.status=status;}
+    if(b.note!==undefined) row.note=b.note?String(b.note).slice(0,200):null;
+    if(b.personId!==undefined){const np=personById(b.personId); if(!np) return json(res,404,{message:'شخص یافت نشد.'}); row.personId=b.personId;}
+    row.updatedAt=nowIso(); saveDb();
+    audit(req,'UPDATE','committee',row.id,'OK',{opportunityId:row.opportunityId});
+    return json(res,200,row);
+  }
+  if(committeeItem&&method==='DELETE'){
+    const row=(COMMITTEE??[]).find(c=>c.id===committeeItem[1]&&c.opportunityId===committeeItem[0]);
+    if(!row) return json(res,404,{message:'عضو کمیته یافت نشد.'});
+    const o=OPPORTUNITIES.find(x=>x.id===row.opportunityId);
+    if(!o||!scopedOpps(req).includes(o)) return json(res,403,{message:'دسترسی به این فرصت مجاز نیست.'});
+    COMMITTEE=COMMITTEE.filter(c=>c.id!==row.id); saveDb();
+    audit(req,'DELETE','committee',row.id,'OK',{opportunityId:row.opportunityId});
     return json(res,200,{ok:true});
   }
 
@@ -4029,6 +4175,7 @@ const server=http.createServer(async(req,res)=>{
     const r=RELS.find(x=>x.id===relPatch[0]);
     if(!r) return json(res,404,{message:'رابطه یافت نشد'});
     const b=await readBody(req);
+    if(b.cadenceDays!==undefined){const cd=Number(b.cadenceDays); if(!Number.isFinite(cd)||cd<7||cd>365) return json(res,400,{message:'کیدنس باید بین ۷ تا ۳۶۵ روز باشد.'}); r.cadenceDays=Math.round(cd); delete b.cadenceDays;}
     Object.assign(r,b);
     return json(res,200,relWithOrgs(r));
   }
@@ -4565,6 +4712,8 @@ const server=http.createServer(async(req,res)=>{
       audit:referralAudit(r),
       postAudit:referralPostAudit(r),
       relationshipCriteria:r.relationshipId?refRelCriteria(r.relationshipId):null,
+      opportunity:(()=>{const o=r.opportunityId?OPPORTUNITIES.find(x=>x.id===r.opportunityId):null; return o?{id:o.id,name:o.name,status:o.status,value:o.value}:null;})(),
+      connectorLoad:(DB.referrals??[]).filter(x=>x.sourcePersonId===r.sourcePersonId&&['PENDING','ACCEPTED'].includes(x.status)).length,
     });
     return json(res,200,list.sort((a,b)=>String(b.createdAt??'').localeCompare(String(a.createdAt??''))).map(enrich));
   }
@@ -4576,7 +4725,10 @@ const server=http.createServer(async(req,res)=>{
     if(!authUser?.isOwner&&b.sourceOrganizationId&&!inScope(req,b.sourceOrganizationId)) return json(res,403,{message:'سازمان مبدأ خارج از محدودهٔ دسترسی شماست.'});
     const ins=(b.instruction&&typeof b.instruction==='object')?{
       goal:String(b.instruction.goal??'').trim(),allowed:(Array.isArray(b.instruction.allowed)?b.instruction.allowed:[]).map(String).slice(0,6),forbidden:(Array.isArray(b.instruction.forbidden)?b.instruction.forbidden:[]).map(String).slice(0,6),boundaries:String(b.instruction.boundaries??'').trim(),dueDays:Math.max(3,Math.min(365,Number(b.instruction.dueDays)||30))}:null;
-    const r={id:`ref-${Date.now()}`,title:String(b.title).trim(),message:b.message??null,sourcePersonId:b.sourcePersonId??null,targetPersonId:b.targetPersonId??null,sourceOrganizationId:b.sourceOrganizationId??null,targetOrganizationId:b.targetOrganizationId??null,relationshipId:b.relationshipId??null,status:'PENDING',createdById:authUser.id,recipientUserId:b.recipientUserId??null,completedAt:null,notes:null,createdAt:nowIso(),acceptedAt:null,instruction:ins,baselineCriteria:null,postCheckins:{}};
+    if(b.requestStatus&&!REF_REQUEST_STATUS_LIST.includes(String(b.requestStatus).toUpperCase())) return json(res,400,{message:'وضعیت درخواست نامعتبر است.'});
+    if(b.outcome&&!REF_OUTCOME_LIST.includes(String(b.outcome).toUpperCase())) return json(res,400,{message:'نتیجهٔ معرفی نامعتبر است.'});
+    if(b.opportunityId&&!OPPORTUNITIES.some(x=>x.id===b.opportunityId)) return json(res,404,{message:'فرصت یافت نشد.'});
+    const r={id:`ref-${Date.now()}`,title:String(b.title).trim(),message:b.message??null,sourcePersonId:b.sourcePersonId??null,targetPersonId:b.targetPersonId??null,sourceOrganizationId:b.sourceOrganizationId??null,targetOrganizationId:b.targetOrganizationId??null,relationshipId:b.relationshipId??null,status:'PENDING',createdById:authUser.id,recipientUserId:b.recipientUserId??null,completedAt:null,notes:null,createdAt:nowIso(),acceptedAt:null,instruction:ins,baselineCriteria:null,postCheckins:{},requestStatus:b.requestStatus?String(b.requestStatus).toUpperCase():null,requestedAt:b.requestStatus==='REQUESTED'?nowIso():null,outcome:b.outcome?String(b.outcome).toUpperCase():null,outcomeNote:b.outcomeNote??null,opportunityId:b.opportunityId??null};
     DB.referrals.unshift(r); saveDb();
     const auditRes=referralAudit(r);
     audit(req,'CREATE','Referral',r.id,'OK',{meta:{title:r.title,status:'PENDING',gate:auditRes.gate}});
@@ -4602,6 +4754,10 @@ const server=http.createServer(async(req,res)=>{
       if(b.instruction.dueDays!==undefined) i.dueDays=Math.max(3,Math.min(365,Number(b.instruction.dueDays)||30));
       r.instruction=i;
     }
+    if(b.requestStatus!==undefined){const rs=String(b.requestStatus).toUpperCase(); if(!REF_REQUEST_STATUS_LIST.includes(rs)) return json(res,400,{message:'وضعیت درخواست نامعتبر است.'}); r.requestStatus=rs; if(rs==='REQUESTED') r.requestedAt=r.requestedAt??nowIso();}
+    if(b.outcome!==undefined){const oc=String(b.outcome).toUpperCase(); if(!REF_OUTCOME_LIST.includes(oc)) return json(res,400,{message:'نتیجهٔ معرفی نامعتبر است.'}); r.outcome=oc;}
+    if(b.outcomeNote!==undefined) r.outcomeNote=b.outcomeNote?String(b.outcomeNote).slice(0,240):null;
+    if(b.opportunityId!==undefined){ if(b.opportunityId){ const o=OPPORTUNITIES.find(x=>x.id===b.opportunityId); if(!o) return json(res,404,{message:'فرصت یافت نشد.'}); r.opportunityId=b.opportunityId; } else r.opportunityId=null; }
     if(b.status!==undefined&&b.status!==r.status){
       const allowed=REF_STATUS_FLOW[r.status]??[];
       if(!allowed.includes(b.status)) return json(res,409,{message:`تغییر وضعیت از «${r.status}» به «${b.status}» مجاز نیست.`});

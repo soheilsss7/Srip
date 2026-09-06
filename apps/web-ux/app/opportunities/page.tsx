@@ -20,6 +20,9 @@ type Opportunity = {
   relationship?: { id: string; sourceOrganization?: { name?: string } | null; targetOrganization?: { name?: string } | null } | null;
   project?: { id: string; name: string } | null;
   criteria?: CriteriaSummary | null;
+  sourceType?: string;
+  sourceReferralId?: string | null;
+  committee?: { presentRoles: number; engagedRoles: number; coverage: number; multiThreaded: boolean; requiredRoles?: number; present?: string[]; missing: string[] };
 };
 type Person = { id: string; firstName: string; lastName: string; organization?: { id?: string; name?: string } | null };
 type Org = { id: string; name: string };
@@ -28,6 +31,14 @@ type Project = { id: string; name: string };
 
 const STATUS_OPTIONS = ['IDENTIFIED', 'QUALIFYING', 'ACTIVE', 'WON', 'LOST'];
 const CLOSED = ['WON', 'LOST'];
+const SOURCE_META: Record<string, { label: string; cls: string }> = {
+  REFERRAL: { label: 'معرفی', cls: 'src-ref' }, EXISTING_RELATIONSHIP: { label: 'رابطهٔ موجود', cls: 'src-rel' },
+  EVENT: { label: 'رویداد', cls: 'src-ev' }, COLD: { label: 'سرد', cls: 'src-cold' },
+};
+const ROLE_FA: Record<string, string> = {
+  ECONOMIC_BUYER: 'خریدار اقتصادی', CHAMPION: 'قهرمان', TECH_EVALUATOR: 'ارزیاب فنی',
+  END_USER: 'کاربر نهایی', PROCUREMENT: 'تدارکات', BLOCKER: 'بلاکر',
+};
 const STATUS_TONE: Record<string, 'success' | 'info' | 'warning' | 'danger' | 'neutral'> = {
   IDENTIFIED: 'neutral', QUALIFYING: 'info', ACTIVE: 'warning', WON: 'success', LOST: 'danger',
 };
@@ -73,6 +84,7 @@ export default function OpportunitiesPage() {
   const [form, setForm] = useState({
     name: '', description: '', organizationId: '', relationshipId: '', projectId: '', ownerId: '',
     status: 'IDENTIFIED', valueB: '', probability: '50', expectedDate: '',
+    sourceType: '', sourceReferralId: '',
   });
 
   const load = useCallback(async () => {
@@ -162,8 +174,10 @@ export default function OpportunitiesPage() {
         probability: Number(form.probability) || 0,
         value: Number.isFinite(valueB) && valueB > 0 ? Math.round(valueB * 1e9) : undefined,
         expectedDate: form.expectedDate ? new Date(form.expectedDate).toISOString() : undefined,
+        sourceType: form.sourceType || undefined,
+        sourceReferralId: form.sourceReferralId || undefined,
       }) });
-      setForm({ name: '', description: '', organizationId: '', relationshipId: '', projectId: '', ownerId: '', status: 'IDENTIFIED', valueB: '', probability: '50', expectedDate: '' });
+      setForm({ name: '', description: '', organizationId: '', relationshipId: '', projectId: '', ownerId: '', status: 'IDENTIFIED', valueB: '', probability: '50', expectedDate: '', sourceType: '', sourceReferralId: '' });
       setCreateOpen(false); await load();
     } catch (err) { setError((err as Error).message); }
     finally { setSaving(false); }
@@ -241,6 +255,8 @@ export default function OpportunitiesPage() {
                 <th>ارزش</th>
                 <th>احتمال</th>
                 <th>موعد بستن</th>
+                <th>منبع</th>
+                <th>کمیتهٔ خرید</th>
                 <th>امتیاز معیارها</th>
                 <th>وضعیت</th>
                 <th></th>
@@ -275,6 +291,18 @@ export default function OpportunitiesPage() {
                   </td>
                   <td>
                     {o.expectedDate ? <span className="cell-count"><CalendarClock size={12} /> {fmtDate(o.expectedDate)}</span> : <span className="t-muted">—</span>}
+                  </td>
+                  <td>
+                    {o.sourceType && SOURCE_META[o.sourceType]
+                      ? <span className={`src-chip ${SOURCE_META[o.sourceType].cls}`}>{SOURCE_META[o.sourceType].label}</span>
+                      : <span className="t-muted">—</span>}
+                  </td>
+                  <td>
+                    {o.committee ? (
+                      <span className={o.committee.multiThreaded ? 'src-chip src-rel' : 'src-chip src-ev'} title={`نقش‌های حاضر: ${(o.committee.present ?? []).join('، ') || '—'}${o.committee.missing.length ? ` · غایب: ${o.committee.missing.map((m: string) => ROLE_FA[m] ?? m).join('، ')}` : ''}`}>
+                        {fmtNum(o.committee.presentRoles)}/{fmtNum(o.committee.requiredRoles ?? 6)} نقش{o.committee.multiThreaded ? ' · چندلایه' : ''}
+                      </span>
+                    ) : <span className="t-muted">—</span>}
                   </td>
                   <td>
                     <CriteriaBadge criteria={o.criteria} />
@@ -339,6 +367,19 @@ export default function OpportunitiesPage() {
                 ))}
               </select>
             </div>
+            <div className="field">
+              <label className="field-label" htmlFor="op-source">منبع فرصت</label>
+              <select id="op-source" value={form.sourceType} onChange={setF('sourceType')}>
+                <option value="">—</option>
+                {Object.entries(SOURCE_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              </select>
+            </div>
+            {form.sourceType === 'REFERRAL' && (
+              <div className="field full">
+                <label className="field-label" htmlFor="op-ref">معرفیٔ مبدأ (اختیاری)</label>
+                <input id="op-ref" value={form.sourceReferralId} onChange={setF('sourceReferralId')} placeholder="شناسهٔ معرفی، مثلاً ref-1" />
+              </div>
+            )}
             <div className="field">
               <label className="field-label" htmlFor="op-project">پروژهٔ مرتبط</label>
               <select id="op-project" value={form.projectId} onChange={setF('projectId')}>

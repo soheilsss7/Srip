@@ -38,6 +38,7 @@ const WF_META: Record<string, { fa: string; color: string }> = {
   COMPLETED: { fa: 'تکمیل‌شده', color: '#16a34a' }, FAILED: { fa: 'ناموفق', color: '#dc2626' },
   REJECTED: { fa: 'ردشده', color: '#64748b' },
 };
+const SRC_FA: Record<string, string> = { REFERRAL: 'معرفی', EXISTING_RELATIONSHIP: 'رابطهٔ موجود', EVENT: 'رویداد', COLD: 'سرد' };
 const COMP_ORDER = {
   relationshipQuality: 'کیفیت رابطه', influence: 'نفوذ', strategicValue: 'ارزش راهبردی',
   opportunityPotential: 'پتانسیل فرصت', resilience: 'تاب‌آوری', coverage: 'پوشش شبکه',
@@ -46,7 +47,7 @@ const COMP_ORDER = {
 const RING_COLOR = (v: number) => (v >= 70 ? '#16a34a' : v >= 45 ? '#d97706' : '#dc2626');
 
 type Summary = { generatedAt: string; windowDays: number; counts: Record<string, number>; engagement: { activeUsers30d: number; featureUsage: { feature: string; count: number }[]; recommendationAcceptance: number; recommendationAcceptanceRate: number; successfulConnections: number; relationshipUpdates: number } };
-type Network = { generatedAt: string; organizationId: string | null; relationshipCount: number; peopleCount: number; opportunityCount: number; networkCapital: { score: number; components: Record<string, number> }; strategicRelationshipIndex: { score: number; breakdown: Record<string, number> }; relationshipResilienceScore: number; weightedOpportunityValue: number; referralSuccessRate: { total: number; successful: number; rate: number }; bounded: boolean };
+type Network = { generatedAt: string; organizationId: string | null; relationshipCount: number; peopleCount: number; opportunityCount: number; networkCapital: { score: number; components: Record<string, number> }; strategicRelationshipIndex: { score: number; breakdown: Record<string, number> }; relationshipResilienceScore: number; weightedOpportunityValue: number; referralSuccessRate: { total: number; successful: number; rate: number }; attribution?: { bySource: { type: string; count: number; won: number; value: number }[]; warm: { count: number; won: number; value: number; rate: number }; cold: { count: number; won: number; value: number; rate: number } }; bounded: boolean };
 type Funnel = { generatedAt: string; from: string; to: string; stages: Record<string, number>; conversion: Record<string, number>; overall: Record<string, number> };
 type Me = { permissions?: string[]; memberships?: { organizationName?: string; role?: string; isPrimary?: boolean }[] };
 
@@ -286,6 +287,30 @@ export default function Analytics() {
                   </div>
                 </div>
               </div>
+
+              {net.attribution && (
+                <div className="panel-sub" style={{ marginTop: 16 }}>
+                  <div className="panel-title" style={{ marginBottom: 8 }}>
+                    <div><h3 style={{ fontSize: 14 }}>منبع فرصت‌ها — گرم در برابر سرد</h3><p>انتساب هر فرصت به مسیر ورود؛ مقایسهٔ نرخ برد</p></div>
+                  </div>
+                  <div className="attr-grid">
+                    {(net.attribution.bySource ?? []).filter(x => x.type !== 'COLD').map(x => (
+                      <div key={x.type} className="kpi-card" style={{ margin: 0 }}>
+                        <small>{SRC_FA[x.type] ?? x.type}</small>
+                        <strong>{fmt.format(x.count)}</strong>
+                        <span className="t-muted" style={{ fontSize: 10 }}>{fmt.format(x.won)} برد · {fmt1.format(x.value / 1e9)} میلیارد</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
+                    <span className="chip success">گرم: {fmt.format(net.attribution.warm.count)} فرصت · {fmt1.format(net.attribution.warm.rate)}٪ برد</span>
+                    <span className="chip info">سرد: {fmt.format(net.attribution.cold.count)} فرصت · {fmt1.format(net.attribution.cold.rate)}٪ برد</span>
+                    {net.attribution.warm.count + net.attribution.cold.count > 0 && (
+                      <span className="chip">{fmt1.format(Math.min(99, Math.round((net.attribution.warm.rate - net.attribution.cold.rate) * 10) / 10))}pp تفاوت نرخ برد</span>
+                    )}
+                  </div>
+                </div>
+              )}
             </section>
           )}
 

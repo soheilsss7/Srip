@@ -7,7 +7,7 @@ import { Badge, ErrorCard, Loading, Modal, PageHeader } from '../../_components/
 import {
   Archive, ArrowRight, BellRing, CalendarDays, CheckCircle2, Clock3, FileText, GitBranch,
   HeartPulse, ListChecks, Mail, MessageSquare, MoreHorizontal, Phone, RefreshCw, Scale,
-  ShieldAlert, StickyNote, Trash2, UserRound, Users, X, Zap,
+  ShieldAlert, StickyNote, Trash2, UserRound, Users, X, Zap, ClipboardList,
 } from 'lucide-react';
 import { JalaliDateField } from '../../_components/jalali-date-field';
 
@@ -27,6 +27,13 @@ const IMP_META: Record<string, { fa: string; tone: 'success' | 'info' | 'warning
   LOW: { fa: 'اهمیت کم', tone: 'neutral' }, MEDIUM: { fa: 'اهمیت متوسط', tone: 'info' },
   HIGH: { fa: 'اهمیت زیاد', tone: 'warning' }, CRITICAL: { fa: 'بحرانی', tone: 'danger' },
 };
+const PURPOSE_META: Record<string, string> = {
+  DISCOVERY: 'کشف', TRUST_BUILDING: 'اعتمادسازی', DECISION: 'تصمیم', NEGOTIATION: 'مذاکره', PROBLEM_SOLVING: 'حل مسئله', APPRECIATION: 'تجلیل',
+};
+const RESULT_META: Record<string, { label: string; cls: 'success' | 'info' | 'danger' | 'warning' | 'neutral' }> = {
+  ADVANCED: { label: 'پیشرفت', cls: 'success' }, STABLE: { label: 'ثابت', cls: 'info' }, REGRESSED: { label: 'عقب‌گرد', cls: 'danger' },
+};
+const DIRECTION_META: Record<string, string> = { WE: 'از ما', THEM: 'از طرف مقابل', MUTUAL: 'دوطرفه' };
 const SENT_META = [
   { v: -1, fa: 'منفی', icon: <ShieldAlert size={13} />, cls: 'sent-neg' },
   { v: 0, fa: 'خنثی', icon: <Scale size={13} />, cls: 'sent-neu' },
@@ -158,9 +165,16 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                   {d.followUpRequired && (
                     <Badge tone="warning"><BellRing size={11} /> {d.followUpAt ? `پیگیری تا ${fmtDT(d.followUpAt)}` : 'نیازمند پیگیری'}</Badge>
                   )}
+                  {d.purpose && <Badge>هدف: {PURPOSE_META[d.purpose] ?? d.purpose}</Badge>}
+                  {d.result && RESULT_META[d.result] && <Badge tone={RESULT_META[d.result].cls}>{RESULT_META[d.result].label}</Badge>}
+                  {d.quality != null && <Badge>{d.quality}★</Badge>}
+                  {d.direction && <Badge>جهت: {DIRECTION_META[d.direction] ?? d.direction}</Badge>}
                   <code dir="ltr" style={{ fontSize: 9.5, color: 'var(--text-muted)', fontFamily: 'ui-monospace,monospace' }}>{d.id}</code>
                 </div>
                 <p style={{ fontSize: 13.5, lineHeight: 1.8, marginTop: 8, whiteSpace: 'pre-wrap' }}>{d.summary || <span className="t-muted">خلاصه‌ای ثبت نشده است.</span>}</p>
+                {d.nextStep && (
+                  <div className="success-card" style={{ marginTop: 10 }}><ClipboardList size={13} /> قدم بعدی: {d.nextStep}{d.nextStepAt ? ` — ${fmtDT(d.nextStepAt)}` : ''}</div>
+                )}
               </div>
             </div>
           </section>

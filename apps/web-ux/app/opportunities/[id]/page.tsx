@@ -26,6 +26,16 @@ const STATUS_OPTIONS = ['IDENTIFIED', 'QUALIFYING', 'ACTIVE', 'WON', 'LOST'];
 const STATUS_TONE: Record<string, 'success' | 'info' | 'warning' | 'danger' | 'neutral'> = {
   IDENTIFIED: 'neutral', QUALIFYING: 'info', ACTIVE: 'warning', WON: 'success', LOST: 'danger',
 };
+const SOURCE_META: Record<string, { label: string; cls: string }> = {
+  REFERRAL: { label: 'معرفی', cls: 'src-ref' }, EXISTING_RELATIONSHIP: { label: 'رابطهٔ موجود', cls: 'src-rel' },
+  EVENT: { label: 'رویداد', cls: 'src-ev' }, COLD: { label: 'سرد', cls: 'src-cold' },
+};
+const ROLE_FA: Record<string, string> = {
+  ECONOMIC_BUYER: 'خریدار اقتصادی', CHAMPION: 'قهرمان', TECH_EVALUATOR: 'ارزیاب فنی',
+  END_USER: 'کاربر نهایی', PROCUREMENT: 'تدارکات', BLOCKER: 'بلاکر',
+};
+const ROLE_ORDER = ['ECONOMIC_BUYER', 'CHAMPION', 'TECH_EVALUATOR', 'END_USER', 'PROCUREMENT', 'BLOCKER'];
+const MEMBER_STATUS_FA: Record<string, string> = { IDENTIFIED: 'شناسایی‌شده', ENGAGED: 'درگیر', LOST: 'از دست رفته' };
 
 export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -37,6 +47,8 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const [busy, setBusy] = useState('');
   const [confirmDel, setConfirmDel] = useState(false);
   const [valForm, setValForm] = useState({ valueB: '', probability: '' });
+  const [committee, setCommittee] = useState<any>(null);
+  const [cmForm, setCmForm] = useState({ personId: '', role: 'ECONOMIC_BUYER', status: 'IDENTIFIED', note: '' });
 
   const load = useCallback(async () => {
     setError('');
@@ -47,6 +59,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
       ]);
       setO(one);
       setPeople(arr(ps));
+      api<any>(`/opportunities/${id}/committee`).then(setCommittee).catch(() => {});
       if (one) {
         const b = (one.value ?? 0) / 1e9;
         setValForm({ valueB: b > 0 ? String(b) : '', probability: one.probability != null ? String(one.probability) : '' });
@@ -72,6 +85,37 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
     if (Number.isFinite(b) && b > 0) body.value = Math.round(b * 1e9);
     if (Number.isFinite(prob)) body.probability = prob;
     return patch(body, 'ارزش و احتمال به‌روزرسانی شد.');
+  }
+  async function addMember(e: React.FormEvent) {
+    e.preventDefault(); setError(''); setInfo('');
+    if (!cmForm.personId) { setError('شخص را انتخاب کنید.'); return; }
+    setBusy('cm-add');
+    try {
+      await api(`/opportunities/${id}/committee`, { method: 'POST', body: JSON.stringify({ personId: cmForm.personId, role: cmForm.role, status: cmForm.status, note: cmForm.note }) });
+      setCmForm({ personId: '', role: 'ECONOMIC_BUYER', status: 'IDENTIFIED', note: '' });
+      setInfo('عضو کمیته افزوده شد.');
+      await Promise.all([load(), api<any>(`/opportunities/${id}/committee`).then(setCommittee)]);
+    } catch (err) { setError((err as Error).message); }
+    finally { setBusy(''); }
+  }
+  async function patchMember(cid: string, body: any) {
+    setError(''); setInfo(''); setBusy('cm-' + cid);
+    try {
+      await api(`/opportunities/${id}/committee/${cid}`, { method: 'PATCH', body: JSON.stringify(body) });
+      setInfo('وضعیت عضو به‌روزرسانی شد.');
+      await api<any>(`/opportunities/${id}/committee`).then(setCommittee);
+    } catch (err) { setError((err as Error).message); }
+    finally { setBusy(''); }
+  }
+  async function removeMember(cid: string) {
+    if (!window.confirm('این عضو از کمیتهٔ خرید حذف شود؟')) return;
+    setError(''); setInfo(''); setBusy('cm-del');
+    try {
+      await api(`/opportunities/${id}/committee/${cid}`, { method: 'DELETE' });
+      setInfo('عضو حذف شد.');
+      await Promise.all([load(), api<any>(`/opportunities/${id}/committee`).then(setCommittee)]);
+    } catch (err) { setError((err as Error).message); }
+    finally { setBusy(''); }
   }
   function remove() {
     return doIt('del', async () => { await api(`/opportunities/${id}`, { method: 'DELETE' }); router.replace('/opportunities'); }, '');
@@ -197,6 +241,12 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                   <small>مالک پیگیری</small>
                   {o.owner ? <Link className="t-primary" href={`/people/${o.ownerId}`}>{o.owner.name}</Link> : <strong className="h-null">—</strong>}
                 </div>
+                <div className="detail-item">
+                  <small>منبع فرصت</small>
+                  {o.sourceType && SOURCE_META[o.sourceType]
+                    ? <span className={`src-chip ${SOURCE_META[o.sourceType].cls}`}>{SOURCE_META[o.sourceType].label}{o.sourceReferralId ? ` · ${o.sourceReferralId}` : ''}</span>
+                    : <strong className="h-null">—</strong>}
+                </div>
                 {o.relationship && (
                   <div className="detail-item">
                     <small>رابطهٔ مرتبط</small>
@@ -250,6 +300,74 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
               <div className="info-card" style={{ marginTop: 12 }}><TrendingUp size={14} /> با تغییر مرحله به «برنده‌شده» احتمال خودکار ۱۰۰٪ و با «ازدست‌رفته» صفر می‌شود.</div>
             </section>
           </div>
+
+          {/* کمیتهٔ خرید */}
+          <section className="panel">
+            <div className="panel-title">
+              <div><h2>کمیتهٔ خرید</h2><p>نقش‌های تصمیم؛ پوشش و خلأ هر نقش</p></div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                {committee && (
+                  <>
+                    <Badge tone={committee.coverage >= 80 ? 'success' : committee.coverage >= 50 ? 'warning' : 'danger'}>پوشش {fmtNum(committee.coverage)}٪</Badge>
+                    <Badge>{fmtNum(committee.presentRoles)}/{fmtNum(committee.requiredRoles)} نقش حاضر</Badge>
+                    {committee.multiThreaded && <Badge tone="success">چندلایه (۳+ درگیر)</Badge>}
+                    {committee.blockers > 0 && <Badge tone="danger">{fmtNum(committee.blockers)} بلاکر</Badge>}
+                  </>
+                )}
+              </div>
+            </div>
+            <div className="detail-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+              {ROLE_ORDER.map(role => {
+                const members = committee?.items?.filter((c: any) => c.role === role) ?? [];
+                return (
+                  <div key={role} className="detail-item" style={{ border: members.length ? '1px solid var(--border)' : '1px dashed var(--border)', background: members.some((c: any) => c.status === 'ENGAGED') ? 'color-mix(in srgb, var(--srip-accent) 5%, transparent)' : undefined, padding: 10 }}>
+                    <small>{ROLE_FA[role] ?? role}</small>
+                    {members.length ? members.map((c: any) => (
+                      <div key={c.id} style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', marginTop: 4, width: '100%' }}>
+                        <span style={{ fontSize: 12.5, fontWeight: 700 }}>{c.person ? `${c.person.firstName} ${c.person.lastName}` : c.personId}</span>
+                        <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                          <select className="toolbar-select" style={{ minHeight: 26, padding: '1px 4px', fontSize: 10.5 }} value={c.status} disabled={!!busy}
+                            onChange={e => patchMember(c.id, { status: e.target.value })}>
+                            {Object.entries(MEMBER_STATUS_FA).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                          </select>
+                          <button className="secondary-action" style={{ padding: '2px 6px', fontSize: 10.5 }} title="حذف عضو" disabled={!!busy} onClick={() => removeMember(c.id)}>✕</button>
+                        </span>
+                        {c.note && <span className="t-muted" style={{ fontSize: 11, width: '100%' }}>{c.note}</span>}
+                      </div>
+                    )) : <span className="t-muted" style={{ fontSize: 12 }}>غایب — خلأ پوشش</span>}
+                  </div>
+                );
+              })}
+            </div>
+            <form className="entity-form org-form" style={{ marginTop: 14, borderTop: '1px solid var(--border)', paddingTop: 12 }} onSubmit={addMember}>
+              <div className="form-grid">
+                <div className="field">
+                  <label className="field-label" htmlFor="cm-person">شخص</label>
+                  <select id="cm-person" value={cmForm.personId} onChange={e => setCmForm(f => ({ ...f, personId: e.target.value }))}>
+                    <option value="">انتخاب شخص…</option>
+                    {people.map((p: any) => <option key={p.id} value={p.id}>{p.firstName} {p.lastName}{p.organization?.name ? ` — ${p.organization.name}` : ''}</option>)}
+                  </select>
+                </div>
+                <div className="field">
+                  <label className="field-label" htmlFor="cm-role">نقش</label>
+                  <select id="cm-role" value={cmForm.role} onChange={e => setCmForm(f => ({ ...f, role: e.target.value }))}>
+                    {ROLE_ORDER.map(r => <option key={r} value={r}>{ROLE_FA[r]}</option>)}
+                  </select>
+                </div>
+                <div className="field">
+                  <label className="field-label" htmlFor="cm-status">وضعیت</label>
+                  <select id="cm-status" value={cmForm.status} onChange={e => setCmForm(f => ({ ...f, status: e.target.value }))}>
+                    {Object.entries(MEMBER_STATUS_FA).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  </select>
+                </div>
+                <div className="field">
+                  <label className="field-label" htmlFor="cm-note">یادداشت</label>
+                  <input id="cm-note" value={cmForm.note} onChange={e => setCmForm(f => ({ ...f, note: e.target.value }))} placeholder="اختیاری" />
+                </div>
+              </div>
+              <button className="primary-action" style={{ marginTop: 8 }} type="submit" disabled={!!busy}><User size={14} /> افزودن به کمیته</button>
+            </form>
+          </section>
 
           {/* زمینه */}
           <section className="panel">

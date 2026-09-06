@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api } from '../_lib/api';
 import { fa } from '../_lib/fa';
@@ -36,6 +37,10 @@ type RefRow = {
   instruction?: Instruction | null;
   audit?: Audit | null; postAudit?: Audit | null;
   relationshipCriteria?: { score?: number; effectiveScore?: number; coverage?: number; verdictLabel?: string; verdict?: string } | null;
+  requestStatus?: string | null; requestedAt?: string | null;
+  outcome?: string | null; outcomeNote?: string | null;
+  opportunity?: { id: string; name: string; status: string; value?: number | null } | null;
+  connectorLoad?: number;
 };
 
 const fmtNum = (v: number): string => new Intl.NumberFormat('fa-IR').format(v);
@@ -55,6 +60,18 @@ const GATE_META: Record<string, { label: string; tone: 'success' | 'warning' | '
   WARN: { label: 'ممیزی زرد', tone: 'warning', icon: <ShieldAlert size={12} /> },
   BLOCKED: { label: 'ممیزی قرمز', tone: 'danger', icon: <ShieldX size={12} /> },
   'N/A': { label: 'ممیزی ندارد', tone: 'neutral', icon: <ShieldCheck size={12} /> },
+};
+const REQ_STATUS_FA: Record<string, { label: string; tone: 'warning' | 'info' | 'success' | 'neutral' | 'danger' }> = {
+  REQUESTED: { label: 'درخواست از معرف ارسال شد', tone: 'warning' },
+  RESPONDED_YES: { label: 'معرف پذیرفت', tone: 'success' },
+  RESPONDED_NO: { label: 'معرف نپذیرفت', tone: 'danger' },
+  NO_RESPONSE: { label: 'بدون پاسخ از معرف', tone: 'neutral' },
+};
+const OUTCOME_FA: Record<string, { label: string; tone: 'success' | 'info' | 'neutral' | 'warning' | 'danger' }> = {
+  MEET_BOOKED: { label: 'ملاقات برقرار شد', tone: 'success' },
+  NO_REPLY: { label: 'بدون پاسخ', tone: 'neutral' },
+  DECLINED: { label: 'رد شد', tone: 'danger' },
+  BAD_FIT: { label: 'نامناسب بود', tone: 'warning' },
 };
 const personName = (p?: MiniPerson | null) => p ? `${p.firstName} ${p.lastName}` : '';
 const orgName = (o?: MiniOrg | null) => o?.name ?? '';
@@ -203,6 +220,17 @@ export default function ReferralsPage() {
     } catch (x) { setError((x as Error).message); await load(); }
     finally { setBusy(null); }
   }
+  async function updateMission(r: RefRow, body: Record<string, unknown>, doneMsg: string) {
+    if (busy) return;
+    setBusy('mission-' + r.id); setError('');
+    try {
+      const res: any = await api(`/core-domain/referrals/${r.id}`, { method: 'PATCH', body: JSON.stringify(body) });
+      setFlash(doneMsg);
+      await load();
+      setDetail(prev => prev ? { ...prev, ...res } : prev);
+    } catch (x) { setError((x as Error).message); await load(); }
+    finally { setBusy(null); }
+  }
   async function rerunAudit(r: RefRow) {
     setBusy('audit-' + r.id); setError(''); setFlash('');
     try {
@@ -343,6 +371,12 @@ export default function ReferralsPage() {
                           {r.instruction && (
                             <div className="t-muted" style={{ fontSize: 10, maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               <Ban size={9} style={{ verticalAlign: '-1px' }} /> خط قرمز: {(r.instruction.forbidden ?? []).slice(0, 2).join('، ') || '—'}
+                            </div>
+                          )}
+                          {(r.outcome || r.requestStatus) && (
+                            <div style={{ fontSize: 9.5, display: 'inline-flex', gap: 4, alignItems: 'center', marginTop: 3 }}>
+                              {r.requestStatus && REQ_STATUS_FA[r.requestStatus] && <span className="ref-mini"><Badge tone={REQ_STATUS_FA[r.requestStatus].tone}>{REQ_STATUS_FA[r.requestStatus].label}</Badge></span>}
+                              {r.outcome && OUTCOME_FA[r.outcome] && <span className="ref-mini"><Badge tone={OUTCOME_FA[r.outcome].tone}>نتیجه: {OUTCOME_FA[r.outcome].label}</Badge></span>}
                             </div>
                           )}
                         </td>
@@ -541,6 +575,44 @@ export default function ReferralsPage() {
             )}
             {detail.message && <div style={{ display: 'flex', gap: 6 }}><StickyNote size={14} className="t-muted" /><span><b>پیام:</b> {detail.message}</span></div>}
             {detail.notes && <div style={{ display: 'flex', gap: 6 }}><CheckCircle2 size={14} className="t-muted" /><span><b>یادداشت پایانی:</b> {detail.notes}</span></div>}
+            <div className="ref-mission-panel">
+              <div className="ref-instruction-head"><Send size={14} /> مِیشن گرم (ارکستراسیون)</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                <span className="t-muted" style={{ fontSize: 11.5 }}>وضعیت درخواست از معرف:</span>
+                {(['REQUESTED', 'RESPONDED_YES', 'RESPONDED_NO', 'NO_RESPONSE'] as const).map(st => (
+                  <button key={st} type="button" className={`btn btn-sm ${detail.requestStatus === st ? 'btn-primary' : 'btn-ghost'}`} disabled={!!busy}
+                    onClick={() => updateMission(detail, { requestStatus: st }, `وضعیت درخواست به «${REQ_STATUS_FA[st].label}» تغییر کرد.`)}>
+                    {REQ_STATUS_FA[st].label}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginTop: 8 }}>
+                <span className="t-muted" style={{ fontSize: 11.5 }}>نتیجهٔ نهایی:</span>
+                {(['MEET_BOOKED', 'NO_REPLY', 'DECLINED', 'BAD_FIT'] as const).map(oc => (
+                  <button key={oc} type="button" className={`btn btn-sm ${detail.outcome === oc ? 'btn-primary' : 'btn-ghost'}`} disabled={!!busy}
+                    onClick={() => updateMission(detail, { outcome: oc }, `نتیجهٔ معرفی «${OUTCOME_FA[oc].label}» ثبت شد.`)}>
+                    {OUTCOME_FA[oc].label}
+                  </button>
+                ))}
+              </div>
+              {detail.outcome && (
+                <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                  <StickyNote size={13} className="t-muted" />
+                  <input className="ref-outcome-note" placeholder="یادداشت نتیجه (اختیاری)" defaultValue={detail.outcomeNote ?? ''}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLInputElement).blur(); } }}
+                    onBlur={e => { const v = e.target.value.trim(); if (v !== (detail.outcomeNote ?? '')) updateMission(detail, { outcomeNote: v }, 'یادداشت نتیجه ذخیره شد.'); }} />
+                </div>
+              )}
+              {detail.opportunity && (
+                <div className="ref-rel-line" style={{ marginTop: 8 }}>
+                  <Link href={`/opportunities/${detail.opportunity.id}`}>فرصت متصل: {detail.opportunity.name} ({fa(detail.opportunity.status)})</Link>
+                  <button type="button" className="btn btn-ghost btn-sm" disabled={!!busy} onClick={() => updateMission(detail, { opportunityId: null }, 'اتصال به فرصت برداشته شد.')}>✕</button>
+                </div>
+              )}
+              {detail.connectorLoad != null && detail.connectorLoad > 0 && (
+                <small className="t-muted" style={{ display: 'block', marginTop: 6 }}>این معرف {fmtNum(detail.connectorLoad)} درخواست فعال دیگر نیز دارد.</small>
+              )}
+            </div>
             <div style={{ display: 'flex', gap: 6 }}><UserRound size={14} className="t-muted" /><span><b>معرف:</b> {detail.createdBy?.name ?? '—'} {detail.createdBy?.email ? `(${detail.createdBy.email})` : ''}</span></div>
             <div style={{ display: 'flex', gap: 12, color: 'var(--text-muted)', fontSize: 11.5 }}>
               <span>ایجاد: {fmtDT(detail.createdAt)}</span>

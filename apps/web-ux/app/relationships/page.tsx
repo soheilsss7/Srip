@@ -30,6 +30,7 @@ type Rel = {
   targetOrganization?: { id: string; name: string; type: string };
   owner?: { id: string; name: string };
   backupOwner?: { id: string; name: string };
+  cadence?: { cadenceDays: number; daysSinceLastInteraction: number; status: 'FRESH' | 'WARN' | 'CRITICAL'; overdueDays: number };
 };
 type RelType = { key: string; name?: string };
 
@@ -315,7 +316,14 @@ export default function RelationshipsPage() {
                             </span>
                           ) : <span className="t-muted">—</span>}
                         </td>
-                        <td className="t-muted">{timeAgo(r.lastInteractionAt)}</td>
+                        <td>
+                          <div className="t-muted">{timeAgo(r.lastInteractionAt)}</div>
+                          {r.cadence && (
+                            <span className={`cell-count ${r.cadence.status === 'CRITICAL' ? 'danger' : r.cadence.status === 'WARN' ? 'warning' : 'info'}`} title={`هدف کیدنس: هر ${fmtNum(r.cadence.cadenceDays)} روز یک تعامل`}>
+                              <CalendarClock size={11} /> {r.cadence.status === 'FRESH' ? `در کیدنس (هدف ${fmtNum(r.cadence.cadenceDays)}روز)` : r.cadence.status === 'WARN' ? `${fmtNum(r.cadence.overdueDays)} روز عقب از کیدنس` : `کیدنس شکسته (${fmtNum(r.cadence.daysSinceLastInteraction)} روز)`}
+                            </span>
+                          )}
+                        </td>
                         <td>
                           <Link className="row-action" href={`/relationships/${r.id}`} aria-label={`مشاهدهٔ رابطهٔ ${r.sourceOrganization?.name ?? ''} و ${r.targetOrganization?.name ?? ''}`}>
                             <ChevronLeft size={16} />
