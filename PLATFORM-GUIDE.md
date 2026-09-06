@@ -773,7 +773,14 @@ scoreBasis    = b === 0 ? 'COLD_START_ASSESSED' : 'BLEND'
 
 ### شکاف‌ها و بدهی فنی (به ترتیب اولویت)
 
-1. **⚠ سند راهنما زیر پای خروجی استاتیک له شده.** `README.md` به `docs/IMPLEMENTATION_CHECKLIST.md` و
+1. **⚠ سند راهنما زیر پای خروجی استاتیک له شده — نیمی از این راه باز شد.** ۱۵۱ فایل `docs/*.md` از
+   `main` بازگردانده شدند (بدون دست‌زدن به `docs/srip2/` و خروجی استاتیک): به همین دلیل
+   `scripts/verify-phase0-6.sh` و `scripts/verify-package8-final.sh` و سوئیت
+   `test/unit/package8-final-audit.spec.ts` دوباره سبزند. باقی‌ماندۀ این شکاف دو چیز است:
+   (الف) `scripts/verify.sh` برای شمارش چک‌باکس‌ها به `python` + `python-docx` نیاز دارد که در
+   رانر CI نیست، پس شغل `quality` همان‌جا هم قرمز است (روی `main` هم قرمز بود — ربطی به این کار ندارد)؛
+   (ب) جای درست خروجی استاتیک از `docs/` به `site/` یا `public/` منتقل شود تا سند و خروجی هم‌نام نمانند.
+   متن اصلی این بند: `README.md` به `docs/IMPLEMENTATION_CHECKLIST.md` و
    `docs/MASTER_TECHNICAL_SPEC.md` ارجاع می‌دهد، اما در این برنچ محتوای `docs/` با **خروجی استاتیک
    GitHub Pages** جایگزین شده (`docs/srip2/...`)؛ ۱۴۶ فایل `docs/*.md` فقط در `main` موجودند
    (`git ls-tree main` = 146، در HEAD = 0). راه‌حل: خروجی استاتیک به `public/` یا `site/` منتقل و `docs/*.md`
