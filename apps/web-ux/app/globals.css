@@ -1292,7 +1292,7 @@ textarea{resize:vertical}
 .rel-status-row-name{flex:1;font-size:12.5px;font-weight:800;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .rel-status-row-name small{color:var(--text-muted);font-weight:600}
 .rel-status-row-bar{width:110px;height:6px;border-radius:999px;background:var(--card-bg-soft);border:1px solid var(--card-border);overflow:hidden}
-.rel-status-row .srip-badge{white-space:nowrap}
+.rel-status-row .srip-badge{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* Org create form — grouped, tidy ---------------------------------------- */
 .org-form .form-section-head{margin-top:2px}
@@ -2627,8 +2627,8 @@ html,body{overflow-x:clip;max-width:100%}
   .workspace-content{padding:14px 12px calc(84px + env(safe-area-inset-bottom))}
 
   /* ۲) جدول‌ها — اسکرول افقی داخل ظرف، سرستون و ستون اول چسبان.
-        سلکتور دوتایی لازم است چون .table-wrap{overflow:hidden} در globals.css
-        (خط ~1511) و در ui-v3.css (خط ~217) بعد از این قاعده می‌آیند. */
+        پایهٔ .table-wrap اکنون overflow:auto است؛ سلکتور دوتایی فقط برای
+        اولویت بالاترِ ستون چسبان روی موبایل لازم است (همان الگوی ui-v3). */
   .table-wrap.table-wrap{overflow-x:auto;overflow-y:hidden;max-width:100%;
     -webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scrollbar-width:thin}
   .table-wrap.table-wrap th{position:sticky;top:0;z-index:3}

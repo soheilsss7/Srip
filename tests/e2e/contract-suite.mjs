@@ -43,6 +43,15 @@ async function main() {
   {
     const r = await api('/health');
     record('health 200 ok', r.status === 200 && r.json?.status === 'ok', `status=${r.status}`);
+    if (r.json?.mockVersion) {
+      // This suite validates the REAL NestJS+Postgres contract (register/
+      // verify/password-reset, tenant scope, pagination…). The demo mock only
+      // implements a subset; running against it produces misleading failures.
+      // Demo mock has its own durable suite: tests/e2e/mock-demo-regression.mjs
+      console.log(`\nSKIP  mock detected (${r.json.mockVersion}) — contract-suite needs the real API.`);
+      console.log('      For the demo backend use: node tests/e2e/mock-demo-regression.mjs');
+      return;
+    }
   }
   {
     const r = await api('/organizations');

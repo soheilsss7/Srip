@@ -55,6 +55,24 @@ function run(args) {
   execFileSync('convert', args, { stdio: 'pipe' });
 }
 
+/* ImageMagick gradient/rendering is NOT byte-deterministic; re-running would
+   dirty the repo on every release. Render to a temp file and only replace the
+   target when bytes actually differ, so gen-icons is idempotent. */
+function stablePng(tmp, out) {
+  let next = null;
+  try { next = fs.readFileSync(tmp); } catch { return false; }
+  let changed = true;
+  try {
+    const cur = fs.readFileSync(out);
+    changed = !cur.equals(next);
+  } catch { /* first write */ }
+  try {
+    if (changed) fs.copyFileSync(tmp, out);
+    fs.rmSync(tmp, { force: true });
+  } catch { /* keep going; temp may remain */ }
+  return changed;
+}
+
 function hasImageMagick() {
   try { execFileSync('convert', ['-version'], { stdio: 'ignore' }); return true; } catch { return false; }
 }
@@ -64,6 +82,12 @@ fs.writeFileSync(path.join(pub, 'icon.svg'), SVG);
 let made = ['icon.svg'];
 
 if (hasImageMagick()) {
+  const FORCE = process.argv.includes('--force');
+  const PNG_NAMES = ['apple-touch-icon.png','favicon-32.png','favicon-64.png','icon-192.png','icon-512.png','icon-maskable-512.png'];
+  const pngUpToDate = PNG_NAMES.every((n) => fs.existsSync(path.join(pub, n)));
+  if (!FORCE && pngUpToDate) {
+    console.log('[gen-icons] PNGها موجودند — بازتولید نشد (برای بازتولید: node scripts/gen-icons.mjs --force)');
+  } else {
   const [edges, nodes, core] = masterCmds();
   const master = path.join(__dirname, '.icon-master.png');
   const mask = path.join(__dirname, '.icon-mask.png');
@@ -84,20 +108,23 @@ if (hasImageMagick()) {
       ['favicon-64.png', 64, []],
     ]) {
       const out = path.join(pub, name);
+      const tmp = out + '.tmp';
       const args = size === 512 && name === 'icon-512.png'
-        ? [master, ...extra, out]
-        : [master, '-resize', `${size}x${size}`, ...extra.filter((a) => a !== '-resize' && !/^\d+%$/.test(a)), out];
-      try { run(args); made.push(name); } catch (e) { console.warn(`[gen-icons] ${name}: ${String(e.message).split('\n')[0]}`); }
+        ? [master, ...extra, tmp]
+        : [master, '-resize', `${size}x${size}`, ...extra.filter((a) => a !== '-resize' && !/^\d+%$/.test(a)), tmp];
+      try { run(args); if (stablePng(tmp, out)) made.push(name); } catch (e) { console.warn(`[gen-icons] ${name}: ${String(e.message).split('\n')[0]}`); }
     }
     // نسخهٔ ماسک‌بل: افکت گوشه لازم نیست؛ پس‌زمینۀ کامل
     try {
-      run(['-size', `${S}x${S}`, `gradient:${NAVY}-${TEAL}`, '-alpha', 'off', '-draw', edges, '-draw', nodes, '-draw', core, path.join(pub, 'icon-maskable-512.png')]);
-      if (!made.includes('icon-maskable-512.png')) made.push('icon-maskable-512.png');
+      const out = path.join(pub, 'icon-maskable-512.png');
+      run(['-size', `${S}x${S}`, `gradient:${NAVY}-${TEAL}`, '-alpha', 'off', '-draw', edges, '-draw', nodes, '-draw', core, out + '.tmp']);
+      if (stablePng(out + '.tmp', out) || !made.includes('icon-maskable-512.png')) made.push('icon-maskable-512.png');
     } catch { /* همان فایل قبلی می‌ماند */ }
   } catch (e) {
     console.warn('[gen-icons] ترسیم PNG ناموفق بود:', String(e.message).split('\n')[0]);
   } finally {
     fs.rmSync(master, { force: true }); fs.rmSync(mask, { force: true });
+  }
   }
 } else {
   console.warn('[gen-icons] ImageMagick نیست — فقط icon.svg نوشته شد (manifest باز هم کار می‌کند)');
