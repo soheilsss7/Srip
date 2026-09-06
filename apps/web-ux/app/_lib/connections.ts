@@ -1,3 +1,4 @@
+import { fa } from './fa';
 /* ==========================================================================
    SRIP Connection-Intelligence engine — fully deterministic, NO LLM.
    Suggests NEW relationships based on:
@@ -113,7 +114,7 @@ export function suggestConnections(
     out.push({
       id: o.id, name: o.name, kind: 'organization', href: `/organizations/${o.id}`,
       score, reasons, via: via.map(orgById).slice(0, 3),
-      sub: [o.type, o.industry].filter(Boolean).join(' · ') || undefined,
+      sub: [fa(o.type), o.industry].filter(Boolean).join(' · ') || undefined,
     });
   }
   return out.sort((a, b) => b.score - a.score);

@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../_lib/api';
+import { idFa } from '../_lib/fa';
 import { Badge, ErrorCard, Loading, Modal, PageHeader, StatCard } from '../_components/page-ui';
 import {
   AlertTriangle, Clock3, FileDown, Fingerprint, Gauge, KeyRound, Lock, RefreshCw, ScrollText,
@@ -20,7 +21,7 @@ const TYPE_META: Record<string, { fa: string; desc: string; icon: React.ReactNod
   RATE_LIMITED: { fa: 'محدودیت نرخ', desc: 'درخواست به دلیل عبور از حد مجاز نرخ مسدود شد', icon: <Gauge size={13} /> },
   SUSPICIOUS_ACCESS: { fa: 'دسترسی مشکوک', desc: 'الگوی دسترسی غیرعادی (دستگاه/مکان جدید)', icon: <AlertTriangle size={13} /> },
   EXPORT_CREATED: { fa: 'خروجی داده', desc: 'صدور فایل خروجی گزارش', icon: <FileDown size={13} /> },
-  MFA_EVENT: { fa: 'رویداد MFA', desc: 'فعال‌سازی/استفاده از تأیید دومرحله‌ای', icon: <KeyRound size={13} /> },
+  MFA_EVENT: { fa: 'رویداد تأیید دومرحله‌ای', desc: 'فعال‌سازی/استفاده از تأیید دومرحله‌ای', icon: <KeyRound size={13} /> },
 };
 const SEV_TONE: Record<string, 'danger' | 'warning' | 'info' | 'success' | 'neutral'> = {
   CRITICAL: 'danger', HIGH: 'danger', WARNING: 'warning', INFO: 'info', LOW: 'success',
@@ -32,7 +33,17 @@ const fmtDT = (iso?: string | null) => iso
   ? new Date(iso).toLocaleString('fa-IR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : '—';
 const fmtNum = (v: unknown) => (v == null ? '—' : new Intl.NumberFormat('fa-IR').format(Number(v)));
 const unwrap = (x: any) => (Array.isArray(x) ? x : x?.items ?? x?.rows ?? x?.events ?? []);
-const metaText = (e: Evt) => Object.entries(e.metadata ?? {}).map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`).join(' · ');
+const META_KEY_FA: Record<string, string> = { mfa: 'تأیید دومرحله‌ای', reason: 'دلیل', attempts: 'تعداد تلاش', country: 'کشور', windowSeconds: 'پنجره (ثانیه)', limit: 'سقف', exportType: 'نوع خروجی', recordCount: 'تعداد رکورد', approvalId: 'شناسهٔ تأیید', permission: 'مجوز', event: 'رویداد', factor: 'عامل', lockedMinutes: 'مدت قفل (دقیقه)', report: 'گزارش', format: 'قالب' };
+const META_VAL_FA: Record<string, Record<string, string>> = {
+  mfa: { TOTP: 'کد زمان‌دار', SMS: 'پیامک' },
+  factor: { TOTP: 'کد زمان‌دار', SMS: 'پیامک' },
+  reason: { no_mfa: 'بدون تأیید دومرحله‌ای', bad_password: 'رمز/کد نادرست', no_user: 'کاربر ناموجود', new_device_geo_mismatch: 'دستگاه/مکان جدید', repeated_failures: 'تکرار تلاش ناموفق' },
+  country: { IR: 'ایران' },
+  exportType: { CSV: 'فایل جدولی', XLSX: 'صفحهٔ گسترده', PDF: 'سند', JSON: 'متن ساختاریافته' },
+  permission: { 'enterprise.read': 'خواندن سازمانی' },
+  event: { ENROLLED: 'ثبت‌شده' },
+};
+const metaText = (e: Evt) => Object.entries(e.metadata ?? {}).map(([k, v]) => `${META_KEY_FA[k] ?? k}: ${META_VAL_FA[k]?.[String(v)] ?? (v == null ? '—' : idFa(String(v)))}`).join(' · ');
 
 export default function SecurityEvents() {
   const [items, setItems] = useState<Evt[]>([]);
@@ -77,7 +88,7 @@ export default function SecurityEvents() {
       <PageHeader
         eyebrow="امنیت"
         title="رویدادهای امنیتی"
-        description="رخدادهای ثبت‌شده در محدودهٔ دسترسی شما: ورود موفق/ناموفق، MFA، قفل حساب، دسترسی غیرمجاز، محدودیت نرخ، دسترسی مشکوک و خروجی داده — همراه با شدت و فرادادهٔ کامل."
+        description="رخدادهای ثبت‌شده در محدودهٔ دسترسی شما: ورود موفق/ناموفق، تأیید دومرحله‌ای، قفل حساب، دسترسی غیرمجاز، محدودیت نرخ، دسترسی مشکوک و خروجی داده — همراه با شدت و فرادادهٔ کامل."
         actions={
           <div className="toolbar">
             <Link className="btn btn-ghost" href="/security"><ShieldCheck size={15} /> امنیت و حاکمیت</Link>

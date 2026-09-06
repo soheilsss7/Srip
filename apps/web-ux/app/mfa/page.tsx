@@ -14,7 +14,7 @@ export default function MFA(){
  return (
   <AuthShell>
     <span className="auth-badge"><ShieldCheck size={14}/> امنیت چندمرحله‌ای</span>
-    <h2>احراز هویت چندمرحله‌ای (MFA)</h2>
+    <h2>احراز هویت چندمرحله‌ای</h2>
     <p className="ac-sub">الزام فعلی: <b>{required===null?'در حال بررسی…':required?'فعال':'غیرفعال'}</b> — دستگاه خود را ثبت و کد ۶ رقمی را تأیید کنید.</p>
 
     <div className="auth-form" style={{gap:14}}>
@@ -27,7 +27,7 @@ export default function MFA(){
       {secret&&<pre className="json-view" style={{maxHeight:220}}>{JSON.stringify(secret,null,2)}</pre>}
 
       <div className="field">
-        <label className="field-label" htmlFor="mfa-device">شناسه دستگاه (Device ID)</label>
+        <label className="field-label" htmlFor="mfa-device">شناسهٔ دستگاه</label>
         <input id="mfa-device" dir="ltr" value={deviceId} onChange={e=>setDeviceId(e.target.value)} placeholder="device-…"/>
       </div>
       <div className="field">

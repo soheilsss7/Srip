@@ -208,7 +208,7 @@ export default function AdminExportsPage() {
                     <th>بازیگر</th>
                     <th>سازمان</th>
                     <th>زمان</th>
-                    <th>IP</th>
+                    <th>نشانی</th>
                   </tr>
                 </thead>
                 <tbody>

@@ -168,7 +168,7 @@ export default function EnterprisePage() {
     } catch (x) { setError((x as Error).message); } finally { setBusy(''); }
   }
   async function disablePolicy(p: Policy) {
-    if (!window.confirm(`سیاست «${p.key}» غیرفعال می‌شود (حذف منطقی ABAC). ادامه می‌دهید؟`)) return;
+    if (!window.confirm(`سیاست «${p.key}» غیرفعال می‌شود (حذف منطقی سیاست). ادامه می‌دهید؟`)) return;
     setBusy('del-' + p.id); setError(''); setNotice('');
     try {
       const out = await apiDelete<Policy>(`/enterprise/policies/${p.id}`);
@@ -217,8 +217,8 @@ export default function EnterprisePage() {
     <main className="feature-page">
       <PageHeader
         eyebrow="حاکمیت سازمانی"
-        title="کنترل سازمانی (ABAC)"
-        description="نظارت یکپارچه بر سیاست‌های دسترسی، پرچم‌های ویژگی، خروجی‌های داده و رویدادهای امنیتی در محدودهٔ سازمانی شما — پاریتی کامل EnterpriseController."
+        title="کنترل سازمانی (ویژگی‌محور)"
+        description="نظارت یکپارچه بر سیاست‌های دسترسی، پرچم‌های ویژگی، خروجی‌های داده و رویدادهای امنیتی در محدودهٔ سازمانی شما — هم‌ارزی کامل با سرویس سازمانی."
         actions={
           <div className="toolbar" style={{ flexWrap: 'wrap' }}>
             {orgs.length > 1 && (
@@ -257,13 +257,13 @@ export default function EnterprisePage() {
           {tab === 'overview' && (
             <>
               <div className="stat-grid">
-                <StatCard icon={<Scale size={18} />} label="سیاست‌های ABAC" value={fmtNum(g.policies ?? 0)} iconClass="ic-purple" sub="فعال و غیرفعال" />
+                <StatCard icon={<Scale size={18} />} label="سیاست‌های ویژگی‌محور" value={fmtNum(g.policies ?? 0)} iconClass="ic-purple" sub="فعال و غیرفعال" />
                 <StatCard icon={<ShieldCheck size={18} />} label="رویدادهای امنیتی" value={fmtNum(g.securityEvents ?? 0)} iconClass="ic-red" sub="در محدودهٔ انتخابی" />
                 <StatCard icon={<Flag size={18} />} label="پرچم‌های ویژگی" value={`${fmtNum(enabled)} / ${fmtNum(totalFlags)}`} iconClass="ic-blue" sub="فعال از کل" />
                 <StatCard icon={<Building2 size={18} />} label="سازمان‌های در دسترس" value={fmtNum(overview?.ownership?.organizations ?? g.organizations ?? 0)} iconClass="ic-gold" sub={orgId ? (orgsById.get(orgId) ?? '') : 'کل سامانه'} />
               </div>
               <div className="stat-grid" style={{ marginTop: 0 }}>
-                <StatCard icon={<FileDown size={18} />} label="کل خروجی‌های ثبت‌شده" value={fmtNum(overview?.exports?.total ?? 0)} iconClass="ic-blue" sub="لاگ DataExportLog" />
+                <StatCard icon={<FileDown size={18} />} label="کل خروجی‌های ثبت‌شده" value={fmtNum(overview?.exports?.total ?? 0)} iconClass="ic-blue" sub="لاگ خروجی داده" />
                 <StatCard icon={<Lock size={18} />} label="طبقه‌بندی اسناد" value="—" iconClass="ic-gold" sub="سامانهٔ اسناد در این دمو خالی است" />
               </div>
 
@@ -286,7 +286,7 @@ export default function EnterprisePage() {
                           <span style={{ flex: 1, minWidth: 0 }}>
                             <span style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                               <code dir="ltr" style={{ fontSize: 11 }}>{p.key}</code>
-                              <Badge tone={p.enabled === false ? 'neutral' : p.effect === 'DENY' ? 'danger' : 'success'}>{p.enabled === false ? 'غیرفعال' : p.effect === 'DENY' ? 'رد (DENY)' : 'اجازه (ALLOW)'}</Badge>
+                              <Badge tone={p.enabled === false ? 'neutral' : p.effect === 'DENY' ? 'danger' : 'success'}>{p.enabled === false ? 'غیرفعال' : p.effect === 'DENY' ? 'رد' : 'اجازه'}</Badge>
                             </span>
                             <span className="t-muted" style={{ display: 'block', fontSize: 10.5, marginTop: 1 }}>
                               {p.permissionName ?? p.permissionKey}{p.organizationName ? ` · ${p.organizationName}` : ''}{p.roleName ? ` · ${p.roleName}` : ''}
@@ -306,7 +306,7 @@ export default function EnterprisePage() {
                     </div>
                     <Badge tone="info">{fmtNum(events.length)} رویداد</Badge>
                   </div>
-                  {events.length === 0 ? <div className="empty-state">رویدادی در دسترس نیست (نیازمند enterprise.security).</div> : (
+                  {events.length === 0 ? <div className="empty-state">رویدادی در دسترس نیست (نیازمند مجوز امنیت سازمانی).</div> : (
                     <div className="list">
                       {events.slice(0, 6).map(ev => (
                         <article className="listRow" key={ev.id} style={{ alignItems: 'center' }}>
@@ -316,7 +316,7 @@ export default function EnterprisePage() {
                           <span style={{ flex: 1, minWidth: 0 }}>
                             <span style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                               <b style={{ fontSize: 11.5 }}>{fa(ev.type)}</b>
-                              <Badge tone={SEV_TONE[ev.severity ?? ''] ?? 'neutral'}>{ev.severity ?? '—'}</Badge>
+                              <Badge tone={SEV_TONE[ev.severity ?? ''] ?? 'neutral'}>{fa(ev.severity) ?? '—'}</Badge>
                             </span>
                             <span className="t-muted" style={{ display: 'block', fontSize: 10 }}>{ev.organizationName ?? ''}{ev.userName ? ` · ${ev.userName}` : ''}</span>
                           </span>
@@ -335,7 +335,7 @@ export default function EnterprisePage() {
               <div className="panel-title">
                 <div>
                   <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Scale size={16} /> سیاست‌های دسترسی (AuthorizationPolicy)</h2>
-                  <p>قواعد ABAC سراسری/سازمانی: اثر، مجوز، نقش، طبقه‌بندی داده، محدودهٔ موضوع و شرایط.</p>
+                  <p>قواعد کنترل دسترسی سراسری/سازمانی: اثر، مجوز، نقش، طبقه‌بندی داده، محدودهٔ موضوع و شرایط.</p>
                 </div>
                 <button className="btn btn-primary" onClick={() => openPolicyModal()} disabled={busyOn('save-policy')}><Plus size={14} /> سیاست جدید</button>
               </div>
@@ -361,7 +361,7 @@ export default function EnterprisePage() {
                       <span style={{ flex: 1, minWidth: 0 }}>
                         <span style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                           <code dir="ltr" style={{ fontSize: 11.5 }}>{p.key}</code>
-                          <Badge tone={p.effect === 'DENY' ? 'danger' : 'success'}>{p.effect === 'DENY' ? 'DENY — رد' : 'ALLOW — اجازه'}</Badge>
+                          <Badge tone={p.effect === 'DENY' ? 'danger' : 'success'}>{p.effect === 'DENY' ? 'رد' : 'اجازه'}</Badge>
                           {p.enabled === false && <Badge tone="neutral">غیرفعال</Badge>}
                         </span>
                         <span className="t-muted" style={{ display: 'block', fontSize: 10.5, marginTop: 2 }}>
@@ -447,7 +447,7 @@ export default function EnterprisePage() {
               <div className="panel-title">
                 <div>
                   <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><FileDown size={16} /> خروجی‌های دادهٔ ثبت‌شده</h2>
-                  <p>صد خروجی اخیر از لاگ DataExportLog به‌همراه طبقه‌بندی و کاربر صادرکننده.</p>
+                  <p>صد خروجی اخیر از لاگ خروجی داده به‌همراه طبقه‌بندی و کاربر صادرکننده.</p>
                 </div>
                 <Badge tone="info">{fmtNum(exports.length)} خروجی</Badge>
               </div>
@@ -493,7 +493,7 @@ export default function EnterprisePage() {
       {/* ------------------------- policy modal ------------------------- */}
       <Modal
         open={policyOpen}
-        title={editKey ? `ویرایش سیاست «${editKey}»` : 'سیاست دسترسی جدید (ABAC)'}
+        title={editKey ? `ویرایش سیاست «${editKey}»` : 'سیاست دسترسی جدید'}
         description="اثر (اجازه/رد)، مجوز هدف، نقش/سازمان/دپارتمان، سقف طبقه‌بندی داده و محدودهٔ موضوع را تعیین کنید؛ ذخیره به‌صورت upsert بر پایهٔ کلید است."
         onClose={() => setPolicyOpen(false)}
         footer={<>
@@ -524,8 +524,8 @@ export default function EnterprisePage() {
           <div className="field">
             <label className="field-label">اثر (Effect) <span className="req">*</span></label>
             <select value={policyForm.effect} onChange={e => setPolicyForm({ ...policyForm, effect: e.target.value })}>
-              <option value="ALLOW">اجازه (ALLOW)</option>
-              <option value="DENY">رد (DENY)</option>
+              <option value="ALLOW">اجازه</option>
+              <option value="DENY">رد</option>
             </select>
           </div>
           <div className="field">

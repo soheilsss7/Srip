@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
-/*  هیئت‌مدیره (P3-4) — ROI رابطه، سرمایهٔ رابطه، سلامت پرتفوی، ریسک تک‌نقطه  */
+/*  هیئت‌مدیره (P3-4) — بازده سرمایهٔ رابطه، سرمایهٔ رابطه، سلامت پرتفوی، ریسک تک‌نقطه  */
 /* ------------------------------------------------------------------ */
 
 const fmtNum = (v: any): string => v == null || Number.isNaN(Number(v)) ? '—' : new Intl.NumberFormat('fa-IR').format(Number(v));
@@ -40,7 +40,7 @@ export default function Board() {
       <PageHeader
         eyebrow="گزارش هیئت مدیره"
         title="هیئت‌مدیره — پرتفوی روابط"
-        description="سرمایهٔ رابطه، ROI، سلامت پرتفوی و ریسک تک‌نقطه — محاسبهٔ قطعی از دادهٔ همین محدودهٔ دسترسی"
+        description="سرمایهٔ رابطه، بازده سرمایه، سلامت پرتفوی و ریسک تک‌نقطه — محاسبهٔ قطعی از دادهٔ همین محدودهٔ دسترسی"
         actions={
           <div className="toolbar">
             <Link className="btn btn-ghost" href="/intelligence"><Activity size={14} /> هوشمندی</Link>
@@ -61,7 +61,7 @@ export default function Board() {
               <div className="st-foot"><span className="st-delta up">میانگین سلامت {fmtNum(k?.avgHealth)}</span></div>
             </div>
             <div className="stat-card">
-              <div className="st-top"><span className="st-ico ic-blue"><Banknote size={17} /></span><span className="st-name">ROI رابطه</span></div>
+              <div className="st-top"><span className="st-ico ic-blue"><Banknote size={17} /></span><span className="st-name">بازده سرمایهٔ رابطه</span></div>
               <strong className="st-value">{fmtB(k?.wonValue)}</strong>
               <div className="st-foot"><span className="st-delta">برابر {fmtNum(k?.roi)}× هزینهٔ تلاش ({fmtNum(k?.totalCost)} واحد)</span></div>
             </div>
@@ -81,8 +81,8 @@ export default function Board() {
             <section className="panel">
               <div className="panel-title">
                 <div>
-                  <h2>ROI و سلامت هر رابطه</h2>
-                  <p>درآمد برنده‌شده ÷ (تعامل×۱ + جلسه×۲ + اقدام باز×۱) · روند ۹۰ روزه و سرمایهٔ P1</p>
+                  <h2>بازده سرمایه و سلامت هر رابطه</h2>
+                  <p>درآمد برنده‌شده ÷ (تعامل×۱ + جلسه×۲ + اقدام باز×۱) · روند ۹۰ روزه و سرمایهٔ سطح اول</p>
                 </div>
                 <Badge tone="info">{fmtNum(d.rows.length)} رابطه</Badge>
               </div>
@@ -90,7 +90,7 @@ export default function Board() {
                 <table>
                   <thead>
                     <tr>
-                      <th>رابطه</th><th>طبقه</th><th>سرمایه</th><th>روند ۹۰روزه</th><th>سلامت</th><th>ریسک</th><th>درآمد برنده</th><th>تلاش</th><th>ROI</th>
+                      <th>رابطه</th><th>طبقه</th><th>سرمایه</th><th>روند ۹۰روزه</th><th>سلامت</th><th>ریسک</th><th>درآمد برنده</th><th>تلاش</th><th>بازده سرمایه</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -145,7 +145,7 @@ export default function Board() {
             </section>
             <section className="panel" style={{ margin: 0 }}>
               <div className="panel-title">
-                <div><h2>بیشترین سرمایه / بیشترین ریسک</h2><p>ترکیب سرمایهٔ P1 با ریسک برای اولویت‌بندی هیئت</p></div>
+                <div><h2>بیشترین سرمایه / بیشترین ریسک</h2><p>ترکیب سرمایهٔ سطح اول با ریسک برای اولویت‌بندی هیئت</p></div>
               </div>
               <b style={{ fontSize: 11.5 }}>سرمایه</b>
               <div className="list" style={{ marginTop: 6 }}>
@@ -168,7 +168,7 @@ export default function Board() {
             </section>
           </div>
           <p className="t-muted" style={{ fontSize: 10.5, marginTop: 8 }}>
-            برچسب دمو: اعداد از دادهٔ نمونهٔ همین سامانه محاسبه شده‌اند و برای گزارش‌برداری هیئت واقعی کافی نیستند (R9 — ریسک‌ها و ملاحظات §۶).
+            برچسب دمو: اعداد از دادهٔ نمونهٔ همین سامانه محاسبه شده‌اند و برای گزارش‌برداری هیئت واقعی کافی نیستند (بند ۹ — ریسک‌ها و ملاحظات).
           </p>
         </>
       )}

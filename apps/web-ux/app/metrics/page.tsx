@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../_lib/api';
+import { apiPathFa } from '../_lib/fa';
 import { Badge, DataTable, ErrorCard, Loading, PageHeader, StatCard } from '../_components/page-ui';
 import { Activity, BarChart3, Boxes, Cpu, Database, Gauge, HardDrive, MemoryStick, ServerCog, Timer, Users, Zap } from 'lucide-react';
 
@@ -39,7 +40,7 @@ function pctile(h: Hist, p: number): string {
   if (!h || h.count === 0) return '—';
   const target = (h.count * p) / 100;
   for (const b of Object.keys(h.buckets).map(Number).sort((a, b) => a - b)) {
-    if ((h.buckets[String(b)] ?? 0) >= target) return b >= 1000 ? `${fmt1.format(b / 1000)}s` : `${fmt.format(b)}ms`;
+    if ((h.buckets[String(b)] ?? 0) >= target) return b >= 1000 ? `${fmt1.format(b / 1000)} ثانیه` : `${fmt.format(b)} میلی‌ثانیه`;
   }
   return '∞';
 }
@@ -84,14 +85,17 @@ export default function Metrics() {
   }
 
   const apiRows = Object.entries(d?.apiLatency ?? {})
-    .map(([k, h]) => ({ key: k, count: fmt.format(h.count), avg: h.count ? `${fmt1.format(h.sum / h.count)}ms` : '—', p50: pctile(h, 50), p95: pctile(h, 95), p99: pctile(h, 99) }))
-    .sort((a, b) => Number(b.p95.replace('ms', '').replace('s', '000') || 0) - Number(a.p95.replace('ms', '').replace('s', '000') || 0));
+    .map(([k, h]) => ({ key: apiPathFa(null, k), count: fmt.format(h.count), avg: h.count ? `${fmt1.format(h.sum / h.count)} میلی‌ثانیه` : '—', p50: pctile(h, 50), p95: pctile(h, 95), p99: pctile(h, 99) }))
+    .sort((a, b) => Number(b.p95.replace('میلی‌ثانیه', '').replace('ثانیه', '000') || 0) - Number(a.p95.replace('میلی‌ثانیه', '').replace('ثانیه', '000') || 0));
+  const DB_OP_FA: Record<string, string> = { query: 'پرس‌وجو', transaction: 'تراکنش', write: 'نوشتن', aggregate: 'تجمیع', raw: 'خام', search: 'جستجو', findMany: 'یافتن چندتایی' };
   const dbRows = Object.entries(d?.dbLatency ?? {})
-    .map(([k, h]) => ({ key: k, count: fmt.format(h.count), avg: h.count ? `${fmt1.format(h.sum / h.count)}ms` : '—', p50: pctile(h, 50), p95: pctile(h, 95) }));
+    .map(([k, h]) => ({ key: DB_OP_FA[k] ?? k, count: fmt.format(h.count), avg: h.count ? `${fmt1.format(h.sum / h.count)} میلی‌ثانیه` : '—', p50: pctile(h, 50), p95: pctile(h, 95) }));
+  const ST_OP_FA: Record<string, string> = { 'documents:upload': 'بارگذاری سند', 'documents:download': 'دانلود سند', 'reports:export': 'خروجی گزارش', 'privacy:archive': 'بایگانی حریم خصوصی', 'backups:snapshot': 'پشتیبان لحظه‌ای' };
   const stRows = Object.entries(d?.storage ?? {})
-    .map(([k, v]) => ({ key: k, req: fmt.format(v.requests), err: fmt.format(v.errors), bytes: bytesFA(v.bytes) }));
+    .map(([k, v]) => ({ key: ST_OP_FA[k] ?? k, req: fmt.format(v.requests), err: fmt.format(v.errors), bytes: bytesFA(v.bytes) }));
+  const AI_FA: Record<string, string> = { deterministic: 'قطعی', external: 'برونی' };
   const aiRows = Object.entries(d?.ai ?? {})
-    .map(([k, v]) => ({ key: k, req: fmt.format(v.requests), err: fmt.format(v.errors), avg: v.requests ? `${fmt1.format(v.latency.sum / v.requests)}ms` : '—', tokens: `${fmt.format(v.inputTokens)} / ${fmt.format(v.outputTokens)}`, cost: v.cost ? `${fmt1.format(v.cost)}` : '۰' }));
+    .map(([k, v]) => ({ key: AI_FA[k] ?? k, req: fmt.format(v.requests), err: fmt.format(v.errors), avg: v.requests ? `${fmt1.format(v.latency.sum / v.requests)} میلی‌ثانیه` : '—', tokens: `${fmt.format(v.inputTokens)} / ${fmt.format(v.outputTokens)}`, cost: v.cost ? `${fmt1.format(v.cost)}` : '۰' }));
   const qTotal = Object.entries(d?.queue ?? {}).map(([k, v]) => ({ key: k, total: fmt.format(v.waiting + v.active + v.delayed), waiting: fmt.format(v.waiting), active: fmt.format(v.active), failed: fmt.format(v.failed), delayed: fmt.format(v.delayed) }));
 
   const errRate = d && d.requests ? ((d.errors / d.requests) * 100) : 0;
@@ -104,11 +108,11 @@ export default function Metrics() {
       <PageHeader
         eyebrow="سنجه‌های پلتفرم"
         title="سنجه‌ها"
-        description="شمارنده‌های سراسری سرور و هیستوگرام‌های تأخیر — پاریتی GET /metrics/summary با مجوز metrics.read؛ نقطهٔ پایانی /metrics خروجی متن پرومتئوس می‌دهد."
+        description="شمارنده‌های سراسری سرور و هیستوگرام‌های تأخیر — هم‌ارزی با سرویس سنجه‌ها و مجوز «خواندن سنجه‌ها». نقطهٔ پایانی خروجی خام، متن سنجه‌ها را می‌دهد."
         actions={
           <>
             <button className="btn btn-ghost" onClick={toggleProm} style={{ minHeight: 0, padding: '6px 10px', fontSize: 10.5 }}>
-              <BarChart3 size={12} /> {showProm ? 'بستن متن پرومتئوس' : 'متن پرومتئوس (scrape)'}
+              <BarChart3 size={12} /> {showProm ? 'بستن متن خام سنجه‌ها' : 'متن خام سنجه‌ها'}
             </button>
             <button className="btn btn-secondary" onClick={() => load(true)} disabled={refreshing}>
               <Activity size={15} className={refreshing ? 'spin' : ''} /> بازخوانی
@@ -118,38 +122,38 @@ export default function Metrics() {
       />
       <ErrorCard message={error} />
       {!canRead && me != null && !loading && (
-        <div className="notice">حساب شما مجوز «مشاهده سنجه‌ها» (metrics.read) را ندارد — مانند نقش‌های عملیاتی (مدیر/مدیر ارشد شرکت و هلدینگ) در سامانهٔ واقعی.</div>
+        <div className="notice">حساب شما مجوز «مشاهده سنجه‌ها» را ندارد — مانند نقش‌های عملیاتی (مدیر/مدیر ارشد شرکت و هلدینگ) در سامانهٔ واقعی.</div>
       )}
       {loading && !d ? <Loading label="در حال خواندن سنجه‌های سرور…" /> : d && (
         <>
           {showProm && (
             <details open style={{ marginBottom: 14 }}>
-              <summary className="t-muted" style={{ fontSize: 11, cursor: 'pointer' }}>خروجی GET /metrics (متن ساده، برای خراش‌گر پرومتئوس) — {promBusy ? 'در حال بارگذاری…' : `${(prom ?? '').split('\n').length} خط`}</summary>
+              <summary className="t-muted" style={{ fontSize: 11, cursor: 'pointer' }}>خروجی خام سنجه‌ها (متن ساده برای ابزارهای مانیتورینگ) — {promBusy ? 'در حال بارگذاری…' : `${(prom ?? '').split('\n').length} خط`}</summary>
               <pre dir="ltr" style={{ background: '#0f172a', color: '#a5f3fc', padding: 12, borderRadius: 10, overflow: 'auto', fontSize: 9.5, maxHeight: 260, lineHeight: 1.5, whiteSpace: 'pre' }}>{prom ?? '—'}</pre>
             </details>
           )}
 
           <div className="stat-grid">
-            <StatCard icon={<Gauge size={18} />} label="درخواست‌های HTTP" value={fmt.format(d.requests)} sub="شمارندهٔ تجمعی فرایند" iconClass="ic-blue" />
-            <StatCard icon={<Zap size={18} />} label="خطاهای 5xx" value={fmt.format(d.errors)} sub={`${fmt1.format(errRate)}٪ از کل درخواست‌ها`} iconClass={errRate > 2 ? 'ic-red' : 'ic-green'} />
-            <StatCard icon={<Timer size={18} />} label="میانگین تأخیر HTTP" value={<>{fmt1.format(d.averageLatencyMs)} <small style={{ fontSize: 12 }}>ms</small></>} sub="در کل مسیرها" iconClass="ic-blue" />
+            <StatCard icon={<Gauge size={18} />} label="درخواست‌های وب" value={fmt.format(d.requests)} sub="شمارندهٔ تجمعی فرایند" iconClass="ic-blue" />
+            <StatCard icon={<Zap size={18} />} label="خطاهای سمت سرور" value={fmt.format(d.errors)} sub={`${fmt1.format(errRate)}٪ از کل درخواست‌ها`} iconClass={errRate > 2 ? 'ic-red' : 'ic-green'} />
+            <StatCard icon={<Timer size={18} />} label="میانگین تأخیر وب" value={<>{fmt1.format(d.averageLatencyMs)} <small style={{ fontSize: 12 }}>میلی‌ثانیه</small></>} sub="در کل مسیرها" iconClass="ic-blue" />
             <StatCard icon={<Cpu size={18} />} label="زمان فعالیت" value={<>{fmt.format(Math.floor(upt / 3600))} <small style={{ fontSize: 12 }}>ساعت</small></>} sub={uptimeFA(upt)} iconClass="ic-purple" />
-            <StatCard icon={<Users size={18} />} label="کاربران فعال (۳۰d)" value={fmt.format(d.activeUsers)} sub="یکتای رصدشده" iconClass="ic-green" />
+            <StatCard icon={<Users size={18} />} label="کاربران فعال (۳۰ روز)" value={fmt.format(d.activeUsers)} sub="یکتای رصدشده" iconClass="ic-green" />
             <StatCard icon={<Activity size={18} />} label="دسترس‌پذیری" value={<>{fmt1.format(d.availabilityPercent)}٪</>} sub="نمونه‌های سلامت" iconClass="ic-green" />
             <StatCard icon={<ServerCog size={18} />} label="پردازنده" value={<>{fmt1.format(d.process.cpuPercent)}٪</>} sub="نمونهٔ لحظه‌ای" iconClass="ic-blue" />
-            <StatCard icon={<MemoryStick size={18} />} label="حافظهٔ RSS" value={bytesFA(d.process.rssBytes)} sub={`هیپ: ${bytesFA(d.process.heapUsedBytes)} از ${bytesFA(d.process.heapTotalBytes)}`} iconClass="ic-gold" />
+            <StatCard icon={<MemoryStick size={18} />} label="حافظهٔ ساکن" value={bytesFA(d.process.rssBytes)} sub={`هیپ: ${bytesFA(d.process.heapUsedBytes)} از ${bytesFA(d.process.heapTotalBytes)}`} iconClass="ic-gold" />
           </div>
 
           <div className="grid2" style={{ alignItems: 'stretch' }}>
             <section className="panel" style={{ margin: 0 }}>
-              <div className="panel-title"><div><h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Cpu size={16} /> پردازش</h2><p>مصرف پردازنده و حافظهٔ فرایند srip-api.</p></div><Badge tone={d.process.cpuPercent > 80 ? 'danger' : d.process.cpuPercent > 55 ? 'warning' : 'success'}>CPU {fmt1.format(d.process.cpuPercent)}٪</Badge></div>
+              <div className="panel-title"><div><h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Cpu size={16} /> پردازش</h2><p>مصرف پردازنده و حافظهٔ فرایند سرویس.</p></div><Badge tone={d.process.cpuPercent > 80 ? 'danger' : d.process.cpuPercent > 55 ? 'warning' : 'success'}>پردازنده {fmt1.format(d.process.cpuPercent)}٪</Badge></div>
               <div style={{ background: 'color-mix(in srgb, var(--border,#e2e8f0) 55%, transparent)', borderRadius: 99, height: 8, overflow: 'hidden', marginBottom: 12 }}>
                 <div style={{ width: `${Math.min(100, d.process.cpuPercent)}%`, height: 8, background: d.process.cpuPercent > 80 ? '#dc2626' : d.process.cpuPercent > 55 ? '#d97706' : '#16a34a' }} />
               </div>
               <div className="metric-list">
                 <div><span>حافظهٔ هیپ استفاده‌شده</span><strong>{fmt.format(heapPct)}٪</strong></div>
                 <div><span>حافظهٔ هیپ اختصاصی</span><strong>{bytesFA(d.process.heapTotalBytes)}</strong></div>
-                <div><span>RSS (حافظهٔ ساکن)</span><strong>{bytesFA(d.process.rssBytes)}</strong></div>
+                <div><span>حافظهٔ ساکن</span><strong>{bytesFA(d.process.rssBytes)}</strong></div>
                 <div><span>نرخ خطا</span><strong><Badge tone={errRate > 2 ? 'danger' : 'success'}>{fmt1.format(errRate)}٪</Badge></strong></div>
               </div>
               <div style={{ background: 'color-mix(in srgb, var(--border,#e2e8f0) 55%, transparent)', borderRadius: 99, height: 8, overflow: 'hidden', marginTop: 4 }}>
@@ -158,7 +162,7 @@ export default function Metrics() {
             </section>
 
             <section className="panel" style={{ margin: 0 }}>
-              <div className="panel-title"><div><h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Boxes size={16} /> صف‌های کار</h2><p>۱۴ صف BullMQ — تعداد در انتظار، فعال، تأخیری و ناموفق.</p></div></div>
+              <div className="panel-title"><div><h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Boxes size={16} /> صف‌های کار</h2><p>۱۴ صف کار — تعداد در انتظار، فعال، تأخیری و ناموفق.</p></div></div>
               {qTotal.length === 0 ? <p className="t-muted" style={{ fontSize: 11 }}>داده‌ای نیست.</p> : (
                 <div style={{ display: 'grid', gap: 7, maxHeight: 230, overflow: 'auto', paddingLeft: 2 }}>
                   {qTotal.map(q => (
@@ -180,20 +184,20 @@ export default function Metrics() {
           <section className="panel">
             <div className="panel-title">
               <div>
-                <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Database size={16} /> تأخیر API بر پایهٔ مسیر</h2>
-                <p>هیستوگرام‌های سطلی (le 5ms … 10s) — صدک‌ها از همان سطل‌های تجمعی محاسبه شده‌اند.</p>
+                <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Database size={16} /> تأخیر رابط بر پایهٔ مسیر</h2>
+                <p>هیستوگرام‌های سطلی (تا ۵ میلی‌ثانیه … ۱۰ ثانیه) — صدک‌ها از همان سطل‌های تجمعی محاسبه شده‌اند.</p>
               </div>
               <Badge tone="info">{fmt.format(apiRows.length)} مسیر</Badge>
             </div>
             {apiRows.length ? (
-              <DataTable columns={[{ key: 'key', label: 'مسیر' }, { key: 'count', label: 'تعداد' }, { key: 'avg', label: 'میانگین' }, { key: 'p50', label: 'p50' }, { key: 'p95', label: 'p95' }, { key: 'p99', label: 'p99' }]} rows={apiRows.slice(0, 14)} />
+              <DataTable columns={[{ key: 'key', label: 'مسیر' }, { key: 'count', label: 'تعداد' }, { key: 'avg', label: 'میانگین' }, { key: 'p50', label: 'صدک ۵۰' }, { key: 'p95', label: 'صدک ۹۵' }, { key: 'p99', label: 'صدک ۹۹' }]} rows={apiRows.slice(0, 14)} />
             ) : <p className="t-muted" style={{ fontSize: 11 }}>بدون داده.</p>}
           </section>
 
           <div className="grid2" style={{ alignItems: 'stretch' }}>
             <section className="panel" style={{ margin: 0 }}>
-              <div className="panel-title"><div><h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Database size={16} /> تأخیر پایگاه داده</h2><p>بر پایهٔ عملیات (query، transaction، …).</p></div></div>
-              {dbRows.length ? <DataTable columns={[{ key: 'key', label: 'عملیات' }, { key: 'count', label: 'تعداد' }, { key: 'avg', label: 'میانگین' }, { key: 'p50', label: 'p50' }, { key: 'p95', label: 'p95' }]} rows={dbRows} /> : <p className="t-muted" style={{ fontSize: 11 }}>بدون داده.</p>}
+              <div className="panel-title"><div><h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Database size={16} /> تأخیر پایگاه داده</h2><p>بر پایهٔ عملیات (پرس‌وجو، تراکنش، …).</p></div></div>
+              {dbRows.length ? <DataTable columns={[{ key: 'key', label: 'عملیات' }, { key: 'count', label: 'تعداد' }, { key: 'avg', label: 'میانگین' }, { key: 'p50', label: 'صدک ۵۰' }, { key: 'p95', label: 'صدک ۹۵' }]} rows={dbRows} /> : <p className="t-muted" style={{ fontSize: 11 }}>بدون داده.</p>}
             </section>
             <section className="panel" style={{ margin: 0 }}>
               <div className="panel-title"><div><h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><HardDrive size={16} /> فضای ذخیره‌سازی</h2><p>تقاضا، خطا و حجم دادهٔ انتقالی هر عملیات ذخیره‌سازی.</p></div></div>

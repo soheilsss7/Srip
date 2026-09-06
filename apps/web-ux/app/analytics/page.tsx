@@ -47,6 +47,10 @@ const COMP_ORDER = {
   diversity: 'تنوع', engagement: 'درگیری', riskAdjusted: 'تعدیل‌شده با ریسک',
 } as const;
 const RING_COLOR = (v: number) => (v >= 70 ? '#16a34a' : v >= 45 ? '#d97706' : '#dc2626');
+const FAMILY_FA: Record<string, string> = {
+  STRATEGIC: 'راهبردی', VALUE: 'ارزش', CAPABILITY: 'توانمندی', RELIABILITY: 'قابلیت اعتماد',
+  ACCESS: 'دسترسی', FINANCIAL: 'مالی', RISK: 'ریسک', NETWORK: 'شبکه',
+};
 
 type Summary = { generatedAt: string; windowDays: number; counts: Record<string, number>; engagement: { activeUsers30d: number; featureUsage: { feature: string; count: number }[]; recommendationAcceptance: number; recommendationAcceptanceRate: number; successfulConnections: number; relationshipUpdates: number } };
 type Network = { generatedAt: string; organizationId: string | null; relationshipCount: number; peopleCount: number; opportunityCount: number; networkCapital: { score: number; components: Record<string, number> }; strategicRelationshipIndex: { score: number; breakdown: Record<string, number> }; relationshipResilienceScore: number; weightedOpportunityValue: number; referralSuccessRate: { total: number; successful: number; rate: number }; attribution?: { bySource: { type: string; count: number; won: number; value: number }[]; warm: { count: number; won: number; value: number; rate: number }; cold: { count: number; won: number; value: number; rate: number } }; bounded: boolean };
@@ -198,7 +202,7 @@ export default function Analytics() {
             <Badge tone="neutral"><BarChart3 size={11} style={{ verticalAlign: -2 }} /> پنجرهٔ {data?.windowDays ?? 30}-روزه</Badge>
             <Badge tone="neutral"><Activity size={11} style={{ verticalAlign: -2 }} /> برآمده در {faDT(data?.generatedAt)}</Badge>
             {net?.bounded && <Badge tone="neutral">محدوده‌بندی سازمانی اعمال شده است</Badge>}
-            {canWrite && <Badge tone="warning">مجوز analytics.write فعال</Badge>}
+            {canWrite && <Badge tone="warning">مجوز ثبت رویداد فعال</Badge>}
           </div>
 
           <div className="stat-grid">
@@ -281,7 +285,7 @@ export default function Analytics() {
                 <div style={{ display: 'flex', gap: 14, alignItems: 'center', flex: '1 1 230px', minWidth: 230 }}>
                   <Ring value={net.strategicRelationshipIndex?.score ?? 0} size={84} stroke={8} label="شاخص راهبردی رابطه" />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <b style={{ fontSize: 12 }}>شاخص راهبردی رابطه (SRI)</b>
+                    <b style={{ fontSize: 12 }}>شاخص راهبردی رابطه</b>
                     <div style={{ marginTop: 7 }}><MiniBars rows={[['پوشش', breakdown.coverage ?? 0], ['قدرت', breakdown.strength ?? 0], ['نفوذ', breakdown.influence ?? 0], ['فرصت', breakdown.opportunity ?? 0], ['تاب‌آوری', breakdown.resilience ?? 0]]} /></div>
                   </div>
                 </div>
@@ -322,7 +326,7 @@ export default function Analytics() {
                     <span className="chip success">گرم: {fmt.format(net.attribution.warm.count)} فرصت · {fmt1.format(net.attribution.warm.rate)}٪ برد</span>
                     <span className="chip info">سرد: {fmt.format(net.attribution.cold.count)} فرصت · {fmt1.format(net.attribution.cold.rate)}٪ برد</span>
                     {net.attribution.warm.count + net.attribution.cold.count > 0 && (
-                      <span className="chip">{fmt1.format(Math.min(99, Math.round((net.attribution.warm.rate - net.attribution.cold.rate) * 10) / 10))}pp تفاوت نرخ برد</span>
+                      <span className="chip">تفاوت نرخ برد: {fmt1.format(Math.min(99, Math.round((net.attribution.warm.rate - net.attribution.cold.rate) * 10) / 10))} واحد درصد</span>
                     )}
                   </div>
                 </div>
@@ -428,7 +432,7 @@ export default function Analytics() {
                   <div style={{ display: 'grid', gap: 5, marginTop: 6 }}>
                     {Object.entries(calib.halfLife?.familyOverrides ?? {}).map(([k, v]: [string, any]) => (
                       <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 10.5 }}>
-                        <span style={{ width: 88, color: 'var(--muted,#64748b)' }}>{k}</span>
+                        <span style={{ width: 88, color: 'var(--muted,#64748b)' }}>{FAMILY_FA[k] ?? k}</span>
                         <input type="number" min={15} max={365} value={Number(v ?? calib.halfLife?.default ?? 90)} disabled={halfLifeBusy === k}
                           onChange={async (e) => {
                             const days = Number(e.target.value);
@@ -466,7 +470,7 @@ export default function Analytics() {
                     <small>{a.person?.name ?? '—'} ← {a.destinationOrg?.name ?? '—'}</small>
                     <strong style={{ fontSize: 15 }}>{a.destinationOrg?.name ?? 'جابه‌جایی'}</strong>
                     <span className="t-muted" style={{ fontSize: 10 }}>
-                      {fmtDate(a.departedAt)} · {Array.isArray(a.warmPaths) ? `مسیر گرم: ${a.warmPaths.map((p: any) => p.relationshipId).join('، ')}` : ''}
+                      {fmtDate(a.departedAt)} · {Array.isArray(a.warmPaths) ? `مسیر گرم: ${a.warmPaths.map((p: any) => p.via?.label ?? p.relationshipId).join('، ')}` : ''}
                     </span>
                   </div>
                 ))}
@@ -485,8 +489,8 @@ export default function Analytics() {
             <section className="panel" style={{ borderColor: 'color-mix(in srgb, var(--green,#16a34a) 30%, transparent)' }}>
               <div className="panel-title">
                 <div>
-                  <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><FlaskConical size={16} /> ثبت رویداد سنجش (analytics.write)</h2>
-                  <p>رویداد با مجوز analytics.write در ممیزیِ رویدادها ذخیره و در مصرف قابلیت‌ها و شمارش‌های ۳۰روزه بازتاب می‌یابد (پاریتی POST /analytics/events).</p>
+                  <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><FlaskConical size={16} /> ثبت رویداد سنجش</h2>
+                  <p>رویداد با مجوز ثبت در ممیزیِ رویدادها ذخیره و در مصرف قابلیت‌ها و شمارش‌های ۳۰روزه بازتاب می‌یابد.</p>
                 </div>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
@@ -500,11 +504,11 @@ export default function Analytics() {
               </div>
               <form className="entity-form" onSubmit={e => sendEvent(customType, customFeature, e)} style={{ gap: 8 }}>
                 <div className="field">
-                  <label className="field-label" htmlFor="an-type">نوع رویداد (type)</label>
+                  <label className="field-label" htmlFor="an-type">نوع رویداد</label>
                   <input id="an-type" dir="ltr" value={customType} onChange={e => setCustomType(e.target.value)} placeholder="FEATURE_VIEWED" style={{ fontFamily: 'ui-monospace,monospace', fontSize: 10.5 }} />
                 </div>
                 <div className="field">
-                  <label className="field-label" htmlFor="an-feat">قابلیت (feature)</label>
+                  <label className="field-label" htmlFor="an-feat">قابلیت</label>
                   <input id="an-feat" dir="ltr" value={customFeature} onChange={e => setCustomFeature(e.target.value)} placeholder="network_explorer" style={{ fontFamily: 'ui-monospace,monospace', fontSize: 10.5 }} />
                 </div>
                 <button className="btn btn-primary" style={{ alignSelf: 'flex-end', padding: '9px 16px', minHeight: 0 }} disabled={saving}>
@@ -515,7 +519,7 @@ export default function Analytics() {
           )}
 
           {!canWrite && me != null && (
-            <div className="notice">حساب شما مجوز «ثبت رویداد سنجش» (analytics.write) را ندارد؛ مشاهدهٔ تحلیل‌ها با مجوز analytics.read فعال است.</div>
+            <div className="notice">حساب شما مجوز «ثبت رویداد سنجش» را ندارد؛ مشاهدهٔ تحلیل‌ها با مجوز خواندن فعال است.</div>
           )}
         </>
       )}

@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '../_lib/api';
+import { fa } from '../_lib/fa';
 import { Badge, ErrorCard, Loading, PageHeader, StatCard } from '../_components/page-ui';
 import {
   AlertTriangle, Archive, CheckCircle2, FileScan, Landmark, Lock, RefreshCw, Scale, ScrollText,
@@ -16,21 +17,23 @@ type Check = { key: string; status: 'PASS' | 'WARN' | 'FAIL'; detail: string };
 type Preflight = { generatedAt?: string; overall?: 'PASS' | 'WARN' | 'FAIL'; checks?: Check[] };
 
 const OVERALL_FA: Record<string, string> = { PASS: 'مطلوب', WARN: 'نیازمند توجه', FAIL: 'شکست در کنترل' };
+const ID_PREFIX_FA: Record<string, string> = { org: 'سازمان', organization: 'سازمان', p: 'شخص', person: 'شخص', o: 'فرصت', pr: 'پروژه', r: 'رابطه', rel: 'رابطه', e: 'پیوند', m: 'جلسه', i: 'تعامل', ce: 'رویداد', u: 'کاربر' };
+const faEntityId = (v: unknown): string => { const raw = String(v ?? ''); const m = raw.match(/^([a-z]+)[-:](\d+)$/i); return m ? `${ID_PREFIX_FA[m[1].toLowerCase()] ?? m[1]} ${new Intl.NumberFormat('fa-IR').format(Number(m[2]))}` : raw; };
 const OVERALL_TONE: Record<string, 'success' | 'warning' | 'danger'> = { PASS: 'success', WARN: 'warning', FAIL: 'danger' };
 const STATUS_FA: Record<string, string> = { PASS: 'گذر', WARN: 'هشدار', FAIL: 'شکست' };
 
 const CHECK_META: Record<string, { fa: string; icon: React.ReactNode; what: string; fix?: string }> = {
   'origin-check': {
-    fa: 'کنترل مبدأ (CSRF)',
+    fa: 'کنترل منشأ درخواست',
     icon: <ShieldCheck size={15} />,
     what: 'درخواست‌های تغییردهندهٔ وضعیت فقط از سامانهٔ خودِ ما پذیرفته می‌شوند و منشأ متقاطع مسدود است.',
     fix: 'اگر غیرفعال شده، ORIGIN_CHECK_ENFORCED را به true برگردانید.',
   },
   'rate-limit-fail-open': {
-    fa: 'محدودسازی نرخ (fail-closed)',
+    fa: 'محدودسازی نرخ (بسته در خطا)',
     icon: <TimerReset size={15} />,
     what: 'در خطای سرویس محدودسازی نرخ، درخواست‌های حساس باید رد شوند (بسته‌ماندن، نه بازشدن).',
-    fix: 'RATE_LIMIT_FAIL_OPEN نباید true باشد؛ سرویس را به حالت بسته برگردانید.',
+    fix: 'محدودسازی نرخ نباید در حالت باز باشد؛ سرویس را به حالت بسته برگردانید.',
   },
   'file-scan': {
     fa: 'پویش بدافزار فایل‌ها',
@@ -39,10 +42,10 @@ const CHECK_META: Record<string, { fa: string; icon: React.ReactNode; what: stri
     fix: 'FILE_SCAN_REQUIRED=true را فعال و پویش‌گر را به مسیر بارگذاری متصل کنید.',
   },
   'secret-manager': {
-    fa: 'مدیریت اسرار (Secret Manager)',
+    fa: 'مدیریت اسرار',
     icon: <Lock size={15} />,
     what: 'کلیدهای حساس نباید در سورس کنترل نگهداری شوند؛ در محیط واقعی از مدیر اسرار تزریق شوند.',
-    fix: 'در production کلیدها را از مدیر اسرار (نه فایل محیطی) تزریق کنید.',
+    fix: 'در محیط عملیاتی کلیدها را از مدیر اسرار (نه فایل محیطی) تزریق کنید.',
   },
   'data-policy-coverage': {
     fa: 'پوشش خط‌مشی‌های داده',
@@ -119,7 +122,7 @@ export default function Governance() {
       <PageHeader
         eyebrow="حاکمیت و امنیت"
         title="وضعیت حاکمیت"
-        description="بررسی خودکار مقدماتی (Preflight) پیش از بهره‌برداری: اسرار و پیکربندی، محافظت ورودی، پویش فایل و پوشش خط‌مشی‌های داده — بر پایهٔ SecurityGovernanceService واقعی."
+        description="بررسی خودکار مقدماتی پیش از بهره‌برداری: اسرار و پیکربندی، محافظت ورودی، پویش فایل و پوشش خط‌مشی‌های داده — بر پایهٔ سرویس حاکمیت امنیتی واقعی."
         actions={
           <div className="toolbar">
             <Link className="btn btn-ghost" href="/enterprise"><Archive size={15} /> حاکمیت سازمانی</Link>
@@ -138,8 +141,8 @@ export default function Governance() {
         <section className="panel" aria-label="پایش انطباق">
           <div className="panel-title">
             <div>
-              <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><ShieldCheck size={16} /> پایش انطباق — غربالگری، UBO و پروندهٔ تصمیم</h2>
-              <p>غربالگری دوره‌ای سازمان‌ها + مالک نهایی (UBO) + یافته‌های رویداد-محور + پروندهٔ تصمیم برای هر تغییر</p>
+              <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><ShieldCheck size={16} /> پایش انطباق — غربالگری، مالک نهایی و پروندهٔ تصمیم</h2>
+              <p>غربالگری دوره‌ای سازمان‌ها + مالک نهایی + یافته‌های رویداد-محور + پروندهٔ تصمیم برای هر تغییر</p>
             </div>
             <div className="toolbar">
               <Badge tone={comp.kpis?.openFindings ? 'warning' : 'success'}>{comp.kpis?.openFindings} یافتهٔ باز</Badge>
@@ -149,17 +152,17 @@ export default function Governance() {
             </div>
           </div>
           <div className="kpi-grid" style={{ marginBottom: 12 }}>
-            <div className="kpi-card" style={{ margin: 0 }}><small>سازمان‌های تحت پوشش</small><strong>{fmtNum(comp.kpis?.organizations)}</strong><span className="t-muted" style={{ fontSize: 10 }}>پوشش UBO {fmtNum(comp.kpis?.uboCoverage)}٪</span></div>
-            <div className="kpi-card" style={{ margin: 0 }}><small>UBO پرچم‌دار</small><strong>{fmtNum(comp.kpis?.flaggedUbo)}</strong><span className="t-muted" style={{ fontSize: 10 }}>PEP یا منابع خارجی</span></div>
+            <div className="kpi-card" style={{ margin: 0 }}><small>سازمان‌های تحت پوشش</small><strong>{fmtNum(comp.kpis?.organizations)}</strong><span className="t-muted" style={{ fontSize: 10 }}>پوشش مالک نهایی {fmtNum(comp.kpis?.uboCoverage)}٪</span></div>
+            <div className="kpi-card" style={{ margin: 0 }}><small>مالک نهاییِ پرچم‌دار</small><strong>{fmtNum(comp.kpis?.flaggedUbo)}</strong><span className="t-muted" style={{ fontSize: 10 }}>دارای منصب یا منابع خارجی</span></div>
             <div className="kpi-card" style={{ margin: 0 }}><small>غربالگری معوق</small><strong>{fmtNum(comp.kpis?.overdueScreens)}</strong><span className="t-muted" style={{ fontSize: 10 }}>بعد از مهلت دوره</span></div>
             <div className="kpi-card" style={{ margin: 0 }}><small>پروندهٔ تصمیم</small><strong>{fmtNum(comp.kpis?.dossiers)}</strong><span className="t-muted" style={{ fontSize: 10 }}>ممیزی‌پذیر</span></div>
           </div>
           <div style={{ display: 'grid', gap: 12 }}>
             <div>
-              <p className="t-muted" style={{ margin: '0 0 6px', fontSize: 10.5, fontWeight: 800 }}>مالک نهایی (UBO)</p>
+              <p className="t-muted" style={{ margin: '0 0 6px', fontSize: 10.5, fontWeight: 800 }}>مالک نهایی</p>
               <div className="table-wrap">
                 <table>
-                  <thead><tr><th>سازمان</th><th>UBO</th><th>نقش</th><th>سهم</th><th>ملیت</th><th>PEP</th><th>ریسک</th><th>آخرین راستی‌آزمایی</th></tr></thead>
+                  <thead><tr><th>سازمان</th><th>مالک نهایی</th><th>نقش</th><th>سهم</th><th>ملیت</th><th>منصب</th><th>ریسک</th><th>آخرین راستی‌آزمایی</th></tr></thead>
                   <tbody>
                     {(comp.ubos ?? []).map((u: any) => (
                       <tr key={u.id}>
@@ -183,7 +186,7 @@ export default function Governance() {
                     <span style={{ flex: 1, minWidth: 0 }}>
                       <b style={{ fontSize: 12.5 }}>{f.title}</b>
                       <small className="t-muted" style={{ display: 'block', marginTop: 2 }}>{f.detail}</small>
-                      <small className="t-muted" style={{ display: 'block', marginTop: 2 }}>{f.type} · {f.trigger === 'periodic' ? 'دوره‌ای' : 'رویداد-محور'} · {fmtDT(f.createdAt)}</small>
+                      <small className="t-muted" style={{ display: 'block', marginTop: 2 }}>{fa(f.type)} · {f.trigger === 'periodic' ? 'دوره‌ای' : 'رویداد-محور'} · {fmtDT(f.createdAt)}</small>
                     </span>
                     <span style={{ display: 'flex', gap: 6, flexDirection: 'column', alignItems: 'stretch' }}>
                       <button className="btn btn-primary" style={{ minHeight: 0, padding: '4px 12px', fontSize: 10.5 }} disabled={compBusy !== ''} onClick={() => decide(f.subject, 'CLEARED')}>تأیید</button>
@@ -201,7 +204,7 @@ export default function Governance() {
                   <div className="listRow" key={x.id} style={{ alignItems: 'flex-start' }}>
                     <Badge tone={x.decision === 'ESCALATED' ? 'warning' : 'success'}>{x.decision === 'ESCALATED' ? 'ارجاع‌شده' : x.decision === 'REJECTED' ? 'ردشده' : 'تأییدشده'}</Badge>
                     <span style={{ flex: 1, minWidth: 0 }}>
-                      <b style={{ fontSize: 12.5 }}>{x.subject} — {x.type === 'UBO_CHANGE' ? 'تغییر UBO' : x.type === 'SCREENING' ? 'غربالگری' : x.type}</b>
+                      <b style={{ fontSize: 12.5 }}>{faEntityId(x.subject)} — {x.type === 'UBO_CHANGE' ? 'تغییر مالک نهایی' : x.type === 'SCREENING' ? 'غربالگری' : fa(x.type)}</b>
                       <small className="t-muted" style={{ display: 'block', marginTop: 2 }}>{x.decidedBy} · {fmtDT(x.decidedAt)}</small>
                       <small className="t-muted" style={{ display: 'block' }}>{x.rationale ?? '—'}</small>
                     </span>
@@ -216,9 +219,9 @@ export default function Governance() {
       {!d && !error ? <Loading label="در حال اجرای بررسی‌های مقدماتی…" /> : (
         <>
           <div className="stat-grid">
-            <StatCard icon={<CheckCircle2 size={18} />} label="گذر (PASS)" value={counts.PASS} iconClass="ic-blue" sub="کنترل بدون مشکل" />
-            <StatCard icon={<AlertTriangle size={18} />} label="هشدار (WARN)" value={counts.WARN} iconClass="ic-gold" sub="نیازمند توجه در production" />
-            <StatCard icon={<XCircle size={18} />} label="شکست (FAIL)" value={counts.FAIL} iconClass="ic-red" sub="باید پیش از بهره‌برداری رفع شود" />
+            <StatCard icon={<CheckCircle2 size={18} />} label="گذر" value={counts.PASS} iconClass="ic-blue" sub="کنترل بدون مشکل" />
+            <StatCard icon={<AlertTriangle size={18} />} label="هشدار" value={counts.WARN} iconClass="ic-gold" sub="نیازمند توجه در محیط عملیاتی" />
+            <StatCard icon={<XCircle size={18} />} label="شکست" value={counts.FAIL} iconClass="ic-red" sub="باید پیش از بهره‌برداری رفع شود" />
             <StatCard icon={<ShieldCheck size={18} />} label="وضعیت کلی" value={OVERALL_FA[overall]} iconClass={overall === 'FAIL' ? 'ic-red' : overall === 'WARN' ? 'ic-gold' : 'ic-purple'} sub={`آخرین بررسی: ${fmtDT(d?.generatedAt)}`} />
           </div>
 
@@ -295,7 +298,7 @@ export default function Governance() {
                 </div>
               </div>
               <p style={{ fontSize: 11.5, margin: 0 }} className="t-muted">
-                وضعیت کلی از جمع کنترل‌ها ساخته می‌شود: هر شکست ← FAIL، هر هشدار ← WARN و در غیر این‌صورت PASS. بررسی‌ها در هر بار بازخوانی دوباره اجرا می‌شوند و زمان اجرا ثبت می‌گردد.
+                وضعیت کلی از جمع کنترل‌ها ساخته می‌شود: هر شکست ← شکست، هر هشدار ← هشدار و در غیر این‌صورت گذر. بررسی‌ها در هر بار بازخوانی دوباره اجرا می‌شوند و زمان اجرا ثبت می‌گردد.
               </p>
               <div style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
                 <Badge tone="success">گذر {counts.PASS}</Badge>

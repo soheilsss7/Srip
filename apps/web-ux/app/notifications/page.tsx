@@ -16,7 +16,7 @@ const PREF_LABELS:Record<string,{label:string;desc:string}> = {
 };
 const PRIORITY_TONE:Record<string,'danger'|'warning'|'info'|'neutral'|'success'>={critical:'danger',important:'warning',recommendation:'info',reminder:'info',information:'neutral',success:'success'};
 const TYPE_FA:Record<string,string>={REMINDER:'یادآوری',RECOMMENDATION:'پیشنهاد',SYSTEM:'سیستمی',ALERT:'هشدار'};
-const PRIORITY_FA:Record<string,string>={LOW:'کم',MEDIUM:'متوسط',HIGH:'زیاد',CRITICAL:'بحرانی'};
+const PRIORITY_FA:Record<string,string>={LOW:'کم',MEDIUM:'متوسط',HIGH:'زیاد',CRITICAL:'بحرانی',IMPORTANT:'مهم',RECOMMENDATION:'پیشنهاد',INFORMATION:'اطلاع'};
 const CHANNEL_FA:Record<string,string>={IN_APP:'درون‌برنامه‌ای',EMAIL:'ایمیل',PUSH:'اعلان فشاری',SMS:'پیامک',WEBHOOK:'وبهوک'};
 const TYPE_ICON:Record<string,React.ReactNode>={REMINDER:<BellRing size={15}/>,RECOMMENDATION:<Zap size={15}/>,SYSTEM:<CheckCircle2 size={15}/>,ALERT:<BellRing size={15}/>};
 
@@ -43,7 +43,7 @@ export default function Notifications(){
  async function read(id:string){setBusy('read'+id);try{await api('/notifications/'+id+'/read',{method:'PATCH'});await load()}catch(x){setError((x as Error).message)}finally{setBusy('')}}
  async function readAll(){setBusy('readall');try{await api('/notifications/read-all',{method:'PATCH'});await load()}catch(x){setError((x as Error).message)}finally{setBusy('')}}
  async function savePrefs(){setBusy('prefs');setError('');setStatus('');try{await api('/notifications/preferences',{method:'PATCH',body:JSON.stringify(prefs)});setStatus('تنظیمات اعلان ذخیره شد.');await load()}catch(x){setError((x as Error).message)}finally{setBusy('')}}
- async function digest(cadence:string){setBusy(cadence);setError('');setStatus('');try{const r:any=await api(`/notifications/digest/${cadence}`,{method:'POST',body:JSON.stringify({})});setStatus(r?.sent?`Digest ${cadence} ارسال شد (${r?.count??0} مورد).`:r?.reason==='digest-disabled'?`خلاصهٔ دوره‌ای ${cadence} غیرفعال است یا ایمیل خاموش است.`:r?.reason==='empty'?'اعلانی برای خلاصهٔ دوره‌ای نبود.':r?.reason==='no-email'?'حساب شما ایمیل ندارد.':'خلاصهٔ دوره‌ای ارسال نشد.');}catch(x){setError((x as Error).message)}finally{setBusy('')}}
+ async function digest(cadence:string){setBusy(cadence);setError('');setStatus('');try{const r:any=await api(`/notifications/digest/${cadence}`,{method:'POST',body:JSON.stringify({})});setStatus(r?.sent?`خلاصهٔ ${cadence === 'DAILY' ? 'روزانه' : 'هفتگی'} ارسال شد (${r?.count??0} مورد).`:r?.reason==='digest-disabled'?`خلاصهٔ دوره‌ای ${cadence} غیرفعال است یا ایمیل خاموش است.`:r?.reason==='empty'?'اعلانی برای خلاصهٔ دوره‌ای نبود.':r?.reason==='no-email'?'حساب شما ایمیل ندارد.':'خلاصهٔ دوره‌ای ارسال نشد.');}catch(x){setError((x as Error).message)}finally{setBusy('')}}
  const toggle=(k:string)=>setPrefs(p=>({...p,[k]:!p[k]}));
 
  const channels=new Set(items.map(n=>n.channel).filter(Boolean)).size;
@@ -127,8 +127,8 @@ export default function Notifications(){
           </div>
           <div className="form-actions" style={{justifyContent:'flex-start'}}>
             <button className="btn btn-primary btn-sm" onClick={savePrefs} disabled={!!busy}>{busy==='prefs'?'در حال ذخیره…':'ذخیره ترجیحات'}</button>
-            <button className="btn btn-secondary btn-sm" onClick={()=>digest('DAILY')} disabled={!!busy}>ارسال Digest روزانه</button>
-            <button className="btn btn-secondary btn-sm" onClick={()=>digest('WEEKLY')} disabled={!!busy}>ارسال Digest هفتگی</button>
+            <button className="btn btn-secondary btn-sm" onClick={()=>digest('DAILY')} disabled={!!busy}>ارسال خلاصهٔ روزانه</button>
+            <button className="btn btn-secondary btn-sm" onClick={()=>digest('WEEKLY')} disabled={!!busy}>ارسال خلاصهٔ هفتگی</button>
           </div>
         </SectionCard>
 

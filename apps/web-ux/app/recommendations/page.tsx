@@ -121,6 +121,15 @@ export default function Recommendations(){
  }
 
  const evidenceEntries=(r:Rec)=>Object.entries(r.evidence??{}).filter(([,v])=>v!==null&&v!==undefined);
+const EV_FA: Record<string,string> = {
+  nextActionAt:'اقدام بعدی', daysSinceLastInteraction:'روزهای بی‌تعاملی', riskScore:'امتیاز ریسک',
+  healthScore:'امتیاز سلامت', resilienceScore:'امتیاز تاب‌آوری', strategicScore:'امتیاز راهبردی',
+  opportunityScore:'امتیاز فرصت', influenceScore:'امتیاز نفوذ', score:'امتیاز', confidence:'اطمینان',
+};
+const evText = (k: string, v: any): string => {
+  if (k === 'nextActionAt' && v) return new Date(v).toLocaleDateString('fa-IR');
+  return String(v);
+};
 
  return (
   <main className="feature-page">
@@ -250,7 +259,7 @@ export default function Recommendations(){
               {evidenceEntries(r).length>0 && (
                 <div className="rec-evidence">
                   {evidenceEntries(r).slice(0,5).map(([k,v])=>(
-                    <span className="chip neutral" key={k} dir="ltr" title={String(v)}>{k}: {String(v)}</span>
+                    <span className="chip neutral" key={k} title={String(v)}>{EV_FA[k] ?? k}: {evText(k, v)}</span>
                   ))}
                 </div>
               )}

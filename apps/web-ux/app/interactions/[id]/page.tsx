@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { use, useCallback, useEffect, useState } from 'react';
 import { api } from '../../_lib/api';
+import { fa } from '../../_lib/fa';
 import { useWorkspace } from '../../_components/workspace';
 import { Badge, ErrorCard, Loading, Modal, PageHeader } from '../../_components/page-ui';
 import {
@@ -124,7 +125,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
       <PageHeader
         eyebrow="تعاملات"
         title={deleted ? 'تعامل بایگانی شد' : (d?.subject ?? 'جزئیات تعامل')}
-        description={d ? `${kind.fa} · ${fmtDT(d.occurredAt)} · شناسه ${d.id}` : `شناسه: ${id}`}
+        description={d ? `${kind.fa} · ${fmtDT(d.occurredAt)} · شناسهٔ تعامل ${String(d.id).replace(/^(i-?)/, '')}` : `شناسهٔ تعامل ${String(id).replace(/^(i-?)/, '')}`}
         actions={
           <div className="toolbar">
             {canWrite && !deleted && d && <button className="btn btn-primary" onClick={openEdit}><FileText size={15} /> ثبت نتیجه</button>}
@@ -218,7 +219,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                 <span>{d.outcome}</span>
               </div>
             ) : <p className="empty-state">نتیجه‌ای ثبت نشده است — از دکمهٔ «ثبت نتیجه» استفاده کنید.</p>}
-            {d.loggedBy && <div className="t-muted" style={{ fontSize: 11, marginTop: 10 }}>ثبت‌شده توسط {d.loggedBy.name} ({d.loggedBy.email})</div>}
+            {d.loggedBy && <div className="t-muted" style={{ fontSize: 11, marginTop: 10 }}><span title={d.loggedBy.email}>ثبت‌شده توسط {d.loggedBy.name}</span></div>}
           </section>
 
           {/* پیوندها */}
@@ -229,7 +230,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                 <div className="list">
                   {d.related.actions.map((a: any) => (
                     <div className="listRow" key={a.id}>
-                      <Badge tone={a.status === 'OPEN' ? 'warning' : a.status === 'DONE' || a.status === 'COMPLETED' ? 'success' : 'neutral'}>{a.status}</Badge>
+                      <Badge tone={a.status === 'OPEN' ? 'warning' : a.status === 'DONE' || a.status === 'COMPLETED' ? 'success' : 'neutral'}>{fa(a.status)}</Badge>
                       <span style={{ flex: 1 }}><strong style={{ fontSize: 12 }}>{a.title}</strong>{a.dueAt && <small>سررسید: {fmtDT(a.dueAt)}</small>}</span>
                     </div>
                   ))}

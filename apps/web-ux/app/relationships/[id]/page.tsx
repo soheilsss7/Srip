@@ -233,7 +233,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                 </div>
                 <div className="rel-metric">
                   <span>اعتماد امتیاز</span>
-                  <div className="rel-metric-value"><b>{fmtNum(pulse.trend?.confidence)}٪</b><small>{pulse.trend?.evidence?.sources ?? 0} منبع · {(pulse.trend?.evidence?.sourceTypes ?? []).join('، ') || 'شاهد محدود'}</small></div>
+                  <div className="rel-metric-value"><b>{fmtNum(pulse.trend?.confidence)}٪</b><small>{pulse.trend?.evidence?.sources ?? 0} منبع · {(pulse.trend?.evidence?.sourceTypes ?? []).map((x: any) => fa(x)).join('، ') || 'شاهد محدود'}</small></div>
                 </div>
                 <div className="rel-metric">
                   <span>ارزش در معرض ریسک</span>
@@ -315,7 +315,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                 }}>
                   <div className="field" style={{ flex: 2 }}>
                     <label className="field-label" htmlFor="plan-title">اقدام جدید</label>
-                    <input id="plan-title" name="plan-title" placeholder="مثلاً: جلسهٔ QBR با مدیر خرید" maxLength={220} />
+                    <input id="plan-title" name="plan-title" placeholder="مثلاً: جلسهٔ بازبینی با مدیر خرید" maxLength={220} />
                   </div>
                   <div className="field">
                     <label className="field-label" htmlFor="plan-due">مهلت</label>
@@ -360,7 +360,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                 }}>
                   {(survey.questions ?? []).map((q: any) => (
                     <div key={q.id} className="field" style={{ width: '100%' }}>
-                      <label className="field-label" htmlFor={`q-${q.id}`}>{q.text} <span className="t-muted" style={{ fontWeight: 400 }}>— {q.criteriaFamily}</span></label>
+                      <label className="field-label" htmlFor={`q-${q.id}`}>{q.text} <span className="t-muted" style={{ fontWeight: 400 }}>— {fa(q.criteriaFamily)}</span></label>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                         {[0, 25, 50, 75, 100].map((v) => (
                           <button key={v} type="button" className={`btn ${surveyAnswers[q.id] === v ? 'btn-primary' : 'btn-ghost'}`}
@@ -426,7 +426,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                       <div className="listRow" key={c.id}>
                         <span style={{ flex: 1, minWidth: 0 }}>
                           <b style={{ fontSize: 12.5 }}>{c.name}</b> {c.champion && <span className="chip success" style={{ marginInlineStart: 4 }}>حامی</span>}
-                          <small className="t-muted" style={{ display: 'block' }}>{c.title} · {c.organization}{c.role ? ` · نقش تصمیم: ${c.role}` : ''}</small>
+                          <small className="t-muted" style={{ display: 'block' }}>{c.title} · {c.organization}{c.role ? ` · نقش تصمیم: ${fa(c.role)}` : ''}</small>
                         </span>
                       </div>
                     ))}

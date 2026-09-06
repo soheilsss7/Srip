@@ -223,7 +223,7 @@ export default function KnowledgeCenter() {
           {tags.length > 0 && (
             <select className="toolbar-select" value={tag} onChange={(e) => setTag(e.target.value)} aria-label="فیلتر برچسب">
               <option value="">همهٔ برچسب‌ها</option>
-              {tags.map((t) => <option key={t} value={t}>{t}</option>)}
+              {tags.map((t) => <option key={t} value={t}>{fa(t)}</option>)}
             </select>
           )}
         </div>
@@ -245,7 +245,7 @@ export default function KnowledgeCenter() {
                   <h3>{a.title}</h3>
                   <p>{a.excerpt}</p>
                   <div className="kb-tags">
-                    {(a.tags ?? []).slice(0, 4).map((t) => <span key={t} className="chip neutral">{t}</span>)}
+                    {(a.tags ?? []).slice(0, 4).map((t) => <span key={t} className="chip neutral">{fa(t)}</span>)}
                     {(a.families ?? []).slice(0, 3).map((f) => <span key={f} className="chip info">معیار: {famLabel(f)}</span>)}
                   </div>
                 </button>
@@ -273,7 +273,7 @@ export default function KnowledgeCenter() {
           <div className="kb-reader">
             {voteFlash && <div className="notice" role="status">{voteFlash}</div>}
             <div className="kb-tags">
-              {(reading.tags ?? []).map((t) => <span key={t} className="chip neutral">{t}</span>)}
+              {(reading.tags ?? []).map((t) => <span key={t} className="chip neutral">{fa(t)}</span>)}
             </div>
             <div className="kb-reader-body">
               {String(reading.body ?? '').split('\n').filter(Boolean).map((p, i) => <p key={i}>{p}</p>)}

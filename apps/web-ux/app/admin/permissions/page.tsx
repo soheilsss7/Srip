@@ -132,7 +132,7 @@ export default function AdminPermissionsPage() {
       <PageHeader
         eyebrow="مدیریت / مجوزها"
         title="مجوزها"
-        description="فهرست کامل مجوزهای سامانه در ۱۰ گروه دسترسی و نقش‌های دارندهٔ هر مجوز — مبنای RBAC و کنترل دسترسی آگاه از محدوده."
+        description="فهرست کامل مجوزهای سامانه در ۱۰ گروه دسترسی و نقش‌های دارندهٔ هر مجوز — مبنای کنترل دسترسی مبتنی بر نقش و آگاهی از محدوده."
         actions={
           <button className="btn btn-secondary" onClick={load} disabled={loading}><RefreshCw size={15} /> بازخوانی</button>
         }
@@ -196,7 +196,7 @@ export default function AdminPermissionsPage() {
                           {GROUPS_FA[g.group] ?? g.group}
                           <span className="chip info">{fmtNum(heldInGroup)}/{fmtNum(g.list.length)} دارای دارنده</span>
                         </h2>
-                        <p className="t-muted" style={{ fontSize: 12, direction: 'ltr', textAlign: 'right' }}>{g.group}</p>
+                        <p className="t-muted" style={{ fontSize: 12, textAlign: 'right' }}>{GROUPS_FA[g.group] ?? g.group}</p>
                       </div>
                     </div>
                     <div className="table-wrap">

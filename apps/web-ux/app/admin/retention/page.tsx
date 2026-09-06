@@ -69,7 +69,7 @@ export default function AdminRetentionPage() {
     const term = q.trim().toLowerCase();
     return rows.filter(r => {
       if (onlyActionable && !(r.erasable && r.count > 0)) return false;
-      if (term && !`${r.entityName ?? r.entityType} ${r.purpose}`.toLowerCase().includes(term)) return false;
+      if (term && !`${r.entityName ?? fa(r.entityType)} ${r.purpose}`.toLowerCase().includes(term)) return false;
       return true;
     });
   }, [rows, q, onlyActionable]);
@@ -135,8 +135,8 @@ export default function AdminRetentionPage() {
             <StatCard icon={<CalendarClock size={18} />} label="سیاست‌های نگهداری" value={fmtNum(stats.policies)} iconClass="ic-indigo" sub="فعال با دورهٔ نگهداری" />
             <StatCard icon={<Archive size={18} />} label="واجد پاک‌سازی" value={fmtNum(stats.eligible)} iconClass="ic-red" sub="گذشته از دورهٔ نگهداری" />
             <StatCard icon={<ShieldOff size={18} />} label="تحت محافظت" value={fmtNum(stats.locked)} iconClass="ic-gold" sub="غیرقابل‌پاک‌سازی" />
-            <StatCard icon={<Trash2 size={18} />} label="سیاست غیرقابل‌حذف" value={fmtNum(stats.protectedRows)} iconClass="ic-teal" sub="erasable = خیر" />
-            <StatCard icon={<ShieldCheck size={18} />} label="بازیگر" value={isOwner ? 'مالک' : '—'} iconClass="ic-teal" sub="دسترسی privacy.manage" />
+            <StatCard icon={<Trash2 size={18} />} label="سیاست غیرقابل‌حذف" value={fmtNum(stats.protectedRows)} iconClass="ic-teal" sub="سیاست غیرقابل‌حذف" />
+            <StatCard icon={<ShieldCheck size={18} />} label="بازیگر" value={isOwner ? 'مالک' : '—'} iconClass="ic-teal" sub="مجوز مدیریت حریم خصوصی" />
           </div>
 
           {lastRun && lastRun.changed?.length > 0 && (
@@ -171,7 +171,7 @@ export default function AdminRetentionPage() {
                     <th>نهاد</th>
                     <th>هدف سیاست</th>
                     <th>دورهٔ نگهداری</th>
-                    <th>محدودیت (cutoff)</th>
+                    <th>محدودیت زمانی</th>
                     <th>قابل‌پاک‌سازی</th>
                     <th>قابل‌خروجی</th>
                     <th>رکورد واجد</th>

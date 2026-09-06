@@ -51,7 +51,7 @@ export default function GlobalSearch(){
 
   return (
     <main className="feature-page">
-      <PageHeader eyebrow="جستجوی سراسری" title="جستجوی سراسری" description="جستجوی authorization-aware روی موجودیت‌های اصلی — نتایج فقط از محدودهٔ مجاز شما."/>
+      <PageHeader eyebrow="جستجوی سراسری" title="جستجوی سراسری" description="جستجوی آگاه از مجوزها روی موجودیت‌های اصلی — نتایج فقط از محدودهٔ مجاز شما."/>
 
       {/* Search hero */}
       <section className="ai-composer" style={{gap:14}}>

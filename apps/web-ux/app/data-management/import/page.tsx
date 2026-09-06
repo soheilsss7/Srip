@@ -21,7 +21,7 @@ export default function ImportPage(){
         </select></label>
       <label className="inline-field">Organization ID (اختیاری)<input value={organizationId} onChange={ev=>setOrganizationId(ev.target.value)} placeholder="شناسه سازمان مقصد" disabled={busy}/></label>
       <label className="inline-field">فایل<input type="file" accept=".csv,.xlsx,.xls,.json,.txt" onChange={ev=>setFile(ev.target.files?.[0]??null)} disabled={busy}/></label>
-      <button className="primary-action" disabled={!file||busy}>{busy?'در حال پردازش…':'Preview'}</button>
+      <button className="primary-action" disabled={!file||busy}>{busy?'در حال پردازش…':'پیش‌نمایش'}</button>
     </form></section>
     {preview&&<section className="panel">
       <div className="panel-title"><h2>پیش‌نمایش</h2>{approved?<Badge tone="success">تأییدشده</Badge>:<Badge tone="info">{preview.status??'PREVIEWED'}</Badge>}</div>

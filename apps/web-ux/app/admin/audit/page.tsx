@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../../_lib/api';
+import { fa, idFa, KEY_FA } from '../../_lib/fa';
 import { useWorkspace } from '../../_components/workspace';
 import {
   Badge, ErrorCard, PageHeader, StatCard, Toolbar,
@@ -63,6 +64,7 @@ const ENTITY_FA: Record<string, string> = {
   CustomField: 'فیلد سفارشی', Role: 'نقش', Membership: 'عضویت', ScoringRule: 'قاعده امتیاز',
   NotificationRule: 'قاعده اعلان', Workflow: 'گردش کار', Interaction: 'تعامل',
   Document: 'سند', Report: 'گزارش', Session: 'نشست', AiSetting: 'تنظیمات هوش مصنوعی',
+  Dataqualitysnapshot: 'نمای کیفیت داده', Scoringrule: 'قاعدهٔ امتیازدهی',
 };
 
 function MetaChips({ meta }: { meta?: any }) {
@@ -79,8 +81,8 @@ function MetaChips({ meta }: { meta?: any }) {
         if (v === null || v === undefined) return null;
         return (
           <span key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10.5, background: 'var(--input-bg, #f5f6f9)', borderRadius: 6, padding: '1px 6px' }}>
-            <b className="t-muted" style={{ fontWeight: 600 }}>{k}:</b>
-            <span dir="auto" style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{String(v)}</span>
+            <b className="t-muted" style={{ fontWeight: 600 }}>{KEY_FA[k] ?? fa(k)}:</b>
+            <span dir="auto" style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(fa(String(v)) !== String(v) ? fa(String(v)) : idFa(String(v)))}</span>
           </span>
         );
       })}
@@ -183,7 +185,7 @@ export default function AdminAuditPage() {
       <PageHeader
         eyebrow="مدیریت / ممیزی"
         title="لاگ ممیزی"
-        description="ردپای append-only همهٔ عملیات: ورودها، ایجاد/ویرایش/حذف، تغییر دسترسی‌ها، تأییدها و خروجی‌های داده — با بازیگر، نهاد، نتیجه و جزئیات."
+        description="ردپای تغییرناپذیر همهٔ عملیات: ورودها، ایجاد/ویرایش/حذف، تغییر دسترسی‌ها، تأییدها و خروجی‌های داده — با بازیگر، نهاد، نتیجه و جزئیات."
         actions={
           <button className="btn btn-secondary" onClick={load} disabled={loading}><RefreshCw size={15} /> بازخوانی</button>
         }
@@ -240,7 +242,7 @@ export default function AdminAuditPage() {
                       <th>عملیات</th>
                       <th>نهاد</th>
                       <th>نتیجه</th>
-                      <th>IP</th>
+                      <th>نشانی</th>
                       <th>جزئیات</th>
                     </tr>
                   </thead>
@@ -262,7 +264,7 @@ export default function AdminAuditPage() {
                           </td>
                           <td>
                             <Badge tone={(ACTION_TONE[e.action] ?? 'neutral') as any}>
-                              {ACTION_ICON[e.action]}{ACTION_FA[e.action] ?? e.action}
+                              {ACTION_ICON[e.action]}{ACTION_FA[e.action] ?? fa(e.action)}
                             </Badge>
                             <div><code dir="ltr" style={{ fontSize: 9.5, color: 'var(--text-muted)', fontFamily: 'ui-monospace,monospace' }}>{e.action}</code></div>
                           </td>
@@ -271,7 +273,7 @@ export default function AdminAuditPage() {
                               <Building2 size={12} className="t-muted" />
                               <span style={{ fontSize: 12.5, fontWeight: 600 }}>{ENTITY_FA[n] ?? n}</span>
                             </span>
-                            {e.entityId && <div><code dir="ltr" style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'ui-monospace,monospace' }}>{e.entityId}</code></div>}
+                            {e.entityId && <div><code dir="ltr" style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'ui-monospace,monospace' }}>{idFa(e.entityId)}</code></div>}
                           </td>
                           <td>
                             {e.outcome === 'OK'

@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../_lib/api';
+import { apiPathFa, fa } from '../_lib/fa';
 import { Badge, DataTable, ErrorCard, Loading, PageHeader, StatCard } from '../_components/page-ui';
 import { Activity, Boxes, Cpu, Database, Gauge, Layers, MemoryStick, ScrollText, ServerCog, Timer, Users, Zap } from 'lucide-react';
 import type { OpsSnapshot, Hist } from '../metrics/page';
@@ -24,7 +25,7 @@ const uptimeFA = (s?: number) => {
 function pctile(h: Hist, p: number): string {
   if (!h || h.count === 0) return '—';
   const target = (h.count * p) / 100;
-  for (const b of Object.keys(h.buckets ?? {}).map(Number).sort((a, b) => a - b)) if ((h.buckets[String(b)] ?? 0) >= target) return b >= 1000 ? `${fmt1.format(b / 1000)}s` : `${fmt.format(b)}ms`;
+  for (const b of Object.keys(h.buckets ?? {}).map(Number).sort((a, b) => a - b)) if ((h.buckets[String(b)] ?? 0) >= target) return b >= 1000 ? `${fmt1.format(b / 1000)} ثانیه` : `${fmt.format(b)} میلی‌ثانیه`;
   return '∞';
 }
 const faDT = (iso?: string) => {
@@ -43,7 +44,7 @@ const QUEUE_FA: Record<string, string> = {
   'srip-default': 'پیش‌فرض', 'srip-notifications': 'اعلان‌ها', 'srip-ai': 'هوش مصنوعی', 'srip-meetings': 'جلسات',
   'srip-documents': 'اسناد', 'srip-recommendations': 'پیشنهادها', 'srip-search': 'جستجو', 'srip-integrations': 'یکپارچه‌سازی',
   'srip-analytics': 'تحلیل', 'srip-reminders': 'یادآورها', 'srip-maintenance': 'نگهداری', 'srip-data-imports': 'وارد کردن داده',
-  'srip-privacy-exports': 'خروجی حریم خصوصی', 'srip-dead-letter': 'پیام‌های ناموفق (DLQ)',
+  'srip-privacy-exports': 'خروجی حریم خصوصی', 'srip-dead-letter': 'پیام‌های ناموفق',
 };
 
 export default function Observability() {
@@ -82,7 +83,7 @@ export default function Observability() {
       <PageHeader
         eyebrow="زمان اجرا"
         title="مشاهده‌پذیری"
-        description="نمای یکپارچهٔ سنجه‌ها، صف‌های کار و مصرف هوش مصنوعی — پاریتی GET /observability/summary و /observability/queue با مجوز metrics.read."
+        description="نمای یکپارچهٔ سنجه‌ها، صف‌های کار و مصرف هوش مصنوعی — هم‌ارزی با سرویس مشاهده‌پذیری با مجوز خواندن سنجه‌ها."
         actions={
           <>
             <button className="btn btn-ghost" onClick={() => { void load(true); }} disabled={refreshing} style={{ minHeight: 0, padding: '6px 10px', fontSize: 10.5 }}>
@@ -98,9 +99,9 @@ export default function Observability() {
       {loading && !d ? <Loading label="در حال خواندن نمای مشاهده‌پذیری…" /> : d && (
         <>
           <div className="stat-grid">
-            <StatCard icon={<Gauge size={18} />} label="درخواست‌های HTTP" value={fmt.format(d.requests)} sub="شمارندهٔ تجمعی" iconClass="ic-blue" />
-            <StatCard icon={<Zap size={18} />} label="خطاهای 5xx" value={fmt.format(errs)} sub={`${fmt1.format(errRate)}٪ از کل`} iconClass={errRate > 2 ? 'ic-red' : 'ic-green'} />
-            <StatCard icon={<Timer size={18} />} label="میانگین تأخیر" value={<>{fmt1.format(d.averageLatencyMs)} <small style={{ fontSize: 12 }}>ms</small></>} sub="HTTP" iconClass="ic-blue" />
+            <StatCard icon={<Gauge size={18} />} label="درخواست‌های وب" value={fmt.format(d.requests)} sub="شمارندهٔ تجمعی" iconClass="ic-blue" />
+            <StatCard icon={<Zap size={18} />} label="خطاهای سمت سرور" value={fmt.format(errs)} sub={`${fmt1.format(errRate)}٪ از کل`} iconClass={errRate > 2 ? 'ic-red' : 'ic-green'} />
+            <StatCard icon={<Timer size={18} />} label="میانگین تأخیر" value={<>{fmt1.format(d.averageLatencyMs)} <small style={{ fontSize: 12 }}>میلی‌ثانیه</small></>} sub="وب" iconClass="ic-blue" />
             <StatCard icon={<Cpu size={18} />} label="زمان فعالیت" value={<>{fmt.format(Math.floor((d.uptimeSeconds ?? 0) / 3600))} <small style={{ fontSize: 12 }}>ساعت</small></>} sub={uptimeFA(d.uptimeSeconds)} iconClass="ic-purple" />
             <StatCard icon={<Users size={18} />} label="کاربران فعال" value={fmt.format(d.activeUsers)} sub="۳۰ روز اخیر" iconClass="ic-green" />
             <StatCard icon={<Layers size={18} />} label="صف‌های کار" value={fmt.format(queueRows.length)} sub={`${fmt.format(qTotal)} کار فعال/در انتظار`} iconClass="ic-gold" />
@@ -112,16 +113,16 @@ export default function Observability() {
             <section className="panel" style={{ margin: 0 }}>
               <div className="panel-title"><div><h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Activity size={16} /> سلامت لحظه‌ای</h2><p>خلاصهٔ دسترس‌پذیری و پردازش سرویس.</p></div><Badge tone={d.availabilityPercent >= 99 ? 'success' : d.availabilityPercent >= 95 ? 'warning' : 'danger'}>دسترس‌پذیری {fmt1.format(d.availabilityPercent)}٪</Badge></div>
               <div className="metric-list">
-                <div><span>رصدهای دسترس‌پذیری</span><strong><Badge tone={d.availabilityPercent >= 99.9 ? 'success' : 'warning'}>{d.availabilityPercent >= 99.9 ? 'عالی (SLO 99.9٪)' : 'نیازمند بازبینی'}</Badge></strong></div>
+                <div><span>رصدهای دسترس‌پذیری</span><strong><Badge tone={d.availabilityPercent >= 99.9 ? 'success' : 'warning'}>{d.availabilityPercent >= 99.9 ? 'عالی (هدف ۹۹٫۹٪)' : 'نیازمند بازبینی'}</Badge></strong></div>
                 <div><span>پردازندهٔ فرایند</span><strong>{fmt1.format(d.process.cpuPercent)}٪</strong></div>
                 <div><span>حافظهٔ هیپ</span><strong>{bytesFA(d.process.heapUsedBytes)}</strong></div>
-                <div><span>حافظهٔ ساکن (RSS)</span><strong>{bytesFA(d.process.rssBytes)}</strong></div>
+                <div><span>حافظهٔ ساکن</span><strong>{bytesFA(d.process.rssBytes)}</strong></div>
               </div>
             </section>
             <section className="panel" style={{ margin: 0 }}>
-              <div className="panel-title"><div><h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Database size={16} /> تأخیر (نمونه‌های میانی)</h2><p>میانگین هر مسیر API و عملیات پایگاه داده.</p></div></div>
+              <div className="panel-title"><div><h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Database size={16} /> تأخیر (نمونه‌های میانی)</h2><p>میانگین تأخیر هر مسیر رابط و عملیات پایگاه داده.</p></div></div>
               <div className="metric-list">
-                <div><span>مسیرهای رصدشدهٔ API</span><strong>{fmt.format(Object.keys(d.apiLatency ?? {}).length)}</strong></div>
+                <div><span>مسیرهای رصدشدهٔ رابط</span><strong>{fmt.format(Object.keys(d.apiLatency ?? {}).length)}</strong></div>
                 <div><span>عملیات پایگاه داده</span><strong>{fmt.format(Object.keys(d.dbLatency ?? {}).length)}</strong></div>
                 <div><span>فراهم‌کننده‌های هوش مصنوعی</span><strong>{fmt.format(Object.keys(d.ai ?? {}).length)}</strong></div>
                 <div><span>مجموعه‌های ذخیره‌سازی</span><strong>{fmt.format(Object.keys(d.storage ?? {}).length)}</strong></div>
@@ -131,7 +132,7 @@ export default function Observability() {
 
           <section className="panel">
             <div className="panel-title">
-              <div><h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Boxes size={16} /> صف‌های کار (BullMQ)</h2><p>دادهٔ زندهٔ هر صف — کارهای ناموفق به صف پیام‌های ناموفق (DLQ) هدایت می‌شوند.</p></div>
+              <div><h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Boxes size={16} /> صف‌های کار</h2><p>دادهٔ زندهٔ هر صف — کارهای ناموفق به صف پیام‌های ناموفق هدایت می‌شوند.</p></div>
               <Badge tone={qFailed > 0 ? 'danger' : 'success'}>{qFailed > 0 ? `${fmt.format(qFailed)} ناموفق` : 'همهٔ صف‌ها سالم'}</Badge>
             </div>
             <div style={{ display: 'grid', gap: 8 }}>
@@ -157,17 +158,17 @@ export default function Observability() {
 
           <div className="grid2" style={{ alignItems: 'stretch' }}>
             <section className="panel" style={{ margin: 0 }}>
-              <div className="panel-title"><div><h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><MemoryStick size={16} /> سرویس‌های پرترافیک</h2><p>پنج مسیر برتر بر پایهٔ p95 (میانگین به‌عنوان ستون کمکی).</p></div></div>
+              <div className="panel-title"><div><h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><MemoryStick size={16} /> سرویس‌های پرترافیک</h2><p>پنج مسیر برتر بر پایهٔ صدک ۹۵ (میانگین به‌عنوان ستون کمکی).</p></div></div>
               {(() => {
                 const p95n = (h: Hist) => { const x = pctile(h, 95).replace(/[^0-9.]/g, ''); return x ? Number(x) : 0; };
-                const rows = Object.entries(d.apiLatency ?? {}).sort((a, b) => p95n(b[1]) - p95n(a[1])).slice(0, 5).map(([k, h]) => ({ key: k, count: fmt.format(h.count), avg: h.count ? `${fmt1.format(h.sum / h.count)}ms` : '—', p95: pctile(h, 95) }));
-                return rows.length ? <DataTable columns={[{ key: 'key', label: 'مسیر' }, { key: 'count', label: 'تعداد' }, { key: 'avg', label: 'میانگین' }, { key: 'p95', label: 'p95' }]} rows={rows} /> : <p className="t-muted" style={{ fontSize: 11 }}>بدون داده.</p>;
+                const rows = Object.entries(d.apiLatency ?? {}).sort((a, b) => p95n(b[1]) - p95n(a[1])).slice(0, 5).map(([k, h]) => ({ key: apiPathFa(null, k), count: fmt.format(h.count), avg: h.count ? `${fmt1.format(h.sum / h.count)} میلی‌ثانیه` : '—', p95: pctile(h, 95) }));
+                return rows.length ? <DataTable columns={[{ key: 'key', label: 'مسیر' }, { key: 'count', label: 'تعداد' }, { key: 'avg', label: 'میانگین' }, { key: 'p95', label: 'صدک ۹۵' }]} rows={rows} /> : <p className="t-muted" style={{ fontSize: 11 }}>بدون داده.</p>;
               })()}
             </section>
             <section className="panel" style={{ margin: 0 }}>
               <div className="panel-title"><div><h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Zap size={16} /> مصرف هوش مصنوعی</h2><p>درخواست، خطا و توکن‌ها بر پایهٔ فراهم‌کننده.</p></div></div>
               {(() => {
-                const rows = Object.entries(d.ai ?? {}).map(([k, v]) => ({ key: k, req: fmt.format(v.requests), err: fmt.format(v.errors), tokens: `${fmt.format(v.inputTokens)} در / ${fmt.format(v.outputTokens)} خ` }));
+                const rows = Object.entries(d.ai ?? {}).map(([k, v]) => ({ key: fa(k), req: fmt.format(v.requests), err: fmt.format(v.errors), tokens: `${fmt.format(v.inputTokens)} در / ${fmt.format(v.outputTokens)} خ` }));
                 return rows.length ? <DataTable columns={[{ key: 'key', label: 'فراهم‌کننده' }, { key: 'req', label: 'درخواست' }, { key: 'err', label: 'خطا' }, { key: 'tokens', label: 'توکن ورودی/خروجی' }]} rows={rows} /> : <p className="t-muted" style={{ fontSize: 11 }}>بدون داده.</p>;
               })()}
             </section>
@@ -175,7 +176,7 @@ export default function Observability() {
 
           <section className="panel">
             <div className="panel-title">
-              <div><h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><ScrollText size={16} /> رخدادهای اخیر</h2><p>آخرین رویدادهای رصدشدهٔ سرویس (ERROR/WARN/INFO/DEBUG) — در نمای محصول به‌عنوان نمای نمونه نمایش داده می‌شوند.</p></div>
+              <div><h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><ScrollText size={16} /> رخدادهای اخیر</h2><p>آخرین رویدادهای رصدشدهٔ سرویس (خطا/هشدار/اطلاع/اشکال‌زدایی) — در نمای محصول به‌عنوان نمای نمونه نمایش داده می‌شوند.</p></div>
               {ev && <Badge tone="info">{fmt.format(show.length)} رخداد</Badge>}
             </div>
             {ev == null ? <p className="t-muted" style={{ fontSize: 11 }}>بدون داده.</p> : (

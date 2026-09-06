@@ -88,8 +88,8 @@ function Flow({ wf }: { wf: WfRow }) {
       <div className="flow-start">
         <CircleDashed size={14} className="t-muted" />
         <span>
-          <b style={{ fontSize: 11 }}>شروع · {def.trigger?.type === 'MANUAL' || !def.trigger?.type ? 'اجرای دستی' : `رویداد ${def.trigger.type}`}</b>
-          {def.trigger?.entityType && <div className="t-muted" style={{ fontSize: 10 }}>نهاد: {def.trigger.entityType}</div>}
+          <b style={{ fontSize: 11 }}>شروع · {def.trigger?.type === 'MANUAL' || !def.trigger?.type ? 'اجرای دستی' : `رویداد ${fa(def.trigger.type)}`}</b>
+          {def.trigger?.entityType && <div className="t-muted" style={{ fontSize: 10 }}>نهاد: {fa(def.trigger.entityType)}</div>}
         </span>
       </div>
       <span className="flow-edge"><ChevronDown size={13} /></span>
@@ -115,7 +115,7 @@ function Flow({ wf }: { wf: WfRow }) {
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                   <b style={{ fontSize: 11.5 }}>{meta.fa}</b>
-                  <Badge tone={meta.tone as any}>{a.type}</Badge>
+                  <Badge tone={meta.tone as any}>{fa(a.type)}</Badge>
                 </div>
                 <div className="t-muted" style={{ fontSize: 10.5, marginTop: 1, lineHeight: 1.5 }}>
                   {a.type === 'CREATE_NOTIFICATION' && notifPreview(a)}

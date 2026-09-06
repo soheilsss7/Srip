@@ -7,6 +7,7 @@
    ============================================================================ */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../../_lib/api';
+import { fa } from '../../_lib/fa';
 import { AdminNav, ErrorCard, Loading, PageHeader, StatusBadge } from '../../_components/page-ui';
 import HubTabs from '../../_components/hub-tabs';
 import { NudgeBanner, NudgeList, useNudges } from '../../_components/nudges';
@@ -90,7 +91,7 @@ export default function Page() {
         eyebrow="مدیریت"
         title="معیارهای ارزیابی"
         description={`کاتالوگ ${faNum(catalog?.criteria.length ?? 0)} معیار در ${faNum(families.length)} خانواده؛ هر معیار به یک پژوهش یا استاندارد مرجع گره خورده است. امتیاز فقط از معیارهای دارای داده ساخته می‌شود و بقیه در فهرست «بدون داده» می‌مانند.`}
-        actions={<span className="chip info">{catalog?.version ?? 'criteria'}</span>}
+        actions={<span className="chip info">{catalog?.version === 'criteria-v1' ? 'نسخهٔ ۱ کاتالوگ' : catalog?.version ?? 'کاتالوگ'}</span>}
       />
       <AdminNav />
       <HubTabs tabs={[
@@ -142,7 +143,7 @@ export default function Page() {
             {gated.map((c) => (
               <li key={c.code}>
                 <strong>{c.name}</strong>
-                <span>{c.gate?.trigger === 'ABOVE' ? 'اگر امتیاز ریسک بالاتر از' : 'اگر امتیاز پایین‌تر از'} {faNum(c.gate?.threshold)} ← سقف {faNum(c.gate?.cap)} ({c.gate?.severity})</span>
+                <span>{c.gate?.trigger === 'ABOVE' ? 'اگر امتیاز ریسک بالاتر از' : 'اگر امتیاز پایین‌تر از'} {faNum(c.gate?.threshold)} ← سقف {faNum(c.gate?.cap)} ({fa(c.gate?.severity ?? '')})</span>
                 <small>{c.gate?.message}</small>
               </li>
             ))}

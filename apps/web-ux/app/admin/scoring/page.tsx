@@ -276,7 +276,7 @@ export default function AdminScoringPage() {
                       <td><Badge tone="info">{ENTITY_FA[r.entityType] ?? r.entityType}</Badge></td>
                       <td><span className="cell-count"><Weight size={12} /> {fmtNum(r.weight ?? 1)}</span></td>
                       <td style={{ maxWidth: 260 }}><DefinitionSummary def={r.definition} /></td>
-                      <td><span className="chip">v{fmtNum(r.version ?? 1)}</span></td>
+                      <td><span className="chip">نسخهٔ {fmtNum(r.version ?? 1)}</span></td>
                       <td>{r.active ? <Badge tone="success"><Eye size={11} /> فعال</Badge> : <Badge tone="neutral"><EyeOff size={11} /> غیرفعال</Badge>}</td>
                       <td>
                         <div style={{ display: 'flex', gap: 4 }}>

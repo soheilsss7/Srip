@@ -80,7 +80,7 @@ export default function AdminSessions() {
       <PageHeader
         eyebrow="مدیریت / امنیت"
         title="حاکمیت نشست‌ها"
-        description="ابطال مدیریتی نشست هر کاربر و رصد ابطال‌های انجام‌شده — نیازمند مجوز session.admin.revoke؛ نشست‌های سایر کاربران بدون ابطال مدیریتی قابل حذف نیستند."
+        description="ابطال مدیریتی نشست هر کاربر و رصد ابطال‌های انجام‌شده — نیازمند مجوز ابطال مدیریتی نشست؛ نشست‌های سایر کاربران بدون ابطال مدیریتی قابل حذف نیستند."
         actions={
           <button className="btn btn-secondary" onClick={() => load(true)} disabled={refreshing}>
             <RefreshCw size={15} className={refreshing ? 'spin' : ''} /> بازخوانی
@@ -100,7 +100,7 @@ export default function AdminSessions() {
           <div className="stat-grid">
             <StatCard icon={<KeyRound size={18} />} label="کاربران سامانه" value={new Intl.NumberFormat('fa-IR').format(users.length)} iconClass="ic-blue" sub="برای انتخاب در فرم ابطال" />
             <StatCard icon={<ScrollText size={18} />} label="ابطال‌های مدیریتی اخیر" value={new Intl.NumberFormat('fa-IR').format(audit.length)} iconClass="ic-gold" sub="از ممیزی سرور" />
-            <StatCard icon={<Lock size={18} />} label="مجوز لازم" value="session.admin.revoke" iconClass="ic-purple" sub="فقط مدیران دارای مجوز" />
+            <StatCard icon={<Lock size={18} />} label="مجوز لازم" value="ابطال مدیریتی نشست" iconClass="ic-purple" sub="فقط مدیران دارای مجوز" />
             <StatCard icon={<Fingerprint size={18} />} label="محدودیت" value="شناسهٔ نشست" iconClass="ic-red" sub="بدون ابزار مرور فهرست (حریم خصوصی)" />
           </div>
 
@@ -109,7 +109,7 @@ export default function AdminSessions() {
               <div className="panel-title">
                 <div>
                   <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><KeyRound size={16} /> ابطال مدیریتی نشست</h2>
-                  <p>شناسهٔ کاربر و شناسهٔ نشست را وارد کنید؛ پس از ابطال، دستگاهِ هدف بلافاصله از دسترسی می‌افتد و رویداد در ممیزی با «admin-session-revoked» ثبت می‌شود.</p>
+                  <p>شناسهٔ کاربر و شناسهٔ نشست را وارد کنید؛ پس از ابطال، دستگاهِ هدف بلافاصله از دسترسی می‌افتد و رویداد در ممیزی با «ابطال مدیریتی نشست» ثبت می‌شود.</p>
                 </div>
               </div>
               <form className="entity-form" onSubmit={revoke} style={{ gap: 10 }}>
@@ -144,7 +144,7 @@ export default function AdminSessions() {
               <div className="panel-title">
                 <div>
                   <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><ScrollText size={16} /> ابطال‌های مدیریتی اخیر</h2>
-                  <p>رویدادهای LOGOUT ثبت‌شده بر نهاد Session با دلیل admin-session-revoked (از ممیزی سرور).</p>
+                  <p>رویدادهای خروج ثبت‌شده بر نهاد نشست با دلیل ابطال مدیریتی نشست (از ممیزی سرور).</p>
                 </div>
                 <Badge tone="info">{new Intl.NumberFormat('fa-IR').format(audit.length)} رویداد</Badge>
               </div>

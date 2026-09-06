@@ -3,6 +3,7 @@ import Link from 'next/link';
 import HubTabs from '../_components/hub-tabs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../_lib/api';
+import { apiPathFa, idFa } from '../_lib/fa';
 import { useWorkspace } from '../_components/workspace';
 import { Badge, ErrorCard, Loading, Modal, PageHeader, StatCard } from '../_components/page-ui';
 import {
@@ -24,7 +25,7 @@ const TYPE_META: Record<string, { fa: string; icon: React.ReactNode }> = {
   RATE_LIMITED: { fa: 'محدودیت نرخ', icon: <Gauge size={13} /> },
   SUSPICIOUS_ACCESS: { fa: 'دسترسی مشکوک', icon: <AlertTriangle size={13} /> },
   EXPORT_CREATED: { fa: 'خروجی داده', icon: <FileDown size={13} /> },
-  MFA_EVENT: { fa: 'رویداد MFA', icon: <KeyRound size={13} /> },
+  MFA_EVENT: { fa: 'رویداد تأیید دومرحله‌ای', icon: <KeyRound size={13} /> },
 };
 const SEV_TONE: Record<string, 'danger' | 'warning' | 'info' | 'success' | 'neutral'> = {
   CRITICAL: 'danger', HIGH: 'danger', WARNING: 'warning', INFO: 'info', LOW: 'success',
@@ -44,19 +45,21 @@ const unwrap = (x: any) => (Array.isArray(x) ? x : x?.items ?? x?.rows ?? x?.eve
 const CHECK_TONE: Record<string, 'success' | 'warning' | 'danger'> = { PASS: 'success', WARN: 'warning', FAIL: 'danger' };
 const CHECK_FA: Record<string, { fa: string; icon: React.ReactNode }> = {
   'origin-check': { fa: 'کنترل مبدأ درخواست', icon: <ShieldCheck size={14} /> },
-  'rate-limit-fail-open': { fa: 'محدودیت نرخ fail-closed', icon: <Gauge size={14} /> },
+  'rate-limit-fail-open': { fa: 'محدودیت نرخ (بسته در خطا)', icon: <Gauge size={14} /> },
   'file-scan': { fa: 'پویش بدافزار فایل‌ها', icon: <FileDown size={14} /> },
   'secret-manager': { fa: 'مدیریت کلیدها', icon: <KeyRound size={14} /> },
   'data-policy-coverage': { fa: 'پوشش خط‌مشی داده', icon: <ScrollText size={14} /> },
-  'secret:JWT_SECRET': { fa: 'کلید JWT', icon: <KeyRound size={14} /> },
+  'secret:JWT_SECRET': { fa: 'کلید امضا', icon: <KeyRound size={14} /> },
   'secret:SECRET_ENCRYPTION_KEY': { fa: 'کلید رمزنگاری', icon: <Lock size={14} /> },
 };
 const CLASS_FA: Record<string, string> = {
   PUBLIC: 'عمومی', INTERNAL: 'داخلی', CONFIDENTIAL: 'محرمانه', RESTRICTED: 'محدود',
   PRIVATE: 'خصوصی', HIGHLY_CONFIDENTIAL: 'بسیار محرمانه',
 };
-const FMT_FA: Record<string, string> = { CSV: 'CSV', XLSX: 'XLSX', PDF: 'PDF', JSON: 'JSON' };
+const FMT_FA: Record<string, string> = { CSV: 'فایل جدولی', XLSX: 'صفحهٔ گسترده', PDF: 'سند', JSON: 'متن ساختاریافته' };
+const ENTITY_FA: Record<string, string> = { USER: 'کاربر', AUTH: 'احراز هویت', REPORT: 'گزارش', ROUTE: 'مسیر', COMPANY: 'سازمان', ORGANIZATION: 'سازمان', RELATIONSHIP: 'رابطه', PERSON: 'شخص', PROJECT: 'پروژه', OPPORTUNITY: 'فرصت', SOURCEFILE: 'سند', NETWORK: 'شبکه', MEETING: 'جلسه', CONTACT: 'مخاطب', RISK: 'ریسک' };
 
+const entityIdFa = (v: string): string => (v.startsWith('/') ? apiPathFa(null, v) : idFa(v));
 function metaDetail(e: Evt): string {
   const m = e.metadata ?? {};
   const parts = Object.entries(m).map(([k, v]) => {
@@ -126,7 +129,7 @@ export default function Security() {
   const exportFormats = useMemo(() => {
     const c: Record<string, number> = {};
     for (const r of exports) {
-      const f = FMT_FA[String(r.exportType ?? '').toUpperCase()] ? String(r.exportType).toUpperCase() : '—';
+      const f = FMT_FA[String(r.exportType ?? '').toUpperCase()] ?? '—';
       c[f] = (c[f] ?? 0) + 1;
     }
     return Object.entries(c).sort((a, b) => b[1] - a[1]);
@@ -137,7 +140,7 @@ export default function Security() {
       <PageHeader
         eyebrow="امنیت و حاکمیت"
         title="امنیت"
-        description="رویدادهای امنیتی (ورود، MFA، خروجی داده، دسترسی غیرمجاز و…)، تاریخچهٔ خروجی‌ها و بررسی مقدماتی حاکمیت — بدون افشای هیچ رمز یا کلیدی."
+        description="رویدادهای امنیتی (ورود، تأیید دومرحله‌ای، خروجی داده، دسترسی غیرمجاز و…)، تاریخچهٔ خروجی‌ها و بررسی مقدماتی حاکمیت — بدون افشای هیچ رمز یا کلیدی."
         actions={
           <div className="toolbar">
             <Link className="btn btn-ghost" href="/security-events"><ScrollText size={15} /> همهٔ رویدادها</Link>
@@ -212,7 +215,7 @@ export default function Security() {
             ) : (
               <div className="table-wrap">
                 <table>
-                  <thead><tr><th>رویداد</th><th>شدت</th><th>بازیگر / سازمان</th><th>IP</th><th>نهاد</th><th>زمان</th><th></th></tr></thead>
+                  <thead><tr><th>رویداد</th><th>شدت</th><th>بازیگر / سازمان</th><th>نشانی شبکه</th><th>نهاد</th><th>زمان</th><th></th></tr></thead>
                   <tbody>
                     {filtered.slice(0, 40).map(e => (
                       <tr key={e.id} onClick={() => setDetail(e)} style={{ cursor: 'pointer' }}>
@@ -230,8 +233,8 @@ export default function Security() {
                         </td>
                         <td><code dir="ltr" style={{ fontSize: 10.5, fontFamily: 'ui-monospace,monospace' }}>{e.ipAddress ?? '—'}</code></td>
                         <td>
-                          <span style={{ fontSize: 11 }}>{e.entityType ?? '—'}</span>
-                          {e.entityId && <div className="t-muted" dir="ltr" style={{ fontSize: 9.5, fontFamily: 'ui-monospace,monospace' }}>{String(e.entityId).slice(0, 24)}</div>}
+                          <span style={{ fontSize: 11 }}>{ENTITY_FA[String(e.entityType ?? '').toUpperCase()] ?? e.entityType ?? '—'}</span>
+                          {e.entityId && <div className="t-muted" dir="ltr" style={{ fontSize: 9.5, fontFamily: 'ui-monospace,monospace' }}>{entityIdFa(String(e.entityId)).slice(0, 28)}</div>}
                         </td>
                         <td><span className="t-muted" style={{ fontSize: 11 }}>{fmtDT(e.createdAt)}</span></td>
                         <td><button className="btn btn-ghost btn-sm" onClick={(ev) => { ev.stopPropagation(); setDetail(e); }}>جزئیات</button></td>
@@ -306,8 +309,8 @@ export default function Security() {
             <div style={{ display: 'flex', gap: 6 }}><Badge tone={SEV_TONE[detail.severity] ?? 'neutral'}>{SEV_FA[detail.severity] ?? detail.severity}</Badge></div>
             <div style={{ display: 'flex', gap: 6 }}><UserRound size={14} className="t-muted" /><span><b>بازیگر:</b> {detail.userName ?? '—'} {detail.userEmail ? `(${detail.userEmail})` : ''}</span></div>
             {detail.organizationName && <div style={{ display: 'flex', gap: 6 }}><ShieldCheck size={14} className="t-muted" /><span><b>سازمان:</b> {detail.organizationName}</span></div>}
-            <div style={{ display: 'flex', gap: 6 }}><Lock size={14} className="t-muted" /><span><b>IP:</b> <code dir="ltr">{detail.ipAddress ?? '—'}</code> {detail.userAgentShort ? `· ${detail.userAgentShort}` : ''}</span></div>
-            <div style={{ display: 'flex', gap: 6 }}><FileDown size={14} className="t-muted" /><span><b>نهاد:</b> {detail.entityType ?? '—'} {detail.entityId ? <code dir="ltr">{detail.entityId}</code> : ''}</span></div>
+            <div style={{ display: 'flex', gap: 6 }}><Lock size={14} className="t-muted" /><span><b>نشانی:</b> <code dir="ltr">{detail.ipAddress ?? '—'}</code> {detail.userAgentShort ? `· ${detail.userAgentShort}` : ''}</span></div>
+            <div style={{ display: 'flex', gap: 6 }}><FileDown size={14} className="t-muted" /><span><b>نهاد:</b> {ENTITY_FA[String(detail.entityType ?? '').toUpperCase()] ?? detail.entityType ?? '—'} {detail.entityId ? <code dir="ltr">{entityIdFa(String(detail.entityId))}</code> : ''}</span></div>
             {detail.metadata && Object.keys(detail.metadata).length > 0 && (
               <div style={{ display: 'grid', gap: 4, background: 'var(--card-bg-soft)', borderRadius: 8, padding: 8, fontSize: 11 }}>
                 <b className="t-muted">فراداده:</b>

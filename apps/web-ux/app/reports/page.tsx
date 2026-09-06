@@ -38,6 +38,8 @@ function cell(key: string, v: unknown): string {
   if (typeof v === 'string') {
     const dt = fmtDT(v);
     if (dt) return dt;
+    const idFa = faId(v);
+    if (idFa !== v) return idFa;
     const up = v.toUpperCase();
     const tr = MISC_FA[up] ?? STATUS_FA[up] ?? fa(up);
     if (tr !== up && tr !== v) return tr;
@@ -77,13 +79,27 @@ const KINDS: KindDef[] = [
   { key: 'project', fa: 'پروژه‌ها', desc: 'پروژه‌های محدوده با اولویت، هدف، مسئول و بازهٔ زمانی.', shape: 'table' },
   { key: 'subsidiary-comparison', fa: 'مقایسهٔ زیرمجموعه‌ها', desc: 'مقایسهٔ شرکت‌های تابعه/شریک از نظر افراد، روابط، جلسات، پروژه‌ها و فرصت‌ها.', shape: 'table' },
   { key: 'holding', fa: 'ساختار هلدینگ', desc: 'سازمان‌های محدوده و ساختار سلسله‌مراتب (ریشه‌ها).', shape: 'summary' },
-  { key: 'executive-summary', fa: 'خلاصهٔ مدیریت ارشد', desc: 'تصویر یک‌صفحه‌ای: شاخص‌های کلان، KPIها، روابط پرریسک، فرصت‌های باز و پیشنهادها.', shape: 'summary' },
+  { key: 'executive-summary', fa: 'خلاصهٔ مدیریت ارشد', desc: 'تصویر یک‌صفحه‌ای: شاخص‌های کلان، روابط پرریسک، فرصت‌های باز و پیشنهادها.', shape: 'summary' },
 ];
 const KINDS_MAP = new Map(KINDS.map(k => [k.key, k]));
 const SUMMARY_ROW_FA: Record<string, string> = {
   organizationCount: 'سازمان‌ها', peopleCount: 'اشخاص', relationshipCount: 'روابط', meetings: 'جلسات',
   commitments: 'تعهدات', opportunities: 'فرصت‌ها', projects: 'پروژه‌ها', successful: 'موفق', successRate: 'نرخ موفقیت',
   total: 'کل', organizations: 'سازمان‌ها', roots: 'ریشه‌ها',
+  companies: 'سازمان‌ها', relationshipsTotal: 'کل روابط',
+  averageRelationshipHealth: 'میانگین سلامت رابطه', averageRelationshipRisk: 'میانگین ریسک رابطه',
+  weightedOpportunityValue: 'ارزش موزون فرصت‌ها',
+};
+const ID_FA_PREFIX: Record<string, string> = {
+  r: 'رابطهٔ', rel: 'رابطهٔ', org: 'سازمانٔ', organization: 'سازمانٔ', p: 'شخصٔ', person: 'شخصٔ',
+  o: 'فرصتٔ', pr: 'پروژهٔ', project: 'پروژهٔ', m: 'جلسهٔ', meeting: 'جلسهٔ', i: 'تعاملٔ',
+  interaction: 'تعاملٔ', a: 'اقدامٔ', c: 'تعهدٔ', u: 'کاربرٔ', rec: 'پیشنهادٔ', e: 'پیوندٔ', ce: 'رویدادٔ',
+};
+const faId = (v: unknown): string => {
+  const raw = String(v ?? '');
+  const m = raw.match(/^([a-z]+)[-:](\d+)$/i);
+  if (!m) return raw;
+  return `${ID_FA_PREFIX[m[1].toLowerCase()] ?? (m[1].toLowerCase() + 'ٔ')} ${new Intl.NumberFormat('fa-IR').format(Number(m[2]))}`;
 };
 const SUMMARY_ICON: Record<string, React.ReactNode> = {
   organizations: <Building2 size={17} />, organizationCount: <Building2 size={17} />, peopleCount: <Users size={17} />,
@@ -209,7 +225,7 @@ export default function Reports() {
                 {(data.recommendations as Array<Record<string, unknown>>).map((r, i) => (
                   <li key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                     <Scale size={14} className="t-muted" style={{ marginTop: 2 }} />
-                    <span>{String(r.recommendation ?? '')} <span className="t-muted">· رابطه {String(r.relationshipId ?? '')}</span></span>
+                    <span>{String(r.recommendation ?? '')} <span className="t-muted">· {faId(r.relationshipId)}</span></span>
                   </li>
                 ))}
               </ul>
@@ -272,7 +288,7 @@ export default function Reports() {
       <PageHeader
         eyebrow="گزارش‌گیری"
         title="گزارش‌ها"
-        description="گزارش‌های عملیاتی و مدیریتی با رعایت محدودهٔ دسترسی شما تولید می‌شوند. خروجی فایل (CSV/XLSX/PDF/JSON) فقط پس از تأیید درخواست، صادر و در «لاگ خروجی داده» ثبت می‌شود."
+        description="گزارش‌های عملیاتی و مدیریتی با رعایت محدودهٔ دسترسی شما تولید می‌شوند. خروجی فایل (جدولی، صفحه‌ای، سند و متنی) فقط پس از تأیید درخواست، صادر و در «لاگ خروجی داده» ثبت می‌شود."
         actions={
           <div className="toolbar">
             {isOwner && <Link className="btn btn-ghost" href="/admin/exports"><CloudDownload size={15} /> لاگ خروجی داده</Link>}
@@ -343,7 +359,7 @@ export default function Reports() {
           <div className="section-head">
             <div>
               <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><FileDown size={16} /> خروجی فایل</h2>
-              <p>خروجی فقط با درخواست تأیید (EXPORT) و پس از تصمیم مالک صادر می‌شود و در لاگ خروجی داده با طبقه‌بندی INTERNAL ثبت می‌گردد. {!canJson && 'فرمت JSON ویژهٔ مدیران سازمانی است.'} در محیط دمو، قالب‌های XLSX و PDF به‌صورت CSV دانلود می‌شوند.</p>
+              <p>خروجی فقط با درخواست تأیید و پس از تصمیم مالک صادر می‌شود و در لاگ خروجی داده با طبقه‌بندی «داخلی» ثبت می‌گردد. {!canJson && 'قالب متنی ویژهٔ مدیران سازمانی است.'} در محیط دمو، قالب‌های صفحه‌ای و سند به‌صورت فایل جدولی دانلود می‌شوند.</p>
             </div>
           </div>
           <div className="toolbar" style={{ flexWrap: 'wrap' }}>

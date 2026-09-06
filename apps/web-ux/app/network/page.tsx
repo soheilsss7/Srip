@@ -27,7 +27,22 @@ import NetworkGraph, { NetworkGraphHandle } from './_graph';
 const COLUMN_LABELS: Record<string, string> = {
   TEAM: 'تیم ما', CUSTOMER: 'مشتری', BOARD_ADVISORS: 'هیئت و مشاوران', PARTNERS: 'شرکا',
 };
-const fmtNum = (v: any): string => v == null ? '—' : new Intl.NumberFormat('fa-IR').format(Number(v));
+const fmtNum = (v: any): string => { const n = Number(v); return Number.isFinite(n) ? new Intl.NumberFormat('fa-IR').format(n) : '—'; };
+// نمایش فارسی شناسه‌ها (org:org-1 → «سازمان ۱»)
+const faEntityId = (id: any): string => {
+  if (id == null) return '—';
+  const raw = String(id);
+  const digits = raw.match(/\d+/g);
+  const num = digits ? fmtNum(Number(digits[digits.length - 1] ?? 0)) : null;
+  const l = raw.toLowerCase();
+  let label = '';
+  if (l.startsWith('org:') || l.startsWith('org-')) label = 'سازمان';
+  else if (l.startsWith('project:') || l.startsWith('project-') || l.startsWith('pr-')) label = 'پروژه';
+  else if (l.startsWith('person:') || l.startsWith('person-') || l.startsWith('p-')) label = 'شخص';
+  else if (l.startsWith('e-')) label = 'پیوند';
+  else if (l.startsWith('rel') || l.startsWith('r-')) label = 'رابطه';
+  return label && num ? `${label} ${num}` : (num ? `شمارهٔ ${num}` : raw);
+};
 
 // A crash inside the graph must never blank the whole page.
 class GraphBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
@@ -114,7 +129,7 @@ function renderAnalysis(
   if (!rows.length) return <Empty>داده‌ای برای این تحلیل یافت نشد.</Empty>;
   const nodeName = (x: any) => x?.node?.name ?? x?.node?.displayName ?? x?.node?.label ?? (typeof x?.node === 'string' ? x.node : '—');
   const nodeId = (x: any) => x?.node?.id ?? null;
-  const fmt = (v: any) => { const n = Number(v); return Number.isFinite(n) ? n.toFixed(2) : '—'; };
+  const fmt = (v: any) => fmtNum(v);
   const metric = (x: any) =>
     kind === 'centrality' ? ('degree' in x ? x.degree : x.degreeScore)
       : kind === 'bridges' ? ('bridgeScore' in x ? x.bridgeScore : '—')
@@ -313,7 +328,7 @@ export default function Page() {
       });
     } catch (e: any) {
       if (seq !== seqRef.current || e?.name === 'AbortError') return;
-      setError(e?.message || 'Unable to load network');
+      setError(e?.message || 'بارگذاری شبکه ناموفق بود');
     } finally {
       if (seq === seqRef.current) {
         setLoading(false);
@@ -433,14 +448,14 @@ export default function Page() {
     if (!fromId || !toId) return;
     const { seq, signal } = beginRequest();
     setError('');
-    log(`درخواست مسیر سازمانی: ${fromId} ← ${toId}`);
+    log(`درخواست مسیر سازمانی: ${faEntityId(fromId)} ← ${faEntityId(toId)}`);
     try {
       const sq = scopeQuery();
       const result = await apiGet(`/network/path?from=${encodeURIComponent(fromId)}&to=${encodeURIComponent(toId)}&mode=${mode}&maxHops=${maxHops}${sq ? `&${sq}` : ''}`, { signal, timeoutMs: 15000 });
       if (seq === seqRef.current) setPath(result);
     } catch (e: any) {
       if (seq !== seqRef.current || e?.name === 'AbortError') return;
-      setError(e?.message || 'Unable to calculate path');
+      setError(e?.message || 'محاسبهٔ مسیر ناموفق بود');
     }
   };
   const runPath = () => { if (from && to) runPathFor(from, to); };
@@ -462,7 +477,7 @@ export default function Page() {
     const { seq, signal } = beginRequest();
     setError('');
     setAnalysisKind('connectors');
-    log('اجرای تحلیل: Connecteurs');
+    log('اجرای تحلیل: اتصال‌دهنده‌ها');
     setShowAnalysis(true);
     try {
       const sq = scopeQuery();
@@ -470,14 +485,14 @@ export default function Page() {
       if (seq === seqRef.current) setAnalysis(result);
     } catch (e: any) {
       if (seq !== seqRef.current || e?.name === 'AbortError') return;
-      setError(e?.message || 'Unable to load connectors');
+      setError(e?.message || 'بارگذاری اتصال‌دهنده‌ها ناموفق بود');
     }
   };
   const runAnalysis = async (endpoint: string) => {
     const { seq, signal } = beginRequest();
     setError('');
     setAnalysisKind(endpoint);
-    log(`اجرای تحلیل: ${endpoint}`);
+    log(`اجرای تحلیل: ${ANALYSIS_FA[endpoint] ?? 'شبکه'}`);
     setShowAnalysis(true);
     try {
       const sq = scopeQuery();
@@ -485,7 +500,7 @@ export default function Page() {
       if (seq === seqRef.current) setAnalysis(result);
     } catch (e: any) {
       if (seq !== seqRef.current || e?.name === 'AbortError') return;
-      setError(e?.message || 'Unable to load analysis');
+      setError(e?.message || 'بارگذاری تحلیل ناموفق بود');
     }
   };
   const onRendered = useCallback((counts: { nodes: number; edges: number }) => setRenderCounts(counts), []);
@@ -594,10 +609,10 @@ export default function Page() {
   const railNodeTopRel = railRelationships[0] ?? null;
 
   const derivedInsights: string[] = [];
-  if (kpi.risk > 0) derivedInsights.push(`${kpi.risk} رابطه پرریسک (risk ≥ ${RISK_THRESHOLD}) در گراف بارگذاری‌شده شناسایی شد.`);
-  if (kpi.opp > 0) derivedInsights.push(`${kpi.opp} رابطه راهبردی (امتیاز راهبردی ≥ 60) فرصت بالقوه در نظر گرفته می‌شود.`);
-  if (kpi.influencer) derivedInsights.push(`${nodeDisplayName(kpi.influencer)} با ${kpi.influencerDeg} پیوند، تأثیرگذارترین شخص در گراف بارگذاری‌شده است.`);
-  if (path?.found) derivedInsights.push(`مسیر کوتاه/بهینه سازمانی با ${path.hops} پرش یافت شد.`);
+  if (kpi.risk > 0) derivedInsights.push(`${fmtNum(kpi.risk)} رابطه پرریسک (ریسک ≥ ${fmtNum(RISK_THRESHOLD)}) در گراف بارگذاری‌شده شناسایی شد.`);
+  if (kpi.opp > 0) derivedInsights.push(`${fmtNum(kpi.opp)} رابطه راهبردی (امتیاز راهبردی ≥ ۶۰) فرصت بالقوه در نظر گرفته می‌شود.`);
+  if (kpi.influencer) derivedInsights.push(`${nodeDisplayName(kpi.influencer)} با ${fmtNum(kpi.influencerDeg)} پیوند، تأثیرگذارترین شخص در گراف بارگذاری‌شده است.`);
+  if (path?.found) derivedInsights.push(`مسیر کوتاه/بهینه سازمانی با ${fmtNum(path.hops)} پرش یافت شد.`);
   if (path && !path.found) derivedInsights.push(`مسیر سازمانی بین دو گره انتخاب‌شده یافت نشد.`);
   if (!derivedInsights.length) derivedInsights.push('هنوز الگوی قابل‌توجهی از گراف بارگذاری‌شده استخراج نشده است.');
 
@@ -621,14 +636,14 @@ export default function Page() {
             گراف تعاملی روابط استراتژیک با فیلتر، مسیر و تحلیل ریسک/تأثیرگذاری. همهٔ مقادیر از دادهٔ واقعیِ همان محدودهٔ سازمانی محاسبه می‌شوند.
           </p>
           <div className="net-stats-line">
-            <span><b>{graph?.meta?.organizationCount ?? 0}</b> سازمان</span>
-            <span><b>{graph?.meta?.peopleCount ?? 0}</b> شخص</span>
-            <span><b>{graph?.meta?.projectCount ?? 0}</b> پروژه</span>
-            <span><b>{graph?.meta?.relationshipCount ?? 0}</b> رابطه سازمانی</span>
-            <span><b>{graph?.meta?.personRelationshipCount ?? 0}</b> رابطه شخص</span>
-            <span><b>{renderCounts.nodes}</b> گره رندر شده · <b>{renderCounts.edges}</b> پیوند رندر شده</span>
-            {orphanEdges > 0 ? <span style={{ color: 'var(--srip-danger)' }}>{orphanEdges} پیوند یتیم حذف شد</span> : null}
-            {scopeId !== 'all' ? <span className="scope-badge">محدوده: {scopeId.slice(0, 8)}…</span> : null}
+            <span><b>{fmtNum(graph?.meta?.organizationCount ?? 0)}</b> سازمان</span>
+            <span><b>{fmtNum(graph?.meta?.peopleCount ?? 0)}</b> شخص</span>
+            <span><b>{fmtNum(graph?.meta?.projectCount ?? 0)}</b> پروژه</span>
+            <span><b>{fmtNum(graph?.meta?.relationshipCount ?? 0)}</b> رابطه سازمانی</span>
+            <span><b>{fmtNum(graph?.meta?.personRelationshipCount ?? 0)}</b> رابطه شخص</span>
+            <span><b>{fmtNum(renderCounts.nodes)}</b> گره رندر شده · <b>{fmtNum(renderCounts.edges)}</b> پیوند رندر شده</span>
+            {orphanEdges > 0 ? <span style={{ color: 'var(--srip-danger)' }}>{fmtNum(orphanEdges)} پیوند یتیم حذف شد</span> : null}
+            {scopeId !== 'all' ? <span className="scope-badge">محدوده: {faEntityId(scopeId)}</span> : null}
           </div>
         </div>
         <div className="net-tabs" role="tablist" aria-label="فیلتر بر اساس نوع گره">
@@ -682,7 +697,7 @@ export default function Page() {
               <div key={c.key} className="kpi-card" style={{ margin: 0 }}>
                 <small>{COLUMN_LABELS[c.key] ?? c.key}</small>
                 <strong>{fmtNum(c.nodeCount)} گره · {fmtNum(c.edgeCount)} پیوند</strong>
-                <span className="t-muted" style={{ fontSize: 11 }}>{c.key} — {c.edges?.length ? 'حاضر در گراف' : 'ستون خالی'}</span>
+                <span className="t-muted" style={{ fontSize: 11 }}>{COLUMN_LABELS[c.key] ?? 'ستون'} — {c.edges?.length ? 'حاضر در گراف' : 'ستون خالی'}</span>
               </div>
             ))}
           </div>
@@ -694,8 +709,8 @@ export default function Page() {
         <section className="panel" style={{ margin: 0, marginBottom: 14 }} aria-label="تحلیل پیشرفته شبکه">
           <div className="panel-title">
             <div>
-              <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Layers size={16} /> تحلیل پیشرفته SNA</h2>
-              <p>تراکم، خوشه‌ها، PageRank، گره‌های منفرد و شکاف‌های ارتباطی — خروجی کاملاً قطعی از پیوند‌های همین گراف</p>
+              <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Layers size={16} /> تحلیل پیشرفتهٔ شبکه</h2>
+              <p>تراکم، خوشه‌ها، رتبهٔ مرکزیت گره‌ها، گره‌های منفرد و شکاف‌های ارتباطی — خروجی کاملاً قطعی از پیوند‌های همین گراف</p>
             </div>
             <Badge tone="info">تراکم سازمانی {fmtNum(sna.kpis?.densityOrg)}٪ · {fmtNum(sna.kpis?.componentCount)} مؤلفه</Badge>
           </div>
@@ -716,7 +731,7 @@ export default function Page() {
               </span>
             ))}
             {(sna.pageRank ?? []).slice(0, 4).map((x: any) => (
-              <span key={x.node?.id} className="chip" title="مرکزیت PageRank">PR {x.node?.label}: {fmtNum(x.score)}</span>
+              <span key={x.node?.id} className="chip" title="مرکزیت PageRank">رتبهٔ مرکزیت {x.node?.label}: {fmtNum(x.score)}</span>
             ))}
           </div>
           {(sna.structuralHoles ?? []).length > 0 && (
@@ -746,7 +761,7 @@ export default function Page() {
         <section className="panel" style={{ margin: 0, marginBottom: 14 }} aria-label="پیش‌بینی شبکه">
           <div className="panel-title">
             <div>
-              <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><BrainCircuit size={16} /> پیش‌بینی شبکه (GNN سبک)</h2>
+              <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><BrainCircuit size={16} /> پیش‌بینی شبکه (مدل سبک)</h2>
               <p>پیش‌بینی پیوند بین سازمان‌های بی‌رابطه، خوشه‌های گراف و مسیر گرم به فرصت‌های باز — همه از روی داده‌های همان شبکه محاسبه شده‌اند</p>
             </div>
             <div className="toolbar">
@@ -804,31 +819,31 @@ export default function Page() {
       <section className="stats-row" aria-label="شاخص‌های کلیدی شبکه">
         <div className="stat-card">
           <div className="st-top"><span className="st-ico ic-teal"><ShieldCheck size={14}/></span><span className="st-name">سلامت شبکه</span></div>
-          <strong className="st-value">{kpi.graphHealth}%</strong>
+          <strong className="st-value">{fmtNum(kpi.graphHealth)}٪</strong>
           <AreaSpark id="sp-health" values={bucketize(renderedEdges.map((e) => (Number.isFinite(e.risk) && e.risk >= RISK_THRESHOLD ? 0 : 100)))} color="var(--teal)" />
-          <div className="st-foot"><span className="st-delta up">{kpi.health} کم‌خطر</span><span className="st-note">نسبت به {kpi.total} پیوند</span></div>
+          <div className="st-foot"><span className="st-delta up">{fmtNum(kpi.health)} کم‌خطر</span><span className="st-note">نسبت به {fmtNum(kpi.total)} پیوند</span></div>
         </div>
         <div className="stat-card">
           <div className="st-top"><span className="st-ico ic-blue"><Network size={14}/></span><span className="st-name">کل روابط</span></div>
-          <strong className="st-value">{kpi.relationshipCount}</strong>
+          <strong className="st-value">{fmtNum(kpi.relationshipCount)}</strong>
           <AreaSpark id="sp-rel" values={bucketize((graph?.nodes ?? []).map((n) => renderDegrees.get(n.id) ?? 0))} color="var(--blue)" />
-          <div className="st-foot"><span className="st-delta">{kpi.personRelationshipCount} شخص</span><span className="st-note">{renderedEdges.length} پیوند رندر</span></div>
+          <div className="st-foot"><span className="st-delta">{fmtNum(kpi.personRelationshipCount)} شخص</span><span className="st-note">{fmtNum(renderedEdges.length)} پیوند رندر</span></div>
         </div>
         <div className="stat-card">
           <div className="st-top"><span className="st-ico ic-indigo"><Lightbulb size={14}/></span><span className="st-name">فرصت‌ها</span></div>
-          <strong className="st-value">{kpi.opp}</strong>
+          <strong className="st-value">{fmtNum(kpi.opp)}</strong>
           <AreaSpark id="sp-opp" values={bucketize(renderedEdges.map((e) => (Number.isFinite(e.strategicImportance) ? e.strategicImportance : 0)))} color="var(--indigo)" />
-          <div className="st-foot"><span className="st-delta up">{kpi.total ? Math.round((kpi.opp / kpi.total) * 100) : 0}%</span><span className="st-note">اهمیت راهبردی ≥ ۶۰</span></div>
+          <div className="st-foot"><span className="st-delta up">{fmtNum(kpi.total ? Math.round((kpi.opp / kpi.total) * 100) : 0)}٪</span><span className="st-note">اهمیت راهبردی ≥ ۶۰</span></div>
         </div>
         <div className="stat-card">
           <div className="st-top"><span className="st-ico ic-red"><AlertTriangle size={14}/></span><span className="st-name">در معرض ریسک</span></div>
-          <strong className="st-value">{kpi.risk}</strong>
+          <strong className="st-value">{fmtNum(kpi.risk)}</strong>
           <AreaSpark id="sp-risk" values={bucketize(renderedEdges.map((e) => (Number.isFinite(e.risk) ? e.risk : 0)))} color="var(--red)" />
-          <div className="st-foot"><span className="st-delta down">{kpi.total ? Math.round((kpi.risk / kpi.total) * 100) : 0}%</span><span className="st-note">risk ≥ {RISK_THRESHOLD}</span></div>
+          <div className="st-foot"><span className="st-delta down">{fmtNum(kpi.total ? Math.round((kpi.risk / kpi.total) * 100) : 0)}٪</span><span className="st-note">ریسک ≥ {fmtNum(RISK_THRESHOLD)}</span></div>
         </div>
         <div className="stat-card">
           <div className="st-top"><span className="st-ico ic-gold"><Zap size={14}/></span><span className="st-name">تأثیرگذاری</span></div>
-          <strong className="st-value">{kpi.influencerDeg}</strong>
+          <strong className="st-value">{fmtNum(kpi.influencerDeg)}</strong>
           <AreaSpark id="sp-inf" values={bucketize((graph?.nodes ?? []).map((n) => renderDegrees.get(n.id) ?? 0))} color="var(--gold)" />
           <div className="st-foot"><span className="st-delta">{kpi.influencer ? nodeDisplayName(kpi.influencer) : '—'}</span><span className="st-note">پیوندها</span></div>
         </div>
@@ -850,7 +865,7 @@ export default function Page() {
             onClick={() => { setStatus(''); log('فیلتر وضعیت: همه'); }}
           >
             همه
-            <span className="status-count">{statusCounts.size ? [...statusCounts.values()].reduce((a, b) => a + b, 0) : 0}</span>
+            <span className="status-count">{fmtNum(statusCounts.size ? [...statusCounts.values()].reduce((a, b) => a + b, 0) : 0)}</span>
           </button>
           {STATUSES.map((s) => {
             const meta = statusMeta(s);
@@ -863,11 +878,11 @@ export default function Page() {
                 style={active ? { background: meta.color, borderColor: meta.color } : { color: meta.color }}
                 onClick={() => { setStatus(active ? '' : s); log(`فیلتر وضعیت: ${meta.label}`); }}
                 disabled={!cnt}
-                title={cnt ? `${meta.label} — ${cnt} رابطه` : `هیچ رابطه‌ای با وضعیت ${meta.label} نیست`}
+                title={cnt ? `${meta.label} — ${fmtNum(cnt)} رابطه` : `هیچ رابطه‌ای با وضعیت ${meta.label} نیست`}
               >
                 <span className="status-dot" style={{ background: meta.color }} />
                 {meta.label}
-                <span className="status-count">{cnt}</span>
+                <span className="status-count">{fmtNum(cnt)}</span>
               </button>
             );
           })}
@@ -912,8 +927,8 @@ export default function Page() {
             <div>
               <h2>شبکهٔ خوشه‌ای ارتباطات</h2>
               <div className="counts">
-                <b>{renderCounts.nodes}</b> گره نمایش داده شده · <b>{renderCounts.edges}</b> پیوند
-                {orphanEdges > 0 ? <span style={{ color: 'var(--srip-danger)' }}> · {orphanEdges} پیوندِ نامرتبط حذف شد</span> : null}
+                <b>{fmtNum(renderCounts.nodes)}</b> گره نمایش داده شده · <b>{fmtNum(renderCounts.edges)}</b> پیوند
+                {orphanEdges > 0 ? <span style={{ color: 'var(--srip-danger)' }}> · {fmtNum(orphanEdges)} پیوندِ نامرتبط حذف شد</span> : null}
               </div>
             </div>
             <div className="net-graph-toolbar">
@@ -957,19 +972,19 @@ export default function Page() {
             <div className={`net-path-result ${path.found ? 'found' : 'notfound'}`}>
               <div className="net-path-msg">
                 {path.found
-                  ? `مسیر سازمانی یافت شد: ${path.hops} پرش · هزینه ${path.totalCost ?? '—'} · امتیاز مسیر ${path.score ?? '—'} (${path.scoreLabel ?? '—'}) · بقیهٔ گراف کمرنگ می‌شود.`
+                  ? `مسیر سازمانی یافت شد: ${fmtNum(path.hops)} پرش · هزینه ${fmtNum(path.totalCost) ?? '—'} · امتیاز مسیر ${fmtNum(path.score) ?? '—'} (${path.scoreLabel ?? '—'}) · بقیهٔ گراف کمرنگ می‌شود.`
                   : 'مسیر سازمانی بین این دو گره یافت نشد — در دادهٔ فعلی به هم متصل نیستند (سازمان دیگری بین آن‌ها نیست).'}
               </div>
               {path.found && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
                   <span className="chip info">کپ مسیر: {path.capped ? `${path.maxHops} پرش` : 'کامل'}</span>
-                  <span className="chip">ظرفیت معرف در ۳۰ روز: {path.governance?.capacityPer30Days ?? 1}</span>
+                  <span className="chip">ظرفیت معرف در ۳۰ روز: {fmtNum(path.governance?.capacityPer30Days ?? 1)}</span>
                   <span className={path.governance?.allowed ? 'chip success' : 'chip danger'}>
                     {path.governance?.allowed ? 'حاکمیت معرف: مجاز' : 'حاکمیت معرف: مسدود'}
                   </span>
                   {Array.isArray(path.governance?.loads) && path.governance.loads.length > 0 && (
-                    <span className="chip neutral" title={path.governance.loads.map((l: any) => `${l.personId}: ${l.load}/${l.capacity}`).join(' · ')}>
-                      بار معرف‌ها: {path.governance.loads.map((l: any) => `${l.personId} ${l.load}/${l.capacity}`).join(' · ')}
+                    <span className="chip neutral" title={path.governance.loads.map((l: any) => `${faEntityId(l.personId)}: ${fmtNum(l.load)}/${fmtNum(l.capacity)}`).join(' · ')}>
+                      بار معرف‌ها: {path.governance.loads.map((l: any) => `${faEntityId(l.personId)} ${fmtNum(l.load)}/${fmtNum(l.capacity)}`).join(' · ')}
                     </span>
                   )}
                 </div>
@@ -983,7 +998,7 @@ export default function Page() {
                     </span>
                   ))}
                   <span className="pc-arrow">←</span>
-                  <b className="pc pc-hops">{path.hops} پرش</b>
+                  <b className="pc pc-hops">{fmtNum(path.hops)} پرش</b>
                 </div>
               )}
             </div>
@@ -1026,7 +1041,7 @@ export default function Page() {
                     const a = idToNode(e.source);
                     const b = idToNode(e.target);
                     const st = statusMeta(edgeStatus(e));
-                    return <>پیوندِ نشان‌شده: <b>{a ? nodeDisplayName(a) : e.source} ↔ {b ? nodeDisplayName(b) : e.target}</b> · {e.label ? fa(e.label) : kindLabel(e.kind)} · <span style={{ color: st.color }}>{st.label}</span>{e.kind === 'relationship' && Number.isFinite(e.risk) ? ` · ریسک ${e.risk}` : ''}</>;
+                    return <>پیوندِ نشان‌شده: <b>{a ? nodeDisplayName(a) : e.source} ↔ {b ? nodeDisplayName(b) : e.target}</b> · {e.label ? fa(e.label) : kindLabel(e.kind)} · <span style={{ color: st.color }}>{st.label}</span>{e.kind === 'relationship' && Number.isFinite(e.risk) ? ` · ریسک ${fmtNum(e.risk)}` : ''}</>;
                   })()
                 : 'نشانگر را روی گره ببرید (کلیک = جزئیات) یا روی خط رابطه (انتخاب خط).'}
           </div>
@@ -1058,7 +1073,7 @@ export default function Page() {
                         }}
                       />
                       {meta.label}
-                      <b className="lg-count">{cnt}</b>
+                      <b className="lg-count">{fmtNum(cnt)}</b>
                     </span>
                   );
                 })}
@@ -1076,14 +1091,14 @@ export default function Page() {
               <div className="net-detail-head">
                 <div>
                   <h3>{nodeDisplayName(selectedNode)}</h3>
-                  <div className="kind">{fa(selectedNode.type)} · {selectedNode.organizationId ? `شناسهٔ ${selectedNode.organizationId.slice(0, 8)}…` : 'سازمان آزاد'}</div>
+                  <div className="kind">{fa(selectedNode.type)} · {selectedNode.organizationId ? `شناسهٔ ${faEntityId(selectedNode.organizationId)}` : 'سازمان آزاد'}</div>
                 </div>
                 <button className="net-btn" onClick={() => setSelectedNode(null)} title="بستن">✕</button>
               </div>
               <div className="net-detail-tabs">
                 {(['overview', 'relationships', 'insights'] as const).map((t) => (
                   <button key={t} className={railTab === t ? 'active' : ''} onClick={() => setRailTab(t)}>
-                    {t === 'overview' ? 'نمای کلی' : t === 'relationships' ? `روابط (${railRelationships.length})` : 'بینش‌ها'}
+                    {t === 'overview' ? 'نمای کلی' : t === 'relationships' ? `روابط (${fmtNum(railRelationships.length)})` : 'بینش‌ها'}
                   </button>
                 ))}
               </div>
@@ -1091,8 +1106,8 @@ export default function Page() {
                 {railTab === 'overview' && (
                   <>
                     <div className="net-kv">
-                      <div className="kv"><small>شناسه</small><strong>{selectedNode.id}</strong></div>
-                      <div className="kv"><small>روابط مرتبط</small><strong>{railNodeDegree}</strong></div>
+                      <div className="kv"><small>شناسه</small><strong>{faEntityId(selectedNode.id)}</strong></div>
+                      <div className="kv"><small>روابط مرتبط</small><strong>{fmtNum(railNodeDegree)}</strong></div>
                       {selectedNode.type !== 'project' && (
                         <div className="kv kv-wide">
                           <small>ارزیابی معیارمحور</small>
@@ -1119,11 +1134,11 @@ export default function Page() {
                                 return (
                                   <span key={s} className="rail-chip" style={{ color: m.color, borderColor: `${m.color}55`, background: `${m.color}12` }}>
                                     <i style={{ background: m.color }} />
-                                    {m.label} · {c}
+                                    {m.label} · {fmtNum(c)}
                                   </span>
                                 );
                               })}
-                              {risky > 0 && <span className="rail-chip danger">⚠ {risky} پرریسک</span>}
+                              {risky > 0 && <span className="rail-chip danger">⚠ {fmtNum(risky)} پرریسک</span>}
                             </div>
                           ) : (
                             <div className="t-muted" style={{ fontSize: 12 }}>پیوند رابطه‌ای برای این گره در گراف بارگذاری‌شده نیست.</div>
@@ -1170,20 +1185,20 @@ export default function Page() {
                 {railTab === 'insights' && (
                   <>
                     <div className="net-kv">
-                      <div className="kv"><small>درجه (پیوندها)</small><strong>{railNodeDegree}</strong></div>
-                      <div className="kv"><small>روابط پرریسک</small><strong style={{ color: railNodeRisky ? 'var(--srip-danger)' : 'var(--srip-success)' }}>{railNodeRisky}</strong></div>
+                      <div className="kv"><small>درجه (پیوندها)</small><strong>{fmtNum(railNodeDegree)}</strong></div>
+                      <div className="kv"><small>روابط پرریسک</small><strong style={{ color: railNodeRisky ? 'var(--srip-danger)' : 'var(--srip-success)' }}>{fmtNum(railNodeRisky)}</strong></div>
                     </div>
                     {railNodeTopRel && (
                       <div className="insight-card">
                         <b>رابطه راهبردی برتر</b>
-                        <p>{railNodeTopRel.label ?? kindLabel(railNodeTopRel.kind)} · strategic {railNodeTopRel.strategicImportance}</p>
+                        <p>{railNodeTopRel.label ?? kindLabel(railNodeTopRel.kind)} · راهبردی {fmtNum(railNodeTopRel.strategicImportance)}</p>
                       </div>
                     )}
                     {kpi.influencer?.id === selectedNode.id && (
                       <div className="insight-card">
                         <b>گره تأثیرگذار</b>
-                        <p>تأثیرگذارترین شخص در گراف بارگذاری‌شده ({kpi.influencerDeg} پیوند).</p>
-                        <span className="derive">derived — از همان گراف بارگذاری‌شده</span>
+                        <p>تأثیرگذارترین شخص در گراف بارگذاری‌شده ({fmtNum(kpi.influencerDeg)} پیوند).</p>
+                        <span className="derive">مشتق‌شده — از همان گراف بارگذاری‌شده</span>
                       </div>
                     )}
                   </>
@@ -1228,13 +1243,13 @@ export default function Page() {
                           <div className="score-bar" key={b.label}>
                             <span>{b.label}</span>
                             <span className="bar"><i style={{ width: `${Math.max(0, Math.min(100, b.value))}%`, background: b.color }} /></span>
-                            <b>{Math.round(b.value)}</b>
+                            <b>{fmtNum(Math.round(b.value))}</b>
                           </div>
                         ))}
                       </div>
                       <div className="net-kv">
                         <div className="kv"><small>نوع</small><strong>{selectedEdge.label ?? kindLabel(selectedEdge.kind)}</strong></div>
-                        <div className="kv"><small>شناسه</small><strong dir="ltr">{selectedEdge.id}</strong></div>
+                        <div className="kv"><small>شناسه</small><strong>{faEntityId(selectedEdge.id)}</strong></div>
                       </div>
                     </>
                   );
@@ -1245,7 +1260,7 @@ export default function Page() {
                     const r = n ? nodeEntityRoute(n) : null;
                     return (
                       <div className="en" key={id}>
-                        <span>{n ? nodeDisplayName(n) : id}<small>{(n as any)?.type ?? ''}</small></span>
+                        <span>{n ? nodeDisplayName(n) : id}<small>{fa((n as any)?.type)}</small></span>
                         {r && n ? <Link href={r.href}>باز کردن</Link> : null}
                       </div>
                     );
@@ -1263,15 +1278,15 @@ export default function Page() {
               </div>
               <div className="net-detail-body">
                 <div className="net-kv">
-                  <div className="kv"><small>سلامت گراف</small><strong>{kpi.graphHealth}%</strong></div>
-                  <div className="kv"><small>پیوند‌های پرریسک</small><strong style={{ color: kpi.risk ? 'var(--srip-danger)' : 'var(--srip-success)' }}>{kpi.risk}</strong></div>
-                  <div className="kv"><small>پیوند‌های راهبردی</small><strong>{kpi.opp}</strong></div>
-                  <div className="kv"><small>روابط سازمان</small><strong>{kpi.relationshipCount}</strong></div>
+                  <div className="kv"><small>سلامت گراف</small><strong>{fmtNum(kpi.graphHealth)}٪</strong></div>
+                  <div className="kv"><small>پیوند‌های پرریسک</small><strong style={{ color: kpi.risk ? 'var(--srip-danger)' : 'var(--srip-success)' }}>{fmtNum(kpi.risk)}</strong></div>
+                  <div className="kv"><small>پیوند‌های راهبردی</small><strong>{fmtNum(kpi.opp)}</strong></div>
+                  <div className="kv"><small>روابط سازمان</small><strong>{fmtNum(kpi.relationshipCount)}</strong></div>
                 </div>
                 <div className="insight-card">
                   <b>خلاصه هوشمند</b>
                   {derivedInsights.slice(0, 3).map((d, i) => <p key={i}>{d}</p>)}
-                  <span className="derive">derived — از گراف بارگذاری‌شده با Authorization واقعی</span>
+                  <span className="derive">مشتق‌شده — از گراف بارگذاری‌شده با مجوز واقعی</span>
                 </div>
                 <div className="net-empty">یک گره یا پیوند را در گراف انتخاب کنید تا جزئیات، روابط و بینش‌های آن را ببینید.</div>
               </div>
@@ -1315,8 +1330,8 @@ export default function Page() {
         <aside className="content-side net-priorities">
       {/* Side rail */}
         <div className="list-card">
-          <div className="lc-head"><span className="lc-ico ic-red"><Target size={14}/></span><h3>امروز در اولویت</h3><span className="lc-badge">{riskPriorities.length}</span></div>
-          <p className="panel-note">پرریسک‌ترین روابط در گراف بارگذاری‌شده (طبقه‌بندی بر اساس riskScore).</p>
+          <div className="lc-head"><span className="lc-ico ic-red"><Target size={14}/></span><h3>امروز در اولویت</h3><span className="lc-badge">{fmtNum(riskPriorities.length)}</span></div>
+          <p className="panel-note">پرریسک‌ترین روابط در گراف بارگذاری‌شده (طبقه‌بندی بر اساس امتیاز ریسک).</p>
           {riskPriorities.length ? (
             <div className="item-list">
               {riskPriorities.map((e) => {
@@ -1327,7 +1342,7 @@ export default function Page() {
                       <b>{a ? nodeDisplayName(a) : e.source} ↔ {b ? nodeDisplayName(b) : e.target}</b>
                       <small style={{ display: 'block' }}>{kindLabel(e.kind)}{e.label ? ` · ${e.label}` : ''}</small>
                     </span>
-                    <span className="meta">ریسک {e.risk}</span>
+                    <span className="meta">ریسک {fmtNum(e.risk)}</span>
                   </button>
                 );
               })}
@@ -1371,7 +1386,7 @@ export default function Page() {
           </div>
         </div>
         <div className="list-card">
-          <div className="lc-head"><span className="lc-ico ic-blue"><Clock size={14}/></span><h3>فعالیت‌های این نشست</h3><span className="lc-badge">{activities.length}</span></div>
+          <div className="lc-head"><span className="lc-ico ic-blue"><Clock size={14}/></span><h3>فعالیت‌های این نشست</h3><span className="lc-badge">{fmtNum(activities.length)}</span></div>
           <p className="panel-note">رویدادهای واقعی تعامل شما با این صفحه در جلسه فعلی.</p>
           {activities.length ? (
             <div style={{ display: 'grid', gap: 4 }}>
@@ -1400,7 +1415,7 @@ export default function Page() {
                   <Network size={16} />
                   <div>
                     <b>شبکهٔ خوشه‌ای ارتباطات</b>
-                    <span className="counts">{renderCounts.nodes} گره · {renderCounts.edges} پیوند</span>
+                    <span className="counts">{fmtNum(renderCounts.nodes)} گره · {fmtNum(renderCounts.edges)} پیوند</span>
                   </div>
                 </div>
                 <div className="net-graph-toolbar">

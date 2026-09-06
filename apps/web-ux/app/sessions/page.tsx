@@ -41,8 +41,8 @@ function deviceInfo(s: Session): { label: string; icon: React.ReactNode; color: 
   const isApp = /SRIP-App|App\//i.test(ua);
   const isTablet = /iPad|Tablet/i.test(ua);
   const isMobile = isTablet || /Android|iPhone|Mobile/i.test(ua) && !/Windows|Macintosh/i.test(ua);
-  const os = /Windows/i.test(ua) ? 'Windows' : /Macintosh|Mac OS/i.test(ua) ? 'macOS' : /Android/i.test(ua) ? 'Android' : /iPhone|iOS/i.test(ua) ? 'iOS' : /Linux/i.test(ua) ? 'Linux' : '';
-  const browser = /Edg\//i.test(ua) ? 'Edge' : /Firefox\//i.test(ua) ? 'Firefox' : /Chrome\//i.test(ua) ? 'Chrome' : /Safari\//i.test(ua) ? 'Safari' : isApp ? 'اپلیکیشن' : '';
+  const os = /Windows/i.test(ua) ? 'ویندوز' : /Macintosh|Mac OS/i.test(ua) ? 'مک‌اواس' : /Android/i.test(ua) ? 'اندروید' : /iPhone|iOS/i.test(ua) ? 'ای‌اواس' : /Linux/i.test(ua) ? 'لینوکس' : '';
+  const browser = /Edg\//i.test(ua) ? 'اج' : /Firefox\//i.test(ua) ? 'فایرفاکس' : /Chrome\//i.test(ua) ? 'کروم' : /Safari\//i.test(ua) ? 'سافاری' : isApp ? 'اپلیکیشن' : '';
   const label = [browser || (isApp ? 'اپلیکیشن SRIP' : 'مرورگر'), os].filter(Boolean).join(' — ') || 'دستگاه';
   const icon = isApp ? <Smartphone size={15} /> : isTablet ? <Tablet size={15} /> : /Android|iPhone|Mobile/i.test(ua) && !/Windows|Macintosh/i.test(ua) ? <Smartphone size={15} /> : <Monitor size={15} />;
   return { label, icon, color: '#2563eb' };
@@ -174,7 +174,7 @@ export default function SessionsPage() {
                           {' · '}آخرین فعالیت: {fmtDT(lastActive)}
                         </span>
                         {s.userAgent && (
-                          <span className="t-muted" dir="ltr" style={{ display: 'block', fontSize: 9.5, textAlign: 'left', marginTop: 1, wordBreak: 'break-all', opacity: .75 }}>{s.userAgent}</span>
+                          <span className="t-muted" dir="ltr" title={s.userAgent} style={{ display: 'block', fontSize: 9.5, textAlign: 'left', marginTop: 1, wordBreak: 'break-all', opacity: .75 }}>شناسهٔ فنی دستگاه — با نگه‌داشتن نشانگر، متن کامل را ببینید</span>
                         )}
                         <span className="t-muted" style={{ display: 'block', fontSize: 9.5, marginTop: 2 }}>
                           ساخته‌شده: {fmtDT(s.createdAt)} · انقضای مطلق: {fmtDT(s.absoluteExpiresAt ?? s.expiresAt)}

@@ -149,7 +149,7 @@ export default function Settings() {
       <PageHeader
         eyebrow="حساب کاربری"
         title="تنظیمات کاربر"
-        description="پروفایل، عضویت‌های سازمانی و نقش‌ها، امنیت حساب (احراز دومرحله‌ای)، مجوزهای شما و ترجیحات رابط کاربری — دادهٔ پروفایل از سرور (GET /auth/me) است."
+        description="پروفایل، عضویت‌های سازمانی و نقش‌ها، امنیت حساب (احراز دومرحله‌ای)، مجوزهای شما و ترجیحات رابط کاربری — دادهٔ پروفایل از سرور خوانده می‌شود."
         actions={
           <button className="btn btn-secondary" onClick={() => load(true)} disabled={refreshing}>
             <RefreshCw size={15} className={refreshing ? 'spin' : ''} /> بازخوانی
@@ -229,7 +229,7 @@ export default function Settings() {
             {/* ------------------- MFA card ------------------- */}
             <section className="panel" style={{ margin: 0 }}>
               <div className="panel-title">
-                <div><h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Fingerprint size={16} /> امنیت حساب — تأیید دومرحله‌ای</h2><p>پارتی MfaService واقعی: دستگاه‌های تأییدشده، کدهای بازیابی یک‌بارمصرف.</p></div>
+                <div><h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Fingerprint size={16} /> امنیت حساب — تأیید دومرحله‌ای</h2><p>هم‌ارزی با سرویس تأیید دومرحله‌ای واقعی: دستگاه‌های تأییدشده، کدهای بازیابی یک‌بارمصرف.</p></div>
               </div>
               {mfaRequired === null ? <Loading label="بررسی وضعیت MFA…" /> : mfaRequired ? (
                 <>
@@ -288,7 +288,7 @@ export default function Settings() {
             {/* ------------------- UI preferences ------------------- */}
             <section className="panel" style={{ margin: 0 }}>
               <div className="panel-title">
-                <div><h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Monitor size={16} /> ترجیحات رابط کاربری</h2><p>این تنظیمات روی همین مرورگر (localStorage) نگهداری می‌شود و به حساب شما در سرور منتقل نمی‌گردد.</p></div>
+                <div><h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Monitor size={16} /> ترجیحات رابط کاربری</h2><p>این تنظیمات روی همین مرورگر (حافظهٔ محلی) نگهداری می‌شود و به حساب شما در سرور منتقل نمی‌گردد.</p></div>
               </div>
               <div className="entity-form" style={{ gap: 10 }}>
                 <ThemeControl />

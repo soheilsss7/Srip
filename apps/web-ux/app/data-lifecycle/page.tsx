@@ -141,10 +141,10 @@ export default function DataLifecycle() {
       {!d && !error ? <Loading label="در حال بارگذاری چرخهٔ حیات…" /> : (
         <>
           <div className="stat-grid">
-            <StatCard icon={<ScrollText size={18} />} label="کل سوابق گذار" value={fmtNum(d?.totalLifecycleRecords ?? 0)} iconClass="ic-blue" sub="رکوردهای ثبت‌شدهٔ DataLifecycle" />
+            <StatCard icon={<ScrollText size={18} />} label="کل سوابق گذار" value={fmtNum(d?.totalLifecycleRecords ?? 0)} iconClass="ic-blue" sub="رکوردهای ثبت‌شدهٔ چرخهٔ حیات داده" />
             <StatCard icon={<DatabaseBackup size={18} />} label="انواع نهاد تحت مدیریت" value={fmtNum(d?.entities?.length ?? 0)} iconClass="ic-purple" sub={`${fmtNum(new Set(recent.map(r => r.entityType)).size)} نهاد دارای سابقه`} />
-            <StatCard icon={<Trash2 size={18} />} label="حذف/پاک‌سازی‌ها" value={fmtNum(purged)} iconClass="ic-red" sub="DELETION · DELETED · PURGED" />
-            <StatCard icon={<Hourglass size={18} />} label="حذف دائمی در انتظار" value={fmtNum(pending)} iconClass="ic-gold" sub="ApprovalRequest از نوع DELETE" />
+            <StatCard icon={<Trash2 size={18} />} label="حذف/پاک‌سازی‌ها" value={fmtNum(purged)} iconClass="ic-red" sub="در صف حذف · حذف‌شده · پاک‌سازی نهایی" />
+            <StatCard icon={<Hourglass size={18} />} label="حذف دائمی در انتظار" value={fmtNum(pending)} iconClass="ic-gold" sub="درخواست تأیید از نوع حذف" />
           </div>
 
           <div className="grid2">
@@ -244,7 +244,7 @@ export default function DataLifecycle() {
               <div className="panel-title">
                 <div>
                   <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Hourglass size={16} /> حذف دائمی و تأییدیه‌ها</h2>
-                  <p>درخواست‌های «حذف دائمی» از جریان ApprovalRequest (عمل DELETE) عبور می‌کنند.</p>
+                  <p>درخواست‌های «حذف دائمی» از جریان درخواست‌های تأیید (عمل حذف) عبور می‌کنند.</p>
                 </div>
               </div>
               {pending > 0 ? (

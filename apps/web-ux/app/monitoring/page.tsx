@@ -55,8 +55,8 @@ export default function Monitoring() {
 
   const hubs = [
     { href: '/health', icon: <HeartPulse size={20} />, title: 'سلامت و آمادگی', desc: 'وضعیت وابستگی‌ها: پایگاه داده، ردیس، صف کارها و فضای ذخیره‌سازی', tone: healthOk ? 'success' : 'danger', tag: healthOk ? 'سالم' : 'تضعیف‌شده' },
-    { href: '/metrics', icon: <Gauge size={20} />, title: 'سنجه‌ها', desc: 'شمارنده‌ها، هیستوگرام تأخیر API/پایگاه داده، پردازش و مصرف هوش مصنوعی', tone: 'info' as const, tag: `${fmt.format(s?.requests ?? 0)} درخواست` },
-    { href: '/observability', icon: <ScrollText size={20} />, title: 'مشاهده‌پذیری', desc: 'صف‌های BullMQ، رخدادهای سرویس و نمای زمان اجرا', tone: qFailed > 0 ? 'warning' as const : 'success', tag: qFailed > 0 ? `${fmt.format(qFailed)} ناموفق` : 'صف‌ها پایدار' },
+    { href: '/metrics', icon: <Gauge size={20} />, title: 'سنجه‌ها', desc: 'شمارنده‌ها، هیستوگرام تأخیر رابط/پایگاه داده، پردازش و مصرف هوش مصنوعی', tone: 'info' as const, tag: `${fmt.format(s?.requests ?? 0)} درخواست` },
+    { href: '/observability', icon: <ScrollText size={20} />, title: 'مشاهده‌پذیری', desc: 'صف‌های کار، رخدادهای سرویس و نمای زمان اجرا', tone: qFailed > 0 ? 'warning' as const : 'success', tag: qFailed > 0 ? `${fmt.format(qFailed)} ناموفق` : 'صف‌ها پایدار' },
     { href: '/security-events', icon: <ShieldAlert size={20} />, title: 'رویدادهای امنیتی', desc: 'رخدادهای امنیتی و دسترسی‌های پرخطر از ممیزی امنیت', tone: 'neutral' as const, tag: 'امنیت' },
   ];
 
@@ -65,7 +65,7 @@ export default function Monitoring() {
       <PageHeader
         eyebrow="پایش یکپارچه"
         title="مرکز پایش"
-        description="نمای واحد از سلامت، سنجه‌ها و مشاهده‌پذیری پلتفرم — با لینک به چهار نمای تخصصی (نیازمند مجوز metrics.read و health.read)."
+        description="نمای واحد از سلامت، سنجه‌ها و مشاهده‌پذیری پلتفرم — با لینک به چهار نمای تخصصی (نیازمند مجوز خواندن سنجه‌ها و وضعیت‌سنجی)."
         actions={<button className="btn btn-secondary" onClick={() => load(true)} disabled={refreshing}><RefreshCw size={15} className={refreshing ? 'spin' : ''} /> بازخوانی</button>}
       />
       <HubTabs base tabs={[
@@ -84,21 +84,21 @@ export default function Monitoring() {
           </div>
 
           <div className="stat-grid">
-            <StatCard icon={<HeartPulse size={18} />} label="وضعیت سلامت" value={<Badge tone={healthOk ? 'success' : 'danger'}>{healthOk ? 'سالم' : 'تضعیف‌شده'}</Badge>} sub={`${fmt.format(depKeys.length)} وابستگی: ${deps.database?.status ?? '—'} پایگاه داده · ${deps.redis?.status ?? '—'} ردیس`} iconClass="ic-green" />
-            <StatCard icon={<Gauge size={18} />} label="میانگین تأخیر" value={<>{fmt1.format(s?.averageLatencyMs ?? 0)} <small style={{ fontSize: 12 }}>ms</small></>} sub={`p95 نمونه‌ها در صفحهٔ سنجه‌ها`} iconClass="ic-blue" />
-            <StatCard icon={<Boxes size={18} />} label="کارهای در انتظار" value={fmt.format(qWaiting)} sub="در همهٔ صف‌های BullMQ" iconClass={qWaiting > 40 ? 'ic-red' : 'ic-gold'} />
-            <StatCard icon={<TriangleAlert size={18} />} label="کارهای ناموفق صف" value={fmt.format(qFailed)} sub="نیازمند بررسی DLQ" iconClass={qFailed > 0 ? 'ic-red' : 'ic-green'} />
+            <StatCard icon={<HeartPulse size={18} />} label="وضعیت سلامت" value={<Badge tone={healthOk ? 'success' : 'danger'}>{healthOk ? 'سالم' : 'تضعیف‌شده'}</Badge>} sub={`${fmt.format(depKeys.length)} وابستگی: ${deps.database?.status === 'ok' ? 'سالم' : deps.database?.status ?? '—'} پایگاه داده · ${deps.redis?.status === 'ok' ? 'سالم' : deps.redis?.status ?? '—'} ردیس`} iconClass="ic-green" />
+            <StatCard icon={<Gauge size={18} />} label="میانگین تأخیر" value={<>{fmt1.format(s?.averageLatencyMs ?? 0)} <small style={{ fontSize: 12 }}>میلی‌ثانیه</small></>} sub={"صدک ۹۵ نمونه‌ها در صفحهٔ سنجه‌ها"} iconClass="ic-blue" />
+            <StatCard icon={<Boxes size={18} />} label="کارهای در انتظار" value={fmt.format(qWaiting)} sub="در همهٔ صف‌های کار" iconClass={qWaiting > 40 ? 'ic-red' : 'ic-gold'} />
+            <StatCard icon={<TriangleAlert size={18} />} label="کارهای ناموفق صف" value={fmt.format(qFailed)} sub="نیازمند بررسی صف ناموفق" iconClass={qFailed > 0 ? 'ic-red' : 'ic-green'} />
             <StatCard icon={<Users size={18} />} label="کاربران فعال" value={fmt.format(s?.activeUsers ?? 0)} sub="۳۰ روز اخیر" iconClass="ic-green" />
-            <StatCard icon={<ServerCog size={18} />} label="پردازنده / حافظه" value={<><small style={{ fontSize: 11 }}>CPU</small> {fmt1.format(s?.process?.cpuPercent ?? 0)}٪</>} sub={`RSS ${fmt1.format((s?.process?.rssBytes ?? 0) / 1024 ** 3)} گیگابایت`} iconClass="ic-purple" />
-            <StatCard icon={<BarChart3 size={18} />} label="خطاهای 5xx" value={fmt.format(errs)} sub={`${fmt1.format(errRate)}٪ از کل`} iconClass={errRate > 2 ? 'ic-red' : errRate > 0.8 ? 'ic-gold' : 'ic-green'} />
-            <StatCard icon={<Database size={18} />} label="مسیرهای API رصدشده" value={fmt.format(Object.keys(s?.apiLatency ?? {}).length)} sub={`${fmt.format(Object.keys(s?.dbLatency ?? {}).length)} عملیات پایگاه داده`} iconClass="ic-blue" />
+            <StatCard icon={<ServerCog size={18} />} label="پردازنده / حافظه" value={<><small style={{ fontSize: 11 }}>پردازنده</small> {fmt1.format(s?.process?.cpuPercent ?? 0)}٪</>} sub={`حافظهٔ ساکن ${fmt1.format((s?.process?.rssBytes ?? 0) / 1024 ** 3)} گیگابایت`} iconClass="ic-purple" />
+            <StatCard icon={<BarChart3 size={18} />} label="خطاهای سمت سرور" value={fmt.format(errs)} sub={`${fmt1.format(errRate)}٪ از کل`} iconClass={errRate > 2 ? 'ic-red' : errRate > 0.8 ? 'ic-gold' : 'ic-green'} />
+            <StatCard icon={<Database size={18} />} label="مسیرهای رابط رصدشده" value={fmt.format(Object.keys(s?.apiLatency ?? {}).length)} sub={`${fmt.format(Object.keys(s?.dbLatency ?? {}).length)} عملیات پایگاه داده`} iconClass="ic-blue" />
           </div>
 
           <section className="panel">
             <div className="panel-title">
               <div>
                 <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Layers size={16} /> نماهای پایش تخصصی</h2>
-                <p>هر نمای تخصصی به یک نقطهٔ پایانی یکسان از بک‌اند وصل است — مسیرهای صفحه از BUILD-ROADMAP گام C پیروی می‌کنند.</p>
+                <p>هر نمای تخصصی به یک نقطهٔ پایانی یکسان از بک‌اند وصل است.</p>
               </div>
             </div>
             <div className="grid2" style={{ gap: 10 }}>
@@ -119,18 +119,18 @@ export default function Monitoring() {
             <div className="panel-title">
               <div>
                 <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Timer size={16} /> خلاصهٔ وابستگی‌های سلامت</h2>
-                <p>نتیجهٔ آخرین بررسی GET /health از بک‌اند.</p>
+                <p>نتیجهٔ آخرین بررسی وضعیت‌سنجی از بک‌اند.</p>
               </div>
               <Badge tone={healthOk ? 'success' : 'danger'}>{healthOk ? 'همه متصل' : `${fmt.format(depKeys.length - depOkCount)} وابستگی خطادار`}</Badge>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {depKeys.length === 0 && <p className="t-muted" style={{ fontSize: 11 }}>پاسخی از /health دریافت نشد (احتمالاً مجوز یا در دسترس نبودن).</p>}
+              {depKeys.length === 0 && <p className="t-muted" style={{ fontSize: 11 }}>پاسخی از وضعیت‌سنجی دریافت نشد (احتمالاً مجوز یا در دسترس نبودن).</p>}
               {depKeys.map(k => {
                 const v = deps[k];
                 return (
                   <span key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, border: '1px solid var(--border,#e2e8f0)', borderRadius: 12, padding: '7px 12px' }}>
                     <span style={{ width: 8, height: 8, borderRadius: 99, background: v?.status === 'ok' ? '#16a34a' : '#dc2626' }} />
-                    <b style={{ fontSize: 11 }}>{k}</b>
+                    <b style={{ fontSize: 11 }}>{k === 'database' ? 'پایگاه داده' : k === 'redis' ? 'ردیس' : k === 'queue' ? 'صف کار' : k === 'storage' ? 'فضای ذخیره‌سازی' : k}</b>
                     {v?.configured === false && <small className="t-muted">اختیاری</small>}
                     {v?.error && <small style={{ color: 'var(--red,#dc2626)' }}>{v.error}</small>}
                   </span>

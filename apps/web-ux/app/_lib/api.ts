@@ -138,4 +138,4 @@ export function unwrapList<T=unknown>(value:any):T[]{ if(Array.isArray(value))re
 export function docsOrigin(){return API.replace(/\/api\/v1\/?$/,'');}
 /** base path-aware app root ('' in dev, '/Srip' on GitHub Pages) */
 export function appBase(){return docsOrigin();}
-export async function apiDocsJson(){const r=await fetch(`${docsOrigin()}/docs-json`,{cache:'no-store'});if(!r.ok)throw new ApiError(`GET /docs-json → ${r.status}`,r.status);return r.json();}
+export async function apiDocsJson(){const r=await fetch(`${docsOrigin()}/docs-json`,{cache:'no-store'});if(!r.ok)throw new ApiError(`دریافت قرارداد رابط ناموفق بود (بازگشت ${r.status})`,r.status);return r.json();}

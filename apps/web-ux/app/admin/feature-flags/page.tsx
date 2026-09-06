@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../../_lib/api';
+import { fa } from '../../_lib/fa';
 import { useWorkspace } from '../../_components/workspace';
 import {
   Badge, ErrorCard, Modal, PageHeader, StatCard, Toolbar,
@@ -23,7 +24,7 @@ type FlagItem = {
 
 const fmtNum = (v: number): string => new Intl.NumberFormat('fa-IR').format(v);
 const unwrap = (x: any): any[] => (Array.isArray(x) ? x : x?.items ?? x?.rows ?? x?.data ?? x?.flags ?? []);
-const flagName = (key: string): string => key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+const flagName = (key: string): string => fa(key.replace(/_/g, ' '));
 
 export default function AdminFeatureFlagsPage() {
   const { me } = useWorkspace();
@@ -87,7 +88,7 @@ export default function AdminFeatureFlagsPage() {
   async function save(e: React.FormEvent) {
     e.preventDefault(); setSaving(true); setFormError('');
     const rollout = Number(form.rollout);
-    if (!Number.isFinite(rollout) || rollout < 0 || rollout > 100) { setFormError('درصد rollout باید بین ۰ تا ۱۰۰ باشد.'); setSaving(false); return; }
+    if (!Number.isFinite(rollout) || rollout < 0 || rollout > 100) { setFormError('درصد انتشار باید بین ۰ تا ۱۰۰ باشد.'); setSaving(false); return; }
     try {
       const saved = await api<FlagItem>('/enterprise/feature-flags', {
         method: 'POST',
@@ -137,7 +138,7 @@ export default function AdminFeatureFlagsPage() {
       <PageHeader
         eyebrow="مدیریت / پرچم‌های ویژگی"
         title="پرچم‌های ویژگی"
-        description="فعال‌سازی تدریجی قابلیت‌ها با درصد rollout — تغییرها فوری در سامانه اعمال و در لاگ ممیزی ثبت می‌شود."
+        description="فعال‌سازی تدریجی قابلیت‌ها با درصد انتشار — تغییرها فوری در سامانه اعمال و در لاگ ممیزی ثبت می‌شود."
         actions={
           <>
             <button className="btn btn-secondary" onClick={load} disabled={loading}><RefreshCw size={15} /> بازخوانی</button>
@@ -159,8 +160,8 @@ export default function AdminFeatureFlagsPage() {
             <StatCard icon={<Flag size={18} />} label="کل پرچم‌ها" value={fmtNum(stats.total)} iconClass="ic-indigo" sub="قابلیت‌های مدیریت‌شده" />
             <StatCard icon={<Rocket size={18} />} label="فعال" value={fmtNum(stats.on)} iconClass="ic-teal" sub="برای کاربران روشن" />
             <StatCard icon={<PauseCircle size={18} />} label="غیرفعال" value={fmtNum(stats.off)} iconClass="ic-gold" sub="معلق" />
-            <StatCard icon={<Gauge size={18} />} label="گسترش کامل" value={fmtNum(stats.full)} iconClass="ic-red" sub="rollout ۱۰۰٪" />
-            <StatCard icon={<Percent size={18} />} label="گسترش تدریجی" value={fmtNum(stats.partial)} iconClass="ic-teal" sub="rollout کمتر از ۱۰۰٪" />
+            <StatCard icon={<Gauge size={18} />} label="گسترش کامل" value={fmtNum(stats.full)} iconClass="ic-red" sub="انتشار کامل (۱۰۰٪)" />
+            <StatCard icon={<Percent size={18} />} label="گسترش تدریجی" value={fmtNum(stats.partial)} iconClass="ic-teal" sub="انتشار تدریجی (کمتر از ۱۰۰٪)" />
           </div>
 
           <Toolbar search={q} onSearch={setQ} searchPlaceholder="جستجوی کلید یا توضیح پرچم…">

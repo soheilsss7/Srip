@@ -9,7 +9,8 @@ import { JalaliDateField } from '../../_components/jalali-date-field';
 export default function Page({params}:{params:Promise<{id:string}>}){
  const {id}=use(params);
  const [r,setR]=useState<any>(null),[explanation,setExplanation]=useState<any>(null),[error,setError]=useState(''),[busy,setBusy]=useState('');
- const [title,setTitle]=useState(''),[rationale,setRationale]=useState(''),[confidence,setConfidence]=useState('');
+ const EV_FA: Record<string,string> = { nextActionAt:'اقدام بعدی', daysSinceLastInteraction:'روزهای بی‌تعاملی', riskScore:'امتیاز ریسک', healthScore:'امتیاز سلامت', resilienceScore:'امتیاز تاب‌آوری', strategicScore:'امتیاز راهبردی', opportunityScore:'امتیاز فرصت', influenceScore:'امتیاز نفوذ' };
+const [title,setTitle]=useState(''),[rationale,setRationale]=useState(''),[confidence,setConfidence]=useState('');
  const [assigneeId,setAssigneeId]=useState(''),[snoozeDatetime,setSnoozeDatetime]=useState(''),[form,setForm]=useState<'snooze'|'assign'|'edit'|null>(null);
 
  const load=useCallback(async()=>{setError('');try{const v:any=await api(`/recommendations/${id}`);setR(v);setTitle(v.title??'');setRationale(v.rationale??'');setConfidence(v.confidence!=null?String(v.confidence):'')}catch(e){setError((e as Error).message)}},[id]);
@@ -20,14 +21,14 @@ export default function Page({params}:{params:Promise<{id:string}>}){
  async function showExplain(){setExplanation(null);setError('');try{setExplanation(await api(`/recommendations/${id}/explain`))}catch(e){setError((e as Error).message)}}
 
  return <main className="feature-page">
-  <PageHeader eyebrow="پیشنهاد" title={r?.title??'پیشنهاد'} description={`شناسه: ${id}`} actions={<div className="toolbar"><Link className="secondary-action" href="/recommendations">بازگشت</Link><button className="secondary-action" onClick={load} disabled={!!busy}>بازخوانی</button></div>}/>
+  <PageHeader eyebrow="پیشنهاد" title={r?.title??'پیشنهاد'} description={`شناسهٔ پیشنهاد ${id.replace(/^rec-/, '')}`} actions={<div className="toolbar"><Link className="secondary-action" href="/recommendations">بازگشت</Link><button className="secondary-action" onClick={load} disabled={!!busy}>بازخوانی</button></div>}/>
   <ErrorCard message={error}/>
   {!r&&!error?<Loading/>:r&&<>
    <section className="panel">
-    <div className="panel-title"><div><h2>{r.type??'پیشنهاد'}</h2><p>{r.rationale??''}</p></div><Badge tone={r.status==='APPROVED'?'success':r.status==='REJECTED'?'danger':'info'}>{fa(r.status)??'پیشنهادی'}</Badge></div>
+    <div className="panel-title"><div><h2>{fa(r.type) ?? 'پیشنهاد'}</h2><p>{r.rationale??''}</p></div><Badge tone={r.status==='APPROVED'?'success':r.status==='REJECTED'?'danger':'info'}>{fa(r.status)??'پیشنهادی'}</Badge></div>
     <div className="metric-list"><div><span>اطمینان</span><strong>{r.confidence??'—'}%</strong></div><div><span>دارای شواهد</span><strong>{r.evidence?'بله':'خیر'}</strong></div></div>
-    <div className="detail-grid">{[['رابطه',fa(r.relationship?.relationshipType)],['سازمان مبدأ',r.relationship?.sourceOrganization?.name],['سازمان مقصد',r.relationship?.targetOrganization?.name],['واگذار به',r.assignedToId],['تصمیم‌گیرنده',r.decisionById],['زمان تصمیم',r.decisionAt?new Date(r.decisionAt).toLocaleString():''],['تعویق تا',r.snoozedUntil?new Date(r.snoozedUntil).toLocaleString():'']].filter(([,v])=>v!=null&&v!=='').map(([k,v])=><div className="detail-item" key={String(k)}><small>{String(k)}</small><strong>{String(v)}</strong></div>)}</div>
-    {r.evidence!=null&&typeof r.evidence==='object'&&Object.keys(r.evidence).length>0&&<div className="detail-grid">{Object.entries(r.evidence).map(([ek,ev])=><div className="detail-item" key={ek}><small>{ek}</small><strong>{typeof ev==='object'?JSON.stringify(ev).slice(0,400):String(ev)}</strong></div>)}</div>}
+    <div className="detail-grid">{[['رابطه',fa(r.relationship?.relationshipType)],['سازمان مبدأ',r.relationship?.sourceOrganization?.name],['سازمان مقصد',r.relationship?.targetOrganization?.name],['واگذار به',r.assignedToId],['تصمیم‌گیرنده',r.decisionById],['زمان تصمیم',r.decisionAt?new Date(r.decisionAt).toLocaleString('fa-IR'):''],['تعویق تا',r.snoozedUntil?new Date(r.snoozedUntil).toLocaleString('fa-IR'):'']].filter(([,v])=>v!=null&&v!=='').map(([k,v])=><div className="detail-item" key={String(k)}><small>{String(k)}</small><strong>{String(v)}</strong></div>)}</div>
+    {r.evidence!=null&&typeof r.evidence==='object'&&Object.keys(r.evidence).length>0&&<div className="detail-grid">{Object.entries(r.evidence).map(([ek,ev])=><div className="detail-item" key={ek}><small>{EV_FA[ek] ?? ek}</small><strong>{typeof ev==='object'?Object.entries(ev as Record<string, any>).map(([a,b])=>`${EV_FA[a] ?? a}: ${/\d{4}-\d{2}-\d{2}T/.test(String(b))?new Date(String(b)).toLocaleString('fa-IR'):String(b)}`).join(' · ') || String(ev): /\d{4}-\d{2}-\d{2}T/.test(String(ev)) ? new Date(String(ev)).toLocaleString('fa-IR') : String(ev)}</strong></div>)}</div>}
    </section>
 
    <section className="panel"><div className="panel-title"><h2>تصمیم</h2></div>

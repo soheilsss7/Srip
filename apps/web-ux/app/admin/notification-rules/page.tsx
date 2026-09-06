@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../../_lib/api';
+import { KEY_FA } from '../../_lib/fa';
 import { useWorkspace } from '../../_components/workspace';
 import {
   Badge, ErrorCard, Modal, PageHeader, StatCard, Toolbar,
@@ -66,6 +67,7 @@ function eventFaLabels(key: string): { groupFa: string; actFa: string } {
   return { groupFa: domainFa, actFa };
 }
 
+const tplFa = (s: string): string => s.replace(/\{(\w+)\}/g, (_m, k: string) => `{${KEY_FA[k] ?? k}}`);
 export default function AdminNotificationRulesPage() {
   const { me } = useWorkspace();
   const isOwner = !!me?.permissions?.includes('*');
@@ -306,7 +308,7 @@ export default function AdminNotificationRulesPage() {
                         </td>
                         <td style={{ maxWidth: 260 }}>
                           {typeof t.title === 'string' && t.title && <div style={{ fontWeight: 700, fontSize: 12 }}>{t.title}</div>}
-                          <div className="t-muted" style={{ fontSize: 11.5 }}>{(typeof t.body === 'string' ? t.body : '').length > 90 ? String(t.body).slice(0, 90) + '…' : (typeof t.body === 'string' ? t.body : '—')}</div>
+                          <div className="t-muted" style={{ fontSize: 11.5 }}>{(typeof t.body === 'string' ? t.body : '').length > 90 ? tplFa(String(t.body)).slice(0, 90) + '…' : (typeof t.body === 'string' ? tplFa(t.body) : '—')}</div>
                         </td>
                         <td>
                           {r.conditions ? (

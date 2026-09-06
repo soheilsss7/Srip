@@ -78,7 +78,7 @@ export default function DataExchangePage() {
 
   const onFile = async (file: File) => {
     setError(''); setResult(null); setPreview([]); setImportErrors([]);
-    if (!/\.csv$/i.test(file.name)) { setError('فقط فایل CSV (سازگار با Excel) پشتیبانی می‌شود.'); return; }
+    if (!/\.csv$/i.test(file.name)) { setError('فقط فایل جدولی (سازگار با اکسل) پشتیبانی می‌شود.'); return; }
     setFileName(file.name);
     const text = await file.text();
     const rows = parseCsv(text);
@@ -138,7 +138,7 @@ export default function DataExchangePage() {
         <div>
           <div className="eyebrow">فضای کاری SRIP · تبادل داده</div>
           <h1><FileSpreadsheet size={20} style={{ verticalAlign: '-4px' }}/> تبادل داده</h1>
-          <p className="subtitle">خروجی فهرست‌ها به فایل Excel-compatible (CSV با پشتیبانی فارسی) و ورود گروهی اشخاص با پیش‌نمایش و اعتبارسنجی — همیشه در محدودهٔ دسترسی شما.</p>
+          <p className="subtitle">خروجی فهرست‌ها به فایل سازگار با اکسل (جدولی با پشتیبانی فارسی) و ورود گروهی اشخاص با پیش‌نمایش و اعتبارسنجی — همیشه در محدودهٔ دسترسی شما.</p>
         </div>
         <div className="heading-tools">
           <span className="chip info"><ShieldCheck size={12}/> فقط محدودهٔ مجاز</span>
@@ -159,14 +159,14 @@ export default function DataExchangePage() {
 
       {tab === 'export' ? (
         <section className="panel">
-          <div className="panel-title"><div><h2>خروجی فهرست‌ها</h2><p>هر فایل با Excel (فارسی) سازگار است — ستون اول BOM یونیکد دارد</p></div></div>
+          <div className="panel-title"><div><h2>خروجی فهرست‌ها</h2><p>هر فایل با اکسل (فارسی) سازگار است — ستون اول نشانهٔ یونیکد دارد</p></div></div>
           <div className="export-grid">
             {EXPORTS.map(spec => (
               <article className="export-card" key={spec.key}>
                 <span className="stat-ico ic-blue" style={{ width: 36, height: 36, borderRadius: 10 }}>{spec.icon}</span>
                 <div style={{ flex: 1 }}>
                   <b>{spec.label}</b>
-                  <small>CSV · سازگار با Excel</small>
+                  <small>فایل جدولی · سازگار با اکسل</small>
                 </div>
                 <button className="btn btn-secondary btn-sm" disabled={busy === spec.key} onClick={() => doExport(spec)}>
                   {busy === spec.key ? <RefreshCw size={13} className="spin" /> : <FileDown size={13}/>} دانلود
@@ -179,7 +179,7 @@ export default function DataExchangePage() {
         <>
           <section className="panel">
             <div className="panel-title">
-              <div><h2>ورود گروهی اشخاص</h2><p>قالب CSV را دانلود، پر و بارگذاری کنید — پیش از ثبت، پیش‌نمایش و خطاها نمایش داده می‌شوند</p></div>
+              <div><h2>ورود گروهی اشخاص</h2><p>قالب جدولی را دانلود، پر و بارگذاری کنید — پیش از ثبت، پیش‌نمایش و خطاها نمایش داده می‌شوند</p></div>
               <button className="btn btn-ghost btn-sm" onClick={downloadTemplate}><FileDown size={13}/> دانلود قالب نمونه</button>
             </div>
             <div className="import-setup">
@@ -190,7 +190,7 @@ export default function DataExchangePage() {
               </select>
               <label className="file-drop">
                 <Upload size={20}/>
-                <span>{fileName || 'انتخاب فایل CSV…'}</span>
+                <span>{fileName || 'انتخاب فایل جدولی…'}</span>
                 <input type="file" accept=".csv,text/csv" onChange={e => e.target.files?.[0] && onFile(e.target.files[0])} />
               </label>
             </div>

@@ -136,7 +136,45 @@ export const STATUS_FA: Record<string, string> = {  ACTIVE:'فعال',
   ICON:'آیکون',
   HIDDEN:'پنهان',
   INFO:'اطلاع',
-  DANGER:'خطر'};
+  DANGER:'خطر',
+  ON_TRACK:'در مسیر',
+  NEEDS_ATTENTION:'نیازمند توجه',
+  CALL:'تماس', MESSAGE:'پیام',
+  SOLID:'قابل اتکا', WARN:'هشدار', FAIL:'شکست', PASS:'گذر',
+  CREATION:'ایجاد', DELETION:'حذف', RETENTION:'نگهداشت', RESTORED:'بازیابی‌شده', PURGED:'پاک‌سازی‌شده',
+  DRIVE:'درایو', TEAMS:'تیم‌ها', SHAREPOINT:'اشتراک‌گذاری',
+  ALLOW:'مجاز', DENY:'رد', DEBUG:'اشکال‌زدایی', DEBUG_LEVEL:'اشکال‌زدایی',
+  LOGIN_SUCCESS:'ورود موفق', LOGIN_FAILURE:'ورود ناموفق', ACCOUNT_LOCKED:'قفل حساب',
+  PERMISSION_DENIED:'دسترسی رد شد', RATE_LIMITED:'محدودیت نرخ', SUSPICIOUS_ACCESS:'دسترسی مشکوک',
+  EXPORT_CREATED:'صدور خروجی', MFA_EVENT:'رویداد تأیید دومرحله‌ای',
+  SANCTION_LIST:'فهرست تحریم‌ها', UBO_PEP:'مالک نهاییِ دارای منصب', UBO_CHANGE:'تغییر مالک نهایی', SCREENING:'غربالگری', CLEARED:'تأییدشده', ESCALATED:'ارجاع‌شده', USER:'کاربر', NEW_OPPORTUNITY:'فرصت جدید',
+  // نقش‌ها
+  ANALYST:'تحلیلگر', HOLDING_ADMIN:'مدیر هلدینگ', HOLDING_EXECUTIVE:'مدیر اجرایی هلدینگ', PROJECT_MANAGER:'مدیر پروژه', READ_ONLY:'فقط‌خواندنی',
+  RELATIONSHIP_MANAGER:'مدیر روابط', STANDARD_USER:'کاربر استاندارد', SUBSIDIARY_ADMIN:'مدیر زیرمجموعه', SUBSIDIARY_EXECUTIVE:'مدیر اجرایی زیرمجموعه', SUPER_ADMIN:'مدیر کل سامانه',
+  // نهادها و برچسب‌ها
+  DATACUALITYSNAPSHOT:'نمای کیفیت داده', SCORINGRULE:'قاعدهٔ امتیازدهی', COMPANY:'سازمان', CONTACT:'مخاطب',
+  DOCUMENTS:'اسناد', PREVIEW:'پیش‌نمایش', ENUM:'مقادیر ثابت', ERASABLE:'قابل‌حذف', CUTOFF:'برش زمانی', ROLLOUT:'انتشار تدریجی', DETERMINISTIC:'قطعی', EXTERNAL:'خارجی',
+  OK:'سالم', XLSX:'صفحه‌گسترده', PDF:'سند', CSV:'فایل جدولی', DOCX:'سند',
+  'AI ASSISTANT':'دستیار هوشمند', 'EXPERIMENTAL SEARCH':'جستجوی آزمایشی', 'NETWORK EXPLORER':'کاوشگر شبکه', 'RECOMMENDATION ENGINE':'موتور پیشنهاددهی',
+  // رویدادها و کلیدهای ممیزی
+  'ADMIN SCORING RE-RUN':'اجرای مجدد امتیازدهی توسط مدیر', 'RBAC MEMBERSHIP ASSIGNED/UPDATED':'اختصاص/به‌روزرسانی عضویت نقش‌ها',
+  'ADMIN TAG DELETED':'حذف برچسب توسط مدیر', 'ADMIN SCORING RULE CHANGED':'تغییر قاعدهٔ امتیازدهی توسط مدیر',
+  RISKSCORE:'امتیاز ریسک', REMOVEDASSIGNMENTS:'اختصاص‌های حذف‌شده', BAD_PASSWORD:'رمز عبور نادرست', RISK_SCORE_FORMULA:'فرمول امتیاز ریسک',
+  LOGOUT:'خروج از حساب', MFADEVICE:'دستگاه تأیید', FILECHANGE:'تغییر فایل', DATAFILE:'فایل داده', DATACLASSIFICATION:'طبقه‌بندی داده', CHECKS:'بررسی‌ها',
+
+  CAREER_EVENT:'رویداد شغلی',
+  GENERAL:'عمومی', CORE:'هسته', MEETINGS:'جلسات', MEETINGS_GRP:'جلسات', WORK:'کار', INTELLIGENCE:'هوشمندی', INTELLIGENCE_GRP:'هوشمندی',
+  KNOWLEDGE:'دانش', KNOWLEDGE_GRP:'دانش', ACCOUNT:'حساب', ACCOUNT_GRP:'حساب', DATAGOVERNANCE:'حاکمیت داده', ADMIN:'مدیریت', ADMIN_GRP:'مدیریت',
+  ECONOMIC_BUYER:'تصمیم‌گیرندهٔ اقتصادی', TECH_EVALUATOR:'ارزیاب فنی', END_USER:'کاربر نهایی',
+  PROCUREMENT:'تدارکات', BLOCKER:'مانع‌ساز', CHAMPION:'حامی', RELIABILITY:'قابلیت اعتماد', ASSESSMENT:'ارزیابی انسانی',
+  REQUEST_APPROVAL:'درخواست تأیید', WAIT:'انتظار', CREATE_NOTIFICATION:'ساخت اطلاع‌رسانی',
+  CREATE_COMMITMENT:'ساخت تعهد', CREATE_ACTION:'ساخت اقدام', RELATIONSHIP_UPDATED:'به‌روزرسانی رابطه',
+  OUTCOME:'نتیجه', ENROLLED:'ثبت‌شده', TOTP:'توکن زمانی',
+  WINDOWS:'ویندوز', MACOS:'مک', LINUX:'لینوکس', ANDROID:'اندروید', IOS:'ایفون',
+  CHROME:'کروم', FIREFOX:'فایرفاکس', SAFARI:'سافاری', EDGE:'اج', EXCEL:'اکسل',
+  'S3':'فضای ذخیره‌سازی ابری', POSTGRESQL:'پایگاه دادهٔ رابط‌های', PRISMA:'پرسما',
+  REDIS:'ردیس', BULLMQ:'صف کار', HTTP:'وب', HTTPS:'وب امن', API:'رابط', OPENAPI:'قرارداد باز رابط',
+  OAUTH:'اجازه‌نامهٔ همگام‌سازی',};
 export const REL_TYPE_FA: Record<string, string> = {
   PARTNERSHIP:'مشارکت', JOINT_VENTURE:'سرمایه‌گذاری مشترک', CUSTOMER:'مشتری', SUPPLIER:'تأمین‌کننده',
   INVESTOR:'سرمایه‌گذار', COMPETITOR:'رقابت', STRATEGIC_ALLIANCE:'اتحاد راهبردی', COMMERCIAL:'تجاری',
@@ -198,10 +236,13 @@ export const REL_TYPE_FA: Record<string, string> = {
   MOBILE:'تلفن همراه',
 
 };
+const TYPE_FA: Record<string, string> = {
+  ORGANIZATION: 'سازمان', PERSON: 'شخص', PROJECT: 'پروژه',
+};
 export const fa = (v: unknown): string => {
   if (v == null) return '—';
   const s = String(v);
-  return STATUS_FA[s.toUpperCase()] ?? REL_TYPE_FA[s.toUpperCase()] ?? s;
+  return STATUS_FA[s.toUpperCase()] ?? REL_TYPE_FA[s.toUpperCase()] ?? TYPE_FA[s.toUpperCase()] ?? s;
 };
 
 export const KEY_FA: Record<string, string> = {
@@ -233,7 +274,7 @@ export const KEY_FA: Record<string, string> = {
   sensitivity:'حساسیت', lastInteractionAt:'آخرین تعامل', nextMeetingAt:'جلسهٔ بعدی',
   objective:'هدف', agenda:'دستور کار', outcome:'نتیجه', notes:'یادداشت‌ها', summary:'خلاصه',
   decisions:'تصمیم‌ها', transcript:'متن مذاکره', followUpRequired:'نیازمند پیگیری',
-  followUpAt:'موعد پیگیری', assignedTo:'واگذار شده به', ownerId:'شناسه مالک',
+  followUpAt:'موعد پیگیری', format:'قالب', approval:'تأیید', provider:'فراهم‌کننده', date:'تاریخ', confidence:'اطمینان', assignedTo:'واگذار شده به', ownerId:'شناسه مالک',
   reminderAt:'یادآور', sourcePersonId:'شناسه معرف', targetPersonId:'شناسه معرفی‌شونده',
   sourceOrganizationId:'سازمان مبدأ', targetOrganizationId:'سازمان مقصد',
   weightedOpportunityValue:'ارزش موزون فرصت', peopleCount:'تعداد اشخاص', opportunityCount:'تعداد فرصت‌ها',
@@ -241,3 +282,50 @@ export const KEY_FA: Record<string, string> = {
   hopCount:'تعداد گام‌ها', connectorPerson:'شخص اتصال‌دهنده',
 };
 export const labelKey = (k: string): string => KEY_FA[k] ?? k.replace(/[A-Z]/g, c => ' ' + c.toLowerCase()).replace(/_/g, ' ');
+
+/* ---------- شناسه‌ها و مسیرهای فنی -> نمایش فارسی ---------- */
+const ID_PREFIX_FA: Record<string, string> = { se: 'رویداد', u: 'کاربر', ap: 'تأیید', org: 'سازمان', ev: 'رویداد', ce: 'رویداد', sn: 'شماره', rel: 'رابطه', dev: 'دستگاه' };
+export const idFa = (v: string): string => {
+  if (!v) return v;
+  const m = String(v).match(/^(se|u|ap|org|ev|ce|sn|rel|dev)[-_]?(\d+)(?:-[a-z0-9]{2,})?$/i);
+  if (m) return `${ID_PREFIX_FA[m[1].toLowerCase()] ?? ''} ${new Intl.NumberFormat('fa-IR').format(Number(m[2]))}`;
+  return v;
+};
+const SEG_FA: Record<string, string> = {
+  auth: 'احراز هویت', login: 'ورود', logout: 'خروج', refresh: 'تازه‌سازی نشست', mfa: 'تأیید دومرحله‌ای', register: 'ثبت‌نام',
+  organizations: 'سازمان‌ها', people: 'اشخاص', relationships: 'روابط', meetings: 'جلسات', actions: 'اقدام‌ها',
+  commitments: 'تعهدها', projects: 'پروژه‌ها', opportunities: 'فرصت‌ها', network: 'شبکه', search: 'جستجو',
+  recommendations: 'پیشنهادها', documents: 'اسناد', reports: 'گزارش‌ها', notifications: 'اعلان‌ها', dashboard: 'پیشخوان',
+  settings: 'تنظیمات', sessions: 'نشست‌ها', security: 'امنیت', integrations: 'یکپارچه‌سازی‌ها', criteria: 'معیارها',
+  approvals: 'تأییدها', workflows: 'گردش‌کارها', data: 'داده', metrics: 'سنجه‌ها', health: 'سلامت', tags: 'برچسب‌ها',
+  users: 'کاربران', roles: 'نقش‌ها', audit: 'ممیزی', privacy: 'حریم خصوصی', exports: 'خروجی‌ها', enterprise: 'سازمانی',
+  'relationship-health': 'سلامت رابطه', 'docs-json': 'قرارداد رابط',
+};
+const METHOD_FA: Record<string, string> = { GET: 'دریافت', POST: 'ثبت', PATCH: 'به‌روزرسانی', PUT: 'جایگزینی', DELETE: 'حذف', OPTIONS: 'بررسی' };
+export function apiPathFa(method: string | null | undefined, path: string): string {
+  const raw = String(path ?? '');
+  if (!method && /^(GET|POST|PUT|PATCH|DELETE|OPTIONS)\s+/.test(raw)) {
+    method = raw.split(' ')[0];
+    path = raw.slice(raw.indexOf(' ') + 1);
+  }
+  const segs = String(path ?? '').split('/').filter(Boolean).filter((x) => x !== 'api' && x !== 'v1');
+  const names = segs.filter((x) => !/^\d+$/.test(x)).map((x) => SEG_FA[x] ?? x);
+  const label = names.length ? names.join(' ← ') : String(path ?? '');
+  return `${METHOD_FA[String(method ?? '').toUpperCase()] ?? String(method ?? '')}: ${label}`;
+}
+const MODULE_FA: Record<string, string> = {
+  actions: 'اقدام‌ها', admin: 'مدیریت', analytics: 'تحلیل‌ها', approvals: 'تأییدها', audit: 'ممیزی',
+  auth: 'احراز هویت', authorization: 'مجوزها', commitments: 'تعهدها', 'custom-fields': 'فیلدهای سفارشی',
+  'data-lifecycle': 'چرخهٔ داده', 'data-management': 'مدیریت داده', data: 'داده', documents: 'اسناد',
+  enterprise: 'سازمانی', health: 'سلامت', integrations: 'یکپارچه‌سازی‌ها', 'integrations/webhooks': 'یکپارچه‌سازی‌ها / قلاب‌های وب',
+  intelligence: 'هوشمندی', interactions: 'تعامل‌ها', meetings: 'جلسات', mfa: 'تأیید دومرحله‌ای',
+  'auth/mfa': 'احراز هویت / تأیید دومرحله‌ای', network: 'شبکه', notifications: 'اعلان‌ها',
+  'notifications/alerts': 'اعلان‌ها / هشدارها', observability: 'مشاهده‌پذیری', opportunities: 'فرصت‌ها',
+  organizations: 'سازمان‌ها', 'core-domain': 'حوزهٔ اصلی', people: 'اشخاص', privacy: 'حریم خصوصی',
+  projects: 'پروژه‌ها', recommendations: 'پیشنهادها', relationships: 'روابط', reporting: 'گزارش‌گیری',
+  reports: 'گزارش‌ها', requirements: 'نیازمندی‌ها', scoring: 'امتیازدهی', scores: 'امتیازها',
+  search: 'جستجو', security: 'امنیت', sessions: 'نشست‌ها', src: 'مبدأ', metrics: 'سنجه‌ها',
+  tags: 'برچسب‌ها', users: 'کاربران', workflows: 'گردش‌کارها',
+};
+export const moduleFa = (m: string): string => MODULE_FA[m] ?? m;
+

@@ -1,6 +1,10 @@
 'use client';
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { api, apiPost } from '../_lib/api';
+import { fa } from '../_lib/fa';
+const FIELD_FA: Record<string, string> = { email: 'پست الکترونیکی', phone: 'شمارهٔ تماس', website: 'وب‌سایت', country: 'کشور', industry: 'صنعت', size: 'اندازه', taxId: 'شناسهٔ مالیاتی', registrationId: 'شناسهٔ ثبت', firstName: 'نام', lastName: 'نام خانوادگی', title: 'عنوان' };
+const ID_FA: Record<string, string> = { p: 'شخص', person: 'شخص', r: 'رابطه', rel: 'رابطه', org: 'سازمان', o: 'فرصت', m: 'جلسه', i: 'تعامل', a: 'اقدام', c: 'تعهد', u: 'کاربر' };
+const faId = (v: unknown): string => { const raw = String(v ?? ''); const m = raw.match(/^([a-z]+)[-:](\d+)$/i); return m ? `${ID_FA[m[1].toLowerCase()] ?? m[1]} ${new Intl.NumberFormat('fa-IR').format(Number(m[2]))}` : fa(raw); };
 import { Badge, ErrorCard, Loading, PageHeader, StatCard } from './page-ui';
 import {
   AlertTriangle, ArrowLeft, BadgeCheck, Building2, CalendarX2,
@@ -200,7 +204,7 @@ export default function QualityDashboard({ mode = 'hub' }: { mode?: 'hub' | 'ops
       <PageHeader
         eyebrow={isOps ? 'مدیریت داده' : 'داده و کیفیت'}
         title={isOps ? 'یکسان‌سازی کیفیت داده' : 'کیفیت داده'}
-        description="پویش یکپارچهٔ کیفیت: رکوردهای تکراری، بدون مالک/مخاطب، روابط کهنه، ایمیل‌های نامعتبر، تاریخ‌های ازدست‌رفته و پروفایل‌های ناقص — هر دو مسیر /data-quality و /data-management/quality به یک موتور (GET /data/quality · POST /data/quality/scan) وصل‌اند."
+        description="پویش یکپارچهٔ کیفیت: رکوردهای تکراری، بدون مالک/مخاطب، روابط کهنه، ایمیل‌های نامعتبر، تاریخ‌های ازدست‌رفته و پروفایل‌های ناقص — هر دو مسیر «کیفیت داده» و «مرکز داده» به یک موتور مشترک وصل‌اند."
         actions={
           <>
             {isOps && <Badge tone="info">هم‌مسیر با /data-quality</Badge>}
@@ -269,7 +273,7 @@ export default function QualityDashboard({ mode = 'hub' }: { mode?: 'hub' | 'ops
                       {!empty && c.key === 'contacts' && (
                         <span style={{ display: 'grid', gap: 3 }}>
                           {(m.missingContacts?.organizations?.values ?? []).length > 0 && <small>سازمان‌ها: {(m.missingContacts.organizations.values ?? []).map(id => <span key={id} style={{ fontSize: 10.5 }}><code dir="ltr" style={{ fontSize: 9.5 }}>{id}</code>{orgOf(id)?.name && <> — {orgOf(id)?.name}</>} · </span>)}</small>}
-                          {(m.missingContacts?.people?.values ?? []).length > 0 && <small>اشخاص: {(m.missingContacts.people.values ?? []).join('، ')}</small>}
+                          {(m.missingContacts?.people?.values ?? []).length > 0 && <small>اشخاص: {(m.missingContacts.people.values ?? []).map((x:any)=>faId(x)).join('، ')}</small>}
                         </span>
                       )}
                       {!empty && c.key === 'stale' && (m.staleRelationships?.values ?? []).map((v: any) => (
@@ -284,13 +288,13 @@ export default function QualityDashboard({ mode = 'hub' }: { mode?: 'hub' | 'ops
                         <span key={`${v.entityType}-${v.id}`} style={{ fontSize: 10.5, display: 'flex', gap: 6, alignItems: 'center' }}>
                           <Badge tone="neutral">{v.entityType === 'Organization' ? 'سازمان' : 'شخص'}</Badge>
                           <code dir="ltr" style={{ fontSize: 9.5 }}>{v.id}</code>
-                          <small className="t-muted">فیلد: {v.field}</small>
+                          <small className="t-muted">فیلد: {FIELD_FA[String(v.field ?? '')] ?? v.field}</small>
                           {v.entityType === 'Organization' && orgOf(v.id)?.name && <small>— {orgOf(v.id)?.name}</small>}
                         </span>
                       ))}
                       {!empty && c.key === 'noDates' && (
                         <span style={{ display: 'grid', gap: 3 }}>
-                          {(m.missingDates?.relationships?.values ?? []).length > 0 && <small>بازبینی رابطه: {(m.missingDates.relationships.values ?? []).join('، ')}</small>}
+                          {(m.missingDates?.relationships?.values ?? []).length > 0 && <small>بازبینی رابطه: {(m.missingDates.relationships.values ?? []).map((x:any)=>faId(x)).join('، ')}</small>}
                           {(m.missingDates?.meetings?.values ?? []).length > 0 && <small>زمان جلسه: {(m.missingDates.meetings.values ?? []).join('، ')}</small>}
                           {(m.missingDates?.actions?.values ?? []).length > 0 && <small>موعد اقدام: {(m.missingDates.actions.values ?? []).join('، ')}</small>}
                         </span>
@@ -298,7 +302,7 @@ export default function QualityDashboard({ mode = 'hub' }: { mode?: 'hub' | 'ops
                       {!empty && c.key === 'incomplete' && (
                         <span style={{ display: 'grid', gap: 3 }}>
                           {(m.incompleteProfiles?.organizations?.values ?? []).length > 0 && <small>سازمان‌ها: {(m.incompleteProfiles.organizations.values ?? []).map(id => <span key={id} style={{ fontSize: 10.5 }}><code dir="ltr" style={{ fontSize: 9.5 }}>{id}</code>{orgOf(id)?.name && <> — {orgOf(id)?.name}</>} · </span>)}</small>}
-                          {(m.incompleteProfiles?.people?.values ?? []).length > 0 && <small>اشخاص: {(m.incompleteProfiles.people.values ?? []).join('، ')}</small>}
+                          {(m.incompleteProfiles?.people?.values ?? []).length > 0 && <small>اشخاص: {(m.incompleteProfiles.people.values ?? []).map((x:any)=>faId(x)).join('، ')}</small>}
                         </span>
                       )}
                       {!empty && c.key === 'missingOrgs' && <small>ارجاع به موجودیت حذف‌شده یافت نشد.</small>}
@@ -313,11 +317,11 @@ export default function QualityDashboard({ mode = 'hub' }: { mode?: 'hub' | 'ops
             <div className="panel-title">
               <div>
                 <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Search size={16} /> تشخیص تکراری هنگام ثبت (پیش‌ثبت)</h2>
-                <p>پاریتی POST /data/duplicates/detect: پیش از ثبت سازمان/شخص، کاندیداهای تکراری با شباهت لون‌اشتاین و قواعد دامنه/شناسه/تلفن/کشور سنجیده می‌شوند (حد آستانه ۰٫۴۰). نیازمند مجوز data.import.</p>
+                <p>هم‌ارزی با سنجش تکراری‌ها: پیش از ثبت سازمان/شخص، کاندیداهای تکراری با شباهت لون‌اشتاین و قواعد دامنه/شناسه/تلفن/کشور سنجیده می‌شوند (حد آستانه ۰٫۴۰). نیازمند مجوز واردکردن داده.</p>
               </div>
-              <Badge tone={canImport ? 'success' : 'warning'}>{canImport ? 'مجوز data.import فعال' : 'بدون مجوز data.import'}</Badge>
+              <Badge tone={canImport ? 'success' : 'warning'}>{canImport ? 'مجوز واردکردن داده فعال' : 'بدون مجوز واردکردن داده'}</Badge>
             </div>
-            {!canImport ? <p className="t-muted" style={{ fontSize: 11 }}>حساب شما مجوز data.import را ندارد؛ ابزار پیش‌ثبت برای نقش‌های دارای مجوز وارد کردن داده فعال است.</p> : (
+            {!canImport ? <p className="t-muted" style={{ fontSize: 11 }}>حساب شما مجوز واردکردن داده را ندارد؛ ابزار پیش‌ثبت برای نقش‌های دارای مجوز فعال است.</p> : (
               <>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
                   <button className="btn btn-ghost" style={{ minHeight: 0, padding: '6px 10px', fontSize: 10.5 }} onClick={demoOrg}>نمونه: «بانک ملی پارس»</button>

@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../../_lib/api';
+import { fa } from '../../_lib/fa';
 import { useWorkspace } from '../../_components/workspace';
 import {
   Badge, ErrorCard, Modal, PageHeader, StatCard, Toolbar,
@@ -264,7 +265,7 @@ export default function AdminRolesPage() {
                               color: 'var(--srip-accent)', fontSize: 12,
                             }}>{r.superAdmin ? <Crown size={15} /> : <KeySquare size={15} />}</span>
                             <div>
-                              <span className="t-primary" style={{ fontWeight: 800, fontFamily: 'ui-monospace, monospace', fontSize: 12.5 }}>{r.key}</span>
+                              <span className="t-primary" style={{ fontWeight: 800, fontFamily: 'ui-monospace, monospace', fontSize: 12.5 }}>{fa(r.key)}</span>
                               <span style={{ fontWeight: 700, marginInlineStart: 8 }}>{r.name}</span>
                               {r.holding && <span className="t-muted" style={{ marginInlineStart: 6, fontSize: 11 }}>· هلدینگ</span>}
                               {r.description && <div className="t-muted" style={{ fontSize: 11.5, maxWidth: 300 }}>{r.description}</div>}

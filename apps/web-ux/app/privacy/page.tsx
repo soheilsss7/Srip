@@ -123,7 +123,7 @@ export default function PrivacyHub() {
   }
   async function runRequest(r: PReq) {
     const verb = r.type === 'ACCESS' ? 'access' : r.type === 'EXPORT' ? 'export' : 'erase';
-    if (verb === 'erase' && !window.confirm('پاک‌سازی داده‌ها (GDPR Erasure) حساب شما را ناشناس‌سازی و غیرفعال می‌کند و قابل بازگشت نیست. تأیید می‌کنید؟')) return;
+    if (verb === 'erase' && !window.confirm('پاک‌سازی داده‌ها (حق حذف طبق مقررات حریم خصوصی) حساب شما را ناشناس‌سازی و غیرفعال می‌کند و قابل بازگشت نیست. تأیید می‌کنید؟')) return;
     setBusy(verb + '-' + r.id); setError(''); setNotice('');
     try {
       const out = await api<{ status: string; totalRecords?: number; legalRetention?: string[] }>(`/privacy/requests/${r.id}/${verb}`, { method: 'POST', body: JSON.stringify({}) });
@@ -161,7 +161,7 @@ export default function PrivacyHub() {
   return (
     <main className="feature-page">
       <PageHeader
-        eyebrow="حریم خصوصی / GDPR"
+        eyebrow="حریم خصوصی"
         title="حقوق داده و حریم خصوصی"
         description="شفافیت پردازش، ثبت و ابطال رضایت، درخواست دسترسی/خروجی/پاک‌سازی داده‌های شخصی، و ممیزی کامل رویدادها — همگی با مجوز و محدودهٔ سازمانی شما."
         actions={
@@ -275,7 +275,7 @@ export default function PrivacyHub() {
             <div className="panel-title">
               <div>
                 <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><ClipboardList size={16} /> درخواست‌های حق داده</h2>
-                <p>دسترسی (ACCESS)، خروجی (EXPORT) و پاک‌سازی (ERASURE)؛ درخواست بازِ تکراری برای هر نوع به‌صورت خودکار ادغام می‌شود.</p>
+                <p>دسترسی، خروجی و پاک‌سازی؛ درخواست بازِ تکراری برای هر نوع به‌صورت خودکار ادغام می‌شود.</p>
               </div>
               <button className="btn btn-secondary" onClick={() => { setError(''); setReqOpen(true); }}><ClipboardList size={14} /> درخواست جدید</button>
             </div>
@@ -342,7 +342,7 @@ export default function PrivacyHub() {
             <div className="panel-title">
               <div>
                 <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Search size={16} /> ممیزی حریم خصوصی</h2>
-                <p>آخرین رویدادهای ثبت‌شده بر نهادهای PrivacyRequest / PrivacyData / UserPrivacyData (تا ۵۰۰ رویداد).</p>
+                <p>آخرین رویدادهای ثبت‌شده بر نهادهای درخواست حریم خصوصی، دادهٔ حریم خصوصی و دادهٔ کاربر (تا ۵۰۰ رویداد).</p>
               </div>
               <Badge tone="info">{fmtNum(auditRows.length)} رویداد</Badge>
             </div>

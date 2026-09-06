@@ -149,7 +149,7 @@ export default function AdminMasterDataPage() {
       <PageHeader
         eyebrow="مدیریت / داده‌های مبنایی"
         title="داده‌های مبنایی"
-        description="مقادیر مرجع فرم‌ها و فیلترها — صنایع و کشورها آزادند (افزودن/تغییر نام/حذف بی‌استفاده) و انواع سازمان/رابطه ثابت (enum). کاربرد هر مقدار از دادهٔ واقعی شمارش می‌شود."
+        description="مقادیر مرجع فرم‌ها و فیلترها — صنایع و کشورها آزادند (افزودن/تغییر نام/حذف بی‌استفاده) و انواع سازمان/رابطه ثابت (مقادیر ثابت). کاربرد هر مقدار از دادهٔ واقعی شمارش می‌شود."
         actions={
           <>
             <button className="btn btn-secondary" onClick={load} disabled={loading}><RefreshCw size={15} /> بازخوانی</button>
@@ -179,7 +179,7 @@ export default function AdminMasterDataPage() {
             <StatCard icon={<Layers size={18} />} label="دسته‌های مبنایی" value={fmtNum(4)} iconClass="ic-indigo" sub="صنعت · کشور · نوع سازمان · نوع رابطه" />
             <StatCard icon={<BookMarked size={18} />} label="مقادیر آزاد کاتالوگ" value={fmtNum(stats.freeVals)} iconClass="ic-teal" sub="صنایع + کشورها" />
             <StatCard icon={<Database size={18} />} label="در حال استفاده" value={fmtNum(stats.freeUsed)} iconClass="ic-gold" sub="داری رکورد واقعی" />
-            <StatCard icon={<Lock size={18} />} label="دسته‌های قفل" value={fmtNum(stats.locked)} iconClass="ic-red" sub="enum های سیستم" />
+            <StatCard icon={<Lock size={18} />} label="دسته‌های قفل" value={fmtNum(stats.locked)} iconClass="ic-red" sub="مقادیر ثابت سیستم" />
             <StatCard icon={<GitBranch size={18} />} label="کاربرد کل فعال" value={fmtNum(catUsageTotal)} iconClass="ic-teal" sub={`در دستهٔ «${activeDef?.label ?? ''}»`} />
           </div>
 

@@ -15,7 +15,7 @@
 /* Service-Worker-safe shims (replaces node built-ins) */
 globalThis.__SRIP_CRITERIA_DATA__ = {
  "generatedFrom": "apps/api/src/criteria/criteria.catalog.ts",
- "generatedAt": "2026-09-06T11:03:19.958Z",
+ "generatedAt": "2026-09-06T12:49:07.200Z",
  "scales": {
   "MATURITY": {
    "label": "بلوغ نظام‌مند",
@@ -202,7 +202,7 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "anchors": [
     {
      "level": 0,
-     "label": "ناحیهٔ خطر (Z″ < ۱٫۱ یا عدم شفافیت مالی)",
+     "label": "ناحیهٔ خطر (امتیاز آلتمن زیر ۱٫۱ یا عدم شفافیت مالی)",
      "score": 0
     },
     {
@@ -217,7 +217,7 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     },
     {
      "level": 3,
-     "label": "سالم (Z″ > ۲٫۶، نقدینگی کافی)",
+     "label": "سالم (امتیاز آلتمن بالای ۲٫۶، نقدینگی کافی)",
      "score": 85
     },
     {
@@ -262,42 +262,42 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
   "STRATEGIC": {
    "name": "اهمیت و هم‌راستایی راهبردی",
    "nameEn": "Strategic salience & fit",
-   "rationale": "معیارهای انتخاب شریک (Rickards 1986؛ Gulati 1995) و برجستگی ذی‌نفعان (Mitchell 1997؛ Mendelow 1991): قدرت، مشروعیت، فوریت و تناسب راهبردی."
+   "rationale": "معیارهای انتخاب شریک (ریکاردز ۱۹۸۶؛ گولاتی ۱۹۹۵) و برجستگی ذی‌نفعان (میتچل ۱۹۹۷؛ مندلو ۱۹۹۱): قدرت، مشروعیت، فوریت و تناسب راهبردی."
   },
   "VALUE": {
    "name": "ارزش اقتصادی",
    "nameEn": "Economic value",
-   "rationale": "ارزش فعلی و چرخهٔ عمر رابطه (E&Y/Moody 2002) و معیار هزینه/سود در ادبیات انتخاب تأمین‌کننده (Dickson 1966)."
+   "rationale": "ارزش فعلی و چرخهٔ عمر رابطه (مودی ۲۰۰۲) و معیار هزینه/سود در ادبیات انتخاب تأمین‌کننده (دیکسون ۱۹۶۶)."
   },
   "CAPABILITY": {
    "name": "توانمندی عملیاتی",
    "nameEn": "Operational capability",
-   "rationale": "معیارهای کلاسیک انتخاب تأمین‌کننده: کیفیت، تحویل به‌موقع، ظرفیت، توانمندی فنی، خدمات پس از فروش (Dickson 1966؛ Weber 1996)."
+   "rationale": "معیارهای کلاسیک انتخاب تأمین‌کننده: کیفیت، تحویل به‌موقع، ظرفیت، توانمندی فنی، خدمات پس از فروش (دیکسون ۱۹۶۶؛ وبر ۱۹۹۶)."
   },
   "RELIABILITY": {
    "name": "قابلیت اتکا و رفتار رابطه‌ای",
    "nameEn": "Reliability & relational behaviour",
-   "rationale": "اعتماد و تعهد (Morgan & Hunt 1994) و ریشه‌های شکست رابطه: فرصت‌طلبی، بی‌وفایی در تعهد، ناتوانی در مدیریت اختلاف (Anderson & Narasimhan 1996؛ Choi & Lee 2007)."
+   "rationale": "اعتماد و تعهد (مورگان و هانت ۱۹۹۴) و ریشه‌های شکست رابطه: فرصت‌طلبی، بی‌وفایی در تعهد، ناتوانی در مدیریت اختلاف (اندرسون و ناراسیمهان ۱۹۹۶؛ چوی و لی ۲۰۰۷)."
   },
   "ACCESS": {
    "name": "دسترسی و نفوذ در تصمیم",
    "nameEn": "Access & decision influence",
-   "rationale": "پوشش چندلایهٔ سازمان مشتری (Fortna et al. 2012؛ Gartner 2021) و قدرت/دسترسی/انگیزهٔ چمپیون (MEDDPICC)."
+   "rationale": "پوشش چندلایهٔ سازمان مشتری (فورتنا و همکاران ۲۰۱۲؛ گارتنر ۲۰۲۱) و قدرت/دسترسی/انگیزهٔ حامی (چارچوب فروش راهبردی)."
   },
   "FINANCIAL": {
    "name": "سلامت مالی",
    "nameEn": "Financial health",
-   "rationale": "مدل Z امتن (1968، 2000)، نسبت‌های نقدینگی/اهرم/پوشش (CFA 2007) و چارچوب ریسک اعتباری بازل (PD/LGD/EAD)."
+   "rationale": "مدل آلتمن (۱۹۶۸، ۲۰۰۰)، نسبت‌های نقدینگی/اهرم/پوشش (انجمن تحلیلگران مالی ۲۰۰۷) و چارچوب ریسک اعتباری کمیتهٔ بازل (احتمال نکول، زیان در صورت نکول، میزان در معرض خطر)."
   },
   "RISK": {
    "name": "ریسک، انطباق و حاکمیت",
    "nameEn": "Risk, compliance & governance",
-   "rationale": "ارزیابی ریسک طرف حساب: شفافیت مالکیت نهایی، غربالگری تحریم/PEP، رسانهٔ منفی، امنیت داده، ESG و تمرکز وابستگی (رویۀ due diligence شخص ثالث)."
+   "rationale": "ارزیابی ریسک طرف حساب: شفافیت مالکیت نهایی، غربالگری تحریم و مناصب، رسانهٔ منفی، امنیت داده، ملاحظات زیست‌محیطی/اجتماعی/حاکمیتی و تمرکز وابستگی (بررسی مقدماتی شخص ثالث)."
   },
   "NETWORK": {
    "name": "جایگاه در شبکه",
    "nameEn": "Network position",
-   "rationale": "بینانی/مرکزی Freeman (1977)، سوراخ‌های ساختاری Burt (1992، 2004) و پیوندهای ضعیف Granovetter (1973)."
+   "rationale": "ذینفع/مرکزی فریمن (۱۹۷۷)، سوراخ‌های ساختاری برت (۱۹۹۲، ۲۰۰۴) و پیوندهای ضعیف گرانووتر (۱۹۷۳)."
   }
  },
  "familyWeights": {
@@ -366,15 +366,15 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     "warning": "بدون جایگاه تصمیم‌ساز، رابطه حتی اگر خوب باشد سرمایه‌گذاری چندانی نمی‌طلبد."
    },
    "sources": [
-    "Mitchell/Agle/Wood 1997 (Academy of Management Review)",
-    "Mendelow 1991 (ECIS)"
+    "میتچل/اگل/وود ۱۹۹۷",
+    "مندلو ۱۹۹۱"
    ]
   },
   {
    "code": "STRAT_FIT",
    "family": "STRATEGIC",
    "name": "تناسب راهبردی و تکمیل منابع",
-   "nameEn": "Strategic fit & resource complementarity",
+   "nameEn": "تناسب راهبردی و مکملیت منابع",
    "why": "انتخاب شریک بر پایهٔ تناسب هدف و تکمیل‌بودن منابع (نه شباهت‌ها) — پیش‌بین اصلی ماندگاری همکاری.",
    "appliesTo": [
     "ORGANIZATION",
@@ -391,8 +391,8 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     "recommended": true
    },
    "sources": [
-    "Gulati 1995 (Strategic Management Journal)",
-    "Das & Teng 1998 (AMR)"
+    "گولاتی ۱۹۹۵",
+    "دس و تنگ ۱۹۹۸"
    ]
   },
   {
@@ -442,8 +442,8 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     "help": "معیار عملیاتی طبقه‌بندی تأمین‌کننده: «در ۳۰ روز قابل جایگزینی است؟»"
    },
    "sources": [
-    "Dickson 1966",
-    "معیارهای ریسک‌تیئر ثالث (2026): replaceability within 30/60 days"
+    "دیکسون ۱۹۶۶",
+    "معیارهای ریسک‌تیئر ثالث (۲۰۲۶): قابلیت جایگزینی در ۳۰/۶۰ روز"
    ]
   },
   {
@@ -461,15 +461,15 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "evidence": "BOTH",
    "scaleId": "FREQUENCY",
    "halfLifeDays": 180,
-   "observedFrom": "meetings+interactions:۹۰ روز اخیر (نقش: مدیر عامل/عضو هیئت‌مدیره)",
+   "observedFrom": "جلسات و تعاملات: ۹۰ روز اخیر (نقش: مدیر عامل/عضو هیئت‌مدیره)",
    "intake": {
     "prompt": "در ۶ ماه گذشته چند نشست مشترک در سطح مدیران ارشد داشته‌ایم؟",
-    "help": "منظور سطح C-level یا عضو هیئت‌مدیره در هر دو طرف.",
+    "help": "منظور سطح مدیریت ارشد یا عضو هیئت‌مدیره در هر دو طرف.",
     "recommended": true
    },
    "sources": [
-    "Gainsight/Planhat renewal-risk drivers",
-    "ChurnZero executive alignment"
+    "گینسایت/پلنهت: محرک‌های ریسک تمدید",
+    "هم‌راستایی مدیریت ارشد (چرن‌زیرو)"
    ]
   },
   {
@@ -514,15 +514,15 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     }
    ],
    "halfLifeDays": 270,
-   "observedFrom": "opportunities: جمع ارزش فازهای برنده + invoices",
+   "observedFrom": "فرصت‌ها: جمع ارزش فازهای برنده + فاکتورها",
    "intake": {
     "prompt": "گردش یا ارزش مالی این رابطه در ۱۲ ماه گذشته چقدر بوده است؟",
     "help": "اختیاری — اگر عدد دقیق نیست، بازهٔ نزدیک را انتخاب کنید.",
     "recommended": true
    },
    "sources": [
-    "E&Y/Moody’s 2002 (Customer Lifetime Value)",
-    "Vitally: expansion & revenue signals"
+    "مودی ۲۰۰۲ (ارزش طول عمر مشتری)",
+    "ابزار مشتریان: سیگنال‌های توسعه و درآمد"
    ]
   },
   {
@@ -541,9 +541,9 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "evidence": "OBSERVED",
    "scaleId": "QUALITY",
    "halfLifeDays": 90,
-   "observedFrom": "opportunities: Σ (amount × stage probability)",
+   "observedFrom": "فرصت‌ها: جمع (مبلغ × احتمال مرحله)",
    "sources": [
-    "Fortna et al. 2012 (high-velocity sales: pipeline quality)"
+    "فورتنا و همکاران ۲۰۱۲ (فروش پرسرعت: کیفیت خط فروش)"
    ]
   },
   {
@@ -566,14 +566,14 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     "help": "نسبت به میانگین بخش خودتان قضاوت کنید."
    },
    "sources": [
-    "Dickson 1966 (cost, terms)",
-    "Weber 1996 (profitability)"
+    "دیکسون ۱۹۶۶ (هزینه، شرایط)",
+    "وبر ۱۹۹۶ (سودآوری)"
    ]
   },
   {
    "code": "VALUE_GROWTH",
    "family": "VALUE",
-   "name": "پتانسیل رشد (CLV)",
+   "name": "پتانسیل رشد (ارزش طول عمر مشتری)",
    "nameEn": "Growth / lifetime potential",
    "why": "ارزش چرخهٔ عمر، نه فقط گردش امروز؛ ملاک اولویت‌بندی سرمایه‌گذاری روی روابط.",
    "appliesTo": [
@@ -591,8 +591,8 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     "help": "مثلاً امکان فروش مکمل، ورود به واحدهای دیگر گروه، یا قرارداد بلندمدت."
    },
    "sources": [
-    "E&Y/Moody’s 2002 (CLV)",
-    "Custify: expansion opportunities"
+    "مودی ۲۰۰۲ (ارزش طول عمر مشتری)",
+    "ابزار مشتریان: فرصت‌های توسعه"
    ]
   },
   {
@@ -610,14 +610,14 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "evidence": "BOTH",
    "scaleId": "FREQUENCY",
    "halfLifeDays": 180,
-   "observedFrom": "invoices/commitments: پرداخت به‌موقع ÷ کل تعهدات مالی",
+   "observedFrom": "فاکتورها/تعهدها: پرداخت به‌موقع ÷ کل تعهدات مالی",
    "intake": {
     "prompt": "تعهدات مالی‌شان را معمولاً به‌موقع انجام می‌دهند؟",
     "help": "مبنای ۱۲ ماه اخیر."
    },
    "sources": [
-    "Altman 2000 (default history)",
-    "CFA 2007 (counterparty payment behaviour)"
+    "آلتمن ۲۰۰۰ (سابقهٔ نکول)",
+    "انجمن تحلیلگران مالی ۲۰۰۷ (رفتار پرداخت طرف حساب)"
    ]
   },
   {
@@ -644,12 +644,12 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    },
    "intake": {
     "prompt": "برای کیفیت، استاندارد یا ممیزی مستقل دارند؟",
-    "help": "ISO 9001، بازرسی شخص ثالث، گزارش نمونه‌آزمایی، یا هیچ‌کدام.",
+    "help": "استاندارد ۹۰۰۱، بازرسی شخص ثالث، گزارش نمونه‌آزمایی، یا هیچ‌کدام.",
     "recommended": true
    },
    "sources": [
-    "Dickson 1966",
-    "Weber 1996 (quality system, technical capability)"
+    "دیکسون ۱۹۶۶",
+    "وبر ۱۹۹۶ (نظام کیفیت، توانمندی فنی)"
    ]
   },
   {
@@ -667,14 +667,14 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "evidence": "BOTH",
    "scaleId": "FREQUENCY",
    "halfLifeDays": 270,
-   "observedFrom": "commitments: تحویل به‌موقع ÷ تعهدات تحویل",
+   "observedFrom": "تعهدها: تحویل به‌موقع ÷ تعهدات تحویل",
    "intake": {
     "prompt": "در تحویل/اجرای به‌موقع تعهدات چقدر قابل اتکا هستند؟",
     "help": "از ۱۲ ماه اخیر فکر کنید."
    },
    "sources": [
-    "Dickson 1966 (delivery)",
-    "Custify: missed milestones as churn risk"
+    "دیکسون ۱۹۶۶ (تحویل)",
+    "ابزار مشتریان: مراحل ازدست‌رفته به‌عنوان ریسک ریزش"
    ]
   },
   {
@@ -696,14 +696,14 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     "help": "نیروی انسانی، تجهیزات، و زمان پاسخ به تغییر تقاضا."
    },
    "sources": [
-    "Weber 1996 (capacity, flexibility)",
-    "Gulati 1995 (complementary resources)"
+    "وبر ۱۹۹۶ (ظرفیت، انعطاف)",
+    "گولاتی ۱۹۹۵ (منابع مکمل)"
    ]
   },
   {
    "code": "CAP_TECH",
    "family": "CAPABILITY",
-   "name": "توانمندی فنی و R&D",
+   "name": "توانمندی فنی و پژوهشی",
    "nameEn": "Technical capability & innovation",
    "why": "توانمندی فنی و بهره‌وری/نوآوری، پیش‌بین استمرار برتری شریک در افق میان‌مدت.",
    "appliesTo": [
@@ -720,8 +720,8 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     "help": "تیم، ابزار، دانش خاص، یا وابستگی به پیمانکاران."
    },
    "sources": [
-    "Dickson 1966 (technical capability)",
-    "Gulati 1998 (capability-based alliances)"
+    "دیکسون ۱۹۶۶ (توانمندی فنی)",
+    "گولاتی ۱۹۹۸ (اتحادهای مبتنی بر توانمندی)"
    ]
   },
   {
@@ -739,14 +739,14 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "evidence": "BOTH",
    "scaleId": "QUALITY",
    "halfLifeDays": 270,
-   "observedFrom": "actions/support tickets: میانگین زمان پاسخ",
+   "observedFrom": "اقدام‌ها/تیکت‌های پشتیبانی: میانگین زمان پاسخ",
    "intake": {
     "prompt": "پس از تحویل، پشتیبانی و رفع مشکل چطور است؟",
     "help": "سرعت پاسخ و کیفیت نتیجه."
    },
    "sources": [
-    "Dickson 1966 (warranty & service)",
-    "Custify: support experience (tickets per user)"
+    "دیکسون ۱۹۶۶ (گارانتی و خدمات)",
+    "ابزار مشتریان: تجربهٔ پشتیبانی (تیکت هر کاربر)"
    ]
   },
   {
@@ -765,15 +765,15 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "evidence": "BOTH",
    "scaleId": "FREQUENCY",
    "halfLifeDays": 365,
-   "observedFrom": "commitments: نرخ انجام به‌موقع + بازخورد جلسات",
+   "observedFrom": "تعهدها: نرخ انجام به‌موقع + بازخورد جلسات",
    "intake": {
     "prompt": "تا امروز گفته‌شان به عملشان نزدیک بوده؟",
     "help": "اختیاری — اگر تجربهٔ مستقیم ندارید، این را خالی بگذارید.",
     "recommended": true
    },
    "sources": [
-    "Morgan & Hunt 1994 (trust)",
-    "Li et al. 2026 (trust → commitment)"
+    "مورگان و هانت ۱۹۹۴ (اعتماد)",
+    "لی و همکاران ۲۰۲۶ (اعتماد به تعهد)"
    ]
   },
   {
@@ -791,14 +791,14 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "evidence": "BOTH",
    "scaleId": "FREQUENCY",
    "halfLifeDays": 270,
-   "observedFrom": "commitments سازۀ رابطه (تعهد دوسویه در ۱۸۰ روز اخیر)",
+   "observedFrom": "تعهدهای سازهٔ رابطه (تعهد دوسویه در ۱۸۰ روز اخیر)",
    "intake": {
     "prompt": "آیا آن‌ها هم سرمایه‌گذاری متقابل نشان داده‌اند؟",
     "help": "مثلاً قرارداد بلندمدت، اختصاص نفر، معرفی فرصت، پیش‌پرداخت."
    },
    "sources": [
-    "Morgan & Hunt 1994 (commitment)",
-    "Jones et al. 1997 (commitment–trust theory)"
+    "مورگان و هانت ۱۹۹۴ (تعهد)",
+    "جونز و همکاران ۱۹۹۷ (نظریهٔ تعهد-اعتماد)"
    ]
   },
   {
@@ -831,8 +831,8 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     "warning": "پاسخ «بله» پرچم سرخ محسوب می‌شود و سقف امتیاز را پایین می‌آورد."
    },
    "sources": [
-    "Anderson & Narasimhan 1996 (root causes of failure)",
-    "Choi & Lee 2007 (opportunism)"
+    "اندرسون و نارسیمهان ۱۹۹۶ (ریشه‌های شکست)",
+    "چوی و لی ۲۰۰۷ (فرصت‌طلبی)"
    ]
   },
   {
@@ -855,8 +855,8 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     "help": "مثلاً تأخیر، نقص کیفیت، مشکل نقدینگی."
    },
    "sources": [
-    "Anderson & Narasimhan 1996",
-    "معیار due diligence: «answers must be verifiable, not narrative»"
+    "اندرسون و نارسیمهان ۱۹۹۶",
+    "اصل بررسی مقدماتی: «پاسخ‌ها باید قابل راستی‌آزمایی باشند، نه روایت»"
    ]
   },
   {
@@ -864,7 +864,7 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "family": "RELIABILITY",
    "name": "کیفیت مدیریت اختلاف",
    "nameEn": "Conflict handling",
-   "why": "نحوۀ برخورد با اختلاف، نه نبودِ اختلاف، تعیین‌کنندۀ بقای رابطه است (مسیرهای voice/loyalty در برابر neglect/exit).",
+   "why": "نحوۀ برخورد با اختلاف، نه نبودِ اختلاف، تعیین‌کنندۀ بقای رابطه است (مسیرهای صدا/وفاداری در برابر غفلت/خروج).",
    "appliesTo": [
     "RELATIONSHIP",
     "PERSON"
@@ -874,14 +874,14 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "evidence": "BOTH",
    "scaleId": "QUALITY",
    "halfLifeDays": 365,
-   "observedFrom": "actions با تگ اختلاف + یادداشت جلسات",
+   "observedFrom": "اقدام‌های دارای برچسب اختلاف + یادداشت جلسات",
    "intake": {
     "prompt": "آخرین اختلاف را چطور حل کردیم؟",
     "help": "سریع و سازنده / کش‌دار / بی‌نتیجه / با ضرر."
    },
    "sources": [
-    "Rusbult et al. 1998 (exit–voice–loyalty–neglect)",
-    "Choi & Lee 2007"
+    "روسبالت و همکاران ۱۹۹۸ (خروج–صدا–وفاداری–غفلت)",
+    "چوی و لی ۲۰۰۷"
    ]
   },
   {
@@ -904,8 +904,8 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     "help": "اگر تجربه‌ای نیست، خالی بگذارید."
    },
    "sources": [
-    "Anderson & Narasimhan 1996 (non-adapted behaviour)",
-    "Weber 1996 (flexibility)"
+    "اندرسون و ناراسیمهان ۱۹۹۶ (رفتار غیرتطبیقی)",
+    "وبر ۱۹۹۶ (انعطاف)"
    ]
   },
   {
@@ -926,9 +926,9 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "halfLifeDays": 90,
    "observedFrom": "تعداد افراد منحصربه‌فرد دارای تعامل در ۹۰ روز اخیر + سطوح سازمانی پوشش‌داده‌شده",
    "sources": [
-    "Fortna et al. 2012 (TSP: 3.4× win rate vs single-threaded)",
-    "Gartner 2021 (10 stakeholders, 6 touchpoints)",
-    "Gong 2025 (2.8× more deal contacts)"
+    "فورتنا و همکاران ۲۰۱۲ (فروش تک‌مسیره: نرخ برد ۳٫۴ برابر با فروش چندلایه)",
+    "گارتنر ۲۰۲۱ (۱۰ ذینفع، ۶ نقطهٔ تماس)",
+    "گونگ ۲۰۲۵ (۲٫۸ برابر تماس معاملاتی بیشتر)"
    ]
   },
   {
@@ -947,15 +947,15 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "evidence": "BOTH",
    "scaleId": "FREQUENCY",
    "halfLifeDays": 120,
-   "observedFrom": "meetings: ۱۸۰ روز اخیر با نقش مدیرعامل/عضو هیئت‌مدیره",
+   "observedFrom": "جلسات: ۱۸۰ روز اخیر با نقش مدیرعامل/عضو هیئت‌مدیره",
    "intake": {
     "prompt": "آیا می‌توانیم مستقیماً با تصمیم‌گیر نهایی صحبت کنیم؟",
     "help": "بدون واسطه و بدون نیاز به مجوز.",
     "recommended": true
    },
    "sources": [
-    "MEDDPICC (EB access)",
-    "Custify: no executive engagement = renewal risk"
+    "چارچوب فروش راهبردی (دسترسی به تصمیم‌گیر اقتصادی)",
+    "ابزار مشتریان: نبود درگیری مدیریتی = ریسک تمدید"
    ]
   },
   {
@@ -1007,8 +1007,8 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     "recommended": true
    },
    "sources": [
-    "MEDDPICC (Champion)",
-    "Fortna et al. 2012 (champion with measurable impact)"
+    "چارچوب فروش راهبردی (حامی)",
+    "فورتنا و همکاران ۲۰۱۲ (حامی با اثر قابل اندازه‌گیری)"
    ]
   },
   {
@@ -1016,7 +1016,7 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "family": "ACCESS",
    "name": "نقش در ساختار تصمیم خرید",
    "nameEn": "Role in the buying committee",
-   "why": "طبقه‌بندی نقش‌ها (EB/TB/UB/Coach) و وزن رأی هر نفر — «قدرت تصمیم» یکی از معیارهای همیشگی ارزیابی ذی‌نفع.",
+   "why": "طبقه‌بندی نقش‌ها (تصمیم‌گیر اقتصادی، تصمیم‌گیر فنی، کاربر نهایی، حامی) و وزن رأی هر نفر — «قدرت تصمیم» یکی از معیارهای همیشگی ارزیابی ذی‌نفع.",
    "appliesTo": [
     "PERSON"
    ],
@@ -1032,22 +1032,22 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     },
     {
      "level": 1,
-     "label": "کاربر نهایی (UB) — اثر توصیه",
+     "label": "کاربر نهایی — اثر توصیه",
      "score": 50
     },
     {
      "level": 2,
-     "label": "تأییدکنندهٔ فنی/مالی (TB)",
+     "label": "تأییدکنندهٔ فنی/مالی",
      "score": 70
     },
     {
      "level": 3,
-     "label": "معرف و جهت‌دهنده (Coach/Champion)",
+     "label": "معرف و جهت‌دهنده (حامی)",
      "score": 85
     },
     {
      "level": 4,
-     "label": "تصمیم‌گیر نهایی (EB) با حق امضا",
+     "label": "تصمیم‌گیر نهایی با حق امضا",
      "score": 100
     }
    ],
@@ -1057,8 +1057,8 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     "help": "اگر مطمئن نیستید، «کاربر نهایی» را انتخاب نکنید — خالی بگذارید."
    },
    "sources": [
-    "میلرهایم هاين (Miller Heiman) Strategic Selling — EB/TB/UB/Coach",
-    "Mitchell 1997 (power dimension)"
+    "میلرهایم هین — فروش راهبردی (تصمیم‌گیر اقتصادی، تصمیم‌گیر فنی، کاربر نهایی، حامی)",
+    "میتچل ۱۹۹۷ (بُعد قدرت)"
    ]
   },
   {
@@ -1079,7 +1079,7 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "halfLifeDays": 60,
    "observedFrom": "تعاملات: میانگین زمان پاسخ به پیام/اقدام + نرخ انجام اقدامات مشترک",
    "sources": [
-    "Custify/Cohere: responsiveness and communication cadence"
+    "ابزار مشتریان: پاسخگویی و چرخهٔ ارتباط"
    ]
   },
   {
@@ -1102,16 +1102,16 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     "help": "نشانه‌ها: تغییر ساختار، نقش جدید، ۱۸ ماه بی‌تغییری در نقش، یا شنیده‌های رسمی."
    },
    "sources": [
-    "Gainsight/ChurnZero: champion departure is a top renewal-risk driver",
-    "Custify: changing points of contact"
+    "گینسایت/چرن‌زیرو: خروج حامی از محرک‌های اصلی ریسک تمدید",
+    "ابزار مشتریان: تغییر نقاط تماس"
    ]
   },
   {
    "code": "FIN_Z_SCORE",
    "family": "FINANCIAL",
-   "name": "ناحیۀ سلامت مالی (Z″ امتن)",
+   "name": "ناحیۀ سلامت مالی (معیار آلتمن)",
    "nameEn": "Financial health zone (Altman Z″)",
-   "why": "طبقه‌بندی کلاسیک ورشکستگی: Z″ بالا = امن، ۱٫۱ تا ۲٫۶ = خاکستری، زیر ۱٫۱ = ناحیۀ خطر.",
+   "why": "طبقه‌بندی کلاسیک ورشکستگی: امتیاز آلتمن بالا = امن، بین ۱٫۱ تا ۲٫۶ = خاکستری، زیر ۱٫۱ = ناحیهٔ خطر.",
    "appliesTo": [
     "ORGANIZATION"
    ],
@@ -1125,15 +1125,15 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     "threshold": 25,
     "cap": 40,
     "severity": "HIGH",
-    "message": "ناحیۀ خطر مالی (Z″ < ۱٫۱ یا صورت‌های مالی نامعتبر): سقف امتیاز ۴۰، نیازمند وثیقه/پیش‌پرداخت."
+    "message": "ناحیۀ خطر مالی (امتیاز آلتمن زیر ۱٫۱ یا صورت‌های مالی نامعتبر): سقف امتیاز ۴۰، نیازمند وثیقه/پیش‌پرداخت."
    },
    "intake": {
     "prompt": "وضعیت مالی‌شان را با کدام نشانه می‌شود توصیف کرد؟",
     "help": "صورت‌های مالی حسابرسی‌شده، نسبت جاری، یا صرفاً شنیده‌ها."
    },
    "sources": [
-    "Altman 1968, 2000 (Z-score)",
-    "Basel IRB (PD)"
+    "آلتمن ۱۹۶۸، ۲۰۰۰ (امتیاز اعتباری)",
+    "بازل (مدل داخلی رتبه‌بندی: احتمال نکول)"
    ]
   },
   {
@@ -1141,7 +1141,7 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "family": "FINANCIAL",
    "name": "نقدینگی جاری",
    "nameEn": "Liquidity",
-   "why": "نسبت جاری: توان پرداخت بدهی کوتاه‌مدت — معیار اصلی ارزیابی طرف حساب در استاندارد CFA.",
+   "why": "نسبت جاری: توان پرداخت بدهی کوتاه‌مدت — معیار اصلی ارزیابی طرف حساب در استاندارد تحلیل مالی.",
    "appliesTo": [
     "ORGANIZATION"
    ],
@@ -1182,7 +1182,7 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     "help": "اگر صورت مالی ندارید، این سؤال را رد کنید."
    },
    "sources": [
-    "CFA Investment Analysis Support & Portfolio Management 2007 (Ch. 5)"
+    "تحلیل سرمایه‌گذاری و مدیریت سبد انجمن تحلیلگران مالی ۲۰۰۷ (فصل ۵)"
    ]
   },
   {
@@ -1228,11 +1228,11 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "halfLifeDays": 365,
    "intake": {
     "prompt": "بار بدهی‌شان نسبت به سود چقدر است؟",
-    "help": "تخمین «بدهی ÷ سود operate» هم کافی است."
+    "help": "تخمین «بدهی ÷ سود عملیاتی» هم کافی است."
    },
    "sources": [
-    "CFA 2007 (leverage, coverage, liquidity)",
-    "Altman 2000"
+    "انجمن تحلیلگران مالی ۲۰۰۷ (اهرم، پوشش، نقدینگی)",
+    "آلتمن ۲۰۰۰"
    ]
   },
   {
@@ -1240,7 +1240,7 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "family": "FINANCIAL",
    "name": "ریسک کشور و تحریم/ارز",
    "nameEn": "Country & currency risk",
-   "why": "ریسک کشور (امتیاز CDS/رتبه) و محدودیت ارزی، ارزش واقعی تعهدات طرف حساب خارجی را تعیین می‌کند.",
+   "why": "ریسک کشور (امتیاز بازار اعتبار/رتبه) و محدودیت ارزی، ارزش واقعی تعهدات طرف حساب خارجی را تعیین می‌کند.",
    "appliesTo": [
     "ORGANIZATION"
    ],
@@ -1254,16 +1254,16 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     "help": "اگر داخل ایران کار می‌کنید، معمولاً «پاک» است مگرنه محدودیت ارزی داشته باشند."
    },
    "sources": [
-    "Damodaran country-risk (CDS spread based)",
-    "Altman Hot’fi 2005 (country-risk rating)"
+    "داموداران: ریسک کشوری (بر پایهٔ فاصله‌های نکول اعتباری)",
+    "رتبه‌بندی ریسک کشوری آلتمن (۲۰۰۵)"
    ]
   },
   {
    "code": "RISK_SANCTIONS_PEP",
    "family": "RISK",
-   "name": "غربالگری تحریم، PEP و رسانهٔ منفی",
+   "name": "غربالگری تحریم‌ها، مناصب و رسانهٔ منفی",
    "nameEn": "Sanctions / PEP / adverse-media screening",
-   "why": "غربالگری، دروازۀ ورود هر طرف حساب است؛ تطابق با فهرست تحریم یا PEP یعنی توقیف، جریمه و ریسک کیفری.",
+   "why": "غربالگری، دروازۀ ورود هر طرف حساب است؛ تطابق با فهرست تحریم یا مناصب یعنی توقیف، جریمه و ریسک کیفری.",
    "appliesTo": [
     "ORGANIZATION",
     "PERSON"
@@ -1278,22 +1278,22 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     "threshold": 50,
     "cap": 20,
     "severity": "CRITICAL",
-    "message": "مواجهۀ تحریم/PEP/رسانۀ منفی تأییدنشده: سقف امتیاز ۲۰ و توقف هر اقدام معاملاتی تا جمع‌بندی واحد انطباق."
+    "message": "مواجهۀ تحریم‌ها/مناصب/رسانهٔ منفی تأییدنشده: سقف امتیاز ۲۰ و توقف هر اقدام معاملاتی تا جمع‌بندی واحد انطباق."
    },
    "intake": {
-    "prompt": "آیا در فهرست‌های تحریم، PEP یا رسانهٔ منفی بررسی شده‌اند؟",
+    "prompt": "آیا در فهرست‌های تحریم، مناصب یا رسانهٔ منفی بررسی شده‌اند؟",
     "help": "پاسخ باید مستند باشد (تاریخ و منبع غربالگری). نبود غربالگری، خودش یک پرچم است.",
     "recommended": true
    },
    "sources": [
-    "OFAC/UN/EU consolidated lists (عملکرد ارزیابی شخص ثالث)",
-    "AML/CFT onboarding practice"
+    "فهرست‌های تحریم بین‌المللی (عملکرد ارزیابی شخص ثالث)",
+    "رویهٔ پذیرش مشتری مطابق مقررات مبارزه با پول‌شویی"
    ]
   },
   {
    "code": "RISK_UBO",
    "family": "RISK",
-   "name": "شفافیت مالکیت نهایی (UBO)",
+   "name": "شفافیت مالکیت نهایی",
    "nameEn": "Beneficial-ownership transparency",
    "why": "ساختار مالکیت مبهم و ذی‌نفع واقعی پنهان، پرچم اصلی پولشویی و دور زدن تحریم است.",
    "appliesTo": [
@@ -1326,7 +1326,7 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     },
     {
      "level": 4,
-     "label": "UBO تا شخص حقیقی نهایی شفاف و مستند",
+     "label": "مالک نهایی تا شخص حقیقی، شفاف و مستند",
      "score": 0
     }
    ],
@@ -1336,8 +1336,8 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     "help": "افشای ذی‌نفع واقعی؛ «نمی‌دانم» هم اطلاعات می‌دهد."
    },
    "sources": [
-    "FinCEN CDD beneficial-ownership rule",
-    "عملکرد DDQ شخص ثالث (UBO verification)"
+    "قاعدهٔ احراز هویت مشتری و شفافیت مالکیت نهایی",
+    "عملکرد پرسشنامهٔ بررسی مقدماتی شخص ثالث (راستی‌آزمایی مالک نهایی)"
    ]
   },
   {
@@ -1360,7 +1360,7 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     "help": "با ذکر منبع (دادگاه، نهاد ناظر، رسانه)."
    },
    "sources": [
-    "vendor due diligence: legal & regulatory compliance domain"
+    "بررسی مقدماتی تأمین‌کننده: حوزهٔ انطباق حقوقی و نظارتی"
    ]
   },
   {
@@ -1368,7 +1368,7 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "family": "RISK",
    "name": "امنیت داده و حریم خصوصی",
    "nameEn": "Data security & privacy posture",
-   "why": "هرچه طرف حساب به داده/سیستم ما بیشتر دسترسی دارد، ریسک نشتی بزرگ‌تر است؛ ISO 27001/SOC 2 مدرک اصلی است.",
+   "why": "هرچه طرف حساب به داده/سیستم ما بیشتر دسترسی دارد، ریسک نشتی بزرگ‌تر است؛ استاندارد ۲۷۰۰۱ و گزارش حسابرسی امنیتی مدرک اصلی است.",
    "appliesTo": [
     "ORGANIZATION",
     "RELATIONSHIP"
@@ -1395,32 +1395,32 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     },
     {
      "level": 3,
-     "label": "SOC 2/ISO 27001 معتبر",
+     "label": "گزارش حسابرسی امنیتی/استاندارد ۲۷۰۰۱ معتبر",
      "score": 20
     },
     {
      "level": 4,
-     "label": "گواهی + تست نفوذ اخیر + قرارداد DPA",
+     "label": "گواهی + تست نفوذ اخیر + قرارداد پردازش داده",
      "score": 0
     }
    ],
    "halfLifeDays": 365,
    "intake": {
     "prompt": "برای داده و امنیت ما چه مدرکی دارند؟",
-    "help": "ISO 27001، SOC 2، قرارداد محرمانگی، گزارش تست نفوذ."
+    "help": "استاندارد ۲۷۰۰۱، گزارش حسابرسی امنیتی، قرارداد محرمانگی، گزارش تست نفوذ."
    },
    "sources": [
-    "Weber 1996 (privacy/data)",
-    "ISO/IEC 27001",
-    "عملکرد tiering بر اساس داده‌ای که مخاطب لمس می‌کند"
+    "وبر ۱۹۹۶ (حریم خصوصی/داده)",
+    "استاندارد ۲۷۰۰۱",
+    "عملکرد سطح‌بندی بر اساس داده‌ای که مخاطب لمس می‌کند"
    ]
   },
   {
    "code": "RISK_ESG",
    "family": "RISK",
-   "name": "حاکمیت، کار و محیط‌زیست (ESG)",
+   "name": "حاکمیت، کار و محیط‌زیست",
    "nameEn": "ESG & governance",
-   "why": "ارزیابی ESG ریسک شهرت و تعطیلی را پیش می‌گیرد؛ ایدئولوژیک نیست: کار اجباری، ایمنی، و فساد مستقیم ارزِ رابطه را تهدید می‌کند.",
+   "why": "ارزیابی حاکمیت، کار و محیط‌زیست ریسک شهرت و تعطیلی را پیش می‌گیرد؛ ایدئولوژیک نیست: کار اجباری، ایمنی، و فساد مستقیم ارزِ رابطه را تهدید می‌کند.",
    "appliesTo": [
     "ORGANIZATION"
    ],
@@ -1430,12 +1430,12 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "scaleId": "MATURITY",
    "halfLifeDays": 540,
    "intake": {
-    "prompt": "گزارش یا گواهی ESG/مسئولیت اجتماعی دارند؟",
-    "help": "ISO 14001، ISO 45001، SA8000، گزارش پایداری، یا خط مشی ضدفساد."
+    "prompt": "گزارش یا گواهی مسئولیت اجتماعی و محیط‌زیست دارند؟",
+    "help": "استانداردهای ۱۴۰۰۱، ۴۵۰۰۱ و ۸۰۰۰، گزارش پایداری، یا خط‌مشی ضدفساد."
    },
    "sources": [
-    "ISO 14001/45001/SA8000",
-    "UNGP/OECD due-diligence guidance"
+    "استانداردهای ۱۴۰۰۱/۴۵۰۰۱/۸۰۰۰",
+    "راهنمای بررسی مقدماتی سازمان ملل و سازمان همکاری اقتصادی"
    ]
   },
   {
@@ -1459,8 +1459,8 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     "help": "هرچه نزدیک‌تر به ۱۰۰٪، ریسک تمرکز بیشتر."
    },
    "sources": [
-    "Basel concentration risk",
-    "Porter 1980 (bargaining power)"
+    "ریسک تمرکز بازل",
+    "پورتر ۱۹۸۰ (قدرت چانه‌زنی)"
    ]
   },
   {
@@ -1483,7 +1483,7 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     "help": "افشای این مورد، نه وجودش، نشانهٔ سلامت رابطه است."
    },
    "sources": [
-    "AML/KYC PEP & related-party screening"
+    "غربالگری پول‌شویی، احراز هویت مشتری، مناصب و طرف‌های مرتبط"
    ]
   },
   {
@@ -1503,9 +1503,9 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "evidence": "OBSERVED",
    "scaleId": "QUALITY",
    "halfLifeDays": 120,
-   "observedFrom": "network.path: قدرت مسیر محاسبه‌شده (0–100)",
+   "observedFrom": "مسیر شبکه: قدرت مسیر محاسبه‌شده (۰–۱۰۰)",
    "sources": [
-    "Burt 1992 (secondary/indirect access to structural holes)"
+    "برت ۱۹۹۲ (دسترسی دوم/غیرمستقیم به سوراخ‌های ساختاری)"
    ]
   },
   {
@@ -1523,11 +1523,11 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "evidence": "OBSERVED",
    "scaleId": "QUALITY",
    "halfLifeDays": 180,
-   "observedFrom": "network.metrics: betweenness/brokerage و پل‌های بین‌سازمانی",
+   "observedFrom": "سنجه‌های شبکه: واسطه‌گری و پل‌های بین‌سازمانی",
    "sources": [
-    "Burt 2004 (AJS: structural holes and good ideas)",
-    "Freeman 1977 (betweenness)",
-    "Valente & Fujimoto 2010 / Everett & Borgatti 2016 (brokerage)"
+    "برت ۲۰۰۴ (سوراخ‌های ساختاری و ایده‌های خوب)",
+    "فریمن ۱۹۷۷ (بینایی مرکزی)",
+    "والنته و فوجیموتو ۲۰۱۰ / اورت و بورگاتی ۲۰۱۶ (واسطه‌گری)"
    ]
   },
   {
@@ -1535,7 +1535,7 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "family": "NETWORK",
    "name": "تنوع و غیرحاشیه‌ای بودن پیوندها",
    "nameEn": "Non-redundant ties (low constraint)",
-   "why": "پیوندهای همپوشان و تکراری (constraint بالا) دسترسی جدید نمی‌آورد؛ تنوع خوشه‌ها ارزش شبکه را می‌سازد.",
+   "why": "پیوندهای همپوشان و تکراری (محدودیت بالا) دسترسی جدید نمی‌آورد؛ تنوع خوشه‌ها ارزش شبکه را می‌سازد.",
    "appliesTo": [
     "ORGANIZATION",
     "PERSON"
@@ -1545,10 +1545,10 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "evidence": "OBSERVED",
    "scaleId": "QUALITY",
    "halfLifeDays": 180,
-   "observedFrom": "network.metrics: تعداد نوع رابطه + تعداد خوشه‌های متمایز (constraint)",
+   "observedFrom": "سنجه‌های شبکه: تعداد نوع رابطه + تعداد خوشه‌های متمایز (محدودیت)",
    "sources": [
-    "Burt 1992 (network constraint)",
-    "Granovetter 1973"
+    "برت ۱۹۹۲ (محدودیت شبکه)",
+    "گرانووتر ۱۹۷۳"
    ]
   },
   {
@@ -1566,10 +1566,10 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "evidence": "OBSERVED",
    "scaleId": "FREQUENCY",
    "halfLifeDays": 90,
-   "observedFrom": "interactions ۱۸۰ روزه + فاصله تا آخرین تعامل (decay)",
+   "observedFrom": "تعامل‌های ۱۸۰ روزه + فاصله تا آخرین تعامل (افت تدریجی)",
    "sources": [
-    "Granovetter 1973 (time spent + intensity + reciprocity)",
-    "Newman 2003 (tie strength)"
+    "گرانووتر ۱۹۷۳ (زمان صرف‌شده + شدت + متقابلیت)",
+    "نیومن ۲۰۰۳ (قوت پیوند)"
    ]
   },
   {
@@ -1588,10 +1588,10 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "evidence": "OBSERVED",
    "scaleId": "QUALITY",
    "halfLifeDays": 120,
-   "observedFrom": "network.articulation: حذف گره → تعداد اجزای جدید",
+   "observedFrom": "شبکه: حذف گره → تعداد اجزای جدید",
    "sources": [
-    "Burt 1992 (shuttle diplomacy / third-party dependency)",
-    "Bottleneck & cut-vertex analysis"
+    "برت ۱۹۹۲ (دیپلماسی واسطه‌ای / وابستگی به شخص ثالث)",
+    "تحلیل گلوگاه و رأس برشی"
    ]
   },
   {
@@ -1608,14 +1608,14 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "evidence": "BOTH",
    "scaleId": "COVERAGE",
    "halfLifeDays": 60,
-   "observedFrom": "meeting participants × required roles (procurement/security/legal/finance)",
+   "observedFrom": "شرکت‌کنندگان جلسه × نقش‌های لازم (تأمین، امنیت، حقوقی، مالی)",
    "intake": {
     "prompt": "چه نقش‌های کلیدی در این معامله هنوز پوشش داده نشده‌اند؟",
     "help": "تأمین، امنیت، مالی، حقوقی، کاربر نهایی."
    },
    "sources": [
-    "Gartner 2021 (6–10 stakeholders)",
-    "MEDDPICC (Paper Process)"
+    "گارتنر ۲۰۲۱ (۶ تا ۱۰ ذینفع)",
+    "چارچوب فروش راهبردی (فرایند مکاتبات)"
    ]
   },
   {
@@ -1623,7 +1623,7 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "family": "RISK",
    "name": "مسیر قرارداد و خرید شفاف است؟",
    "nameEn": "Paper process / procurement path",
-   "why": "نبود فرایند خرید مشخص (RFP، ممیزی امنیتی، قرارداد) یعنی تاریخ بسته‌شدن معامله حدس است.",
+   "why": "نبود فرایند خرید مشخص (درخواست پیشنهاد، ممیزی امنیتی، قرارداد) یعنی تاریخ بسته‌شدن معامله حدس است.",
    "appliesTo": [
     "OPPORTUNITY"
    ],
@@ -1637,8 +1637,8 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     "help": "کی تایید می‌کند، چه اسنادی لازم است، مهلت‌ها چیست."
    },
    "sources": [
-    "MEDDPICC (Paper Process)",
-    "Dickson 1966 (contract terms)"
+    "چارچوب فروش راهبردی (فرایند کاغذی)",
+    "دیکسون ۱۹۶۶ (شرایط قرارداد)"
    ]
   },
   {
@@ -1661,8 +1661,8 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     "help": "مثلاً صرفه‌جویی سالانه، درآمد افزوده، کاهش ریسک قابل‌سنجش."
    },
    "sources": [
-    "MEDDIC (Metrics)",
-    "Fortna et al. 2012 (identified pain)"
+    "چارچوب فروش راهبردی (سنجه‌ها)",
+    "فورتنا و همکاران ۲۰۱۲ (درد شناسایی‌شده)"
    ]
   },
   {
@@ -1670,7 +1670,7 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "family": "ACCESS",
    "name": "شتاب فعالیت‌های مشترک",
    "nameEn": "Joint activity momentum",
-   "why": "نرخ تبدیل فعالیت به پیشرفت فاز (activity→activity و activity→pipeline) پیش‌بین کوتاه‌مدت برد است.",
+   "why": "نرخ تبدیل فعالیت به پیشرفت فاز (فعالیت←فعالیت و فعالیت←خط فروش) پیش‌بین کوتاه‌مدت برد است.",
    "appliesTo": [
     "OPPORTUNITY",
     "RELATIONSHIP"
@@ -1680,9 +1680,9 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "evidence": "OBSERVED",
    "scaleId": "FREQUENCY",
    "halfLifeDays": 45,
-   "observedFrom": "interactions/meetings ۳۰ روز اخیر + تغییر فاز فرصت",
+   "observedFrom": "تعامل‌ها/جلسات ۳۰ روز اخیر + تغییر فاز فرصت",
    "sources": [
-    "Gainsight: activity→activity & activity→pipeline conversion"
+    "گینسایت: تبدیل فعالیت←فعالیت و فعالیت←خط فروش"
    ]
   },
   {
@@ -1690,7 +1690,7 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
    "family": "RELIABILITY",
    "name": "مدافع فعال در داخل سازمان",
    "nameEn": "Internal advocacy / sentiment",
-   "why": "نه رضایت مودبانه، بلکه آمادۀ دفاع در جلسهٔ داخلی بودن؛ شاخص احساسی و نه «امتیاز NPS».",
+   "why": "نه رضایت مودبانه، بلکه آمادۀ دفاع در جلسهٔ داخلی بودن؛ شاخص احساسی و نه «شاخص رضایت».",
    "appliesTo": [
     "OPPORTUNITY",
     "PERSON"
@@ -1706,8 +1706,8 @@ globalThis.__SRIP_CRITERIA_DATA__ = {
     "help": "اگر پاسخ «نیست/نیست» باشد، هنوز چمپیون نداریم."
    },
    "sources": [
-    "Gainsight: sentiment > NPS",
-    "MEDDPICC (Champion)"
+    "گینسایت: احساسات مهم‌تر از شاخص رضایت",
+    "چارچوب فروش راهبردی (حامی)"
    ]
   }
  ]
@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.06.10';
+const DEMO_MOCK_VERSION = '2026.09.06.14';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -1759,7 +1759,7 @@ let RELS = [
 /* کیدنس دمو بر اساس نوع رابطه (P0-4) */
 [['r-1',30],['r-2',30],['r-3',45],['r-4',30],['r-5',60],['r-6',30]].forEach(([id,cd])=>{const r=RELS.find(v=>v.id===id); if(r) r.cadenceDays=cd;});
 let MEETINGS = [
-  { id:'m-1', title:'جلسهٔ راهبردی Q3 با پترو صنعت', startAt:'2026-09-03T09:30:00.000Z', endAt:'2026-09-03T11:00:00.000Z', objective:'بررسی همکاری راهبردی و برنامه توسعه', agenda:'1) گزارش عملکرد ۲ فصل\n2) برنامه توسعه بازار\n3) زمان‌بندی قرارداد جدید', organizationId:'org-4', relationshipId:'r-1', participants:[{personId:'p-2'},{personId:'p-6'}], actions:[], commitments:[], preMeetingBrief:'تمرکز بر تمدید قرارداد و نرخ جدید.' },
+  { id:'m-1', title:'جلسهٔ راهبردی فصل سوم با پترو صنعت', startAt:'2026-09-03T09:30:00.000Z', endAt:'2026-09-03T11:00:00.000Z', objective:'بررسی همکاری راهبردی و برنامه توسعه', agenda:'1) گزارش عملکرد ۲ فصل\n2) برنامه توسعه بازار\n3) زمان‌بندی قرارداد جدید', organizationId:'org-4', relationshipId:'r-1', participants:[{personId:'p-2'},{personId:'p-6'}], actions:[], commitments:[], preMeetingBrief:'تمرکز بر تمدید قرارداد و نرخ جدید.' },
   { id:'m-2', title:'مذاکره با بانک ملّی پارس', startAt:'2026-09-07T10:00:00.000Z', endAt:'2026-09-07T11:30:00.000Z', objective:'افتتاح خط اعتباری', agenda:'ارائه صورت‌های مالی و طرح توجیهی', organizationId:'org-3', relationshipId:'r-2', participants:[{personId:'p-3'}], actions:[], commitments:[], preMeetingBrief:null },
   { id:'m-3', title:'جلسهٔ پیگیری پروژه سدنا', startAt:'2026-08-25T09:00:00.000Z', endAt:'2026-08-25T10:00:00.000Z', objective:'پیشرفت فاز دوم', agenda:'بررسی مایلاستون‌ها', organizationId:'org-5', relationshipId:'r-3', participants:[{personId:'p-4'},{personId:'p-1'}], actions:[{id:'a-x1'}], commitments:[{id:'c-x1'}], outcome:'توافق شد تحویل فاز دوم ۱۰ روز زودتر انجام شود.', preMeetingBrief:null },
   { id:'m-4', title:'بررسی ریسک تأمین‌کننده البرز', startAt:'2026-08-28T08:30:00.000Z', endAt:'2026-08-28T09:15:00.000Z', objective:'مدیریت تاخیر تحویل قطعات', agenda:'تاخیرها و برنامه جبرانی', organizationId:'org-6', relationshipId:'r-4', participants:[{personId:'p-5'}], actions:[], commitments:[], outcome:'تأمین‌کننده متعهد شد تحویل‌ها را ۳ هفته شتاب دهد.', preMeetingBrief:null },
@@ -1904,7 +1904,7 @@ const DECISION_ROLE_LIST=BUYING_ROLE_LIST.filter(r=>r!=='BLOCKER');
 const COMMITTEE_MEMBER_STATUS=['IDENTIFIED','ENGAGED','LOST'];
 /* --------------------- میشن معرفی (P0-3) --------------------- */
 const REF_REQUEST_STATUS_LIST=['REQUESTED','RESPONDED_YES','RESPONDED_NO','NO_RESPONSE'];
-const REF_OUTCOME_LIST=['MEET_BOOKED','NO_REPLY','DECLINED','BAD_FIT'];
+const REF_OUTCOME_LIST=['MEET_BOOKED','NO_REPLY','DECLINED','منفی_FIT'];
 /* --------------------- منبع فرصت (P0-5) --------------------- */
 const OPPORTUNITY_SOURCE_LIST=['REFERRAL','EXISTING_RELATIONSHIP','EVENT','COLD'];
 /* کیدنس هدف بر اساس نوع رابطه (P0-4): چند روز یک بار باید تعامل معنادار ثبت شود */
@@ -2068,7 +2068,7 @@ const SEED_USERS = {
   'client@arya-tech.ir': {
     id:'u-2', email:'client@arya-tech.ir', username:'client', name:'سارا محمدی', password:'123456',
     memberships:[{id:'mb-2',organizationId:'org-2',organizationName:'آریا فناوری',role:'RELATIONSHIP_MANAGER',department:'فروش',dataScope:'ORGANIZATION',accessScope:'ORGANIZATION',isPrimary:true}],
-    permissions:['dashboard.read','organization.read','person.read','relationship.read','meeting.read','interaction.read','action.read','commitment.read','project.read','opportunity.read','network.read','ai.query','ai.executive_brief','recommendation.read','report.read','report.export','approval.request','approval.read','search.read','notification.read','document.read','calendar.read','help.read','privacy.read','privacy.access','privacy.export','privacy.erase','enterprise.read','feature_flag.read','analytics.read','analytics.write'],
+    permissions:['dashboard.read','organization.read','person.read','relationship.read','meeting.read','interaction.read','action.read','commitment.read','project.read','opportunity.read','network.read','ai.query','ai.executive_brief','recommendation.read','report.read','مجوز خروجی گزارش','approval.request','approval.read','search.read','notification.read','document.read','calendar.read','help.read','privacy.read','privacy.access','privacy.export','privacy.erase','enterprise.read','feature_flag.read','analytics.read','analytics.write'],
     accessibleOrganizationIds:['org-2'],
     isOwner:false,
     isActive:true,
@@ -2334,6 +2334,7 @@ function networkColumns(req){
    P2-1 NBA: صف «قدم بعدی» — باید الان/امروز/این هفته + کانال + بازده + چرا
    خانوادهٔ اولویت‌ها: موعدگذشته → ریسک بدون پوشش → کیدنس → فرصت بزرگ → برنامه
    -------------------------------------------------------------------------- */
+const PRIO_FA={LOW:'کم',MEDIUM:'متوسط',HIGH:'بالا',CRITICAL:'بحرانی'};
 const NBA_URGENCY={NOW:'باید الان',TODAY:'امروز',WEEK:'این هفته'};
 const NBA_CHANNEL={MEETING:'جلسه',PHONE:'تماس تلفنی',EMAIL:'ایمیل'};
 const NBA_URGENCY_W={NOW:0,TODAY:1,WEEK:2};
@@ -2356,13 +2357,13 @@ function nbaView(req){
     .sort((a,b)=>(a.dueAt??'9999').localeCompare(b.dueAt??'9999')).forEach(a=>{
       add({key:`a-${a.id}`,id:`nba-a-${a.id}`,kind:'ACTION',refId:a.id,relationshipId:a.relationshipId,relationshipName:relName(a.relationshipId),
         title:a.title,text:`اقدام «${a.title}» را همین امروز پیگیری کنید`,urgency:'NOW',channel:'PHONE',expectedValue:null,
-        why:[`موعد ${a.dueAt?faDate(a.dueAt):'ثبت نشده'}${isLateAt(a.dueAt,now)?' گذشته است':''}`,a.status==='BLOCKED'?'اقدام مسدود است':`اولویت ${a.priority??'MEDIUM'}`]});
+        why:[`موعد ${a.dueAt?faDate(a.dueAt):'ثبت نشده'}${isLateAt(a.dueAt,now)?' گذشته است':''}`,a.status==='BLOCKED'?'اقدام مسدود است':`اولویت ${PRIO_FA[a.priority]??'متوسط'}`]});
     });
   coms.filter(c=>['OPEN','OVERDUE'].includes(c.status)&&isLateAt(c.dueAt,now)).forEach(c=>{
       add({key:`c-${c.id}`,id:`nba-c-${c.id}`,kind:'COMMITMENT',refId:c.id,relationshipId:c.relationshipId,relationshipName:relName(c.relationshipId),
         title:c.description.slice(0,80),text:`تعهد «${c.description.length>60?c.description.slice(0,60)+'…':c.description}» سررسید گذشته — پیگیری و راستی‌آزمایی کنید`,
         urgency:'NOW',channel:'PHONE',expectedValue:null,
-        why:[`سررسید ${c.dueAt?faDate(c.dueAt):'—'}`,c.direction==='THEIRS'?'تعهد طرف مقابل است — راستی‌آزمایی کنید':`ریسک ${c.risk??'MEDIUM'}`]});
+        why:[`سررسید ${c.dueAt?faDate(c.dueAt):'—'}`,c.direction==='THEIRS'?'تعهد طرف مقابل است — راستی‌آزمایی کنید':`ریسک ${PRIO_FA[c.risk]??'متوسط'}`]});
     });
   /* ۲) روابط در خطر بدون پوشش اقدام/تعهد */
   rels.filter(r=>r.status==='WATCH'||(r.riskScore??0)>=60).forEach(r=>{
@@ -2437,7 +2438,7 @@ function nbaAct(req,id,status){
 }
 /* --------------------------------------------------------------------------
    P2-2 SNA پیشرفته: تراکم، خوشه (label propagation)، PageRank، ایزوله،
-   شکاف ارتباطی + «پیشنهاد معرفی» با پذیرش و شمارش KPI
+   شکاف ارتباطی + «پیشنهاد معرفی» با پذیرش و شمارش شاخص
    -------------------------------------------------------------------------- */
 function snaView(req){
   const g=netGraphVisible(req);
@@ -2445,7 +2446,7 @@ function snaView(req){
   const adj=netUndirected(nodes,edges);
   const n=nodes.length;
   const uniqEdges=new Set(); edges.forEach(e=>uniqEdges.add([e.source,e.target].sort().join('|')));
-  /* تراکم روی گراف سازمانی (روابط واقعی) — KPI اصلی */
+  /* تراکم روی گراف سازمانی (روابط واقعی) — شاخص اصلی */
   const orgNodes=nodes.filter(x=>x.type==='organization');
   const orgIds=new Set(orgNodes.map(x=>x.id));
   const orgEdges=new Set(); edges.forEach(e=>{if(orgIds.has(e.source)&&orgIds.has(e.target)&&e.kind==='relationship')orgEdges.add([e.source,e.target].sort().join('|'));});
@@ -2658,15 +2659,15 @@ function seedComplianceStore(){
     status:'SCHEDULED',
   }));
   const findings=[
-    {id:'cf-1',severity:'HIGH',type:'UBO_PEP',subject:'org-6',title:'UBO دارای پرچم PEP با منابع خارجی',detail:'مالک اصلی البرز (۵۲٪) در فهرست PEP است و تأمین سرمایه از حوزهٔ خارجی دارد؛ راستی‌آزمایی سالانه منقضی شده است.',trigger:'periodic',createdAt:ago(8),status:'OPEN',assignedTo:'u-1',evidence:['ubo-6']},
-    {id:'cf-2',severity:'MEDIUM',type:'CAREER_EVENT',subject:'org-5',title:'خروج مدیر پروژه از سدنا',detail:'رویداد شغلی ce-2 (خروج علی نادری) — دسترسی به سفارش‌دهندهٔ اقتصادی باید از نو پوشش داده شود.',trigger:'event',createdAt:ago(9),status:'OPEN',assignedTo:'u-1',evidence:['ce-2']},
-    {id:'cf-3',severity:'HIGH',type:'SANCTION_LIST',subject:'org-8',title:'غربالگری دوره‌ای منقضی شده است',detail:'آخرین غربالگری استانداری تهران ۱۰۴ روز پیش بوده؛ مهلت ۶۰ روزه گذشته و نمایندهٔ PEP است.',trigger:'periodic',createdAt:ago(6),status:'OPEN',assignedTo:'u-1',evidence:['ubo-8']},
-    {id:'cf-4',severity:'MEDIUM',type:'NEW_OPPORTUNITY',subject:'org-4',title:'فرصت جدید روی رابطهٔ با پترو صنعت',detail:'ثبت فرصت o-6 (توسعهٔ سرویس ابری) — بررسی انطباق مشتری جدید پیش از ورود به هیئت.',trigger:'event',createdAt:ago(3),status:'OPEN',assignedTo:'u-1',evidence:['o-6']},
+    {id:'cf-1',severity:'HIGH',type:'UBO_PEP',subject:'org-6',title:'مالک نهاییِ دارای پرچم منصب با منابع خارجی',detail:'مالک اصلی البرز (۵۲٪) در فهرست افرادِ دارای منصب است و تأمین سرمایه از حوزهٔ خارجی دارد؛ راستی‌آزمایی سالانه منقضی شده است.',trigger:'periodic',createdAt:ago(8),status:'OPEN',assignedTo:'u-1',evidence:['ubo-6']},
+    {id:'cf-2',severity:'MEDIUM',type:'CAREER_EVENT',subject:'org-5',title:'خروج مدیر پروژه از سدنا',detail:'رویداد شغلی ۲ (خروج علی نادری) — دسترسی به سفارش‌دهندهٔ اقتصادی باید از نو پوشش داده شود.',trigger:'event',createdAt:ago(9),status:'OPEN',assignedTo:'u-1',evidence:['ce-2']},
+    {id:'cf-3',severity:'HIGH',type:'SANCTION_LIST',subject:'org-8',title:'غربالگری دوره‌ای منقضی شده است',detail:'آخرین غربالگری استانداری تهران ۱۰۴ روز پیش بوده؛ مهلت ۶۰ روزه گذشته و نماینده دارای منصب سیاسی است.',trigger:'periodic',createdAt:ago(6),status:'OPEN',assignedTo:'u-1',evidence:['ubo-8']},
+    {id:'cf-4',severity:'MEDIUM',type:'NEW_OPPORTUNITY',subject:'org-4',title:'فرصت جدید روی رابطهٔ با پترو صنعت',detail:'ثبت فرصت ۶ (توسعهٔ سرویس ابری) — بررسی انطباق مشتری جدید پیش از ورود به هیئت.',trigger:'event',createdAt:ago(3),status:'OPEN',assignedTo:'u-1',evidence:['o-6']},
   ];
   const dossiers=[
-    {id:'cd-1',subject:'org-3',type:'SCREENING',decision:'CLEARED',decidedBy:'امیر صادقی',decidedAt:ago(26),rationale:'UBO تأییدشده؛ هیچ پرچمی در فهرست‌ها نیست.',evidence:['ubo-3']},
+    {id:'cd-1',subject:'org-3',type:'SCREENING',decision:'CLEARED',decidedBy:'امیر صادقی',decidedAt:ago(26),rationale:'مالک نهایی تأییدشده؛ هیچ پرچمی در فهرست‌ها نیست.',evidence:['ubo-3']},
     {id:'cd-2',subject:'org-4',type:'SCREENING',decision:'CLEARED',decidedBy:'امیر صادقی',decidedAt:ago(24),rationale:'ساختار سهام شفاف؛ پس از ارائهٔ صورت‌های مالی تأیید شد.',evidence:['ubo-4']},
-    {id:'cd-3',subject:'org-6',type:'UBO_CHANGE',decision:'ESCALATED',decidedBy:'امیر صادقی',decidedAt:ago(7),rationale:'پرچم PEP + منبع خارجی؛ نیازمند تأیید کمیتهٔ انطباق پیش از تمدید قرارداد.',evidence:['ubo-6','cf-1']},
+    {id:'cd-3',subject:'org-6',type:'UBO_CHANGE',decision:'ESCALATED',decidedBy:'امیر صادقی',decidedAt:ago(7),rationale:'پرچم منصب + منبع خارجی؛ نیازمند تأیید کمیتهٔ انطباق پیش از تمدید قرارداد.',evidence:['ubo-6','cf-1']},
   ];
   return {ubos,schedules,findings,dossiers,lastRun:ago(8)};
 }
@@ -2698,7 +2699,7 @@ function complianceScreen(req){
     if(existing.has(key))return;
     existing.add(key);
     const r=RELS.find(x=>x.targetOrganizationId===u.organizationId||x.sourceOrganizationId===u.organizationId);
-    created.push({id:`cf-${Date.now()}-${u.organizationId}`,severity:'HIGH',type:'UBO_PEP',subject:u.organizationId,title:`غربالگری: ${orgById(u.organizationId)?.name??u.organizationId} — UBO دارای پرچم`,detail:`پس از غربالگری دوره‌ای، ${u.name} (${u.ownershipPercent}٪) همچنان دارای پرچم PEP/خارجی است.${r?' رابطهٔ '+relLabel(r)+' در معرض بازنگری است.':''}`,trigger:'periodic',createdAt:now,status:'OPEN',assignedTo:'u-1',evidence:[u.id]});
+    created.push({id:`cf-${Date.now()}-${u.organizationId}`,severity:'HIGH',type:'UBO_PEP',subject:u.organizationId,title:`غربالگری: ${orgById(u.organizationId)?.name??u.organizationId} — مالک نهاییِ دارای پرچم`,detail:`پس از غربالگری دوره‌ای، ${u.name} (${u.ownershipPercent}٪) همچنان دارای پرچم منصب/خارجی است.${r?' رابطهٔ '+relLabel(r)+' در معرض بازنگری است.':''}`,trigger:'periodic',createdAt:now,status:'OPEN',assignedTo:'u-1',evidence:[u.id]});
   });
   if(created.length) st.findings=(st.findings??[]).concat(created);
   saveDb();
@@ -3295,7 +3296,7 @@ function computeCriteria(subjectType, subjectId, options = {}) {
         gate: c.gate ? { severity: c.gate.severity, message: c.gate.message, cap: c.gate.cap, active: !!gateActive } : null,
         actionHint: value == null
           ? (c.evidence === 'OBSERVED' ? 'با ثبت تعامل/جلسه/تعهد واقعی این معیار خودکار پر می‌شود.' : c.intake ? `پاسخ به این پرسش کافی است: «${c.intake.prompt}»` : 'یک ارزیابی مستند ثبت کنید.')
-          : (c.polarity === 'GOOD' ? value < 45 : value > 55) ? 'شواهد این معیار را ضعیف می‌کند؛ یک اقدام اصلاحی با مهلت تعریف کنید.' : 'وضعیت مطلوب است؛ در بازبینی بعدی تمدید شود.',
+          : (c.polarity === 'مثبت' ? value < 45 : value > 55) ? 'شواهد این معیار را ضعیف می‌کند؛ یک اقدام اصلاحی با مهلت تعریف کنید.' : 'وضعیت مطلوب است؛ در بازبینی بعدی تمدید شود.',
       };
       famLines.push(line);
       if (value == null) { unknown.push({ code: c.code, name: c.name, family, weightPct, prompt: c.intake?.prompt, help: c.intake?.help }); continue; }
@@ -3346,7 +3347,7 @@ function computeCriteria(subjectType, subjectId, options = {}) {
     const heavy = unknown.filter((u) => u.weightPct >= 1.5).sort((a, b) => b.weightPct - a.weightPct).slice(0, 4);
     if (heavy.length) hints.push(`برای عبور از آستانۀ رتبه‌بندی (${options.minCoverage ?? 40}٪) این ${heavy.length} معیار پرتأثیر را پاسخ دهید: ${heavy.map((u) => u.name).join('، ')}.`);
   }
-  const weakest = lines.filter((l) => l.value != null && (l.polarity === 'GOOD' ? l.value < 45 : l.value > 55)).sort((a, b) => b.weightPct - a.weightPct).slice(0, 3).map((l) => l.name);
+  const weakest = lines.filter((l) => l.value != null && (l.polarity === 'مثبت' ? l.value < 45 : l.value > 55)).sort((a, b) => b.weightPct - a.weightPct).slice(0, 3).map((l) => l.name);
   if (weakest.length) hints.push(`ضعیف‌ترین نقاط: ${weakest.join('، ')}.`);
   if (flags.length) hints.push(`${flags.length} پرچم ثبت شده است؛ ابتدا موارد بحرانی/بالا.`);
   const out = {
@@ -3451,7 +3452,7 @@ const kb = (id, slug, title, excerpt, category, tags, families, readMinutes, aut
 function seedKnowledge() {
   return [
     kb('kb-start', '5-minute-first-score', 'در پنج دقیقه به اولین امتیاز معیارها برسید', 'مسیر کوتاه از ورود تا داشتن یک امتیاز قابل اتکا برای نخستین رابطه؛ جایی که باید بروید و هر عدد یعنی چه.', 'GETTING_STARTED', ['شروع', 'امتیاز', 'گام‌به‌گام'], ['STRATEGIC', 'RELIABILITY'], 4, 'تیم محصول',
-      '۱) یک سازمان و سپس یک رابطه بسازید (منوی «روابط» → «رابطهٔ جدید»). هنگام ساخت، پرسش‌نامهٔ اختیاری معیارها ظاهر می‌شود؛ آریا فناوری را با پترو صنعت وصل کنید. \n۲) به صفحهٔ همان رابطه بروید. کارت «امتیاز معیارها» عدد، پوشش اطلاعات و اطمینان را نشان می‌دهد. اگر تازه شروع کرده‌اید برچسب «داده کافی نیست» را می‌بینید — این طبیعی است و عمداً عددی نمی‌سازد. \n۳) روی «ثبت ارزیابی» بزنید و تنها پرسش‌هایی را پاسخ دهید که مطمئن هستید. هر پاسخ «ناشناخته» را از بین نمی‌برد؛ فقط آن معیار را روشن می‌کند. \n۴) تعامل‌ها، جلسه‌ها، تعهدها و فرصت‌های همان رابطه به‌صورت خودکار به‌عنوان «رفتار واقعی» وارد مدل می‌شوند و سهم مشاهده‌شده را بالا می‌برند. \n۵) برای رتبه‌بندی، پوشش باید به آستانهٔ تعریف‌شده (پیش‌فرض ۴۰٪) برسد. زیر آن، رکورد صادقانه «قابل مقایسه نیست» می‌ماند.', { views: 312, helpful: 41 }), kb('kb-scoring-model', 'how-scoring-works', 'مدل امتیازدهی دقیقاً چطور کار می‌کند؟', 'وزن خانواده‌ها، قطبیت هر معیار، سقف‌های دروازه و نقش اطمینان — تا بتوانید عدد را بخوانید، نه فقط ببینید.', 'SCORING', ['وزن‌ها', 'دروازه', 'اطمینان'], ['STRATEGIC', 'VALUE', 'CAPABILITY', 'RELIABILITY', 'ACCESS', 'FINANCIAL', 'RISK', 'NETWORK'], 6, 'تیم محصول', 'هر رابطه، سازمان، شخص و فرصت از یک کاتالوگ معیار امتیاز می‌گیرد: هر معیار به یک خانواده تعلق دارد (راهبردی، ارزش، توانمندی، قابلیت اعتماد، دسترسی، مالی، ریسک، شبکه) و وزن ۱ تا ۳ دارد. \nامتیاز هر خانواده، میانگین وزن‌دار معیارهای پاسخ‌داده‌شدهٔ همان خانواده است؛ سپس خانواده‌ها با وزن سازمانی (قابل تغییر در «مدیریت → معیارها») ترکیب می‌شوند. خانوادۀ بدون داده در تقسیم وزن حساب نمی‌شود تا «نبودِ اطلاعات» خودش نمره نشود. \nقطبیت مهم است: معیارهای ریسک (BAD) بالاتر بودن یعنی بدتر؛ معیارهای مثبت (GOOD) بالاتر یعنی بهتر. هر دو به مقیاس ۰ تا ۱۰۰ نگاشت می‌شوند. \nدروازهٔ ریسک (Gate) از میانگین‌گیری مستثناست: اگر شرطش فعال شود، سقف امتیاز را تحمیل می‌کند — مثلاً «سقف ۴۰». این یعنی یک معیار بحرانی را چند معیار خوب «جبران» نمی‌کنند. \nدر نهایت، امتیاز بدون اطمینان ارائه نمی‌شود: پوشش (چند درصد از وزن مدل داده دارد؟) و اطمینان (کیفیت و تازگی پاسخ‌ها) کنار هر عدد می‌آیند و امتیاز رتبه‌بندی = امتیاز × (۰٫۷ + ۰٫۳ × اطمینان).', { views: 540, helpful: 86 }), kb('kb-manual', 'manual-override', 'تنظیم دستی امتیاز: چه وقت، چرا و تا کجا؟', 'وقتی دانش شما از مدل جلوتر است؛ چطور با ±۲۵ و دلیلِ الزامی این کار را بکنید و مدل را دست‌نخورده نگه دارید.', 'SCORING', ['دستی', 'ممیزی'], ['RISK', 'STRATEGIC'], 3, 'تیم محصول', 'مدل بر شواهد ساخته می‌شود؛ اما گاهی شما چیزی می‌دانید که هنوز در سیستم ثبت نشده — مانند امضای اولیهٔ قرارداد. برای همین در کارت «امتیاز معیارها» دکمهٔ «تنظیم دستی» است. \nجابه‌جایی فقط تا ±۲۵ نقطه مجاز است (عدد بزرگ‌تر یعنی احتمالاً باید دادهٔ اصلی را ثبت کنید نه امتیاز را تکان دهید). دلیل تنظیم الزامی است؛ چون در ممیزی ثبت می‌شود و بعداً باید قابل بازبینی باشد. \nانقضا را انتخاب کنید (۳۰/۹۰/۱۸۰ روز یا دائمی). پس از انقضا، امتیاز خودکار به مدل برمی‌گردد و نشان «دستی» از روی Badgeها برداشته می‌شود. \nهر جا «دستی» می‌بینید، یعنی امتیاز موثر = مدل ± جابه‌جایی؛ مبنای مدل هرگز بازنویسی نمی‌شود. Badge «تنظیم دستی منقضی» هم هشدار می‌دهد که جابه‌جایی دیگر اعمال نمی‌شود.', { views: 198, helpful: 33 }), kb('kb-verdict', 'verdict-ladder', 'نردبان حکم: هر برچسب یعنی چه اقدامی؟', 'قابل اتکا، پیش‌نویس، داده کافی نیست، ضعیف و پرچم بحرانی — نقشهٔ اقدام هر وضعیت.', 'SCORING', ['حکم', 'اقدام'], [], 4, 'تیم محصول', 'پرچم بحرانی: یک دروازهٔ ریسک فعال است. تا جمع‌شدن آن، هیچ رتبه‌بندی و مقایسه‌ای انجام نشود؛ اول اقدام کنید. \nداده کافی نیست (پوشش زیر ۲۵٪): تصویر ساخته نشده. عددی که می‌بینید صرفاً پرسش‌های جواب‌داده است؛ مبنای تصمیم نگیرید. \nپیش‌نویس ارزیابی (اطمینان زیر ۴۰٪): شواهد کم یا کهنه است. چند پاسخ مستند می‌تواند امتیاز را به‌شکل معنادار جابه‌جا کند — روی «ثبت ارزیابی» تمرکز کنید. \nقابل اتکا / قوی: شواهد کافی است. اینجا مقایسهٔ رتبه‌ای و تصمیم‌گیری مجاز است. «قوی» یعنی امتیاز ۷۵+ با اطمینان ۶۵+. \nضعیف: شواهد کافی و وضعیت نامطلوب — نیازمند اقدام. به «نقاط ضعف» در همان کارت نگاه کنید: سه معیاری که بیشترین اثر منفی را دارند آنجا فهرست شده‌اند.', { views: 260, helpful: 51 }), kb('kb-coverage', 'coverage-honesty', 'چرا «داده کافی نیست» درست‌تر از یک عدد خوش‌بینانه است؟', 'فلسفهٔ ناشناخته‌ها: پاسخ‌ندادن صفر حساب نمی‌شود؛ و چرا این تصمیم، امتیاز را قابل اعتمادتر می‌کند.', 'SCORING', ['پوشش', 'ناشناخته'], [], 4, 'تیم محصول', 'در این مدل، معیار بی‌پاسخ هرگز صفر فرض نمی‌شود. معیار بی‌پاسخ در «ناشناخته» می‌ماند، وزن‌ش در تقسیم حذف می‌شود و در عوض پوشش و اطمینان پایین می‌آید. \nنتیجه: یک رابطه با پنج پاسخ خوب اما پوشش ۲۰٪ هرگز «قابل اتکا» رتبه نمی‌گیرد؛ برچسب‌اش صادقانه «داده کافی نیست» است. اگر ناشناخته‌ها صفر بودند، هر رکورد نیمه‌پر با عددی نیمه‌واقعی در مقایسه‌های بالایی می‌نشست. \nدروازهٔ رتبه‌بندی (پیش‌فرض ۴۰٪ پوشش) و حداقل اطمینان ۳۵٪ همین را سخت‌گیرانه اجرا می‌کنند. به‌جای بالا بردن عدد، روی «معیارهای بدون داده» کار کنید — کارت امتیاز دقیقاً می‌گوید کدام‌ها بیشترین وزن را دارند. \nاگر ۲۴۰ نویسه دلیل نیاز نیست؛ فقط یک پاسخ کوتاه و دقیق. امتیاز، خلاصهٔ کیفیت دادهٔ شماست.', { views: 174, helpful: 29 }), kb('kb-families', 'families-and-evidence', 'هشت خانوادهٔ معیار و شواهد هر کدام', 'چرا هر خانواده وجود دارد، به چه پژوهشی وصل است و چه رفتاری در سیستم آن را «مشاهده» می‌کند.', 'SCORING', ['خانواده‌ها', 'شواهد'], ['STRATEGIC', 'VALUE', 'CAPABILITY', 'RELIABILITY', 'ACCESS', 'FINANCIAL', 'RISK', 'NETWORK'], 7, 'تیم محصول', 'اهمیت و هم‌راستایی راهبردی: برجستگی شریک، تناسب با استراتژی و قدرت ذی‌نفع (پایه: Mitchell 1997). شاهد در سیستم: نوع رابطه، وضعیت، نقش سازمان در پروژه‌های مشترک. \nارزش اقتصادی: ارزش فعلی رابطه و چرخهٔ عمر آن. شاهد: ارزش فرصت‌ها و قراردادهای متصل. \nتوانمندی عملیاتی: کیفیت تحویل، ظرفیت، خدمت پس از فروش. شاهد: نتیجهٔ تعامل‌ها، جلسه‌ها و اقداماتِ خاتمه‌یافته. \nقابلیت اعتماد: ثبات رفتاری و پایبندی به قول‌ها. شاهد: تعهدهای سرموعد یا عقب‌افتاده. \nدسترسی و نفوذ: دسترسی به تصمیم‌گیرنده. شاهد: معرفی‌ها و نقش اشخاص کلیدی. \nمالی و منابع، ریسک و انطباق، شبکه و موقعیت: از وضعیت مالی، پرچم‌های ریسک، مسیرهای شبکه و مرکزیت استفاده می‌شود. هر معیار در کاتالوگ «منبع» دارد و طول عمر پاسخ‌اش (نیمه‌عمر) تعیین می‌کند چه وقت کهنه می‌شود.', { views: 233, helpful: 44 }), kb('kb-workflows', 'workflows-approvals', 'گردش‌کار و تأییدها: چه چیزی لازم است تأیید شود؟', 'اجراهای خودکار، قواعد تأیید و اینکه هر اقدام چه زمانی به «تأیید» گیر می‌کند.', 'PROCESS', ['گردش‌کار', 'تأیید'], [], 5, 'تیم محصول', 'گردش‌کارها، اقدام‌های خودکار روی رویدادها هستند (مثلاً ساخت رابطه یا وعدهٔ قرارداد). وضعیت اجرا را در «گردش‌کار و تأییدها → اجراها» ببینید. \nهر قاعده‌ای که روی «تأیید» بایستد، در صف «تأییدها» می‌آید و تا تصمیم کاربرِ دارای مجوز، اجرا متوقف می‌ماند — این عمدی است تا کارهای حساس بی‌اجازه نگذرند. \nخروجی گزارش‌ها هم همین‌طور است: «دریافت فایل» یک درخواست تأیید ثبت می‌کند و فایل واقعی پس از تأیید در صفحهٔ تأییدها صادر می‌شود. اگر پیام «ابتدا تأیید درخواست» دیدید، سراغ تأییدها بروید. \nاشخاص بدون مجوز، تنها می‌توانند اجراهایی را ببینند که در محدودهٔ سازمانی‌شان است؛ مالک سامانه همه‌چیز را می‌بیند.', { views: 121, helpful: 18 }), kb('kb-security', 'data-security', 'امنیت داده: طبقه‌بندی، تأیید دومرحله‌ای و نشست‌ها', 'مدارک واقعی: طبقه‌بندی اسناد، MFA، احراز هویت، نشست‌ها و رویدادهای امنیتی.', 'SECURITY', ['MFA', 'طبقه‌بندی', 'نشست'], [], 5, 'تیم محصول', 'ورود با تأیید دومرحله‌ای (MFA) محافظت می‌شود؛ دستگاه‌های تأییدشده و کدهای بازیابی در «امنیت → دستگاه‌های من» مدیریت می‌شوند. در دمو، هر کد شش‌رقمی پذیرفته می‌شود. \nاسناد چهار طبقه دارند: داخلی، محرمانه، محدود و عمومی. بارگذاری با اعتبارسنجی MIME/پسوند، قرنطینه و اسکن بدافزار همراه است؛ وضعیت هر فایل کنارش می‌آید. \nنشست‌های فعال خود را در «نشست‌های من» ببینید و از راه دور ببندید. رویدادهای ورود ناموفق، قفل حساب، تلاش بدون مجوز و صادرات در «امنیت → رویدادها» ثبت می‌شوند. \nنکتهٔ مهم: در حالت دمو (GitHub Pages) همه‌چیز در مرورگر شما اجرا می‌شود و داده‌ها برای همان نشست است؛ هیچ داده‌ای به سرور واقعی نمی‌رود.', { views: 149, helpful: 22 }), kb('kb-intel', 'reading-intelligence', 'خواندن هوشمندی: سیگنال‌ها، فرصت‌ها و پوشش راهبردی', 'چهار بخش صفحهٔ هوشمندی یعنی چه و هر کدام به کدام اقدام ختم می‌شود.', 'ANALYTICS', ['هوشمندی', 'ریسک', 'فرصت'], ['RISK', 'STRATEGIC'], 6, 'تیم محصول', 'سیگنال‌های ریسک از دادهٔ واقعی ساخته می‌شوند: اقدام عقب‌افتاده، تعهد عقب‌افتاده، اقدام مسدود، سلامت پایین و تعامل کهنه. شدت بالا (۶۰+) یعنی فوری؛ بالای ۴۰ متوسط، زیر آن ملایم. تأخیر بیش از دو برابر، شدت را بالا می‌برد. \nتشخیص فرصت دو نوع است: پیگیری (فرصتِ بازِ روی رابطه) و رشد (رابطه‌ای با امتیاز فرصت ۶۰+ ولی بدون فرصت باز) — یعنی به‌جای فهرست خپیوندی، به بازار رشد واقعی اشاره می‌کند. \nپوشش راهبردی، روابط استراتژیک (امتیاز راهبردی ۶۰+) را با وضعیت عملیاتی‌شان مقایسه می‌کند: اقدام باز، تعهد باز یا اقدام بعدیِ آینده. شکاف‌ها را با NO_OPEN_ITEMS و LOW_HEALTH می‌بیند. \nستون «معیارها» در همین جدول، امتیاز KPI هر رابطه را به امتیاز معیارها وصل می‌کند — همان عددی که در صفحهٔ رابطه می‌بینید.', { views: 205, helpful: 37 }), kb('kb-reports', 'reports-and-export', 'گزارش‌ها و خروجی: چه مجوزی لازم است؟', 'نقشهٔ گزارش‌ها، فرمت‌ها، محدودیت JSON برای مدیران و جریان تأیید خروجی.', 'PROCESS', ['گزارش', 'خروجی', 'مجوز'], [], 4, 'تیم محصول', 'گزارش‌ها بر اساس محدودهٔ سازمانی شما ساخته می‌شوند و همان‌جا می‌توانید CSV/XLSX/گزارش رنگی داشته باشید. \nفرمت JSON مخصوص مدیران سازمانی است؛ CSV برای بقیهٔ کاربران دارای مجوز خروجی. بدون مجوز report.export، دکمهٔ خروجی کار نمی‌کند. \nجریان تأیید: ابتدا «دریافت فایل» (ثبت درخواست)، بعد در «تأییدها» approve، سپس دوباره تلاش کنید. هر خروجی در لاگ تحویل و رویدادهای امنیتی ثبت می‌شود. \nدر دمو، خروجی CSV واقعی تولید می‌شود ولی XLSX/PDF به CSV برمی‌گردند تا بدون سرور افزوده هم کار کنند.', { views: 96, helpful: 14 }), kb('kb-network', 'network-spof', 'شبکه: مرکزیت، پل‌ها و نقطهٔ شکست واحد', 'چرا یک گره «مرکزیت» بالا یا «نقطهٔ شکست واحد» می‌گیرد و چرا این برای شما مهم است.', 'ANALYTICS', ['شبکه', 'ریسک'], ['NETWORK', 'RISK'], 4, 'تیم محصول', 'مرکزیت شبکه، گره‌هایی را نشان می‌دهد که بیشترین پیوند را دارند — آنها کانون ارتباط شما هستند؛ از دست دادن‌شان گران است. \nپل‌ها (Bridge People) اشخاصی هستند که دو خوشهٔ متفاوت را به هم می‌رسانند؛ معمولاً مدیرانی که در چند وضعیت نقش دارند. \nنقطهٔ شکست واحد (SPOF) گره‌ای است که حذف آن شبکه را از هم باز می‌کند. اگر همان گره با پیوندهای پرریسک همراه باشد، بالاترین اولویت اقدام را دارد: حداقل یک مسیر جایگزین بسازید. \nبه یاد داشته باشید که امتیازهای این صفحه با امتیازهای معیاریِ همان گره یکی نیستند؛ اعداد شبکه ساختاری‌اند و اعداد معیار، کیفیت رابطه را می‌سنجند.', { views: 158, helpful: 26 }), kb('kb-ai', 'ai-and-brief', 'بریف اجرایی و دستیار: کجا به عددها اعتماد کنیم؟', 'تفاوت خلاصهٔ خودکار با امتیاز معیارها و مرز اعتماد در خروجی هوش مصنوعی.', 'ANALYTICS', ['هوش مصنوعی', 'بریف'], [], 4, 'تیم محصول', 'دستیار هوشمند و بریف اجرایی، متن را از همان دادهٔ ساخت‌یافته می‌سازند؛ اطلاعات جدید به پایگاه داده اضافه نمی‌کنند. برای همین قبل از اعتماد، سند مرتبط را چک کنید. \nعددهای بریف (میانگین سلامت، ریسک، فرصت) از دادهٔ واقعی و با محدودهٔ سازمانی محاسبه می‌شوند، ولی «تفسیر» متن خودکار است. \nبه‌عنوان قاعدهٔ سرانگشتی: هر جا «امتیاز معیارها» را می‌بینید، همان عدد مقیاس ۰–۱۰۰ با پوشش و اطمینان است؛ هر جا درصد یا شمارش در بریف است، منبع‌اش به دادهٔ خام وصل است. \nاگر متن بریف با امتیاز معیارها نخواند، اول پوشش را چک کنید— معمولاً دلیلش دادهٔ ناقص است نه اشتباه مدل.', { views: 172, helpful: 25 }), ]; }  
+      '۱) یک سازمان و سپس یک رابطه بسازید (منوی «روابط» → «رابطهٔ جدید»). هنگام ساخت، پرسش‌نامهٔ اختیاری معیارها ظاهر می‌شود؛ آریا فناوری را با پترو صنعت وصل کنید. \n۲) به صفحهٔ همان رابطه بروید. کارت «امتیاز معیارها» عدد، پوشش اطلاعات و اطمینان را نشان می‌دهد. اگر تازه شروع کرده‌اید برچسب «داده کافی نیست» را می‌بینید — این طبیعی است و عمداً عددی نمی‌سازد. \n۳) روی «ثبت ارزیابی» بزنید و تنها پرسش‌هایی را پاسخ دهید که مطمئن هستید. هر پاسخ «ناشناخته» را از بین نمی‌برد؛ فقط آن معیار را روشن می‌کند. \n۴) تعامل‌ها، جلسه‌ها، تعهدها و فرصت‌های همان رابطه به‌صورت خودکار به‌عنوان «رفتار واقعی» وارد مدل می‌شوند و سهم مشاهده‌شده را بالا می‌برند. \n۵) برای رتبه‌بندی، پوشش باید به آستانهٔ تعریف‌شده (پیش‌فرض ۴۰٪) برسد. زیر آن، رکورد صادقانه «قابل مقایسه نیست» می‌ماند.', { views: 312, helpful: 41 }), kb('kb-scoring-model', 'how-scoring-works', 'مدل امتیازدهی دقیقاً چطور کار می‌کند؟', 'وزن خانواده‌ها، قطبیت هر معیار، سقف‌های دروازه و نقش اطمینان — تا بتوانید عدد را بخوانید، نه فقط ببینید.', 'SCORING', ['وزن‌ها', 'دروازه', 'اطمینان'], ['STRATEGIC', 'VALUE', 'CAPABILITY', 'RELIABILITY', 'ACCESS', 'FINANCIAL', 'RISK', 'NETWORK'], 6, 'تیم محصول', 'هر رابطه، سازمان، شخص و فرصت از یک کاتالوگ معیار امتیاز می‌گیرد: هر معیار به یک خانواده تعلق دارد (راهبردی، ارزش، توانمندی، قابلیت اعتماد، دسترسی، مالی، ریسک، شبکه) و وزن ۱ تا ۳ دارد. \nامتیاز هر خانواده، میانگین وزن‌دار معیارهای پاسخ‌داده‌شدهٔ همان خانواده است؛ سپس خانواده‌ها با وزن سازمانی (قابل تغییر در «مدیریت → معیارها») ترکیب می‌شوند. خانوادۀ بدون داده در تقسیم وزن حساب نمی‌شود تا «نبودِ اطلاعات» خودش نمره نشود. \nقطبیت مهم است: معیارهای ریسک (منفی) بالاتر بودن یعنی بدتر؛ معیارهای مثبت (مثبت) بالاتر یعنی بهتر. هر دو به مقیاس ۰ تا ۱۰۰ نگاشت می‌شوند. \nدروازهٔ ریسک (دروازه) از میانگین‌گیری مستثناست: اگر شرطش فعال شود، سقف امتیاز را تحمیل می‌کند — مثلاً «سقف ۴۰». این یعنی یک معیار بحرانی را چند معیار خوب «جبران» نمی‌کنند. \nدر نهایت، امتیاز بدون اطمینان ارائه نمی‌شود: پوشش (چند درصد از وزن مدل داده دارد؟) و اطمینان (کیفیت و تازگی پاسخ‌ها) کنار هر عدد می‌آیند و امتیاز رتبه‌بندی = امتیاز × (۰٫۷ + ۰٫۳ × اطمینان).', { views: 540, helpful: 86 }), kb('kb-manual', 'manual-override', 'تنظیم دستی امتیاز: چه وقت، چرا و تا کجا؟', 'وقتی دانش شما از مدل جلوتر است؛ چطور با ±۲۵ و دلیلِ الزامی این کار را بکنید و مدل را دست‌نخورده نگه دارید.', 'SCORING', ['دستی', 'ممیزی'], ['RISK', 'STRATEGIC'], 3, 'تیم محصول', 'مدل بر شواهد ساخته می‌شود؛ اما گاهی شما چیزی می‌دانید که هنوز در سیستم ثبت نشده — مانند امضای اولیهٔ قرارداد. برای همین در کارت «امتیاز معیارها» دکمهٔ «تنظیم دستی» است. \nجابه‌جایی فقط تا ±۲۵ نقطه مجاز است (عدد بزرگ‌تر یعنی احتمالاً باید دادهٔ اصلی را ثبت کنید نه امتیاز را تکان دهید). دلیل تنظیم الزامی است؛ چون در ممیزی ثبت می‌شود و بعداً باید قابل بازبینی باشد. \nانقضا را انتخاب کنید (۳۰/۹۰/۱۸۰ روز یا دائمی). پس از انقضا، امتیاز خودکار به مدل برمی‌گردد و نشان «دستی» از روی نشان‌ها برداشته می‌شود. \nهر جا «دستی» می‌بینید، یعنی امتیاز موثر = مدل ± جابه‌جایی؛ مبنای مدل هرگز بازنویسی نمی‌شود. نشان «تنظیم دستی منقضی» هم هشدار می‌دهد که جابه‌جایی دیگر اعمال نمی‌شود.', { views: 198, helpful: 33 }), kb('kb-verdict', 'verdict-ladder', 'نردبان حکم: هر برچسب یعنی چه اقدامی؟', 'قابل اتکا، پیش‌نویس، داده کافی نیست، ضعیف و پرچم بحرانی — نقشهٔ اقدام هر وضعیت.', 'SCORING', ['حکم', 'اقدام'], [], 4, 'تیم محصول', 'پرچم بحرانی: یک دروازهٔ ریسک فعال است. تا جمع‌شدن آن، هیچ رتبه‌بندی و مقایسه‌ای انجام نشود؛ اول اقدام کنید. \nداده کافی نیست (پوشش زیر ۲۵٪): تصویر ساخته نشده. عددی که می‌بینید صرفاً پرسش‌های جواب‌داده است؛ مبنای تصمیم نگیرید. \nپیش‌نویس ارزیابی (اطمینان زیر ۴۰٪): شواهد کم یا کهنه است. چند پاسخ مستند می‌تواند امتیاز را به‌شکل معنادار جابه‌جا کند — روی «ثبت ارزیابی» تمرکز کنید. \nقابل اتکا / قوی: شواهد کافی است. اینجا مقایسهٔ رتبه‌ای و تصمیم‌گیری مجاز است. «قوی» یعنی امتیاز ۷۵+ با اطمینان ۶۵+. \nضعیف: شواهد کافی و وضعیت نامطلوب — نیازمند اقدام. به «نقاط ضعف» در همان کارت نگاه کنید: سه معیاری که بیشترین اثر منفی را دارند آنجا فهرست شده‌اند.', { views: 260, helpful: 51 }), kb('kb-coverage', 'coverage-honesty', 'چرا «داده کافی نیست» درست‌تر از یک عدد خوش‌بینانه است؟', 'فلسفهٔ ناشناخته‌ها: پاسخ‌ندادن صفر حساب نمی‌شود؛ و چرا این تصمیم، امتیاز را قابل اعتمادتر می‌کند.', 'SCORING', ['پوشش', 'ناشناخته'], [], 4, 'تیم محصول', 'در این مدل، معیار بی‌پاسخ هرگز صفر فرض نمی‌شود. معیار بی‌پاسخ در «ناشناخته» می‌ماند، وزن‌ش در تقسیم حذف می‌شود و در عوض پوشش و اطمینان پایین می‌آید. \nنتیجه: یک رابطه با پنج پاسخ خوب اما پوشش ۲۰٪ هرگز «قابل اتکا» رتبه نمی‌گیرد؛ برچسب‌اش صادقانه «داده کافی نیست» است. اگر ناشناخته‌ها صفر بودند، هر رکورد نیمه‌پر با عددی نیمه‌واقعی در مقایسه‌های بالایی می‌نشست. \nدروازهٔ رتبه‌بندی (پیش‌فرض ۴۰٪ پوشش) و حداقل اطمینان ۳۵٪ همین را سخت‌گیرانه اجرا می‌کنند. به‌جای بالا بردن عدد، روی «معیارهای بدون داده» کار کنید — کارت امتیاز دقیقاً می‌گوید کدام‌ها بیشترین وزن را دارند. \nاگر ۲۴۰ نویسه دلیل نیاز نیست؛ فقط یک پاسخ کوتاه و دقیق. امتیاز، خلاصهٔ کیفیت دادهٔ شماست.', { views: 174, helpful: 29 }), kb('kb-families', 'families-and-evidence', 'هشت خانوادهٔ معیار و شواهد هر کدام', 'چرا هر خانواده وجود دارد، به چه پژوهشی وصل است و چه رفتاری در سیستم آن را «مشاهده» می‌کند.', 'SCORING', ['خانواده‌ها', 'شواهد'], ['STRATEGIC', 'VALUE', 'CAPABILITY', 'RELIABILITY', 'ACCESS', 'FINANCIAL', 'RISK', 'NETWORK'], 7, 'تیم محصول', 'اهمیت و هم‌راستایی راهبردی: برجستگی شریک، تناسب با استراتژی و قدرت ذی‌نفع (پایه: میتچل 1997). شاهد در سیستم: نوع رابطه، وضعیت، نقش سازمان در پروژه‌های مشترک. \nارزش اقتصادی: ارزش فعلی رابطه و چرخهٔ عمر آن. شاهد: ارزش فرصت‌ها و قراردادهای متصل. \nتوانمندی عملیاتی: کیفیت تحویل، ظرفیت، خدمت پس از فروش. شاهد: نتیجهٔ تعامل‌ها، جلسه‌ها و اقداماتِ خاتمه‌یافته. \nقابلیت اعتماد: ثبات رفتاری و پایبندی به قول‌ها. شاهد: تعهدهای سرموعد یا عقب‌افتاده. \nدسترسی و نفوذ: دسترسی به تصمیم‌گیرنده. شاهد: معرفی‌ها و نقش اشخاص کلیدی. \nمالی و منابع، ریسک و انطباق، شبکه و موقعیت: از وضعیت مالی، پرچم‌های ریسک، مسیرهای شبکه و مرکزیت استفاده می‌شود. هر معیار در کاتالوگ «منبع» دارد و طول عمر پاسخ‌اش (نیمه‌عمر) تعیین می‌کند چه وقت کهنه می‌شود.', { views: 233, helpful: 44 }), kb('kb-workflows', 'workflows-approvals', 'گردش‌کار و تأییدها: چه چیزی لازم است تأیید شود؟', 'اجراهای خودکار، قواعد تأیید و اینکه هر اقدام چه زمانی به «تأیید» گیر می‌کند.', 'PROCESS', ['گردش‌کار', 'تأیید'], [], 5, 'تیم محصول', 'گردش‌کارها، اقدام‌های خودکار روی رویدادها هستند (مثلاً ساخت رابطه یا وعدهٔ قرارداد). وضعیت اجرا را در «گردش‌کار و تأییدها → اجراها» ببینید. \nهر قاعده‌ای که روی «تأیید» بایستد، در صف «تأییدها» می‌آید و تا تصمیم کاربرِ دارای مجوز، اجرا متوقف می‌ماند — این عمدی است تا کارهای حساس بی‌اجازه نگذرند. \nخروجی گزارش‌ها هم همین‌طور است: «دریافت فایل» یک درخواست تأیید ثبت می‌کند و فایل واقعی پس از تأیید در صفحهٔ تأییدها صادر می‌شود. اگر پیام «ابتدا تأیید درخواست» دیدید، سراغ تأییدها بروید. \nاشخاص بدون مجوز، تنها می‌توانند اجراهایی را ببینند که در محدودهٔ سازمانی‌شان است؛ مالک سامانه همه‌چیز را می‌بیند.', { views: 121, helpful: 18 }), kb('kb-security', 'data-security', 'امنیت داده: طبقه‌بندی، تأیید دومرحله‌ای و نشست‌ها', 'مدارک واقعی: طبقه‌بندی اسناد، تأیید دومرحله‌ای، احراز هویت، نشست‌ها و رویدادهای امنیتی.', 'SECURITY', ['تأیید دومرحله‌ای', 'طبقه‌بندی', 'نشست'], [], 5, 'تیم محصول', 'ورود با تأیید دومرحله‌ای محافظت می‌شود؛ دستگاه‌های تأییدشده و کدهای بازیابی در «امنیت → دستگاه‌های من» مدیریت می‌شوند. در دمو، هر کد شش‌رقمی پذیرفته می‌شود. \nاسناد چهار طبقه دارند: داخلی، محرمانه، محدود و عمومی. بارگذاری با اعتبارسنجی نوع فایل/پسوند، قرنطینه و اسکن بدافزار همراه است؛ وضعیت هر فایل کنارش می‌آید. \nنشست‌های فعال خود را در «نشست‌های من» ببینید و از راه دور ببندید. رویدادهای ورود ناموفق، قفل حساب، تلاش بدون مجوز و صادرات در «امنیت → رویدادها» ثبت می‌شوند. \nنکتهٔ مهم: در حالت دمو (سرویس میزبانی استاتیک) همه‌چیز در مرورگر شما اجرا می‌شود و داده‌ها برای همان نشست است؛ هیچ داده‌ای به سرور واقعی نمی‌رود.', { views: 149, helpful: 22 }), kb('kb-intel', 'reading-intelligence', 'خواندن هوشمندی: سیگنال‌ها، فرصت‌ها و پوشش راهبردی', 'چهار بخش صفحهٔ هوشمندی یعنی چه و هر کدام به کدام اقدام ختم می‌شود.', 'ANALYTICS', ['هوشمندی', 'ریسک', 'فرصت'], ['RISK', 'STRATEGIC'], 6, 'تیم محصول', 'سیگنال‌های ریسک از دادهٔ واقعی ساخته می‌شوند: اقدام عقب‌افتاده، تعهد عقب‌افتاده، اقدام مسدود، سلامت پایین و تعامل کهنه. شدت بالا (۶۰+) یعنی فوری؛ بالای ۴۰ متوسط، زیر آن ملایم. تأخیر بیش از دو برابر، شدت را بالا می‌برد. \nتشخیص فرصت دو نوع است: پیگیری (فرصتِ بازِ روی رابطه) و رشد (رابطه‌ای با امتیاز فرصت ۶۰+ ولی بدون فرصت باز) — یعنی به‌جای فهرست پیوندها، به بازار رشد واقعی اشاره می‌کند. \nپوشش راهبردی، روابط استراتژیک (امتیاز راهبردی ۶۰+) را با وضعیت عملیاتی‌شان مقایسه می‌کند: اقدام باز، تعهد باز یا اقدام بعدیِ آینده. شکاف‌ها را با بدون اقدام باز و سلامت پایین می‌بیند. \nستون «معیارها» در همین جدول، امتیاز شاخص هر رابطه را به امتیاز معیارها وصل می‌کند — همان عددی که در صفحهٔ رابطه می‌بینید.', { views: 205, helpful: 37 }), kb('kb-reports', 'reports-and-export', 'گزارش‌ها و خروجی: چه مجوزی لازم است؟', 'نقشهٔ گزارش‌ها، فرمت‌ها، محدودیت متن ساختاریافته برای مدیران و جریان تأیید خروجی.', 'PROCESS', ['گزارش', 'خروجی', 'مجوز'], [], 4, 'تیم محصول', 'گزارش‌ها بر اساس محدودهٔ سازمانی شما ساخته می‌شوند و همان‌جا می‌توانید فایل جدولی/XLSX/گزارش رنگی داشته باشید. \nفرمت متن ساختاریافته مخصوص مدیران سازمانی است؛ فایل جدولی برای بقیهٔ کاربران دارای مجوز خروجی. بدون مجوز خروجی گزارش، دکمهٔ خروجی کار نمی‌کند. \nجریان تأیید: ابتدا «دریافت فایل» (ثبت درخواست)، بعد در «تأییدها» تأیید، سپس دوباره تلاش کنید. هر خروجی در لاگ تحویل و رویدادهای امنیتی ثبت می‌شود. \nدر دمو، خروجی فایل جدولی واقعی تولید می‌شود ولی صفحهٔ گسترده/سند به فایل جدولی برمی‌گردند تا بدون سرور افزوده هم کار کنند.', { views: 96, helpful: 14 }), kb('kb-network', 'network-spof', 'شبکه: مرکزیت، پل‌ها و نقطهٔ شکست واحد', 'چرا یک گره «مرکزیت» بالا یا «نقطهٔ شکست واحد» می‌گیرد و چرا این برای شما مهم است.', 'ANALYTICS', ['شبکه', 'ریسک'], ['NETWORK', 'RISK'], 4, 'تیم محصول', 'مرکزیت شبکه، گره‌هایی را نشان می‌دهد که بیشترین پیوند را دارند — آنها کانون ارتباط شما هستند؛ از دست دادن‌شان گران است. \nپل‌های ارتباطی اشخاصی هستند که دو خوشهٔ متفاوت را به هم می‌رسانند؛ معمولاً مدیرانی که در چند وضعیت نقش دارند. \nنقطهٔ شکست واحد  گره‌ای است که حذف آن شبکه را از هم باز می‌کند. اگر همان گره با پیوندهای پرریسک همراه باشد، بالاترین اولویت اقدام را دارد: حداقل یک مسیر جایگزین بسازید. \nبه یاد داشته باشید که امتیازهای این صفحه با امتیازهای معیاریِ همان گره یکی نیستند؛ اعداد شبکه ساختاری‌اند و اعداد معیار، کیفیت رابطه را می‌سنجند.', { views: 158, helpful: 26 }), kb('kb-ai', 'ai-and-brief', 'بریف اجرایی و دستیار: کجا به عددها اعتماد کنیم؟', 'تفاوت خلاصهٔ خودکار با امتیاز معیارها و مرز اعتماد در خروجی هوش مصنوعی.', 'ANALYTICS', ['هوش مصنوعی', 'بریف'], [], 4, 'تیم محصول', 'دستیار هوشمند و بریف اجرایی، متن را از همان دادهٔ ساخت‌یافته می‌سازند؛ اطلاعات جدید به پایگاه داده اضافه نمی‌کنند. برای همین قبل از اعتماد، سند مرتبط را چک کنید. \nعددهای بریف (میانگین سلامت، ریسک، فرصت) از دادهٔ واقعی و با محدودهٔ سازمانی محاسبه می‌شوند، ولی «تفسیر» متن خودکار است. \nبه‌عنوان قاعدهٔ سرانگشتی: هر جا «امتیاز معیارها» را می‌بینید، همان عدد مقیاس ۰–۱۰۰ با پوشش و اطمینان است؛ هر جا درصد یا شمارش در بریف است، منبع‌اش به دادهٔ خام وصل است. \nاگر متن بریف با امتیاز معیارها نخواند، اول پوشش را چک کنید— معمولاً دلیلش دادهٔ ناقص است نه اشتباه مدل.', { views: 172, helpful: 25 }), ]; }  
 /* اسناد واقعی مرکز دانش — در دمو بدون فایل واقعی، اما با چرخهٔ واقعی وضعیت/اسکن/ایندکس */
 function seedDocuments() {
   const at = (d) => new Date(Date.now() - d * 86400000).toISOString();
@@ -3489,7 +3490,7 @@ function seedAccountPlans(){
       items:[
         {id:'ap1-1',title:'تمدید قرارداد دوسالهٔ پشتیبانی و توسعه',ownerId:'p-1',dueAt:day(20),status:'IN_PROGRESS',focus:'قرارداد'},
         {id:'ap1-2',title:'تثبیت نقش هیئت‌مدیرهٔ پترو — جلسه با مدیر مالی',ownerId:'p-6',dueAt:day(35),status:'TODO',focus:'کمیتهٔ خرید'},
-        {id:'ap1-3',title:'جلسهٔ QBR با مدیر خرید',ownerId:'p-8',dueAt:day(60),status:'TODO',focus:'جلسه'},
+        {id:'ap1-3',title:'جلسهٔ بازبینی دوره‌ای با مدیر خرید',ownerId:'p-8',dueAt:day(60),status:'TODO',focus:'جلسه'},
         {id:'ap1-4',title:'معرفی سرویس جدید به واحد فناوری پترو',ownerId:'p-7',dueAt:day(75),status:'TODO',focus:'رشد'},
       ]},
     'r-2':{id:'ap-2',relationshipId:'r-2',horizonDays:90,status:'NEEDS_ATTENTION',reviewCycleDays:30,reviewDates:[day(-3),day(27),day(57),day(87)],
@@ -3544,14 +3545,14 @@ function seedCalibrationSettings(){
   return {targetGap:20,windowMonths:12,lastRun:new Date().toISOString(),halfLifeDefault:90,
     familyOverrides:{STRATEGIC:120,VALUE:90,CAPABILITY:75,RELIABILITY:60,ACCESS:60,FINANCIAL:90,RISK:90,NETWORK:75},
     history:[
-      {period:'Q2 1404',scoreGap:24,note:'گپ بالای هدف — تنظیم نیمه‌عمرها به منحنی فعلی'},
-      {period:'Q3 1404',scoreGap:18,note:'گپ زیر هدف — نیمه‌عمر ACCESS کوتاه‌تر شد'},
+      {period:'فصل دوم ۱۴۰۴',scoreGap:24,note:'گپ بالای هدف — تنظیم نیمه‌عمرها به منحنی فعلی'},
+      {period:'فصل سوم ۱۴۰۴',scoreGap:18,note:'گپ زیر هدف — نیمه‌عمر خانوادهٔ دسترسی کوتاه‌تر شد'},
     ]};
 }
 /* فرصت‌های تاریخی بسته‌شده + امتیاز زمان بستن (P1-4) */
 OPPORTUNITIES.push(
   {id:'o-5',name:'قرارداد پایش شبکهٔ بانک پارس',description:'مانیتورینگ و گزارش‌دهی امنیتی ۱۲ ماهه',status:'WON',probability:100,value:25000000000,expectedDate:'2026-05-20T00:00:00.000Z',organizationId:'org-3',relationshipId:'r-2',projectId:null,ownerId:'p-7',createdAt:'2026-02-10T08:00:00.000Z',wonAt:'2026-05-20T10:00:00.000Z',scoreAtClose:74,sourceType:'EXISTING_RELATIONSHIP'},
-  {id:'o-6',name:'پروژهٔ ERP پترو صنعت',description:'پیاده‌سازی ERP یکپارچه',status:'LOST',probability:0,value:60000000000,expectedDate:'2026-06-10T00:00:00.000Z',organizationId:'org-4',relationshipId:'r-1',projectId:null,ownerId:'p-1',createdAt:'2026-02-01T08:00:00.000Z',lostAt:'2026-06-10T10:00:00.000Z',scoreAtClose:47,lossReason:'انتخاب تأمین‌کنندهٔ ارزان‌تر',sourceType:'EVENT'},
+  {id:'o-6',name:'پروژهٔ یکپارچه‌سازی پترو صنعت',description:'پیاده‌سازی سامانهٔ یکپارچه',status:'LOST',probability:0,value:60000000000,expectedDate:'2026-06-10T00:00:00.000Z',organizationId:'org-4',relationshipId:'r-1',projectId:null,ownerId:'p-1',createdAt:'2026-02-01T08:00:00.000Z',lostAt:'2026-06-10T10:00:00.000Z',scoreAtClose:47,lossReason:'انتخاب تأمین‌کنندهٔ ارزان‌تر',sourceType:'EVENT'},
   {id:'o-7',name:'قرارداد نگهداری سدنا ۱۴۰۴',description:'پیمان سالانهٔ نگهداری سامانه‌ها',status:'WON',probability:100,value:8000000000,expectedDate:'2026-04-15T00:00:00.000Z',organizationId:'org-5',relationshipId:'r-3',projectId:null,ownerId:'p-8',createdAt:'2026-01-20T08:00:00.000Z',wonAt:'2026-04-15T10:00:00.000Z',scoreAtClose:61,sourceType:'REFERRAL'},
   {id:'o-8',name:'تأمین ناوگان قطعات البرز',description:'قرارداد سالانهٔ تأمین قطعات',status:'LOST',probability:0,value:15000000000,expectedDate:'2026-07-01T00:00:00.000Z',organizationId:'org-6',relationshipId:'r-4',projectId:null,ownerId:'p-5',createdAt:'2026-03-05T08:00:00.000Z',lostAt:'2026-07-01T10:00:00.000Z',scoreAtClose:38,lossReason:'ریسک تأمین مالی از سمت البرز',sourceType:'COLD'},
   {id:'o-9',name:'سرویس مشاورهٔ صندوق امید',description:'مشاورهٔ سرمایه‌گذاری ۶ ماهه',status:'WON',probability:100,value:5000000000,expectedDate:'2026-03-10T00:00:00.000Z',organizationId:'org-7',relationshipId:'r-5',projectId:null,ownerId:'p-6',createdAt:'2026-01-15T08:00:00.000Z',wonAt:'2026-03-10T10:00:00.000Z',scoreAtClose:79,sourceType:'EXISTING_RELATIONSHIP'},
@@ -3638,7 +3639,7 @@ function audit(req, action, entity, entityId, outcome = 'OK', meta = {}) {
 /* --------------------------- admin: RBAC catalog & access recompute ----- */
 const ROLE_LABELS_ADMIN={SUPER_ADMIN:'مدیر کل سیستم',HOLDING_ADMIN:'مدیر هلدینگ',HOLDING_EXECUTIVE:'مدیر ارشد هلدینگ',SUBSIDIARY_ADMIN:'مدیر شرکت',SUBSIDIARY_EXECUTIVE:'مدیر ارشد شرکت',RELATIONSHIP_MANAGER:'مدیر روابط',PROJECT_MANAGER:'مدیر پروژه',ANALYST:'تحلیلگر',STANDARD_USER:'کاربر استاندارد',READ_ONLY:'فقط خواندنی'};
 const R_READ=['dashboard.read','organization.read','person.read','relationship.read','network.read','interaction.read','meeting.read','action.read','commitment.read','project.read','opportunity.read','recommendation.read','report.read','document.read','notification.read','search.read','calendar.read','help.read','user.read','session.read','analytics.read','ai.query','ai.executive_brief'];
-const R_WRITE=['person.write','relationship.write','interaction.write','meeting.write','action.write','commitment.write','project.write','opportunity.write','recommendation.approve','document.write','data.manage'];
+const R_WRITE=['person.write','relationship.write','interaction.write','meeting.write','action.write','commitment.write','project.write','opportunity.write','recommendation.تأیید','document.write','data.manage'];
 const R_READONLY_PERMS=R_READ.filter(p=>!['ai.query','ai.executive_brief','analytics.read','recommendation.read'].includes(p));
 const ROLE_CATALOG=[
   {key:'SUPER_ADMIN',name:ROLE_LABELS_ADMIN.SUPER_ADMIN,description:'مالک سامانه — دسترسی کامل، غیرقابل واگذاری.',holding:true,perms:['*']},
@@ -3669,7 +3670,7 @@ const P_DEFS=[
   ['Work','opportunity.read','مشاهده فرصت‌ها'],['Work','opportunity.write','ثبت و تغییر فرصت'],
   ['Work','approval.read','مشاهده تأییدها'],['Work','workflow.read','مشاهده گردش کارها'],
   ['Intelligence','analytics.read','تحلیل و هوشمندی'],['Intelligence','analytics.write','ثبت رویداد و نتیجهٔ سنجش'],['Intelligence','ai.query','پرس‌وجوی هوشمند'],['Intelligence','ai.executive_brief','گزارش راهبردی هوش مصنوعی'],
-  ['Intelligence','recommendation.read','مشاهده پیشنهادها'],['Intelligence','recommendation.approve','تأیید پیشنهاد'],['Intelligence','report.read','مشاهده و خروجی گزارش‌ها'],
+  ['Intelligence','recommendation.read','مشاهده پیشنهادها'],['Intelligence','recommendation.تأیید','تأیید پیشنهاد'],['Intelligence','report.read','مشاهده و خروجی گزارش‌ها'],
   ['Knowledge','document.read','مشاهده اسناد'],['Knowledge','document.write','بارگذاری و ویرایش سند'],
   ['Knowledge','search.read','جستجوی سراسری'],['Knowledge','notification.read','مشاهده اعلان‌ها'],['Knowledge','help.read','مشاهده راهنما'],
   ['Account','user.read','مدیریت حساب کاربری'],['Account','session.read','مدیریت نشست‌ها'],['Account','session.admin.revoke','ابطال مدیریتی نشست'],
@@ -3743,7 +3744,7 @@ const CF_SEED_DEFS=[
   ['national_id','شناسهٔ ملی','Person','text',true,true],
   ['priority','اولویت','Relationship','select',true,true,['کم','متوسط','زیاد','بحرانی']],
   ['linkedin','لینکدین','Person','url',false,true],
-  ['kpi_target','هدف KPI سالانه','Organization','number',false,false],
+  ['kpi_target','هدف شاخص سالانه','Organization','number',false,false],
   ['is_public','سهامی عام','Organization','boolean',false,false],
 ];
 function seedCustomFields(){
@@ -3785,7 +3786,7 @@ function srView(r){ return {id:r.id,key:r.key,name:r.name,scoreType:r.scoreType,
 
 /* ---------- notification rules (NotificationRule parity) ---------- */
 const NR_CHANNELS=['IN_APP','EMAIL','PUSH'];
-const NR_EVENT_TYPES=['organization.created','organization.updated','organization.deleted','person.created','person.updated','person.deleted','relationship.created','relationship.updated','relationship.deleted','interaction.created','interaction.updated','interaction.deleted','meeting.created','meeting.updated','meeting.deleted','meeting.completed','commitment.created','commitment.updated','commitment.deleted','commitment.completed','commitment.overdue','action.created','action.updated','action.deleted','action.completed','project.created','project.updated','project.deleted','score.updated','relationship.score.changed','relationship.status.changed','relationship.lifecycle.changed','opportunity.created','opportunity.updated','opportunity.deleted','opportunity.status.changed','recommendation.created','recommendation.updated','recommendation.deleted','recommendation.viewed','recommendation.accepted','recommendation.action.completed','integration.webhook.received','approval.requested','approval.approved','approval.rejected','data.import.approved','data.import.completed','integration.sync.completed','integration.sync.failed','*'];
+const NR_EVENT_TYPES=['organization.created','organization.updated','organization.deleted','person.created','person.updated','person.deleted','relationship.created','relationship.updated','relationship.deleted','interaction.created','interaction.updated','interaction.deleted','meeting.created','meeting.updated','meeting.deleted','meeting.completed','commitment.created','commitment.updated','commitment.deleted','commitment.completed','commitment.overdue','action.created','action.updated','action.deleted','action.completed','project.created','project.updated','project.deleted','score.updated','relationship.score.changed','relationship.status.changed','relationship.lifecycle.changed','opportunity.created','opportunity.updated','opportunity.deleted','opportunity.status.changed','recommendation.created','recommendation.updated','recommendation.deleted','recommendation.viewed','recommendation.accepted','recommendation.action.completed','integration.webhook.received','approval.requested','approval.تأییدd','approval.rejected','data.import.تأییدd','data.import.completed','integration.sync.completed','integration.sync.failed','*'];
 const NR_SEED=[
   ['new_meeting_inapp','اعلان جلسهٔ جدید','meeting.created',['IN_APP'],{title:'جلسهٔ جدید برنامه‌ریزی شد',body:'جلسهٔ «{title}» در {date} با {organization} ثبت شد.'},null,true],
   ['overdue_commitment_alert','هشدار تعهد معوق','commitment.overdue',['IN_APP','EMAIL'],{title:'تعهد عقب افتاد',body:'تعهد «{description}» به موعد {dueAt} نرسیده و معوق شد.'},null,true],
@@ -3818,7 +3819,7 @@ function seedAuditDemo(){
     {id:'au-seed-7',at:ago(1,1),actorEmail:'client@arya-tech.ir',action:'CREATE',entity:'Meeting',entityId:'m-42',outcome:'OK',ip:'10.0.4.12',meta:{title:'بازبینی فصلی'}},
     {id:'au-seed-8',at:ago(0,6),actorEmail:'demo@srip.local',action:'APPROVE',entity:'Recommendation',entityId:'rec-3',outcome:'OK',ip:'10.0.0.1',meta:{}},
     {id:'au-seed-9',at:ago(0,4),actorEmail:'demo@srip.local',action:'UPDATE',entity:'ScoringRule',entityId:'sr-2',outcome:'OK',ip:'10.0.0.1',meta:{key:'risk_score_formula',reason:'Admin scoring rule changed'}},
-    {id:'au-seed-10',at:ago(0,2),actorEmail:'demo@srip.local',action:'EXPORT',entity:'Report',entityId:'relationship-health',outcome:'OK',ip:'10.0.0.1',meta:{format:'CSV',approval:'ap-1'}},
+    {id:'au-seed-10',at:ago(0,2),actorEmail:'demo@srip.local',action:'EXPORT',entity:'Report',entityId:'relationship-health',outcome:'OK',ip:'10.0.0.1',meta:{format:'فایل جدولی',approval:'ap-1'}},
   ];
 }
 
@@ -3845,11 +3846,11 @@ function seedExportLog(){
     const ago=(d,h)=>{const t=new Date(Date.now()-d*86400000);t.setHours(10-h,15,0,0);return t.toISOString();};
     DB.exportLog=[
       // DataExportLog parity (real: exportType=format, entityType=report kind, requestId=approval id)
-      {id:'ex-1',userId:'u-1',organizationId:'org-1',exportType:'CSV',entityType:'relationship-health',recordCount:8,classification:'CONFIDENTIAL',requestId:null,ipAddress:'10.0.0.1',createdAt:ago(5,1)},
+      {id:'ex-1',userId:'u-1',organizationId:'org-1',exportType:'فایل جدولی',entityType:'relationship-health',recordCount:8,classification:'CONFIDENTIAL',requestId:null,ipAddress:'10.0.0.1',createdAt:ago(5,1)},
       {id:'ex-2',userId:'u-2',organizationId:'org-2',exportType:'XLSX',entityType:'company',recordCount:4,classification:'INTERNAL',requestId:null,ipAddress:'10.0.4.12',createdAt:ago(4,3)},
       {id:'ex-3',userId:'u-1',organizationId:'org-1',exportType:'PDF',entityType:'network',recordCount:38,classification:'RESTRICTED',requestId:null,ipAddress:'10.0.0.1',createdAt:ago(3,2)},
-      {id:'ex-4',userId:'u-1',organizationId:'org-1',exportType:'CSV',entityType:'meeting',recordCount:22,classification:'INTERNAL',requestId:null,ipAddress:'10.0.0.1',createdAt:ago(2,4)},
-      {id:'ex-5',userId:'u-2',organizationId:'org-2',exportType:'CSV',entityType:'contact',recordCount:14,classification:'CONFIDENTIAL',requestId:null,ipAddress:'10.0.4.12',createdAt:ago(2,1)},
+      {id:'ex-4',userId:'u-1',organizationId:'org-1',exportType:'فایل جدولی',entityType:'meeting',recordCount:22,classification:'INTERNAL',requestId:null,ipAddress:'10.0.0.1',createdAt:ago(2,4)},
+      {id:'ex-5',userId:'u-2',organizationId:'org-2',exportType:'فایل جدولی',entityType:'contact',recordCount:14,classification:'CONFIDENTIAL',requestId:null,ipAddress:'10.0.4.12',createdAt:ago(2,1)},
       {id:'ex-6',userId:'u-1',organizationId:'org-1',exportType:'XLSX',entityType:'risk',recordCount:5,classification:'HIGHLY_CONFIDENTIAL',requestId:null,ipAddress:'10.0.0.1',createdAt:ago(1,2)},
     ];
   }
@@ -3859,7 +3860,7 @@ function exportView(x){ return {id:x.id,userId:x.userId,userName:userById(x.user
 
 /* ---------- retention (DataProcessingPolicy + retention preview parity) ---------- */
 const RETENTION_COLLECTIONS={Organization:'orgs',Project:'projects',Opportunity:'opportunities',Commitment:'commitments'};
-const RETENTION_ENTITY_FA={Organization:'سازمان',Project:'پروژه',Opportunity:'فرصت',Commitment:'تعهد'};
+const RETENTION_ENTITY_FA={Organization:'سازمان',Project:'پروژه',Opportunity:'فرصت',Commitment:'تعهد',Interaction:'تعامل',Meeting:'جلسه',Action:'اقدام',Person:'شخص'};
 function seedRetention(){
   if(!Array.isArray(DB.retentionPolicies)||DB.retentionPolicies.length===0){
     DB.retentionPolicies=[
@@ -4150,9 +4151,9 @@ function seedApprovals(){
   if(!Array.isArray(DB.approvals)||DB.approvals.length===0){
     const ago=(d,h)=>{const t=new Date(Date.now()-d*86400000);t.setHours(10-h,20,0,0);return t.toISOString();};
     DB.approvals=[
-      {id:'ap-1',entityType:'Report',entityId:'relationship-health',actionType:'EXPORT',organizationId:'org-1',requestedById:'u-2',decidedById:'u-1',status:'APPROVED',reason:'خروجی سلامت روابط برای هیئت مدیره',before:null,after:{classification:'CONFIDENTIAL',format:'CSV'},createdAt:ago(3,1),decidedAt:ago(3,0)},
-      {id:'ap-2',entityType:'Report',entityId:'network',actionType:'EXPORT',organizationId:'org-1',requestedById:'u-2',decidedById:'u-1',status:'APPROVED',reason:'خروجی شبکه برای جلسهٔ راهبردی',before:null,after:{classification:'RESTRICTED',format:'CSV'},createdAt:ago(3,4),decidedAt:ago(3,3)},
-      {id:'ap-3',entityType:'Report',entityId:'risk',actionType:'EXPORT',organizationId:'org-1',requestedById:'u-2',decidedById:'u-1',status:'APPROVED',reason:'گزارش ریسک برای کمیتهٔ ریسک',before:null,after:{classification:'HIGHLY_CONFIDENTIAL',format:'CSV'},createdAt:ago(2,3),decidedAt:ago(2,2)},
+      {id:'ap-1',entityType:'Report',entityId:'relationship-health',actionType:'EXPORT',organizationId:'org-1',requestedById:'u-2',decidedById:'u-1',status:'APPROVED',reason:'خروجی سلامت روابط برای هیئت مدیره',before:null,after:{classification:'CONFIDENTIAL',format:'فایل جدولی'},createdAt:ago(3,1),decidedAt:ago(3,0)},
+      {id:'ap-2',entityType:'Report',entityId:'network',actionType:'EXPORT',organizationId:'org-1',requestedById:'u-2',decidedById:'u-1',status:'APPROVED',reason:'خروجی شبکه برای جلسهٔ راهبردی',before:null,after:{classification:'RESTRICTED',format:'فایل جدولی'},createdAt:ago(3,4),decidedAt:ago(3,3)},
+      {id:'ap-3',entityType:'Report',entityId:'risk',actionType:'EXPORT',organizationId:'org-1',requestedById:'u-2',decidedById:'u-1',status:'APPROVED',reason:'گزارش ریسک برای کمیتهٔ ریسک',before:null,after:{classification:'HIGHLY_CONFIDENTIAL',format:'فایل جدولی'},createdAt:ago(2,3),decidedAt:ago(2,2)},
       {id:'ap-4',entityType:'Relationship',entityId:'r-1',actionType:'STRATEGIC_SCORE_CHANGE',organizationId:'org-2',requestedById:'u-2',decidedById:null,status:'PENDING',reason:'ارتقای امتیاز راهبردی پس از توافقنامهٔ مشارکت',before:{strategicScore:86},after:{strategicScore:92},createdAt:ago(1,2),decidedAt:null},
       {id:'ap-5',entityType:'Relationship',entityId:null,actionType:'SENSITIVE_RELATIONSHIP_CREATE',organizationId:'org-1',requestedById:'u-2',decidedById:null,status:'PENDING',reason:'ایجاد رابطه با استانداری برای پیگیری مجوزهای زیرساخت',before:null,after:{sourceOrganizationId:'org-5',targetOrganizationId:'org-8',relationshipType:'PARTNERSHIP',status:'PROSPECTIVE'},createdAt:ago(1,1),decidedAt:null},
       {id:'ap-6',entityType:'DataLifecycle',entityId:'org-8',actionType:'DELETE',organizationId:'org-1',requestedById:'u-2',decidedById:null,status:'PENDING',reason:'حذف دائمی سازمان دولتی بدون تعامل فعال',before:null,after:{entityType:'Organization'},createdAt:ago(0,5),decidedAt:null},
@@ -4201,7 +4202,7 @@ function seedSecurityEvents(){
       {id:'se-2',type:'LOGIN_SUCCESS',severity:'INFO',requestId:null,ipAddress:'10.0.4.12',userAgent:ua,entityType:'User',entityId:'client@arya-tech.ir',userId:'u-2',organizationId:null,metadata:{mfa:'TOTP'},createdAt:ago(2,1)},
       {id:'se-3',type:'SUSPICIOUS_ACCESS',severity:'CRITICAL',requestId:null,ipAddress:'203.0.113.44',userAgent:'Mozilla/5.0 (X11; Linux x86_64)',entityType:'User',entityId:'demo@srip.local',userId:null,organizationId:null,metadata:{reason:'new_device_geo_mismatch',country:'IR'},createdAt:ago(1,6)},
       {id:'se-4',type:'RATE_LIMITED',severity:'WARNING',requestId:null,ipAddress:'203.0.113.44',userAgent:null,entityType:'Auth',entityId:'/auth/login',userId:null,organizationId:null,metadata:{windowSeconds:60,limit:10},createdAt:ago(1,5)},
-      {id:'se-5',type:'EXPORT_CREATED',severity:'INFO',requestId:null,ipAddress:'10.0.0.1',userAgent:ua,entityType:'Report',entityId:'relationship-health',userId:'u-1',organizationId:'org-1',metadata:{exportType:'CSV',recordCount:8,approvalId:null},createdAt:ago(1,3)},
+      {id:'se-5',type:'EXPORT_CREATED',severity:'INFO',requestId:null,ipAddress:'10.0.0.1',userAgent:ua,entityType:'Report',entityId:'relationship-health',userId:'u-1',organizationId:'org-1',metadata:{exportType:'فایل جدولی',recordCount:8,approvalId:null},createdAt:ago(1,3)},
       {id:'se-6',type:'PERMISSION_DENIED',severity:'WARNING',requestId:null,ipAddress:'10.0.4.12',userAgent:ua,entityType:'Route',entityId:'/enterprise/exports',userId:'u-2',organizationId:'org-2',metadata:{permission:'enterprise.read'},createdAt:ago(1,1)},
       {id:'se-7',type:'MFA_EVENT',severity:'INFO',requestId:null,ipAddress:'10.0.4.12',userAgent:ua,entityType:'User',entityId:'u-2',userId:'u-2',organizationId:null,metadata:{event:'ENROLLED',factor:'TOTP'},createdAt:ago(3,4)},
       {id:'se-8',type:'LOGIN_FAILURE',severity:'WARNING',requestId:null,ipAddress:'45.83.9.150',userAgent:null,entityType:'User',entityId:'mina@demo.ir',userId:null,organizationId:null,metadata:{reason:'no_user'},createdAt:ago(2,2)},
@@ -4282,7 +4283,7 @@ function seedEnterpriseStore(){
     const ago=(d,h)=>{const t=new Date(Date.now()-d*86400000);t.setHours(10-h,0,0,0);return t.toISOString();};
     DB.authorizationPolicies=[
       {id:'abac-1',key:'audit-log-view-confidential',permissionKey:'audit.read',effect:'ALLOW',role:null,organizationId:null,department:null,maxDataClassification:'CONFIDENTIAL',ownerOnly:false,subjectScope:'ALL',conditions:null,enabled:true,createdById:'u-1',createdAt:ago(120,2),updatedAt:ago(6,2)},
-      {id:'abac-2',key:'deny-restricted-export',permissionKey:'report.export',effect:'DENY',role:null,organizationId:null,department:null,maxDataClassification:'RESTRICTED',ownerOnly:false,subjectScope:'ALL',conditions:null,enabled:true,createdById:'u-1',createdAt:ago(110,3),updatedAt:ago(5,3)},
+      {id:'abac-2',key:'deny-restricted-export',permissionKey:'مجوز خروجی گزارش',effect:'DENY',role:null,organizationId:null,department:null,maxDataClassification:'RESTRICTED',ownerOnly:false,subjectScope:'ALL',conditions:null,enabled:true,createdById:'u-1',createdAt:ago(110,3),updatedAt:ago(5,3)},
       {id:'abac-3',key:'holding-exec-ai-brief',permissionKey:'ai.executive_brief',effect:'ALLOW',role:'HOLDING_EXECUTIVE',organizationId:'org-1',department:null,maxDataClassification:'CONFIDENTIAL',ownerOnly:false,subjectScope:'ORGANIZATION',conditions:null,enabled:true,createdById:'u-1',createdAt:ago(90,4),updatedAt:ago(4,4)},
       {id:'abac-4',key:'rel-mgr-interaction-write',permissionKey:'interaction.write',effect:'ALLOW',role:'RELATIONSHIP_MANAGER',organizationId:'org-2',department:null,maxDataClassification:'INTERNAL',ownerOnly:false,subjectScope:'ORGANIZATION',conditions:null,enabled:true,createdById:'u-1',createdAt:ago(60,5),updatedAt:ago(3,5)},
       {id:'abac-5',key:'sales-search-restricted-ips',permissionKey:'search.read',effect:'ALLOW',role:null,organizationId:null,department:'فروش',maxDataClassification:'CONFIDENTIAL',ownerOnly:false,subjectScope:'DEPARTMENT',conditions:{ipRange:'10.0.0.0/8'},enabled:true,createdById:'u-1',createdAt:ago(30,6),updatedAt:ago(2,6)},
@@ -4485,15 +4486,15 @@ function opsEventsNow(){
   const base=Date.now();
   const at=(m)=>new Date(base-m*60000).toISOString();
   return [
-    {id:'ev-1',level:'ERROR',message:'اتصال به Redis قطع شد؛ بازیابی خودکار پس از ۸۰۰ms انجام شد',source:'redis-client',createdAt:at(2)},
-    {id:'ev-2',level:'WARN',message:'تأخیر بالای صف srip-notifications (۱۱ کار در انتظار > ۳۰s)',source:'queue-monitor',createdAt:at(9)},
-    {id:'ev-3',level:'INFO',message:'اجرای زمان‌بندی‌شدهٔ بازپردازش تحلیل (analytics_recompute) با موفقیت پایان یافت',source:'scheduler',createdAt:at(14)},
-    {id:'ev-4',level:'INFO',message:'اعتبارسنجی توکن تازهٔ فراهم‌کنندهٔ هوش مصنوعی (deterministic) انجام شد',source:'ai-gateway',createdAt:at(26)},
-    {id:'ev-5',level:'WARN',message:'۲ تلاش ورود ناموفق برای کاربر client@arya-tech.ir',source:'auth',createdAt:at(41)},
-    {id:'ev-6',level:'ERROR',message:'بازیابی ابردادهٔ سند sn-۴۲ از فضای ذخیره‌سازی ناموفق بود (بازیابی در تلاش بعدی)',source:'documents-store',createdAt:at(55)},
+    {id:'ev-1',level:'ERROR',message:'اتصال به ردیس قطع شد؛ بازیابی خودکار پس از ۸۰۰ میلی‌ثانیه انجام شد',source:'redis-client',createdAt:at(2)},
+    {id:'ev-2',level:'WARN',message:'تأخیر بالای صف اعلانات (۱۱ کار در انتظار بیش از ۳۰ ثانیه)',source:'queue-monitor',createdAt:at(9)},
+    {id:'ev-3',level:'INFO',message:'اجرای زمان‌بندی‌شدهٔ بازپردازش تحلیل با موفقیت پایان یافت',source:'scheduler',createdAt:at(14)},
+    {id:'ev-4',level:'INFO',message:'اعتبارسنجی توکن تازهٔ فراهم‌کنندهٔ هوش مصنوعی (قطعی) انجام شد',source:'ai-gateway',createdAt:at(26)},
+    {id:'ev-5',level:'WARN',message:'۲ تلاش ورود ناموفق برای حساب سازمانی (آریا فناوری)',source:'auth',createdAt:at(41)},
+    {id:'ev-6',level:'ERROR',message:'بازیابی ابردادهٔ سند شمارهٔ ۴۲ از فضای ذخیره‌سازی ناموفق بود (بازیابی در تلاش بعدی)',source:'documents-store',createdAt:at(55)},
     {id:'ev-7',level:'INFO',message:'پشتیبان‌گیری شبانه کامل شد (۵۲ گیگابایت، ۱:۰۲)',source:'backup',createdAt:at(240)},
-    {id:'ev-8',level:'INFO',message:'میانگین تأخیر سرویس در ۵ دقیقهٔ اخیر: ۳۴ms (p95: ۹۸ms)',source:'metrics',createdAt:at(260)},
-    {id:'ev-9',level:'DEBUG',message:'مسیر جستجو: رتبه‌بندی مجدد نتیجهٔ جستجوی «خط اعتباری» (۸ نتیجه در ۴۱ms)',source:'search',createdAt:at(280)},
+    {id:'ev-8',level:'INFO',message:'میانگین تأخیر سرویس در ۵ دقیقهٔ اخیر: ۳۴ میلی‌ثانیه (صدک ۹۵: ۹۸ میلی‌ثانیه)',source:'metrics',createdAt:at(260)},
+    {id:'ev-9',level:'DEBUG',message:'مسیر جستجو: رتبه‌بندی مجدد نتیجهٔ جستجوی «خط اعتباری» (۸ نتیجه در ۴۱ میلی‌ثانیه)',source:'search',createdAt:at(280)},
     {id:'ev-10',level:'INFO',message:'پاک‌سازی دورهای حافظهٔ پنهان انجام شد (۱۲۴ کلید)',source:'cache',createdAt:at(300)},
   ];
 }
@@ -4715,8 +4716,8 @@ function seedWorkflowStore(){
 function approvalFlowSafe(deciderId,a,decision,isOwner){
   if(!isOwner) return 'فقط مالک سامانه می‌تواند درخواست‌ها را تصمیم بگیرد.';
   if(a.status!=='PENDING') return 'این درخواست از قبل تصمیم‌گیری شده است.';
-  // Demo note: in the real API a requester can never approve their own request
-  // ('Requester cannot approve their own request') and any decider with
+  // Demo note: in the real API a requester can never تأیید their own request
+  // ('Requester cannot تأیید their own request') and any decider with
   // approval.decide decides. This demo has a single decider (the owner), so the
   // owner may also decide on requests they requested themselves; non-owners are
   // already blocked above.
@@ -5115,7 +5116,7 @@ async function __handler(req, res) {
     if(!u){ audit(req,'LOGIN_FAIL','user',ident,'FAIL',{reason:'no_user'}); recordSecurity(req,'LOGIN_FAILURE','WARNING',{reason:'no_user',login:ident},'User',ident,null,null); return json(res,401,{message:'حسابی با این نام کاربری/ایمیل یافت نشد.'}); }
     if(!u.salt||!u.passwordHash||!verifyPassword(b.password,u.salt,u.passwordHash)){ audit(req,'LOGIN_FAIL','user',u.email,'FAIL',{reason:'bad_password'}); recordSecurity(req,'LOGIN_FAILURE','WARNING',{reason:'bad_password'},'User',u.email,u.id,null); return json(res,401,{message:'نام کاربری/ایمیل یا رمز عبور نادرست است.'}); }
     const mfaNeeded=mfaRequiredFor(u.id);
-    if(mfaNeeded&&(!b.otp||!/^\d{6}$/.test(String(b.otp)))){ audit(req,'LOGIN_FAIL','user',u.email,'FAIL',{reason:'no_mfa'}); recordSecurity(req,'LOGIN_FAILURE','WARNING',{reason:'no_mfa'},'User',u.email,u.id,null); return json(res,401,{message:'کد تأیید دومرحله‌ای (MFA) لازم است.'}); }
+    if(mfaNeeded&&(!b.otp||!/^\d{6}$/.test(String(b.otp)))){ audit(req,'LOGIN_FAIL','user',u.email,'FAIL',{reason:'no_mfa'}); recordSecurity(req,'LOGIN_FAILURE','WARNING',{reason:'no_mfa'},'User',u.email,u.id,null); return json(res,401,{message:'کد تأیید دومرحله‌ای لازم است.'}); }
     if(!u.isActive){ audit(req,'LOGIN_FAIL','user',u.email,'FAIL',{reason:'inactive'}); recordSecurity(req,'LOGIN_FAILURE','WARNING',{reason:'inactive'},'User',u.email,u.id,null); return json(res,401,{message:'نام کاربری/ایمیل یا رمز عبور نادرست است.'}); }
     u.lastLoginAt=nowIso();
     audit(req,'LOGIN_SUCCESS','user',u.email,'OK'); recordSecurity(req,'LOGIN_SUCCESS','INFO',{mfa:'TOTP'},'User',u.email,u.id,null);
@@ -5904,12 +5905,12 @@ async function __handler(req, res) {
     if(RECS.length>before) NOTIFICATIONS.unshift({id:`n-${Date.now()}`,title:'پیشنهاد هوشمند جدید',body:`${RECS.length-before} پیشنهاد جدید بر اساس روابط و تعاملات تولید شد.`,type:'RECOMMENDATION',priority:'recommendation',isRead:false,createdAt:nowIso()});
     return json(res,200,{generated:RECS.length-before,recommendations:[],candidateTypes:Object.keys(TYPE_KEYS)});
   }
-  const recAction = path.match(new RegExp(`^${V1}/recommendations/([^/]+)/(approve|reject|snooze|execute)$`));
+  const recAction = path.match(new RegExp(`^${V1}/recommendations/([^/]+)/(تأیید|reject|snooze|execute)$`));
   if(recAction && method==='POST'){
     const rec=RECS.find(x=>x.id===recAction[1]);
     if(!rec) return json(res,404,{message:'پیشنهاد یافت نشد'});
     const action=recAction[2];
-    if(action==='approve'){ rec.status='APPROVED'; rec.decisionAt=nowIso(); rec.snoozedUntil=null; audit(req,'APPROVE','recommendation',rec.id,'OK'); NOTIFICATIONS.unshift({id:`n-${Date.now()}`,title:'پیشنهاد تأیید شد',body:`«${rec.title}» تأیید شد و آمادهٔ اجراست.`,type:'RECOMMENDATION',priority:'information',isRead:false,createdAt:nowIso()}); return json(res,200,rec); }
+    if(action==='تأیید'){ rec.status='APPROVED'; rec.decisionAt=nowIso(); rec.snoozedUntil=null; audit(req,'APPROVE','recommendation',rec.id,'OK'); NOTIFICATIONS.unshift({id:`n-${Date.now()}`,title:'پیشنهاد تأیید شد',body:`«${rec.title}» تأیید شد و آمادهٔ اجراست.`,type:'RECOMMENDATION',priority:'information',isRead:false,createdAt:nowIso()}); return json(res,200,rec); }
     if(action==='reject'){ rec.status='REJECTED'; rec.decisionAt=nowIso(); audit(req,'REJECT','recommendation',rec.id,'OK'); return json(res,200,rec); }
     if(action==='snooze'){
       const b=await readBody(req);
@@ -5917,7 +5918,7 @@ async function __handler(req, res) {
       rec.status='SNOOZED'; rec.snoozedUntil=b.until; return json(res,200,rec);
     }
     if(action==='execute'){
-      if(rec.status!=='APPROVED') return json(res,400,{message:'Recommendation must be approved before execution'});
+      if(rec.status!=='APPROVED') return json(res,400,{message:'Recommendation must be تأییدd before execution'});
       rec.status='EXECUTED'; rec.decisionAt=nowIso();
       const actionId=`a-${Date.now()}`;
       ACTIONS.push({id:actionId,title:rec.title,status:'OPEN',priority:rec.type==='RISK_MITIGATION'?'HIGH':'MEDIUM',dueAt:new Date(Date.now()+7*86400000).toISOString(),ownerId:'p-1',relationshipId:rec.relationshipId});
@@ -6159,7 +6160,7 @@ async function __handler(req, res) {
   }
   if(is('/documents/status')&&method==='GET'){
     const list=DB.documents??seedDocuments();
-    return json(res,200,{module:'Documents',status:'READY',total:list.length,indexed:list.filter((d)=>d.indexStatus==='INDEXED').length,pending:list.filter((d)=>d.scanStatus==='QUARANTINED'||d.uploadStatus==='PENDING').length,capabilities:['MIME/Ext Validation','Quarantine','Malware Scan','Chunking + Redaction','Signed Download'],capabilitiesCount:5});
+    return json(res,200,{module:'اسناد',status:'READY',total:list.length,indexed:list.filter((d)=>d.indexStatus==='INDEXED').length,pending:list.filter((d)=>d.scanStatus==='QUARANTINED'||d.uploadStatus==='PENDING').length,capabilities:['اعتبارسنجی نوع فایل/پسوند','قرنطینه','اسکن بدافزار','تکه‌تکه‌کردن و پاکسازی','دانلود امضاشده'],capabilitiesCount:5});
   }
 
   /* ----------------------------- intelligence ----------------------------- */
@@ -6190,7 +6191,7 @@ async function __handler(req, res) {
       acts.filter(a=>a.relationshipId===r.id&&a.status==='BLOCKED').forEach(a=>evidence.push({type:'ACTION_BLOCKED',refId:a.id,title:a.title,at:null}));
       coms.filter(c=>c.relationshipId===r.id&&c.status==='OVERDUE').forEach(c=>evidence.push({type:'COMMITMENT_OVERDUE',refId:c.id,title:c.description,at:c.dueAt}));
       if(r.status==='WATCH') evidence.push({type:'RELATIONSHIP_WATCH',refId:r.id,title:'رابطه در وضعیت «تحت نظر» قرار دارد',at:null});
-      if(r.healthScore<45) evidence.push({type:'LOW_HEALTH',refId:r.id,title:`سلامت رابطه ${r.healthScore} از ۱۰۰ — زیر آستانهٔ ۴۵`,at:null});
+      if(r.healthScore<45) evidence.push({type:'سلامت پایین',refId:r.id,title:`سلامت رابطه ${r.healthScore} از ۱۰۰ — زیر آستانهٔ ۴۵`,at:null});
       const cad=relCadence(r);
       if(cad.status==='CRITICAL') evidence.push({type:'CADENCE_BREACH',refId:r.id,title:`کیدنس شکسته: آخرین تعامل ${cad.daysSinceLastInteraction} روز پیش (هدف ${cad.cadenceDays})`,at:r.lastInteractionAt});
       else if(cad.status==='WARN') evidence.push({type:'CADENCE_BREACH',refId:r.id,title:`کیدنس عقب افتاده: آخرین تعامل ${cad.daysSinceLastInteraction} روز پیش (هدف ${cad.cadenceDays})`,at:r.lastInteractionAt});
@@ -6235,8 +6236,8 @@ async function __handler(req, res) {
       const futureNext=r.nextActionAt&&!isLate(r.nextActionAt);
       const covered=openActs.length>0||openComs.length>0||!!futureNext;
       const gaps=[];
-      if(!openActs.length&&!openComs.length&&!futureNext) gaps.push({type:'NO_OPEN_ITEMS',title:'اقدام یا تعهد بازی ندارد و موعد بعدی ثبت نشده است'});
-      if((r.healthScore??0)<60) gaps.push({type:'LOW_HEALTH',title:`سلامت ${r.healthScore} زیر آستانهٔ ۶۰`});
+      if(!openActs.length&&!openComs.length&&!futureNext) gaps.push({type:'بدون اقدام باز',title:'اقدام یا تعهد بازی ندارد و موعد بعدی ثبت نشده است'});
+      if((r.healthScore??0)<60) gaps.push({type:'سلامت پایین',title:`سلامت ${r.healthScore} زیر آستانهٔ ۶۰`});
       if(openComs.some(c=>c.status==='OVERDUE')) gaps.push({type:'OVERDUE_COMMITMENT',title:'تعهد عقب‌افتاده دارد'});
       const cad=relCadence(r);
       if(cad.status!=='FRESH') gaps.push(cad.status==='CRITICAL'?{type:'CADENCE_BREAK',title:`کیدنس شکسته: ${cad.daysSinceLastInteraction} روز (هدف ${cad.cadenceDays})`}:{type:'CADENCE_WARN',title:`کیدنس عقب افتاده: ${cad.daysSinceLastInteraction} روز (هدف ${cad.cadenceDays})`});
@@ -7842,7 +7843,7 @@ async function __handler(req, res) {
     if(b.classification&&!DATA_CLASSIFICATIONS.includes(String(b.classification))) return json(res,400,{message:`طبقه‌بندی «${b.classification}» نامعتبر است.`});
     const row={id:`ex-${Date.now()}`,userId:authUser.id,organizationId:b.organizationId??null,exportType:String(b.exportType),entityType:b.entityType??null,recordCount:Number(b.recordCount)||0,classification:b.classification??'INTERNAL',requestId:b.requestId??null,ipAddress:req.socket?.remoteAddress??null,createdAt:nowIso()};
     DB.exportLog.unshift(row);
-    audit(req,'EXPORT','Report',row.id,'OK',{meta:{exportType:row.exportType,classification:row.classification,format:'CSV',approval:row.requestId??null,reason:'Enterprise export record'}});
+    audit(req,'EXPORT','Report',row.id,'OK',{meta:{exportType:row.exportType,classification:row.classification,format:'فایل جدولی',approval:row.requestId??null,reason:'Enterprise export record'}});
     return json(res,201,exportView(row));
   }
   if(is('/security/governance/preflight')&&method==='GET'){
@@ -7850,8 +7851,8 @@ async function __handler(req, res) {
     const policies=(DB.retentionPolicies??[]).filter(p=>p.active!==false);
     const erasableNoRetention=policies.filter(p=>p.erasable&&!p.retentionDays).length;
     const checks=[
-      {key:'origin-check',status:'PASS',detail:'محافظت از تغییرات متقاطع (origin) فعال است.'},
-      {key:'rate-limit-fail-open',status:'PASS',detail:'محدودسازی نرخ در حالت خطا بسته (fail-closed) می‌ماند.'},
+      {key:'origin-check',status:'PASS',detail:'محافظت از تغییرات متقاطع (مبدأ ارسال) فعال است.'},
+      {key:'rate-limit-fail-open',status:'PASS',detail:'محدودسازی نرخ در حالت خطا، بسته‌مانده عمل می‌کند.'},
       {key:'file-scan',status:'WARN',detail:'در حالت دمو پویش بدافزار برای بارگذاری فایل الزامی نیست؛ در محیط واقعی فعال شود.'},
       {key:'secret-manager',status:'PASS',detail:'کلیدهای دمو در حافظه ساخته می‌شوند و در سورس کنترل نگهداری نمی‌شوند.'},
       {key:'data-policy-coverage',status:policies.length?(erasableNoRetention?'WARN':'PASS'):'FAIL',detail:policies.length?`${policies.length} خط‌مشی داده فعال؛ ${erasableNoRetention} خط‌مشی پاک‌شدنی بدون دورهٔ نگهداری.`:'هیچ خط‌مشی دادهٔ فعالی پیکربندی نشده است.'},
@@ -8217,20 +8218,20 @@ async function __handler(req, res) {
   const approvalDecision=match('/approvals/:id/:decision');
   if(approvalDecision&&method==='POST'){
     const decision=approvalDecision[1];
-    if(!['approve','reject'].includes(decision)) return json(res,400,{message:'تصمیم نامعتبر است.'});
+    if(!['تأیید','reject'].includes(decision)) return json(res,400,{message:'تصمیم نامعتبر است.'});
     const b=await readBody(req);
     const a=(DB.approvals??[]).find(x=>x.id===approvalDecision[0]);
     if(!a) return json(res,404,{message:'درخواست تأیید یافت نشد.'});
     const guard=approvalFlowSafe(authUser.id,a,decision,!!authUser?.isOwner);
     if(guard) return json(res,403,{message:guard});
-    if(decision==='approve'){
+    if(decision==='تأیید'){
       const applied=approvalApply(req,a,b.reason);
       if(applied&&applied.error) return json(res,applied.code??409,{message:applied.error});
       a.status='APPROVED'; a.decidedById=authUser.id; a.decidedAt=nowIso(); a.decidedReason=b.reason??null;
       if(a.decidedReason!==undefined&&a.reason===null) a.reason=a.decidedReason;
       DB.approvals=DB.approvals; saveDb();
       audit(req,'APPROVAL_APPROVED','Approval',a.id,'OK',{meta:{actionType:a.actionType,entityType:a.entityType,entityId:a.entityId,reason:b.reason??null}});
-      return json(res,200,{...approvalView(a),applied:applied??{approved:true}});
+      return json(res,200,{...approvalView(a),applied:applied??{تأییدd:true}});
     }
     a.status='REJECTED'; a.decidedById=authUser.id; a.decidedAt=nowIso(); a.decidedReason=b.reason??null;
     saveDb();
@@ -8279,7 +8280,7 @@ async function __handler(req, res) {
         }
         return {error:'نوع نهاد برای حذف پشتیبانی نمی‌شود.',code:400};
       }
-      return null; // EXPORT / DATA_SHARING / DATA_IMPORT → {approved:true} only
+      return null; // EXPORT / DATA_SHARING / DATA_IMPORT → {تأییدd:true} only
     }catch(e){ return {error:e?.message??'خطا در اعمال تأیید.',code:500}; }
   }
   /* ------------------- quality data (DataQualityService parity) ------------------- */
@@ -8287,14 +8288,14 @@ async function __handler(req, res) {
   const DQ_READ_MSG='شما مجوز «مشاهده کیفیت داده» (data.quality.read) را ندارید.';
   const DQ_EXEC_MSG='شما مجوز «اجرای بازبینی کیفیت» (data.quality.execute) را ندارید.';
   const DQ_IMPORT_MSG='شما مجوز «وارد کردن داده» (data.import) را ندارید.';
-  const dqGate=(oid)=>{
+  const dqدروازه=(oid)=>{
     if(oid&&!authUser?.isOwner&&!visibleOrgIds(req).includes(oid)) return 'شما به سازمان موردنظر (organizationId) دسترسی ندارید.';
     return null;
   };
   if(is('/data/quality')&&method==='GET'){
     if(!dqCan('data.quality.read')) return json(res,403,{message:DQ_READ_MSG});
     const oid=q.get('organizationId')??null;
-    const gate=dqGate(oid); if(gate) return json(res,403,{message:gate});
+    const gate=dqدروازه(oid); if(gate) return json(res,403,{message:gate});
     const store=DB.dataQualitySnapshots=DB.dataQualitySnapshots??[];
     if(oid==null&&(authUser?.isOwner??false)){
       const latest=[...store].reverse().find(s=>s.organizationId==null);
@@ -8310,13 +8311,13 @@ async function __handler(req, res) {
     if(!dqCan('data.quality.execute')) return json(res,403,{message:DQ_EXEC_MSG});
     const body=await readBody(req);
     const oid=body?.organizationId??null;
-    const gate=dqGate(oid); if(gate) return json(res,403,{message:gate});
+    const gate=dqدروازه(oid); if(gate) return json(res,403,{message:gate});
     return json(res,200,runQualitySnapshot(req,oid));
   }
   if(is('/data/duplicates')&&method==='GET'){
     if(!dqCan('data.quality.read')) return json(res,403,{message:DQ_READ_MSG});
     const oid=q.get('organizationId')??null;
-    const gate=dqGate(oid); if(gate) return json(res,403,{message:gate});
+    const gate=dqدروازه(oid); if(gate) return json(res,403,{message:gate});
     const snap=runQualitySnapshot(req,oid);
     return json(res,200,{snapshotId:snap.id,duplicateOrganizations:(snap.metrics?.duplicateOrganizations??[])});
   }
@@ -8327,11 +8328,11 @@ async function __handler(req, res) {
     if(entityType!=='ORGANIZATION'&&entityType!=='PERSON') return json(res,400,{message:'entityType باید ORGANIZATION یا PERSON باشد.'});
     const oid=body?.organizationId?String(body.organizationId):null;
     if(!oid) return json(res,400,{message:'organizationId برای تشخیص تکراری لازم است.'});
-    const gate=dqGate(oid); if(gate) return json(res,403,{message:gate});
+    const gate=dqدروازه(oid); if(gate) return json(res,403,{message:gate});
     const orgScope=authUser?.isOwner?null:visibleOrgIds(req);
     return json(res,200,dqDetectCandidates(entityType,body?.data??{},oid,orgScope));
   }
-  if(match('/data/import/:id/approve')&&method==='POST') return json(res,200,{ok:true});
+  if(match('/data/import/:id/تأیید')&&method==='POST') return json(res,200,{ok:true});
   if(is('/integrations')||is('/integrations/')&&method==='GET') return json(res,200,{integrations:[
     {id:'in-1',name:'تقویم Google',status:'CONNECTED'},{id:'in-2',name:'Slack',status:'DISCONNECTED'},
   ]});
@@ -8339,7 +8340,7 @@ async function __handler(req, res) {
      reports + export (ReportingService parity)
        · GET  /reports/:kind            → payload {report,generatedAt,…}
        · GET  /reports/:kind/export/:format?approvalId=…
-           format: csv|xlsx|pdf|json   (xlsx/pdf fall back to CSV here)
+           format: csv|xlsx|pdf|json   (xlsx/pdf fall back to فایل جدولی here)
            requires an APPROVED EXPORT approval for (Report, kind)
            writes DataExportLog row + EXPORT audit (real parity)
   ------------------------------------------------------------------ */
@@ -8477,9 +8478,9 @@ async function __handler(req, res) {
     if(!['csv','xlsx','pdf','json'].includes(format)) return json(res,400,{message:`قالب خروجی «${format}» پشتیبانی نمی‌شود.`});
     const sc=reportScope(req);
     if(sc.error) return json(res,sc.code,{message:sc.error});
-    const canExport=authUser?.isOwner||(authUser?.permissions??[]).includes('report.export');
-    if(!canExport) return json(res,403,{message:'شما مجوز «خروجی گزارش» (report.export) را ندارید؛ با مالک سامانه تماس بگیرید.'});
-    if(format==='json'&&!authUser?.isOwner) return json(res,403,{message:'فرمت JSON ویژهٔ مدیران سازمانی (enterprise.admin) است.'});
+    const canExport=authUser?.isOwner||(authUser?.permissions??[]).includes('مجوز خروجی گزارش');
+    if(!canExport) return json(res,403,{message:'شما مجوز «خروجی گزارش» (مجوز خروجی گزارش) را ندارید؛ با مالک سامانه تماس بگیرید.'});
+    if(format==='json'&&!authUser?.isOwner) return json(res,403,{message:'فرمت متن ساختاریافته ویژهٔ مدیران سازمانی (enterprise.admin) است.'});
     const approval=assertExportApproval(req,kind);
     if(!approval) return json(res,403,{message:'خروجی گزارش فقط پس از تأیید درخواست آن صادر می‌شود؛ ابتدا «دریافت فایل» را بزنید تا درخواست تأیید ثبت شود، سپس پس از تأیید در صفحهٔ «تأییدها» دوباره تلاش کنید.'});
     const payload=reportPayload(kind,sc.ids);
@@ -8490,7 +8491,7 @@ async function __handler(req, res) {
       res.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Content-Disposition':`attachment; filename="srip-${kind}.json"`});
       return res.end(body);
     }
-    // csv (xlsx/pdf fall back to CSV in the demo; real API streams real xlsx/pdf)
+    // csv (xlsx/pdf fall back to فایل جدولی in the demo; real API streams real xlsx/pdf)
     const keys=[...new Set(rows.flatMap(r=>Object.keys(r)))];
     const esc=(v)=>{const s=v===null||v===undefined?'':String(v);return /[\",\\n\\r;]/.test(s)?'\"'+s.replace(/\"/g,'\"\"')+'\"':s;};
     const lines=['\uFEFF'+keys.map(esc).join(',')];

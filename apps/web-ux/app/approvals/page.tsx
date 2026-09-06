@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../_lib/api';
+import { fa } from '../_lib/fa';
 import { useWorkspace } from '../_components/workspace';
 import HubTabs from '../_components/hub-tabs';
 import {
@@ -199,7 +200,7 @@ export default function ApprovalsPage() {
     }
     if (a.actionType === 'SENSITIVE_RELATIONSHIP_CREATE') {
       const d = a.after as Record<string, string> | undefined;
-      return { text: `رابطهٔ جدید: ${orgName(d?.sourceOrganizationId ?? null, orgs)} ← ${orgName(d?.targetOrganizationId ?? null, orgs)} · ${d?.relationshipType ?? ''}`, from: 0, to: 0 };
+      return { text: `رابطهٔ جدید: ${orgName(d?.sourceOrganizationId ?? null, orgs)} ← ${orgName(d?.targetOrganizationId ?? null, orgs)} · ${fa(d?.relationshipType ?? '')}`, from: 0, to: 0 };
     }
     if (a.actionType === 'DELETE') {
       const et = (a.after as Record<string, string> | undefined)?.entityType ?? a.entityType;
@@ -244,7 +245,7 @@ export default function ApprovalsPage() {
       {flash && <div className="flash-banner" role="status"><CheckCircle2 size={15} /> {flash}</div>}
 
       <div className="stat-grid">
-        <StatCard icon={<ShieldQuestion size={18} />} label="در انتظار" value={fmtNum(rows.filter(a => a.status === 'PENDING').length)} iconClass="ic-gold" sub={`نمای فعلی: ${statusTab === 'ALL' ? 'همه' : statusTab}`} />
+        <StatCard icon={<ShieldQuestion size={18} />} label="در انتظار" value={fmtNum(rows.filter(a => a.status === 'PENDING').length)} iconClass="ic-gold" sub={`نمای فعلی: ${statusTab === 'ALL' ? 'همه' : fa(statusTab)}`} />
         <StatCard icon={<Scale size={18} />} label="نیازمند تصمیم من" value={fmtNum(myPending)} iconClass="ic-indigo" sub={isOwner ? 'همهٔ درخواست‌های در انتظار (در دمو مالک تصمیم‌گیرنده است)' : 'کاربران غیرمالک در این دمو تصمیم نمی‌گیرند'} />
         <StatCard icon={<ThumbsUp size={18} />} label="تأییدشده (این نما)" value={fmtNum(rows.filter(a => a.status === 'APPROVED').length)} iconClass="ic-teal" sub={statusTab === 'APPROVED' ? 'در بازهٔ نگهداری' : 'از فیلتر وضعیت استفاده کنید'} />
         <StatCard icon={<ThumbsDown size={18} />} label="ردشده (این نما)" value={fmtNum(rows.filter(a => a.status === 'REJECTED').length)} iconClass="ic-red" sub={statusTab === 'REJECTED' ? 'در بازهٔ نگهداری' : 'از فیلتر وضعیت استفاده کنید'} />
@@ -400,7 +401,7 @@ export default function ApprovalsPage() {
                 </label>
                 <label className="field full"><span className="field-label">نوع رابطه</span>
                   <select value={form.relType} onChange={e => setForm(f => ({ ...f, relType: e.target.value }))}>
-                    {REL_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                    {REL_TYPES.map(t => <option key={t} value={t}>{fa(t)}</option>)}
                   </select>
                 </label>
               </>

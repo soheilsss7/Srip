@@ -203,7 +203,7 @@ const GLOSS: Record<string, string> = {
   '/interactions': 'هر تماس/جلسه/مکاتبه‌ای که روی یک رابطه رخ داده است',
   '/referrals': 'معرفی‌ها و واسطه‌های رسیدن به یک سازمان',
   '/intelligence': 'سیگنال‌های ریسک، فرصت‌های در جریان و پیشنهاد رشد',
-  '/board': 'گزارش هیئت‌مدیره: ROI رابطه، سرمایه، سلامت پرتفوی و ریسک تک‌نقطه',
+  '/board': 'گزارش هیئت‌مدیره: بازده سرمایهٔ رابطه، سرمایه، سلامت پرتفوی و ریسک تک‌نقطه',
   '/meetings': 'جلسات برنامه‌ریزی‌شده با ثبت دستور و خلاصه',
   '/calendar': 'نمای تقویمی جلسات در محدودهٔ شما',
   '/actions': 'کارهایی که کسی قول داده تا موعد معین انجام دهد',
@@ -468,7 +468,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <AppShellEnhancement />
             <ThemeToggle />
             <Link href="/settings" className="user-chip" aria-label="پروفایل">
-              <span className="avatar">{(me?.name ?? 'U').slice(0, 1)}</span>
+              <span className="avatar">{(me?.name ?? 'کاربر').slice(0, 1)}</span>
               <span className="uc-meta">
                 <strong>{me?.name ?? 'کاربر'}</strong>
                 <small>{ROLE_LABELS[role]}</small>
