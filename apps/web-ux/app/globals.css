@@ -413,7 +413,7 @@ button.primary-action,button.secondary-action{border-radius:var(--radius-md)}
   display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 10px;
   font-size:11px;font-weight:800;border:1px solid var(--card-border-strong);
   background:var(--card-bg-soft);color:var(--text-secondary);
-  min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;line-height:1.35;
+  min-width:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1;
 }
 .srip-badge.success{background:color-mix(in srgb,var(--srip-success) 12%,transparent);color:var(--srip-success);border-color:color-mix(in srgb,var(--srip-success) 30%,transparent)}
 .srip-badge.warning{background:color-mix(in srgb,var(--srip-amber) 12%,transparent);color:var(--srip-amber);border-color:color-mix(in srgb,var(--srip-amber) 30%,transparent)}
@@ -468,7 +468,7 @@ textarea{resize:vertical}
 .detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .detail-item{padding:12px;border:1px solid var(--card-border);border-radius:var(--radius-md);display:flex;flex-direction:column;gap:5px;background:var(--card-bg-soft)}
 .detail-item small{color:var(--text-muted);font-size:10px}
-.detail-item strong{overflow-wrap:anywhere;font-size:12.5px}
+.detail-item strong{overflow-wrap:break-word;font-size:12.5px}
 @media(max-width:900px){.detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.detail-grid{grid-template-columns:1fr}}
 .recommendation-list{display:grid;gap:10px;margin-top:12px}
@@ -772,7 +772,7 @@ textarea{resize:vertical}
 .stat-card .st-value{font-size:30px;font-weight:800;letter-spacing:-.02em;line-height:1;color:var(--text-primary);font-variant-numeric:tabular-nums}
 .stat-card .spark{height:30px;width:100%}
 .stat-card .st-foot{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-top:auto;padding-top:4px}
-.stat-card .st-delta{font-size:10px;font-weight:800;border-radius:999px;padding:3px 9px;min-width:0;max-width:100%;overflow-wrap:anywhere;line-height:1.35;font-variant-numeric:tabular-nums}
+.stat-card .st-delta{font-size:10px;font-weight:800;border-radius:999px;padding:3px 9px;min-width:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1;font-variant-numeric:tabular-nums}
 .stat-card .st-delta.up{color:var(--green);background:color-mix(in srgb,var(--green) 12%,transparent)}
 .stat-card .st-delta.down{color:var(--red);background:color-mix(in srgb,var(--red) 12%,transparent)}
 .stat-card .st-delta.flat{color:var(--text-muted);background:var(--card-bg-soft)}
@@ -861,7 +861,7 @@ textarea{resize:vertical}
 .net-detail-body{padding:13px 15px;overflow-y:auto;display:flex;flex-direction:column;gap:11px;flex:1}
 .net-field{display:flex;flex-direction:column;gap:2px}
 .net-field small{font-size:10px;color:var(--text-muted)}
-.net-field strong{font-size:12.5px;overflow-wrap:anywhere}
+.net-field strong{font-size:12.5px;overflow-wrap:break-word}
 .net-kv{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .net-kv .kv{background:var(--card-bg-soft);border:1px solid var(--card-border);border-radius:var(--radius-sm);padding:8px 10px;display:flex;flex-direction:column;gap:2px}
 .net-kv .kv small{font-size:9.5px;color:var(--text-muted)}
@@ -1338,7 +1338,7 @@ textarea{resize:vertical}
 .org-cell strong{color:var(--text-secondary);font-weight:700;font-size:12px}
 .org-cell small{color:var(--text-muted);font-size:10.5px}
 .contact-cell{display:flex;flex-direction:column;gap:3px;min-width:150px}
-.contact-cell span{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text-secondary);word-break:break-all}
+.contact-cell span{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text-secondary);overflow-wrap:break-word}
 .contact-cell span svg{color:var(--srip-accent-text);flex:0 0 auto}
 .contact-cell .muted{color:var(--text-muted)}
 .person-scores{display:flex;gap:6px;flex-wrap:wrap}
@@ -1458,7 +1458,7 @@ textarea{resize:vertical}
 /* ---------- Buttons (v4 aliases) ---------- */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:var(--radius-md);
   padding:10px 16px;font-size:13px;font-weight:800;min-height:40px;cursor:pointer;white-space:normal;
-  min-width:0;max-width:100%;overflow-wrap:anywhere;text-align:center;
+  min-width:0;max-width:100%;overflow-wrap:break-word;text-align:center;
   border:1px solid transparent;transition:background .15s,border-color .15s,color .15s,transform .1s,box-shadow .15s;
   text-decoration:none;line-height:1.2}
 .btn:active{transform:translateY(1px)}
@@ -1528,7 +1528,7 @@ a.stat-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-
 .segmented button.active .count{background:var(--srip-accent-soft);border-color:transparent}
 
 /* ---------- Chips & tags ---------- */
-.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 11px;font-size:11px;font-weight:800;min-width:0;max-width:100%;overflow-wrap:anywhere;line-height:1.35;
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 11px;font-size:11px;font-weight:800;min-width:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1;
   background:var(--card-bg-soft);color:var(--text-secondary);border:1px solid var(--card-border-strong)}
 .chip svg{width:12px;height:12px;opacity:.8}
 .chip.success{background:color-mix(in srgb,var(--srip-success) 12%,transparent);color:var(--srip-success);border-color:color-mix(in srgb,var(--srip-success) 32%,transparent)}
