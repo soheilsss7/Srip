@@ -903,34 +903,19 @@ textarea{resize:vertical}
   .entity-layout,.dashboard-grid{grid-template-columns:1fr}
 }
 @media(max-width:900px){
-  .sidebar{width:80px;flex-basis:80px}
-  .sidebar .brand-title,.sidebar .workspace-role,.sidebar .nav-group-title,.sidebar .side-nav a small,.sidebar .engine-card b,.sidebar .engine-card span,.sidebar .engine-card .ec-spark{display:none}
-  .brand{justify-content:center}
+  /* «ریل آیکونی» قدیمی (سایدبار ۸۰px + نقطه به‌جای برچسب) حذف شد: از v4.2 به بعد
+     سایدبار در موبایل دراور عمودی با برچسب کامل است و این قواعد با آن می‌جنگیدند.
+     فقط قواعد محتوا در این بلوک می‌مانند. */
   .brand-mark{width:44px;height:44px}
-  .workspace-role{display:none}
-  .side-nav a{height:42px;display:grid;place-items:center;font-size:0;padding:0;border-inline-start:0}
-  .side-nav a::before{content:'•';font-size:18px;color:var(--text-muted)}
-  .side-nav a.active::before{color:#8b93f8}
-  .logout-button span{display:none}
-  .engine-card{justify-content:center;align-items:center;padding:10px 0}
-  .engine-card .ec-top{justify-content:center}
   .stats-row{grid-template-columns:repeat(2,minmax(0,1fr))}
   .page-heading{align-items:flex-start;flex-direction:column}
   .table-wrap{overflow-x:auto}.table-wrap table{min-width:680px}
 }
 @media(max-width:760px){
-  .app-shell{display:block}
-  .sidebar{position:static;width:auto;flex-basis:auto;height:auto;flex-direction:row;align-items:center;overflow:visible;padding:8px 12px}
-  .sidebar .brand-title,.sidebar .engine-card{display:none}
-  .brand{margin-inline-end:auto;padding:0 6px}
-  .side-nav{flex-direction:row;overflow:auto;gap:4px;margin:0;padding:0;flex:none}
-  .side-nav .nav-group-title{display:none}
-  .side-nav a::before{content:''}
-  .side-nav a{font-size:0;width:38px;height:38px}
-  .side-nav a::after{content:'•';font-size:16px;color:var(--text-muted)}
-  .logout-button{padding:6px 10px}
+  /* قواعد ناوبری به بلوک v4.2 (max-width:900px) منتقل شد؛ اینجا فقط چیدمان محتوا می‌ماند،
+     وگرنه این بلوکِ زودتر، دراور عمودی را به ردیفی از نقطه تبدیل می‌کرد. */
   .app-main{margin:0}
-  .global-header{position:sticky;top:0;z-index:50;height:auto;padding:10px 14px;gap:10px;align-items:center;flex-wrap:wrap}
+  .global-header{position:sticky;top:0;z-index:50;height:auto;padding:calc(10px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-inline-end)) 10px calc(14px + env(safe-area-inset-inline-start));gap:10px;align-items:center;flex-wrap:wrap}
   .global-search{min-width:0}
   .global-search a .kbd{display:none}
   .header-actions select{max-width:150px}
@@ -1847,6 +1832,19 @@ button:disabled{opacity:.55;cursor:not-allowed}
   .header-actions .ai-btn span{display:none}
   .header-actions .ai-btn{padding:0 10px}
   .global-search{max-width:100%}
+  /* ── ناوبری موبایل: دراور عمودی با برچسب کامل و هدف ضربه ≥۴۴px ── */
+  .sidebar{width:min(320px,88vw);flex-direction:column;align-items:stretch;overflow-y:auto;
+    padding:calc(14px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom))}
+  .sidebar .brand{display:flex;align-items:center;gap:10px;margin:0 0 4px;padding:0}
+  .sidebar .brand-title{display:block}
+  .sidebar .engine-card{display:flex}
+  .side-nav{flex-direction:column;align-items:stretch;gap:2px;margin:10px 0;padding:0;flex:1 0 auto;overflow:visible}
+  .side-nav .nav-group-title{display:block;font-size:10.5px;letter-spacing:.08em;color:var(--text-muted);padding:12px 6px 4px}
+  .side-nav a{font-size:13.5px;width:auto;height:auto;min-height:44px;display:flex;align-items:center;gap:9px;padding:0 11px;border-radius:10px}
+  .side-nav a::after{content:none}
+  .side-nav a::before{content:'';width:3px;height:18px;border-radius:2px;background:transparent;flex:0 0 auto}
+  .side-nav a.active::before{background:var(--teal,#0f9b8e)}
+  .logout-button{margin-top:6px;padding:11px 12px;min-height:44px}
 }
 @media(max-width:640px){
   .header-actions .scope-chip{max-width:44px;padding:2px 8px}
@@ -2407,3 +2405,29 @@ tr.row-muted td{opacity:.6}
 
 .net-detail-body .kv.kv-wide{grid-column:1/-1;display:flex;flex-direction:column;align-items:flex-start;gap:5px}
 .net-detail-body .kv.kv-wide .criteria-badge{font-size:10.6px}
+
+/* ==========================================================================
+   موبایل/لمس (پاس v4.4) — ارتفاع داینامیک، safe-area، جلوگیری از زوم اجباری iOS
+   و اطمینان از اینکه بوم گراف روی تاچ «می‌کشد» نه اینکه صفحه را زوم کند.
+   ========================================================================== */
+.app-shell{min-height:100vh;min-height:100dvh}
+.sidebar{height:100vh;height:100dvh}
+.login,.auth-page,.auth-shell{min-height:100vh;min-height:100dvh}
+.net-graph-zone,canvas.net-canvas,.net-fs-canvas canvas{touch-action:none;-webkit-user-select:none;user-select:none}
+.net-pinch-hint{display:none}
+@media(max-width:900px){
+  .net-fs-canvas{height:calc(100dvh - 116px)}
+  .net-fs-canvas .net-graph-zone{min-height:calc(100dvh - 130px)}
+  .notification-drawer{padding:calc(18px + env(safe-area-inset-top)) 18px calc(18px + env(safe-area-inset-bottom))}
+  .net-pinch-hint{display:inline-flex}
+}
+/* ورودی‌ها روی iOS با فونت <۱۶px هنگام فوکوس زوم اجباری می‌کنند — پس روی موبایل ۱۶px */
+@media(max-width:760px){
+  input,select,textarea{font-size:16px}
+  .toolbar-select,input,select,textarea{min-height:44px}
+  .btn,.net-btn,.srip-button{min-height:44px}
+  .workspace-content{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
+}
+@media (prefers-reduced-motion:reduce){
+  .sidebar,.sidebar.open{transition:none}
+}

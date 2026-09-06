@@ -778,22 +778,29 @@ scoreBasis    = b === 0 ? 'COLD_START_ASSESSED' : 'BLEND'
    GitHub Pages** جایگزین شده (`docs/srip2/...`)؛ ۱۴۶ فایل `docs/*.md` فقط در `main` موجودند
    (`git ls-tree main` = 146، در HEAD = 0). راه‌حل: خروجی استاتیک به `public/` یا `site/` منتقل و `docs/*.md`
    بازگردانی شود (یا مسیر خروجی GH Pages به `docs/` محدود و اسناد به `docs/manual/` برود).
-2. **موبایل (کار ناتمام سشن قبل):** لایهٔ «Mobile responsive shell (v4.2)» در `globals.css` سایدبار را در
-   ≤۹۰۰px به **دراور فیکس‌شدهٔ عمودی** تبدیل می‌کند، اما قواعد قدیمی‌تر `@media(max-width:760px)` در همان فایل
-   هنوز `.side-nav{flex-direction:row}` و `.side-nav a{font-size:0; width/height:38px}` و بولت `content:'•'`
-   را دیکته می‌کنند؛ چون بلوک ۷۶۰ *قبل از* بلوک ۹۰۰ِ جدید است، در عرض موبایل باقی می‌ماند و دراور عمودی را
-   به ردیفی از نقطه‌های بی‌متن تبدیل می‌کند. کار لازم: حذف/محدود‌کردن بلوک‌های ۷۶۰ قدیمی، لیست عمودی با برچسب،
-   ارتفاع ضربه ≥۴۴px.
-3. **نبود `viewport-fit=cover`، safe-area و `100dvh`:** `layout.tsx` هیچ `export const viewport` ندارد؛
-   `.app-shell/.sidebar/.login/.auth-shell` هنوز `100vh` می‌گیرند (فقط دراور `100dvh`) و
-   `ui-v3.css` برای گراف تمام‌صفحه از `calc(100vh - 130px)` استفاده می‌کند → در Safari/iOS زیر toolbar و notch
-   بریده می‌شود. `env(safe-area-inset-*)` هم هیچ‌جا استفاده نشده.
-4. **PWA ناقص:** `sw.js` ثبت می‌شود ولی `manifest.webmanifest`، `theme-color`، `apple-touch-icon` و
-   `display:standalone` وجود ندارند → «افزودن به صفحهٔ اصلی» روی iOS نتیجهٔ درست نمی‌دهد.
-5. **زوم اجباری iOS روی ورودی‌ها:** فونت پیش‌فرض بدنه/اکشن‌بار `14px` و ورودی‌ها `font:inherit` است؛
-   هر input با فونت <16px در iOS هنگام فوکوس زوم می‌کند. باید در breakpoint موبایل ≥16px شود.
-6. **تعامل لمسی گراف:** تعامل‌ها pointer-based‌اند و برای ماوس تنظیم شده‌اند؛ `touch-action` روی بوم گراف و
-   حالت «پینچ/دابل‌تپ» و همچنین «مبدأ/مقصد» روی موبایل نیاز به بازبینی دارد (کلیک/دابل‌کلیک روی تاچ مطمئن نیست).
+2. **موبایل — انجام شد (بازبینی این برنچ).** دو بلوک کهنه که سایدبار را در موبایل به ردیفی از نقطه
+   تبدیل می‌کردند (`@media(max-width:900px)` «ریل آیکونی» با `font-size:0` و `content:'•'` و بلوک `760px`
+   با `flex-direction:row`) حذف شدند؛ ناوبری موبایل حالا همان دراور عمودی v4.2 است: برچسب کامل،
+   لیست ستونی، ارتفاع ضربهٔ `min-height:44px`، عرض `min(320px,88vw)` و `padding` امن. در همان فایل
+   یک بلوک «پاس موبایل v4.4» اضافه شد که `100dvh` (با `100vh` به‌عنوان fallback) برای `.app-shell`/
+   `.sidebar`/صفحهٔ ورود، و `env(safe-area-inset-*)` برای هدر ثابت، دراور اعلان‌ها و محتوای صفحه ست می‌کند.
+3. **`viewport-fit` و safe-area — انجام شد.** `layout.tsx` (هر دو کلاینت) حالا `export const viewport` با
+   `viewportFit:'cover'` و `maximumScale:5` دارد و `themeColor` روشن/تاریک می‌دهد؛ ارتفاع بوم گرافِ
+   تمام‌صفحه در `ui-v3.css` هم از `calc(100vh - 130px)` به `100dvh` رفت.
+4. **PWA — انجام شد.** `manifest.webmanifest` (با `display:standalone`، `theme_color`، `safe_area_inset_overrides`
+   و آیکون maskable)، `icon.svg`، PNGهای ۱۹۲/۵۱۲/maskable/`apple-touch-icon` و فاوآیکون‌ها ساخته شدند
+   (`scripts/gen-icons.mjs`، خروجی‌ها commit‌اند) و از طریق `metadata` وصل‌اند؛ `appleWebApp` استاتوس‌بار را
+   مشکی می‌کند و `formatDetection.telephone:false` شماره‌های فارسی را به لینک تماس تبدیل نمی‌کند. چون
+   `basePath` روی URLهای متادیتا اعمال نمی‌شود، مسیرها صراحتاً با `PAGES_BASE` پیشوند می‌گیرند (الگوی
+   `sw-register`)؛ در خروجی استاتیک همه با `curl` ۲۰۰ شدند.
+5. **زوم اجباری iOS — انجام شد.** در breakpoint موبایل `input,select,textarea{font-size:16px}` و
+   `min-height:44px` برای `.btn/.net-btn/.toolbar-select` ست می‌شود، و `user-scalable` بسته می‌ماند.
+6. **تعامل لمسی گراف — انجام شد (web-ux).** روی بوم `touch-action:none` است، زوم دوانگشتی با محور ثابت روی
+   نقطۀ میانیِ دو انگشت پیاده شد، دوتپ روی گره بزرگ‌نمایی می‌کند و دوتپ روی زمینۀ خالی بازنشانی؛
+   کلیک با «سlop» جابه‌جایی (۶px) و دابل‌کلیک ماوس حفظ شده و راهنمای «دو انگشت = زوم» به نوار ابزار اضافه شد.
+   کلاینت قدیمی `apps/web` گراف جدا و ساده‌تری دارد و فقط `touch-action` گرفت؛ پینچ به آن منتقل نشد.
+   **هنوز روی دستگاه واقعی تأیید نشده** (مرورگر سری‌هد در این محیط کار نمی‌کند).
+
 7. **AI فقط قاعده‌محور است.** Provider بیرونی هست ولی خروجی آن هیچ validation/schema‌ای ندارد، `AiPromptVersion`
    در مسیر `execute()` خوانده نمی‌شود، و بردارها واقعی نیستند (هش ۳۲بعدی). برای «هوشمندی» جدی: RAG با
    embedding واقعی + rerank + guardrail روی خروجی + ارزیابی.
@@ -805,7 +812,7 @@ scoreBasis    = b === 0 ? 'COLD_START_ASSESSED' : 'BLEND'
    به `CriteriaReviewTask` اضافه کند (امروز فقط هنگام محاسبه علامت می‌خورد).
 10. **موبایل در CI تست نمی‌شود** (نه typecheck اجباری در gate، نه e2e RN)؛ `apps/mobile` فقط `tsc --noEmit` دارد.
 
-### وضعیت کار باز (همان تسک قطع‌شده)
-ادامهٔ اصلاحات موبایل آیتم‌های **۲ تا ۶** — یعنی یک پاس متمرکز روی `apps/web-ux/app/globals.css` +
-`ui-v3.css` + `layout.tsx` (و بازتاب در `apps/web`) سپس بازسازی خروجی با `scripts/release-ux.sh` تا در
-پیش‌نمایش هم دیده شود.
+### وضعیت کار باز (پس از پاس موبایل)
+آیتم‌های **۲ تا ۶** انجام شدند و در خروجی استاتیک بازسازی‌شده با `scripts/release-ux.sh` دیده می‌شوند؛
+باقی‌ماندۀ این محور فقط **تأیید چشمی روی گوشی واقعی** (نصب PWA، نچ‌دارینگ، ژست‌های گراف) است و آیتم **۱**
+(له‌شدن اسناد زیر خروجی استاتیک). typecheck سخت `apps/mobile` صفر خطا است.
