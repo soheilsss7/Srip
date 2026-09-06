@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import HubTabs from '../_components/hub-tabs';
 import { api } from '../_lib/api';
+import { fa } from '../_lib/fa';
 import { useWorkspace } from '../_components/workspace';
 import { Badge, ErrorCard, Loading, Modal, PageHeader, SectionCard, StatCard } from '../_components/page-ui';
 import {
@@ -36,6 +37,12 @@ const ACTION_META: Record<string, { fa: string; icon: React.ReactNode; tone: 'in
   REQUEST_APPROVAL: { fa: 'تأیید دوم‌نفره', icon: <Scale size={14} />, tone: 'danger', color: '#dc2626' },
   WAIT: { fa: 'انتظار', icon: <Clock3 size={14} />, tone: 'neutral', color: '#64748b' },
 };
+
+const TRIGGER_FA: Record<string, string> = {
+  RELATIONSHIP_UPDATED: 'به‌روزرسانی رابطه', MEETING_CREATED: 'ایجاد جلسه', ACTION_CREATED: 'ایجاد اقدام',
+  OPPORTUNITY_CREATED: 'ایجاد فرصت', RELATIONSHIP_CREATED: 'ایجاد رابطه',
+};
+const PRIORITY_FA: Record<string, string> = { LOW: 'کم', MEDIUM: 'متوسط', HIGH: 'زیاد', CRITICAL: 'بحرانی' };
 
 type WfAction = { type: string; [k: string]: any };
 type WfDef = { trigger?: { type?: string; entityType?: string }; conditions?: any[]; actions?: WfAction[] };
@@ -112,8 +119,8 @@ function Flow({ wf }: { wf: WfRow }) {
                 </div>
                 <div className="t-muted" style={{ fontSize: 10.5, marginTop: 1, lineHeight: 1.5 }}>
                   {a.type === 'CREATE_NOTIFICATION' && notifPreview(a)}
-                  {a.type === 'CREATE_ACTION' && (a.title ? `«${a.title}»` : 'اقدام') + (a.priority ? ` · اولویت ${a.priority}` : '')}
-                  {a.type === 'CREATE_COMMITMENT' && ((a.description ?? a.title) ? `«${String(a.description ?? a.title).slice(0, 90)}»` : 'تعهد') + (a.risk ? ` · ریسک ${a.risk}` : '')}
+                  {a.type === 'CREATE_ACTION' && (a.title ? `«${a.title}»` : 'اقدام') + (a.priority ? ` · اولویت ${PRIORITY_FA[a.priority] ?? fa(a.priority)}` : '')}
+                  {a.type === 'CREATE_COMMITMENT' && ((a.description ?? a.title) ? `«${String(a.description ?? a.title).slice(0, 90)}»` : 'تعهد') + (a.risk ? ` · ریسک ${PRIORITY_FA[a.risk] ?? fa(a.risk)}` : '')}
                   {a.type === 'CREATE_OPPORTUNITY' && (a.name ? `«${a.name}»` : 'فرصت') + (a.probability ? ` · احتمال ${a.probability}٪` : '')}
                   {a.type === 'REQUEST_APPROVAL' && (a.payload?.note ?? a.payload?.title ?? 'تصویب ادامهٔ گردش کار')}
                   {a.type === 'WAIT' && `${Number(a.minutes) || 1} دقیقه`}
@@ -132,9 +139,11 @@ function Flow({ wf }: { wf: WfRow }) {
 function ExecStatus({ status }: { status: string }) {
   const tone = STR_TONES[status] ?? 'neutral';
   const label: Record<string, string> = {
-    COMPLETED: 'کامل شد', RUNNING: 'در حال اجرا', WAITING: 'در انتظار', FAILED: 'ناموفق', REJECTED: 'رد شد',
+    COMPLETED: 'کامل شد', RUNNING: 'در حال اجرا', WAITING: 'در انتظار', FAILED: 'ناموفق',
+    REJECTED: 'رد شد', CANCELLED: 'لغو شد', PAUSED: 'متوقف شد', SKIPPED: 'نادیده گرفته شد',
+    PENDING: 'در انتظار', APPROVED: 'تأیید شد',
   };
-  return <Badge tone={tone}>{label[status] ?? status}</Badge>;
+  return <Badge tone={tone}>{label[status] ?? fa(status)}</Badge>;
 }
 
 export default function WorkflowsPage({ initialTab = 'workflows' }: { initialTab?: 'workflows' | 'executions' }) {
@@ -448,7 +457,7 @@ export default function WorkflowsPage({ initialTab = 'workflows' }: { initialTab
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <h3 style={{ fontSize: 13.5 }}>{w.name}</h3>
                       <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 3 }}>
-                        <Badge tone={triggerType === 'MANUAL' ? 'neutral' : 'warning'}>{triggerType === 'MANUAL' ? 'اجرای دستی' : `رویداد: ${triggerType}`}</Badge>
+                        <Badge tone={triggerType === 'MANUAL' ? 'neutral' : 'warning'}>{triggerType === 'MANUAL' ? 'اجرای دستی' : `رویداد: ${TRIGGER_FA[triggerType] ?? triggerType}`}</Badge>
                         <Badge tone="info">{entityIcon(w.entityType)}</Badge>
                         {w.isActive ? <Badge tone="success">فعال</Badge> : <Badge tone="neutral">غیرفعال</Badge>}
                         {conds > 0 && <Badge tone="warning">{conds} شرط</Badge>}
@@ -496,7 +505,7 @@ export default function WorkflowsPage({ initialTab = 'workflows' }: { initialTab
               const pendingApps = approvals[e.id] ?? [];
               return (
                 <div key={e.id + idx} className="exec-row" style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '10px 0', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
-                  <span className="wf-ico" style={{ width: 34, height: 34, background: 'var(--surface-2)' }}><GitCommitHorizontal size={15} /></span>
+                  <span className="wf-ico" style={{ width: 34, height: 34, background: 'var(--srip-surface-2)' }}><GitCommitHorizontal size={15} /></span>
                   <div style={{ flex: 1, minWidth: 220 }}>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                       <b style={{ fontSize: 12.5 }}>{wf?.name ?? e.workflowId}</b>
@@ -555,7 +564,7 @@ export default function WorkflowsPage({ initialTab = 'workflows' }: { initialTab
             <label><span className="field-label">محرک</span>
               <select value={form.triggerType} onChange={e => setForm(f => ({ ...f, triggerType: e.target.value }))}>
                 <option value="MANUAL">دستی (فقط با دکمهٔ اجرا)</option>
-                {['RELATIONSHIP_UPDATED', 'MEETING_CREATED', 'ACTION_CREATED', 'OPPORTUNITY_CREATED', 'RELATIONSHIP_CREATED'].map(t => <option key={t} value={t}>{`رویداد: ${t}`}</option>)}
+                {['RELATIONSHIP_UPDATED', 'MEETING_CREATED', 'ACTION_CREATED', 'OPPORTUNITY_CREATED', 'RELATIONSHIP_CREATED'].map(t => <option key={t} value={t}>{`رویداد: ${TRIGGER_FA[t] ?? t}`}</option>)}
               </select>
             </label>
             <label className="full"><span className="field-label">شرط (اختیاری)</span>
@@ -580,7 +589,7 @@ export default function WorkflowsPage({ initialTab = 'workflows' }: { initialTab
             {steps.map((st, i) => {
               const meta = ACTION_META[st.type] ?? { fa: st.type, icon: <Workflow size={14} />, tone: 'neutral', color: '#94a3b8' };
               return (
-                <div key={i} className="step-card" style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '8px 10px', background: 'var(--surface-2)', borderRadius: 10, marginBottom: 6 }}>
+                <div key={i} className="step-card" style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '8px 10px', background: 'var(--srip-surface-2)', borderRadius: 10, marginBottom: 6 }}>
                   <GripVertical size={13} className="t-muted" style={{ marginTop: 22 }} />
                   <span className="flow-step" style={{ marginTop: 16 }}>{i + 1}</span>
                   <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 6 }}>
@@ -592,15 +601,15 @@ export default function WorkflowsPage({ initialTab = 'workflows' }: { initialTab
                     {st.type === 'CREATE_NOTIFICATION' && (<>
                       <label className="full"><span className="field-label">عنوان اعلان</span><input value={st.title ?? ''} onChange={e => setSteps(s => s.map((x, j) => j === i ? { ...x, title: e.target.value } : x))} /></label>
                       <label className="full"><span className="field-label">متن اعلان</span><textarea rows={2} value={st.body ?? ''} onChange={e => setSteps(s => s.map((x, j) => j === i ? { ...x, body: e.target.value } : x))} /></label>
-                      <label><span className="field-label">شدت</span><select value={st.priority ?? 'MEDIUM'} onChange={e => setSteps(s => s.map((x, j) => j === i ? { ...x, priority: e.target.value } : x))}><option>LOW</option><option>MEDIUM</option><option>HIGH</option></select></label>
+                      <label><span className="field-label">شدت</span><select value={st.priority ?? 'MEDIUM'} onChange={e => setSteps(s => s.map((x, j) => j === i ? { ...x, priority: e.target.value } : x))}><option value="LOW">کم</option><option value="MEDIUM">متوسط</option><option value="HIGH">زیاد</option></select></label>
                     </>)}
                     {st.type === 'CREATE_ACTION' && (<>
                       <label><span className="field-label">عنوان اقدام</span><input value={st.title ?? ''} onChange={e => setSteps(s => s.map((x, j) => j === i ? { ...x, title: e.target.value } : x))} /></label>
-                      <label><span className="field-label">اولویت</span><select value={st.priority ?? 'MEDIUM'} onChange={e => setSteps(s => s.map((x, j) => j === i ? { ...x, priority: e.target.value } : x))}><option>LOW</option><option>MEDIUM</option><option>HIGH</option><option>CRITICAL</option></select></label>
+                      <label><span className="field-label">اولویت</span><select value={st.priority ?? 'MEDIUM'} onChange={e => setSteps(s => s.map((x, j) => j === i ? { ...x, priority: e.target.value } : x))}><option value="LOW">کم</option><option value="MEDIUM">متوسط</option><option value="HIGH">زیاد</option><option value="CRITICAL">بحرانی</option></select></label>
                     </>)}
                     {st.type === 'CREATE_COMMITMENT' && (<>
                       <label><span className="field-label">متن تعهد</span><input value={st.description ?? ''} onChange={e => setSteps(s => s.map((x, j) => j === i ? { ...x, description: e.target.value } : x))} /></label>
-                      <label><span className="field-label">ریسک</span><select value={st.risk ?? 'MEDIUM'} onChange={e => setSteps(s => s.map((x, j) => j === i ? { ...x, risk: e.target.value } : x))}><option>LOW</option><option>MEDIUM</option><option>HIGH</option></select></label>
+                      <label><span className="field-label">ریسک</span><select value={st.risk ?? 'MEDIUM'} onChange={e => setSteps(s => s.map((x, j) => j === i ? { ...x, risk: e.target.value } : x))}><option value="LOW">کم</option><option value="MEDIUM">متوسط</option><option value="HIGH">زیاد</option></select></label>
                     </>)}
                     {st.type === 'CREATE_OPPORTUNITY' && (<>
                       <label><span className="field-label">نام فرصت</span><input value={st.name ?? ''} onChange={e => setSteps(s => s.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} /></label>

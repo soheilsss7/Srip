@@ -117,8 +117,13 @@
   color-scheme:light;
 }
 
-html[data-theme="dark"], html[data-theme="system"]{
+html[data-theme="dark"]{
   color-scheme:dark;
+}
+/* «سیستم» باید با prefrence مرورگر هماهنگ باشد؛ وادار کردن color-scheme به dark
+   در سیستم روشن، کنترلهای بومی (دراپداون، تاریخ، شمارنده) را مشکی میکرد. */
+html[data-theme="system"]{
+  color-scheme:light dark;
 }
 html[data-theme="dark"]{
   /* Mockup canonical tokens (dark) ----------------------------------------- */
@@ -1526,8 +1531,17 @@ html[data-theme="dark"] .chip.warning{color:var(--srip-amber)}
 
 /* ---------- Forms (v4) ---------- */
 .field{display:flex;flex-direction:column;gap:7px}
-.field-label{font-size:12px;font-weight:800;color:var(--text-secondary);display:flex;align-items:center;gap:5px}
-.field-label .req{color:var(--srip-danger)}
+.field-label{font-size:12px;font-weight:800;color:var(--text-secondary);display:flex;flex-direction:row;align-items:center;gap:5px;flex-wrap:nowrap}
+/* قواعد «.entity-form label / .panel>label / .form-card label» (اختصاصیت بالاتر)
+   برچسب ستاره‌دار را ستونی می‌کردند و «*» را به خط بعد می‌انداختند. */
+.entity-form label.field-label,.panel>label.field-label,.form-card label.field-label{flex-direction:row;align-items:center;gap:5px}
+.field-label .req{color:var(--srip-danger);font-style:normal;line-height:1;flex:0 0 auto}
+/* جلوگیری از مشکی‌شدن فیلدهای auto-fill مرورگر در تم روشن */
+input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus{
+  -webkit-text-fill-color:var(--text-primary);
+  -webkit-box-shadow:0 0 0 1000px var(--card-bg) inset;
+  caret-color:var(--text-primary);
+}
 .field-hint{font-size:10.5px;color:var(--text-muted);margin-top:-2px}
 .field input,.field select,.field textarea{border:1px solid var(--card-border-strong);background:var(--card-bg);
   color:var(--text-primary);border-radius:var(--radius-md);padding:10px 12px;min-height:42px;font:inherit;width:100%;transition:border-color .12s,box-shadow .12s,background .12s}

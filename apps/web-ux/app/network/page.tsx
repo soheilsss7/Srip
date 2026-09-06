@@ -570,7 +570,7 @@ export default function Page() {
       {/* Header */}
       <section className="net-head">
         <div>
-          <div className="eyebrow">SRIP Workspace · Network Intelligence</div>
+          <div className="eyebrow">شبکه اطلاعاتی SRIP</div>
           <h1>شبکهٔ روابط</h1>
           <p className="subtitle">
             گراف تعاملی روابط استراتژیک با فیلتر، مسیر و تحلیل ریسک/نفوذ. همه مقادیر از سرور واقعی با مجوز و محدودهٔ سازمانی محاسبه می‌شوند.

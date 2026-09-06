@@ -10,7 +10,7 @@ export default function ApiCoverage(){
    const out:Row[]=[];const paths=spec?.paths??{};
    for(const [path,item] of Object.entries<any>(paths))for(const [method,op] of Object.entries<any>(item??{})){
     if(!['get','post','put','patch','delete'].includes(method))continue;
-    out.push({module:(op?.tags?.[0]??path.split('/')[2]??'api'),method:method.toUpperCase(),path:`/api/v1${path}`,status:op?.security?.length? 'Bearer · contract enforced':'Public'});
+    out.push({module:(op?.tags?.[0]??path.split('/')[2]??'api'),method:method.toUpperCase(),path:`/api/v1${path}`,status:op?.security?.length? 'توکن امنیتی الزامی':'عمومی'});
    }
    setRows(out.sort((a,b)=>a.path.localeCompare(b.path)||a.method.localeCompare(b.method)));
   }).catch(e=>setError(e instanceof Error?e.message:String(e)));

@@ -78,7 +78,7 @@ export default function HelpPage() {
     <main className="feature-page">
       <section className="page-heading">
         <div>
-          <div className="eyebrow">SRIP Workspace · User Guide</div>
+          <div className="eyebrow">راهنمای کاربری SRIP</div>
           <h1><BookOpen size={22} style={{ verticalAlign: '-4px' }}/> راهنمای کاربر</h1>
           <p className="subtitle">همه‌چیز دربارهٔ پلتفرم: نقش‌ها، بخش‌ها، قابلیت‌ها و پاسخ پرسش‌های پرتکرار — در یک نگاه.</p>
         </div>

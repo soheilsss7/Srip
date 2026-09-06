@@ -15,6 +15,9 @@ const PREF_LABELS:Record<string,{label:string;desc:string}> = {
   weeklyDigest:{label:'خلاصهٔ هفتگی',desc:'خلاصهٔ هفتگی'},
 };
 const PRIORITY_TONE:Record<string,'danger'|'warning'|'info'|'neutral'|'success'>={critical:'danger',important:'warning',recommendation:'info',reminder:'info',information:'neutral',success:'success'};
+const TYPE_FA:Record<string,string>={REMINDER:'یادآوری',RECOMMENDATION:'پیشنهاد',SYSTEM:'سیستمی',ALERT:'هشدار'};
+const PRIORITY_FA:Record<string,string>={LOW:'کم',MEDIUM:'متوسط',HIGH:'زیاد',CRITICAL:'بحرانی'};
+const CHANNEL_FA:Record<string,string>={IN_APP:'درون‌برنامه‌ای',EMAIL:'ایمیل',PUSH:'اعلان فشاری',SMS:'پیامک',WEBHOOK:'وبهوک'};
 const TYPE_ICON:Record<string,React.ReactNode>={REMINDER:<BellRing size={15}/>,RECOMMENDATION:<Zap size={15}/>,SYSTEM:<CheckCircle2 size={15}/>,ALERT:<BellRing size={15}/>};
 
 export default function Notifications(){
@@ -96,8 +99,8 @@ export default function Notifications(){
                     </div>
                     <p style={{fontSize:12,color:'var(--text-secondary)',lineHeight:1.75,margin:'3px 0 0'}}>{n.body}</p>
                     <div className="match-meta" style={{marginTop:6}}>
-                      <span className="chip neutral">{String(n.priority).toUpperCase()}</span>
-                      {n.channel&&<span className="chip neutral">{n.channel}</span>}
+                      <span className="chip neutral">{PRIORITY_FA[String(n.priority).toUpperCase()] ?? String(n.priority).toUpperCase()}</span>
+                      {n.channel&&<span className="chip neutral">{CHANNEL_FA[String(n.channel).toUpperCase()] ?? n.channel}</span>}
                       <span style={{display:'inline-flex',alignItems:'center',gap:4}}><CalendarClock size={12}/> {new Date(n.createdAt).toLocaleString('fa-IR',{dateStyle:'medium',timeStyle:'short'})}</span>
                       {!readAt&&<button className="btn btn-ghost btn-sm" style={{marginInlineStart:'auto'}} onClick={()=>read(n.id)} disabled={!!busy}>علامت‌گذاری خوانده</button>}
                     </div>

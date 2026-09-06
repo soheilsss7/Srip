@@ -49,7 +49,7 @@ export function NotificationsDrawer({ open, onClose }: { open: boolean; onClose:
         {loading ? <p>در حال بارگذاری…</p> :
           items.length ? items.map(n => (
             <button className={'notification-item ' + (!n.read ? 'unread' : '')} key={n.id} onClick={() => read(n.id)}>
-              <strong>{n.title ?? n.type ?? 'اعلان'}</strong>
+              <strong>{n.title ?? ({REMINDER:'یادآوری',RECOMMENDATION:'پیشنهاد',SYSTEM:'سیستمی',ALERT:'هشدار'} as Record<string,string>)[n.type] ?? 'اعلان'}</strong>
               <span>{n.message ?? n.body ?? ''}</span>
               <small>{n.createdAt ?? ''}</small>
             </button>

@@ -1,4 +1,5 @@
 'use client';
+import { fa } from '../../_lib/fa';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../../_lib/api';
 import { useWorkspace } from '../../_components/workspace';
@@ -143,7 +144,7 @@ export default function AdminRetentionPage() {
               <ArchiveRestore size={16} />
               <b style={{ fontSize: 13 }}>آخرین اجرا: {fmtDT(lastRun.executedAt)}</b>
               {lastRun.changed.map(c => (
-                <Badge key={c.entityType} tone="neutral"><Database size={10} /> {c.entityType}: {fmtNum(c.count)} رکورد</Badge>
+                <Badge key={c.entityType} tone="neutral"><Database size={10} /> {fa(c.entityType)}: {fmtNum(c.count)} رکورد</Badge>
               ))}
             </div>
           )}

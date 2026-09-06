@@ -297,7 +297,7 @@ export default function Settings() {
                     زبان
                     <select value={prefs.locale} onChange={e => setPrefs({ ...prefs, locale: e.target.value })}>
                       <option value="fa">فارسی</option>
-                      <option value="en">English</option>
+                      <option value="en">انگلیسی</option>
                     </select>
                   </label>
                   <label className="field-label" style={{ fontSize: 11 }}>
