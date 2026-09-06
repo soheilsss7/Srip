@@ -1,0 +1,6 @@
+# SRIP static export (Next.js) — Apache / Plesk
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_URI} !\.html$
+RewriteCond %{REQUEST_URI} !\.(txt|js|css|json|map|png|jpg|jpeg|svg|ico|woff2|webmanifest)$ [NC]
+RewriteRule ^(.+?)/?$ $1.html [L,QSA]
