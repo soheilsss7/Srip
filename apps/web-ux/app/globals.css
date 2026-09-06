@@ -2129,10 +2129,11 @@ tr.row-muted td{opacity:.6}
 .expiry-near{color:#b7791f;font-weight:600}
 
 /* ================= workflows — visual editor (B5) ================= */
-.tabs{display:flex;gap:4px;border-bottom:1px solid var(--card-border-strong);margin:14px 0;flex-wrap:wrap}
-.tabs button{background:transparent;border:none;border-bottom:2px solid transparent;padding:9px 13px;font-size:12.5px;font-weight:700;color:var(--text-muted);cursor:pointer;display:inline-flex;gap:6px;align-items:center;border-radius:8px 8px 0 0}
-.tabs button:hover{color:var(--text-secondary)}
-.tabs .tab-active{color:var(--srip-accent);border-bottom-color:var(--srip-accent)}
+/* ---------- Tab bar hubs (HubTabs) — قرصی، هماهنگ با segmented/net-tabs ---------- */
+.tabs{display:flex;gap:4px;background:var(--card-bg-soft);border:1px solid var(--card-border);border-radius:var(--radius-md);padding:4px;margin:14px 0;flex-wrap:wrap;width:max-content;max-width:100%;overflow:auto}
+.tabs a,.tabs button{background:transparent;border:1px solid transparent;border-radius:10px;padding:8px 16px;font-size:12.5px;font-weight:800;color:var(--text-muted);cursor:pointer;display:inline-flex;gap:6px;align-items:center;min-height:34px;white-space:nowrap;text-decoration:none;transition:background .12s,color .12s,box-shadow .12s,border-color .12s}
+.tabs a:hover,.tabs button:hover{color:var(--text-primary)}
+.tabs .tab-active,.tabs .tab-active:hover{background:var(--card-bg);color:var(--srip-accent-text);box-shadow:var(--shadow-sm);border-color:var(--card-border-strong)}
 .wf-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px}
 .wf-card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
 .wf-ico{width:38px;height:38px;border-radius:12px;background:color-mix(in srgb,var(--srip-accent) 12%,transparent);color:var(--srip-accent);display:grid;place-items:center;flex:0 0 auto}
