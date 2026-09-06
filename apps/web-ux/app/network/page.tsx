@@ -8,7 +8,7 @@ import type { ReactNode } from 'react';
 import { apiGet } from '../_lib/api';
 import {fa} from '../_lib/fa';
 import { useWorkspace } from '../_components/workspace';
-import { Empty, ErrorCard, Loading } from '../_components/page-ui';
+import { Badge, Empty, ErrorCard, Loading } from '../_components/page-ui';
 import { CriteriaRailChip } from '../_components/criteria';
 import {
   GGraph,
@@ -23,6 +23,11 @@ import {
   statusMeta,
 } from './_nodes';
 import NetworkGraph, { NetworkGraphHandle } from './_graph';
+
+const COLUMN_LABELS: Record<string, string> = {
+  TEAM: 'تیم ما', CUSTOMER: 'مشتری', BOARD_ADVISORS: 'هیئت و مشاوران', PARTNERS: 'شرکا',
+};
+const fmtNum = (v: any): string => v == null ? '—' : new Intl.NumberFormat('fa-IR').format(Number(v));
 
 // A crash inside the graph must never blank the whole page.
 class GraphBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
@@ -181,9 +186,20 @@ export default function Page() {
   const [relType, setRelType] = useState('');
   const [focus, setFocus] = useState('');
   const [mode, setMode] = useState<'shortest' | 'best'>('shortest');
+  const [maxHops, setMaxHops] = useState(3);
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [path, setPath] = useState<any>(null);
+  const [columns, setColumns] = useState<any[] | null>(null);
+  // گراف ۴ ستونی: ستون هر یال از edgeCategory روی گراف/یال می‌آید
+  useEffect(() => {
+    let alive = true;
+    apiGet<any>('/network/columns').then((d: any) => {
+      if (!alive) return;
+      setColumns(Array.isArray(d) ? d : (d?.columns ?? d?.items ?? []));
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
   const [analysis, setAnalysis] = useState<any>(null);
   const [analysisKind, setAnalysisKind] = useState('');
   const [loading, setLoading] = useState(true);
@@ -392,7 +408,7 @@ export default function Page() {
     log(`درخواست مسیر سازمانی: ${fromId} ← ${toId}`);
     try {
       const sq = scopeQuery();
-      const result = await apiGet(`/network/path?from=${encodeURIComponent(fromId)}&to=${encodeURIComponent(toId)}&mode=${mode}${sq ? `&${sq}` : ''}`, { signal, timeoutMs: 15000 });
+      const result = await apiGet(`/network/path?from=${encodeURIComponent(fromId)}&to=${encodeURIComponent(toId)}&mode=${mode}&maxHops=${maxHops}${sq ? `&${sq}` : ''}`, { signal, timeoutMs: 15000 });
       if (seq === seqRef.current) setPath(result);
     } catch (e: any) {
       if (seq !== seqRef.current || e?.name === 'AbortError') return;
@@ -601,6 +617,28 @@ export default function Page() {
         </div>
       </section>
 
+      {/* 4-column network (P1-6): edgeCategory from /network/columns */}
+      {columns && columns.length > 0 && (
+        <section className="panel" style={{ margin: 0, marginBottom: 14 }} aria-label="ستون‌های شبکه">
+          <div className="panel-title">
+            <div>
+              <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Network size={16} /> شبکهٔ چهارستونی</h2>
+              <p>ستون هر یال روی گراف از نوع سازمان مبدأ/مقصد تعیین می‌شود — برای پیمایش مسیر «داخل تیم ← مشتری ← هیئت» و حاکمیت معرف.</p>
+            </div>
+            <Badge tone="info">{columns.length} ستون</Badge>
+          </div>
+          <div className="attr-grid">
+            {columns.map((c: any) => (
+              <div key={c.key} className="kpi-card" style={{ margin: 0 }}>
+                <small>{COLUMN_LABELS[c.key] ?? c.key}</small>
+                <strong>{fmtNum(c.nodeCount)} گره · {fmtNum(c.edgeCount)} یال</strong>
+                <span className="t-muted" style={{ fontSize: 10 }}>{c.key} — {c.edges?.length ? 'حاضر در گراف' : 'ستون خالی'}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Stats row */}
       <section className="stats-row" aria-label="شاخص‌های کلیدی شبکه">
         <div className="stat-card">
@@ -748,6 +786,9 @@ export default function Page() {
               <option value="shortest">کوتاه‌ترین</option>
               <option value="best">بهترین</option>
             </select>
+            <select value={maxHops} onChange={(e) => setMaxHops(Number(e.target.value))} aria-label="حداکثر پرش">
+              {[1, 2, 3, 4, 5, 6].map((h) => <option key={h} value={h}>تا {h} پرش</option>)}
+            </select>
             <button className="net-btn primary" onClick={runPath} disabled={!from || !to}>یافتن مسیر</button>
             {path ? <button className="net-btn" onClick={clearPath}>پاک‌کردن مسیر</button> : null}
           </div>
@@ -755,9 +796,23 @@ export default function Page() {
             <div className={`net-path-result ${path.found ? 'found' : 'notfound'}`}>
               <div className="net-path-msg">
                 {path.found
-                  ? `مسیر سازمانی یافت شد: ${path.hops} پرش · هزینه ${path.totalCost ?? '—'} · بقیهٔ گراف کمرنگ می‌شود.`
+                  ? `مسیر سازمانی یافت شد: ${path.hops} پرش · هزینه ${path.totalCost ?? '—'} · امتیاز مسیر ${path.score ?? '—'} (${path.scoreLabel ?? '—'}) · بقیهٔ گراف کمرنگ می‌شود.`
                   : 'مسیر سازمانی بین این دو گره یافت نشد — در دادهٔ فعلی به هم متصل نیستند (سازمان دیگری بین آن‌ها نیست).'}
               </div>
+              {path.found && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                  <span className="chip info">کپ مسیر: {path.capped ? `${path.maxHops} پرش` : 'کامل'}</span>
+                  <span className="chip">ظرفیت معرف در ۳۰ روز: {path.governance?.capacityPer30Days ?? 1}</span>
+                  <span className={path.governance?.allowed ? 'chip success' : 'chip danger'}>
+                    {path.governance?.allowed ? 'حاکمیت معرف: مجاز' : 'حاکمیت معرف: مسدود'}
+                  </span>
+                  {Array.isArray(path.governance?.loads) && path.governance.loads.length > 0 && (
+                    <span className="chip neutral" title={path.governance.loads.map((l: any) => `${l.personId}: ${l.load}/${l.capacity}`).join(' · ')}>
+                      بار معرف‌ها: {path.governance.loads.map((l: any) => `${l.personId} ${l.load}/${l.capacity}`).join(' · ')}
+                    </span>
+                  )}
+                </div>
+              )}
               {path.found && Array.isArray(path.nodes) && path.nodes.length > 1 && (
                 <div className="net-path-chain">
                   {path.nodes.map((n: any, i: number) => (

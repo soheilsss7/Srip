@@ -4,7 +4,7 @@ import { use, useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../../_lib/api';
 import { fa } from '../../_lib/fa';
 import { Badge, ErrorCard, Loading, PageHeader } from '../../_components/page-ui';
-import { CalendarDays, HeartPulse, RefreshCw, Archive, RotateCcw, AlertTriangle, ChevronLeft } from 'lucide-react';
+import { CalendarDays, HeartPulse, RefreshCw, Archive, RotateCcw, AlertTriangle, ChevronLeft, TrendingUp, Gauge, FileClock } from 'lucide-react';
 import { CriteriaScoreCard } from '../../_components/criteria';
 
 const arr = (x: any): any[] => Array.isArray(x) ? x : Array.isArray(x?.items) ? x.items : Array.isArray(x?.data) ? x.data : Array.isArray(x?.rows) ? x.rows : [];
@@ -47,6 +47,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [r, setR] = useState<any>(null);
   const [tl, setTl] = useState<any[]>([]);
+  const [pulse, setPulse] = useState<any>(null);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [busy, setBusy] = useState('');
@@ -54,8 +55,12 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const load = useCallback(async () => {
     setError('');
     try {
-      const [a, b] = await Promise.all([api(`/relationships/${id}`), api(`/relationships/${id}/timeline`)]);
-      setR(a); setTl(arr(b));
+      const [a, b, p] = await Promise.all([
+        api(`/relationships/${id}`),
+        api(`/relationships/${id}/timeline`),
+        api(`/relationships/${id}/pulse`).catch(() => null),
+      ]);
+      setR(a); setTl(arr(b)); setPulse(p);
     } catch (e) { setError((e as Error).message); }
   }, [id]);
   useEffect(() => { load(); }, [load]);
@@ -184,6 +189,137 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                   ))}
                 </div>
               </div>
+            )}
+          </section>
+
+          {/* P1: سرمایهٔ رابطه، روند و برنامهٔ ۹۰ روزه */}
+          {pulse && (
+            <section className="panel" style={{ marginTop: 14 }}>
+              <div className="panel-title">
+                <div>
+                  <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Gauge size={16} /> سرمایهٔ رابطه و روند ۹۰ روزه</h2>
+                  <p>سرمایه = قدرت (سلامت) × نفوذ × پتانسیل · روند از اسنپ‌شات ۹۰روزه · اعتماد از تعداد منابع و تازگی شواهد</p>
+                </div>
+                <span className={`chip ${pulse.classKey === 'RISK' ? 'danger' : pulse.classKey === 'GROWTH' ? 'success' : 'info'}`}>{pulse.classLabel}</span>
+              </div>
+              <div className="rel-status-metrics">
+                <div className="rel-metric">
+                  <span>سرمایهٔ رابطه</span>
+                  <div className="rel-metric-value"><b className={clsOf(pulse.capital?.capital)}>{fmtNum(pulse.capital?.capital)}</b><small>از ۱۰۰</small></div>
+                  <div className="rel-metric-bar"><span className={clsOf(pulse.capital?.capital)} style={{ width: `${Math.min(100, pulse.capital?.capital ?? 0)}%` }} /></div>
+                </div>
+                <div className="rel-metric">
+                  <span>قدرت × نفوذ × پتانسیل</span>
+                  <div className="rel-metric-value" style={{ flexWrap: 'wrap', gap: 4 }}>
+                    <b style={{ fontSize: 14 }}>{fmtNum(pulse.capital?.strength)}</b><small>قدرت</small>
+                    <b style={{ fontSize: 14 }}>× {fmtNum(pulse.capital?.influence)}</b><small>نفوذ</small>
+                    <b style={{ fontSize: 14 }}>× {fmtNum(pulse.capital?.potential)}</b><small>پتانسیل</small>
+                  </div>
+                </div>
+                <div className="rel-metric">
+                  <span>روند ۹۰ روزه</span>
+                  <div className="rel-metric-value">
+                    <b className={pulse.trend?.trend === 'DOWN' ? 'h-crit' : pulse.trend?.trend === 'UP' ? 'h-hi' : 'h-mid'}>
+                      {pulse.trend?.trend === 'UP' ? '↗' : pulse.trend?.trend === 'DOWN' ? '↘' : '→'} {fmtNum(pulse.trend?.current)} ({pulse.trend?.delta90d != null && pulse.trend?.delta90d > 0 ? '+' : ''}{fmtNum(pulse.trend?.delta90d)})
+                    </b>
+                    <small>پایه: {fmtNum(pulse.trend?.baseline)}</small>
+                  </div>
+                </div>
+                <div className="rel-metric">
+                  <span>اعتماد امتیاز</span>
+                  <div className="rel-metric-value"><b>{fmtNum(pulse.trend?.confidence)}٪</b><small>{pulse.trend?.evidence?.sources ?? 0} منبع · {(pulse.trend?.evidence?.sourceTypes ?? []).join('، ') || 'شاهد محدود'}</small></div>
+                </div>
+                <div className="rel-metric">
+                  <span>ارزش در معرض ریسک</span>
+                  <div className="rel-metric-value">
+                    <b style={{ fontSize: 15 }}>{pulse.capital?.valueAtRisk ? new Intl.NumberFormat('fa-IR', { notation: 'compact' }).format(pulse.capital.valueAtRisk) : '—'}</b>
+                    <small>از {pulse.capital?.openValue ? new Intl.NumberFormat('fa-IR', { notation: 'compact' }).format(pulse.capital.openValue) : '۰'} تومان فرصت باز</small>
+                  </div>
+                </div>
+              </div>
+              {Array.isArray(pulse.trend?.snapshots) && pulse.trend.snapshots.length > 1 && (
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 52, marginTop: 10 }}>
+                  {pulse.trend.snapshots.map((s: any) => (
+                    <div key={s.daysAgo} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }} title={`${fmtNum(s.daysAgo)} روز پیش: ${fmtNum(s.score)} · اعتماد ${fmtNum(s.confidence)}٪`}>
+                      <span style={{ width: '100%', height: Math.max(6, Math.round(s.score * 0.44)), borderRadius: 4, background: s.daysAgo === 0 ? 'var(--accent,#2563eb)' : 'color-mix(in srgb, var(--accent,#2563eb) 45%, transparent)' }} />
+                      <small className="t-muted" style={{ fontSize: 9.5 }}>{s.daysAgo === 0 ? 'اکنون' : fmtNum(s.daysAgo) + 'پ'}</small>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {Array.isArray(pulse.openOpportunities) && pulse.openOpportunities.length > 0 && (
+                <div className="t-muted" style={{ marginTop: 8 }}>
+                  فرصت‌های باز متصل: {pulse.openOpportunities.map((o: any) => `«${o.name}» (${fmtNum(o.probability)}٪)`).join(' · ')}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* P1: برنامهٔ ۹۰ روزهٔ حساب */}
+          <section className="panel" style={{ marginTop: 14 }}>
+            <div className="panel-title">
+              <div>
+                <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><FileClock size={16} /> برنامهٔ ۹۰ روزهٔ حساب {pulse?.plan ? <span className={`chip ${pulse.plan.status === 'ON_TRACK' ? 'success' : 'warning'}`}>{fa(pulse.plan.status)}</span> : null}</h2>
+                <p>اقدامات، مالک، مهلت و ریسک‌نامه — مرور ماهانه (هر {fmtNum(pulse?.plan?.reviewCycleDays ?? 30)} روز)</p>
+              </div>
+            </div>
+            {pulse?.plan ? (
+              <>
+                {pulse.plan.riskNote && (
+                  <div className="wf-alert" role="note"><AlertTriangle size={13} /> <b>ریسک‌نامه:</b> {pulse.plan.riskNote}</div>
+                )}
+                <div className="list" style={{ marginTop: 8 }}>
+                  {pulse.plan.items.map((it: any) => {
+                    const due = it.dueAt ? new Date(it.dueAt).getTime() : null;
+                    const overdue = due != null && due < Date.now() && it.status !== 'DONE';
+                    return (
+                      <article className="panel compact" key={it.id}>
+                        <div className="panel-title">
+                          <div>
+                            <strong>{it.title} {overdue ? <span className="chip danger">موعد گذشته</span> : null}</strong>
+                            <small className="t-muted">{it.focus} · مالک: {it.owner?.name ?? '—'} · مهلت: {fmtDate(it.dueAt)}</small>
+                          </div>
+                          <select value={it.status} aria-label={`وضعیت ${it.title}`} onChange={async (e) => {
+                            setBusy(it.id); setError(''); setInfo('');
+                            try {
+                              await api(`/relationships/${id}/account-plan/items/${it.id}`, { method: 'PATCH', body: JSON.stringify({ status: e.target.value }) });
+                              setInfo('وضعیت اقدام برنامه به‌روزرسانی شد.'); await load();
+                            } catch (x) { setError((x as Error).message); }
+                            finally { setBusy(''); }
+                          }} disabled={busy === it.id}>
+                            {['TODO', 'IN_PROGRESS', 'DONE', 'BLOCKED'].map(s => <option key={s} value={s}>{fa(s)}</option>)}
+                          </select>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+                <form className="entity-form" style={{ marginTop: 10, gap: 8 }} onSubmit={async (e) => {
+                  e.preventDefault();
+                  const t = (e.currentTarget.elements.namedItem('plan-title') as HTMLInputElement)?.value ?? '';
+                  const d = (e.currentTarget.elements.namedItem('plan-due') as HTMLInputElement)?.value ?? '';
+                  if (!t.trim()) { setError('عنوان اقدام الزامی است.'); return; }
+                  setBusy('new'); setError(''); setInfo('');
+                  try {
+                    await api(`/relationships/${id}/account-plan`, { method: 'POST', body: JSON.stringify({ title: t.trim(), dueAt: d ? new Date(d).toISOString() : null, ownerId: '' }) });
+                    setInfo('اقدام جدید به برنامهٔ ۹۰ روزه اضافه شد.'); await load();
+                    e.currentTarget.reset();
+                  } catch (x) { setError((x as Error).message); }
+                  finally { setBusy(''); }
+                }}>
+                  <div className="field" style={{ flex: 2 }}>
+                    <label className="field-label" htmlFor="plan-title">اقدام جدید</label>
+                    <input id="plan-title" name="plan-title" placeholder="مثلاً: جلسهٔ QBR با مدیر خرید" maxLength={220} />
+                  </div>
+                  <div className="field">
+                    <label className="field-label" htmlFor="plan-due">مهلت</label>
+                    <input id="plan-due" name="plan-due" type="date" />
+                  </div>
+                  <button className="btn btn-primary" style={{ alignSelf: 'flex-end', minHeight: 0, padding: '9px 16px' }} disabled={busy === 'new'}>{busy === 'new' ? 'در حال ثبت…' : 'افزودن'}</button>
+                </form>
+              </>
+            ) : (
+              <p className="t-muted">برنامهٔ ۹۰ روزه برای این رابطه ثبت نشده — از فهرست روابط یا صفحهٔ تحلیل، برنامه بسازید.</p>
             )}
           </section>
 

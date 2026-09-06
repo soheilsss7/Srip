@@ -19,7 +19,7 @@ const PORT = Number(process.env.MOCK_API_PORT || 4000);
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.06.1';
+const DEMO_MOCK_VERSION = '2026.09.06.2';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -405,6 +405,8 @@ function netOrgAdj(req){
     risk:r.riskScore??0,
     strategicImportance:r.strategicScore??50,
     status:r.status, health:r.healthScore, label:r.relationshipType,
+    edgeCategory:orgColumn(r.sourceOrganizationId)==='TEAM'?orgColumn(r.targetOrganizationId):orgColumn(r.sourceOrganizationId),
+    heat:Math.round(0.6*(r.healthScore??50)+0.4*(100-(r.riskScore??0))),
   });
   const put=(u,v,rel)=>{
     const key=[u,v].sort().join('|');
@@ -416,29 +418,33 @@ function netOrgAdj(req){
   return {adj,byKey,rels,edgeOf};
 }
 // path search: shortest = BFS (hop count); best = Dijkstra over cost max(1,(101-weight)+risk*0.5)
-function netPathOrg(req,fromId,toId,mode){
+// P1-6: سقف پرش (پیش‌فرض ۳)، امتیاز گرمای کل مسیر، دستهٔ یال و حاکمیت معرف
+function netPathOrg(req,fromId,toId,mode,opts={}){
   const {adj,byKey,rels,edgeOf}=netOrgAdj(req);
-  const maxHops=8;
+  const maxHops=Math.max(1,Math.min(6,Number(opts.maxHops)||3));
+  const heatOf=(rel)=>Math.round(0.6*(rel?.healthScore??50)+0.4*(100-(rel?.riskScore??0)));
   const name=(oid)=>orgById(oid)?.name??oid;
   const nodeOf=(oid)=>({id:`org:${oid}`,label:name(oid),type:'organization',organizationId:oid});
   const foundNode=(oid)=>ORGS.some(o=>o.id===oid)&&(inScope(req,oid)||[...byKey.keys()].some(k=>k.split('|').includes(oid)));
-  if(!foundNode(fromId)||!foundNode(toId)) return {found:false,mode,nodes:[],edges:[],hops:0,totalCost:null,bounded:true,maxHops};
-  if(fromId===toId) return {found:true,mode,nodes:[nodeOf(fromId)],edges:[],hops:0,totalCost:0,bounded:true,maxHops};
+  if(!foundNode(fromId)||!foundNode(toId)) return {found:false,mode,nodes:[],edges:[],hops:0,totalCost:null,score:null,bounded:true,maxHops};
+  if(fromId===toId) return {found:true,mode,nodes:[nodeOf(fromId)],edges:[],hops:0,totalCost:0,score:100,bounded:true,maxHops};
   const cost=(u,v)=> mode==='best'
     ? Math.max(1,(101-(byKey.get([u,v].sort().join('|')).healthScore??50))+((byKey.get([u,v].sort().join('|')).riskScore??0)*0.5))
     : 1;
   const prev=new Map([[fromId,null]]);
   const dist=new Map([[fromId,0]]);
+  const depth=new Map([[fromId,0]]);
   const q=[fromId];
   let guard=0;
   while(q.length&&guard++<20000){
     q.sort((a,b)=>(dist.get(a)??1e9)-(dist.get(b)??1e9));
     const u=q.shift();
     if(u===toId) break;
-    if((dist.get(u)??0)>=maxHops+1) continue;
+    const du=depth.get(u)??0;
+    if(du>=maxHops) continue;
     for(const n of (adj.get(u)??[])){
       const c=(dist.get(u)??0)+cost(u,n.v);
-      if(c<(dist.get(n.v)??1e9)){ dist.set(n.v,c); prev.set(n.v,u); q.push(n.v); }
+      if(c<(dist.get(n.v)??1e9)){ dist.set(n.v,c); depth.set(n.v,du+1); prev.set(n.v,u); q.push(n.v); }
     }
   }
   if(!prev.has(toId)) return {found:false,mode,nodes:[],edges:[],hops:0,totalCost:null,bounded:true,maxHops};
@@ -449,14 +455,177 @@ function netPathOrg(req,fromId,toId,mode){
     const rel=byKey.get([chain[i],chain[i+1]].sort().join('|'));
     if(rel) edgePath.push(edgeOf(rel));
   }
+  const avgHeat=edgePath.length?edgePath.reduce((s,e)=>s+(e.heat??50),0)/edgePath.length:100;
+  const score=Math.max(0,Math.min(100,Math.round(avgHeat-(edgePath.length-1)*5)));
+  /* حاکمیت معرف (P1-6): ظرفیت هر شخص واسط — حداکثر ۱ درخواست فعال در ۳۰ روز */
+  const pathOrgIds=new Set(chain);
+  const loads=PEOPLE.filter(p=>!p.deletedAt&&pathOrgIds.has(p.organizationId)).map(p=>{
+    const active=REFERRALS.filter(r=>r.sourcePersonId===p.id&&!['CANCELLED','DECLINED'].includes(r.status)&&new Date(r.createdAt??0).getTime()>Date.now()-30*86400000).length;
+    return {personId:p.id,name:`${p.firstName} ${p.lastName}`,title:p.title,organizationId:p.organizationId,load:active,capacity:1,allowed:active<1};
+  });
   return {
     found:true,mode,
     nodes:chain.map(nodeOf),
     edges:edgePath,
     hops:edgePath.length,
     totalCost:Math.round(edgePath.reduce((s,e)=>s+(mode==='best'?Math.max(1,(101-(e.health??50))+(e.risk??0)*0.5):1),0)*10)/10,
+    score,governance:{capacityPer30Days:1,loads,blockedCount:loads.filter(l=>!l.allowed).length},
     bounded:true,maxHops,
   };
+}
+/* ─────────────── P1: سرمایهٔ رابطه، روند، اعتماد، برنامهٔ ۹۰ روزه ─────────────── */
+const ORG_COLUMN={TEAM:['org-1','org-2'],CUSTOMER:['org-3','org-4','org-5'],BOARD_ADVISORS:['org-7','org-8'],PARTNERS:['org-6']};
+const COLUMN_LABELS={TEAM:'تیم ما',CUSTOMER:'مشتری',BOARD_ADVISORS:'هیئت و مشاوران',PARTNERS:'شرکا'};
+const REL_CLASS_LABELS={STRATEGIC:'راهبردی',CORE:'هستهٔ درآمد',GROWTH:'رشد',RISK:'در معرض ریسک',ROUTINE:'روتین'};
+const orgColumn=(oid)=>Object.entries(ORG_COLUMN).find(([,ids])=>ids.includes(oid))?.[0]??'PARTNERS';
+function relClass(r){
+  if((r.riskScore??0)>=60) return 'RISK';
+  if((r.strategicScore??0)>=80&&(r.healthScore??0)>=70) return 'STRATEGIC';
+  if((r.opportunityScore??0)>=70) return 'GROWTH';
+  if((r.strategicScore??0)>=70||(r.healthScore??0)>=60) return 'CORE';
+  return 'ROUTINE';
+}
+function relSnapshotScore(s){ return Math.round(0.35*(s.health??50)+0.25*(s.strategic??50)+0.2*(s.influence??50)+0.2*(s.opportunity??50)); }
+function relScore(r){ return relSnapshotScore({health:r.healthScore,strategic:r.strategicScore,influence:r.influenceScore,opportunity:r.opportunityScore}); }
+function relEvidenceSummary(r,days=90){
+  const since=Date.now()-days*86400000;
+  const ints=INTERACTIONS.filter(x=>!x.deletedAt&&x.relationshipId===r.id&&new Date(x.occurredAt??0).getTime()>=since);
+  const mtgs=MEETINGS.filter(m=>!m.deletedAt&&m.relationshipId===r.id&&new Date(m.startAt??0).getTime()>=since);
+  const coms=COMMITMENTS.filter(c=>!c.deletedAt&&c.relationshipId===r.id&&new Date(c.createdAt??0).getTime()>=since);
+  const acts=ACTIONS.filter(a=>!a.deletedAt&&a.relationshipId===r.id&&new Date(a.dueAt??0).getTime()>=since);
+  const assessed=Object.keys(assessmentStore()[`RELATIONSHIP:${r.id}`]??{}).length;
+  const seen=new Set();
+  if(ints.length) seen.add('INTERACTION');
+  if(mtgs.length) seen.add('MEETING');
+  if(coms.length) seen.add('COMMITMENT');
+  if(acts.length) seen.add('ACTION');
+  if(assessed>0) seen.add('ASSESSMENT');
+  return {sources:seen.size,sourceTypes:[...seen],interactions:ints.length,meetings:mtgs.length};
+}
+function relConfidence(r){
+  const ev=relEvidenceSummary(r);
+  const days=Math.max(0,Math.round((Date.now()-new Date(r.lastInteractionAt??Date.now()).getTime())/86400000));
+  const recency=days<=14?10:days<=30?6:days<=60?3:0;
+  return Math.min(100,Math.round(28+ev.sources*12+recency));
+}
+function relTrend(r){
+  const snaps=(DB.scoreSnapshots??[]).filter(s=>s.relationshipId===r.id).sort((a,b)=>b.daysAgo-a.daysAgo);
+  const now=relScore(r);
+  const base=snaps.find(s=>Math.abs(s.daysAgo-90)<15)??snaps[0];
+  const delta=base?now-base.score:0;
+  const trend=delta>=5?'UP':delta<=-5?'DOWN':'FLAT';
+  return {current:now,delta90d:delta,trend,confidence:relConfidence(r),baseline:base?.score??null,evidence:relEvidenceSummary(r),snapshots:snaps.slice().reverse().map(s=>({asOf:s.asOf,daysAgo:s.daysAgo,score:s.score,confidence:s.confidence}))};
+}
+function relPotential(req,r){
+  const open=scopedOpps(req).filter(o=>!o.deletedAt&&o.relationshipId===r.id&&!['WON','LOST'].includes(o.status));
+  const vSum=open.reduce((s,o)=>s+(Number(o.value)||0),0);
+  const allOpen=scopedOpps(req).filter(o=>!o.deletedAt&&!['WON','LOST'].includes(o.status));
+  const maxV=Math.max(1,...allOpen.map(o=>Number(o.value)||0));
+  const valueScore=vSum>0?Math.min(100,Math.round(100*(vSum/maxV))):0;
+  return {potential:Math.round(0.55*(r.opportunityScore??50)+0.45*valueScore),openValue:vSum,openCount:open.length};
+}
+function relCapital(req,r){
+  const strength=r.healthScore??50,influence=r.influenceScore??50;
+  const {potential,openValue,openCount}=relPotential(req,r);
+  const capital=Math.round((strength/100)*(influence/100)*(potential/100)*100);
+  const valueAtRisk=Math.round(openValue*(1-(r.resilienceScore??50)/100));
+  return {strength,influence,potential,capital,valueAtRisk,openValue,openCount};
+}
+function accountPlanOf(rid){ return (DB.accountPlans??{})[rid]??null; }
+function planStatusFor(rid){
+  const p=accountPlanOf(rid);
+  if(!p) return {exists:false};
+  const open=p.items.filter(i=>i.status!=='DONE');
+  return {exists:true,id:p.id,status:p.status,reviewCycleDays:p.reviewCycleDays,openCount:open.length,overdue:open.filter(i=>i.dueAt&&new Date(i.dueAt).getTime()<Date.now()).length};
+}
+function capitalRow(req,r){
+  const c=relCapital(req,r),t=relTrend(r),p=planStatusFor(r.id);
+  const className=relClass(r);
+  return {relationshipId:r.id,name:`${orgById(r.sourceOrganizationId)?.name??''} ↔ ${orgById(r.targetOrganizationId)?.name??''}`,type:r.relationshipType,status:r.status,classKey:className,classLabel:REL_CLASS_LABELS[className],...c,currentScore:t.current,delta90d:t.delta90d,trend:t.trend,confidence:t.confidence,plan:p};
+}
+/* کالیبراسیون مدل روی نتایج واقعی (P1-4): Win/Lost + گپ امتیاز + نیمه‌عمر */
+function calibrationView(req){
+  const closedAll=scopedOpps(req).filter(o=>!o.deletedAt&&['WON','LOST'].includes(o.status));
+  const closed=closedAll.filter(o=>o.scoreAtClose!=null);
+  const won=closed.filter(o=>o.status==='WON'),lost=closed.filter(o=>o.status==='LOST');
+  const avg=(rows,f)=>rows.length?Math.round(rows.reduce((s,o)=>s+f(o),0)/rows.length):0;
+  const s=DB.calibrationSettings??{};
+  const avgWon=avg(won,o=>Number(o.scoreAtClose)||0),avgLost=avg(lost,o=>Number(o.scoreAtClose)||0);
+  const scoreGap=avgWon-avgLost;
+  return {generatedAt:nowIso(),windowMonths:s.windowMonths??12,targetGap:s.targetGap??20,scoreGap,meetsTarget:scoreGap>=(s.targetGap??20),
+    won:{count:won.length,avgScore:avgWon,avgValue:avg(won,o=>Number(o.value)||0),totals:won.reduce((x,o)=>x+(Number(o.value)||0),0)},
+    lost:{count:lost.length,avgScore:avgLost,avgValue:avg(lost,o=>Number(o.value)||0),totals:lost.reduce((x,o)=>x+(Number(o.value)||0),0),reasons:[...new Set(lost.map(o=>o.lossReason).filter(Boolean))]},
+    matched:closed.length,closedAll:closedAll.length,coverageRate:closedAll.length?Math.round(closed.length/closedAll.length*100):0,
+    halfLife:{defaultDays:s.halfLifeDefault??90,familyOverrides:s.familyOverrides??{}},
+    history:s.history??[],
+    rows:closed.map(o=>({id:o.id,name:o.name,status:o.status,relationshipId:o.relationshipId,relationship:relWithOrgs(RELS.find(r=>r.id===o.relationshipId)??o.relationshipId?{id:o.relationshipId}:null)?.name??null,scoreAtClose:Number(o.scoreAtClose)||0,value:Number(o.value)||0,closedAt:o.wonAt??o.lostAt,lossReason:o.lossReason??null,sourceType:o.sourceType??null})).sort((a,b)=>String(b.closedAt??'').localeCompare(String(a.closedAt??''))),
+    note:'گپ امتیاز Win/Lost باید ≥ ٪۲۰ باشد؛ زیر آن یعنی امتیازها خروجی واقعی را پیش‌بینی نمی‌کنند.'};
+}
+/* رویداد شغلی و «چه کسی در سازمان جدید او را می‌شناسد» (P1-5) */
+function careerWarmPaths(req,ev){
+  const toOrg=ev.to?.organizationId; if(!toOrg) return [];
+  const out=[];
+  for(const tp of PEOPLE.filter(p=>!p.deletedAt&&p.organizationId===toOrg&&p.id!==ev.personId)){
+    const rel=scopedRels(req).find(r=>r.sourceOrganizationId===toOrg||r.targetOrganizationId===toOrg);
+    let via=null;
+    if(rel){ const other=rel.sourceOrganizationId===toOrg?rel.targetOrganizationId:rel.sourceOrganizationId; via={kind:'RELATIONSHIP',label:`مسیر گرم: ${orgById(other)?.name??''} ↔ ${orgById(toOrg)?.name??''}`,relationshipId:rel.id}; }
+    else { const m=MEETINGS.find(mm=>(mm.participants??[]).some(x=>x.personId===tp.id)); if(m) via={kind:'MEETING',label:`جلسهٔ مشترک: ${m.title}`,meetingId:m.id}; }
+    if(via) out.push({personId:tp.id,name:`${tp.firstName} ${tp.lastName}`,title:tp.title,organizationId:toOrg,orgName:orgById(toOrg)?.name??'',via});
+  }
+  return out;
+}
+function careerEventsView(req){
+  const evts=(DB.careerEvents??[]).map(e=>{
+    const p=personById(e.personId);
+    return {...e,person:p?{id:p.id,name:`${p.firstName} ${p.lastName}`,title:p.title,organizationId:p.organizationId,organization:orgById(p.organizationId)?{id:p.organizationId,name:orgById(p.organizationId).name}:null,champion:p.champion??null}:null};
+  });
+  const alerts=evts.filter(e=>e.alert).map(e=>({...e,warmPaths:careerWarmPaths(req,e)}));
+  const champions=PEOPLE.filter(p=>!p.deletedAt&&p.champion?.flag&&inScope(req,p.organizationId)).map(p=>({id:p.id,name:`${p.firstName} ${p.lastName}`,title:p.title,organizationId:p.organizationId,organization:orgById(p.organizationId)?.name??'',power:p.champion.power,source:p.champion.source}));
+  return {generatedAt:nowIso(),events:evts,alerts,summary:{championCount:champions.length,championMoves:alerts.length},champions};
+}
+/* گراف ۴ ستون (P1-6): تیم/مشتری/هیئت-مشاوران/شرکا */
+function networkColumns(req){
+  const rels=scopedRels(req);
+  const relOrgIds=new Set(); rels.forEach(r=>{relOrgIds.add(r.sourceOrganizationId);relOrgIds.add(r.targetOrganizationId);});
+  const orgNodes=ORGS.filter(o=>inScope(req,o.id)||relOrgIds.has(o.id)).map(o=>({id:`org:${o.id}`,label:o.name,type:'organization',organizationId:o.id,column:orgColumn(o.id)}));
+  const personNodes=scopedPeople(req).map(p=>({id:`person:${p.id}`,label:`${p.firstName} ${p.lastName}`,type:'person',organizationId:p.organizationId,column:orgColumn(p.organizationId),champion:!!p.champion?.flag}));
+  const nodes=[...orgNodes,...personNodes];
+  const ids=new Set(nodes.map(n=>n.id));
+  const edges=[];
+  const edgeCategory=(kind,src,tgt)=>{
+    if(kind==='membership') return orgColumn(tgt.slice(4));
+    if(kind==='person_relationship') return orgColumn(PERSON_ORGS.find(m=>m.personId===src.slice(6)&&m.isPrimary)?.organizationId??orgColumn(tgt.slice(4)));
+    if(kind==='relationship') return orgColumn(src.slice(4))==='TEAM'?orgColumn(tgt.slice(4)):orgColumn(src.slice(4));
+    return 'PARTNERS';
+  };
+  const heat=(r)=>Math.round(0.6*(r.healthScore??50)+0.4*(100-(r.riskScore??0)));
+  rels.forEach(r=>{
+    const s=`org:${r.sourceOrganizationId}`,t=`org:${r.targetOrganizationId}`;
+    if(!ids.has(s)||!ids.has(t)) return;
+    edges.push({id:`e-${r.id}`,source:s,target:t,kind:'relationship',edgeCategory:edgeCategory('relationship',s,t),weight:Math.round(30+(r.healthScore??50)/2),risk:r.riskScore??0,strategicImportance:r.strategicScore??50,status:r.status,health:r.healthScore,heat:heat(r),label:r.relationshipType});
+  });
+  scopedPeople(req).forEach(p=>{
+    const pid=`person:${p.id}`,oid=`org:${p.organizationId}`;
+    if(!ids.has(pid)||!ids.has(oid)) return;
+    edges.push({id:`pm-${p.id}`,source:pid,target:oid,kind:'membership',edgeCategory:edgeCategory('membership',pid,oid),weight:15,risk:0,strategicImportance:0});
+  });
+  const personEdges=new Set();
+  MEETINGS.forEach(m=>{
+    const parts=(m.participants??[]).map(x=>`person:${x.personId}`).filter(pid=>ids.has(pid));
+    for(let i=0;i<parts.length;i++)for(let j=i+1;j<parts.length;j++){
+      const key=[parts[i],parts[j]].sort().join('|');
+      if(personEdges.has(key))continue;
+      personEdges.add(key);
+      edges.push({id:`pp-${m.id}-${i}-${j}`,source:parts[i],target:parts[j],kind:'person_relationship',edgeCategory:edgeCategory('person_relationship',parts[i],parts[j]),weight:12,risk:0,strategicImportance:35});
+    }
+  });
+  const columns=Object.keys(COLUMN_LABELS).map(key=>({
+    key,label:COLUMN_LABELS[key],
+    nodes:nodes.filter(n=>n.column===key),
+    edges:edges.filter(e=>e.edgeCategory===key),
+    count:nodes.filter(n=>n.column===key).length,
+  }));
+  return {generatedAt:nowIso(),columns,edgesTotal:edges.length,nodesTotal:nodes.length,labels:COLUMN_LABELS,meta:{organizationCount:orgNodes.length,peopleCount:personNodes.length,relationshipCount:rels.length}};
 }
 // full visible graph (orgs + people + memberships + meeting edges) for analytics
 function netGraphVisible(req){
@@ -1049,6 +1218,101 @@ function seedDocuments() {
     { id: 'doc-4', name: 'پیش‌نویس قرارداد چارچوب همکاری.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', sizeBytes: 612000, classification: 'CONFIDENTIAL', uploadedBy: 'demo@srip.local', organizationId: 'org-3', scanStatus: 'QUARANTINED', uploadStatus: 'PENDING', indexStatus: 'PENDING', createdAt: at(1), updatedAt: at(1) },
   ];
 }
+/* ─────────────── P1: سرمایهٔ رابطه، روند، برنامهٔ ۹۰ روزه، کالیبراسیون و رویداد شغلی ─────────────── */
+/* اسنپشات امتیازها (P1-2): پایهٔ محاسبهٔ روند/اطمینان — از همان امتیازهای رابطه، بدون دادهٔ جدا */
+function seedScoreSnapshots(){
+  const ago=(d)=>new Date(Date.now()-d*86400000).toISOString();
+  const rows=[];
+  const defs={
+    'r-1':[[92,62,74,70,64,3],[60,66,78,72,67,3],[30,72,82,78,70,4],[0,78,86,80,72,5]],
+    'r-2':[[92,63,88,86,75,3],[60,64,89,88,78,3],[30,62,90,90,80,4],[0,64,92,90,81,5]],
+    'r-3':[[92,67,70,62,70,2],[60,69,72,63,72,2],[30,68,73,65,74,3],[0,71,74,66,77,4]],
+    'r-4':[[92,55,72,66,52,3],[60,50,70,64,48,2],[30,46,69,62,45,3],[0,41,69,60,45,4]],
+    'r-5':[[92,74,84,80,82,3],[60,77,85,82,85,3],[30,79,86,84,88,3],[0,82,88,85,90,4]],
+    'r-6':[[92,85,83,70,46,3],[60,85,84,70,47,3],[30,86,84,70,48,4],[0,86,84,70,48,4]],
+  };
+  for(const [rid,d] of Object.entries(defs)) for(const [days,health,strategic,influence,opportunity,sources] of d){
+    rows.push({relationshipId:rid,asOf:ago(days),daysAgo:days,health,strategic,influence,opportunity,score:relSnapshotScore({health,strategic,influence,opportunity}),sources,confidence:Math.min(100,Math.round(30+sources*12+(days<=0?10:days<=30?6:days<=60?3:0)))});
+  }
+  return rows;
+}
+/* برنامهٔ ۹۰ روزهٔ حساب (P1-3): اقدامات، مالک، مهلت، مرور ماهانه + ریسک‌نامه */
+function seedAccountPlans(){
+  const day=(d)=>new Date(Date.now()+d*86400000).toISOString();
+  return {
+    'r-1':{id:'ap-1',relationshipId:'r-1',horizonDays:90,status:'ON_TRACK',reviewCycleDays:30,reviewDates:[day(-6),day(24),day(54),day(84)],
+      riskNote:'امضای نهایی منوط به تأیید هیئت‌مدیرهٔ پترو است؛ اگر تأیید تا ۳۰ روز آینده نرسد، ریسک قیمت‌گذاری و رقابت بالا می‌رود.',
+      items:[
+        {id:'ap1-1',title:'تمدید قرارداد دوسالهٔ پشتیبانی و توسعه',ownerId:'p-1',dueAt:day(20),status:'IN_PROGRESS',focus:'قرارداد'},
+        {id:'ap1-2',title:'تثبیت نقش هیئت‌مدیرهٔ پترو — جلسه با مدیر مالی',ownerId:'p-6',dueAt:day(35),status:'TODO',focus:'کمیتهٔ خرید'},
+        {id:'ap1-3',title:'جلسهٔ QBR با مدیر خرید',ownerId:'p-8',dueAt:day(60),status:'TODO',focus:'جلسه'},
+        {id:'ap1-4',title:'معرفی سرویس جدید به واحد فناوری پترو',ownerId:'p-7',dueAt:day(75),status:'TODO',focus:'رشد'},
+      ]},
+    'r-2':{id:'ap-2',relationshipId:'r-2',horizonDays:90,status:'NEEDS_ATTENTION',reviewCycleDays:30,reviewDates:[day(-3),day(27),day(57),day(87)],
+      riskNote:'مدارک مالی خط اعتباری هنوز تکمیل نشده؛ بدون طرح توجیهی، بررسی واحد اعتبارات متوقف می‌ماند.',
+      items:[
+        {id:'ap2-1',title:'تکمیل مدارک مالی و طرح توجیهی خط اعتباری',ownerId:'p-6',dueAt:day(-3),status:'TODO',focus:'مالی'},
+        {id:'ap2-2',title:'جلسه با واحد اعتبارات بانک',ownerId:'p-1',dueAt:day(12),status:'IN_PROGRESS',focus:'قرارداد'},
+        {id:'ap2-3',title:'گزارش فنی پلتفرم بانکداری شرکتی به مدیر فناوری',ownerId:'p-7',dueAt:day(45),status:'TODO',focus:'فنی'},
+      ]},
+    'r-3':{id:'ap-3',relationshipId:'r-3',horizonDays:90,status:'ON_TRACK',reviewCycleDays:30,reviewDates:[day(-10),day(20),day(50),day(80)],
+      riskNote:'تمرکز رابطه روی یک پروژهٔ فعال است؛ تعمیق با مدیر مالی (آیدا) پیش‌نیاز تمدید قرارداد نگهداری است.',
+      items:[
+        {id:'ap3-1',title:'پیش‌نویس قرارداد نگهداری سالانه',ownerId:'p-8',dueAt:day(15),status:'IN_PROGRESS',focus:'قرارداد'},
+        {id:'ap3-2',title:'جلسهٔ تعمیق با مدیر مالی سدنا',ownerId:'p-1',dueAt:day(30),status:'TODO',focus:'کمیتهٔ خرید'},
+        {id:'ap3-3',title:'مرور ریسک تحویل فاز دوم',ownerId:'p-7',dueAt:day(50),status:'TODO',focus:'ریسک'},
+      ]},
+    'r-4':{id:'ap-4',relationshipId:'r-4',horizonDays:90,status:'NEEDS_ATTENTION',reviewCycleDays:30,reviewDates:[day(-8),day(22),day(52),day(82)],
+      riskNote:'رابطه در وضعیت WATCH است: سلامت ۴۱، ریسک ۶۶ و یک تعهد جبرانی باز؛ تأخیر بعدی می‌تواند زنجیرهٔ تأمین را متوقف کند.',
+      items:[
+        {id:'ap4-1',title:'بازبینی شروط قرارداد تأمین',ownerId:'p-5',dueAt:day(5),status:'IN_PROGRESS',focus:'قرارداد'},
+        {id:'ap4-2',title:'شناسایی و ارزیابی تأمین‌کنندهٔ دوم',ownerId:'p-8',dueAt:day(25),status:'TODO',focus:'تنوع‌بخشی'},
+        {id:'ap4-3',title:'جلسهٔ مشترک ریسک با مدیر کیفیت البرز',ownerId:'p-1',dueAt:day(2),status:'BLOCKED',focus:'ریسک'},
+      ]},
+    'r-5':{id:'ap-5',relationshipId:'r-5',horizonDays:90,status:'ON_TRACK',reviewCycleDays:30,reviewDates:[day(-5),day(25),day(55),day(85)],
+      riskNote:'فرصت سرمایه‌گذاری قوی است؛ تنها ریسک، وابستگی به یک کانال ارتباطی (مدیر استراتژی) است.',
+      items:[
+        {id:'ap5-1',title:'گزارش فصلی پرتفوی صندوق',ownerId:'p-6',dueAt:day(10),status:'IN_PROGRESS',focus:'قرارداد'},
+        {id:'ap5-2',title:'معرفی فرصت مشترک جدید به صندوق',ownerId:'p-8',dueAt:day(40),status:'TODO',focus:'رشد'},
+        {id:'ap5-3',title:'تعمیق ارتباط با هیئت سرمایه‌گذاری',ownerId:'p-6',dueAt:day(60),status:'TODO',focus:'کمیتهٔ خرید'},
+      ]},
+  };
+}
+/* رویدادهای شغلی (P1-5): حرکت قهرمان‌ها/ارتباط‌های کلیدی */
+function seedCareerEvents(){
+  return [
+    {id:'ce-1',personId:'p-9',type:'PROMOTED',at:'2026-08-14T09:00:00.000Z',from:{organizationId:'org-3',title:'معاون اعتباری'},to:{organizationId:'org-3',title:'قائم‌مقام مدیرعامل — حوزهٔ اعتبارات'},source:'NETWORK_SIGNAL',alert:true,note:'قهرمان خط اعتباری ارتقا یافت؛ تماس تبریک + تازه‌سازی شناخت در پنجرهٔ ۳۰–۶۰ روز.'},
+    {id:'ce-2',personId:'p-4',type:'LEFT',at:'2026-08-05T09:00:00.000Z',from:{organizationId:'org-5',title:'مدیر پروژه'},to:{organizationId:'org-4',title:'مدیر پروژه‌های سرمایه‌گذاری'},source:'COMPETITOR_INSIGHT',alert:true,note:'علی نادری از سدنا به پترو صنعت رفت؛ او خریدار اقتصادی قراردادهای قبلی سدنا بود.'},
+    {id:'ce-3',personId:'p-12',type:'TITLE_CHANGED',at:'2026-07-28T09:00:00.000Z',from:{organizationId:'org-5',title:'مدیر مالی'},to:{organizationId:'org-5',title:'مدیر مالی ارشد'},source:'ACTIVE_USER',alert:true,note:'حامی مالی قرارداد نگهداری ارتقا یافت؛ نقش او در تصویب بودجه پررنگ‌تر شده است.'},
+    {id:'ce-4',personId:'p-7',type:'HIRED',at:'2026-07-01T09:00:00.000Z',from:null,to:{organizationId:'org-2',title:'مدیر محصول'},source:'ACTIVE_USER',alert:false,note:'عضو جدید تیم داخلی؛ برای ارزیابی‌های فنی مشتریان در دسترس است.'},
+  ];
+}
+/* برچسب قهرمان + منبع شناسایی + قدرت قهرمانی (P1-5) */
+const CHAMPION_TAG_SEED={
+  'p-3':{flag:true,source:'WON_DEAL',power:84},
+  'p-9':{flag:true,source:'ACTIVE_USER',power:76},
+  'p-11':{flag:true,source:'WON_DEAL',power:88},
+  'p-12':{flag:true,source:'ACTIVE_USER',power:71},
+};
+for(const [pid,t] of Object.entries(CHAMPION_TAG_SEED)){const p=PEOPLE.find(v=>v.id===pid); if(p) p.champion=t;}
+/* تنظیم‌های کالیبراسیون مدل (P1-4): گپ هدف و نیمه‌عمر خانواده‌ها */
+function seedCalibrationSettings(){
+  return {targetGap:20,windowMonths:12,lastRun:new Date().toISOString(),halfLifeDefault:90,
+    familyOverrides:{STRATEGIC:120,VALUE:90,CAPABILITY:75,RELIABILITY:60,ACCESS:60,FINANCIAL:90,RISK:90,NETWORK:75},
+    history:[
+      {period:'Q2 1404',scoreGap:24,note:'گپ بالای هدف — تنظیم نیمه‌عمرها به منحنی فعلی'},
+      {period:'Q3 1404',scoreGap:18,note:'گپ زیر هدف — نیمه‌عمر ACCESS کوتاه‌تر شد'},
+    ]};
+}
+/* فرصت‌های تاریخی بسته‌شده + امتیاز زمان بستن (P1-4) */
+OPPORTUNITIES.push(
+  {id:'o-5',name:'قرارداد پایش شبکهٔ بانک پارس',description:'مانیتورینگ و گزارش‌دهی امنیتی ۱۲ ماهه',status:'WON',probability:100,value:25000000000,expectedDate:'2026-05-20T00:00:00.000Z',organizationId:'org-3',relationshipId:'r-2',projectId:null,ownerId:'p-7',createdAt:'2026-02-10T08:00:00.000Z',wonAt:'2026-05-20T10:00:00.000Z',scoreAtClose:74,sourceType:'EXISTING_RELATIONSHIP'},
+  {id:'o-6',name:'پروژهٔ ERP پترو صنعت',description:'پیاده‌سازی ERP یکپارچه',status:'LOST',probability:0,value:60000000000,expectedDate:'2026-06-10T00:00:00.000Z',organizationId:'org-4',relationshipId:'r-1',projectId:null,ownerId:'p-1',createdAt:'2026-02-01T08:00:00.000Z',lostAt:'2026-06-10T10:00:00.000Z',scoreAtClose:47,lossReason:'انتخاب تأمین‌کنندهٔ ارزان‌تر',sourceType:'EVENT'},
+  {id:'o-7',name:'قرارداد نگهداری سدنا ۱۴۰۴',description:'پیمان سالانهٔ نگهداری سامانه‌ها',status:'WON',probability:100,value:8000000000,expectedDate:'2026-04-15T00:00:00.000Z',organizationId:'org-5',relationshipId:'r-3',projectId:null,ownerId:'p-8',createdAt:'2026-01-20T08:00:00.000Z',wonAt:'2026-04-15T10:00:00.000Z',scoreAtClose:61,sourceType:'REFERRAL'},
+  {id:'o-8',name:'تأمین ناوگان قطعات البرز',description:'قرارداد سالانهٔ تأمین قطعات',status:'LOST',probability:0,value:15000000000,expectedDate:'2026-07-01T00:00:00.000Z',organizationId:'org-6',relationshipId:'r-4',projectId:null,ownerId:'p-5',createdAt:'2026-03-05T08:00:00.000Z',lostAt:'2026-07-01T10:00:00.000Z',scoreAtClose:38,lossReason:'ریسک تأمین مالی از سمت البرز',sourceType:'COLD'},
+  {id:'o-9',name:'سرویس مشاورهٔ صندوق امید',description:'مشاورهٔ سرمایه‌گذاری ۶ ماهه',status:'WON',probability:100,value:5000000000,expectedDate:'2026-03-10T00:00:00.000Z',organizationId:'org-7',relationshipId:'r-5',projectId:null,ownerId:'p-6',createdAt:'2026-01-15T08:00:00.000Z',wonAt:'2026-03-10T10:00:00.000Z',scoreAtClose:79,sourceType:'EXISTING_RELATIONSHIP'},
+);
+[{id:'o-3',scoreAtClose:68}].forEach(x=>{const o=OPPORTUNITIES.find(v=>v.id===x.id); if(o) o.scoreAtClose=x.scoreAtClose;});
 const kbSummary = (a, uid) => ({
   id: a.id, slug: a.slug, title: a.title, excerpt: a.excerpt, category: a.category,
   tags: a.tags ?? [], families: a.families ?? [], readMinutes: a.readMinutes, author: a.author,
@@ -1075,6 +1339,10 @@ function loadDb() {
       if (!Array.isArray(DB.criteriaManual)) DB.criteriaManual = [];
       if (!Array.isArray(DB.knowledge)) DB.knowledge = seedKnowledge();
       if (!Array.isArray(DB.documents)) DB.documents = seedDocuments();
+      if (!Array.isArray(DB.scoreSnapshots)) DB.scoreSnapshots = seedScoreSnapshots();
+      if (!DB.accountPlans) DB.accountPlans = seedAccountPlans();
+      if (!Array.isArray(DB.careerEvents)) DB.careerEvents = seedCareerEvents();
+      if (!DB.calibrationSettings) DB.calibrationSettings = seedCalibrationSettings();
     }
   } catch { DB = null; }
   if (!DB) {
@@ -1082,7 +1350,9 @@ function loadDb() {
       actions: ACTIONS, commitments: COMMITMENTS, projects: PROJECTS, projectExtra: PROJECT_EXTRA,
       opportunities: OPPORTUNITIES, interactions: INTERACTIONS, notifications: NOTIFICATIONS,
       recs: RECS, aiUsage: AI_USAGE, personOrgs: PERSON_ORGS, audit: [], revokedJtis: [], nextId: 1,
-      assessments: seedCriteriaAssessments(), criteriaManual: [], knowledge: seedKnowledge(), documents: seedDocuments() };
+      assessments: seedCriteriaAssessments(), criteriaManual: [], knowledge: seedKnowledge(), documents: seedDocuments(),
+      scoreSnapshots: seedScoreSnapshots(), accountPlans: seedAccountPlans(), careerEvents: seedCareerEvents(),
+      calibrationSettings: seedCalibrationSettings() };
   }
   // seed identities with real scrypt hashes (kept on disk afterwards)
   for (const [email, u] of Object.entries(SEED_USERS)) {
@@ -2850,6 +3120,81 @@ const server=http.createServer(async(req,res)=>{
     audit(req,'CREATE','relationship',r.id,'OK',{source:r.sourceOrganizationId,target:r.targetOrganizationId,answers:relIntake.length});
     return json(res,201,attachCriteria('RELATIONSHIP',[relWithOrgs(r)])[0]);
   }
+  /* --------------------- P1: سرمایهٔ رابطه، روند و برنامهٔ ۹۰ روزه --------------------- */
+  if(is('/relationships/capital')&&method==='GET'){
+    const rows=scopedRels(req).filter(r=>!r.deletedAt).map(r=>capitalRow(req,r));
+    const n=rows.length||1;
+    return json(res,200,{generatedAt:nowIso(),items:rows,totals:{
+      count:rows.length,
+      capital:rows.reduce((s,x)=>s+x.capital,0),
+      avgCapital:Math.round(rows.reduce((s,x)=>s+x.capital,0)/n),
+      avgConfidence:Math.round(rows.reduce((s,x)=>s+x.confidence,0)/n),
+      avgDelta:Math.round(rows.reduce((s,x)=>s+x.delta90d,0)/n),
+      up:rows.filter(x=>x.trend==='UP').length,down:rows.filter(x=>x.trend==='DOWN').length,flat:rows.filter(x=>x.trend==='FLAT').length,
+      withPlan:rows.filter(x=>x.plan.exists).length,
+      openOpportunityValue:rows.reduce((s,x)=>s+x.openValue,0),
+    }});
+  }
+  const relPulse=match('/relationships/:id/pulse');
+  if(relPulse&&method==='GET'){
+    const r=RELS.find(x=>x.id===relPulse[0]);
+    if(!r) return json(res,404,{message:'رابطه یافت نشد'}); 
+    if(!inScope(req,r.sourceOrganizationId)&&!inScope(req,r.targetOrganizationId)) return json(res,403,{message:'دسترسی مجاز نیست.'});
+    const c=relCapital(req,r),t=relTrend(r),plan=accountPlanOf(r.id);
+    const openOpps=scopedOpps(req).filter(o=>!o.deletedAt&&o.relationshipId===r.id&&!['WON','LOST'].includes(o.status));
+    return json(res,200,{relationship:relWithOrgs(r),capital:c,trend:t,classKey:relClass(r),classLabel:REL_CLASS_LABELS[relClass(r)],
+      plan:plan?{...plan,items:plan.items.map(i=>({...i,owner:personById(i.ownerId)?{id:i.ownerId,name:`${personById(i.ownerId).firstName} ${personById(i.ownerId).lastName}`}:null}))}:null,
+      openOpportunities:openOpps.map(o=>({id:o.id,name:o.name,status:o.status,probability:o.probability,value:o.value})),
+      riskDrivers:riskDrivers(req,r)});
+  }
+  const relPlan=match('/relationships/:id/account-plan');
+  if(relPlan&&method==='GET'){
+    const r=RELS.find(x=>x.id===relPlan[0]);
+    if(!r) return json(res,404,{message:'رابطه یافت نشد'}); 
+    const plan=accountPlanOf(r.id);
+    if(!plan) return json(res,200,{exists:false,relationshipId:r.id});
+    return json(res,200,{exists:true,...plan,summary:planStatusFor(r.id),items:plan.items.map(i=>({...i,owner:personById(i.ownerId)?{id:i.ownerId,name:`${personById(i.ownerId).firstName} ${personById(i.ownerId).lastName}`}:null}))});
+  }
+  if(relPlan&&method==='POST'){
+    const r=RELS.find(x=>x.id===relPlan[0]);
+    if(!r) return json(res,404,{message:'رابطه یافت نشد'}); 
+    const b=await readBody(req);
+    if(!String(b.title??'').trim()) return json(res,400,{message:'عنوان اقدام الزامی است.'});
+    const plan=accountPlanOf(r.id)??{id:`ap-${Date.now()}`,relationshipId:r.id,horizonDays:90,status:'ON_TRACK',reviewCycleDays:30,reviewDates:[],riskNote:'',items:[]};
+    plan.items.push({id:`api-${Date.now()}`,title:String(b.title).trim().slice(0,220),ownerId:String(b.ownerId??'').trim()||null,dueAt:b.dueAt?String(b.dueAt):null,status:'TODO',focus:String(b.focus??'').trim().slice(0,60)||'عمومی'});
+    DB.accountPlans=DB.accountPlans??{}; DB.accountPlans[r.id]=plan;
+    const owner=plan.items[plan.items.length-1].ownerId?personById(plan.items[plan.items.length-1].ownerId):null;
+    saveDb(); audit(req,'UPDATE','account-plan',r.id,'OK',{meta:{action:'add-item',title:plan.items[plan.items.length-1].title}});
+    return json(res,201,{exists:true,...plan,summary:planStatusFor(r.id),items:plan.items.map(i=>({...i,owner:personById(i.ownerId)?{id:i.ownerId,name:`${personById(i.ownerId).firstName} ${personById(i.ownerId).lastName}`}:null}))});
+  }
+  if(relPlan&&method==='PATCH'){
+    const r=RELS.find(x=>x.id===relPlan[0]);
+    if(!r) return json(res,404,{message:'رابطه یافت نشد'}); 
+    const plan=accountPlanOf(r.id);
+    if(!plan) return json(res,404,{message:'برنامهٔ ۹۰ روزه برای این رابطه ثبت نشده است.'});
+    const b=await readBody(req);
+    if(typeof b.riskNote==='string') plan.riskNote=b.riskNote.slice(0,500);
+    if(['ON_TRACK','NEEDS_ATTENTION','AT_RISK'].includes(b.status)) plan.status=b.status;
+    saveDb(); audit(req,'UPDATE','account-plan',r.id,'OK',{meta:{action:'update-plan'}});
+    return json(res,200,{exists:true,...plan,summary:planStatusFor(r.id)});
+  }
+  const relPlanItem=match('/relationships/:id/account-plan/items/:itemId');
+  if(relPlanItem&&method==='PATCH'){
+    const r=RELS.find(x=>x.id===relPlanItem[0]);
+    if(!r) return json(res,404,{message:'رابطه یافت نشد'}); 
+    const plan=accountPlanOf(r.id);
+    if(!plan) return json(res,404,{message:'برنامهٔ ۹۰ روزه برای این رابطه ثبت نشده است.'});
+    const item=plan.items.find(i=>i.id===relPlanItem[1]);
+    if(!item) return json(res,404,{message:'اقدام برنامه یافت نشد.'});
+    const b=await readBody(req);
+    if(['TODO','IN_PROGRESS','DONE','BLOCKED'].includes(b.status)) item.status=b.status;
+    if(typeof b.title==='string'&&String(b.title).trim()) item.title=String(b.title).trim().slice(0,220);
+    if(b.ownerId!==undefined) item.ownerId=b.ownerId||null;
+    if(b.dueAt!==undefined) item.dueAt=b.dueAt||null;
+    if(typeof b.focus==='string'&&String(b.focus).trim()) item.focus=String(b.focus).trim().slice(0,60);
+    saveDb(); audit(req,'UPDATE','account-plan-item',item.id,'OK',{meta:{status:item.status,title:item.title}});
+    return json(res,200,{...item,owner:item.ownerId&&personById(item.ownerId)?{id:item.ownerId,name:`${personById(item.ownerId).firstName} ${personById(item.ownerId).lastName}`}:null});
+  }
   const relId=match('/relationships/:id');
   if(relId&&method==='GET'){
     const r=RELS.find(x=>x.id===relId[0]);
@@ -3204,6 +3549,29 @@ const server=http.createServer(async(req,res)=>{
       attribution,bounded:true,
     });
   }
+  /* --------------------- P1: کالیبراسیون و رویدادهای شغلی --------------------- */
+  if(is('/analytics/calibration')&&method==='GET'){
+    if(!canAn('analytics.read')) return json(res,403,{message:AN_READ_MSG});
+    return json(res,200,calibrationView(req));
+  }
+  if(is('/analytics/calibration/half-life')&&method==='PATCH'){
+    if(!canAn('analytics.read')) return json(res,403,{message:AN_READ_MSG});
+    const b=await readBody(req);
+    const fam=String(b.family??'').trim();
+    const days=Number(b.days);
+    const known=Object.keys(KB_FAMILY_LABELS);
+    if(!known.includes(fam)) return json(res,400,{message:'خانوادهٔ معیار نامعتبر است.'});
+    if(!Number.isFinite(days)||days<15||days>365) return json(res,400,{message:'نیمه‌عمر باید بین ۱۵ تا ۳۶۵ روز باشد.'});
+    DB.calibrationSettings=DB.calibrationSettings??seedCalibrationSettings();
+    DB.calibrationSettings.familyOverrides[fam]=Math.round(days);
+    DB.calibrationSettings.lastRun=nowIso();
+    saveDb(); audit(req,'UPDATE','calibration-half-life',fam,'OK',{days:Math.round(days)});
+    return json(res,200,{family:fam,days:Math.round(days),familyOverrides:DB.calibrationSettings.familyOverrides});
+  }
+  if(is('/analytics/career-events')&&method==='GET'){
+    if(!canAn('analytics.read')) return json(res,403,{message:AN_READ_MSG});
+    return json(res,200,careerEventsView(req));
+  }
   if(is('/analytics/workflows')&&method==='GET'){
     if(!canAn('analytics.read')) return json(res,403,{message:AN_READ_MSG});
     const wfRows=DB.workflowExecutions??[];
@@ -3360,12 +3728,12 @@ const server=http.createServer(async(req,res)=>{
     rels.forEach(r=>{
       const s=`org:${r.sourceOrganizationId}`,t=`org:${r.targetOrganizationId}`;
       if(!nodeIds.has(s)||!nodeIds.has(t)) return;
-      edges.push({id:`e-${r.id}`,source:s,target:t,kind:'relationship',weight:Math.round(30+(r.healthScore??50)/2),risk:r.riskScore??0,strategicImportance:r.strategicScore??50,status:r.status,health:r.healthScore});
+      edges.push({id:`e-${r.id}`,source:s,target:t,kind:'relationship',edgeCategory:orgColumn(r.sourceOrganizationId)==='TEAM'?orgColumn(r.targetOrganizationId):orgColumn(r.sourceOrganizationId),weight:Math.round(30+(r.healthScore??50)/2),risk:r.riskScore??0,strategicImportance:r.strategicScore??50,status:r.status,health:r.healthScore,heat:Math.round(0.6*(r.healthScore??50)+0.4*(100-(r.riskScore??0)))});
     });
     scopedPeople(req).forEach(p=>{
       const pid=`person:${p.id}`,oid=`org:${p.organizationId}`;
       if(!nodeIds.has(pid)||!nodeIds.has(oid)) return;
-      edges.push({id:`pm-${p.id}`,source:pid,target:oid,kind:'membership',weight:15,risk:0,strategicImportance:0});
+      edges.push({id:`pm-${p.id}`,source:pid,target:oid,kind:'membership',edgeCategory:orgColumn(p.organizationId),weight:15,risk:0,strategicImportance:0});
     });
     // person↔person edges derived from shared meeting participation
     const personEdges=new Set();
@@ -3375,7 +3743,8 @@ const server=http.createServer(async(req,res)=>{
         const key=[parts[i],parts[j]].sort().join('|');
         if(personEdges.has(key))continue;
         personEdges.add(key);
-        edges.push({id:`pp-${m.id}-${i}-${j}`,source:parts[i],target:parts[j],kind:'person_relationship',weight:12,risk:0,strategicImportance:35});
+        const pc=orgColumn(m.organizationId??'org-1');
+        edges.push({id:`pp-${m.id}-${i}-${j}`,source:parts[i],target:parts[j],kind:'person_relationship',edgeCategory:pc,weight:12,risk:0,strategicImportance:35});
       }
     });
     return json(res,200,{nodes,edges,total:nodes.length,nextCursor:null,page:{limit:Number(q.get('limit'))||250,nextCursor:null,bounded:true},meta:{
@@ -3392,8 +3761,10 @@ const server=http.createServer(async(req,res)=>{
     const toId=toRaw.startsWith('org:')?toRaw.slice(4):toRaw;
     const mode=q.get('mode')==='best'?'best':'shortest';
     if(!fromId||!toId) return json(res,400,{message:'مبدأ و مقصد مسیر الزامی است.'});
-    return json(res,200,netPathOrg(req,fromId,toId,mode));
+    return json(res,200,netPathOrg(req,fromId,toId,mode,{maxHops:Number(q.get('maxHops'))||3}));
   }
+  /* گراف ۴ ستون (P1-6) */
+  if(is('/network/columns')&&method==='GET') return json(res,200,networkColumns(req));
   if(is('/network/connectors')&&method==='GET') return json(res,200,netAnalytics(req,'connectors'));
   if(is('/network/centrality')&&method==='GET') return json(res,200,netAnalytics(req,'centrality'));
   if(is('/network/bridges')&&method==='GET') return json(res,200,netAnalytics(req,'bridges'));

@@ -14,17 +14,43 @@ const HEAL_KEY = 'srip_sw_heal_tried';
  * اگر سرویس‌کارگرِ کهنه (از نسخه‌های پیش‌تر) روی صفحه کنترل داشته باشد، API های
  * جدید را نمی‌شناسد (مثلاً /knowledge وجود ندارد و «مرکز دانش» خالی دیده می‌شود).
  * این جا نسخهٔ جاری را از /health می‌خوانیم؛ اگر با انتظار فرانت‌اند فرق داشت،
- * سرویس‌کارگر را به‌روزرسانی و صفحه را یک‌بار خودکار رفرش می‌کنیم.
+ * سرویس‌کارگر را به‌روزرسانی، تا فعال‌شدن نسخهٔ جدید صبر و صفحه را یک‌بار خودکار
+ * رفرش می‌کنیم — رفرشِ بی‌وقت ممکن است هنوز توسط SW کهنه سرو شود (مسابقهٔ فعال‌سازی).
  */
+function waitForNewActive(reg: ServiceWorkerRegistration, old: ServiceWorker | null, timeoutMs = 6000): Promise<void> {
+  if (reg.active && reg.active !== old) return Promise.resolve();
+  return new Promise((resolve) => {
+    const timer = setTimeout(done, timeoutMs);
+    function done() { clearTimeout(timer); reg.removeEventListener('updatefound', onUpdate); resolve(); }
+    function onUpdate() {
+      const w = reg.installing ?? reg.waiting;
+      if (w) {
+        w.addEventListener('statechange', check);
+        if (w.state === 'activated') check();
+      }
+    }
+    function check() { if (reg.active && reg.active !== old) done(); }
+    reg.addEventListener('updatefound', onUpdate);
+    onUpdate();
+    check();
+  });
+}
+
 async function healStaleWorker(reg: ServiceWorkerRegistration): Promise<void> {
   if (!EXPECTED_MOCK_VERSION || !navigator.serviceWorker.controller) return;
-  if (sessionStorage.getItem(HEAL_KEY)) return; // این نشست قبلاً تلاش شد — جلوگیری از حلقه
   try {
     const r = await fetch(`${PAGES_BASE}/api/v1/health`, { cache: 'no-store' });
     const h: any = await r.json().catch(() => null);
-    if (h?.mockVersion === EXPECTED_MOCK_VERSION) return; // تازه است؛ کاری نکن
+    if (h?.mockVersion === EXPECTED_MOCK_VERSION) {
+      // تازه است — قفلِ تلاشِ قبلی را هم پاک کن تا انتشارهای بعدی دوباره بتوانند ترمیم کنند
+      sessionStorage.removeItem(HEAL_KEY);
+      return;
+    }
+    if (sessionStorage.getItem(HEAL_KEY)) return; // این نشست قبلاً تلاش شد — جلوگیری از حلقه
     sessionStorage.setItem(HEAL_KEY, '1');
+    const oldController = navigator.serviceWorker.controller;
     try { await reg.update(); } catch { /* CDN/offline — رفرش همچنان امتحان می‌شود */ }
+    await waitForNewActive(reg, oldController);
     window.location.reload();
   } catch { /* عدم دسترسی به /health یعنی احتمالاً SW ندارد؛ رها کن */ }
 }

@@ -10,7 +10,7 @@ import { Badge } from '../_components/page-ui';
 import { Modal } from '../_components/page-ui';
 import {
   Share2, Building2, Search, Plus, ShieldAlert, Target, ChevronLeft,
-  ArrowDownWideNarrow, AlertTriangle, CalendarClock,
+  ArrowDownWideNarrow, AlertTriangle, CalendarClock, TrendingUp, Gauge,
 } from 'lucide-react';
 
 type Org = { id: string; name: string; type: string };
@@ -31,6 +31,14 @@ type Rel = {
   owner?: { id: string; name: string };
   backupOwner?: { id: string; name: string };
   cadence?: { cadenceDays: number; daysSinceLastInteraction: number; status: 'FRESH' | 'WARN' | 'CRITICAL'; overdueDays: number; dueAt?: string };
+  // P1 — سرمایهٔ رابطه، روند و برنامهٔ ۹۰ روزه
+  capital?: { strength: number; influence: number; potential: number; capital: number; valueAtRisk: number; openValue: number; openCount: number };
+  currentScore?: number;
+  delta90d?: number;
+  trend?: 'UP' | 'DOWN' | 'FLAT';
+  confidence?: number;
+  classLabel?: string;
+  plan?: { exists: boolean; status?: string; openCount?: number; overdue?: number };
 };
 type RelType = { key: string; name?: string };
 
@@ -109,8 +117,20 @@ export default function RelationshipsPage() {
       const params = new URLSearchParams();
       if (scopeId !== 'all') params.set('organizationId', scopeId);
       const qs = params.toString();
-      const data = await api<{ data: Rel[] }>(`/relationships${qs ? `?${qs}` : ''}`);
-      setItems(Array.isArray(data) ? data as Rel[] : data.data ?? []);
+      const [data, cap] = await Promise.all([
+        api<{ data: Rel[] }>(`/relationships${qs ? `?${qs}` : ''}`),
+        api<{ items: any[] }>(`/relationships/capital`).catch(() => null),
+      ]);
+      const rows = Array.isArray(data) ? data as Rel[] : data.data ?? [];
+      // P1: ادغام سرمایهٔ رابطه/روند/برنامه روی هر ردیف
+      if (cap?.items?.length) {
+        const byId = new Map(cap.items.map((c: any) => [c.relationshipId, c]));
+        rows.forEach((r) => {
+          const c = byId.get(r.id);
+          if (c) { r.capital = c; r.currentScore = c.currentScore; r.delta90d = c.delta90d; r.trend = c.trend; r.confidence = c.confidence; r.classLabel = c.classLabel; r.plan = c.plan; }
+        });
+      }
+      setItems(rows);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -153,6 +173,23 @@ export default function RelationshipsPage() {
     const avgHealth = items.length ? Math.round(items.reduce((a, r) => a + (r.healthScore ?? 0), 0) / items.length) : null;
     const overdueNext = items.filter(r => r.nextActionAt && new Date(r.nextActionAt).getTime() < Date.now()).length;
     return { total: items.length, healthHi, atRisk, strategic, active, avgHealth, overdueNext };
+  }, [items]);
+
+  const capTotals = useMemo(() => {
+    const n = items.filter(r => r.capital || r.currentScore != null).length || 1;
+    const total = items.reduce((s, r) => s + (r.capital?.capital ?? 0), 0);
+    return {
+      count: items.length,
+      capital: total,
+      avgCapital: Math.round(total / n || 0),
+      up: items.filter(r => r.trend === 'UP').length,
+      down: items.filter(r => r.trend === 'DOWN').length,
+      flat: items.filter(r => r.trend === 'FLAT').length,
+      avgDelta: Math.round(items.reduce((s, r) => s + (r.delta90d ?? 0), 0) / n),
+      withPlan: items.filter(r => r.plan?.exists).length,
+      needsAttention: items.filter(r => r.plan?.exists && r.plan.status !== 'ON_TRACK').length,
+      avgConfidence: Math.round(items.reduce((s, r) => s + (r.confidence ?? 0), 0) / n),
+    };
   }, [items]);
 
   const visible = useMemo(() => {
@@ -224,6 +261,34 @@ export default function RelationshipsPage() {
           </div>
         </section>
 
+        <section className="panel" aria-label="پورتفوی روابط (P1)">
+          <div className="panel-title">
+            <div><h2>پورتفوی رابطه — سرمایه، روند و برنامهٔ ۹۰ روزه</h2><p>سرمایهٔ رابطه = قدرت × نفوذ × پتانسیل؛ روند Δ۹۰ روزه با اعتماد؛ برنامهٔ ۹۰ روزه کِی‌اِی‌اِم</p></div>
+          </div>
+          <div className="stats-row" style={{ margin: 0 }}>
+            <div className="stat-card">
+              <div className="st-top"><span className="st-ico ic-teal"><Target size={17} /></span><span className="st-name">سرمایهٔ رابطهٔ پرتفوی</span></div>
+              <strong className="st-value">{fmtNum(capTotals.capital)}</strong>
+              <div className="st-foot"><span className="st-delta up">میانگین {fmtNum(capTotals.avgCapital)} از ۱۰۰</span></div>
+            </div>
+            <div className="stat-card">
+              <div className="st-top"><span className="st-ico ic-blue"><TrendingUp size={17} /></span><span className="st-name">روند ۹۰ روزه</span></div>
+              <strong className="st-value">{fmtNum(capTotals.up)} ↑ · {fmtNum(capTotals.down)} ↓</strong>
+              <div className="st-foot"><span className="st-delta">{fmtNum(capTotals.flat)} پایدار · میانگین تغییر {capTotals.avgDelta > 0 ? `+${fmtNum(capTotals.avgDelta)}` : fmtNum(capTotals.avgDelta)}</span></div>
+            </div>
+            <div className="stat-card">
+              <div className="st-top"><span className="st-ico ic-gold"><CalendarClock size={17} /></span><span className="st-name">برنامهٔ ۹۰ روزه</span></div>
+              <strong className="st-value">{fmtNum(capTotals.withPlan)} از {fmtNum(capTotals.count)}</strong>
+              <div className="st-foot"><span className={`st-delta ${capTotals.needsAttention ? 'down' : 'up'}`}>{fmtNum(capTotals.needsAttention)} نیازمند توجه</span></div>
+            </div>
+            <div className="stat-card">
+              <div className="st-top"><span className="st-ico ic-purple"><Gauge size={17} /></span><span className="st-name">اعتماد امتیازها</span></div>
+              <strong className="st-value">{fmtNum(capTotals.avgConfidence)}٪</strong>
+              <div className="st-foot"><span className="st-delta">ترکیب منابع و تازگی شواهد</span></div>
+            </div>
+          </div>
+        </section>
+
         <Card className="rel-directory">
           <div className="panel-title">
             <div><h2>فهرست روابط</h2><p>برای دیدن جزئیات و مدیریت، روی هر ردیف کلیک کنید</p></div>
@@ -263,6 +328,8 @@ export default function RelationshipsPage() {
                     <th>ریسک عملیاتی</th>
                     <th>اقدام بعدی</th>
                     <th>آخرین تعامل</th>
+                    <th>سرمایهٔ رابطه · روند ۹۰روزه</th>
+                    <th>برنامهٔ ۹۰ روزه</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -323,6 +390,24 @@ export default function RelationshipsPage() {
                               <CalendarClock size={11} /> {r.cadence.status === 'FRESH' ? `در کیدنس (هدف ${fmtNum(r.cadence.cadenceDays)}روز)` : r.cadence.status === 'WARN' ? `${fmtNum(r.cadence.overdueDays)} روز عقب از کیدنس` : `کیدنس شکسته (${fmtNum(r.cadence.daysSinceLastInteraction)} روز)`}
                             </span>
                           )}
+                        </td>
+                        <td>
+                          {r.currentScore != null ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span className={`cell-count ${r.trend === 'DOWN' ? 'danger' : r.trend === 'UP' ? 'success' : 'info'}`} title={`امتیاز مرکب ${fmtNum(r.currentScore)} · Δ۹۰ روزه ${r.delta90d != null && r.delta90d > 0 ? '+' : ''}${fmtNum(r.delta90d)} · اعتماد ${fmtNum(r.confidence)}٪`}>
+                                {r.trend === 'UP' ? <TrendingUp size={13} /> : r.trend === 'DOWN' ? <AlertTriangle size={12} /> : <Gauge size={12} />}
+                                {fmtNum(r.delta90d)}{r.trend === 'UP' ? ' ↗' : r.trend === 'DOWN' ? ' ↘' : ''} · {fmtNum(r.capital?.capital ?? 0)}
+                              </span>
+                            </div>
+                          ) : <span className="t-muted">—</span>}
+                          {r.classLabel && <div className="t-muted" style={{ fontSize: 11 }}>{r.classLabel} · اعتماد {fmtNum(r.confidence)}٪</div>}
+                        </td>
+                        <td>
+                          {r.plan?.exists ? (
+                            <span className={`cell-count ${r.plan.status === 'ON_TRACK' ? 'success' : 'warning'}`} title={`برنامهٔ ۹۰ روزه: ${fa(r.plan.status)} · ${fmtNum(r.plan.openCount)} اقدام باز${r.plan.overdue ? ` · ${fmtNum(r.plan.overdue)} عقب‌افتاده` : ''}`}>
+                              <CalendarClock size={12} /> {fa(r.plan.status)}{r.plan.overdue ? ` · ${fmtNum(r.plan.overdue)} عقب‌افتاده` : ''}
+                            </span>
+                          ) : <span className="t-muted">—</span>}
                         </td>
                         <td>
                           <Link className="row-action" href={`/relationships/${r.id}`} aria-label={`مشاهدهٔ رابطهٔ ${r.sourceOrganization?.name ?? ''} و ${r.targetOrganization?.name ?? ''}`}>

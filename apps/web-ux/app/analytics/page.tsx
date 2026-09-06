@@ -14,6 +14,8 @@ import {
 
 const fmt = new Intl.NumberFormat('fa-IR');
 const fmt1 = new Intl.NumberFormat('fa-IR', { maximumFractionDigits: 1 });
+const fmtDate = (iso?: string | null): string =>
+  iso ? new Date(iso).toLocaleDateString('fa-IR', { year: 'numeric', month: 'long', day: 'numeric' }) : '—';
 const faDT = (iso?: string | null) => {
   if (!iso) return '—';
   const d = new Date(iso);
@@ -50,6 +52,14 @@ type Summary = { generatedAt: string; windowDays: number; counts: Record<string,
 type Network = { generatedAt: string; organizationId: string | null; relationshipCount: number; peopleCount: number; opportunityCount: number; networkCapital: { score: number; components: Record<string, number> }; strategicRelationshipIndex: { score: number; breakdown: Record<string, number> }; relationshipResilienceScore: number; weightedOpportunityValue: number; referralSuccessRate: { total: number; successful: number; rate: number }; attribution?: { bySource: { type: string; count: number; won: number; value: number }[]; warm: { count: number; won: number; value: number; rate: number }; cold: { count: number; won: number; value: number; rate: number } }; bounded: boolean };
 type Funnel = { generatedAt: string; from: string; to: string; stages: Record<string, number>; conversion: Record<string, number>; overall: Record<string, number> };
 type Me = { permissions?: string[]; memberships?: { organizationName?: string; role?: string; isPrimary?: boolean }[] };
+type Calibration = {
+  meetsTarget: boolean; scoreGap: number; targetGap: number; coverageRate: number;
+  won: { count: number; avgScore: number; totalValue: number; value: number };
+  lost: { count: number; avgScore: number; reasons: string[] };
+  halfLife?: { default: number; familyOverrides: Record<string, number> };
+};
+const fmtNum = (v: any): string => v == null || Number.isNaN(Number(v)) ? '—' : new Intl.NumberFormat('fa-IR').format(Number(v));
+type CareerEvents = { alerts: any[]; champions: any[] };
 
 function Ring({ value, size = 104, stroke = 10, label }: { value: number; size?: number; stroke?: number; label?: string }) {
   const v = Math.min(100, Math.max(0, value));
@@ -90,6 +100,9 @@ export default function Analytics() {
   const [net, setNet] = useState<Network | null>(null);
   const [wf, setWf] = useState<{ generatedAt?: string; executions: { status: string; count: number }[] } | null>(null);
   const [funnel, setFunnel] = useState<Funnel | null>(null);
+  const [calib, setCalib] = useState<Calibration | null>(null);
+  const [career, setCareer] = useState<CareerEvents | null>(null);
+  const [halfLifeBusy, setHalfLifeBusy] = useState('');
   const [me, setMe] = useState<Me | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -104,11 +117,14 @@ export default function Analytics() {
     if (!silent) setLoading(true);
     setRefreshing(true); setError('');
     try {
-      const [s, n, w, f, m] = await Promise.all([
+      const [s, n, w, f, c, ce, m] = await Promise.all([
         api<Summary>('/analytics/summary'), api<Network>('/analytics/network'), api<{ generatedAt?: string; executions: { status: string; count: number }[] }>('/analytics/workflows'),
-        api<Funnel>('/analytics/recommendations/funnel'), api<Me>('/auth/me').catch(() => null),
+        api<Funnel>('/analytics/recommendations/funnel'),
+        api<Calibration>('/analytics/calibration').catch(() => null),
+        api<CareerEvents>('/analytics/career-events').catch(() => null),
+        api<Me>('/auth/me').catch(() => null),
       ]);
-      setData(s); setNet(n); setWf(w); setFunnel(f); setMe(m);
+      setData(s); setNet(n); setWf(w); setFunnel(f); setCalib(c); setCareer(ce); setMe(m);
     } catch (x) { setError((x as Error).message); }
     finally { setLoading(false); setRefreshing(false); }
   }, []);
@@ -367,6 +383,101 @@ export default function Analytics() {
               <p className="t-muted" style={{ fontSize: 10.5, margin: 0 }}>
                 از کل دیده‌شده‌ها: پذیرش {fmt1.format(funnel.overall?.acceptedPct ?? 0)}٪ · ساخت اقدام {fmt1.format(funnel.overall?.actionCreatedPct ?? 0)}٪ · انجام {fmt1.format(funnel.overall?.actionCompletedPct ?? 0)}٪ · نتیجه {fmt1.format(funnel.overall?.outcomePct ?? 0)}٪
               </p>
+            </section>
+          )}
+
+          {calib && (
+            <section className="panel">
+              <div className="panel-title">
+                <div>
+                  <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Target size={16} /> کالیبراسیون مدل — برد در برابر باخت</h2>
+                  <p>گپ امتیاز (میانگین برد − میانگین باخت) باید ≥ {fmtNum(calib.targetGap ?? 20)} باشد؛ نیمه‌عمر هر خانواده از همین‌جا تنظیم می‌شود.</p>
+                </div>
+                <Badge tone={calib.meetsTarget ? 'success' : 'danger'}>
+                  {calib.meetsTarget ? `گپ ${fmtNum(calib.scoreGap)} — در هدف` : `گپ ${fmtNum(calib.scoreGap)} — زیر هدف`}
+                </Badge>
+              </div>
+              <div className="kpi-grid">
+                <div className="kpi-card" style={{ margin: 0 }}>
+                  <small>فرصت‌های برده</small>
+                  <strong>{fmt.format(calib.won?.count ?? 0)}</strong>
+                  <span className="t-muted" style={{ fontSize: 10 }}>میانگین امتیاز {fmt1.format(calib.won?.avgScore ?? 0)} · {fmt1.format((calib.won?.totalValue ?? 0) / 1e9)} میلیارد</span>
+                </div>
+                <div className="kpi-card" style={{ margin: 0 }}>
+                  <small>فرصت‌های باخته</small>
+                  <strong>{fmt.format(calib.lost?.count ?? 0)}</strong>
+                  <span className="t-muted" style={{ fontSize: 10 }}>میانگین امتیاز {fmt1.format(calib.lost?.avgScore ?? 0)}</span>
+                </div>
+                <div className="kpi-card" style={{ margin: 0 }}>
+                  <small>پوشش کالیبراسیون</small>
+                  <strong>{fmt1.format(calib.coverageRate ?? 0)}٪</strong>
+                  <span className="t-muted" style={{ fontSize: 10 }}>فرصت‌های با نتیجه</span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+                <div style={{ flex: '1 1 280px', minWidth: 250 }}>
+                  <b style={{ fontSize: 11.5 }}>دلایل باخت</b>
+                  <div style={{ display: 'grid', gap: 6, marginTop: 6 }}>
+                    {(calib.lost?.reasons ?? []).map((r: string, i: number) => (
+                      <span key={i} className="chip danger" style={{ justifySelf: 'start' }}>{r}</span>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ flex: '1 1 280px', minWidth: 250 }}>
+                  <b style={{ fontSize: 11.5 }}>نیمه‌عمر خانواده‌ها (روز)</b>
+                  <div style={{ display: 'grid', gap: 5, marginTop: 6 }}>
+                    {Object.entries(calib.halfLife?.familyOverrides ?? {}).map(([k, v]: [string, any]) => (
+                      <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 10.5 }}>
+                        <span style={{ width: 88, color: 'var(--muted,#64748b)' }}>{k}</span>
+                        <input type="number" min={15} max={365} value={Number(v ?? calib.halfLife?.default ?? 90)} disabled={halfLifeBusy === k}
+                          onChange={async (e) => {
+                            const days = Number(e.target.value);
+                            if (!Number.isFinite(days) || days < 15 || days > 365) return;
+                            setHalfLifeBusy(k); setError(''); setNotice('');
+                            try {
+                              await api('/analytics/calibration/half-life', { method: 'PATCH', body: JSON.stringify({ family: k, days }) });
+                              setNotice(`نیمه‌عمر ${k} به ${fmtNum(days)} روز تغییر کرد.`);
+                              await load(true);
+                            } catch (x) { setError((x as Error).message); }
+                            finally { setHalfLifeBusy(''); }
+                          }}
+                          style={{ width: 64, padding: '4px 6px', borderRadius: 8, border: '1px solid var(--border,#e2e8f0)' }} />
+                        <span className="t-muted">پیش‌فرض: {fmtNum(calib.halfLife?.default ?? 90)}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {career && (career.alerts?.length > 0 || career.champions?.length > 0) && (
+            <section className="panel">
+              <div className="panel-title">
+                <div>
+                  <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><CalendarDays size={16} /> قهرمان‌ها و رویدادهای شغلی</h2>
+                  <p>هشدار جابه‌جایی قهرمان + «چه کسی در سازمان جدید او را می‌شناسد» + مسیر گرم به سازمان مقصد</p>
+                </div>
+                <Badge tone="info">{fmt.format(career.champions?.length ?? 0)} قهرمان</Badge>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
+                {(career.alerts ?? []).map((a: any) => (
+                  <div key={a.id} className="kpi-card" style={{ margin: 0, flex: '1 1 240px', borderColor: 'color-mix(in srgb, var(--gold,#f59e0b) 40%, transparent)' }}>
+                    <small>{a.person?.name ?? '—'} ← {a.destinationOrg?.name ?? '—'}</small>
+                    <strong style={{ fontSize: 15 }}>{a.destinationOrg?.name ?? 'جابه‌جایی'}</strong>
+                    <span className="t-muted" style={{ fontSize: 10 }}>
+                      {fmtDate(a.departedAt)} · {Array.isArray(a.warmPaths) ? `مسیر گرم: ${a.warmPaths.map((p: any) => p.relationshipId).join('، ')}` : ''}
+                    </span>
+                  </div>
+                ))}
+                {(career.champions ?? []).map((c: any) => (
+                  <div key={c.personId} className="kpi-card" style={{ margin: 0, flex: '1 1 180px' }}>
+                    <small>{c.person?.name ?? c.personId}</small>
+                    <strong style={{ fontSize: 15 }}>{fmtNum(c.score)}</strong>
+                    <span className="chip info">{c.status === 'WON_DEAL' ? 'برندهٔ قرارداد' : c.status ?? c.championTag}</span>
+                  </div>
+                ))}
+              </div>
             </section>
           )}
 
