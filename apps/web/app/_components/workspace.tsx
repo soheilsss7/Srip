@@ -23,6 +23,20 @@ const WorkspaceContext = createContext<WorkspaceContextValue|null>(null);
 
 export const ROLE_LABELS: Record<Role,string> = { SUPER_ADMIN:'مدیر کل سیستم', HOLDING_ADMIN:'مدیر هلدینگ', HOLDING_EXECUTIVE:'مدیر ارشد هلدینگ', SUBSIDIARY_ADMIN:'مدیر شرکت', SUBSIDIARY_EXECUTIVE:'مدیر ارشد شرکت', RELATIONSHIP_MANAGER:'مدیر روابط', PROJECT_MANAGER:'مدیر پروژه', ANALYST:'تحلیلگر', STANDARD_USER:'کاربر استاندارد', READ_ONLY:'فقط خواندنی' };
 
+/**
+ * کاوش نشست با مهلت — در نسخۀ استاتیک ممکن است API هرگز پاسخ ندهد و پردۀ
+ * «در حال بررسی نشست…» کاربر را تا ابد قفل کند.
+ */
+const SESSION_PROBE_TIMEOUT_MS = 4500;
+function probeMe(): Promise<Me> {
+  return Promise.race<Me>([
+    api<Me>('/auth/me'),
+    new Promise<Me>((_resolve, reject) => {
+      setTimeout(() => reject(new Error('بررسی نشست بیش از حد طول کشید')), SESSION_PROBE_TIMEOUT_MS);
+    }),
+  ]);
+}
+
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [me, setMe] = useState<Me|null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,7 +58,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     const stored = getScope(); if (stored) setScopeIdState(stored);
     const token = getAccessToken();
     if (!token && !getRefreshToken()) { setLoading(false); return; }
-    api<Me>('/auth/me').then(applyMe).catch(e => setError((e as Error).message)).finally(() => setLoading(false));
+    probeMe().then(applyMe).catch(e => setError((e as Error).message)).finally(() => setLoading(false));
   }, []);
   useEffect(() => {
     const reload = () => {
@@ -53,7 +67,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       const token = getAccessToken();
       if (!token && !getRefreshToken()) { setLoading(false); return; }
       setLoading(true);
-      api<Me>('/auth/me').then(applyMe).catch(e => setError((e as Error).message)).finally(() => setLoading(false));
+      probeMe().then(applyMe).catch(e => setError((e as Error).message)).finally(() => setLoading(false));
     };
     window.addEventListener('srip:session', reload);
     return () => window.removeEventListener('srip:session', reload);
@@ -131,6 +145,15 @@ const ADMIN_NAV: Array<readonly [string, string, string]> = [
   ['/data-lifecycle', 'چرخهٔ حیات داده', 'data.lifecycle_status'],
   ['/health', 'سلامت زمان اجرا', 'health.read'],
 ] as const;
+
+/** نوار تب پایین موبایل — چهار خانهٔ اصلی؛ بقیه از دراور کناری.
+ *  فقط در ≤900px دیده می‌شود (همان‌جا که سایدبار دراور می‌شود). */
+const MOBILE_TABS: Array<readonly [string, string, string]> = [
+  ['/', 'خانه', 'dashboard.read'],
+  ['/organizations', 'سازمان‌ها', 'organization.read'],
+  ['/network', 'شبکه', 'network.read'],
+  ['/interactions', 'تعامل‌ها', 'interaction.read'],
+];
 
 const NAV_ICONS: Record<string, React.ReactNode> = {
   '/': <LayoutDashboard size={16}/>,
@@ -299,6 +322,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="auth-gate-title"><strong>SRIP</strong><span>هوش روابط راهبردی</span></div>
             <div className="spinner" aria-hidden="true" />
             <p>{loading ? 'در حال بررسی نشست و محدودهٔ دسترسی…' : 'نشست فعالی یافت نشد؛ انتقال به صفحهٔ ورود…'}</p>
+            <Link className="auth-gate-escape" href="/login" onClick={() => clearSession()}>رفتن به صفحهٔ ورود</Link>
           </div>
         </div>
       )}
@@ -379,6 +403,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <main id="workspace-main" className="workspace-content" tabIndex={-1}>{children}</main>
       </div>
       </div>
+      {/* نوار تب پایین موبایل — در دسکتاپ با CSS پنهان است */}
+      <nav className="mobile-tabs" aria-label="ناوبری سریع">
+        {MOBILE_TABS.filter(([href, , perm]) => href === '/' || can(perm)).map(([href, label]) => {
+          const active = href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(href + '/');
+          return (
+            <Link key={href} href={href} className={active ? 'active' : ''} aria-current={active ? 'page' : undefined}>
+              <span className="mt-ico" aria-hidden="true">{NAV_ICONS[href]}</span>
+              <span className="mt-label">{label}</span>
+            </Link>
+          );
+        })}
+        <button type="button" className="mobile-tabs-more" onClick={() => setNavOpen(true)} aria-label="همهٔ بخش‌ها" aria-expanded={navOpen}>
+          <span className="mt-ico" aria-hidden="true"><ListChecks size={16}/></span>
+          <span className="mt-label">بیشتر</span>
+        </button>
+      </nav>
     </>
   );
 }
