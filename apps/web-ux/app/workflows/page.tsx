@@ -34,7 +34,7 @@ const ACTION_META: Record<string, { fa: string; icon: React.ReactNode; tone: 'in
   CREATE_ACTION: { fa: 'اقدام', icon: <Zap size={14} />, tone: 'warning', color: '#d97706' },
   CREATE_COMMITMENT: { fa: 'تعهد', icon: <ListChecks size={14} />, tone: 'success', color: '#16a34a' },
   CREATE_OPPORTUNITY: { fa: 'فرصت', icon: <Target size={14} />, tone: 'success', color: '#0d9488' },
-  REQUEST_APPROVAL: { fa: 'تأیید دوم‌نفره', icon: <Scale size={14} />, tone: 'danger', color: '#dc2626' },
+  REQUEST_APPROVAL: { fa: 'تأیید دونفره', icon: <Scale size={14} />, tone: 'danger', color: '#dc2626' },
   WAIT: { fa: 'انتظار', icon: <Clock3 size={14} />, tone: 'neutral', color: '#64748b' },
 };
 
@@ -185,6 +185,15 @@ export default function WorkflowsPage({ initialTab = 'workflows' }: { initialTab
 
   const entityIcon = (t: string) => ENTITY_OPTIONS.find(e => e.key === t)?.fa ?? t;
 
+  const [liveAt, setLiveAt] = useState<string>(() => new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }));
+  useEffect(() => {
+    const t = setInterval(async () => {
+      await refreshLive().catch(() => {});
+      setLiveAt(new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }));
+    }, 8000);
+    return () => clearInterval(t);
+    /* eslint-disable-next-line */
+  }, []);
   async function refreshLive() {
     try {
       const [exList, apList] = await Promise.all([
@@ -418,7 +427,7 @@ export default function WorkflowsPage({ initialTab = 'workflows' }: { initialTab
       <PageHeader
         eyebrow="اتوماسیون گردش کار"
         title="گردش کار"
-        description="طراحی بصری گردش‌های کاری: محرک (دستی/رویداد)، شرط‌ها و گام‌ها — اعلان، اقدام، تعهد، فرصت، تأیید دوم‌نفره و انتظار. اجرا با مجوز واقعی، اثر واقعی بر داده‌ها و ثبت در ممیزی."
+        description="طراحی بصری گردش‌های کاری: محرک (دستی/رویداد)، شرط‌ها و گام‌ها — اعلان، اقدام، تعهد، فرصت، تأیید دونفره و انتظار. اجرا با مجوز واقعی، اثر واقعی بر داده‌ها و ثبت در ممیزی."
         actions={canWrite ? (
           <button className="btn btn-primary" onClick={() => { clean(); setEditing({ id: '', name: '', entityType: 'Relationship', isActive: true, definition: { actions: [] }, actionCount: 0, triggerType: 'MANUAL', createdAt: '' }); }}>
             <Plus size={15} /> گردش کار جدید
@@ -431,8 +440,15 @@ export default function WorkflowsPage({ initialTab = 'workflows' }: { initialTab
       <div className="stat-grid">
         <StatCard icon={<Workflow size={18} />} label="کل گردش کارها" value={fmtNum(counts.total)} iconClass="ic-blue" sub={`${fmtNum(counts.active)} فعال`} />
         <StatCard icon={<Play size={18} />} label="اجراهای زنده" value={fmtNum(counts.live)} iconClass="ic-green" sub="در حال اجرا یا انتظار" />
-        <StatCard icon={<Scale size={18} />} label="تأییدهای در انتظار" value={fmtNum(counts.pendingApprovals)} iconClass="ic-gold" sub="تصمیم دوم‌نفره" />
-        <StatCard icon={<GitMerge size={18} />} label="محرک‌ها" value={<span>{fmtNum(counts.manual)} <span style={{ fontSize: 11 }}>/</span> {fmtNum(counts.ev)}</span>} iconClass="ic-indigo" sub="دستی / رویدادی" />
+        <StatCard icon={<Scale size={18} />} label="تأییدهای در انتظار" value={fmtNum(counts.pendingApprovals)} iconClass="ic-gold" sub="تصمیم دونفره" />
+        <StatCard icon={<GitMerge size={18} />} label="محرک‌ها" value={<span>{fmtNum(counts.manual)} <span style={{ fontSize: 11 }}>/</span> {fmtNum(counts.ev)}</span>} iconClass="ic-indigo" sub="دستی / خودکار" />
+      </div>
+
+      <div className="wf-engine" role="note">
+        <span className="wf-live-dot" aria-hidden="true" />
+        <b>موتور اتوماسیون فعال</b>
+        <span className="wf-engine-desc">رویدادهای ثبت‌شده (رابطه، جلسه، اقدام، فرصت) گردش‌کارهای هم‌محرک را خودکار اجرا می‌کنند؛ اجراها هر ۸ ثانیه به‌روز می‌شوند.</span>
+        <code className="wf-engine-time">آخرین بازخوانی {liveAt}</code>
       </div>
 
       <HubTabs base tabs={[
@@ -564,7 +580,7 @@ export default function WorkflowsPage({ initialTab = 'workflows' }: { initialTab
             <label><span className="field-label">محرک</span>
               <select value={form.triggerType} onChange={e => setForm(f => ({ ...f, triggerType: e.target.value }))}>
                 <option value="MANUAL">دستی (فقط با دکمهٔ اجرا)</option>
-                {['RELATIONSHIP_UPDATED', 'MEETING_CREATED', 'ACTION_CREATED', 'OPPORTUNITY_CREATED', 'RELATIONSHIP_CREATED'].map(t => <option key={t} value={t}>{`رویداد: ${TRIGGER_FA[t] ?? t}`}</option>)}
+                {['RELATIONSHIP_UPDATED', 'MEETING_CREATED', 'ACTION_CREATED', 'OPPORTUNITY_CREATED', 'RELATIONSHIP_CREATED'].map(t => <option key={t} value={t}>{`خودکار · رویداد ${TRIGGER_FA[t] ?? t}`}</option>)}
               </select>
             </label>
             <label className="full"><span className="field-label">شرط (اختیاری)</span>
@@ -653,7 +669,7 @@ export default function WorkflowsPage({ initialTab = 'workflows' }: { initialTab
             )}
             <div className="tabs" role="tablist" style={{ display: 'inline-flex' }}>
               <button className={runType === 'manual' ? 'tab-active' : ''} onClick={() => setRunType('manual')}><Play size={13} /> اجرای دستی</button>
-              <button className={runType === 'event' ? 'tab-active' : ''} onClick={() => setRunType('event')}><Zap size={13} /> شبیه‌سازی محرک رویداد</button>
+              <button className={runType === 'event' ? 'tab-active' : ''} onClick={() => setRunType('event')}><Zap size={13} /> شبیه‌سازی رویداد (خودکار)</button>
             </div>
             <label className="full">
               <span className="field-label">نهاد ({entityIcon(runFor.entityType)})</span>
@@ -690,7 +706,7 @@ export default function WorkflowsPage({ initialTab = 'workflows' }: { initialTab
       <Modal
         open={!!approvalModal}
         title="تصمیم تأیید گردش کار"
-        description={approvalModal ? `اجرا ${approvalModal.execId} در گام «تأیید دوم‌نفره» متوقف است. تصویب یعنی ادامهٔ خودکار گام‌های بعد؛ رد یعنی توقف اجرا.` : ''}
+        description={approvalModal ? `اجرا ${approvalModal.execId} در گام «تأیید دونفره» متوقف است. تصویب یعنی ادامهٔ خودکار گام‌های بعد؛ رد یعنی توقف اجرا.` : ''}
         onClose={() => setApprovalModal(null)}
         footer={
           <>

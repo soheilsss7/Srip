@@ -675,27 +675,32 @@ textarea{resize:vertical}
 
 .app-main{min-width:0;flex:1;display:flex;flex-direction:column}
 .global-header{
-  height:var(--header-h);background:color-mix(in srgb,var(--topbar-bg) 86%,transparent);
+  min-height:var(--header-h);height:auto;background:color-mix(in srgb,var(--topbar-bg) 86%,transparent);
   backdrop-filter:blur(14px);border-bottom:1px solid var(--card-border);
-  display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 20px;
-  position:sticky;top:0;z-index:40;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 20px;
+  flex-wrap:wrap;row-gap:6px;position:sticky;top:0;z-index:40;overflow:hidden;
 }
-.global-search{flex:1;max-width:560px}
+.global-search{flex:1 1 200px;max-width:560px;min-width:170px}
 .global-search a{
   display:flex;align-items:center;gap:8px;
   border:1px solid var(--card-border-strong);background:var(--input-bg);color:var(--text-muted);
-  height:38px;padding:0 12px;border-radius:var(--radius-md);font-size:12.5px;
-  transition:border-color .12s,box-shadow .12s;
+  height:38px;padding:0 12px;border-radius:var(--radius-md);font-size:12.5px;min-width:0;
+  white-space:nowrap;overflow:hidden;transition:border-color .12s,box-shadow .12s;
 }
 .global-search a:hover{border-color:var(--srip-accent);box-shadow:0 0 0 3px var(--srip-accent-softer)}
-.global-search a .kbd{margin-inline-start:auto;border:1px solid var(--card-border-strong);border-radius:6px;padding:1px 6px;font-size:10px;font-weight:800;color:var(--text-muted);background:var(--card-bg)}
+.global-search a .gs-label{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.global-search a .kbd{flex:0 0 auto;margin-inline-start:auto;border:1px solid var(--card-border-strong);border-radius:6px;padding:1px 6px;font-size:10px;font-weight:800;color:var(--text-muted);background:var(--card-bg)}
 .ai-btn{
   display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 14px;border-radius:var(--radius-md);
   background:linear-gradient(135deg,var(--purple),var(--indigo));color:#fff;font-size:12.5px;font-weight:800;
   box-shadow:0 4px 14px -4px rgba(146,97,248,.5);transition:transform .12s,box-shadow .12s;white-space:nowrap;
 }
 .ai-btn:hover{transform:translateY(-1px)}
-.header-actions{display:flex;align-items:center;gap:9px}
+.header-actions{display:flex;align-items:center;gap:9px;flex:0 0 auto;flex-wrap:wrap}
+@media(max-width:1460px){.global-search a .kbd{display:none}}
+@media(max-width:1380px){.header-actions .ai-btn span{display:none}.header-actions .ai-btn{padding:0 10px}}
+@media(max-width:1300px){.header-actions .scope-chip .scope-label{display:none}.header-actions .scope-chip{padding-inline-end:4px}}
+@media(max-width:1200px){.demo-chip{display:none}.user-chip .uc-meta{display:none}.header-actions .user-chip{padding:0 8px}}
 .header-actions select,.scope-chip select{border:1px solid var(--card-border-strong);background:var(--card-bg);color:var(--text-secondary);border-radius:var(--radius-md);padding:9px 11px;max-width:230px;min-height:38px}
 .scope-chip{display:flex;align-items:center;gap:6px;border:1px solid color-mix(in srgb,var(--srip-accent) 30%,transparent);background:var(--srip-accent-softer);border-radius:var(--radius-md);padding:2px 4px 2px 10px;height:38px}
 .scope-chip .globe{font-size:12px}
@@ -715,7 +720,7 @@ textarea{resize:vertical}
 .user-chip .uc-meta strong{display:block;font-size:12px;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .user-chip .uc-meta small{display:block;font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .user-chip .chev{color:var(--text-muted);font-size:10px;margin-inline-start:2px}
-.shell-actions{display:flex;align-items:center;gap:8px}
+.shell-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}
 .theme-toggle .sun,.theme-toggle .moon{width:17px;height:17px}
 .theme-toggle .moon{display:block}
 .theme-toggle .sun{display:none}
@@ -2829,3 +2834,14 @@ html,body{overflow-x:clip;max-width:100%}
   .net-legend{gap:10px}
   .net-detail-head h3{font-size:14px}
 }
+
+/* ---------- گردش کار: نوار موتور اتوماسیون ---------- */
+.wf-engine{display:flex;align-items:center;gap:9px;flex-wrap:wrap;background:color-mix(in srgb,var(--srip-success) 7%,transparent);
+  border:1px solid color-mix(in srgb,var(--srip-success) 26%,transparent);border-radius:var(--radius-md);
+  padding:9px 12px;margin:0 0 12px;font-size:12px;color:var(--text-secondary)}
+.wf-engine b{color:var(--srip-success);font-size:12.5px;white-space:nowrap}
+.wf-engine-desc{flex:1;min-width:240px;font-size:11.5px;line-height:1.7;color:var(--text-muted)}
+.wf-engine-time{font-size:10.5px;color:var(--text-muted);background:var(--card-bg);border:1px solid var(--card-border);
+  border-radius:999px;padding:3px 9px;white-space:nowrap;font-family:inherit}
+.wf-live-dot{width:9px;height:9px;border-radius:50%;background:var(--srip-success);box-shadow:0 0 0 4px color-mix(in srgb,var(--srip-success) 18%,transparent);animation:pulse-live 1.6s ease-in-out infinite}
+@keyframes pulse-live{0%,100%{opacity:1}50%{opacity:.45}}

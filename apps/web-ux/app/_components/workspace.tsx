@@ -448,7 +448,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </button>
             <div className="global-search">
               <Link href="/search">
-                <Search size={13}/> جستجوی سراسری…
+                <Search size={13}/>
+                <span className="gs-label">جستجوی سراسری…</span>
                 <kbd className="kbd">⌘K</kbd>
               </Link>
             </div>

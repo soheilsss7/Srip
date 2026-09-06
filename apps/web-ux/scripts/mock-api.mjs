@@ -19,7 +19,7 @@ const PORT = Number(process.env.MOCK_API_PORT || 4000);
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.06.14';
+const DEMO_MOCK_VERSION = '2026.09.06.15';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -3036,11 +3036,11 @@ function seedWorkflowStore(){
          {type:'CREATE_NOTIFICATION',title:'رابطه به‌روزرسانی شد',body:'محرک رویداد رابطه فعال شد و تعهد بازبینی زیر ثبت گردید.',channel:'IN_APP',priority:'MEDIUM'},
          {type:'CREATE_COMMITMENT',description:'بازبینی برنامهٔ تعاملات و اقدام بعدی این رابطه',status:'OPEN',risk:'MEDIUM'},
        ]},createdAt:t(6,3),updatedAt:t(6,3)},
-      {id:'wf-3',name:'تأیید دوم‌نفره و انتظار برای فرصت تازه',entityType:'Opportunity',organizationId:null,isActive:true,
-       definition:{trigger:{type:'MANUAL'},conditions:[],actions:[
+      {id:'wf-3',name:'تأیید دونفره و انتظار برای فرصت تازه',entityType:'Opportunity',organizationId:null,isActive:true,
+       definition:{trigger:{type:'OPPORTUNITY_CREATED'},conditions:[{path:'opportunity.value',exists:true}],actions:[
          {type:'REQUEST_APPROVAL',payload:{title:'اجرای گردش کار ادامه یابد؟',note:'تأیید برای ادامهٔ خودکار مراحل بعدی (انتظار و اعلان پایانی) لازم است.'}},
          {type:'WAIT',minutes:1},
-         {type:'CREATE_NOTIFICATION',title:'گردش کار فرصت کامل شد',body:'پس از تأیید و پایان مهلت انتظار، گردش کار «تأیید دوم‌نفره» به پایان رسید.',channel:'IN_APP',priority:'LOW'},
+         {type:'CREATE_NOTIFICATION',title:'گردش کار فرصت کامل شد',body:'پس از تأیید و پایان مهلت انتظار، گردش کار «تأیید دونفره» به پایان رسید.',channel:'IN_APP',priority:'LOW'},
        ]},createdAt:t(3,5),updatedAt:t(3,5)},
     ];
   }
@@ -3673,6 +3673,7 @@ const server=http.createServer(async(req,res)=>{
     RELS.push(r); saveDb();
     if(relIntake.length) saveStoredAnswers('RELATIONSHIP',r.id,relIntake);
     audit(req,'CREATE','relationship',r.id,'OK',{source:r.sourceOrganizationId,target:r.targetOrganizationId,answers:relIntake.length});
+    await autoRunWorkflows('Relationship', r.id, 'RELATIONSHIP_CREATED', { relationship: { id: r.id, sourceOrganizationId: r.sourceOrganizationId, targetOrganizationId: r.targetOrganizationId, relationshipType: r.relationshipType, status: r.status, healthScore: r.healthScore, strategicScore: r.strategicScore, riskScore: r.riskScore } });
     return json(res,201,attachCriteria('RELATIONSHIP',[relWithOrgs(r)])[0]);
   }
   /* --------------------- P1: سرمایهٔ رابطه، روند و برنامهٔ ۹۰ روزه --------------------- */
@@ -3817,6 +3818,7 @@ const server=http.createServer(async(req,res)=>{
     const m={id:`m-${Date.now()}`,title:b.title,startAt:b.startAt,endAt:b.endAt??null,objective:b.objective??null,agenda:b.agenda??null,outcome:null,notes:null,preMeetingBrief:null,location:b.location??null,meetingUrl:b.meetingUrl??null,organizationId:mOrg,relationshipId:b.relationshipId??null,participants,actions:[],commitments:[]};
     MEETINGS.unshift(m);
     audit(req,'CREATE','meeting',m.id,'OK',{title:m.title});
+    await autoRunWorkflows('Meeting', m.id, 'MEETING_CREATED', { meeting: { id: m.id, title: m.title, relationshipId: m.relationshipId, organizationId: m.organizationId, participants: m.participants } });
     return json(res,201,meetingView(m));
   }
   const meetingInScope=(m)=>m&&(!m.organizationId||inScope(req,m.organizationId))&&(!m.relationshipId||relInScope(req,RELS.find(r=>r.id===m.relationshipId)));
@@ -3909,7 +3911,9 @@ const server=http.createServer(async(req,res)=>{
     if(actRel&&!relInScope(req,actRel)) return json(res,403,{message:'رابطهٔ اقدام خارج از محدودهٔ دسترسی شماست.'});
     if(b.organizationId&&!inScope(req,b.organizationId)) return json(res,403,{message:'سازمانِ اقدام خارج از محدودهٔ دسترسی شماست.'});
     const a={id:`a-${Date.now()}`,title:b.title,status:b.status??'OPEN',priority:b.priority??'MEDIUM',dueAt:b.dueAt??null,description:b.description??null,reminderAt:b.reminderAt??null,meetingId:b.meetingId??null,outcome:b.outcome??null,ownerId:b.ownerId??null,relationshipId:b.relationshipId??null,organizationId:b.organizationId??null};
-    ACTIONS.push(a); audit(req,'CREATE','action',a.id,'OK',{title:a.title}); return json(res,201,actionView(a));
+    ACTIONS.push(a); audit(req,'CREATE','action',a.id,'OK',{title:a.title});
+    await autoRunWorkflows('Action', a.id, 'ACTION_CREATED', { action: { id: a.id, title: a.title, status: a.status, priority: a.priority, relationshipId: a.relationshipId, organizationId: a.organizationId } });
+    return json(res,201,actionView(a));
   }
   if(is('/commitments')&&method==='GET') return json(res,200,scopedCommitments(req).map(commitmentView));
   if(is('/projects')&&method==='GET') return json(res,200,scopedProjects(req).map(projectView));
@@ -4842,6 +4846,7 @@ const server=http.createServer(async(req,res)=>{
     const o={id:`o-${Date.now()}`,name:b.name,description:b.description??null,status,sourceType,sourceReferralId:b.sourceReferralId??null,probability:Math.max(0,Math.min(100,Number(b.probability)||0)),value:b.value==null?null:Number(b.value)||0,expectedDate:b.expectedDate??null,organizationId:orgId,relationshipId:b.relationshipId??null,projectId:b.projectId??null,ownerId:b.ownerId??null,createdAt:nowIso(),wonAt:status==='WON'?nowIso():null,lostAt:status==='LOST'?nowIso():null};
     OPPORTUNITIES.push(o);
     audit(req,'CREATE','opportunity',o.id,'OK',{name:o.name});
+    await autoRunWorkflows('Opportunity', o.id, 'OPPORTUNITY_CREATED', { opportunity: { id: o.id, name: o.name, status: o.status, value: o.value, probability: o.probability, relationshipId: o.relationshipId, organizationId: o.organizationId } });
     return json(res,201,opportunityView(o));
   }
   const opportunityId=match('/opportunities/:id');
@@ -5246,6 +5251,8 @@ const server=http.createServer(async(req,res)=>{
     const b=await readBody(req);
     if(b.cadenceDays!==undefined){const cd=Number(b.cadenceDays); if(!Number.isFinite(cd)||cd<7||cd>365) return json(res,400,{message:'کیدنس باید بین ۷ تا ۳۶۵ روز باشد.'}); r.cadenceDays=Math.round(cd); delete b.cadenceDays;}
     Object.assign(r,b);
+    audit(req,'UPDATE','relationship',r.id,'OK',{patch:Object.keys(b).join(',')});
+    await autoRunWorkflows('Relationship', r.id, 'RELATIONSHIP_UPDATED', { relationship: { id: r.id, sourceOrganizationId: r.sourceOrganizationId, targetOrganizationId: r.targetOrganizationId, relationshipType: r.relationshipType, status: r.status, healthScore: r.healthScore, strategicScore: r.strategicScore, riskScore: r.riskScore } });
     return json(res,200,relWithOrgs(r));
   }
 
@@ -6381,6 +6388,18 @@ const server=http.createServer(async(req,res)=>{
     DB.workflowExecutions.push(exec);
     audit(req2,'WORKFLOW_EXECUTED','WorkflowExecution',exec.id,'OK',{meta:{workflow:wf.id,trigger:triggerType,entityType,entityId}});
     return wfRun(wf,exec,0,log);
+  }
+  /* اجرای خودکار: بعد از ساخت/به‌روزرسانی نهاد، گردش‌کارهای هم‌محرک و فعال خودشان اجرا می‌شوند */
+  async function autoRunWorkflows(entityType,entityId,triggerType,context={}){
+    const wfs=(DB.workflows??[]).filter(w=>w.isActive&&w.entityType===entityType&&wfScopeOk(w));
+    let runs=0;
+    for(const wf of wfs){
+      const def=wf.definition??{};
+      if(def.trigger?.type&&def.trigger.type!==triggerType) continue;
+      if(!wfConditionsPass(def.conditions??[],context)) continue;
+      try{ wfStart(req,wf,entityType,entityId,context,triggerType,[]); runs++; }catch(e){/* دمو پایدار بماند */}
+    }
+    if(runs) saveDb();
   }
   function wfConditionsPass(conditions,context){
     return (conditions??[]).every(c=>{

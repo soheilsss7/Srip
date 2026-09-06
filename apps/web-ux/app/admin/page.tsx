@@ -47,7 +47,7 @@ const GROUPS: Array<{ title: string; desc: string; items: Array<[string, string,
       ['/admin/master-data', 'دادهٔ مبنایی', 'داده‌های مرجع', <Boxes size={17} key="md"/>],
       ['/integrations', 'یکپارچه‌سازی', 'اتصال سامانه‌ها', <Share2 size={17} key="int"/>],
       ['/workflows', 'گردش کار', 'زنجیره‌های خودکار', <Workflow size={17} key="wf"/>],
-      ['/approvals', 'تأییدها', 'تأیید دوم‌نفره', <CheckCircle2 size={17} key="ap"/>],
+      ['/approvals', 'تأییدها', 'تأیید دونفره', <CheckCircle2 size={17} key="ap"/>],
     ],
   },
   {

@@ -151,7 +151,7 @@ export default function AdminExportsPage() {
       <PageHeader
         eyebrow="مدیریت / کنترل خروجی داده"
         title="کنترل خروجی داده"
-        description="لاگِ فقط‌افزودنی خروجی‌های داده: نوع، طبقه‌بندی، تعداد رکورد، بازیگر و تأیید دوم‌نفره برای داده‌های حساس — منطبق با سیاست طبقه‌بندی و ممیزی."
+        description="لاگِ فقط‌افزودنی خروجی‌های داده: نوع، طبقه‌بندی، تعداد رکورد، بازیگر و تأیید دونفره برای داده‌های حساس — منطبق با سیاست طبقه‌بندی و ممیزی."
         actions={
           <>
             <button className="btn btn-secondary" onClick={load} disabled={loading}><RefreshCw size={15} /> بازخوانی</button>
@@ -174,7 +174,7 @@ export default function AdminExportsPage() {
           <div className="stat-grid">
             <StatCard icon={<FileDown size={18} />} label="کل خروجی‌ها" value={fmtNum(stats.total)} iconClass="ic-indigo" sub="در بازهٔ نگهداری لاگ" />
             <StatCard icon={<ShieldCheck size={18} />} label="خروجی حساس" value={fmtNum(stats.high)} iconClass="ic-gold" sub="محدود/بسیار محرمانه/خصوصی" />
-            <StatCard icon={<CheckCircle2 size={18} />} label="دارای تأیید" value={fmtNum(stats.approved)} iconClass="ic-teal" sub="تأیید دوم‌نفره" />
+            <StatCard icon={<CheckCircle2 size={18} />} label="دارای تأیید" value={fmtNum(stats.approved)} iconClass="ic-teal" sub="تأیید دونفره" />
             <StatCard icon={<Database size={18} />} label="رکوردهای خارج‌شده" value={fmtNum(stats.totalCount)} iconClass="ic-red" sub="مجموع همهٔ خروجی‌ها" />
             <StatCard icon={<UserRound size={18} />} label="بازیگران" value={fmtNum(stats.actors)} iconClass="ic-teal" sub="کاربرانِ خروجی‌گیرنده" />
           </div>
@@ -274,7 +274,7 @@ export default function AdminExportsPage() {
               <select value={form.classification} onChange={e => setForm(f => ({ ...f, classification: e.target.value }))}>
                 {CLASSIFICATION_OPTIONS.map(c => <option key={c} value={c}>{CLASS_FA[c]}</option>)}
               </select>
-              <small className="t-muted">محدود و بالاتر نیازمند تأیید دوم‌نفره است.</small>
+              <small className="t-muted">محدود و بالاتر نیازمند تأیید دونفره است.</small>
             </label>
             <label className="field">
               <span className="field-label">تعداد رکورد</span>
