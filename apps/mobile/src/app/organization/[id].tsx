@@ -4,6 +4,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { apiGet, apiPatch, apiPost } from '../../services/api-client';
 import { useSession } from '../../state/session';
 import { styles, colors } from '../../lib/ui';
+import { CriteriaScore } from '../../features/criteria';
 
 const arr = (x: any) => Array.isArray(x) ? x : (x?.items ?? x?.data ?? x?.rows ?? []);
 
@@ -70,6 +71,8 @@ export default function OrganizationDetail() {
               </View>
             ))}
           </View>
+
+          <CriteriaScore subjectType="ORGANIZATION" subjectId={String(id)} token={token} onSaved={load} />
 
           <View style={styles.card}>
             <Text style={styles.label}>Units ({units.length})</Text>

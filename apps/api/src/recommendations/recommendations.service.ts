@@ -7,6 +7,7 @@ import { AuditService } from '../audit/audit.service';
 import { EventBusService } from '../event-bus/event-bus.service';
 import { DOMAIN_EVENT_TYPES } from '../event-bus/event-bus.constants';
 import { EntityResponseDto } from '../common/dto/entity-response.dto';
+import { CriteriaService } from '../criteria/criteria.service';
 
 export const RECOMMENDATION_TYPES = [
   'FOLLOW_UP','MEETING','INTRODUCTION','RELATIONSHIP_REPAIR','DIVERSIFICATION',
@@ -19,7 +20,7 @@ const clamp = (n:number) => Math.max(0, Math.min(100, Math.round(n)));
 
 @Injectable()
 export class RecommendationsService {
-  constructor(private readonly prisma: PrismaService, private readonly authorization: AuthorizationService, private readonly audit: AuditService, private readonly eventBus: EventBusService) {}
+  constructor(private readonly prisma: PrismaService, private readonly authorization: AuthorizationService, private readonly audit: AuditService, private readonly eventBus: EventBusService, private readonly criteria: CriteriaService) {}
 
   status() { return { module: 'recommendations', status: 'implemented', types: RECOMMENDATION_TYPES, humanApproval: true, explainability: true }; }
 
@@ -78,7 +79,20 @@ export class RecommendationsService {
       include:{ sourceOrganization:{select:{id:true,name:true}}, targetOrganization:{select:{id:true,name:true}} }, take:500,
     });
     const now=Date.now(); const created:any[]=[];
+    // معیارها در تولید پیشنهادها هم جاری است: هم «ارزیابی ناقص» و هم «پرچم ریسک معیار» به پیشنهاد تبدیل می‌شود.
+    const criteriaMap = await this.criteria.summaries('RELATIONSHIP', relationships.map((r) => r.id));
     for (const r of relationships) {
+      const c: any = criteriaMap.get(r.id);
+      if (c) {
+        const seriousFlag = (c.flags ?? []).find((f: any) => f.severity === 'CRITICAL' || f.severity === 'HIGH');
+        if (seriousFlag) {
+          const rec=await this.createCandidate(userId,{type:'RISK_MITIGATION',relationshipId:r.id,title:`رفع پرچم ارزیابی برای ${r.targetOrganization.name}`,rationale:`معیار «${seriousFlag.criterionCode}» با شدت ${seriousFlag.severity} ثبت شده است. پیش از هر تعهد جدید، این مورد باید جمع‌بندی یا مستند شود.`,confidence:clamp(70+(seriousFlag.severity==='CRITICAL'?25:10)),evidence:{criterionCode:seriousFlag.criterionCode,severity:seriousFlag.severity,coverage:c.coverage,confidence:c.confidence,score:c.score}}); if(rec)created.push(rec);
+        }
+        if ((c.coverage ?? 0) < 40 && !seriousFlag) {
+          const missing = Math.max(1, (c.total ?? 0) - (c.known ?? 0));
+          const rec=await this.createCandidate(userId,{type:'FOLLOW_UP',relationshipId:r.id,title:`تکمیل ارزیابی معیارها برای ${r.targetOrganization.name}`,rationale:`تنها ${c.known ?? 0} از ${c.total ?? 0} معیار پاسخ دارد (پوشش ${c.coverage}٪). تا پیش از ${40}٪ پوشش، این رابطه در رتبه‌بندی قابل مقایسه نیست.`,confidence:clamp(45+missing*2),evidence:{coverage:c.coverage,known:c.known,total:c.total,unknownWeight:(100-(c.coverage ?? 0)),uncertainty:c.uncertainty}}); if(rec)created.push(rec);
+        }
+      }
       const daysSince = r.lastInteractionAt ? (now-r.lastInteractionAt.getTime())/86400000 : 365;
       const hasFollowUp = !!r.nextActionAt && r.nextActionAt.getTime() <= now;
       if (hasFollowUp || daysSince >= 90) {

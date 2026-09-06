@@ -5,7 +5,8 @@ import { PeopleController } from './people.controller';
 import { PeopleService } from './people.service';
 import { AuthGuard } from '../common/guards/auth.guard';
 import { DataLifecycleModule } from '../common/data-lifecycle/data-lifecycle.module';
-@Module({ imports: [PermissionsModule, AuditModule, DataLifecycleModule], controllers: [PeopleController], providers: [
+import { CriteriaModule } from '../criteria/criteria.module';
+@Module({ imports: [PermissionsModule, AuditModule, DataLifecycleModule, CriteriaModule], controllers: [PeopleController], providers: [
         PeopleService, AuthGuard
     ] })
 export class PeopleModule {

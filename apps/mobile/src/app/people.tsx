@@ -4,6 +4,7 @@ import { Link } from 'expo-router';
 import { apiGet } from '../services/api-client';
 import { useSession } from '../state/session';
 import { styles, colors } from '../lib/ui';
+import { CriteriaChip } from '../features/criteria';
 
 type Item = { id: string; displayName?: string; firstName?: string; lastName?: string; title?: string; organization?: { name?: string } };
 
@@ -38,7 +39,8 @@ export default function People() {
             <Pressable style={styles.card}>
               <Text style={styles.value}>{r.displayName ?? (`${r.firstName ?? ''} ${r.lastName ?? ''}`.trim() || r.id)}</Text>
               <Text style={styles.subtitle}>{r.title} · {r.organization?.name}</Text>
-              <Text style={{ color: colors.accent, fontWeight: '700' }}>Open detail →</Text>
+              <CriteriaChip criteria={(r as any).criteria} />
+<Text style={{ color: colors.accent, fontWeight: '700' }}>Open detail →</Text>
             </Pressable>
           </Link>
         ))}

@@ -5,6 +5,7 @@ import { api } from '../../_lib/api';
 import { fa } from '../../_lib/fa';
 import { Badge, ErrorCard, Loading, Modal, PageHeader } from '../../_components/page-ui';
 import { EgoGraph, type EgoNode } from '../../_components/ego-graph';
+import { CriteriaScoreCard } from '../../_components/criteria';
 import { suggestConnections } from '../../_lib/connections';
 import { Building2, Users, Share2, Link2, Sparkles, ArrowUpRight, CalendarDays, Network, HeartPulse, AlertTriangle, TrendingUp, Clock } from 'lucide-react';
 
@@ -233,6 +234,8 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
               <p className="empty-state">هنوز رابطه‌ای برای این سازمان ثبت نشده — از صفحهٔ «روابط» نخستین رابطه را ایجاد کنید.</p>
             )}
           </section>
+
+          <CriteriaScoreCard subjectType="ORGANIZATION" subjectId={id} onEdit={load} />
 
           <div className="split-panels">
             {/* Ego graph */}

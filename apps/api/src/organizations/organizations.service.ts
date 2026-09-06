@@ -5,10 +5,11 @@ import { EventBusService } from '../event-bus/event-bus.service';
 import { DOMAIN_EVENT_TYPES } from '../event-bus/event-bus.constants';
 import { DataLifecycleService } from '../common/data-lifecycle/data-lifecycle.service';
 import { EntityResponseDto } from '../common/dto/entity-response.dto';
+import { CriteriaService } from '../criteria/criteria.service';
 
 @Injectable()
 export class OrganizationsService {
-  constructor(private readonly prisma: PrismaService, private readonly authorization: AuthorizationService, private readonly audit: AuditService, private readonly eventBus: EventBusService, private readonly lifecycle: DataLifecycleService) {}
+  constructor(private readonly prisma: PrismaService, private readonly authorization: AuthorizationService, private readonly audit: AuditService, private readonly eventBus: EventBusService, private readonly lifecycle: DataLifecycleService, private readonly criteria: CriteriaService) {}
 
   private async assertReadable(userId: string, organizationId: string) {
     await this.authorization.assertPermission(userId, 'org.read', { organizationId: organizationId });
@@ -35,12 +36,14 @@ export class OrganizationsService {
       skip: (page - 1) * pageSize,
       take: pageSize,
     }), this.prisma.organization.count({ where: { deletedAt: null, ...(ids ? { id: { in: ids } } : {}), ...(parentOrganizationId ? { parentOrganizationId } : {}) } })]);
-    return { data: EntityResponseDto.many('Organization', rows), page, pageSize, total, totalPages: Math.ceil(total / pageSize) };
+    const data = EntityResponseDto.many('Organization', rows);
+    const criteriaMap = await this.criteria.summaries('ORGANIZATION', data.map((r: any) => String(r.id)));
+    return { data: data.map((r: any) => ({ ...r, criteria: criteriaMap.get(String(r.id)) ?? null })), page, pageSize, total, totalPages: Math.ceil(total / pageSize) };
   }
 
   async get(userId: string, id: string) {
     await this.assertReadable(userId, id);
-    return EntityResponseDto.fromUnknown(await this.prisma.organization.findFirst({
+    const row = await this.prisma.organization.findFirst({
       where: { id, deletedAt: null },
       include: {
         owner: { select: { id: true, name: true, email: true } },
@@ -51,7 +54,10 @@ export class OrganizationsService {
         targetRelationships: { where: { deletedAt: null }, include: { sourceOrganization: { select: { id: true, name: true, type: true } } }, take: 50 },
         _count: { select: { people: true, sourceRelationships: true, targetRelationships: true, projects: true, opportunities: true, meetings: true, interactions: true } },
       },
-    }));
+    });
+    const presented = EntityResponseDto.fromUnknown(row ?? {});
+    const criteriaMap = await this.criteria.summaries('ORGANIZATION', [id]);
+    return { ...presented, criteria: criteriaMap.get(id) ?? null };
   }
 
   async timeline(userId: string, id: string) {
@@ -68,7 +74,7 @@ export class OrganizationsService {
     ].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0,100) };
   }
 
-  async create(userId: string, data: { name: string; legalName?: string; englishName?: string; displayName?: string; type?: any; industry?: string; country?: string; city?: string; address?: string; website?: string; phone?: string; email?: string; strategicImportance?: number; registrationId?: string; parentOrganizationId?: string; ownerId?: string }) {if(data.parentOrganizationId)await this.authorization.assertPermission(userId,'org.write',{organizationId:data.parentOrganizationId});else if(!(await this.authorization.isSuperAdmin(userId)))throw new ForbiddenException('Root organization creation requires Super Admin');if(data.ownerId)await this.authorization.assertPermission(userId,'org.write',{organizationId:data.parentOrganizationId??undefined,ownerId:data.ownerId});const duplicate=await this.prisma.organization.findFirst({where:{name:data.name.trim(),deletedAt:null,...(data.parentOrganizationId?{parentOrganizationId:data.parentOrganizationId}:{parentOrganizationId:null})}});if(duplicate)throw new ForbiddenException('An organization with this name already exists in this scope');const created=await this.eventBus.transaction(async tx=>{const row=await tx.organization.create({data:{...data,name:data.name.trim(),displayName:data.displayName?.trim()||data.name.trim(),ownerId:data.ownerId??userId}});await tx.membership.create({data:{userId,organizationId:row.id,role:'SUBSIDIARY_ADMIN'}});await this.audit.logMutation({userId,action:'CREATE',entityType:'Organization',entityId:row.id,organizationId:row.id,after:row},tx);await this.eventBus.publishInTransaction(tx,{eventType:DOMAIN_EVENT_TYPES.ORGANIZATION_CREATED,aggregateType:'Organization',aggregateId:row.id,organizationId:row.id,actorId:userId,payload:row as any});return row;});return EntityResponseDto.from('Organization',created);}
+  async create(userId: string, data: { name: string; criteriaAnswers?: Array<{ criterionCode: string; level?: number | null; value?: number | null; note?: string | null; evidence?: string | null; method?: any; answeredAt?: string | null }>; legalName?: string; englishName?: string; displayName?: string; type?: any; industry?: string; country?: string; city?: string; address?: string; website?: string; phone?: string; email?: string; strategicImportance?: number; registrationId?: string; parentOrganizationId?: string; ownerId?: string }) {const intake=this.criteria.normalizeIntake('ORGANIZATION',(data as any).criteriaAnswers);const { criteriaAnswers: _criteriaAnswers, ...orgData }=data as any;if(data.parentOrganizationId)await this.authorization.assertPermission(userId,'org.write',{organizationId:data.parentOrganizationId});else if(!(await this.authorization.isSuperAdmin(userId)))throw new ForbiddenException('Root organization creation requires Super Admin');if(data.ownerId)await this.authorization.assertPermission(userId,'org.write',{organizationId:data.parentOrganizationId??undefined,ownerId:data.ownerId});const duplicate=await this.prisma.organization.findFirst({where:{name:data.name.trim(),deletedAt:null,...(data.parentOrganizationId?{parentOrganizationId:data.parentOrganizationId}:{parentOrganizationId:null})}});if(duplicate)throw new ForbiddenException('An organization with this name already exists in this scope');const created=await this.eventBus.transaction(async tx=>{const row=await tx.organization.create({data:{...orgData,name:data.name.trim(),displayName:data.displayName?.trim()||data.name.trim(),ownerId:data.ownerId??userId}});await tx.membership.create({data:{userId,organizationId:row.id,role:'SUBSIDIARY_ADMIN'}});await this.audit.logMutation({userId,action:'CREATE',entityType:'Organization',entityId:row.id,organizationId:row.id,after:row},tx);await this.eventBus.publishInTransaction(tx,{eventType:DOMAIN_EVENT_TYPES.ORGANIZATION_CREATED,aggregateType:'Organization',aggregateId:row.id,organizationId:row.id,actorId:userId,payload:row as any});return row;});if(intake.length)await this.criteria.saveAnswers(userId,{subjectType:'ORGANIZATION',subjectId:created.id,answers:intake,source:'INTAKE'});return EntityResponseDto.from('Organization',created);}
 
   async update(userId: string, id: string, data: Record<string, unknown>) { const existing=await this.assertReadable(userId,id); await this.authorization.assertPermission(userId,'org.write',{organizationId:existing.id}); if(data.parentOrganizationId&&data.parentOrganizationId===id)throw new ForbiddenException('Organization cannot be its own parent'); if(data.parentOrganizationId)await this.authorization.assertPermission(userId,'org.write',{organizationId:String(data.parentOrganizationId)}); const name=typeof data.name==='string'?data.name.trim():undefined; if(name){const duplicate=await this.prisma.organization.findFirst({where:{id:{not:id},name,deletedAt:null,parentOrganizationId:(data.parentOrganizationId as string|null|undefined)??existing.parentOrganizationId}});if(duplicate)throw new ForbiddenException('An organization with this name already exists in this scope');} const updated=await this.eventBus.transaction(async tx=>{const safeData:any={...data}; if (typeof safeData.email==='string') safeData.email=safeData.email.trim().toLowerCase(); if (typeof safeData.website==='string') safeData.website=safeData.website.trim(); if (typeof safeData.legalName==='string') safeData.legalName=safeData.legalName.trim(); if (typeof safeData.englishName==='string') safeData.englishName=safeData.englishName.trim(); if (typeof safeData.city==='string') safeData.city=safeData.city.trim(); if (typeof safeData.country==='string') safeData.country=safeData.country.trim(); delete safeData.status; const row=await tx.organization.update({where:{id},data:{...safeData,...(name?{name,displayName:(data.displayName as string|undefined)?.trim()||name}:{})}});await this.audit.logMutation({userId,action:'UPDATE',entityType:'Organization',entityId:id,organizationId:id,before:existing,after:row},tx);await this.eventBus.publishInTransaction(tx,{eventType:DOMAIN_EVENT_TYPES.ORGANIZATION_UPDATED,aggregateType:'Organization',aggregateId:row.id,organizationId:row.id,actorId:userId,payload:row as any});return row;});return EntityResponseDto.from('Organization',updated); }
 

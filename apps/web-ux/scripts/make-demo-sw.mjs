@@ -10,9 +10,17 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const mockPath = path.join(__dirname, 'mock-api.mjs');
+const criteriaPath = path.join(__dirname, 'criteria-data.json');
 const outPath = path.join(__dirname, '..', 'public', 'sw.js');
 
 let src = fs.readFileSync(mockPath, 'utf8');
+/* 0) کاتالوگ معیارها (تولیدشده از apps/api) به‌صورت global تزریق می‌شود؛
+      در نسخهٔ Node خودِ mock-api فایل scripts/criteria-data.json را می‌خواند. */
+if (!fs.existsSync(criteriaPath)) {
+  throw new Error('criteria-data.json missing — run: node scripts/sync-criteria-catalog.mjs');
+}
+const criteriaJson = fs.readFileSync(criteriaPath, 'utf8').trim();
+
 const lines = src.split('\n');
 const find = (sub, from = 0) => lines.findIndex((l, i) => i >= from && l.includes(sub));
 const assert = (idx, what) => { if (idx < 0) throw new Error(`anchor not found: ${what}`); };
@@ -25,6 +33,7 @@ const assert = (idx, what) => { if (idx < 0) throw new Error(`anchor not found: 
   assert(b, 'import crypto');
   lines.splice(a, b - a + 1,
     '/* Service-Worker-safe shims (replaces node built-ins) */',
+    `globalThis.__SRIP_CRITERIA_DATA__ = ${criteriaJson};`,
     'const crypto = {',
     "  randomUUID: () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => '0123456789abcdef'[Math.floor(Math.random() * 16)]),",
     "  randomBytes: () => ({ toString: (enc) => (enc === 'hex' ? 'ab'.repeat(16) : '') }),",

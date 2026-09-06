@@ -5,6 +5,7 @@ import { api } from '../../_lib/api';
 import { fa } from '../../_lib/fa';
 import { Badge, ErrorCard, Loading, PageHeader } from '../../_components/page-ui';
 import { CalendarDays, HeartPulse, RefreshCw, Archive, RotateCcw, AlertTriangle, ChevronLeft } from 'lucide-react';
+import { CriteriaScoreCard } from '../../_components/criteria';
 
 const arr = (x: any): any[] => Array.isArray(x) ? x : Array.isArray(x?.items) ? x.items : Array.isArray(x?.data) ? x.data : Array.isArray(x?.rows) ? x.rows : [];
 const fmtNum = (v: any): string => (v == null ? '—' : new Intl.NumberFormat('fa-IR').format(v));
@@ -119,6 +120,8 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
       {r && (
         <>
           {/* خلاصهٔ وضعیت */}
+          <CriteriaScoreCard subjectType="RELATIONSHIP" subjectId={id} onEdit={load} />
+
           <section className="rel-status-card">
             <div className="rel-status-head">
               <span className="rel-status-ico"><HeartPulse size={17} /></span>

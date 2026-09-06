@@ -13,6 +13,1705 @@
    'deterministic-gateway' mode): no LLM involved anywhere.
    ============================================================================ */
 /* Service-Worker-safe shims (replaces node built-ins) */
+globalThis.__SRIP_CRITERIA_DATA__ = {
+ "generatedFrom": "apps/api/src/criteria/criteria.catalog.ts",
+ "generatedAt": "2026-09-05T18:42:57.577Z",
+ "scales": {
+  "MATURITY": {
+   "label": "بلوغ نظام‌مند",
+   "anchors": [
+    {
+     "level": 0,
+     "label": "اصلاً ندارد",
+     "score": 0
+    },
+    {
+     "level": 1,
+     "label": "غیررسمی و پراکنده",
+     "score": 25
+    },
+    {
+     "level": 2,
+     "label": "رویهٔ مکتوب دارد",
+     "score": 50
+    },
+    {
+     "level": 3,
+     "label": "اجرای پایدار و ممیزی‌شده",
+     "score": 75
+    },
+    {
+     "level": 4,
+     "label": "استاندارد بین‌المللی/گواهی معتبر",
+     "score": 100
+    }
+   ]
+  },
+  "FREQUENCY": {
+   "label": "دوام و تکرار",
+   "anchors": [
+    {
+     "level": 0,
+     "label": "هرگز",
+     "score": 0
+    },
+    {
+     "level": 1,
+     "label": "به‌ندرت",
+     "score": 25
+    },
+    {
+     "level": 2,
+     "label": "گاهی",
+     "score": 50
+    },
+    {
+     "level": 3,
+     "label": "معمولاً",
+     "score": 75
+    },
+    {
+     "level": 4,
+     "label": "همیشه / بی‌استثنا",
+     "score": 100
+    }
+   ]
+  },
+  "AGREEMENT": {
+   "label": "میزان هم‌راستایی",
+   "anchors": [
+    {
+     "level": 0,
+     "label": "تضاد کامل",
+     "score": 0
+    },
+    {
+     "level": 1,
+     "label": "هم‌راستایی کم",
+     "score": 25
+    },
+    {
+     "level": 2,
+     "label": "قسمتی مشترک",
+     "score": 50
+    },
+    {
+     "level": 3,
+     "label": "هم‌راستایی روشن",
+     "score": 75
+    },
+    {
+     "level": 4,
+     "label": "پیوستگی کامل استراتژیک",
+     "score": 100
+    }
+   ]
+  },
+  "QUALITY": {
+   "label": "کیفیت مشاهده‌شده",
+   "anchors": [
+    {
+     "level": 0,
+     "label": "بسیار ضعیف",
+     "score": 0
+    },
+    {
+     "level": 1,
+     "label": "ضعیف",
+     "score": 25
+    },
+    {
+     "level": 2,
+     "label": "متوسط",
+     "score": 50
+    },
+    {
+     "level": 3,
+     "label": "خوب",
+     "score": 75
+    },
+    {
+     "level": 4,
+     "label": "عالی",
+     "score": 100
+    }
+   ]
+  },
+  "COVERAGE": {
+   "label": "پوشش خطوط تماس",
+   "anchors": [
+    {
+     "level": 0,
+     "label": "بدون تماس",
+     "score": 0
+    },
+    {
+     "level": 1,
+     "label": "فقط یک نفر (رابطهٔ تک‌رشته‌ای)",
+     "score": 30
+    },
+    {
+     "level": 2,
+     "label": "دو خط تماس",
+     "score": 55
+    },
+    {
+     "level": 3,
+     "label": "سه تا چهار خط تماس",
+     "score": 80
+    },
+    {
+     "level": 4,
+     "label": "پنج خط تماس یا بیشتر، شامل مدیران ارشد",
+     "score": 100
+    }
+   ]
+  },
+  "EXPOSURE": {
+   "label": "میزان مواجهه",
+   "anchors": [
+    {
+     "level": 0,
+     "label": "مواجههٔ تاییدشده / رد نشد",
+     "score": 100
+    },
+    {
+     "level": 1,
+     "label": "نشانهٔ قوی، در حال بررسی",
+     "score": 75
+    },
+    {
+     "level": 2,
+     "label": "پرسش باز / پاسخ داده نشد",
+     "score": 55
+    },
+    {
+     "level": 3,
+     "label": "ریسک جزئی، قابل مدیر",
+     "score": 25
+    },
+    {
+     "level": 4,
+     "label": "پاک — بررسی و مستند شده",
+     "score": 0
+    }
+   ]
+  },
+  "FINANCIAL_ZONE": {
+   "label": "ناحیهٔ سلامت مالی",
+   "anchors": [
+    {
+     "level": 0,
+     "label": "ناحیهٔ خطر (Z″ < ۱٫۱ یا عدم شفافیت مالی)",
+     "score": 0
+    },
+    {
+     "level": 1,
+     "label": "منطقهٔ خاکستری (۱٫۱ تا ۲٫۶)",
+     "score": 40
+    },
+    {
+     "level": 2,
+     "label": "قابل قبول، حاشیهٔ کم",
+     "score": 60
+    },
+    {
+     "level": 3,
+     "label": "سالم (Z″ > ۲٫۶، نقدینگی کافی)",
+     "score": 85
+    },
+    {
+     "level": 4,
+     "label": "بسیار قوی (صورت مالی حسابرسی‌شده، پوشش > ۲)",
+     "score": 100
+    }
+   ]
+  },
+  "DEPENDENCY": {
+   "label": "وابستگی متقابل",
+   "anchors": [
+    {
+     "level": 0,
+     "label": "وابستگی یک‌طرفه و غیرقابل جایگزینی",
+     "score": 100
+    },
+    {
+     "level": 1,
+     "label": "جایگزینی دشوار (بیش از ۶ ماه)",
+     "score": 75
+    },
+    {
+     "level": 2,
+     "label": "جایگزینی متوسط (۳ تا ۶ ماه)",
+     "score": 50
+    },
+    {
+     "level": 3,
+     "label": "جایگزینی آسان (کمتر از ۹۰ روز)",
+     "score": 25
+    },
+    {
+     "level": 4,
+     "label": "کالا/خدمت کاملاً جایگزین‌پذیر",
+     "score": 0
+    }
+   ]
+  }
+ },
+ "familyMeta": {
+  "STRATEGIC": {
+   "name": "اهمیت و هم‌راستایی راهبردی",
+   "nameEn": "Strategic salience & fit",
+   "rationale": "معیارهای انتخاب شریک (Rickards 1986؛ Gulati 1995) و برجستگی ذی‌نفعان (Mitchell 1997؛ Mendelow 1991): قدرت، مشروعیت، فوریت و تناسب راهبردی."
+  },
+  "VALUE": {
+   "name": "ارزش اقتصادی",
+   "nameEn": "Economic value",
+   "rationale": "ارزش فعلی و چرخهٔ عمر رابطه (E&Y/Moody 2002) و معیار هزینه/سود در ادبیات انتخاب تأمین‌کننده (Dickson 1966)."
+  },
+  "CAPABILITY": {
+   "name": "توانمندی عملیاتی",
+   "nameEn": "Operational capability",
+   "rationale": "معیارهای کلاسیک انتخاب تأمین‌کننده: کیفیت، تحویل به‌موقع، ظرفیت، توانمندی فنی، خدمات پس از فروش (Dickson 1966؛ Weber 1996)."
+  },
+  "RELIABILITY": {
+   "name": "قابلیت اتکا و رفتار رابطه‌ای",
+   "nameEn": "Reliability & relational behaviour",
+   "rationale": "اعتماد و تعهد (Morgan & Hunt 1994) و ریشه‌های شکست رابطه: فرصت‌طلبی، بی‌وفایی در تعهد، ناتوانی در مدیریت اختلاف (Anderson & Narasimhan 1996؛ Choi & Lee 2007)."
+  },
+  "ACCESS": {
+   "name": "دسترسی و نفوذ در تصمیم",
+   "nameEn": "Access & decision influence",
+   "rationale": "پوشش چندلایهٔ سازمان مشتری (Fortna et al. 2012؛ Gartner 2021) و قدرت/دسترسی/انگیزهٔ چمپیون (MEDDPICC)."
+  },
+  "FINANCIAL": {
+   "name": "سلامت مالی",
+   "nameEn": "Financial health",
+   "rationale": "مدل Z امتن (1968، 2000)، نسبت‌های نقدینگی/اهرم/پوشش (CFA 2007) و چارچوب ریسک اعتباری بازل (PD/LGD/EAD)."
+  },
+  "RISK": {
+   "name": "ریسک، انطباق و حاکمیت",
+   "nameEn": "Risk, compliance & governance",
+   "rationale": "ارزیابی ریسک طرف حساب: شفافیت مالکیت نهایی، غربالگری تحریم/PEP، رسانهٔ منفی، امنیت داده، ESG و تمرکز وابستگی (رویۀ due diligence شخص ثالث)."
+  },
+  "NETWORK": {
+   "name": "جایگاه در شبکه",
+   "nameEn": "Network position",
+   "rationale": "بینانی/مرکزی Freeman (1977)، سوراخ‌های ساختاری Burt (1992، 2004) و پیوندهای ضعیف Granovetter (1973)."
+  }
+ },
+ "familyWeights": {
+  "ORGANIZATION": {
+   "STRATEGIC": 0.18,
+   "VALUE": 0.16,
+   "CAPABILITY": 0.13,
+   "RELIABILITY": 0.13,
+   "ACCESS": 0.1,
+   "FINANCIAL": 0.16,
+   "RISK": 0.1,
+   "NETWORK": 0.04
+  },
+  "PERSON": {
+   "STRATEGIC": 0.1,
+   "VALUE": 0.06,
+   "CAPABILITY": 0.08,
+   "RELIABILITY": 0.24,
+   "ACCESS": 0.32,
+   "FINANCIAL": 0,
+   "RISK": 0.12,
+   "NETWORK": 0.08
+  },
+  "RELATIONSHIP": {
+   "STRATEGIC": 0.16,
+   "VALUE": 0.14,
+   "CAPABILITY": 0.1,
+   "RELIABILITY": 0.2,
+   "ACCESS": 0.12,
+   "FINANCIAL": 0.06,
+   "RISK": 0.12,
+   "NETWORK": 0.1
+  },
+  "OPPORTUNITY": {
+   "STRATEGIC": 0.12,
+   "VALUE": 0.26,
+   "CAPABILITY": 0.08,
+   "RELIABILITY": 0.12,
+   "ACCESS": 0.24,
+   "FINANCIAL": 0.04,
+   "RISK": 0.1,
+   "NETWORK": 0.04
+  }
+ },
+ "criteria": [
+  {
+   "code": "STRAT_POWER",
+   "family": "STRATEGIC",
+   "name": "جایگاه در دستور کار تصمیم‌سازان",
+   "nameEn": "Salience to decision makers",
+   "why": "برجستگی ذی‌نفع بر پایهٔ قدرت، مشروعیت و فوریت خواسته — تعیین می‌کند حمایت یا مخالفت این طرف حساب واقعاً روی تصمیم اثر دارد یا نه.",
+   "appliesTo": [
+    "ORGANIZATION",
+    "RELATIONSHIP"
+   ],
+   "polarity": "GOOD",
+   "weight": 3,
+   "evidence": "ASSESSED",
+   "scaleId": "AGREEMENT",
+   "halfLifeDays": 365,
+   "intake": {
+    "prompt": "این طرف حساب در دستور کار مدیران ارشد ما کجاست؟",
+    "help": "مثلاً: پروژهٔ مصوب بودجه دارد، در کارت امتیازی مدیران است، یا صرفاً یک تماس معمولی.",
+    "recommended": true,
+    "warnBelow": 25,
+    "warning": "بدون جایگاه تصمیم‌ساز، رابطه حتی اگر خوب باشد سرمایه‌گذاری چندانی نمی‌طلبد."
+   },
+   "sources": [
+    "Mitchell/Agle/Wood 1997 (Academy of Management Review)",
+    "Mendelow 1991 (ECIS)"
+   ]
+  },
+  {
+   "code": "STRAT_FIT",
+   "family": "STRATEGIC",
+   "name": "تناسب راهبردی و تکمیل منابع",
+   "nameEn": "Strategic fit & resource complementarity",
+   "why": "انتخاب شریک بر پایهٔ تناسب هدف و تکمیل‌بودن منابع (نه شباهت‌ها) — پیش‌بین اصلی ماندگاری همکاری.",
+   "appliesTo": [
+    "ORGANIZATION",
+    "RELATIONSHIP"
+   ],
+   "polarity": "GOOD",
+   "weight": 3,
+   "evidence": "ASSESSED",
+   "scaleId": "AGREEMENT",
+   "halfLifeDays": 365,
+   "intake": {
+    "prompt": "همکاری با این سازمان چه خلأ راهبردی ما را پر می‌کند؟",
+    "help": "تکنولوژی، دسترسی به بازار، منبع مالی، اعتبار برند یا ظرفیت تولید.",
+    "recommended": true
+   },
+   "sources": [
+    "Gulati 1995 (Strategic Management Journal)",
+    "Das & Teng 1998 (AMR)"
+   ]
+  },
+  {
+   "code": "STRAT_REPLACEMENT",
+   "family": "STRATEGIC",
+   "name": "دشواری جایگزینی و هزینهٔ خروج",
+   "nameEn": "Replaceability / switching cost",
+   "why": "هرچه جایگزینی سخت‌تر، رابطه راهبردی‌تر و در عین حال وابستگی پرریسک‌تر — مبنای طبقه‌بندی ریسک تأمین.",
+   "appliesTo": [
+    "ORGANIZATION",
+    "RELATIONSHIP"
+   ],
+   "polarity": "GOOD",
+   "weight": 2,
+   "evidence": "ASSESSED",
+   "scaleId": "DEPENDENCY",
+   "anchors": [
+    {
+     "level": 0,
+     "label": "کاملاً جایگزین‌پذیر (بازار آزاد)",
+     "score": 100
+    },
+    {
+     "level": 1,
+     "label": "جایگزینی تا ۹۰ روز ممکن است",
+     "score": 80
+    },
+    {
+     "level": 2,
+     "label": "جایگزینی ۳ تا ۶ ماه",
+     "score": 55
+    },
+    {
+     "level": 3,
+     "label": "جایگزینی بیش از ۶ ماه / دانش ضمنی بالا",
+     "score": 30
+    },
+    {
+     "level": 4,
+     "label": "غیرقابل جایگزینی در افق قابل‌تصور",
+     "score": 10
+    }
+   ],
+   "halfLifeDays": 540,
+   "intake": {
+    "prompt": "اگر این رابطه فردا قطع شود، چند ماه طول می‌کشد جایگزینش کنیم؟",
+    "help": "معیار عملیاتی طبقه‌بندی تأمین‌کننده: «در ۳۰ روز قابل جایگزینی است؟»"
+   },
+   "sources": [
+    "Dickson 1966",
+    "معیارهای ریسک‌تیئر ثالث (2026): replaceability within 30/60 days"
+   ]
+  },
+  {
+   "code": "STRAT_EXEC_SPONSOR",
+   "family": "STRATEGIC",
+   "name": "حمایت مدیران ارشد دوطرفه",
+   "nameEn": "Executive engagement on both sides",
+   "why": "درگیری مدیران ارشد قوی‌ترین پیش‌بین رشد و نگهداشت مشتری است و نبود آن یکی از پرریسک‌ترین نشانه‌ها.",
+   "appliesTo": [
+    "ORGANIZATION",
+    "RELATIONSHIP"
+   ],
+   "polarity": "GOOD",
+   "weight": 2,
+   "evidence": "BOTH",
+   "scaleId": "FREQUENCY",
+   "halfLifeDays": 180,
+   "observedFrom": "meetings+interactions:۹۰ روز اخیر (نقش: مدیر عامل/عضو هیئت‌مدیره)",
+   "intake": {
+    "prompt": "در ۶ ماه گذشته چند نشست مشترک در سطح مدیران ارشد داشته‌ایم؟",
+    "help": "منظور سطح C-level یا عضو هیئت‌مدیره در هر دو طرف.",
+    "recommended": true
+   },
+   "sources": [
+    "Gainsight/Planhat renewal-risk drivers",
+    "ChurnZero executive alignment"
+   ]
+  },
+  {
+   "code": "VALUE_REALISED",
+   "family": "VALUE",
+   "name": "ارزش محقق‌شدهٔ سالانه",
+   "nameEn": "Realised annual value",
+   "why": "گردش/حاشیهٔ واقعی ۱۲ ماه گذشته — مبنای کمّی «ارزش رابطه» در ادبیات ارزش‌گذاری مشتری.",
+   "appliesTo": [
+    "ORGANIZATION",
+    "RELATIONSHIP"
+   ],
+   "polarity": "GOOD",
+   "weight": 3,
+   "evidence": "BOTH",
+   "scaleId": "QUALITY",
+   "anchors": [
+    {
+     "level": 0,
+     "label": "هیچ گردش ثبت‌شده‌ای",
+     "score": 0
+    },
+    {
+     "level": 1,
+     "label": "کمتر از ۱ میلیارد تومان",
+     "score": 30
+    },
+    {
+     "level": 2,
+     "label": "۱ تا ۵ میلیارد",
+     "score": 55
+    },
+    {
+     "level": 3,
+     "label": "۵ تا ۲۵ میلیارد",
+     "score": 80
+    },
+    {
+     "level": 4,
+     "label": "بیش از ۲۵ میلیارد",
+     "score": 100
+    }
+   ],
+   "halfLifeDays": 270,
+   "observedFrom": "opportunities: جمع ارزش فازهای برنده + invoices",
+   "intake": {
+    "prompt": "گردش یا ارزش مالی این رابطه در ۱۲ ماه گذشته چقدر بوده است؟",
+    "help": "اختیاری — اگر عدد دقیق نیست، بازهٔ نزدیک را انتخاب کنید.",
+    "recommended": true
+   },
+   "sources": [
+    "E&Y/Moody’s 2002 (Customer Lifetime Value)",
+    "Vitally: expansion & revenue signals"
+   ]
+  },
+  {
+   "code": "VALUE_PIPELINE",
+   "family": "VALUE",
+   "name": "ارزش فرصت‌های باز",
+   "nameEn": "Open pipeline value",
+   "why": "احتمال × ارزش پایپ‌لاین باز، شاخص پیشرو برای ارزش آینده و توجاه سرمایه‌گذاری روی رابطه.",
+   "appliesTo": [
+    "ORGANIZATION",
+    "RELATIONSHIP",
+    "OPPORTUNITY"
+   ],
+   "polarity": "GOOD",
+   "weight": 2,
+   "evidence": "OBSERVED",
+   "scaleId": "QUALITY",
+   "halfLifeDays": 90,
+   "observedFrom": "opportunities: Σ (amount × stage probability)",
+   "sources": [
+    "Fortna et al. 2012 (high-velocity sales: pipeline quality)"
+   ]
+  },
+  {
+   "code": "VALUE_MARGIN",
+   "family": "VALUE",
+   "name": "کیفیت حاشیه و شرایط قراردادی",
+   "nameEn": "Margin quality & contract terms",
+   "why": "«هزینه» و «شرایط قرارداد» از معیارهای همیشگی انتخاب تأمین‌کننده؛ رابطهٔ پردردست ولی کم‌حاشیه ارزش راهبردی پایینی دارد.",
+   "appliesTo": [
+    "ORGANIZATION",
+    "RELATIONSHIP"
+   ],
+   "polarity": "GOOD",
+   "weight": 2,
+   "evidence": "ASSESSED",
+   "scaleId": "QUALITY",
+   "halfLifeDays": 365,
+   "intake": {
+    "prompt": "حاشیهٔ سود این همکاری را چطور ارزیابی می‌کنید؟",
+    "help": "نسبت به میانگین بخش خودتان قضاوت کنید."
+   },
+   "sources": [
+    "Dickson 1966 (cost, terms)",
+    "Weber 1996 (profitability)"
+   ]
+  },
+  {
+   "code": "VALUE_GROWTH",
+   "family": "VALUE",
+   "name": "پتانسیل رشد (CLV)",
+   "nameEn": "Growth / lifetime potential",
+   "why": "ارزش چرخهٔ عمر، نه فقط گردش امروز؛ ملاک اولویت‌بندی سرمایه‌گذاری روی روابط.",
+   "appliesTo": [
+    "ORGANIZATION",
+    "RELATIONSHIP",
+    "OPPORTUNITY"
+   ],
+   "polarity": "GOOD",
+   "weight": 2,
+   "evidence": "ASSESSED",
+   "scaleId": "QUALITY",
+   "halfLifeDays": 365,
+   "intake": {
+    "prompt": "پتانسیل رشد این رابطه در دو سال آینده چقدر است؟",
+    "help": "مثلاً امکان فروش مکمل، ورود به واحدهای دیگر گروه، یا قرارداد بلندمدت."
+   },
+   "sources": [
+    "E&Y/Moody’s 2002 (CLV)",
+    "Custify: expansion opportunities"
+   ]
+  },
+  {
+   "code": "VALUE_PAYMENT",
+   "family": "VALUE",
+   "name": "خوش‌حسابی و رفتار تسویه",
+   "nameEn": "Payment behaviour",
+   "why": "سرعت تسویه و بدهی معوق، مستقیم‌ترین نشانهٔ ریسک نقدینگی و اعتماد اقتصادی.",
+   "appliesTo": [
+    "ORGANIZATION",
+    "RELATIONSHIP"
+   ],
+   "polarity": "GOOD",
+   "weight": 2,
+   "evidence": "BOTH",
+   "scaleId": "FREQUENCY",
+   "halfLifeDays": 180,
+   "observedFrom": "invoices/commitments: پرداخت به‌موقع ÷ کل تعهدات مالی",
+   "intake": {
+    "prompt": "تعهدات مالی‌شان را معمولاً به‌موقع انجام می‌دهند؟",
+    "help": "مبنای ۱۲ ماه اخیر."
+   },
+   "sources": [
+    "Altman 2000 (default history)",
+    "CFA 2007 (counterparty payment behaviour)"
+   ]
+  },
+  {
+   "code": "CAP_QUALITY_SYSTEM",
+   "family": "CAPABILITY",
+   "name": "نظام کیفیت و استانداردها",
+   "nameEn": "Quality system & certification",
+   "why": "«کیفیت» و «ظرفیت تولید» مهم‌ترین معیارهای انتخاب تأمین‌کننده در ۶۰ سال پژوهش؛ گواهی معتبر مدرک قابل راستی‌آزمایی است.",
+   "appliesTo": [
+    "ORGANIZATION",
+    "RELATIONSHIP"
+   ],
+   "polarity": "GOOD",
+   "weight": 3,
+   "evidence": "ASSESSED",
+   "scaleId": "MATURITY",
+   "halfLifeDays": 540,
+   "gate": {
+    "trigger": "BELOW",
+    "threshold": 25,
+    "cap": 55,
+    "severity": "MEDIUM",
+    "message": "عدم وجود نظام کیفیت قابل استناد: سقف امتیاز ۵۵ است تا یک ممیزی یا نمونه‌کار مستقل اضافه شود."
+   },
+   "intake": {
+    "prompt": "برای کیفیت، استاندارد یا ممیزی مستقل دارند؟",
+    "help": "ISO 9001، بازرسی شخص ثالث، گزارش نمونه‌آزمایی، یا هیچ‌کدام.",
+    "recommended": true
+   },
+   "sources": [
+    "Dickson 1966",
+    "Weber 1996 (quality system, technical capability)"
+   ]
+  },
+  {
+   "code": "CAP_DELIVERY",
+   "family": "CAPABILITY",
+   "name": "نظم تحویل و زمان‌بندی",
+   "nameEn": "Delivery reliability",
+   "why": "دقت در تحویل به‌موقع دومین معیار پرتکرار ادبیات تأمین و در عمل قابل اندازه‌گیری از تاریخ‌های تعهد.",
+   "appliesTo": [
+    "ORGANIZATION",
+    "RELATIONSHIP"
+   ],
+   "polarity": "GOOD",
+   "weight": 3,
+   "evidence": "BOTH",
+   "scaleId": "FREQUENCY",
+   "halfLifeDays": 270,
+   "observedFrom": "commitments: تحویل به‌موقع ÷ تعهدات تحویل",
+   "intake": {
+    "prompt": "در تحویل/اجرای به‌موقع تعهدات چقدر قابل اتکا هستند؟",
+    "help": "از ۱۲ ماه اخیر فکر کنید."
+   },
+   "sources": [
+    "Dickson 1966 (delivery)",
+    "Custify: missed milestones as churn risk"
+   ]
+  },
+  {
+   "code": "CAP_CAPACITY",
+   "family": "CAPABILITY",
+   "name": "ظرفیت و انعطاف",
+   "nameEn": "Capacity & flexibility",
+   "why": "«ظرفیت تولید بالا» و «انعطاف» از معیارهای ثابت انتخاب شریک؛ بدون آن، رشد پایپ‌لاین به شکست عملیاتی تبدیل می‌شود.",
+   "appliesTo": [
+    "ORGANIZATION"
+   ],
+   "polarity": "GOOD",
+   "weight": 2,
+   "evidence": "ASSESSED",
+   "scaleId": "MATURITY",
+   "halfLifeDays": 540,
+   "intake": {
+    "prompt": "اگر حجم کار را ۳۰٪ افزایش دهیم، ظرفیت دارند؟",
+    "help": "نیروی انسانی، تجهیزات، و زمان پاسخ به تغییر تقاضا."
+   },
+   "sources": [
+    "Weber 1996 (capacity, flexibility)",
+    "Gulati 1995 (complementary resources)"
+   ]
+  },
+  {
+   "code": "CAP_TECH",
+   "family": "CAPABILITY",
+   "name": "توانمندی فنی و R&D",
+   "nameEn": "Technical capability & innovation",
+   "why": "توانمندی فنی و بهره‌وری/نوآوری، پیش‌بین استمرار برتری شریک در افق میان‌مدت.",
+   "appliesTo": [
+    "ORGANIZATION",
+    "RELATIONSHIP"
+   ],
+   "polarity": "GOOD",
+   "weight": 2,
+   "evidence": "ASSESSED",
+   "scaleId": "MATURITY",
+   "halfLifeDays": 540,
+   "intake": {
+    "prompt": "سطح توانمندی فنی‌شان نسبت به بازار چطور است؟",
+    "help": "تیم، ابزار، دانش خاص، یا وابستگی به پیمانکاران."
+   },
+   "sources": [
+    "Dickson 1966 (technical capability)",
+    "Gulati 1998 (capability-based alliances)"
+   ]
+  },
+  {
+   "code": "CAP_SERVICE",
+   "family": "CAPABILITY",
+   "name": "پشتیبانی و خدمات پس از تحویل",
+   "nameEn": "Service & support",
+   "why": "«خدمات پس از فروش» از معیارهای کلاسیک؛ در عمل شدت و سرعت پشتیبانی، تجربهٔ کاربر نهایی را می‌سازد.",
+   "appliesTo": [
+    "ORGANIZATION",
+    "RELATIONSHIP"
+   ],
+   "polarity": "GOOD",
+   "weight": 1,
+   "evidence": "BOTH",
+   "scaleId": "QUALITY",
+   "halfLifeDays": 270,
+   "observedFrom": "actions/support tickets: میانگین زمان پاسخ",
+   "intake": {
+    "prompt": "پس از تحویل، پشتیبانی و رفع مشکل چطور است؟",
+    "help": "سرعت پاسخ و کیفیت نتیجه."
+   },
+   "sources": [
+    "Dickson 1966 (warranty & service)",
+    "Custify: support experience (tickets per user)"
+   ]
+  },
+  {
+   "code": "REL_TRUST",
+   "family": "RELIABILITY",
+   "name": "اعتماد و صداقت در گفتار و کردار",
+   "nameEn": "Trust (integrity + benevolence)",
+   "why": "اعتماد هستهٔ مدل تعهد–اعتماد و قوی‌ترین پیش‌بین ادامهٔ رابطه؛ نداشتنش تقریباً همهٔ ارزش اقتصادی را بی‌اثر می‌کند.",
+   "appliesTo": [
+    "ORGANIZATION",
+    "PERSON",
+    "RELATIONSHIP"
+   ],
+   "polarity": "GOOD",
+   "weight": 3,
+   "evidence": "BOTH",
+   "scaleId": "FREQUENCY",
+   "halfLifeDays": 365,
+   "observedFrom": "commitments: نرخ انجام به‌موقع + بازخورد جلسات",
+   "intake": {
+    "prompt": "تا امروز گفته‌شان به عملشان نزدیک بوده؟",
+    "help": "اختیاری — اگر تجربهٔ مستقیم ندارید، این را خالی بگذارید.",
+    "recommended": true
+   },
+   "sources": [
+    "Morgan & Hunt 1994 (trust)",
+    "Li et al. 2026 (trust → commitment)"
+   ]
+  },
+  {
+   "code": "REL_COMMITMENT",
+   "family": "RELIABILITY",
+   "name": "تعهد متقابل به ادامهٔ رابطه",
+   "nameEn": "Mutual commitment",
+   "why": "تعهد، سازۀ میانجی اعتماد تا ماندگاری و همکاری؛ نبودنش رابطه را شکننده و قابل‌خرید رقبا می‌کند.",
+   "appliesTo": [
+    "ORGANIZATION",
+    "RELATIONSHIP"
+   ],
+   "polarity": "GOOD",
+   "weight": 3,
+   "evidence": "BOTH",
+   "scaleId": "FREQUENCY",
+   "halfLifeDays": 270,
+   "observedFrom": "commitments سازۀ رابطه (تعهد دوسویه در ۱۸۰ روز اخیر)",
+   "intake": {
+    "prompt": "آیا آن‌ها هم سرمایه‌گذاری متقابل نشان داده‌اند؟",
+    "help": "مثلاً قرارداد بلندمدت، اختصاص نفر، معرفی فرصت، پیش‌پرداخت."
+   },
+   "sources": [
+    "Morgan & Hunt 1994 (commitment)",
+    "Jones et al. 1997 (commitment–trust theory)"
+   ]
+  },
+  {
+   "code": "REL_OPPORTUNISM",
+   "family": "RELIABILITY",
+   "name": "رفتار فرصت‌طلبانه (بدقولی، تغییر ناگهانی شرایط)",
+   "nameEn": "Opportunism",
+   "why": "شایع‌ترین ریشۀ شکست روابط تجاری: سوءاستفاده از وابستگی، تغییر قیمت در میانهٔ راه، پنهان‌کاری.",
+   "appliesTo": [
+    "ORGANIZATION",
+    "PERSON",
+    "RELATIONSHIP"
+   ],
+   "polarity": "BAD",
+   "weight": 3,
+   "evidence": "ASSESSED",
+   "scaleId": "FREQUENCY",
+   "halfLifeDays": 365,
+   "gate": {
+    "trigger": "ABOVE",
+    "threshold": 70,
+    "cap": 45,
+    "severity": "HIGH",
+    "message": "سابقهٔ رفتار فرصت‌طلبانه: سقف امتیاز ۴۵ و نیازمند ضمانت قراردادی پیش از هر سرمایه‌گذاری."
+   },
+   "intake": {
+    "prompt": "تا حالا در میانۀ همکاری شرایط را یک‌طرفه تغییر داده‌اند؟",
+    "help": "افزایش قیمت، عقب کشیدن تعهد، استفاده از وابستگی ما.",
+    "warnBelow": 0,
+    "warning": "پاسخ «بله» پرچم سرخ محسوب می‌شود و سقف امتیاز را پایین می‌آورد."
+   },
+   "sources": [
+    "Anderson & Narasimhan 1996 (root causes of failure)",
+    "Choi & Lee 2007 (opportunism)"
+   ]
+  },
+  {
+   "code": "REL_INFORMATION_HONESTY",
+   "family": "RELIABILITY",
+   "name": "صداقت در انتقال اطلاعات",
+   "nameEn": "Honest information sharing",
+   "why": "پنهان‌کردن اطلاعات نامطلوب (تأخیر، نقص، مشکل مالی) از ریشه‌های اصلی فروپاشی رابطه است و قابل راستی‌آزمایی با اسناد.",
+   "appliesTo": [
+    "ORGANIZATION",
+    "RELATIONSHIP"
+   ],
+   "polarity": "GOOD",
+   "weight": 2,
+   "evidence": "ASSESSED",
+   "scaleId": "FREQUENCY",
+   "halfLifeDays": 365,
+   "intake": {
+    "prompt": "اطلاعات نامطلوب را خودشان زودتر اعلام می‌کنند؟",
+    "help": "مثلاً تأخیر، نقص کیفیت، مشکل نقدینگی."
+   },
+   "sources": [
+    "Anderson & Narasimhan 1996",
+    "معیار due diligence: «answers must be verifiable, not narrative»"
+   ]
+  },
+  {
+   "code": "REL_CONFLICT",
+   "family": "RELIABILITY",
+   "name": "کیفیت مدیریت اختلاف",
+   "nameEn": "Conflict handling",
+   "why": "نحوۀ برخورد با اختلاف، نه نبودِ اختلاف، تعیین‌کنندۀ بقای رابطه است (مسیرهای voice/loyalty در برابر neglect/exit).",
+   "appliesTo": [
+    "RELATIONSHIP",
+    "PERSON"
+   ],
+   "polarity": "GOOD",
+   "weight": 2,
+   "evidence": "BOTH",
+   "scaleId": "QUALITY",
+   "halfLifeDays": 365,
+   "observedFrom": "actions با تگ اختلاف + یادداشت جلسات",
+   "intake": {
+    "prompt": "آخرین اختلاف را چطور حل کردیم؟",
+    "help": "سریع و سازنده / کش‌دار / بی‌نتیجه / با ضرر."
+   },
+   "sources": [
+    "Rusbult et al. 1998 (exit–voice–loyalty–neglect)",
+    "Choi & Lee 2007"
+   ]
+  },
+  {
+   "code": "REL_ADAPTABILITY",
+   "family": "RELIABILITY",
+   "name": "انعطاف در شرایط غیرمنتظره",
+   "nameEn": "Adaptability",
+   "why": "«عدم تطابق» سومین ریشۀ شکست رابطه؛ انعطاف در تغییر تقاضا و شرایط، ارزش واقعی شریک در بحران است.",
+   "appliesTo": [
+    "ORGANIZATION",
+    "RELATIONSHIP"
+   ],
+   "polarity": "GOOD",
+   "weight": 1,
+   "evidence": "ASSESSED",
+   "scaleId": "FREQUENCY",
+   "halfLifeDays": 365,
+   "intake": {
+    "prompt": "در شرایط اضطراری (تأخیر، تحریم، نوسان بازار) چطور کنار آمدند؟",
+    "help": "اگر تجربه‌ای نیست، خالی بگذارید."
+   },
+   "sources": [
+    "Anderson & Narasimhan 1996 (non-adapted behaviour)",
+    "Weber 1996 (flexibility)"
+   ]
+  },
+  {
+   "code": "ACC_MULTITHREADING",
+   "family": "ACCESS",
+   "name": "پوشش چندلایهٔ سازمان طرف حساب",
+   "nameEn": "Multi-threading breadth",
+   "why": "رابطهٔ تک‌رشته‌ای بزرگ‌ترین ریسک معاملات است؛ سازمان‌های چندلایه به‌طور معناداری بیشتر می‌برند و کمتر می‌بازند.",
+   "appliesTo": [
+    "ORGANIZATION",
+    "RELATIONSHIP",
+    "OPPORTUNITY"
+   ],
+   "polarity": "GOOD",
+   "weight": 3,
+   "evidence": "BOTH",
+   "scaleId": "COVERAGE",
+   "halfLifeDays": 90,
+   "observedFrom": "تعداد افراد منحصربه‌فرد دارای تعامل در ۹۰ روز اخیر + سطوح سازمانی پوشش‌داده‌شده",
+   "sources": [
+    "Fortna et al. 2012 (TSP: 3.4× win rate vs single-threaded)",
+    "Gartner 2021 (10 stakeholders, 6 touchpoints)",
+    "Gong 2025 (2.8× more deal contacts)"
+   ]
+  },
+  {
+   "code": "ACC_DECISION_ACCESS",
+   "family": "ACCESS",
+   "name": "دسترسی به سطح تصمیم‌گیری",
+   "nameEn": "Access to the decision level",
+   "why": "دسترسی واقعی به کسی که امضا می‌کند (نه فقط دروازه‌بان) — بدون آن، فرایند فروش روی شنیده‌ها پیش می‌رود.",
+   "appliesTo": [
+    "ORGANIZATION",
+    "RELATIONSHIP",
+    "OPPORTUNITY"
+   ],
+   "polarity": "GOOD",
+   "weight": 3,
+   "evidence": "BOTH",
+   "scaleId": "FREQUENCY",
+   "halfLifeDays": 120,
+   "observedFrom": "meetings: ۱۸۰ روز اخیر با نقش مدیرعامل/عضو هیئت‌مدیره",
+   "intake": {
+    "prompt": "آیا می‌توانیم مستقیماً با تصمیم‌گیر نهایی صحبت کنیم؟",
+    "help": "بدون واسطه و بدون نیاز به مجوز.",
+    "recommended": true
+   },
+   "sources": [
+    "MEDDPICC (EB access)",
+    "Custify: no executive engagement = renewal risk"
+   ]
+  },
+  {
+   "code": "ACC_CHAMPION_POWER",
+   "family": "ACCESS",
+   "name": "قدرت و انگیزهٔ چمپیون",
+   "nameEn": "Champion power × access × motivation",
+   "why": "چمپیون واقعی سه شرط دارد: قدرت، دسترسی به تصمیم‌گیر، و انگیزهٔ شخصی؛ فقدان هرکدام چمپیون را نمادین می‌کند.",
+   "appliesTo": [
+    "PERSON",
+    "RELATIONSHIP",
+    "OPPORTUNITY"
+   ],
+   "polarity": "GOOD",
+   "weight": 3,
+   "evidence": "ASSESSED",
+   "scaleId": "QUALITY",
+   "anchors": [
+    {
+     "level": 0,
+     "label": "نه قدرت، نه دسترسی، نه انگیزه",
+     "score": 0
+    },
+    {
+     "level": 1,
+     "label": "موافق اما بی‌اثر",
+     "score": 25
+    },
+    {
+     "level": 2,
+     "label": "دو شرط از سه شرط",
+     "score": 60
+    },
+    {
+     "level": 3,
+     "label": "هر سه شرط",
+     "score": 85
+    },
+    {
+     "level": 4,
+     "label": "تصمیم‌گیر مستقیم و حامی فعال",
+     "score": 100
+    }
+   ],
+   "halfLifeDays": 150,
+   "intake": {
+    "prompt": "این فرد قدرت، دسترسی و انگیزهٔ شخصی برای پیش بردن کار ما را دارد؟",
+    "help": "هر سه لازم است؛ اگر فقط «خوب است» ولی اثری روی تصمیم ندارد، چمپیون نیست.",
+    "recommended": true
+   },
+   "sources": [
+    "MEDDPICC (Champion)",
+    "Fortna et al. 2012 (champion with measurable impact)"
+   ]
+  },
+  {
+   "code": "ACC_DECISION_ROLE",
+   "family": "ACCESS",
+   "name": "نقش در ساختار تصمیم خرید",
+   "nameEn": "Role in the buying committee",
+   "why": "طبقه‌بندی نقش‌ها (EB/TB/UB/Coach) و وزن رأی هر نفر — «قدرت تصمیم» یکی از معیارهای همیشگی ارزیابی ذی‌نفع.",
+   "appliesTo": [
+    "PERSON"
+   ],
+   "polarity": "GOOD",
+   "weight": 3,
+   "evidence": "ASSESSED",
+   "scaleId": "QUALITY",
+   "anchors": [
+    {
+     "level": 0,
+     "label": "بی‌نقش / فقط کاربر",
+     "score": 25
+    },
+    {
+     "level": 1,
+     "label": "کاربر نهایی (UB) — اثر توصیه",
+     "score": 50
+    },
+    {
+     "level": 2,
+     "label": "تأییدکنندهٔ فنی/مالی (TB)",
+     "score": 70
+    },
+    {
+     "level": 3,
+     "label": "معرف و جهت‌دهنده (Coach/Champion)",
+     "score": 85
+    },
+    {
+     "level": 4,
+     "label": "تصمیم‌گیر نهایی (EB) با حق امضا",
+     "score": 100
+    }
+   ],
+   "halfLifeDays": 365,
+   "intake": {
+    "prompt": "نقش واقعی این فرد در تصمیم خرید/انتخاب چیست؟",
+    "help": "اگر مطمئن نیستید، «کاربر نهایی» را انتخاب نکنید — خالی بگذارید."
+   },
+   "sources": [
+    "میلرهایم هاين (Miller Heiman) Strategic Selling — EB/TB/UB/Coach",
+    "Mitchell 1997 (power dimension)"
+   ]
+  },
+  {
+   "code": "ACC_RESPONSIVENESS",
+   "family": "ACCESS",
+   "name": "سرعت و کیفیت پاسخ‌گویی",
+   "nameEn": "Responsiveness",
+   "why": "پاسخ‌دهی، شاخص عملی احترام متقابل و سلامت رابطه است و از داده‌های رفتار (نه قضاوت) قابل محاسبه.",
+   "appliesTo": [
+    "PERSON",
+    "ORGANIZATION",
+    "RELATIONSHIP"
+   ],
+   "polarity": "GOOD",
+   "weight": 2,
+   "evidence": "OBSERVED",
+   "scaleId": "QUALITY",
+   "halfLifeDays": 60,
+   "observedFrom": "تعاملات: میانگین زمان پاسخ به پیام/اقدام + نرخ انجام اقدامات مشترک",
+   "sources": [
+    "Custify/Cohere: responsiveness and communication cadence"
+   ]
+  },
+  {
+   "code": "ACC_CONTACT_STABILITY",
+   "family": "ACCESS",
+   "name": "پایداری مخاطب (ریسک جابه‌جایی)",
+   "nameEn": "Contact stability / departure risk",
+   "why": "رفت رفت چمپیون یا مدیر رابطه، شایع‌ترین رویداد از دست رفتن مشتری؛ باید از ابتدا ثبت و پایش شود.",
+   "appliesTo": [
+    "PERSON",
+    "ORGANIZATION"
+   ],
+   "polarity": "BAD",
+   "weight": 2,
+   "evidence": "ASSESSED",
+   "scaleId": "EXPOSURE",
+   "halfLifeDays": 120,
+   "intake": {
+    "prompt": "احتمال جابه‌جایی/استعفای این فرد در ۱۲ ماه آینده چقدر است؟",
+    "help": "نشانه‌ها: تغییر ساختار، نقش جدید، ۱۸ ماه بی‌تغییری در نقش، یا شنیده‌های رسمی."
+   },
+   "sources": [
+    "Gainsight/ChurnZero: champion departure is a top renewal-risk driver",
+    "Custify: changing points of contact"
+   ]
+  },
+  {
+   "code": "FIN_Z_SCORE",
+   "family": "FINANCIAL",
+   "name": "ناحیۀ سلامت مالی (Z″ امتن)",
+   "nameEn": "Financial health zone (Altman Z″)",
+   "why": "طبقه‌بندی کلاسیک ورشکستگی: Z″ بالا = امن، ۱٫۱ تا ۲٫۶ = خاکستری، زیر ۱٫۱ = ناحیۀ خطر.",
+   "appliesTo": [
+    "ORGANIZATION"
+   ],
+   "polarity": "GOOD",
+   "weight": 3,
+   "evidence": "ASSESSED",
+   "scaleId": "FINANCIAL_ZONE",
+   "halfLifeDays": 365,
+   "gate": {
+    "trigger": "BELOW",
+    "threshold": 25,
+    "cap": 40,
+    "severity": "HIGH",
+    "message": "ناحیۀ خطر مالی (Z″ < ۱٫۱ یا صورت‌های مالی نامعتبر): سقف امتیاز ۴۰، نیازمند وثیقه/پیش‌پرداخت."
+   },
+   "intake": {
+    "prompt": "وضعیت مالی‌شان را با کدام نشانه می‌شود توصیف کرد؟",
+    "help": "صورت‌های مالی حسابرسی‌شده، نسبت جاری، یا صرفاً شنیده‌ها."
+   },
+   "sources": [
+    "Altman 1968, 2000 (Z-score)",
+    "Basel IRB (PD)"
+   ]
+  },
+  {
+   "code": "FIN_LIQUIDITY",
+   "family": "FINANCIAL",
+   "name": "نقدینگی جاری",
+   "nameEn": "Liquidity",
+   "why": "نسبت جاری: توان پرداخت بدهی کوتاه‌مدت — معیار اصلی ارزیابی طرف حساب در استاندارد CFA.",
+   "appliesTo": [
+    "ORGANIZATION"
+   ],
+   "polarity": "GOOD",
+   "weight": 2,
+   "evidence": "ASSESSED",
+   "scaleId": "QUALITY",
+   "anchors": [
+    {
+     "level": 0,
+     "label": "کمتر از ۰٫۸ یا نامشخص",
+     "score": 15
+    },
+    {
+     "level": 1,
+     "label": "۰٫۸ تا ۱٫۰",
+     "score": 40
+    },
+    {
+     "level": 2,
+     "label": "۱٫۰ تا ۱٫۵",
+     "score": 65
+    },
+    {
+     "level": 3,
+     "label": "۱٫۵ تا ۲٫۵",
+     "score": 90
+    },
+    {
+     "level": 4,
+     "label": "بیش از ۲٫۵",
+     "score": 100
+    }
+   ],
+   "halfLifeDays": 365,
+   "intake": {
+    "prompt": "نسبت جاری (دارایی جاری ÷ بدهی جاری) حدوداً چقدر است؟",
+    "help": "اگر صورت مالی ندارید، این سؤال را رد کنید."
+   },
+   "sources": [
+    "CFA Investment Analysis Support & Portfolio Management 2007 (Ch. 5)"
+   ]
+  },
+  {
+   "code": "FIN_LEVERAGE",
+   "family": "FINANCIAL",
+   "name": "اهرم مالی و پوشش بدهی",
+   "nameEn": "Leverage & coverage",
+   "why": "بدهی بالا/سود و پوشش پایین بهره، ریسک نکول را در دورهٔ رکود تشدید می‌کند.",
+   "appliesTo": [
+    "ORGANIZATION"
+   ],
+   "polarity": "BAD",
+   "weight": 2,
+   "evidence": "ASSESSED",
+   "scaleId": "QUALITY",
+   "anchors": [
+    {
+     "level": 0,
+     "label": "بدون بدهی / پوشش > ۴",
+     "score": 0
+    },
+    {
+     "level": 1,
+     "label": "بدهی ÷ سود < ۲، پوشش > ۲٫۵",
+     "score": 25
+    },
+    {
+     "level": 2,
+     "label": "بدهی ÷ سود ۲ تا ۴",
+     "score": 50
+    },
+    {
+     "level": 3,
+     "label": "بدهی ÷ سود ۴ تا ۶ یا پوشش ۱ تا ۲",
+     "score": 75
+    },
+    {
+     "level": 4,
+     "label": "بدهی ÷ سود > ۶ یا پوشش < ۱",
+     "score": 100
+    }
+   ],
+   "halfLifeDays": 365,
+   "intake": {
+    "prompt": "بار بدهی‌شان نسبت به سود چقدر است؟",
+    "help": "تخمین «بدهی ÷ سود operate» هم کافی است."
+   },
+   "sources": [
+    "CFA 2007 (leverage, coverage, liquidity)",
+    "Altman 2000"
+   ]
+  },
+  {
+   "code": "FIN_COUNTRY",
+   "family": "FINANCIAL",
+   "name": "ریسک کشور و تحریم/ارز",
+   "nameEn": "Country & currency risk",
+   "why": "ریسک کشور (امتیاز CDS/رتبه) و محدودیت ارزی، ارزش واقعی تعهدات طرف حساب خارجی را تعیین می‌کند.",
+   "appliesTo": [
+    "ORGANIZATION"
+   ],
+   "polarity": "BAD",
+   "weight": 2,
+   "evidence": "ASSESSED",
+   "scaleId": "EXPOSURE",
+   "halfLifeDays": 180,
+   "intake": {
+    "prompt": "ریسک کشور/تحریم/انتقال ارز برای آن‌ها چقدر است؟",
+    "help": "اگر داخل ایران کار می‌کنید، معمولاً «پاک» است مگرنه محدودیت ارزی داشته باشند."
+   },
+   "sources": [
+    "Damodaran country-risk (CDS spread based)",
+    "Altman Hot’fi 2005 (country-risk rating)"
+   ]
+  },
+  {
+   "code": "RISK_SANCTIONS_PEP",
+   "family": "RISK",
+   "name": "غربالگری تحریم، PEP و رسانهٔ منفی",
+   "nameEn": "Sanctions / PEP / adverse-media screening",
+   "why": "غربالگری، دروازۀ ورود هر طرف حساب است؛ تطابق با فهرست تحریم یا PEP یعنی توقیف، جریمه و ریسک کیفری.",
+   "appliesTo": [
+    "ORGANIZATION",
+    "PERSON"
+   ],
+   "polarity": "BAD",
+   "weight": 3,
+   "evidence": "ASSESSED",
+   "scaleId": "EXPOSURE",
+   "halfLifeDays": 90,
+   "gate": {
+    "trigger": "ABOVE",
+    "threshold": 50,
+    "cap": 20,
+    "severity": "CRITICAL",
+    "message": "مواجهۀ تحریم/PEP/رسانۀ منفی تأییدنشده: سقف امتیاز ۲۰ و توقف هر اقدام معاملاتی تا جمع‌بندی واحد انطباق."
+   },
+   "intake": {
+    "prompt": "آیا در فهرست‌های تحریم، PEP یا رسانهٔ منفی بررسی شده‌اند؟",
+    "help": "پاسخ باید مستند باشد (تاریخ و منبع غربالگری). نبود غربالگری، خودش یک پرچم است.",
+    "recommended": true
+   },
+   "sources": [
+    "OFAC/UN/EU consolidated lists (عملکرد ارزیابی شخص ثالث)",
+    "AML/CFT onboarding practice"
+   ]
+  },
+  {
+   "code": "RISK_UBO",
+   "family": "RISK",
+   "name": "شفافیت مالکیت نهایی (UBO)",
+   "nameEn": "Beneficial-ownership transparency",
+   "why": "ساختار مالکیت مبهم و ذی‌نفع واقعی پنهان، پرچم اصلی پولشویی و دور زدن تحریم است.",
+   "appliesTo": [
+    "ORGANIZATION"
+   ],
+   "polarity": "BAD",
+   "weight": 2,
+   "evidence": "ASSESSED",
+   "scaleId": "MATURITY",
+   "anchors": [
+    {
+     "level": 0,
+     "label": "مالکیت نامشخص / لایه‌های بیگانه",
+     "score": 100
+    },
+    {
+     "level": 1,
+     "label": "اطلاعات ناقص، بدون راستی‌آزمایی",
+     "score": 75
+    },
+    {
+     "level": 2,
+     "label": "مشخص اما بدون سند رسمی",
+     "score": 45
+    },
+    {
+     "level": 3,
+     "label": "مطابق اسناد ثبتی تأیید شده",
+     "score": 15
+    },
+    {
+     "level": 4,
+     "label": "UBO تا شخص حقیقی نهایی شفاف و مستند",
+     "score": 0
+    }
+   ],
+   "halfLifeDays": 540,
+   "intake": {
+    "prompt": "مالک نهایی و ساختار سهام‌داری‌شان شفاف و مستند است؟",
+    "help": "افشای ذی‌نفع واقعی؛ «نمی‌دانم» هم اطلاعات می‌دهد."
+   },
+   "sources": [
+    "FinCEN CDD beneficial-ownership rule",
+    "عملکرد DDQ شخص ثالث (UBO verification)"
+   ]
+  },
+  {
+   "code": "RISK_LEGAL",
+   "family": "RISK",
+   "name": "سابقۀ دعوای حقوقی و جریمۀ نظارتی",
+   "nameEn": "Litigation & regulatory findings",
+   "why": "دعوای مکرر یا جریمۀ رگولاتوری، الگوی رفتار و ریسک توقف عملیات را نشان می‌دهد.",
+   "appliesTo": [
+    "ORGANIZATION",
+    "PERSON"
+   ],
+   "polarity": "BAD",
+   "weight": 2,
+   "evidence": "ASSESSED",
+   "scaleId": "EXPOSURE",
+   "halfLifeDays": 365,
+   "intake": {
+    "prompt": "پروندۀ باز حقوقی، ورشکستگی یا جریمۀ سازمانی دارند؟",
+    "help": "با ذکر منبع (دادگاه، نهاد ناظر، رسانه)."
+   },
+   "sources": [
+    "vendor due diligence: legal & regulatory compliance domain"
+   ]
+  },
+  {
+   "code": "RISK_DATA_SECURITY",
+   "family": "RISK",
+   "name": "امنیت داده و حریم خصوصی",
+   "nameEn": "Data security & privacy posture",
+   "why": "هرچه طرف حساب به داده/سیستم ما بیشتر دسترسی دارد، ریسک نشتی بزرگ‌تر است؛ ISO 27001/SOC 2 مدرک اصلی است.",
+   "appliesTo": [
+    "ORGANIZATION",
+    "RELATIONSHIP"
+   ],
+   "polarity": "BAD",
+   "weight": 2,
+   "evidence": "ASSESSED",
+   "scaleId": "MATURITY",
+   "anchors": [
+    {
+     "level": 0,
+     "label": "بدون سیاست امنیتی",
+     "score": 100
+    },
+    {
+     "level": 1,
+     "label": "ادعا بدون مدرک",
+     "score": 70
+    },
+    {
+     "level": 2,
+     "label": "سیاست مکتوب، بدون ممیزی",
+     "score": 45
+    },
+    {
+     "level": 3,
+     "label": "SOC 2/ISO 27001 معتبر",
+     "score": 20
+    },
+    {
+     "level": 4,
+     "label": "گواهی + تست نفوذ اخیر + قرارداد DPA",
+     "score": 0
+    }
+   ],
+   "halfLifeDays": 365,
+   "intake": {
+    "prompt": "برای داده و امنیت ما چه مدرکی دارند؟",
+    "help": "ISO 27001، SOC 2، قرارداد محرمانگی، گزارش تست نفوذ."
+   },
+   "sources": [
+    "Weber 1996 (privacy/data)",
+    "ISO/IEC 27001",
+    "عملکرد tiering بر اساس داده‌ای که مخاطب لمس می‌کند"
+   ]
+  },
+  {
+   "code": "RISK_ESG",
+   "family": "RISK",
+   "name": "حاکمیت، کار و محیط‌زیست (ESG)",
+   "nameEn": "ESG & governance",
+   "why": "ارزیابی ESG ریسک شهرت و تعطیلی را پیش می‌گیرد؛ ایدئولوژیک نیست: کار اجباری، ایمنی، و فساد مستقیم ارزِ رابطه را تهدید می‌کند.",
+   "appliesTo": [
+    "ORGANIZATION"
+   ],
+   "polarity": "BAD",
+   "weight": 1,
+   "evidence": "ASSESSED",
+   "scaleId": "MATURITY",
+   "halfLifeDays": 540,
+   "intake": {
+    "prompt": "گزارش یا گواهی ESG/مسئولیت اجتماعی دارند؟",
+    "help": "ISO 14001، ISO 45001، SA8000، گزارش پایداری، یا خط مشی ضدفساد."
+   },
+   "sources": [
+    "ISO 14001/45001/SA8000",
+    "UNGP/OECD due-diligence guidance"
+   ]
+  },
+  {
+   "code": "RISK_CONCENTRATION",
+   "family": "RISK",
+   "name": "تمرکز وابستگی (یک‌نقطه‌ای بودن)",
+   "nameEn": "Dependency concentration",
+   "why": "اگر یک تأمین‌کننده/مشتری بخش بزرگی از درآمد یا عملیات ما را بگیرد، تمرکز خودش ریسک ساختاری است.",
+   "appliesTo": [
+    "ORGANIZATION",
+    "RELATIONSHIP"
+   ],
+   "polarity": "BAD",
+   "weight": 2,
+   "evidence": "BOTH",
+   "scaleId": "DEPENDENCY",
+   "halfLifeDays": 270,
+   "observedFrom": "سهم این رابطه از کل گردش/تعهدات سازمان (حداکثر وابستگی دوطرفه)",
+   "intake": {
+    "prompt": "این همکاری چند درصد از درآمد/عملیات یک طرف را می‌گیرد؟",
+    "help": "هرچه نزدیک‌تر به ۱۰۰٪، ریسک تمرکز بیشتر."
+   },
+   "sources": [
+    "Basel concentration risk",
+    "Porter 1980 (bargaining power)"
+   ]
+  },
+  {
+   "code": "RISK_CONFLICT_OF_INTEREST",
+   "family": "RISK",
+   "name": "تعارض منافع و وابستگی‌های پنهان",
+   "nameEn": "Conflict of interest",
+   "why": "خویشاوندی با تصمیم‌ساز، سهم در رقیب، یا نقش دولتی — اگر فاش نشود، هم ریسک انطباق و هم ریسک مذاکره است.",
+   "appliesTo": [
+    "PERSON",
+    "ORGANIZATION"
+   ],
+   "polarity": "BAD",
+   "weight": 2,
+   "evidence": "ASSESSED",
+   "scaleId": "EXPOSURE",
+   "halfLifeDays": 365,
+   "intake": {
+    "prompt": "تعارض منافع (نزدیکی به رقیب، سهم‌داری، نقش دولتی) وجود دارد؟",
+    "help": "افشای این مورد، نه وجودش، نشانهٔ سلامت رابطه است."
+   },
+   "sources": [
+    "AML/KYC PEP & related-party screening"
+   ]
+  },
+  {
+   "code": "NET_PATH_STRENGTH",
+   "family": "NETWORK",
+   "name": "قدرت مسیر تا هدف",
+   "nameEn": "Path strength to target",
+   "why": "اعتبار مسیر معرفی‌شده (محصول قدرت یال‌ها) تعیین می‌کند یک تماس غیرمستقیم چقدر وزن دارد.",
+   "appliesTo": [
+    "ORGANIZATION",
+    "PERSON",
+    "RELATIONSHIP",
+    "OPPORTUNITY"
+   ],
+   "polarity": "GOOD",
+   "weight": 2,
+   "evidence": "OBSERVED",
+   "scaleId": "QUALITY",
+   "halfLifeDays": 120,
+   "observedFrom": "network.path: قدرت مسیر محاسبه‌شده (0–100)",
+   "sources": [
+    "Burt 1992 (secondary/indirect access to structural holes)"
+   ]
+  },
+  {
+   "code": "NET_BRIDGE",
+   "family": "NETWORK",
+   "name": "نقش پل و واسطه‌گری",
+   "nameEn": "Brokerage / betweenness",
+   "why": "کسی که میان خوشه‌های جدا پل می‌زند، اطلاعات و منابع جدید می‌آورد؛ جایگاه واسطه با عملکرد بهتر همبسته است.",
+   "appliesTo": [
+    "PERSON",
+    "ORGANIZATION"
+   ],
+   "polarity": "GOOD",
+   "weight": 2,
+   "evidence": "OBSERVED",
+   "scaleId": "QUALITY",
+   "halfLifeDays": 180,
+   "observedFrom": "network.metrics: betweenness/brokerage و پل‌های بین‌سازمانی",
+   "sources": [
+    "Burt 2004 (AJS: structural holes and good ideas)",
+    "Freeman 1977 (betweenness)",
+    "Valente & Fujimoto 2010 / Everett & Borgatti 2016 (brokerage)"
+   ]
+  },
+  {
+   "code": "NET_NON_REDUNDANCY",
+   "family": "NETWORK",
+   "name": "تنوع و غیرحاشیه‌ای بودن پیوندها",
+   "nameEn": "Non-redundant ties (low constraint)",
+   "why": "پیوندهای همپوشان و تکراری (constraint بالا) دسترسی جدید نمی‌آورد؛ تنوع خوشه‌ها ارزش شبکه را می‌سازد.",
+   "appliesTo": [
+    "ORGANIZATION",
+    "PERSON"
+   ],
+   "polarity": "GOOD",
+   "weight": 2,
+   "evidence": "OBSERVED",
+   "scaleId": "QUALITY",
+   "halfLifeDays": 180,
+   "observedFrom": "network.metrics: تعداد نوع رابطه + تعداد خوشه‌های متمایز (constraint)",
+   "sources": [
+    "Burt 1992 (network constraint)",
+    "Granovetter 1973"
+   ]
+  },
+  {
+   "code": "NET_TIE_STRENGTH",
+   "family": "NETWORK",
+   "name": "قدرت پیوند (تازگی و بسامد تماس)",
+   "nameEn": "Tie strength (frequency + recency)",
+   "why": "قدرت پیوند در ادبیات شبکه با بسامد تماس، مدت رابطه و شدت متقابل سنجیده می‌شود؛ پیوند خفته دیگر منبع اطلاعات نیست.",
+   "appliesTo": [
+    "RELATIONSHIP",
+    "PERSON"
+   ],
+   "polarity": "GOOD",
+   "weight": 3,
+   "evidence": "OBSERVED",
+   "scaleId": "FREQUENCY",
+   "halfLifeDays": 90,
+   "observedFrom": "interactions ۱۸۰ روزه + فاصله تا آخرین تعامل (decay)",
+   "sources": [
+    "Granovetter 1973 (time spent + intensity + reciprocity)",
+    "Newman 2003 (tie strength)"
+   ]
+  },
+  {
+   "code": "NET_SINGLE_POINT",
+   "family": "NETWORK",
+   "name": "آسیب‌پذیری نقطۀ تک‌روی (نقطۀ شکست)",
+   "nameEn": "Single point of failure in network",
+   "why": "اگر حذف یک فرد/سازمان شبکه را به اجزای جدا تقسیم کند، کل دسترسی به آن حوزه در معرض یک تصمیم است.",
+   "appliesTo": [
+    "PERSON",
+    "ORGANIZATION",
+    "RELATIONSHIP"
+   ],
+   "polarity": "BAD",
+   "weight": 2,
+   "evidence": "OBSERVED",
+   "scaleId": "QUALITY",
+   "halfLifeDays": 120,
+   "observedFrom": "network.articulation: حذف گره → تعداد اجزای جدید",
+   "sources": [
+    "Burt 1992 (shuttle diplomacy / third-party dependency)",
+    "Bottleneck & cut-vertex analysis"
+   ]
+  },
+  {
+   "code": "OPP_COMMITTEE_COVERAGE",
+   "family": "ACCESS",
+   "name": "پوشش کمیتهٔ خرید در این فرصت",
+   "nameEn": "Buying-committee coverage",
+   "why": "پوشش نداشتن افراد کلیدی (تأمین، امنیت، مالی، حقوقی) شایع‌ترین علت شکست ناگهانی معامله است.",
+   "appliesTo": [
+    "OPPORTUNITY"
+   ],
+   "polarity": "GOOD",
+   "weight": 2,
+   "evidence": "BOTH",
+   "scaleId": "COVERAGE",
+   "halfLifeDays": 60,
+   "observedFrom": "meeting participants × required roles (procurement/security/legal/finance)",
+   "intake": {
+    "prompt": "چه نقش‌های کلیدی در این معامله هنوز پوشش داده نشده‌اند؟",
+    "help": "تأمین، امنیت، مالی، حقوقی، کاربر نهایی."
+   },
+   "sources": [
+    "Gartner 2021 (6–10 stakeholders)",
+    "MEDDPICC (Paper Process)"
+   ]
+  },
+  {
+   "code": "OPP_PAPER_PROCESS",
+   "family": "RISK",
+   "name": "مسیر قرارداد و خرید شفاف است؟",
+   "nameEn": "Paper process / procurement path",
+   "why": "نبود فرایند خرید مشخص (RFP، ممیزی امنیتی، قرارداد) یعنی تاریخ بسته‌شدن معامله حدس است.",
+   "appliesTo": [
+    "OPPORTUNITY"
+   ],
+   "polarity": "GOOD",
+   "weight": 2,
+   "evidence": "ASSESSED",
+   "scaleId": "MATURITY",
+   "halfLifeDays": 90,
+   "intake": {
+    "prompt": "مسیر رسمی تصمیم و قرارداد مشخص شده؟",
+    "help": "کی تایید می‌کند، چه اسنادی لازم است، مهلت‌ها چیست."
+   },
+   "sources": [
+    "MEDDPICC (Paper Process)",
+    "Dickson 1966 (contract terms)"
+   ]
+  },
+  {
+   "code": "OPP_BUSINESS_CASE",
+   "family": "VALUE",
+   "name": "توجیه اقتصادی برای طرف حساب",
+   "nameEn": "Business case / identified pain",
+   "why": "مشکل روشن + ارزش قابل‌محاسبه، پایهٔ بودجه است؛ بدون آن «علاقه» به «بودجه» تبدیل نمی‌شود.",
+   "appliesTo": [
+    "OPPORTUNITY",
+    "RELATIONSHIP"
+   ],
+   "polarity": "GOOD",
+   "weight": 3,
+   "evidence": "ASSESSED",
+   "scaleId": "QUALITY",
+   "halfLifeDays": 90,
+   "intake": {
+    "prompt": "آیا عدد مشخصی برای منفعتمان ثبت شده؟",
+    "help": "مثلاً صرفه‌جویی سالانه، درآمد افزوده، کاهش ریسک قابل‌سنجش."
+   },
+   "sources": [
+    "MEDDIC (Metrics)",
+    "Fortna et al. 2012 (identified pain)"
+   ]
+  },
+  {
+   "code": "OPP_ACTIVITY_MOMENTUM",
+   "family": "ACCESS",
+   "name": "شتاب فعالیت‌های مشترک",
+   "nameEn": "Joint activity momentum",
+   "why": "نرخ تبدیل فعالیت به پیشرفت فاز (activity→activity و activity→pipeline) پیش‌بین کوتاه‌مدت برد است.",
+   "appliesTo": [
+    "OPPORTUNITY",
+    "RELATIONSHIP"
+   ],
+   "polarity": "GOOD",
+   "weight": 2,
+   "evidence": "OBSERVED",
+   "scaleId": "FREQUENCY",
+   "halfLifeDays": 45,
+   "observedFrom": "interactions/meetings ۳۰ روز اخیر + تغییر فاز فرصت",
+   "sources": [
+    "Gainsight: activity→activity & activity→pipeline conversion"
+   ]
+  },
+  {
+   "code": "OPP_ADVOCACY",
+   "family": "RELIABILITY",
+   "name": "مدافع فعال در داخل سازمان",
+   "nameEn": "Internal advocacy / sentiment",
+   "why": "نه رضایت مودبانه، بلکه آمادۀ دفاع در جلسهٔ داخلی بودن؛ شاخص احساسی و نه «امتیاز NPS».",
+   "appliesTo": [
+    "OPPORTUNITY",
+    "PERSON"
+   ],
+   "polarity": "GOOD",
+   "weight": 2,
+   "evidence": "BOTH",
+   "scaleId": "FREQUENCY",
+   "halfLifeDays": 90,
+   "observedFrom": "لحن تعاملات + اقدامات معرفی/توصیه",
+   "intake": {
+    "prompt": "آیا این فرد بدون حضور ما از کار ما دفاع می‌کند؟",
+    "help": "اگر پاسخ «نیست/نیست» باشد، هنوز چمپیون نداریم."
+   },
+   "sources": [
+    "Gainsight: sentiment > NPS",
+    "MEDDPICC (Champion)"
+   ]
+  }
+ ]
+};
 const crypto = {
   randomUUID: () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => '0123456789abcdef'[Math.floor(Math.random() * 16)]),
   randomBytes: () => ({ toString: (enc) => (enc === 'hex' ? 'ab'.repeat(16) : '') }),
@@ -546,13 +2245,346 @@ function hashPassword(pw, salt) { return 'h$' + salt + '$' + String(pw); }
 function verifyPassword(pw, salt, hash) { return hashPassword(pw, salt) === hash; }
 function saveDb() {}
 
+/* ─────────────────────────────  معیارهای ارزیابی (آینۀ کاتالوگ API) ─────────────────────────────
+   کاتالوگ معیارها در `scripts/criteria-data.json` نگهداری می‌شود که با
+   `node scripts/sync-criteria-catalog.mjs` از `apps/api/src/criteria/criteria.catalog.ts`
+   تولید می‌شود؛ در نسخۀ Service Worker همان داده از `globalThis.__SRIP_CRITERIA_DATA__`
+   تزریق می‌شود (make-demo-sw.mjs). قواعد محاسبه آینهٔ `criteria.engine.ts` است:
+   فقط معیارهای پاسخ‌داده‌شده در امتیاز می‌آیند، پوشش/اطمینان گزارش می‌شود،
+   و معیارهای دروازه‌ای سقف امتیاز می‌گذارند. */
+let CRITERIA_DATA = null;
+function criteriaData() {
+  if (CRITERIA_DATA) return CRITERIA_DATA;
+  const attempts = () => {
+    const files = ['scripts/criteria-data.json', 'apps/web-ux/scripts/criteria-data.json'];
+    try { files.push(path.join(__dirname, 'criteria-data.json')); } catch {}
+    for (const f of files) { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch {} }
+    return null;
+  };
+  const loaded = attempts();
+  CRITERIA_DATA = loaded ?? globalThis.__SRIP_CRITERIA_DATA__ ?? { scales: {}, familyMeta: {}, familyWeights: {}, criteria: [] };
+  return CRITERIA_DATA;
+}
+const CRITERIA_VERSION = 'criteria-v1';
+const METHOD_QUALITY = { DOCUMENT: 100, VERIFIED: 90, OWNER_ASSESSED: 70, SELF_REPORTED: 55, INFERRED: 40 };
+const METHOD_LABELS = { DOCUMENT: 'مدرک/سند', VERIFIED: 'راستی‌آزمایی مستقل', OWNER_ASSESSED: 'ارزیابی مدیر رابطه', SELF_REPORTED: 'خوداظهادی مخاطب', INFERRED: 'استنتاج از رفتار' };
+const pct = (v) => Math.max(0, Math.min(100, Math.round(Number.isFinite(+v) ? +v : 0)));
+const criteriaScale = (c) => c.anchors ?? (criteriaData().scales[c.scaleId] || { anchors: [] }).anchors;
+const criteriaForSubject = (subject) => criteriaData().criteria.filter((c) => (c.appliesTo || []).includes(subject));
+const criterionByCode = (code) => criteriaData().criteria.find((c) => c.code === code);
+const decayOf = (ageDays, halfLife) => {
+  if (ageDays == null) return 0.85;
+  const r = ageDays / Math.max(30, halfLife || 365);
+  return Math.max(0.35, Math.min(1, 1 - 0.3 * Math.min(1, r) - 0.25 * Math.max(0, Math.min(1, r / 2))));
+};
+const observedConfidence = (evidence) => (evidence > 0 ? pct(28 + 62 * (1 - Math.exp(-evidence / 6))) : 15);
+const coverageValue = (contacts, senior) => (contacts <= 0 ? 0 : contacts === 1 ? (senior ? 45 : 30) : contacts === 2 ? 55 : contacts <= 4 ? 80 : 100);
+const logScale = (amount) => pct(Math.log10(Math.max(1, amount)) * 20);
+
+const assessmentStore = () => { if (!DB.assessments) DB.assessments = {}; return DB.assessments; };
+const assessmentKey = (subjectType, subjectId) => `${subjectType}:${subjectId}`;
+function storedAnswers(subjectType, subjectId) {
+  const bucket = assessmentStore()[assessmentKey(subjectType, subjectId)] || {};
+  return Object.entries(bucket).map(([criterionCode, a]) => ({ criterionCode, ...a }));
+}
+function saveStoredAnswers(subjectType, subjectId, list) {
+  const store = assessmentStore();
+  const key = assessmentKey(subjectType, subjectId);
+  const bucket = store[key] ?? (store[key] = {});
+  for (const a of list) {
+    if (a.level == null && a.value == null) { delete bucket[a.criterionCode]; continue; }
+    bucket[a.criterionCode] = {
+      level: a.level ?? null, value: a.value ?? null, note: a.note ?? null, evidence: a.evidence ?? null,
+      method: a.method ?? 'OWNER_ASSESSED', answeredAt: a.answeredAt ?? new Date().toISOString(),
+    };
+  }
+  saveDb();
+  return Object.keys(bucket).length;
+}
+
+/* سیگنال‌های مشاهده‌شده از داده‌های رفتاری دمو — آینهٔ CriteriaService.observedSignals */
+function criteriaObserved(subjectType, subjectId) {
+  const out = {};
+  const now = Date.now();
+  const age = (iso) => (iso ? Math.max(0, (now - new Date(iso).getTime()) / 86400000) : 365);
+  const put = (code, value, evidence, label) => { if (evidence > 0) out[code] = { value: pct(value), evidence, label }; };
+  const seniorTitles = /مدیر\s*عامل|مدیرعامل|ceo|chief|عضو\s*هیئت\s*مدیره|مدیر\s*ارشد|رئیس|director|president/i;
+  const meetingHasSenior = (m) => (Array.isArray(m?.participants) ? m.participants : []).some((pp) => {
+    const person = PEOPLE.find((x) => x.id === (pp?.personId ?? pp?.id ?? pp));
+    return seniorTitles.test(String(person?.title ?? ''));
+  });
+
+  if (subjectType === 'RELATIONSHIP') {
+    const rel = RELS.find((r) => r.id === subjectId);
+    if (!rel) return out;
+    const its = INTERACTIONS.filter((x) => x.relationshipId === subjectId);
+    const its180 = its.filter((x) => age(x.occurredAt) <= 180);
+    const its90 = its.filter((x) => age(x.occurredAt) <= 90);
+    const contacts = new Set(its90.map((x) => x.personId).filter(Boolean)).size;
+    const mts180 = MEETINGS.filter((m) => m.relationshipId === subjectId && age(m.startAt) <= 180);
+    const senior = mts180.filter(meetingHasSenior).length;
+    const cm = COMMITMENTS.filter((c) => c.relationshipId === subjectId);
+    const done = cm.filter((c) => c.status === 'FULFILLED').length;
+    const opps = OPPORTUNITIES.filter((o) => o.relationshipId === subjectId);
+    const value = opps.reduce((sum, o) => sum + Number(o.value ?? 0), 0);
+    const weighted = opps.reduce((sum, o) => sum + Number(o.value ?? 0) * (Number(o.probability ?? 0) / 100), 0);
+    const latest = its.map((x) => x.occurredAt).sort().slice(-1)[0];
+    const daysSince = latest ? age(latest) : 365;
+    const withOutcome = its180.filter((x) => x.outcome).length;
+    const kinds = new Set(its180.map((x) => x.type)).size;
+    const parallel = RELS.filter((r) => r.id !== subjectId && ((r.sourceOrganizationId === rel.sourceOrganizationId && r.targetOrganizationId === rel.targetOrganizationId) || (r.sourceOrganizationId === rel.targetOrganizationId && r.targetOrganizationId === rel.sourceOrganizationId))).length;
+    const orgValue = OPPORTUNITIES.filter((o) => o.organizationId === rel.sourceOrganizationId).reduce((sum, o) => sum + Number(o.value ?? 0), 0);
+    put('ACC_MULTITHREADING', coverageValue(contacts, senior > 0), Math.max(contacts, its90.length), `${contacts} خط تماس فعال در ۹۰ روز`);
+    put('NET_TIE_STRENGTH', pct(its180.length * 4 + mts180.length * 8) * 0.6 + pct(100 - daysSince * 1.1) * 0.4, its180.length + mts180.length, `آخرین تعامل ${Math.round(daysSince)} روز پیش`);
+    if (cm.length) put('CAP_DELIVERY', (done / cm.length) * 100, cm.length, `${done} از ${cm.length} تعهد انجام شده`);
+    if (its180.length) put('ACC_RESPONSIVENESS', (withOutcome / its180.length) * 100, its180.length, `${withOutcome} از ${its180.length} تعامل با نتیجه`);
+    if (value > 0) put('VALUE_REALISED', logScale(value), opps.length, `گردش ثبت‌شده ${value.toLocaleString('fa-IR')}`);
+    put('VALUE_PIPELINE', logScale(weighted), opps.length, 'ارزش وزنی پایپ‌لاین');
+    put('ACC_DECISION_ACCESS', senior > 0 ? Math.min(100, 60 + senior * 10) : mts180.length ? 35 : 20, senior + mts180.length, senior ? `${senior} نشست با مدیران ارشد` : 'بدون نشست با سطح تصمیم');
+    put('STRAT_EXEC_SPONSOR', senior > 0 ? Math.min(100, 55 + senior * 12) : 15, senior + mts180.length, 'درگیری مدیران ارشد در ۱۸۰ روز');
+    put('NET_NON_REDUNDANCY', (kinds / 5) * 60 + (Math.min(contacts, 5) / 5) * 40, kinds + contacts, `${kinds} نوع تعامل با ${contacts} نفر`);
+    put('NET_BRIDGE', Math.min(100, 20 + contacts * 12 + (senior ? 20 : 0)), Math.max(contacts, 1), 'پل میان واحدهای طرف حساب');
+    put('NET_SINGLE_POINT', parallel === 0 && contacts <= 1 ? 100 : parallel === 0 ? 70 : Math.max(0, 35 - parallel * 8), parallel + 1, parallel === 0 ? 'تنها مسیر دسترسی به این سازمان' : `${parallel} رابطهٔ موازی`);
+    const share = orgValue > 0 ? value / orgValue : parallel === 0 ? 0.85 : 0.2;
+    put('RISK_CONCENTRATION', share * 100, parallel + 1, `سهم ${Math.round(share * 100)}٪ از گردش ثبت‌شده`);
+    return out;
+  }
+
+  if (subjectType === 'ORGANIZATION') {
+    const rels = RELS.filter((r) => r.sourceOrganizationId === subjectId || r.targetOrganizationId === subjectId);
+    const its = INTERACTIONS.filter((x) => x.organizationId === subjectId && age(x.occurredAt) <= 180);
+    const its90 = its.filter((x) => age(x.occurredAt) <= 90);
+    const contacts = new Set(its90.map((x) => x.personId).filter(Boolean)).size;
+    const people = PEOPLE.filter((x) => x.organizationId === subjectId).length;
+    const mts = MEETINGS.filter((m) => m.organizationId === subjectId && age(m.startAt) <= 180);
+    const senior = mts.filter(meetingHasSenior).length;
+    const opps = OPPORTUNITIES.filter((o) => o.organizationId === subjectId);
+    const value = opps.reduce((sum, o) => sum + Number(o.value ?? 0), 0);
+    const weighted = opps.reduce((sum, o) => sum + Number(o.value ?? 0) * (Number(o.probability ?? 0) / 100), 0);
+    const cm = COMMITMENTS.filter((c) => c.organizationId === subjectId);
+    const done = cm.filter((c) => c.status === 'FULFILLED').length;
+    const avg = (key) => {
+      const values = rels.map((r) => r[key]).filter((v) => v != null && Number.isFinite(Number(v))).map(Number);
+      if (!values.length) return null; // فیلد ثبت‌نشده با صفر یکی نیست
+      return values.reduce((sum, v) => sum + v, 0) / values.length;
+    };
+    put('ACC_MULTITHREADING', coverageValue(contacts, senior > 0), Math.max(contacts, its90.length), `${contacts} مخاطب فعال در ۹۰ روز`);
+    if (value > 0) put('VALUE_REALISED', logScale(value), opps.length, `گردش ثبت‌شده ${value.toLocaleString('fa-IR')}`);
+    put('VALUE_PIPELINE', logScale(weighted), opps.length, 'ارزش وزنی فرصت‌ها');
+    if (cm.length) put('CAP_DELIVERY', (done / cm.length) * 100, cm.length, `${done} از ${cm.length} تعهد انجام شده`);
+    put('STRAT_EXEC_SPONSOR', senior > 0 ? Math.min(100, 55 + senior * 10) : 15, senior + mts.length, `${senior} نشست با مدیران ارشد`);
+    put('NET_BRIDGE', Math.min(100, rels.length * 12 + contacts * 4), rels.length, `${rels.length} رابطهٔ ثبت‌شده`);
+    put('NET_TIE_STRENGTH', its.length * 2 + mts.length * 3, its.length + mts.length, `${its.length} تعامل در ۱۸۰ روز`);
+    put('NET_NON_REDUNDANCY', Math.min(100, rels.length * 10 + people * 2), rels.length + people, `${rels.length} رابطه با ${people} نفر`);
+    put('NET_SINGLE_POINT', rels.length <= 1 ? 85 : Math.max(0, 60 - rels.length * 8), Math.max(1, rels.length), rels.length <= 1 ? 'تنها یک رابطهٔ ثبت‌شده' : `${rels.length} رابطه`);
+    const trust = avg('trustScore');
+    if (trust != null && trust > 0) put('REL_TRUST', trust, rels.length, 'میانگین اعتماد روابط');
+    const risk = avg('riskScore');
+    if (risk != null && risk > 0) put('RISK_CONCENTRATION', risk, rels.length, 'میانگین ریسک روابط');
+    return out;
+  }
+
+  if (subjectType === 'PERSON') {
+    const person = PEOPLE.find((x) => x.id === subjectId);
+    if (!person) return out;
+    const its = INTERACTIONS.filter((x) => x.personId === subjectId);
+    const its180 = its.filter((x) => age(x.occurredAt) <= 180);
+    const its90 = its.filter((x) => age(x.occurredAt) <= 90);
+    const withOutcome = its180.filter((x) => x.outcome).length;
+    const mts = MEETINGS.filter((m) => (m.participants ?? []).some((pp) => (pp.personId ?? pp.id) === subjectId) && age(m.startAt) <= 180);
+    const colleagues = new Set(INTERACTIONS.filter((x) => x.organizationId === person.organizationId && age(x.occurredAt) <= 90).map((x) => x.personId).filter(Boolean)).size;
+    const senior = /مدیر\s*عامل|مدیرعامل|ceo|chief|عضو\s*هیئت|رئیس|director|president/i.test(String(person.title ?? ''));
+    const latest = its.map((x) => x.occurredAt).sort().slice(-1)[0];
+    const daysSince = latest ? age(latest) : 365;
+    put('ACC_RESPONSIVENESS', its180.length ? (withOutcome / its180.length) * 100 : 0, its180.length, `${withOutcome} از ${its180.length} تعامل با نتیجه`);
+    put('NET_TIE_STRENGTH', pct(its180.length * 4 + mts.length * 6) * 0.6 + pct(100 - daysSince * 1.1) * 0.4, its180.length + mts.length, `آخرین تماس ${Math.round(daysSince)} روز پیش`);
+    put('ACC_MULTITHREADING', coverageValue(colleagues, senior), colleagues, `${colleagues} خط تماس در سازمان او`);
+    put('ACC_DECISION_ACCESS', senior ? 85 : its90.length ? 50 : 25, Math.max(1, its90.length + mts.length), senior ? 'سمت ارشد' : 'بدون نشانهٔ سطح تصمیم');
+    put('NET_SINGLE_POINT', its90.length === 0 ? 70 : 20, Math.max(1, its.length), 'جایگاه تنها در مسیر دسترسی');
+    if (Number(person.influenceScore ?? 0) > 0) put('STRAT_POWER', Number(person.influenceScore), Math.max(1, its.length), 'شاخص نفوذ ثبت‌شده');
+    return out;
+  }
+
+  return out;
+}
+
+const normalizeCriteriaAnswers = (raw) => {
+  const list = Array.isArray(raw) ? raw : raw && typeof raw === 'object' ? Object.entries(raw).map(([criterionCode, v]) => (typeof v === 'object' ? { criterionCode, ...v } : { criterionCode, value: v })) : [];
+  const out = [];
+  for (const item of list) {
+    const code = String(item?.criterionCode ?? item?.code ?? '').toUpperCase();
+    if (!code || !criterionByCode(code)) continue;
+    const level = item.level == null || item.level === '' ? null : Number(item.level);
+    const value = item.value == null || item.value === '' ? null : Number(item.value);
+    out.push({ criterionCode: code, level: Number.isFinite(level) ? level : null, value: Number.isFinite(value) ? value : null, note: item.note ?? null, evidence: item.evidence ?? null, method: item.method ?? 'OWNER_ASSESSED', answeredAt: item.answeredAt ?? new Date().toISOString() });
+  }
+  return out;
+};
+
+/** like the API: an answer may only reference a criterion defined for that subject type */
+const criteriaScopeError = (subjectType, rows) => {
+  const bad = rows.filter((r) => {
+    const c = criterionByCode(r.criterionCode);
+    return c && Array.isArray(c.appliesTo) && !c.appliesTo.includes(subjectType);
+  });
+  return bad.length ? `معیار «${bad.map((r) => r.criterionCode).join('، ')}» برای ${subjectType} تعریف نشده است.` : null;
+};
+
+function computeCriteria(subjectType, subjectId, options = {}) {
+  const data = criteriaData();
+  const universe = criteriaForSubject(subjectType);
+  const answers = options.answers ?? storedAnswers(subjectType, subjectId);
+  const observed = options.observed ?? criteriaObserved(subjectType, subjectId);
+  const byCode = new Map(answers.filter((a) => a.level != null || a.value != null).map((a) => [a.criterionCode, a]));
+  const weights = { ...(data.familyWeights[subjectType] || {}) };
+  const totalWeight = Object.values(weights).reduce((sum, v) => sum + v, 0) || 1;
+  const lines = [];
+  const families = [];
+  const flags = [];
+  const unknown = [];
+  const reviewDue = [];
+  let answeredCount = 0;
+  for (const family of Object.keys(data.familyMeta)) {
+    const list = universe.filter((c) => c.family === family);
+    if (!list.length) continue;
+    const famTotalWeight = list.reduce((sum, c) => sum + c.weight, 0) || 1;
+    let scoreSum = 0, weightSum = 0, confSum = 0, knownWeight = 0;
+    const famLines = [];
+    for (const c of list) {
+      const a = byCode.get(c.code);
+      const sig = observed[c.code];
+      let assessed = null, aConf = 0;
+      if (a) {
+        answeredCount += 1;
+        assessed = a.value != null ? pct(a.value) : (criteriaScale(c).find((x) => x.level === Number(a.level)) || {}).score ?? null;
+        if (assessed != null) {
+          const ageDays = a.answeredAt ? Math.floor((Date.now() - new Date(a.answeredAt).getTime()) / 86400000) : null;
+          const quality = METHOD_QUALITY[a.method ?? 'OWNER_ASSESSED'] ?? 60;
+          const bonus = (a.evidence && String(a.evidence).length > 8 ? 10 : 0) + (a.note && String(a.note).length > 12 ? 4 : 0);
+          aConf = pct((quality + bonus) * decayOf(ageDays, c.halfLifeDays));
+        }
+      }
+      const oVal = sig && Number.isFinite(sig.value) ? pct(sig.value) : null;
+      const oConf = oVal != null ? observedConfidence(sig.evidence) : 0;
+      let value = null, status = 'UNKNOWN', confidence = 0;
+      if (assessed != null && oVal != null) { value = Math.round((assessed * aConf + oVal * oConf) / Math.max(1, aConf + oConf)); confidence = pct(100 - ((100 - aConf) * (100 - oConf)) / 100); status = 'BLENDED'; }
+      else if (assessed != null) { value = assessed; confidence = aConf; status = 'ASSESSED'; }
+      else if (oVal != null) { value = oVal; confidence = oConf; status = 'OBSERVED'; }
+      const ageDays = a?.answeredAt ? Math.floor((Date.now() - new Date(a.answeredAt).getTime()) / 86400000) : null;
+      const weightPct = Math.round((c.weight / famTotalWeight) * ((weights[family] ?? 0) / totalWeight) * 10000) / 100;
+      const gateActive = c.gate && value != null && (c.gate.trigger === 'ABOVE' ? value >= c.gate.threshold : value <= c.gate.threshold);
+      const line = {
+        code: c.code, family, familyName: data.familyMeta[family].name, name: c.name, nameEn: c.nameEn, why: c.why,
+        polarity: c.polarity, weight: c.weight, weightPct, value, displayValue: value, confidence, status,
+        needsReview: value != null && (confidence < 40 || (ageDays != null && ageDays > c.halfLifeDays * 2)),
+        answerAgeDays: ageDays, reliabilityDecay: Math.round(decayOf(ageDays, c.halfLifeDays) * 100) / 100,
+        note: a?.note ?? null, evidence: a?.evidence ?? null, sources: c.sources,
+        anchors: criteriaScale(c), intake: c.intake ? { prompt: c.intake.prompt, help: c.intake.help, recommended: !!c.intake.recommended } : null,
+        observed: sig ? { value: pct(sig.value), evidence: sig.evidence, label: sig.label } : null,
+        assessed: a && assessed != null ? { value: assessed, level: Number(a.level ?? 0), method: a.method ?? 'OWNER_ASSESSED', methodLabel: METHOD_LABELS[a.method ?? 'OWNER_ASSESSED'], confidence: aConf } : null,
+        gate: c.gate ? { severity: c.gate.severity, message: c.gate.message, cap: c.gate.cap, active: !!gateActive } : null,
+        actionHint: value == null
+          ? (c.evidence === 'OBSERVED' ? 'با ثبت تعامل/جلسه/تعهد واقعی این معیار خودکار پر می‌شود.' : c.intake ? `پاسخ به این پرسش کافی است: «${c.intake.prompt}»` : 'یک ارزیابی مستند ثبت کنید.')
+          : (c.polarity === 'GOOD' ? value < 45 : value > 55) ? 'شواهد این معیار را ضعیف می‌کند؛ یک اقدام اصلاحی با مهلت تعریف کنید.' : 'وضعیت مطلوب است؛ در بازبینی بعدی تمدید شود.',
+      };
+      famLines.push(line);
+      if (value == null) { unknown.push({ code: c.code, name: c.name, family, weightPct, prompt: c.intake?.prompt, help: c.intake?.help }); continue; }
+      scoreSum += value * c.weight; weightSum += c.weight; knownWeight += c.weight; confSum += confidence * c.weight;
+      if (gateActive) flags.push({ code: `GATE_${c.code}`, severity: c.gate.severity, message: c.gate.message, criterionCode: c.code });
+      if (c.intake?.warnBelow != null && c.intake.warning && value <= c.intake.warnBelow) flags.push({ code: `WARN_${c.code}`, severity: 'MEDIUM', message: c.intake.warning, criterionCode: c.code });
+      if (line.needsReview) reviewDue.push({ code: c.code, name: c.name, reason: confidence < 40 ? 'اطمینان کمتر از ۴۰' : 'پاسخ کهنه (بیش از دو نیمه‌عمر)' });
+    }
+    families.push({
+      family, name: data.familyMeta[family].name, nameEn: data.familyMeta[family].nameEn, rationale: data.familyMeta[family].rationale,
+      modelWeight: weights[family] ?? 0, weightPct: Math.round(((weights[family] ?? 0) / totalWeight) * 1000) / 10,
+      score: weightSum > 0 ? Math.round(scoreSum / weightSum) : null,
+      confidence: knownWeight > 0 ? Math.round(confSum / knownWeight) : 0,
+      coveragePct: knownWeight > 0 ? Math.round((knownWeight / famTotalWeight) * 100) : 0,
+      known: famLines.filter((l) => l.value != null).length, total: famLines.length, lines: famLines,
+    });
+    lines.push(...famLines);
+  }
+  let num = 0, den = 0, confNum = 0, familyCredit = 0;
+  for (const f of families) {
+    if (f.score == null || !f.modelWeight) continue;
+    num += f.score * f.modelWeight; den += f.modelWeight; confNum += f.confidence * f.modelWeight;
+  }
+  for (const f of families) { if (!f.modelWeight) continue; familyCredit += f.modelWeight * (f.coveragePct / 100); }
+  const rawScore = den > 0 ? Math.round(num / den) : 0;
+  const knownWeightRatio = Math.min(1, familyCredit / totalWeight);
+  const coverage = Math.round(knownWeightRatio * 100);
+  const baseConfidence = den > 0 ? Math.round(confNum / den) : 0;
+  const confidence = Math.round(baseConfidence * (0.55 + 0.45 * knownWeightRatio));
+  const uncertainty = Math.round((1 - knownWeightRatio) * 28 + (100 - baseConfidence) / 12);
+  const gateCaps = flags.filter((f) => f.code.startsWith('GATE_')).map((f) => criterionByCode(f.criterionCode.replace('GATE_', ''))?.gate?.cap).filter((v) => v != null);
+  const gateCap = gateCaps.length ? Math.min(...gateCaps) : null;
+  const score = gateCap == null ? rawScore : Math.min(rawScore, gateCap);
+  const critical = flags.some((f) => f.severity === 'CRITICAL');
+  const rankable = coverage >= (options.minCoverage ?? 40) && confidence >= 35 && !critical;
+  const verdict = critical ? { verdictLabel: 'پرچم بحرانی', verdict: 'CRITICAL', verdictHint: 'یک دروازۀ ریسک فعال است؛ تا جمع‌شدن این مورد امتیاز اعتبار عملیاتی ندارد.' }
+    : coverage < 25 ? { verdictLabel: 'داده کافی نیست', verdict: 'INSUFFICIENT_DATA', verdictHint: 'تصویر هنوز ساخته نشده؛ این عدد را مبنای تصمیم نگذارید.' }
+    : confidence < 40 ? { verdictLabel: 'پیش‌نویس ارزیابی', verdict: 'PRELIMINARY', verdictHint: 'شواهد کم یا کهنه است؛ با چند پاسخ مستند امتیاز جابه‌جا می‌شود.' }
+    : score < 40 ? { verdictLabel: 'ضعیف', verdict: 'AT_RISK', verdictHint: 'شواهد کافی، وضعیت نامطلوب — نیازمند اقدام.' }
+    : score >= 75 && confidence >= 65 ? { verdictLabel: 'قوی', verdict: 'STRONG', verdictHint: 'شواهد کافی و باکیفیت.' }
+    : { verdictLabel: 'قابل اتکا', verdict: 'SOLID', verdictHint: 'امتیاز بر پایهٔ شواهد کافی محاسبه شده است.' };
+  const behavioral = subjectType === 'RELATIONSHIP'
+    ? INTERACTIONS.filter((x) => x.relationshipId === subjectId).length + MEETINGS.filter((m) => m.relationshipId === subjectId).length * 2 + COMMITMENTS.filter((c) => c.relationshipId === subjectId).length + OPPORTUNITIES.filter((o) => o.relationshipId === subjectId).length
+    : answeredCount * 0;
+  const evidenceShare = behavioral / (behavioral + 6);
+  const hints = [];
+  if (coverage < 40) {
+    const heavy = unknown.filter((u) => u.weightPct >= 1.5).sort((a, b) => b.weightPct - a.weightPct).slice(0, 4);
+    if (heavy.length) hints.push(`برای عبور از آستانۀ رتبه‌بندی (${options.minCoverage ?? 40}٪) این ${heavy.length} معیار پرتأثیر را پاسخ دهید: ${heavy.map((u) => u.name).join('، ')}.`);
+  }
+  const weakest = lines.filter((l) => l.value != null && (l.polarity === 'GOOD' ? l.value < 45 : l.value > 55)).sort((a, b) => b.weightPct - a.weightPct).slice(0, 3).map((l) => l.name);
+  if (weakest.length) hints.push(`ضعیف‌ترین نقاط: ${weakest.join('، ')}.`);
+  if (flags.length) hints.push(`${flags.length} پرچم ثبت شده است؛ ابتدا موارد بحرانی/بالا.`);
+  return {
+    subjectType, subjectId, score, rawScore, uncertainty, rangeLow: Math.max(0, score - uncertainty), rangeHigh: Math.min(100, score + uncertainty),
+    coverage, confidence, rankingScore: rankable ? Math.round(score * (0.7 + 0.3 * (confidence / 100))) : score, rankable, gateCap,
+    ...verdict, families: families.filter((f) => f.modelWeight > 0), criteria: lines,
+    knownCriteria: lines.filter((l) => l.value != null).length, totalCriteria: lines.length, unknown, flags, reviewDue,
+    answeredCount, blend: { behavioralEvidence: behavioral, observedShare: Math.round(evidenceShare * 100), coldStart: behavioral === 0 && coverage < 25 },
+    criteriaVersion: CRITERIA_VERSION, computedAt: new Date().toISOString(), hints,
+  };
+}
+function criteriaSummaryLite(a) {
+  if (!a) return null;
+  return {
+    score: a.score, rawScore: a.rawScore, coverage: a.coverage, confidence: a.confidence, uncertainty: a.uncertainty,
+    rangeLow: a.rangeLow, rangeHigh: a.rangeHigh, rankable: a.rankable, rankingScore: a.rankingScore, gateCap: a.gateCap,
+    verdict: a.verdict, verdictLabel: a.verdictLabel, known: a.knownCriteria, total: a.totalCriteria,
+    flags: a.flags.map((f) => ({ code: f.code, severity: f.severity, criterionCode: f.criterionCode })),
+    families: a.families.map((f) => ({ family: f.family, name: f.name, score: f.score, weightPct: f.weightPct, coveragePct: f.coveragePct })),
+    version: a.criteriaVersion, computedAt: a.computedAt,
+  };
+}
+const attachCriteria = (subjectType, rows) => rows.map((row) => {
+  const id = String(row?.id ?? '');
+  if (!id) return row;
+  try { return { ...row, criteria: criteriaSummaryLite(computeCriteria(subjectType, id)) }; } catch { return { ...row, criteria: null }; }
+});
+function seedCriteriaAssessments() {
+  // ارزیابی‌های اولیهٔ نمونه‌ها (۱۲ روز پیش) تا دمو با پوشش واقعی شروع شود
+  const answeredAt = new Date(Date.now() - 12 * 86400000).toISOString();
+  const A = (level, extra = {}) => ({ level, answeredAt, method: 'OWNER_ASSESSED', ...extra });
+  return {
+    'ORGANIZATION:org-3': { STRAT_POWER: A(3), STRAT_FIT: A(2), VALUE_REALISED: A(4, { evidence: 'صورت وضعیت حسابرسی‌شده ۱۴۰۴', method: 'DOCUMENT' }), VALUE_GROWTH: A(3), CAP_QUALITY_SYSTEM: A(3), CAP_DELIVERY: A(3), REL_TRUST: A(3), REL_COMMITMENT: A(2), ACC_DECISION_ACCESS: A(3), FIN_Z_SCORE: A(3, { evidence: 'Z″≈۲٫۹ بر پایه صورت‌های مالی' }), FIN_LIQUIDITY: A(3), RISK_LEGAL: A(0), RISK_UBO: A(3) },
+    'ORGANIZATION:org-6': { STRAT_POWER: A(1), STRAT_FIT: A(1), CAP_QUALITY_SYSTEM: A(0, { note: 'بدون ISO 9001؛ فقط بازرسی داخلی' }), CAP_DELIVERY: A(1), REL_TRUST: A(1), REL_OPPORTUNISM: A(3, { note: 'دو بار افزایش نرخ در میانهٔ قرارداد' }), VALUE_PAYMENT: A(1), FIN_Z_SCORE: A(0, { evidence: 'نسبت جاری ۰٫۷' }), RISK_CONCENTRATION: A(1) },
+    'RELATIONSHIP:r-1': { STRAT_FIT: A(3), REL_TRUST: A(3), REL_COMMITMENT: A(3), ACC_MULTITHREADING: A(3), VALUE_GROWTH: A(3), CAP_SERVICE: A(3), RISK_LEGAL: A(0) },
+    'RELATIONSHIP:r-4': { STRAT_FIT: A(1), REL_TRUST: A(1), REL_OPPORTUNISM: A(3, { note: 'تغییر یک‌طرفه نرخ در میانهٔ دوره' }), CAP_DELIVERY: A(1), CAP_CAPACITY: A(1), REL_INFORMATION_HONESTY: A(1), RISK_CONCENTRATION: A(1) },
+    'PERSON:p-2': { ACC_CHAMPION_POWER: A(3), ACC_DECISION_ROLE: A(2), REL_TRUST: A(3), ACC_CONTACT_STABILITY: A(3, { note: 'تغییر ساختار در تدارکات' }) },
+  };
+}
+
+
 let DB = null;
 function loadDb() {
   if (!DB) {
     DB = { version: 2, users: {}, orgs: ORGS, people: PEOPLE, rels: RELS, meetings: MEETINGS,
       actions: ACTIONS, commitments: COMMITMENTS, projects: PROJECTS, projectExtra: PROJECT_EXTRA,
       opportunities: OPPORTUNITIES, interactions: INTERACTIONS, notifications: NOTIFICATIONS,
-      recs: RECS, aiUsage: AI_USAGE, personOrgs: PERSON_ORGS, audit: [], revokedJtis: [], nextId: 1 };
+      recs: RECS, aiUsage: AI_USAGE, personOrgs: PERSON_ORGS, audit: [], revokedJtis: [], nextId: 1, assessments: seedCriteriaAssessments() };
   }
   // seed identities with real scrypt hashes (kept on disk afterwards)
   for (const [email, u] of Object.entries(SEED_USERS)) {
@@ -2091,21 +4123,27 @@ async function __handler(req, res) {
   }
 
   /* --------------------------- organizations --------------------------- */
-  if(is('/organizations') && method==='GET') return json(res,200,scopedOrgs(req).map(o=>({...o,owner:{name:'کاربر دمو'},_count:orgCounts(o)})));
+  if(is('/organizations') && method==='GET') return json(res,200,attachCriteria('ORGANIZATION',scopedOrgs(req).map(o=>({...o,owner:{name:'کاربر دمو'},_count:orgCounts(o)}))));
   if(is('/organizations') && method==='POST'){
     const b=await readBody(req);
     if(!b.name||b.name.trim().length<2) return json(res,400,{message:'نام سازمان حداقل ۲ نویسه باید باشد.'});
+    const intake = normalizeCriteriaAnswers(b.criteriaAnswers ?? b.assessment);
+    const intakeScope = criteriaScopeError('ORGANIZATION', intake);
+    if (intakeScope) return json(res,400,{message:intakeScope});
     const o={id:`org-${Date.now()}`,name:b.name,type:b.type??'OTHER',industry:b.industry??null,country:b.country??null,parentOrganizationId:b.parentOrganizationId??null,createdAt:nowIso()};
     ORGS.push(o);
-    audit(req,'CREATE','organization',o.id,'OK',{name:o.name});
-    return json(res,201,{...o,owner:{name:'کاربر دمو'},_count:orgCounts(o)});
+    // دمو: سازندهٔ سازمان آن را در محدودهٔ دید خود می‌گیرد تا ارزیابی اولیه بلافاصله ممکن باشد
+    if (authUser && !authUser.isOwner && Array.isArray(authUser.accessibleOrganizationIds) && !authUser.accessibleOrganizationIds.includes(o.id)) authUser.accessibleOrganizationIds.push(o.id);
+    if (intake.length) saveStoredAnswers('ORGANIZATION', o.id, intake);
+    audit(req,'CREATE','organization',o.id,'OK',{name:o.name,criteriaAnswers:intake.length});
+    return json(res,201,attachCriteria('ORGANIZATION',[{...o,owner:{name:'کاربر دمو'},_count:orgCounts(o)}])[0]);
   }
   const orgId=match('/organizations/:id');
   if(orgId&&method==='GET'){
     const o=ORGS.find(x=>x.id===orgId[0]);
     if(!o) return json(res,404,{message:'سازمان یافت نشد'});
     if(!inScope(req,o.id)) return json(res,403,{message:'دسترسی به این سازمان مجاز نیست.'});
-    return json(res,200,{...o,owner:{name:'کاربر دمو'},_count:orgCounts(o)});
+    return json(res,200,attachCriteria('ORGANIZATION',[{...o,owner:{name:'کاربر دمو'},_count:orgCounts(o)}])[0]);
   }
   const orgTimeline=match('/organizations/:id/timeline');
   if(orgTimeline&&method==='GET'){
@@ -2126,14 +4164,14 @@ async function __handler(req, res) {
     let list=scopedPeople(req);
     const orgParam=q.get('organizationId');
     if(orgParam) list=list.filter(p=>p.organizationId===orgParam);
-    return json(res,200,list.map(p=>({...p,organization:orgById(p.organizationId)?{id:p.organizationId,name:orgById(p.organizationId).name}:null})));
+    return json(res,200,attachCriteria('PERSON',list.map(p=>({...p,organization:orgById(p.organizationId)?{id:p.organizationId,name:orgById(p.organizationId).name}:null}))));
   }
   const personId=match('/people/:id');
   if(personId&&method==='GET'){
     const p=PEOPLE.find(x=>x.id===personId[0]);
     if(!p) return json(res,404,{message:'شخص یافت نشد'});
     if(!inScope(req,p.organizationId)) return json(res,403,{message:'دسترسی به این شخص مجاز نیست.'});
-    return json(res,200,{...p,organization:orgById(p.organizationId)?{id:p.organizationId,name:orgById(p.organizationId).name}:null});
+    return json(res,200,attachCriteria('PERSON',[{...p,organization:orgById(p.organizationId)?{id:p.organizationId,name:orgById(p.organizationId).name}:null}])[0]);
   }
   const personOrgs=match('/people/:id/organizations');
   if(personOrgs&&method==='GET'){
@@ -2208,23 +4246,27 @@ async function __handler(req, res) {
     let list=scopedRels(req);
     const orgParam=q.get('organizationId');
     if(orgParam) list=list.filter(r=>r.sourceOrganizationId===orgParam||r.targetOrganizationId===orgParam);
-    return json(res,200,list.map(r=>({...relWithOrgs(r), riskDrivers:riskDrivers(req,r)})));
+    return json(res,200,attachCriteria('RELATIONSHIP',list.map(r=>({...relWithOrgs(r), riskDrivers:riskDrivers(req,r)}))));
   }
   if(is('/relationships')&&method==='POST'){
     const b=await readBody(req);
     if(!b.sourceOrganizationId||!b.targetOrganizationId) return json(res,400,{message:'سازمان مبدأ و مقصد لازم است.'});
     if(!inScope(req,b.sourceOrganizationId)||!inScope(req,b.targetOrganizationId)) return json(res,403,{message:'یکی از سازمان‌ها خارج از محدوده است.'});
-    const r={id:`r-${Date.now()}`,relationshipType:b.relationshipType??'OTHER',status:b.status??'ACTIVE',healthScore:b.healthScore??60,riskScore:b.riskScore??30,strategicScore:b.strategicScore??50,influenceScore:b.influenceScore??50,opportunityScore:b.opportunityScore??50,resilienceScore:b.resilienceScore??50,nextActionAt:null,lastInteractionAt:nowIso(),sourceOrganizationId:b.sourceOrganizationId,targetOrganizationId:b.targetOrganizationId};
+    const relIntake=normalizeCriteriaAnswers(b.criteriaAnswers??b.assessment);
+    const relIntakeScope=criteriaScopeError('RELATIONSHIP',relIntake);
+    if(relIntakeScope) return json(res,400,{message:relIntakeScope});
+        const r={id:`r-${Date.now()}`,relationshipType:b.relationshipType??'OTHER',status:b.status??'ACTIVE',healthScore:b.healthScore??60,riskScore:b.riskScore??30,strategicScore:b.strategicScore??50,influenceScore:b.influenceScore??50,opportunityScore:b.opportunityScore??50,resilienceScore:b.resilienceScore??50,nextActionAt:null,lastInteractionAt:nowIso(),sourceOrganizationId:b.sourceOrganizationId,targetOrganizationId:b.targetOrganizationId};
     RELS.push(r); saveDb();
-    audit(req,'CREATE','relationship',r.id,'OK',{source:r.sourceOrganizationId,target:r.targetOrganizationId});
-    return json(res,201,relWithOrgs(r));
+    if(relIntake.length) saveStoredAnswers('RELATIONSHIP',r.id,relIntake);
+    audit(req,'CREATE','relationship',r.id,'OK',{source:r.sourceOrganizationId,target:r.targetOrganizationId,answers:relIntake.length});
+    return json(res,201,attachCriteria('RELATIONSHIP',[relWithOrgs(r)])[0]);
   }
   const relId=match('/relationships/:id');
   if(relId&&method==='GET'){
     const r=RELS.find(x=>x.id===relId[0]);
     if(!r) return json(res,404,{message:'رابطه یافت نشد'});
     if(!inScope(req,r.sourceOrganizationId)||!inScope(req,r.targetOrganizationId)) return json(res,403,{message:'دسترسی مجاز نیست.'});
-    return json(res,200,{...relWithOrgs(r), riskDrivers:riskDrivers(req,r)});
+    return json(res,200,attachCriteria('RELATIONSHIP',[{...relWithOrgs(r), riskDrivers:riskDrivers(req,r)}])[0]);
   }
   const relTimeline=match('/relationships/:id/timeline');
   if(relTimeline&&method==='GET'){
@@ -2922,10 +4964,14 @@ async function __handler(req, res) {
     const b=await readBody(req);
     if(!b.firstName?.trim()||!b.lastName?.trim()) return json(res,400,{message:'نام و نام خانوادگی لازم است.'});
     if(!b.organizationId||!inScope(req,b.organizationId)) return json(res,403,{message:'سازمان انتخاب‌شده در محدودهٔ دسترسی شما نیست.'});
+    const personIntake=normalizeCriteriaAnswers(b.criteriaAnswers??b.assessment);
+    const personIntakeScope=criteriaScopeError('PERSON',personIntake);
+    if(personIntakeScope) return json(res,400,{message:personIntakeScope});
     const p={id:`p-${Date.now()}`,firstName:b.firstName,lastName:b.lastName,email:b.email??null,phone:b.phone??null,title:b.title??null,department:b.department??null,organizationId:b.organizationId,status:'ACTIVE',influenceScore:b.influenceScore??60,decisionPower:b.decisionPower??50,accessibilityScore:b.accessibilityScore??60,country:b.country??'ایران'};
     PEOPLE.push(p);
-    audit(req,'CREATE','person',p.id,'OK',{name:`${p.firstName} ${p.lastName}`});
-    return json(res,201,{...p,organization:orgById(p.organizationId)?{id:p.organizationId,name:orgById(p.organizationId).name}:null});
+    if(personIntake.length) saveStoredAnswers('PERSON',p.id,personIntake);
+    audit(req,'CREATE','person',p.id,'OK',{name:`${p.firstName} ${p.lastName}`,answers:personIntake.length});
+    return json(res,201,attachCriteria('PERSON',[{...p,organization:orgById(p.organizationId)?{id:p.organizationId,name:orgById(p.organizationId).name}:null}])[0]);
   }
 
   /* ---- commitments CRUD ---- */
@@ -4887,6 +6933,107 @@ async function __handler(req, res) {
     writeExportLog(req,kind,format,rows,approval.id,sc.orgId);
     res.writeHead(200,{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':`attachment; filename="srip-${kind}.csv"`});
     return res.end(body);
+  }
+
+
+  /* ───────────────────────────  معیارها و ارزیابی  ─────────────────────────── */
+  if(is('/criteria')&&method==='GET'){
+    const data=criteriaData();
+    const subject=q.get('subjectType');
+    const list=subject?criteriaForSubject(String(subject).toUpperCase()):data.criteria;
+    return json(res,200,{
+      version:CRITERIA_VERSION,
+      families:Object.entries(data.familyMeta).map(([key,m])=>({key,...m,criteria:list.filter(c=>c.family===key).map(c=>c.code)})),
+      scales:Object.fromEntries(Object.entries(data.scales).map(([k,v])=>[k,{label:v.label,anchors:v.anchors}])),
+      criteria:list.map(c=>({...c,anchors:c.anchors??data.scales[c.scaleId]?.anchors??[],familyName:data.familyMeta[c.family]?.name??c.family})),
+      methodLabels:METHOD_LABELS,
+    });
+  }
+  {
+    const qMatch=match('/criteria/questionnaire/:subjectType');
+    if(qMatch&&method==='GET'){
+      const subject=String(qMatch[0]).toUpperCase();
+      if(!['ORGANIZATION','PERSON','RELATIONSHIP','OPPORTUNITY'].includes(subject)) return json(res,400,{message:'نوع سوژه نامعتبر است.'});
+      const questions=criteriaForSubject(subject).filter(c=>c.intake&&c.evidence!=='OBSERVED').map(c=>({
+        code:`Q_${c.code}`,criterionCode:c.code,family:c.family,familyName:criteriaData().familyMeta[c.family].name,subject,
+        prompt:c.intake.prompt,help:c.intake.help,recommended:!!c.intake.recommended,polarity:c.polarity,
+        warning:c.intake.warning??null,warnBelow:c.intake.warnBelow??null,anchors:criteriaScale(c),
+        criterion:{...c,anchors:criteriaScale(c)},
+      }));
+      return json(res,200,{subjectType:subject,version:CRITERIA_VERSION,optional:true,totalCriteria:criteriaForSubject(subject).length,questions,recommendedIds:questions.filter(x=>x.recommended).map(x=>x.code),note:'همۀ پرسش‌ها اختیاری‌اند. پاسخ‌ندادنه با صفر یکسان نیست: معیار در «ناشناخته» می‌ماند و اطمینان امتیاز پایین می‌آید.'});
+    }
+  }
+  {
+    const aMatch=match('/criteria/assessment/:subjectType/:subjectId');
+    if(aMatch&&(method==='GET'||method==='POST'||method==='PATCH')){
+      const subject=String(aMatch[0]).toUpperCase();
+      if(!['ORGANIZATION','PERSON','RELATIONSHIP','OPPORTUNITY'].includes(subject)) return json(res,400,{message:'نوع سوژه نامعتبر است.'});
+      const subjectId=aMatch[1];
+      const orgOf = (type,id)=>type==='ORGANIZATION'?id:type==='PERSON'?(PEOPLE.find(x=>x.id===id)?.organizationId??null):(RELS.find(x=>x.id===id)?.sourceOrganizationId??null);
+      const record = subject==='ORGANIZATION'?ORGS.find(x=>x.id===subjectId):subject==='PERSON'?PEOPLE.find(x=>x.id===subjectId):RELS.find(x=>x.id===subjectId);
+      if(!record) return json(res,404,{message:'رکورد موردنظر یافت نشد.'});
+      const ownerOrg = orgOf(subject,subjectId);
+      if(ownerOrg && !inScope(req,ownerOrg)) return json(res,403,{message:'دسترسی به ارزیابی این رکورد مجاز نیست.'});
+      if(method!=='GET'){
+        const b=await readBody(req);
+        const answers=normalizeCriteriaAnswers(b.answers??b.criteriaAnswers??b);
+        const unknownCodes=(Array.isArray(b.answers??b)?b.answers:[]).map(x=>String(x?.criterionCode??'').toUpperCase()).filter(code=>code&&!criterionByCode(code));
+        if(unknownCodes.length) return json(res,400,{message:`معیارهای ناشناخته: ${unknownCodes.join('، ')}`});
+        const scopeErr=criteriaScopeError(subject,answers);
+        if(scopeErr) return json(res,400,{message:scopeErr});
+        if(!answers.length) return json(res,400,{message:'دست‌کم یک پاسخ لازم است. اگر نمی‌دانید، این بخش را رد کنید.'});
+        const savedCount=saveStoredAnswers(subject,subjectId,answers);
+        let assessment; try { assessment=computeCriteria(subject,subjectId); } catch (e) { return json(res,500,{message:'محاسبۀ ارزیابی ناموفق بود: '+String(e?.message??e)}); }
+        audit(req,'UPDATE','criteria',`${subject}:${subjectId}`,'OK',{answers:savedCount,score:assessment.score,coverage:assessment.coverage});
+        NOTIFICATIONS.unshift({id:`n-crit-${Date.now()}`,userId:authUser?.id??'u-demo',type:assessment.flags.some(f=>f.severity==='CRITICAL')?'ALERT':'INFO',title:assessment.flags.some(f=>f.severity==='CRITICAL')?'پرچم بحرانی در ارزیابی معیارها':'ارزیابی معیارها به‌روزرسانی شد',body:assessment.flags[0]?.message??`امتیاز ${assessment.score} با پوشش ${assessment.coverage}٪ محاسبه شد.`,channel:'IN_APP',priority:assessment.flags.some(f=>f.severity==='CRITICAL')?'HIGH':'MEDIUM',createdAt:new Date().toISOString(),readAt:null,data:{subjectType:subject,subjectId}});
+        return json(res,200,{savedCount,assessment:{...assessment,summary:criteriaSummaryLite(assessment)}});
+      }
+      try { return json(res,200,computeCriteria(subject,subjectId)); }
+      catch (e) { return json(res,500,{message:'محاسبۀ ارزیابی ناموفق بود: '+String(e?.message??e)}); }
+    }
+  }
+  if(is('/criteria/review-queue')&&method==='GET'){
+    const rows=[];
+    for(const [key,bucket] of Object.entries(assessmentStore())){
+      const [subjectType,subjectId]=key.split(':');
+      for(const [code,a] of Object.entries(bucket??{})){
+        const c=criterionByCode(code); if(!c) continue;
+        const age=a.answeredAt?Math.floor((Date.now()-new Date(a.answeredAt).getTime())/86400000):9999;
+        if(age<c.halfLifeDays) continue;
+        rows.push({subjectType,subjectId,criterionCode:code,name:c.name,age,dueInDays:c.halfLifeDays-age,reason:age>c.halfLifeDays*2?'اعتبار پاسخ گذشته (بیش از دو نیمه‌عمر)':'نزدیک به پایان اعتبار پاسخ',weight:c.weight});
+      }
+    }
+    rows.sort((x,y)=>y.age-x.age);
+    return json(res,200,{tasks:[],staleAnswers:rows,total:rows.length});
+  }
+  {
+    const ovMatch=match('/criteria/overrides/:organizationId');
+    if(ovMatch){
+      const data=criteriaData();
+      if(method==='GET') return json(res,200,{version:CRITERIA_VERSION,defaults:data.familyWeights,organizationId:ovMatch[0],overrides:DB.criteriaOverrides??[],families:Object.entries(data.familyMeta).map(([key,m])=>({key,...m}))});
+      const b=await readBody(req);
+      const subject=String(b.subjectType??'RELATIONSHIP').toUpperCase();
+      const incoming=b.familyWeights??{};
+      const merged={...(data.familyWeights[subject]??{})};
+      for(const k of Object.keys(merged)){ const v=Number(incoming[k]); if(Number.isFinite(v)&&v>=0&&v<=1) merged[k]=v; }
+      const total=Object.values(merged).reduce((sum,v)=>sum+v,0)||1;
+      const normalized=Object.fromEntries(Object.entries(merged).map(([k,v])=>[k,Math.round((v/total)*10000)/10000]));
+      DB.criteriaOverrides=[...(DB.criteriaOverrides??[]).filter(x=>x.subjectType!==subject),{id:'ov-'+Date.now(),organizationId:ovMatch[0],subjectType:subject,scope:b.scope??'DEFAULT',familyWeights:normalized,minCoverageForRanking:Number(b.minCoverageForRanking??40),enabled:true,updatedAt:new Date().toISOString()}];
+      saveDb();
+      audit(req,'UPDATE','criteria-overrides',subject,'OK',{familyWeights:normalized});
+      return json(res,200,{subjectType:subject,familyWeights:normalized,minCoverageForRanking:Number(b.minCoverageForRanking??40)});
+    }
+  }
+  {
+    const covMatch=match('/criteria/coverage/:organizationId');
+    if(covMatch&&method==='GET'){
+      const subject=String(q.get('subjectType')??'RELATIONSHIP').toUpperCase();
+      const oid=covMatch[0];
+      const ids=subject==='PERSON'?PEOPLE.filter(x=>x.organizationId===oid).map(x=>x.id):subject==='ORGANIZATION'?[oid]:RELS.filter(r=>r.sourceOrganizationId===oid||r.targetOrganizationId===oid).map(r=>r.id);
+      const minForRanking=Math.ceil(criteriaForSubject(subject).length*0.35);
+      const rows=ids.map(id=>{const a=storedAnswers(subject,id);const answered=Object.keys(a).filter(k=>a[k].level!=null||a[k].value!=null).length;return {subjectId:id,answered,ready:answered>=minForRanking};});
+      return json(res,200,{subjectType:subject,assessed:rows.filter(r=>r.answered>0).length,rankable:rows.filter(r=>r.ready).length,total:rows.length,minAnswersForRanking:minForRanking,rows});
+    }
   }
 
   json(res,404,{message:`مسیر ${method} ${path} در Mock API وجود ندارد.`});

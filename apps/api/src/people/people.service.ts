@@ -4,6 +4,7 @@ import { AuthorizationService } from '../common/authorization/authorization.serv
 import { AuditService } from '../audit/audit.service';
 import { EventBusService } from '../event-bus/event-bus.service';
 import { DataLifecycleService } from '../common/data-lifecycle/data-lifecycle.service';
+import { CriteriaService } from '../criteria/criteria.service';
 import { EntityResponseDto, PersonResponseDto } from '../common/dto/entity-response.dto';
 import { DOMAIN_EVENT_TYPES } from '../event-bus/event-bus.constants';
 
@@ -15,6 +16,7 @@ export class PeopleService {
     private readonly audit: AuditService,
     private readonly eventBus: EventBusService,
     private readonly lifecycle: DataLifecycleService,
+    private readonly criteria: CriteriaService,
   ) {}
 
   private async getRaw(id: string, includeDeleted = false) {
@@ -59,13 +61,17 @@ export class PeopleService {
       }),
       this.prisma.person.count({ where }),
     ]);
-    return { data: rows.map(row => PersonResponseDto.from('Person', row)), page, pageSize, total, totalPages: Math.ceil(total / pageSize) };
+    const data = rows.map((row) => PersonResponseDto.from('Person', row));
+    const criteriaMap = await this.criteria.summaries('PERSON', data.map((r: any) => String(r.id)));
+    return { data: data.map((r: any) => ({ ...r, criteria: criteriaMap.get(String(r.id)) ?? null })), page, pageSize, total, totalPages: Math.ceil(total / pageSize) };
   }
 
   async get(userId: string, id: string) {
     const person = await this.getRaw(id);
     await this.authorization.assertPermission(userId, 'person.read', { organizationId: person.organizationId, entityType: 'Person', entityId: id });
-    return PersonResponseDto.from('Person', person);
+    const presented = PersonResponseDto.from('Person', person);
+    const criteriaMap = await this.criteria.summaries('PERSON', [id]);
+    return { ...presented, criteria: criteriaMap.get(id) ?? null };
   }
 
   async timeline(userId: string, id: string) {
@@ -85,7 +91,7 @@ export class PeopleService {
     ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 100) };
   }
 
-  async create(userId: string, data: { firstName: string; lastName: string; organizationId: string; email?: string; phone?: string; title?: string; department?: string; country?: string; notes?: string; status?: string; influenceScore?: number; decisionPower?: number; accessibilityScore?: number }) {
+  async create(userId: string, data: { firstName: string; lastName: string; organizationId: string; criteriaAnswers?: Array<{ criterionCode: string; level?: number | null; value?: number | null; note?: string | null; evidence?: string | null; method?: any; answeredAt?: string | null }>; email?: string; phone?: string; title?: string; department?: string; country?: string; notes?: string; status?: string; influenceScore?: number; decisionPower?: number; accessibilityScore?: number }) {
     await this.authorization.assertPermission(userId, 'person.write', { organizationId: data.organizationId });
     const firstName = data.firstName.trim();
     const lastName = data.lastName.trim();
@@ -97,13 +103,16 @@ export class PeopleService {
       { firstName, lastName },
     ] } });
     if (duplicate) throw new ConflictException('A matching person already exists in this organization');
+    const intake = this.criteria.normalizeIntake('PERSON', (data as any).criteriaAnswers);
+    const { criteriaAnswers: _criteriaAnswers, ...personData } = data as any;
     const created = await this.eventBus.transaction(async tx => {
-      const row = await tx.person.create({ data: { ...data, notes: undefined, notesText: data.notes, firstName, lastName, displayName: `${firstName} ${lastName}`, email } });
+      const row = await tx.person.create({ data: { ...personData, notes: undefined, notesText: data.notes, firstName, lastName, displayName: `${firstName} ${lastName}`, email } });
       await tx.organizationPerson.create({ data: { organizationId: data.organizationId, personId: row.id, roleTitle: data.title, department: data.department, isPrimary: true } });
       await this.audit.logMutation({ userId, action: 'CREATE', entityType: 'Person', entityId: row.id, organizationId: row.organizationId, after: row }, tx);
       await this.eventBus.publishInTransaction(tx, { eventType: DOMAIN_EVENT_TYPES.PERSON_CREATED, aggregateType: 'Person', aggregateId: row.id, organizationId: row.organizationId, actorId: userId, payload: row as any });
       return row;
     });
+    if (intake.length) await this.criteria.saveAnswers(userId, { subjectType: 'PERSON', subjectId: created.id, answers: intake, source: 'INTAKE' });
     return PersonResponseDto.from('Person', created);
   }
 

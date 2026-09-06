@@ -548,6 +548,339 @@ function verifyPassword(pw, salt, hash) {
 }
 function saveDb() { fs.mkdirSync(DATA_DIR, { recursive: true }); fs.writeFileSync(DB_FILE, JSON.stringify(DB, null, 1)); }
 
+/* ─────────────────────────────  معیارهای ارزیابی (آینۀ کاتالوگ API) ─────────────────────────────
+   کاتالوگ معیارها در `scripts/criteria-data.json` نگهداری می‌شود که با
+   `node scripts/sync-criteria-catalog.mjs` از `apps/api/src/criteria/criteria.catalog.ts`
+   تولید می‌شود؛ در نسخۀ Service Worker همان داده از `globalThis.__SRIP_CRITERIA_DATA__`
+   تزریق می‌شود (make-demo-sw.mjs). قواعد محاسبه آینهٔ `criteria.engine.ts` است:
+   فقط معیارهای پاسخ‌داده‌شده در امتیاز می‌آیند، پوشش/اطمینان گزارش می‌شود،
+   و معیارهای دروازه‌ای سقف امتیاز می‌گذارند. */
+let CRITERIA_DATA = null;
+function criteriaData() {
+  if (CRITERIA_DATA) return CRITERIA_DATA;
+  const attempts = () => {
+    const files = ['scripts/criteria-data.json', 'apps/web-ux/scripts/criteria-data.json'];
+    try { files.push(path.join(__dirname, 'criteria-data.json')); } catch {}
+    for (const f of files) { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch {} }
+    return null;
+  };
+  const loaded = attempts();
+  CRITERIA_DATA = loaded ?? globalThis.__SRIP_CRITERIA_DATA__ ?? { scales: {}, familyMeta: {}, familyWeights: {}, criteria: [] };
+  return CRITERIA_DATA;
+}
+const CRITERIA_VERSION = 'criteria-v1';
+const METHOD_QUALITY = { DOCUMENT: 100, VERIFIED: 90, OWNER_ASSESSED: 70, SELF_REPORTED: 55, INFERRED: 40 };
+const METHOD_LABELS = { DOCUMENT: 'مدرک/سند', VERIFIED: 'راستی‌آزمایی مستقل', OWNER_ASSESSED: 'ارزیابی مدیر رابطه', SELF_REPORTED: 'خوداظهادی مخاطب', INFERRED: 'استنتاج از رفتار' };
+const pct = (v) => Math.max(0, Math.min(100, Math.round(Number.isFinite(+v) ? +v : 0)));
+const criteriaScale = (c) => c.anchors ?? (criteriaData().scales[c.scaleId] || { anchors: [] }).anchors;
+const criteriaForSubject = (subject) => criteriaData().criteria.filter((c) => (c.appliesTo || []).includes(subject));
+const criterionByCode = (code) => criteriaData().criteria.find((c) => c.code === code);
+const decayOf = (ageDays, halfLife) => {
+  if (ageDays == null) return 0.85;
+  const r = ageDays / Math.max(30, halfLife || 365);
+  return Math.max(0.35, Math.min(1, 1 - 0.3 * Math.min(1, r) - 0.25 * Math.max(0, Math.min(1, r / 2))));
+};
+const observedConfidence = (evidence) => (evidence > 0 ? pct(28 + 62 * (1 - Math.exp(-evidence / 6))) : 15);
+const coverageValue = (contacts, senior) => (contacts <= 0 ? 0 : contacts === 1 ? (senior ? 45 : 30) : contacts === 2 ? 55 : contacts <= 4 ? 80 : 100);
+const logScale = (amount) => pct(Math.log10(Math.max(1, amount)) * 20);
+
+const assessmentStore = () => { if (!DB.assessments) DB.assessments = {}; return DB.assessments; };
+const assessmentKey = (subjectType, subjectId) => `${subjectType}:${subjectId}`;
+function storedAnswers(subjectType, subjectId) {
+  const bucket = assessmentStore()[assessmentKey(subjectType, subjectId)] || {};
+  return Object.entries(bucket).map(([criterionCode, a]) => ({ criterionCode, ...a }));
+}
+function saveStoredAnswers(subjectType, subjectId, list) {
+  const store = assessmentStore();
+  const key = assessmentKey(subjectType, subjectId);
+  const bucket = store[key] ?? (store[key] = {});
+  for (const a of list) {
+    if (a.level == null && a.value == null) { delete bucket[a.criterionCode]; continue; }
+    bucket[a.criterionCode] = {
+      level: a.level ?? null, value: a.value ?? null, note: a.note ?? null, evidence: a.evidence ?? null,
+      method: a.method ?? 'OWNER_ASSESSED', answeredAt: a.answeredAt ?? new Date().toISOString(),
+    };
+  }
+  saveDb();
+  return Object.keys(bucket).length;
+}
+
+/* سیگنال‌های مشاهده‌شده از داده‌های رفتاری دمو — آینهٔ CriteriaService.observedSignals */
+function criteriaObserved(subjectType, subjectId) {
+  const out = {};
+  const now = Date.now();
+  const age = (iso) => (iso ? Math.max(0, (now - new Date(iso).getTime()) / 86400000) : 365);
+  const put = (code, value, evidence, label) => { if (evidence > 0) out[code] = { value: pct(value), evidence, label }; };
+  const seniorTitles = /مدیر\s*عامل|مدیرعامل|ceo|chief|عضو\s*هیئت\s*مدیره|مدیر\s*ارشد|رئیس|director|president/i;
+  const meetingHasSenior = (m) => (Array.isArray(m?.participants) ? m.participants : []).some((pp) => {
+    const person = PEOPLE.find((x) => x.id === (pp?.personId ?? pp?.id ?? pp));
+    return seniorTitles.test(String(person?.title ?? ''));
+  });
+
+  if (subjectType === 'RELATIONSHIP') {
+    const rel = RELS.find((r) => r.id === subjectId);
+    if (!rel) return out;
+    const its = INTERACTIONS.filter((x) => x.relationshipId === subjectId);
+    const its180 = its.filter((x) => age(x.occurredAt) <= 180);
+    const its90 = its.filter((x) => age(x.occurredAt) <= 90);
+    const contacts = new Set(its90.map((x) => x.personId).filter(Boolean)).size;
+    const mts180 = MEETINGS.filter((m) => m.relationshipId === subjectId && age(m.startAt) <= 180);
+    const senior = mts180.filter(meetingHasSenior).length;
+    const cm = COMMITMENTS.filter((c) => c.relationshipId === subjectId);
+    const done = cm.filter((c) => c.status === 'FULFILLED').length;
+    const opps = OPPORTUNITIES.filter((o) => o.relationshipId === subjectId);
+    const value = opps.reduce((sum, o) => sum + Number(o.value ?? 0), 0);
+    const weighted = opps.reduce((sum, o) => sum + Number(o.value ?? 0) * (Number(o.probability ?? 0) / 100), 0);
+    const latest = its.map((x) => x.occurredAt).sort().slice(-1)[0];
+    const daysSince = latest ? age(latest) : 365;
+    const withOutcome = its180.filter((x) => x.outcome).length;
+    const kinds = new Set(its180.map((x) => x.type)).size;
+    const parallel = RELS.filter((r) => r.id !== subjectId && ((r.sourceOrganizationId === rel.sourceOrganizationId && r.targetOrganizationId === rel.targetOrganizationId) || (r.sourceOrganizationId === rel.targetOrganizationId && r.targetOrganizationId === rel.sourceOrganizationId))).length;
+    const orgValue = OPPORTUNITIES.filter((o) => o.organizationId === rel.sourceOrganizationId).reduce((sum, o) => sum + Number(o.value ?? 0), 0);
+    put('ACC_MULTITHREADING', coverageValue(contacts, senior > 0), Math.max(contacts, its90.length), `${contacts} خط تماس فعال در ۹۰ روز`);
+    put('NET_TIE_STRENGTH', pct(its180.length * 4 + mts180.length * 8) * 0.6 + pct(100 - daysSince * 1.1) * 0.4, its180.length + mts180.length, `آخرین تعامل ${Math.round(daysSince)} روز پیش`);
+    if (cm.length) put('CAP_DELIVERY', (done / cm.length) * 100, cm.length, `${done} از ${cm.length} تعهد انجام شده`);
+    if (its180.length) put('ACC_RESPONSIVENESS', (withOutcome / its180.length) * 100, its180.length, `${withOutcome} از ${its180.length} تعامل با نتیجه`);
+    if (value > 0) put('VALUE_REALISED', logScale(value), opps.length, `گردش ثبت‌شده ${value.toLocaleString('fa-IR')}`);
+    put('VALUE_PIPELINE', logScale(weighted), opps.length, 'ارزش وزنی پایپ‌لاین');
+    put('ACC_DECISION_ACCESS', senior > 0 ? Math.min(100, 60 + senior * 10) : mts180.length ? 35 : 20, senior + mts180.length, senior ? `${senior} نشست با مدیران ارشد` : 'بدون نشست با سطح تصمیم');
+    put('STRAT_EXEC_SPONSOR', senior > 0 ? Math.min(100, 55 + senior * 12) : 15, senior + mts180.length, 'درگیری مدیران ارشد در ۱۸۰ روز');
+    put('NET_NON_REDUNDANCY', (kinds / 5) * 60 + (Math.min(contacts, 5) / 5) * 40, kinds + contacts, `${kinds} نوع تعامل با ${contacts} نفر`);
+    put('NET_BRIDGE', Math.min(100, 20 + contacts * 12 + (senior ? 20 : 0)), Math.max(contacts, 1), 'پل میان واحدهای طرف حساب');
+    put('NET_SINGLE_POINT', parallel === 0 && contacts <= 1 ? 100 : parallel === 0 ? 70 : Math.max(0, 35 - parallel * 8), parallel + 1, parallel === 0 ? 'تنها مسیر دسترسی به این سازمان' : `${parallel} رابطهٔ موازی`);
+    const share = orgValue > 0 ? value / orgValue : parallel === 0 ? 0.85 : 0.2;
+    put('RISK_CONCENTRATION', share * 100, parallel + 1, `سهم ${Math.round(share * 100)}٪ از گردش ثبت‌شده`);
+    return out;
+  }
+
+  if (subjectType === 'ORGANIZATION') {
+    const rels = RELS.filter((r) => r.sourceOrganizationId === subjectId || r.targetOrganizationId === subjectId);
+    const its = INTERACTIONS.filter((x) => x.organizationId === subjectId && age(x.occurredAt) <= 180);
+    const its90 = its.filter((x) => age(x.occurredAt) <= 90);
+    const contacts = new Set(its90.map((x) => x.personId).filter(Boolean)).size;
+    const people = PEOPLE.filter((x) => x.organizationId === subjectId).length;
+    const mts = MEETINGS.filter((m) => m.organizationId === subjectId && age(m.startAt) <= 180);
+    const senior = mts.filter(meetingHasSenior).length;
+    const opps = OPPORTUNITIES.filter((o) => o.organizationId === subjectId);
+    const value = opps.reduce((sum, o) => sum + Number(o.value ?? 0), 0);
+    const weighted = opps.reduce((sum, o) => sum + Number(o.value ?? 0) * (Number(o.probability ?? 0) / 100), 0);
+    const cm = COMMITMENTS.filter((c) => c.organizationId === subjectId);
+    const done = cm.filter((c) => c.status === 'FULFILLED').length;
+    const avg = (key) => {
+      const values = rels.map((r) => r[key]).filter((v) => v != null && Number.isFinite(Number(v))).map(Number);
+      if (!values.length) return null; // فیلد ثبت‌نشده با صفر یکی نیست
+      return values.reduce((sum, v) => sum + v, 0) / values.length;
+    };
+    put('ACC_MULTITHREADING', coverageValue(contacts, senior > 0), Math.max(contacts, its90.length), `${contacts} مخاطب فعال در ۹۰ روز`);
+    if (value > 0) put('VALUE_REALISED', logScale(value), opps.length, `گردش ثبت‌شده ${value.toLocaleString('fa-IR')}`);
+    put('VALUE_PIPELINE', logScale(weighted), opps.length, 'ارزش وزنی فرصت‌ها');
+    if (cm.length) put('CAP_DELIVERY', (done / cm.length) * 100, cm.length, `${done} از ${cm.length} تعهد انجام شده`);
+    put('STRAT_EXEC_SPONSOR', senior > 0 ? Math.min(100, 55 + senior * 10) : 15, senior + mts.length, `${senior} نشست با مدیران ارشد`);
+    put('NET_BRIDGE', Math.min(100, rels.length * 12 + contacts * 4), rels.length, `${rels.length} رابطهٔ ثبت‌شده`);
+    put('NET_TIE_STRENGTH', its.length * 2 + mts.length * 3, its.length + mts.length, `${its.length} تعامل در ۱۸۰ روز`);
+    put('NET_NON_REDUNDANCY', Math.min(100, rels.length * 10 + people * 2), rels.length + people, `${rels.length} رابطه با ${people} نفر`);
+    put('NET_SINGLE_POINT', rels.length <= 1 ? 85 : Math.max(0, 60 - rels.length * 8), Math.max(1, rels.length), rels.length <= 1 ? 'تنها یک رابطهٔ ثبت‌شده' : `${rels.length} رابطه`);
+    const trust = avg('trustScore');
+    if (trust != null && trust > 0) put('REL_TRUST', trust, rels.length, 'میانگین اعتماد روابط');
+    const risk = avg('riskScore');
+    if (risk != null && risk > 0) put('RISK_CONCENTRATION', risk, rels.length, 'میانگین ریسک روابط');
+    return out;
+  }
+
+  if (subjectType === 'PERSON') {
+    const person = PEOPLE.find((x) => x.id === subjectId);
+    if (!person) return out;
+    const its = INTERACTIONS.filter((x) => x.personId === subjectId);
+    const its180 = its.filter((x) => age(x.occurredAt) <= 180);
+    const its90 = its.filter((x) => age(x.occurredAt) <= 90);
+    const withOutcome = its180.filter((x) => x.outcome).length;
+    const mts = MEETINGS.filter((m) => (m.participants ?? []).some((pp) => (pp.personId ?? pp.id) === subjectId) && age(m.startAt) <= 180);
+    const colleagues = new Set(INTERACTIONS.filter((x) => x.organizationId === person.organizationId && age(x.occurredAt) <= 90).map((x) => x.personId).filter(Boolean)).size;
+    const senior = /مدیر\s*عامل|مدیرعامل|ceo|chief|عضو\s*هیئت|رئیس|director|president/i.test(String(person.title ?? ''));
+    const latest = its.map((x) => x.occurredAt).sort().slice(-1)[0];
+    const daysSince = latest ? age(latest) : 365;
+    put('ACC_RESPONSIVENESS', its180.length ? (withOutcome / its180.length) * 100 : 0, its180.length, `${withOutcome} از ${its180.length} تعامل با نتیجه`);
+    put('NET_TIE_STRENGTH', pct(its180.length * 4 + mts.length * 6) * 0.6 + pct(100 - daysSince * 1.1) * 0.4, its180.length + mts.length, `آخرین تماس ${Math.round(daysSince)} روز پیش`);
+    put('ACC_MULTITHREADING', coverageValue(colleagues, senior), colleagues, `${colleagues} خط تماس در سازمان او`);
+    put('ACC_DECISION_ACCESS', senior ? 85 : its90.length ? 50 : 25, Math.max(1, its90.length + mts.length), senior ? 'سمت ارشد' : 'بدون نشانهٔ سطح تصمیم');
+    put('NET_SINGLE_POINT', its90.length === 0 ? 70 : 20, Math.max(1, its.length), 'جایگاه تنها در مسیر دسترسی');
+    if (Number(person.influenceScore ?? 0) > 0) put('STRAT_POWER', Number(person.influenceScore), Math.max(1, its.length), 'شاخص نفوذ ثبت‌شده');
+    return out;
+  }
+
+  return out;
+}
+
+const normalizeCriteriaAnswers = (raw) => {
+  const list = Array.isArray(raw) ? raw : raw && typeof raw === 'object' ? Object.entries(raw).map(([criterionCode, v]) => (typeof v === 'object' ? { criterionCode, ...v } : { criterionCode, value: v })) : [];
+  const out = [];
+  for (const item of list) {
+    const code = String(item?.criterionCode ?? item?.code ?? '').toUpperCase();
+    if (!code || !criterionByCode(code)) continue;
+    const level = item.level == null || item.level === '' ? null : Number(item.level);
+    const value = item.value == null || item.value === '' ? null : Number(item.value);
+    out.push({ criterionCode: code, level: Number.isFinite(level) ? level : null, value: Number.isFinite(value) ? value : null, note: item.note ?? null, evidence: item.evidence ?? null, method: item.method ?? 'OWNER_ASSESSED', answeredAt: item.answeredAt ?? new Date().toISOString() });
+  }
+  return out;
+};
+
+/** like the API: an answer may only reference a criterion defined for that subject type */
+const criteriaScopeError = (subjectType, rows) => {
+  const bad = rows.filter((r) => {
+    const c = criterionByCode(r.criterionCode);
+    return c && Array.isArray(c.appliesTo) && !c.appliesTo.includes(subjectType);
+  });
+  return bad.length ? `معیار «${bad.map((r) => r.criterionCode).join('، ')}» برای ${subjectType} تعریف نشده است.` : null;
+};
+
+function computeCriteria(subjectType, subjectId, options = {}) {
+  const data = criteriaData();
+  const universe = criteriaForSubject(subjectType);
+  const answers = options.answers ?? storedAnswers(subjectType, subjectId);
+  const observed = options.observed ?? criteriaObserved(subjectType, subjectId);
+  const byCode = new Map(answers.filter((a) => a.level != null || a.value != null).map((a) => [a.criterionCode, a]));
+  const weights = { ...(data.familyWeights[subjectType] || {}) };
+  const totalWeight = Object.values(weights).reduce((sum, v) => sum + v, 0) || 1;
+  const lines = [];
+  const families = [];
+  const flags = [];
+  const unknown = [];
+  const reviewDue = [];
+  let answeredCount = 0;
+  for (const family of Object.keys(data.familyMeta)) {
+    const list = universe.filter((c) => c.family === family);
+    if (!list.length) continue;
+    const famTotalWeight = list.reduce((sum, c) => sum + c.weight, 0) || 1;
+    let scoreSum = 0, weightSum = 0, confSum = 0, knownWeight = 0;
+    const famLines = [];
+    for (const c of list) {
+      const a = byCode.get(c.code);
+      const sig = observed[c.code];
+      let assessed = null, aConf = 0;
+      if (a) {
+        answeredCount += 1;
+        assessed = a.value != null ? pct(a.value) : (criteriaScale(c).find((x) => x.level === Number(a.level)) || {}).score ?? null;
+        if (assessed != null) {
+          const ageDays = a.answeredAt ? Math.floor((Date.now() - new Date(a.answeredAt).getTime()) / 86400000) : null;
+          const quality = METHOD_QUALITY[a.method ?? 'OWNER_ASSESSED'] ?? 60;
+          const bonus = (a.evidence && String(a.evidence).length > 8 ? 10 : 0) + (a.note && String(a.note).length > 12 ? 4 : 0);
+          aConf = pct((quality + bonus) * decayOf(ageDays, c.halfLifeDays));
+        }
+      }
+      const oVal = sig && Number.isFinite(sig.value) ? pct(sig.value) : null;
+      const oConf = oVal != null ? observedConfidence(sig.evidence) : 0;
+      let value = null, status = 'UNKNOWN', confidence = 0;
+      if (assessed != null && oVal != null) { value = Math.round((assessed * aConf + oVal * oConf) / Math.max(1, aConf + oConf)); confidence = pct(100 - ((100 - aConf) * (100 - oConf)) / 100); status = 'BLENDED'; }
+      else if (assessed != null) { value = assessed; confidence = aConf; status = 'ASSESSED'; }
+      else if (oVal != null) { value = oVal; confidence = oConf; status = 'OBSERVED'; }
+      const ageDays = a?.answeredAt ? Math.floor((Date.now() - new Date(a.answeredAt).getTime()) / 86400000) : null;
+      const weightPct = Math.round((c.weight / famTotalWeight) * ((weights[family] ?? 0) / totalWeight) * 10000) / 100;
+      const gateActive = c.gate && value != null && (c.gate.trigger === 'ABOVE' ? value >= c.gate.threshold : value <= c.gate.threshold);
+      const line = {
+        code: c.code, family, familyName: data.familyMeta[family].name, name: c.name, nameEn: c.nameEn, why: c.why,
+        polarity: c.polarity, weight: c.weight, weightPct, value, displayValue: value, confidence, status,
+        needsReview: value != null && (confidence < 40 || (ageDays != null && ageDays > c.halfLifeDays * 2)),
+        answerAgeDays: ageDays, reliabilityDecay: Math.round(decayOf(ageDays, c.halfLifeDays) * 100) / 100,
+        note: a?.note ?? null, evidence: a?.evidence ?? null, sources: c.sources,
+        anchors: criteriaScale(c), intake: c.intake ? { prompt: c.intake.prompt, help: c.intake.help, recommended: !!c.intake.recommended } : null,
+        observed: sig ? { value: pct(sig.value), evidence: sig.evidence, label: sig.label } : null,
+        assessed: a && assessed != null ? { value: assessed, level: Number(a.level ?? 0), method: a.method ?? 'OWNER_ASSESSED', methodLabel: METHOD_LABELS[a.method ?? 'OWNER_ASSESSED'], confidence: aConf } : null,
+        gate: c.gate ? { severity: c.gate.severity, message: c.gate.message, cap: c.gate.cap, active: !!gateActive } : null,
+        actionHint: value == null
+          ? (c.evidence === 'OBSERVED' ? 'با ثبت تعامل/جلسه/تعهد واقعی این معیار خودکار پر می‌شود.' : c.intake ? `پاسخ به این پرسش کافی است: «${c.intake.prompt}»` : 'یک ارزیابی مستند ثبت کنید.')
+          : (c.polarity === 'GOOD' ? value < 45 : value > 55) ? 'شواهد این معیار را ضعیف می‌کند؛ یک اقدام اصلاحی با مهلت تعریف کنید.' : 'وضعیت مطلوب است؛ در بازبینی بعدی تمدید شود.',
+      };
+      famLines.push(line);
+      if (value == null) { unknown.push({ code: c.code, name: c.name, family, weightPct, prompt: c.intake?.prompt, help: c.intake?.help }); continue; }
+      scoreSum += value * c.weight; weightSum += c.weight; knownWeight += c.weight; confSum += confidence * c.weight;
+      if (gateActive) flags.push({ code: `GATE_${c.code}`, severity: c.gate.severity, message: c.gate.message, criterionCode: c.code });
+      if (c.intake?.warnBelow != null && c.intake.warning && value <= c.intake.warnBelow) flags.push({ code: `WARN_${c.code}`, severity: 'MEDIUM', message: c.intake.warning, criterionCode: c.code });
+      if (line.needsReview) reviewDue.push({ code: c.code, name: c.name, reason: confidence < 40 ? 'اطمینان کمتر از ۴۰' : 'پاسخ کهنه (بیش از دو نیمه‌عمر)' });
+    }
+    families.push({
+      family, name: data.familyMeta[family].name, nameEn: data.familyMeta[family].nameEn, rationale: data.familyMeta[family].rationale,
+      modelWeight: weights[family] ?? 0, weightPct: Math.round(((weights[family] ?? 0) / totalWeight) * 1000) / 10,
+      score: weightSum > 0 ? Math.round(scoreSum / weightSum) : null,
+      confidence: knownWeight > 0 ? Math.round(confSum / knownWeight) : 0,
+      coveragePct: knownWeight > 0 ? Math.round((knownWeight / famTotalWeight) * 100) : 0,
+      known: famLines.filter((l) => l.value != null).length, total: famLines.length, lines: famLines,
+    });
+    lines.push(...famLines);
+  }
+  let num = 0, den = 0, confNum = 0, familyCredit = 0;
+  for (const f of families) {
+    if (f.score == null || !f.modelWeight) continue;
+    num += f.score * f.modelWeight; den += f.modelWeight; confNum += f.confidence * f.modelWeight;
+  }
+  for (const f of families) { if (!f.modelWeight) continue; familyCredit += f.modelWeight * (f.coveragePct / 100); }
+  const rawScore = den > 0 ? Math.round(num / den) : 0;
+  const knownWeightRatio = Math.min(1, familyCredit / totalWeight);
+  const coverage = Math.round(knownWeightRatio * 100);
+  const baseConfidence = den > 0 ? Math.round(confNum / den) : 0;
+  const confidence = Math.round(baseConfidence * (0.55 + 0.45 * knownWeightRatio));
+  const uncertainty = Math.round((1 - knownWeightRatio) * 28 + (100 - baseConfidence) / 12);
+  const gateCaps = flags.filter((f) => f.code.startsWith('GATE_')).map((f) => criterionByCode(f.criterionCode.replace('GATE_', ''))?.gate?.cap).filter((v) => v != null);
+  const gateCap = gateCaps.length ? Math.min(...gateCaps) : null;
+  const score = gateCap == null ? rawScore : Math.min(rawScore, gateCap);
+  const critical = flags.some((f) => f.severity === 'CRITICAL');
+  const rankable = coverage >= (options.minCoverage ?? 40) && confidence >= 35 && !critical;
+  const verdict = critical ? { verdictLabel: 'پرچم بحرانی', verdict: 'CRITICAL', verdictHint: 'یک دروازۀ ریسک فعال است؛ تا جمع‌شدن این مورد امتیاز اعتبار عملیاتی ندارد.' }
+    : coverage < 25 ? { verdictLabel: 'داده کافی نیست', verdict: 'INSUFFICIENT_DATA', verdictHint: 'تصویر هنوز ساخته نشده؛ این عدد را مبنای تصمیم نگذارید.' }
+    : confidence < 40 ? { verdictLabel: 'پیش‌نویس ارزیابی', verdict: 'PRELIMINARY', verdictHint: 'شواهد کم یا کهنه است؛ با چند پاسخ مستند امتیاز جابه‌جا می‌شود.' }
+    : score < 40 ? { verdictLabel: 'ضعیف', verdict: 'AT_RISK', verdictHint: 'شواهد کافی، وضعیت نامطلوب — نیازمند اقدام.' }
+    : score >= 75 && confidence >= 65 ? { verdictLabel: 'قوی', verdict: 'STRONG', verdictHint: 'شواهد کافی و باکیفیت.' }
+    : { verdictLabel: 'قابل اتکا', verdict: 'SOLID', verdictHint: 'امتیاز بر پایهٔ شواهد کافی محاسبه شده است.' };
+  const behavioral = subjectType === 'RELATIONSHIP'
+    ? INTERACTIONS.filter((x) => x.relationshipId === subjectId).length + MEETINGS.filter((m) => m.relationshipId === subjectId).length * 2 + COMMITMENTS.filter((c) => c.relationshipId === subjectId).length + OPPORTUNITIES.filter((o) => o.relationshipId === subjectId).length
+    : answeredCount * 0;
+  const evidenceShare = behavioral / (behavioral + 6);
+  const hints = [];
+  if (coverage < 40) {
+    const heavy = unknown.filter((u) => u.weightPct >= 1.5).sort((a, b) => b.weightPct - a.weightPct).slice(0, 4);
+    if (heavy.length) hints.push(`برای عبور از آستانۀ رتبه‌بندی (${options.minCoverage ?? 40}٪) این ${heavy.length} معیار پرتأثیر را پاسخ دهید: ${heavy.map((u) => u.name).join('، ')}.`);
+  }
+  const weakest = lines.filter((l) => l.value != null && (l.polarity === 'GOOD' ? l.value < 45 : l.value > 55)).sort((a, b) => b.weightPct - a.weightPct).slice(0, 3).map((l) => l.name);
+  if (weakest.length) hints.push(`ضعیف‌ترین نقاط: ${weakest.join('، ')}.`);
+  if (flags.length) hints.push(`${flags.length} پرچم ثبت شده است؛ ابتدا موارد بحرانی/بالا.`);
+  return {
+    subjectType, subjectId, score, rawScore, uncertainty, rangeLow: Math.max(0, score - uncertainty), rangeHigh: Math.min(100, score + uncertainty),
+    coverage, confidence, rankingScore: rankable ? Math.round(score * (0.7 + 0.3 * (confidence / 100))) : score, rankable, gateCap,
+    ...verdict, families: families.filter((f) => f.modelWeight > 0), criteria: lines,
+    knownCriteria: lines.filter((l) => l.value != null).length, totalCriteria: lines.length, unknown, flags, reviewDue,
+    answeredCount, blend: { behavioralEvidence: behavioral, observedShare: Math.round(evidenceShare * 100), coldStart: behavioral === 0 && coverage < 25 },
+    criteriaVersion: CRITERIA_VERSION, computedAt: new Date().toISOString(), hints,
+  };
+}
+function criteriaSummaryLite(a) {
+  if (!a) return null;
+  return {
+    score: a.score, rawScore: a.rawScore, coverage: a.coverage, confidence: a.confidence, uncertainty: a.uncertainty,
+    rangeLow: a.rangeLow, rangeHigh: a.rangeHigh, rankable: a.rankable, rankingScore: a.rankingScore, gateCap: a.gateCap,
+    verdict: a.verdict, verdictLabel: a.verdictLabel, known: a.knownCriteria, total: a.totalCriteria,
+    flags: a.flags.map((f) => ({ code: f.code, severity: f.severity, criterionCode: f.criterionCode })),
+    families: a.families.map((f) => ({ family: f.family, name: f.name, score: f.score, weightPct: f.weightPct, coveragePct: f.coveragePct })),
+    version: a.criteriaVersion, computedAt: a.computedAt,
+  };
+}
+const attachCriteria = (subjectType, rows) => rows.map((row) => {
+  const id = String(row?.id ?? '');
+  if (!id) return row;
+  try { return { ...row, criteria: criteriaSummaryLite(computeCriteria(subjectType, id)) }; } catch { return { ...row, criteria: null }; }
+});
+function seedCriteriaAssessments() {
+  // ارزیابی‌های اولیهٔ نمونه‌ها (۱۲ روز پیش) تا دمو با پوشش واقعی شروع شود
+  const answeredAt = new Date(Date.now() - 12 * 86400000).toISOString();
+  const A = (level, extra = {}) => ({ level, answeredAt, method: 'OWNER_ASSESSED', ...extra });
+  return {
+    'ORGANIZATION:org-3': { STRAT_POWER: A(3), STRAT_FIT: A(2), VALUE_REALISED: A(4, { evidence: 'صورت وضعیت حسابرسی‌شده ۱۴۰۴', method: 'DOCUMENT' }), VALUE_GROWTH: A(3), CAP_QUALITY_SYSTEM: A(3), CAP_DELIVERY: A(3), REL_TRUST: A(3), REL_COMMITMENT: A(2), ACC_DECISION_ACCESS: A(3), FIN_Z_SCORE: A(3, { evidence: 'Z″≈۲٫۹ بر پایه صورت‌های مالی' }), FIN_LIQUIDITY: A(3), RISK_LEGAL: A(0), RISK_UBO: A(3) },
+    'ORGANIZATION:org-6': { STRAT_POWER: A(1), STRAT_FIT: A(1), CAP_QUALITY_SYSTEM: A(0, { note: 'بدون ISO 9001؛ فقط بازرسی داخلی' }), CAP_DELIVERY: A(1), REL_TRUST: A(1), REL_OPPORTUNISM: A(3, { note: 'دو بار افزایش نرخ در میانهٔ قرارداد' }), VALUE_PAYMENT: A(1), FIN_Z_SCORE: A(0, { evidence: 'نسبت جاری ۰٫۷' }), RISK_CONCENTRATION: A(1) },
+    'RELATIONSHIP:r-1': { STRAT_FIT: A(3), REL_TRUST: A(3), REL_COMMITMENT: A(3), ACC_MULTITHREADING: A(3), VALUE_GROWTH: A(3), CAP_SERVICE: A(3), RISK_LEGAL: A(0) },
+    'RELATIONSHIP:r-4': { STRAT_FIT: A(1), REL_TRUST: A(1), REL_OPPORTUNISM: A(3, { note: 'تغییر یک‌طرفه نرخ در میانهٔ دوره' }), CAP_DELIVERY: A(1), CAP_CAPACITY: A(1), REL_INFORMATION_HONESTY: A(1), RISK_CONCENTRATION: A(1) },
+    'PERSON:p-2': { ACC_CHAMPION_POWER: A(3), ACC_DECISION_ROLE: A(2), REL_TRUST: A(3), ACC_CONTACT_STABILITY: A(3, { note: 'تغییر ساختار در تدارکات' }) },
+  };
+}
+
+
 let DB = null;
 function loadDb() {
   if (process.argv.includes('--reset')) { try { fs.rmSync(DB_FILE, { force: true }); } catch {} }
@@ -563,13 +896,14 @@ function loadDb() {
       if (!Array.isArray(DB.audit)) DB.audit = [];
       if (!Array.isArray(DB.revokedJtis)) DB.revokedJtis = [];
       if (!DB.users) DB.users = {};
+      if (!DB.assessments) DB.assessments = {};
     }
   } catch { DB = null; }
   if (!DB) {
     DB = { version: 2, users: {}, orgs: ORGS, people: PEOPLE, rels: RELS, meetings: MEETINGS,
       actions: ACTIONS, commitments: COMMITMENTS, projects: PROJECTS, projectExtra: PROJECT_EXTRA,
       opportunities: OPPORTUNITIES, interactions: INTERACTIONS, notifications: NOTIFICATIONS,
-      recs: RECS, aiUsage: AI_USAGE, personOrgs: PERSON_ORGS, audit: [], revokedJtis: [], nextId: 1 };
+      recs: RECS, aiUsage: AI_USAGE, personOrgs: PERSON_ORGS, audit: [], revokedJtis: [], nextId: 1, assessments: seedCriteriaAssessments() };
   }
   // seed identities with real scrypt hashes (kept on disk afterwards)
   for (const [email, u] of Object.entries(SEED_USERS)) {
@@ -2111,21 +2445,27 @@ const server=http.createServer(async(req,res)=>{
   }
 
   /* --------------------------- organizations --------------------------- */
-  if(is('/organizations') && method==='GET') return json(res,200,scopedOrgs(req).map(o=>({...o,owner:{name:'کاربر دمو'},_count:orgCounts(o)})));
+  if(is('/organizations') && method==='GET') return json(res,200,attachCriteria('ORGANIZATION',scopedOrgs(req).map(o=>({...o,owner:{name:'کاربر دمو'},_count:orgCounts(o)}))));
   if(is('/organizations') && method==='POST'){
     const b=await readBody(req);
     if(!b.name||b.name.trim().length<2) return json(res,400,{message:'نام سازمان حداقل ۲ نویسه باید باشد.'});
+    const intake = normalizeCriteriaAnswers(b.criteriaAnswers ?? b.assessment);
+    const intakeScope = criteriaScopeError('ORGANIZATION', intake);
+    if (intakeScope) return json(res,400,{message:intakeScope});
     const o={id:`org-${Date.now()}`,name:b.name,type:b.type??'OTHER',industry:b.industry??null,country:b.country??null,parentOrganizationId:b.parentOrganizationId??null,createdAt:nowIso()};
     ORGS.push(o);
-    audit(req,'CREATE','organization',o.id,'OK',{name:o.name});
-    return json(res,201,{...o,owner:{name:'کاربر دمو'},_count:orgCounts(o)});
+    // دمو: سازندهٔ سازمان آن را در محدودهٔ دید خود می‌گیرد تا ارزیابی اولیه بلافاصله ممکن باشد
+    if (authUser && !authUser.isOwner && Array.isArray(authUser.accessibleOrganizationIds) && !authUser.accessibleOrganizationIds.includes(o.id)) authUser.accessibleOrganizationIds.push(o.id);
+    if (intake.length) saveStoredAnswers('ORGANIZATION', o.id, intake);
+    audit(req,'CREATE','organization',o.id,'OK',{name:o.name,criteriaAnswers:intake.length});
+    return json(res,201,attachCriteria('ORGANIZATION',[{...o,owner:{name:'کاربر دمو'},_count:orgCounts(o)}])[0]);
   }
   const orgId=match('/organizations/:id');
   if(orgId&&method==='GET'){
     const o=ORGS.find(x=>x.id===orgId[0]);
     if(!o) return json(res,404,{message:'سازمان یافت نشد'});
     if(!inScope(req,o.id)) return json(res,403,{message:'دسترسی به این سازمان مجاز نیست.'});
-    return json(res,200,{...o,owner:{name:'کاربر دمو'},_count:orgCounts(o)});
+    return json(res,200,attachCriteria('ORGANIZATION',[{...o,owner:{name:'کاربر دمو'},_count:orgCounts(o)}])[0]);
   }
   const orgTimeline=match('/organizations/:id/timeline');
   if(orgTimeline&&method==='GET'){
@@ -2146,14 +2486,14 @@ const server=http.createServer(async(req,res)=>{
     let list=scopedPeople(req);
     const orgParam=q.get('organizationId');
     if(orgParam) list=list.filter(p=>p.organizationId===orgParam);
-    return json(res,200,list.map(p=>({...p,organization:orgById(p.organizationId)?{id:p.organizationId,name:orgById(p.organizationId).name}:null})));
+    return json(res,200,attachCriteria('PERSON',list.map(p=>({...p,organization:orgById(p.organizationId)?{id:p.organizationId,name:orgById(p.organizationId).name}:null}))));
   }
   const personId=match('/people/:id');
   if(personId&&method==='GET'){
     const p=PEOPLE.find(x=>x.id===personId[0]);
     if(!p) return json(res,404,{message:'شخص یافت نشد'});
     if(!inScope(req,p.organizationId)) return json(res,403,{message:'دسترسی به این شخص مجاز نیست.'});
-    return json(res,200,{...p,organization:orgById(p.organizationId)?{id:p.organizationId,name:orgById(p.organizationId).name}:null});
+    return json(res,200,attachCriteria('PERSON',[{...p,organization:orgById(p.organizationId)?{id:p.organizationId,name:orgById(p.organizationId).name}:null}])[0]);
   }
   const personOrgs=match('/people/:id/organizations');
   if(personOrgs&&method==='GET'){
@@ -2228,23 +2568,27 @@ const server=http.createServer(async(req,res)=>{
     let list=scopedRels(req);
     const orgParam=q.get('organizationId');
     if(orgParam) list=list.filter(r=>r.sourceOrganizationId===orgParam||r.targetOrganizationId===orgParam);
-    return json(res,200,list.map(r=>({...relWithOrgs(r), riskDrivers:riskDrivers(req,r)})));
+    return json(res,200,attachCriteria('RELATIONSHIP',list.map(r=>({...relWithOrgs(r), riskDrivers:riskDrivers(req,r)}))));
   }
   if(is('/relationships')&&method==='POST'){
     const b=await readBody(req);
     if(!b.sourceOrganizationId||!b.targetOrganizationId) return json(res,400,{message:'سازمان مبدأ و مقصد لازم است.'});
     if(!inScope(req,b.sourceOrganizationId)||!inScope(req,b.targetOrganizationId)) return json(res,403,{message:'یکی از سازمان‌ها خارج از محدوده است.'});
-    const r={id:`r-${Date.now()}`,relationshipType:b.relationshipType??'OTHER',status:b.status??'ACTIVE',healthScore:b.healthScore??60,riskScore:b.riskScore??30,strategicScore:b.strategicScore??50,influenceScore:b.influenceScore??50,opportunityScore:b.opportunityScore??50,resilienceScore:b.resilienceScore??50,nextActionAt:null,lastInteractionAt:nowIso(),sourceOrganizationId:b.sourceOrganizationId,targetOrganizationId:b.targetOrganizationId};
+    const relIntake=normalizeCriteriaAnswers(b.criteriaAnswers??b.assessment);
+    const relIntakeScope=criteriaScopeError('RELATIONSHIP',relIntake);
+    if(relIntakeScope) return json(res,400,{message:relIntakeScope});
+        const r={id:`r-${Date.now()}`,relationshipType:b.relationshipType??'OTHER',status:b.status??'ACTIVE',healthScore:b.healthScore??60,riskScore:b.riskScore??30,strategicScore:b.strategicScore??50,influenceScore:b.influenceScore??50,opportunityScore:b.opportunityScore??50,resilienceScore:b.resilienceScore??50,nextActionAt:null,lastInteractionAt:nowIso(),sourceOrganizationId:b.sourceOrganizationId,targetOrganizationId:b.targetOrganizationId};
     RELS.push(r); saveDb();
-    audit(req,'CREATE','relationship',r.id,'OK',{source:r.sourceOrganizationId,target:r.targetOrganizationId});
-    return json(res,201,relWithOrgs(r));
+    if(relIntake.length) saveStoredAnswers('RELATIONSHIP',r.id,relIntake);
+    audit(req,'CREATE','relationship',r.id,'OK',{source:r.sourceOrganizationId,target:r.targetOrganizationId,answers:relIntake.length});
+    return json(res,201,attachCriteria('RELATIONSHIP',[relWithOrgs(r)])[0]);
   }
   const relId=match('/relationships/:id');
   if(relId&&method==='GET'){
     const r=RELS.find(x=>x.id===relId[0]);
     if(!r) return json(res,404,{message:'رابطه یافت نشد'});
     if(!inScope(req,r.sourceOrganizationId)||!inScope(req,r.targetOrganizationId)) return json(res,403,{message:'دسترسی مجاز نیست.'});
-    return json(res,200,{...relWithOrgs(r), riskDrivers:riskDrivers(req,r)});
+    return json(res,200,attachCriteria('RELATIONSHIP',[{...relWithOrgs(r), riskDrivers:riskDrivers(req,r)}])[0]);
   }
   const relTimeline=match('/relationships/:id/timeline');
   if(relTimeline&&method==='GET'){
@@ -2942,10 +3286,14 @@ const server=http.createServer(async(req,res)=>{
     const b=await readBody(req);
     if(!b.firstName?.trim()||!b.lastName?.trim()) return json(res,400,{message:'نام و نام خانوادگی لازم است.'});
     if(!b.organizationId||!inScope(req,b.organizationId)) return json(res,403,{message:'سازمان انتخاب‌شده در محدودهٔ دسترسی شما نیست.'});
+    const personIntake=normalizeCriteriaAnswers(b.criteriaAnswers??b.assessment);
+    const personIntakeScope=criteriaScopeError('PERSON',personIntake);
+    if(personIntakeScope) return json(res,400,{message:personIntakeScope});
     const p={id:`p-${Date.now()}`,firstName:b.firstName,lastName:b.lastName,email:b.email??null,phone:b.phone??null,title:b.title??null,department:b.department??null,organizationId:b.organizationId,status:'ACTIVE',influenceScore:b.influenceScore??60,decisionPower:b.decisionPower??50,accessibilityScore:b.accessibilityScore??60,country:b.country??'ایران'};
     PEOPLE.push(p);
-    audit(req,'CREATE','person',p.id,'OK',{name:`${p.firstName} ${p.lastName}`});
-    return json(res,201,{...p,organization:orgById(p.organizationId)?{id:p.organizationId,name:orgById(p.organizationId).name}:null});
+    if(personIntake.length) saveStoredAnswers('PERSON',p.id,personIntake);
+    audit(req,'CREATE','person',p.id,'OK',{name:`${p.firstName} ${p.lastName}`,answers:personIntake.length});
+    return json(res,201,attachCriteria('PERSON',[{...p,organization:orgById(p.organizationId)?{id:p.organizationId,name:orgById(p.organizationId).name}:null}])[0]);
   }
 
   /* ---- commitments CRUD ---- */
@@ -4907,6 +5255,107 @@ const server=http.createServer(async(req,res)=>{
     writeExportLog(req,kind,format,rows,approval.id,sc.orgId);
     res.writeHead(200,{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':`attachment; filename="srip-${kind}.csv"`});
     return res.end(body);
+  }
+
+
+  /* ───────────────────────────  معیارها و ارزیابی  ─────────────────────────── */
+  if(is('/criteria')&&method==='GET'){
+    const data=criteriaData();
+    const subject=q.get('subjectType');
+    const list=subject?criteriaForSubject(String(subject).toUpperCase()):data.criteria;
+    return json(res,200,{
+      version:CRITERIA_VERSION,
+      families:Object.entries(data.familyMeta).map(([key,m])=>({key,...m,criteria:list.filter(c=>c.family===key).map(c=>c.code)})),
+      scales:Object.fromEntries(Object.entries(data.scales).map(([k,v])=>[k,{label:v.label,anchors:v.anchors}])),
+      criteria:list.map(c=>({...c,anchors:c.anchors??data.scales[c.scaleId]?.anchors??[],familyName:data.familyMeta[c.family]?.name??c.family})),
+      methodLabels:METHOD_LABELS,
+    });
+  }
+  {
+    const qMatch=match('/criteria/questionnaire/:subjectType');
+    if(qMatch&&method==='GET'){
+      const subject=String(qMatch[0]).toUpperCase();
+      if(!['ORGANIZATION','PERSON','RELATIONSHIP','OPPORTUNITY'].includes(subject)) return json(res,400,{message:'نوع سوژه نامعتبر است.'});
+      const questions=criteriaForSubject(subject).filter(c=>c.intake&&c.evidence!=='OBSERVED').map(c=>({
+        code:`Q_${c.code}`,criterionCode:c.code,family:c.family,familyName:criteriaData().familyMeta[c.family].name,subject,
+        prompt:c.intake.prompt,help:c.intake.help,recommended:!!c.intake.recommended,polarity:c.polarity,
+        warning:c.intake.warning??null,warnBelow:c.intake.warnBelow??null,anchors:criteriaScale(c),
+        criterion:{...c,anchors:criteriaScale(c)},
+      }));
+      return json(res,200,{subjectType:subject,version:CRITERIA_VERSION,optional:true,totalCriteria:criteriaForSubject(subject).length,questions,recommendedIds:questions.filter(x=>x.recommended).map(x=>x.code),note:'همۀ پرسش‌ها اختیاری‌اند. پاسخ‌ندادنه با صفر یکسان نیست: معیار در «ناشناخته» می‌ماند و اطمینان امتیاز پایین می‌آید.'});
+    }
+  }
+  {
+    const aMatch=match('/criteria/assessment/:subjectType/:subjectId');
+    if(aMatch&&(method==='GET'||method==='POST'||method==='PATCH')){
+      const subject=String(aMatch[0]).toUpperCase();
+      if(!['ORGANIZATION','PERSON','RELATIONSHIP','OPPORTUNITY'].includes(subject)) return json(res,400,{message:'نوع سوژه نامعتبر است.'});
+      const subjectId=aMatch[1];
+      const orgOf = (type,id)=>type==='ORGANIZATION'?id:type==='PERSON'?(PEOPLE.find(x=>x.id===id)?.organizationId??null):(RELS.find(x=>x.id===id)?.sourceOrganizationId??null);
+      const record = subject==='ORGANIZATION'?ORGS.find(x=>x.id===subjectId):subject==='PERSON'?PEOPLE.find(x=>x.id===subjectId):RELS.find(x=>x.id===subjectId);
+      if(!record) return json(res,404,{message:'رکورد موردنظر یافت نشد.'});
+      const ownerOrg = orgOf(subject,subjectId);
+      if(ownerOrg && !inScope(req,ownerOrg)) return json(res,403,{message:'دسترسی به ارزیابی این رکورد مجاز نیست.'});
+      if(method!=='GET'){
+        const b=await readBody(req);
+        const answers=normalizeCriteriaAnswers(b.answers??b.criteriaAnswers??b);
+        const unknownCodes=(Array.isArray(b.answers??b)?b.answers:[]).map(x=>String(x?.criterionCode??'').toUpperCase()).filter(code=>code&&!criterionByCode(code));
+        if(unknownCodes.length) return json(res,400,{message:`معیارهای ناشناخته: ${unknownCodes.join('، ')}`});
+        const scopeErr=criteriaScopeError(subject,answers);
+        if(scopeErr) return json(res,400,{message:scopeErr});
+        if(!answers.length) return json(res,400,{message:'دست‌کم یک پاسخ لازم است. اگر نمی‌دانید، این بخش را رد کنید.'});
+        const savedCount=saveStoredAnswers(subject,subjectId,answers);
+        let assessment; try { assessment=computeCriteria(subject,subjectId); } catch (e) { return json(res,500,{message:'محاسبۀ ارزیابی ناموفق بود: '+String(e?.message??e)}); }
+        audit(req,'UPDATE','criteria',`${subject}:${subjectId}`,'OK',{answers:savedCount,score:assessment.score,coverage:assessment.coverage});
+        NOTIFICATIONS.unshift({id:`n-crit-${Date.now()}`,userId:authUser?.id??'u-demo',type:assessment.flags.some(f=>f.severity==='CRITICAL')?'ALERT':'INFO',title:assessment.flags.some(f=>f.severity==='CRITICAL')?'پرچم بحرانی در ارزیابی معیارها':'ارزیابی معیارها به‌روزرسانی شد',body:assessment.flags[0]?.message??`امتیاز ${assessment.score} با پوشش ${assessment.coverage}٪ محاسبه شد.`,channel:'IN_APP',priority:assessment.flags.some(f=>f.severity==='CRITICAL')?'HIGH':'MEDIUM',createdAt:new Date().toISOString(),readAt:null,data:{subjectType:subject,subjectId}});
+        return json(res,200,{savedCount,assessment:{...assessment,summary:criteriaSummaryLite(assessment)}});
+      }
+      try { return json(res,200,computeCriteria(subject,subjectId)); }
+      catch (e) { return json(res,500,{message:'محاسبۀ ارزیابی ناموفق بود: '+String(e?.message??e)}); }
+    }
+  }
+  if(is('/criteria/review-queue')&&method==='GET'){
+    const rows=[];
+    for(const [key,bucket] of Object.entries(assessmentStore())){
+      const [subjectType,subjectId]=key.split(':');
+      for(const [code,a] of Object.entries(bucket??{})){
+        const c=criterionByCode(code); if(!c) continue;
+        const age=a.answeredAt?Math.floor((Date.now()-new Date(a.answeredAt).getTime())/86400000):9999;
+        if(age<c.halfLifeDays) continue;
+        rows.push({subjectType,subjectId,criterionCode:code,name:c.name,age,dueInDays:c.halfLifeDays-age,reason:age>c.halfLifeDays*2?'اعتبار پاسخ گذشته (بیش از دو نیمه‌عمر)':'نزدیک به پایان اعتبار پاسخ',weight:c.weight});
+      }
+    }
+    rows.sort((x,y)=>y.age-x.age);
+    return json(res,200,{tasks:[],staleAnswers:rows,total:rows.length});
+  }
+  {
+    const ovMatch=match('/criteria/overrides/:organizationId');
+    if(ovMatch){
+      const data=criteriaData();
+      if(method==='GET') return json(res,200,{version:CRITERIA_VERSION,defaults:data.familyWeights,organizationId:ovMatch[0],overrides:DB.criteriaOverrides??[],families:Object.entries(data.familyMeta).map(([key,m])=>({key,...m}))});
+      const b=await readBody(req);
+      const subject=String(b.subjectType??'RELATIONSHIP').toUpperCase();
+      const incoming=b.familyWeights??{};
+      const merged={...(data.familyWeights[subject]??{})};
+      for(const k of Object.keys(merged)){ const v=Number(incoming[k]); if(Number.isFinite(v)&&v>=0&&v<=1) merged[k]=v; }
+      const total=Object.values(merged).reduce((sum,v)=>sum+v,0)||1;
+      const normalized=Object.fromEntries(Object.entries(merged).map(([k,v])=>[k,Math.round((v/total)*10000)/10000]));
+      DB.criteriaOverrides=[...(DB.criteriaOverrides??[]).filter(x=>x.subjectType!==subject),{id:'ov-'+Date.now(),organizationId:ovMatch[0],subjectType:subject,scope:b.scope??'DEFAULT',familyWeights:normalized,minCoverageForRanking:Number(b.minCoverageForRanking??40),enabled:true,updatedAt:new Date().toISOString()}];
+      saveDb();
+      audit(req,'UPDATE','criteria-overrides',subject,'OK',{familyWeights:normalized});
+      return json(res,200,{subjectType:subject,familyWeights:normalized,minCoverageForRanking:Number(b.minCoverageForRanking??40)});
+    }
+  }
+  {
+    const covMatch=match('/criteria/coverage/:organizationId');
+    if(covMatch&&method==='GET'){
+      const subject=String(q.get('subjectType')??'RELATIONSHIP').toUpperCase();
+      const oid=covMatch[0];
+      const ids=subject==='PERSON'?PEOPLE.filter(x=>x.organizationId===oid).map(x=>x.id):subject==='ORGANIZATION'?[oid]:RELS.filter(r=>r.sourceOrganizationId===oid||r.targetOrganizationId===oid).map(r=>r.id);
+      const minForRanking=Math.ceil(criteriaForSubject(subject).length*0.35);
+      const rows=ids.map(id=>{const a=storedAnswers(subject,id);const answered=Object.keys(a).filter(k=>a[k].level!=null||a[k].value!=null).length;return {subjectId:id,answered,ready:answered>=minForRanking};});
+      return json(res,200,{subjectType:subject,assessed:rows.filter(r=>r.answered>0).length,rankable:rows.filter(r=>r.ready).length,total:rows.length,minAnswersForRanking:minForRanking,rows});
+    }
   }
 
   json(res,404,{message:`مسیر ${method} ${path} در Mock API وجود ندارد.`});

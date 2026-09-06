@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { apiGet, apiPostOffline } from '../services/api-client';
 import { useSession } from '../state/session';
 import { styles, colors } from '../lib/ui';
+import { CriteriaIntake, intakePayload, type AnswerMap } from '../features/criteria';
 
 const TYPES = ['HOLDING', 'SUBSIDIARY', 'CUSTOMER', 'PARTNER', 'BANK', 'GOVERNMENT', 'INVESTOR', 'SUPPLIER', 'OTHER'];
 
@@ -26,6 +27,8 @@ export default function CreateOrganization() {
   const [email, setEmail] = useState('');
   const [parentOrgId, setParentOrgId] = useState('');
   const [orgs, setOrgs] = useState<Org[]>([]);
+  /* optional — the same criteria the record's score is later computed from */
+  const [intake, setIntake] = useState<AnswerMap>({});
   const [e, setE] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -57,6 +60,7 @@ export default function CreateOrganization() {
         phone: phone.trim() || undefined,
         email: email.trim() || undefined,
         parentOrganizationId: parentOrgId.trim() || undefined,
+        criteriaAnswers: intakePayload(intake),
       }, token);
       router.back();
     } catch (x) { setE((x as Error).message); setSaving(false); }
@@ -95,6 +99,7 @@ export default function CreateOrganization() {
           </View>
         ) : <ActivityIndicator />}
         <TextInput style={styles.input} placeholder="Parent organization ID (or pick above)" value={parentOrgId} onChangeText={setParentOrgId} />
+        <CriteriaIntake subjectType="ORGANIZATION" answers={intake} onChange={setIntake} token={token} />
         {e ? <Text style={styles.error}>{e}</Text> : null}
         <Pressable style={styles.button} disabled={saving} onPress={save}><Text style={styles.buttonText}>{saving ? 'Saving…' : 'Save'}</Text></Pressable>
       </ScrollView>

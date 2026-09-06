@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { CriteriaBadge, CriteriaIntake, intakePayload, type AnswerMap, type Summary as CriteriaSummary } from '../_components/criteria';
 import { api } from '../_lib/api';
 import { fa } from '../_lib/fa';
 import { useWorkspace } from '../_components/workspace';
@@ -14,6 +15,7 @@ import {
 
 type Org = { id: string; name: string; type: string };
 type Rel = {
+  criteria?: CriteriaSummary | null;
   id: string;
   relationshipType: string;
   status: string;
@@ -46,6 +48,7 @@ const SORTS = [
   { value: 'strategicScore', label: 'بیشترین ارزش راهبردی' },
   { value: 'lastInteractionAt', label: 'قدیمی‌ترین تعامل' },
   { value: 'nextActionAt', label: 'نزدیک‌ترین اقدام بعدی' },
+  { value: 'coverage', label: 'ارزیابی ناقص‌تر اول' },
 ] as const;
 type SortKey = typeof SORTS[number]['value'];
 
@@ -95,6 +98,8 @@ export default function RelationshipsPage() {
   const [saving, setSaving] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [formError, setFormError] = useState('');
+  /* پرسش‌نامای اختیاری — همان معیارهایی که امتیاز رابطه از آن‌ها ساخته می‌شود */
+  const [intake, setIntake] = useState<AnswerMap>({});
 
   const load = useCallback(async () => {
     try {
@@ -131,8 +136,8 @@ export default function RelationshipsPage() {
     if (source === target) { setFormError('سازمان مبدأ و مقصد نمی‌توانند یکسان باشند.'); return; }
     setSaving(true); setError('');
     try {
-      await api('/relationships', { method: 'POST', body: JSON.stringify({ sourceOrganizationId: source, targetOrganizationId: target, relationshipType: kind }) });
-      setSource(''); setTarget(''); setKind(''); setCreateOpen(false);
+      await api('/relationships', { method: 'POST', body: JSON.stringify({ sourceOrganizationId: source, targetOrganizationId: target, relationshipType: kind, criteriaAnswers: intakePayload(intake) }) });
+      setSource(''); setTarget(''); setKind(''); setIntake({}); setCreateOpen(false);
       await load();
     } catch (err) {
       setError((err as Error).message);
@@ -164,6 +169,7 @@ export default function RelationshipsPage() {
         case 'riskScore': return (y.riskScore ?? -1) - (x.riskScore ?? -1);
         case 'strategicScore': return (y.strategicScore ?? -1) - (x.strategicScore ?? -1);
         case 'lastInteractionAt': return (x.lastInteractionAt ?? '9999').localeCompare(y.lastInteractionAt ?? '9999');
+        case 'coverage': return (x.criteria?.coverage ?? -1) - (y.criteria?.coverage ?? -1);
         case 'nextActionAt': return (x.nextActionAt ?? '9999').localeCompare(y.nextActionAt ?? '9999');
         default: return (x.healthScore ?? 101) - (y.healthScore ?? 101);
       }
@@ -272,6 +278,7 @@ export default function RelationshipsPage() {
                             {r.sourceOrganization?.name ?? '—'} <span className="t-muted">↔</span> {r.targetOrganization?.name ?? '—'}
                           </Link>
                           <div className="t-muted">{r.owner?.name ? `مالک: ${r.owner.name}` : 'بدون مالک'}</div>
+                          <div className="rel-criteria-row"><CriteriaBadge criteria={r.criteria} /></div>
                         </td>
                         <td>
                           <div className="rel-badges" style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
@@ -362,6 +369,8 @@ export default function RelationshipsPage() {
               <span className="field-hint">نوع رابطه تعیین می‌کند که امتیازهای سلامت، ریسک و راهبردی چگونه تفسیر شوند. رابطهٔ «{orgName(source)} ← {orgName(target)}» ثبت خواهد شد.</span>
             </div>
           </div>
+          <div className="form-section-head"><h3>معیارهای ارزیابی</h3></div>
+          <CriteriaIntake subjectType="RELATIONSHIP" answers={intake} onChange={setIntake} heading="آنچه همین حالا از این رابطه می‌دانید (اختیاری)" />
         </form>
       </Modal>
     </>

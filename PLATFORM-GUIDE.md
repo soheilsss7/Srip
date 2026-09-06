@@ -77,7 +77,7 @@ Srip/
 │   ├── web-ux/       ← کلون بازطراحی‌شدهٔ رابط = «srip2 / UI 3.0»  → خروجی استاتیک در docs/srip2
 │   └── mobile/       ← Expo SDK 57 + React Native 0.86 (expo-router)
 ├── packages/         ← api-client, auth, config, design-system, types, ui, validation, tsconfig, eslint-config
-├── docs/             ← (امروزه) خروجی استاتیک گیت‌هاب‌پیج  ⚠ ببینید §۲۰
+├── docs/             ← (امروزه) خروجی استاتیک گیت‌هاب‌پیج  ⚠ ببینید §۲۱
 ├── infra/, infrastructure/  ← docker, nginx, terraform (VPC/WAF/RDS/EKS/…), scripts backup/PITR/restore
 ├── tests/            ← e2e, load, security, dr, storage (اسکریپت‌های Node)
 └── scripts/          ← ۸۰+ اسکریپت verify-*/، backup، benchmark، preview-server
@@ -681,10 +681,94 @@ node serve-preview.mjs            # :4173 — لندینگ + /Srip (اصلی) + 
 
 ---
 
-## ۲۰. وضعیت فعلی، شکاف‌ها و کارهای ناتمام
+## ۲۰. مدل معیارهای ارزیابی (Criteria Assessment Model)
+
+سند کامل و قابل‌ارجاع: `docs/CRITERIA-MODEL.md`. اینجا خلاصۀ فنی و محل کدها.
+
+### چرا و چه چیزی
+
+نمره‌ها پیش‌تر فقط از رفتار ثبت‌شده ساخته می‌شدند؛ دو نقص داشت: (الف) تعریف «معیار» پشت عدد نبود،
+(ب) در `cold start` (داده = صفر) عملاً نمره‌ای نبود. فاز جدید یک **مدل واحد** می‌سازد که عوامل را
+دو-نوعی می‌کند و وزنشان را با شواهد تنظیم می‌کند:
+
+- `OBSERVED` — همان ۱۲ عامل رفتاری فعلی (تعامل/جلسه/قول/فرصت/تازگی/…).
+- `ASSESSED` — کاتالوگ **۴۷ معیار در ۸ خانواده** که از تحقیق بیرون آمده (Dickson 1966 و Weber et al. 1996
+  برای انتخاب شریک/تأمین‌کننده، Morgan & Hunt 1994 برای اعتماد/تعهد، Burt 2004 + Granovetter 1973 برای
+  شبکه، چک‌لیست‌های due diligence برای لایۀ ریسک/انطباق، و ادبیات انضباط عدم‌قطعیت PLOS برای
+  coverage/confidence و «بدون داده ≠ صفر»).
+
+### فایل‌ها
+
+| مسیر | نقش |
+|---|---|
+| `apps/api/src/criteria/criteria.catalog.ts` | **منبع حقیقت**: خانواده‌ها، مقیاس‌ها، ۴۷ معیار، `FAMILY_WEIGHTS`، `questionnaireFor()` — و `CRITERIA_VERSION = 'criteria-v1'` + `METHOD_QUALITY` در `criteria.engine.ts` |
+| `apps/api/src/criteria/criteria.engine.ts` | `computeAssessment`، `summarizeAssessment`، `FACTOR_CRITERIA_MAP`، `factorAssessment`، `criteriaFactorBridge`، `gateCap` |
+| `apps/api/src/criteria/criteria.service.ts` | Prisma (answers/snapshots/overrides/review-tasks) + کش ۶۰ ثانیه‌ای + `recordAnswers` |
+| `apps/api/src/criteria/criteria.controller.ts` | ۹ مسیر `/criteria/*` (کاتالوگ، پرسش‌نامه، ارزیابی GET/POST/PATCH، review-queue، overrides GET/PATCH، coverage) |
+| `apps/api/prisma/schema.prisma` | `CriteriaAnswer` / `CriteriaSnapshot` / `CriteriaOverride` / `CriteriaReviewTask` + سه enum |
+| `apps/api/prisma/migrations/20260905120000_criteria_assessment_model/` | مهاجرت (هنوز در این sandbox اجرا نشده) |
+| `apps/web-ux/scripts/sync-criteria-catalog.mjs` | کاتالوگ → `criteria-data.json` برای دمو (`--check` = drift gate) |
+| `apps/web-ux/scripts/mock-api.mjs` | همتای کامل موتور در دمو (`computeCriteria`، مسیرهای `/criteria/*`، intake در `POST /organizations` `/people` `/relationships`) |
+| `apps/{web-ux,web}/app/_components/criteria.tsx` | `CriteriaIntake` / `CriteriaBadge` / `CriteriaScoreCard` / `CriteriaRailChip` |
+| `apps/web-ux/app/admin/criteria/page.tsx` | کاتالوگ‌براوزر + وزن خانوادگی + آستانۀ رتبه‌بندی + صف بازبینی |
+| `apps/mobile/src/features/criteria.tsx` | همان منطق در RN با `StyleSheet` (intake در سه فرم ساخت، کارت در سه صفحهٔ جزئیات، چیپ در دو فهرست) |
+
+### قواعد مهم موتور (هر دو پیاده‌سازی یکسان)
+
+1. `answerMethod` → کیفیت روش: `DOCUMENT 100 / VERIFIED 90 / OWNER_ASSESSED 70 / SELF_REPORTED 55 / INFERRED 40`؛
+   `+10` مدرک (>8 کاراکتر)، `+4` یادداشت (>12)؛ فرسودگی: `decay = max(.35, 1 − .3·min(1,r) − .25·min(1,r/2))`، `r = age/max(30,halfLife)`
+2. `confidence = methodQuality·decay (+bonuses)`، و پس از آن `confidence ×= 0.55 + 0.45·knownWeight`
+3. پوشش **وزن‌محور**: `familyCredit = Σ modelWeight_f · coveragePct_f`، `knownWeight = min(1, familyCredit/totalModelWeight)`
+   — پاسخ‌دادن به یک معیار، خانوادۀ ۸ عضوی را ۱۰۰٪ نمی‌کند
+4. `uncertainty = (1−coverage)·28 + (100−conf)/12` → بازۀ `[score±u]` در همه‌جا نمایش داده می‌شود
+5. خانواده = میانگین وزن‌دار معیارهای **دارای داده**؛ سوژه = میانگین وزن‌دار خانواده‌ها با `FAMILY_WEIGHTS[subjectType]`
+6. `GATES`: `RISK_SANCTIONS_PEP`→cap 20 (CRITICAL)، `FIN_Z_SCORE`→40، `REL_OPPORTUNISM`→45، `CAP_QUALITY_SYSTEM`→55؛
+   `score = min(weighted, gateCap)`، پرچم CRITICAL ⇒ `rankable=false`
+7. `rankable = coverage ≥ minCoverageForRanking (40) && conf ≥ 35 && بدون CRITICAL`؛
+   `rankingScore = score·(0.7 + 0.3·conf/100)`
+8. verdict ladder: `CRITICAL → INSUFFICIENT_DATA (<25 cov) → PRELIMINARY (<40 conf) → AT_RISK (<40 score) → STRONG (≥75 & conf≥65) → SOLID`
+9. `needsReview = conf < 40 || age > 2×halfLife` → `CriteriaReviewTask` و `/criteria/review-queue`
+10. `OBSERVED` هیچ‌وقت از نبود داده صفر نمی‌گیرد: نبودِ کلید ⇒ `null`، صفر واقعی فقط وقتی است که رفتار واقعاً صفر باشد
+
+### نقطۀ اتصال به امتیاز رابطه (`relationship-score.service.ts`)
+
+```ts
+b             = interactions + meetings*2 + commitments + opportunities
+evidenceShare = b / (b + 6)
+assessedShare = (1 − evidenceShare) * (0.35 + 0.65 * confidence/100)
+score         = min(Σ wᵢfᵢ با تعدیل پل معیارها, gateCap)
+scoreBasis    = b === 0 ? 'COLD_START_ASSESSED' : 'BLEND'
+```
+
+و `FACTOR_CRITERIA_MAP` برای هر یک از ۱۲ عامل مشخص می‌کند کدام معیارها آن را به‌عنوان «شاهد تحلیلی»
+تقویت/تعدیل کنند (مثلاً `ACC_MULTITHREADING` → تنوع مخاطب، `REL_COMMITMENT` → وفای به قول،
+`NET_*` → عوامل موقعیت شبکه).
+
+### API
+
+`GET /criteria` · `GET /criteria/questionnaire/:subjectType[?recommended=true]` ·
+`GET|POST /criteria/assessment/:subjectType/:subjectId` · `GET /criteria/review-queue` ·
+`GET|PATCH /criteria/overrides/:organizationId` · `GET /criteria/coverage/:organizationId`.
+مجوزها تازه اضافه نشدند: `entity.read` / `entity.write` / `analytics.read` / `admin.catalog`.
+`POST` روی سه سوژۀ اول، `criteriaAnswers[]` اختیاری می‌پذیرد (cold-start intake همان لحظۀ ساخت).
+
+### ریسک‌های نگهداری
+
+- موک دمو با بیلد **بدون باندلر** (چسباندن خطی در `make-demo-sw.mjs`) ساخته می‌شود؛ منطق تازهٔ دمو باید داخل
+  `mock-api.mjs` بماند، بی `import` تازه، بی `server.listen` دوم، و API‌های node-only داخل `try{}`
+  (در مرورگر `globalThis.__SRIP_CRITERIA_DATA__` تنها منبع کاتالوگ است).
+- تغییر کاتالوگ بدون `pnpm sync:criteria` دمو را از API جدا می‌کند → `release-ux.sh` و
+  `pnpm lint:criteria-drift` همین را می‌گیرند.
+- `apps/web` (کلاینت قدیمی) موک مستقل دارد که `/criteria/*` را ندارد؛ مؤلفه‌ها با تشخیص ۴۰۴ خودشان را
+  پنهان می‌کنند تا فرم ثبت رکورد نشکند.
+
+---
+
+## ۲۱. وضعیت فعلی، شکاف‌ها و کارهای ناتمام
 
 ### آنچه پخته است
-دامنهٔ کامل + دسترسی لایه‌ای + امتیازدهی نسخه‌بندی‌شده/قابل‌توضیح + تحلیل شبکهٔ واقعی + موتور توصیه با حلقهٔ
+دامنهٔ کامل + دسترسی لایه‌ای + امتیازدهی نسخه‌بندی‌شده/قابل‌توضیح + **مدل معیارهای ارزیابی با پوشش و اطمینان
+و cold-start** (§۲۰، `docs/CRITERIA-MODEL.md`) + تحلیل شبکهٔ واقعی + موتور توصیه با حلقهٔ
 انسان + گزارش‌گیری چندفرمتی با درگاه تأیید + آفلاین/ایدپوتنسی در موبایل + درگاه‌های CI و ممیزی قرارداد.
 
 ### شکاف‌ها و بدهی فنی (به ترتیب اولویت)
@@ -717,7 +801,8 @@ node serve-preview.mjs            # :4173 — لندینگ + /Srip (اصلی) + 
    `recommendationFunnel` محاسبه می‌شود) → کارت داشبورد گمراه‌کننده.
 9. **بازمحاسبهٔ امتیازها manual/رویدادمحور است؛** زمان‌بند (cron/queue) برای «decay همهٔ روابط شب‌ها» وجود ندارد،
    پس `healthScore` روی رابطه می‌تواند کهنه بماند (سیگنال `relationship-decay` در `riskSignals` همان نقص را
-   پوشش می‌دهد).
+   پوشش می‌دهد). پاسخ‌های معیارها هم همان زمان‌بند را لازم دارند: «decay + refresh» سنجهٔ کهنه را هر شب
+   به `CriteriaReviewTask` اضافه کند (امروز فقط هنگام محاسبه علامت می‌خورد).
 10. **موبایل در CI تست نمی‌شود** (نه typecheck اجباری در gate، نه e2e RN)؛ `apps/mobile` فقط `tsc --noEmit` دارد.
 
 ### وضعیت کار باز (همان تسک قطع‌شده)
