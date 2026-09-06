@@ -18,6 +18,7 @@ const MIME = {
   ".woff": "font/woff",
   ".ttf": "font/ttf",
   ".svg": "image/svg+xml",
+  ".webmanifest": "application/manifest+json",
   ".png": "image/png",
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",

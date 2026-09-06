@@ -5,6 +5,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT/apps/web-ux"
 # ترتیب مهم: اول SW از روی موکِ جاری ساخته شود، بعد build (public -> out)
 node scripts/sync-criteria-catalog.mjs --check || node scripts/sync-criteria-catalog.mjs
+node scripts/gen-icons.mjs || true  # آیکون/manifest — اگر ImageMagick نبود فقط SVG ساخته می‌شود
 node scripts/make-demo-sw.mjs
 SRIP_PAGES=1 NEXT_PUBLIC_API_URL='/Srip/srip2/api/v1' node scripts/next-build.mjs
 rm -rf "$ROOT/docs/srip2"

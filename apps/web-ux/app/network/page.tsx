@@ -722,6 +722,7 @@ export default function Page() {
               <button className="net-btn" onClick={() => graphHandle.current?.reset()} disabled={!graph} title="بازنشانی">بازنشانی</button>
               <button className="net-btn" onClick={() => graphHandle.current?.zoomBy(1.35)} disabled={!graph} title="بزرگ‌نمایی" aria-label="بزرگ‌نمایی">+</button>
               <button className="net-btn" onClick={() => graphHandle.current?.zoomBy(0.74)} disabled={!graph} title="کوچک‌نمایی" aria-label="کوچک‌نمایی">−</button>
+              <span className="net-pinch-hint" title="روی موبایل با دو انگشت زوم کنید؛ دوباره‌لمس روی زمینه هم بزرگ‌نمایی می‌کند"><Maximize size={12} /> دو انگشت = زوم</span>
               <button className="net-btn" onClick={() => setShowLegend(!showLegend)} title="نمایش/عدم نمایش راهنما">راهنما</button>
               {focus ? <button className="net-btn" onClick={clearFocus} title="بازگشت به نمای کلی">پاک‌کردن تمرکز</button> : null}
               <button className="net-btn primary" onClick={() => setGraphFs(true)} disabled={!graph} title="نمایش تمام‌صفحهٔ گراف"><Maximize2 size={13}/> تمام صفحه</button>
@@ -1184,6 +1185,7 @@ export default function Page() {
                   <button className="net-btn" onClick={() => graphHandle.current?.reset()} title="بازنشانی">بازنشانی</button>
                   <button className="net-btn" onClick={() => graphHandle.current?.zoomBy(1.35)} title="بزرگ‌نمایی" aria-label="بزرگ‌نمایی">+</button>
                   <button className="net-btn" onClick={() => graphHandle.current?.zoomBy(0.74)} title="کوچک‌نمایی" aria-label="کوچک‌نمایی">−</button>
+                  <span className="net-pinch-hint" title="با دو انگشت زوم کنید؛ دوباره‌لمس روی زمینه = بزرگ‌نمایی"><Maximize size={12} /> دو انگشت</span>
                   <button className="net-btn" onClick={() => setShowLegend(!showLegend)} title="نمایش/عدم نمایش راهنما">راهنما</button>
                   {focus ? <button className="net-btn" onClick={clearFocus} title="بازگشت به نمای کلی">پاک‌کردن تمرکز</button> : null}
                   <button className="net-btn primary" onClick={() => setGraphFs(false)} title="بستن نمای تمام‌صفحه"><X size={13}/> بستن</button>

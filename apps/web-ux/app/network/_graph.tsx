@@ -279,6 +279,21 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
   const panRef = useRef<Pos>({ x: 0, y: 0 });
   useEffect(() => { panRef.current = pan; }, [pan]);
   const lastTapRef = useRef<{ id: string; t: number } | null>(null);
+  /** پینچ لمسی: دو انگشت → زوم + جابه‌جایی با نقطۀ میانی. */
+  const touchPtsRef = useRef(new Map<number, { x: number; y: number }>());
+  const pinchRef = useRef<{ dist: number; cx: number; cy: number } | null>(null);
+  const zoomRef = useRef(1);
+  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+  /** دابل‌تپ روی زمینۀ گراف = زوم (و در سقف، بازگشت). */
+  const bgTapRef = useRef<{ x: number; y: number; t: number } | null>(null);
+
+  const clampZoom = (v: number) => Math.min(3, Math.max(0.3, v));
+  const twoFingerGeom = () => {
+    const pts = [...touchPtsRef.current.values()];
+    if (pts.length !== 2) return null;
+    const [a, b] = pts;
+    return { dist: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 };
+  };
 
   const clusters = useMemo(() => buildClusters(graph.nodes), [graph]);
   const { positions, links } = useMemo(() => {
@@ -346,11 +361,38 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
   const CLICK_SLOP = 9; // px — هر جابجایی بیشتر از این = پن، نه کلیک
   const onSvgPointerDown = (e: React.PointerEvent) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (e.pointerType !== 'mouse') touchPtsRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (touchPtsRef.current.size === 2) {
+      // انگشت دوم نشست → پن را ول کن و پینچ را ببند
+      pressRef.current = null;
+      setPanning(false);
+      pinchRef.current = twoFingerGeom();
+      return;
+    }
     if ((e.target as Element) !== (e.currentTarget as Element)) return; // فقط خودِ بوم
     pressRef.current = { kind: 'pan', x: e.clientX, y: e.clientY, pan0: { ...panRef.current } };
     setPanning(true);
   };
   const onSvgPointerMove = (e: React.PointerEvent) => {
+    if (e.pointerType !== 'mouse' && touchPtsRef.current.has(e.pointerId)) {
+      touchPtsRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    }
+    if (touchPtsRef.current.size >= 2) {
+      const g = twoFingerGeom();
+      const base = pinchRef.current;
+      if (g && base) {
+        const el = svgRef.current;
+        const rect = el?.getBoundingClientRect();
+        const unit = rect && rect.width ? W / rect.width : 1;
+        setZoom(clampZoom(zoomRef.current * (g.dist / base.dist)));
+        setPan((panNow) => ({
+          x: panNow.x - (g.cx - base.cx) * unit,
+          y: panNow.y - (g.cy - base.cy) * unit,
+        }));
+        pinchRef.current = g;
+      }
+      return;
+    }
     const p = pressRef.current;
     if (!p) return;
     if (p.kind === 'pan') {
@@ -373,9 +415,23 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
     }
   };
   const onSvgPointerUp = (e: React.PointerEvent) => {
+    if (e.pointerType !== 'mouse') {
+      touchPtsRef.current.delete(e.pointerId);
+      if (touchPtsRef.current.size < 2) pinchRef.current = null;
+    }
     const p = pressRef.current;
     pressRef.current = null;
     setPanning(false);
+    // دابل‌تپ روی زمینۀ خالی: زوم ۱٫۶× (یا بازگشت اگر خیلی نزدیک باشیم)
+    if (e.pointerType !== 'mouse' && (!p || p.kind === 'pan') && (e.target as Element) === (e.currentTarget as Element)) {
+      const now = Date.now();
+      const last = bgTapRef.current;
+      const near = last && Math.hypot(e.clientX - last.x, e.clientY - last.y) < 28;
+      if (last && near && now - last.t < 380) {
+        bgTapRef.current = null;
+        setZoom((z) => (z >= 2.4 ? 1 : clampZoom(z * 1.6)));
+      } else bgTapRef.current = { x: e.clientX, y: e.clientY, t: now };
+    }
     if (!p || p.kind === 'pan') return;
     const dist = Math.hypot(e.clientX - p.x, e.clientY - p.y);
     if (dist > CLICK_SLOP) return;
@@ -395,7 +451,12 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
     }
     lastTapRef.current = { id: n.id, t: now };
   };
-  const clearPress = () => { pressRef.current = null; setPanning(false); };
+  const clearPress = () => {
+    pressRef.current = null;
+    setPanning(false);
+    if (touchPtsRef.current.size < 2) pinchRef.current = null;
+    touchPtsRef.current.clear();
+  };
 
   const onNodePointerDown = (e: React.PointerEvent, n: GNode) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;

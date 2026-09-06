@@ -26,6 +26,8 @@ export type Summary = {
 type Line = {
   code: string; name: string; value: number | null; confidence: number;
   status: 'OBSERVED' | 'ASSESSED' | 'BLENDED' | 'UNKNOWN'; actionHint?: string; needsReview?: boolean;
+  note?: string | null;
+  assessed?: { value: number; level: number; methodLabel?: string; confidence: number } | null;
 };
 type Assessment = Summary & {
   criteria?: Line[]; unknown?: { code: string; name: string; family: string }[];
@@ -113,14 +115,20 @@ export function CriteriaIntake({
                 const on = current === a.level;
                 const bad = q.polarity === 'BAD' ? a.score >= 60 : a.score < 40;
                 return (
-                  <Pressable key={a.level} onPress={() => pick(q, a.level)}
+                  <Pressable key={a.level} onPress={() => pick(q, a.level)} accessibilityRole="button"
+                    accessibilityLabel={`${q.prompt} — ${a.label}`} accessibilityState={{ selected: on }}
+                    hitSlop={4}
                     style={[s.chip, on && { backgroundColor: bad ? colors.danger : colors.accent, borderColor: bad ? colors.danger : colors.accent }]}>
-                    <Text style={[s.chipText, on && { color: '#fff' }]}>{a.label}</Text>
+                    <Text style={[s.chipText, on && { color: '#fff' }]} numberOfLines={2}>{a.label}</Text>
                   </Pressable>
                 );
               })}
-              <Pressable onPress={() => pick(q, null)} style={[s.chip, s.chipGhost]}>
-                <Text style={[s.chipText, s.chipGhostText]}>{'\u0646\u0645\u06cc\u200c\u062f\u0627\u0646\u0645'} / unknown</Text>
+              <Pressable onPress={() => pick(q, null)} accessibilityRole="button" accessibilityLabel="Unknown — leave this criterion without data"
+                style={[s.chip, s.chipGhost]}>
+                <Text style={[s.chipText, s.chipGhostText]}>
+                  <Text style={{ writingDirection: 'rtl' }}>{'\u0646\u0645\u06cc\u200c\u062f\u0627\u0646\u0645'}</Text>
+                  {' · unknown'}
+                </Text>
               </Pressable>
             </View>
             <Pressable onPress={() => setOpenNote(openNote === q.criterionCode ? null : q.criterionCode)}>
@@ -165,7 +173,12 @@ export function CriteriaScore({ subjectType, subjectId, token, onSaved }: { subj
     try {
       const res = await apiGet<Assessment>(`/criteria/assessment/${subjectType}/${subjectId}`, token);
       setData(res ?? null);
-      setAnswers(Object.fromEntries(((res?.criteria ?? []).filter((l) => l.status !== 'UNKNOWN')).map((l) => [l.code, { level: null }])));
+      // پیش‌پرکردن حالت ویرایش با پاسخ‌های انسانیِ فعلی (نه رفتار مشاهده‌شده) تا عدد قبلی گم نشود
+      setAnswers(Object.fromEntries(
+        (res?.criteria ?? [])
+          .filter((l) => l.assessed)
+          .map((l) => [l.code, { level: l.assessed!.level, note: l.note ?? '' }]),
+      ));
     } catch (e) {
       if (isMissing(e)) setMissing(true); else setError((e as Error).message);
     } finally { setLoading(false); }
@@ -278,17 +291,17 @@ const s = StyleSheet.create({
   blockTitle: { fontSize: 15, fontWeight: '800', color: colors.text },
   blockHint: { fontSize: 12.5, color: colors.muted, lineHeight: 19 },
   question: { gap: 6, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border },
-  questionText: { fontSize: 14, fontWeight: '700', color: colors.text, lineHeight: 21 },
-  questionHelp: { fontSize: 12, color: colors.muted, lineHeight: 18 },
+  questionText: { fontSize: 14.5, fontWeight: '700', color: colors.text, lineHeight: 22, writingDirection: 'rtl' },
+  questionHelp: { fontSize: 12, color: colors.muted, lineHeight: 18, writingDirection: 'rtl' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  chip: { paddingVertical: 7, paddingHorizontal: 10, borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: '#fff' },
-  chipText: { fontSize: 12, fontWeight: '600', color: colors.text },
+  chip: { minHeight: 36, paddingVertical: 8, paddingHorizontal: 11, borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: '#fff', justifyContent: 'center' },
+  chipText: { fontSize: 12, fontWeight: '600', color: colors.text, writingDirection: 'rtl' },
   chipGhost: { borderStyle: 'dashed' },
   chipGhostText: { color: colors.muted },
-  noteToggle: { fontSize: 12, color: colors.accent, fontWeight: '700' },
+  noteToggle: { minHeight: 32, fontSize: 12, color: colors.accent, fontWeight: '700', writingDirection: 'rtl' },
   noteInput: { minHeight: 68, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 10, fontSize: 14, color: colors.text, backgroundColor: '#fff', textAlignVertical: 'top' },
   warn: { fontSize: 12, color: colors.danger, fontWeight: '700' },
-  moreBtn: { paddingVertical: 8 },
+  moreBtn: { minHeight: 44, justifyContent: 'center' },
   moreText: { fontSize: 12.5, color: colors.accent, fontWeight: '700' },
   foot: { fontSize: 12, color: colors.muted, lineHeight: 18 },
   card: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 14, gap: 9 },
@@ -305,18 +318,18 @@ const s = StyleSheet.create({
   meterTrack: { height: 6, borderRadius: 999, backgroundColor: '#EEF1F5', overflow: 'hidden' },
   meterFill: { height: 6, borderRadius: 999 },
   familyRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  familyName: { flex: 2, fontSize: 12, color: colors.text, fontWeight: '600' },
+  familyName: { flex: 2, fontSize: 12, color: colors.text, fontWeight: '600', writingDirection: 'rtl', textAlign: 'left' },
   familyBar: { flex: 2, height: 5, borderRadius: 999, backgroundColor: '#EEF1F5', overflow: 'hidden' },
   familyBarFill: { height: 5, borderRadius: 999 },
   familyValue: { width: 34, fontSize: 12, fontWeight: '800', color: colors.text, textAlign: 'right' },
   familyKnown: { width: 34, fontSize: 10.5, color: colors.muted, textAlign: 'right' },
   unknownBox: { gap: 3, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 9, backgroundColor: colors.bg },
   unknownTitle: { fontSize: 12, fontWeight: '800', color: colors.text },
-  unknownItem: { fontSize: 11.5, color: colors.muted, lineHeight: 17 },
-  hint: { fontSize: 12, color: colors.accent, lineHeight: 18 },
-  smallBtn: { borderWidth: 1, borderColor: colors.border, borderRadius: 9, paddingVertical: 6, paddingHorizontal: 10 },
+  unknownItem: { fontSize: 11.5, color: colors.muted, lineHeight: 17, writingDirection: 'rtl' },
+  hint: { fontSize: 12, color: colors.accent, lineHeight: 18, writingDirection: 'rtl' },
+  smallBtn: { minHeight: 36, borderWidth: 1, borderColor: colors.border, borderRadius: 9, paddingVertical: 8, paddingHorizontal: 11, justifyContent: 'center' },
   smallBtnText: { fontSize: 12, fontWeight: '700', color: colors.text },
-  primaryBtn: { backgroundColor: colors.accent, borderRadius: 10, paddingVertical: 11, alignItems: 'center' },
+  primaryBtn: { minHeight: 46, backgroundColor: colors.accent, borderRadius: 10, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' },
   primaryBtnText: { color: '#fff', fontWeight: '800', fontSize: 13 },
   chipMuted: { fontSize: 11.5, color: colors.muted },
   chipInline: { alignSelf: 'flex-start', borderWidth: 1, borderRadius: 999, paddingVertical: 2, paddingHorizontal: 7, backgroundColor: '#fff' },
