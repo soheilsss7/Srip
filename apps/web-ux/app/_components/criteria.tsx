@@ -278,7 +278,8 @@ export function CriteriaScoreCard({
       setData(res);
       setMDelta(res?.manual?.active ? Number(res.manual.delta) : 0);
       setMReason(res?.manual?.reason ?? '');
-      setMExpiry(res?.manual?.expiresAt ? '90' : 'permanent');
+      const daysLeft = res?.manual?.expiresAt ? Math.max(1, Math.round((new Date(res.manual.expiresAt).getTime() - Date.now()) / 86400000)) : 0;
+      setMExpiry(daysLeft > 0 ? String([30, 90, 180].find((d) => d >= daysLeft) ?? daysLeft) : 'permanent');
       setMError('');
       setDraft(Object.fromEntries((res?.criteria ?? []).filter((l: Line) => l.assessed).map((l: Line) => [l.code, { level: l.assessed!.level, note: l.note ?? '', evidence: '' }])));
     } catch (e) { if (isMissingCriteriaApi(e)) setMissing(true); else setError((e as Error).message); } finally { setLoading(false); }
