@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CriteriaBadge, CriteriaIntake, intakePayload, type AnswerMap, type Summary as CriteriaSummary } from '../_components/criteria';
+import { CriteriaBadge, CriteriaIntake, intakePayload, verdictTone, type AnswerMap, type Summary as CriteriaSummary } from '../_components/criteria';
 import { api } from '../_lib/api';
 import { fa } from '../_lib/fa';
 import { useWorkspace } from '../_components/workspace';
@@ -256,10 +256,10 @@ export default function RelationshipsPage() {
               <table>
                 <thead>
                   <tr>
-                    <th>رابطه (مبدأ ← مقصد)</th>
+                    <th>رابطه (مبدأ ← مقصد) · وضعیت معیارها</th>
                     <th>نوع / وضعیت</th>
-                    <th>سلامت رابطه</th>
-                    <th>ریسک</th>
+                    <th>سلامت (شاخص عملیاتی)</th>
+                    <th>ریسک عملیاتی</th>
                     <th>اقدام بعدی</th>
                     <th>آخرین تعامل</th>
                     <th></th>
@@ -278,7 +278,12 @@ export default function RelationshipsPage() {
                             {r.sourceOrganization?.name ?? '—'} <span className="t-muted">↔</span> {r.targetOrganization?.name ?? '—'}
                           </Link>
                           <div className="t-muted">{r.owner?.name ? `مالک: ${r.owner.name}` : 'بدون مالک'}</div>
-                          <div className="rel-criteria-row"><CriteriaBadge criteria={r.criteria} /></div>
+                          <div className="rel-criteria-row">
+                            <CriteriaBadge criteria={r.criteria} />
+                            {r.criteria?.verdictLabel && (
+                              <span className={`chip ${verdictTone(r.criteria.verdict)}`}>{r.criteria.verdictLabel}</span>
+                            )}
+                          </div>
                         </td>
                         <td>
                           <div className="rel-badges" style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>

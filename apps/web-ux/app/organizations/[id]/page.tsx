@@ -5,9 +5,9 @@ import { api } from '../../_lib/api';
 import { fa } from '../../_lib/fa';
 import { Badge, ErrorCard, Loading, Modal, PageHeader } from '../../_components/page-ui';
 import { EgoGraph, type EgoNode } from '../../_components/ego-graph';
-import { CriteriaScoreCard } from '../../_components/criteria';
+import { CriteriaBadge, CriteriaScoreCard, verdictTone, type Summary as CriteriaSummary } from '../../_components/criteria';
 import { suggestConnections } from '../../_lib/connections';
-import { Building2, Users, Share2, Link2, Sparkles, ArrowUpRight, CalendarDays, Network, HeartPulse, AlertTriangle, TrendingUp, Clock } from 'lucide-react';
+import { Building2, Users, Share2, Link2, Sparkles, ArrowUpRight, CalendarDays, Network, HeartPulse, AlertTriangle, TrendingUp, Clock, ChevronLeft } from 'lucide-react';
 
 const arr = (x: any): any[] => Array.isArray(x) ? x : Array.isArray(x?.items) ? x.items : Array.isArray(x?.data) ? x.data : Array.isArray(x?.rows) ? x.rows : [];
 const fmtNum = (v: number | undefined | null): string =>
@@ -106,6 +106,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
     let worstHealth: number | null = null, worst: any = null;
     let maxRisk: number | null = null, maxStrategic: number | null = null, nextAt: string | null = null;
     let lastInter: string | null = null;
+    const critScores: number[] = [];
     for (const r of rels) {
       const h = r.healthScore ?? 0, k = r.riskScore ?? 0, st = r.strategicScore ?? 0;
       if (worstHealth == null || h < worstHealth) { worstHealth = h; worst = r; }
@@ -114,12 +115,19 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
       if (r.nextActionAt && (!nextAt || r.nextActionAt < nextAt)) nextAt = r.nextActionAt;
       const li = r.lastInteractionAt ?? null;
       if (li && (!lastInter || li > lastInter)) lastInter = li;
+      const eff = (r.criteria as any)?.effectiveScore ?? (r.criteria as any)?.score;
+      if (eff != null && Number.isFinite(Number(eff))) critScores.push(Number(eff));
     }
     for (const i of interactions) {
       if (i.organizationId !== id && !rels.some((r: any) => r.id === i.relationshipId)) continue;
       if (i.occurredAt && (!lastInter || i.occurredAt > lastInter)) lastInter = i.occurredAt;
     }
-    return { worstHealth, worst, maxRisk, maxStrategic, nextAt, lastInter, count: rels.length };
+    return {
+      worstHealth, worst, maxRisk, maxStrategic, nextAt, lastInter, count: rels.length,
+      criteriaAvg: critScores.length ? Math.round(critScores.reduce((a, b) => a + b, 0) / critScores.length) : null,
+      criteriaCount: critScores.length,
+      criteriaRankable: rels.filter((r: any) => (r.criteria as any)?.rankable).length,
+    };
   }, [rels, interactions, id]);
 
   if (!o && !error) return <main className="feature-page"><PageHeader eyebrow="سازمان" title="سازمان" description="" actions={<></>} /><Loading /></main>;
@@ -180,9 +188,14 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
               <span className="rel-status-ico"><HeartPulse size={17}/></span>
               <div>
                 <h2>وضعیت رابطه با این سازمان</h2>
-                <p>بر پایهٔ امتیاز سلامت، ریسک و تازگی تعامل — محاسبهٔ زنده از روابط ثبت‌شده</p>
+                <p>امتیاز هر رابطه از همان کاتالوگ معیارها ساخته شده (شواهد رفتاری + ارزیابی انسانی)؛ سلامتیِ عملیاتی هم به‌عنوان شاخص مکمل کنارش می‌ماند.</p>
               </div>
-              <Badge tone={bandTone(band.cls)}>{band.label}</Badge>
+              <div className="toolbar">
+                <Badge tone={relStatus?.criteriaAvg != null ? (relStatus.criteriaAvg >= 70 ? 'success' : relStatus.criteriaAvg >= 50 ? 'warning' : 'danger') : 'neutral'}>
+                  {relStatus?.criteriaAvg != null ? `میانگین معیارها: ${fmtNum(relStatus.criteriaAvg)}` : 'بدون امتیاز معیارها'}
+                </Badge>
+                <Badge tone={bandTone(band.cls)}>{band.label}</Badge>
+              </div>
             </div>
             {relStatus ? (
               <>
@@ -215,19 +228,39 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                   {rels.map((r: any) => {
                     const otherId = r.sourceOrganizationId === id ? r.targetOrganizationId : r.sourceOrganizationId;
                     const other = allOrgs.find((x: any) => x.id === otherId);
+                    const c = r.criteria as CriteriaSummary | null | undefined;
+                    const eff = c?.effectiveScore ?? c?.rankingScore ?? c?.score ?? null;
+                    const vTone = verdictTone(c?.verdict);
                     const h = r.healthScore ?? 0;
                     const b = healthBand(h);
                     return (
-                      <Link className="rel-status-row" href={`/relationships/${r.id}`} key={r.id}>
-                        <span className={`health-dot ${b.cls}`} />
-                        <span className="rel-status-row-name">{other?.name ?? '—'} <small>({fa(r.relationshipType)})</small></span>
-                        <span className="rel-status-row-bar"><span className={`health-fill ${b.cls}`} style={{ width: `${h}%` }}/></span>
-                        <b className={`health-num ${b.cls}`}>{fmtNum(h)}</b>
-                        <Badge tone={bandTone(b.cls)}>{b.label}</Badge>
-                        <Badge tone={r.status === 'ACTIVE' ? 'success' : 'warning'}>{fa(r.status)}</Badge>
+                      <Link className="org-rel-row" href={`/relationships/${r.id}`} key={r.id}>
+                        <div className="org-rel-name">
+                          <strong>{other?.name ?? '—'}</strong>
+                          <small>{fa(r.relationshipType)} · {fa(r.status)}</small>
+                        </div>
+                        <div className="org-rel-criteria">
+                          <div className="org-rel-scoreline">
+                            <b className={`org-rel-score ${vTone}`}>{eff == null ? '—' : fmtNum(eff)}</b>
+                            <span className={`chip ${vTone}`}>{c?.verdictLabel ?? 'داده کافی نیست'}</span>
+                            {c?.manual?.active && <em className="criteria-badge-manual" title={`تنظیم دستی: ${c.manual.reason}`}>دستی</em>}
+                          </div>
+                          <small>
+                            {c
+                              ? `${fmtNum(c.coverage)}٪ اطلاعات · اطمینان ${fmtNum(c.confidence)}٪${c.rankable ? '' : ' · قابل مقایسه نیست'}${c.gateCap != null ? ` · سقف ${fmtNum(c.gateCap)}` : ''}`
+                              : 'ارزیابی معیارها در دسترس نیست'}
+                          </small>
+                        </div>
+                        <div className="org-rel-health" title="شاخص عملیاتی (سلامت) — مکمل امتیاز معیارها">
+                          <span className={`health-dot ${b.cls}`} />
+                          <span className="health-bar-mini"><span className={`health-fill ${b.cls}`} style={{ width: `${h}%` }} /></span>
+                          <b className={`health-num-sm ${b.cls}`}>{fmtNum(h)}</b>
+                        </div>
+                        <ChevronLeft size={15} className="t-muted" />
                       </Link>
                     );
                   })}
+                  <p className="org-rel-note">برای دیدن تفکیک خانواده‌ها و تک‌تک معیارها، هر ردیف را باز کنید.</p>
                 </div>
               </>
             ) : (

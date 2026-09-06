@@ -34,6 +34,7 @@ export type Summary = {
   manual?: Manual | null;
   effectiveScore?: number | null;
   modelScore?: number | null;
+  rankingScore?: number | null;
   scoreSource?: 'MODEL' | 'MODEL_MANUAL';
 };
 export type Line = {
@@ -61,6 +62,9 @@ const isMissingCriteriaApi = (e: unknown) => {
 };
 
 const faNum = (v: number | null | undefined) => (v == null ? '—' : new Intl.NumberFormat('fa-IR').format(Math.round(v)));
+export const verdictTone = (v?: string): string =>
+  v === 'CRITICAL' || v === 'AT_RISK' ? 'danger' : v === 'INSUFFICIENT_DATA' || v === 'PRELIMINARY' ? 'warning'
+    : v === 'STRONG' ? 'success' : 'info';
 const toneOf = (a: Pick<Summary, 'verdict' | 'rankable' | 'score'>) =>
   a.verdict === 'CRITICAL' ? 'danger' : a.verdict === 'INSUFFICIENT_DATA' || a.verdict === 'PRELIMINARY' ? 'warning'
     : a.verdict === 'AT_RISK' ? 'danger' : a.verdict === 'STRONG' ? 'success' : 'info';
