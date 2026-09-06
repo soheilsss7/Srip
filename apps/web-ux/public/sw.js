@@ -2616,6 +2616,49 @@ function seedCriteriaAssessments() {
 }
 
 
+
+/* ─────────────── مرکز دانش (Knowledge Center) — محتوای واقعی و کاربردی ───────────────
+   مقالات از رفتار واقعی پلتفرم نوشته شده‌اند: آستانه‌ها، وزن‌ها، سقف‌های دروازه،
+   تنظیم دستی، مجوزها و جریان کار — نه متن تزئینی. */
+let __rawHttpBody = '';
+const KB_CATEGORIES = [
+  { key: 'GETTING_STARTED', label: 'شروع سریع' },
+  { key: 'SCORING', label: 'امتیازدهی' },
+  { key: 'PROCESS', label: 'فرآیند و اتوماسیون' },
+  { key: 'SECURITY', label: 'امنیت و دسترسی' },
+  { key: 'ANALYTICS', label: 'تحلیل و هوشمندی' },
+];
+const KB_FAMILY_LABELS = {
+  STRATEGIC: 'اهمیت و هم‌راستایی راهبردی', VALUE: 'ارزش اقتصادی', CAPABILITY: 'توانمندی عملیاتی',
+  RELIABILITY: 'قابلیت اعتماد', ACCESS: 'دسترسی و نفوذ', FINANCIAL: 'مالی و منابع',
+  RISK: 'ریسک و انطباق', NETWORK: 'شبکه و موقعیت',
+};
+const kb = (id, slug, title, excerpt, category, tags, families, readMinutes, author, body, extra = {}) =>
+  ({ id, slug, title, excerpt, category, tags, families, readMinutes, author,
+     updatedAt: extra.updatedAt ?? '2026-08-30T09:00:00.000Z', views: extra.views ?? 0,
+     helpful: extra.helpful ?? 0, notHelpful: extra.notHelpful ?? 0, bookmarks: extra.bookmarks ?? [], body, ...extra, id, slug, title, excerpt, category, tags, families });
+
+function seedKnowledge() {
+  return [
+    kb('kb-start', '5-minute-first-score', 'در پنج دقیقه به اولین امتیاز معیارها برسید', 'مسیر کوتاه از ورود تا داشتن یک امتیاز قابل اتکا برای نخستین رابطه؛ جایی که باید بروید و هر عدد یعنی چه.', 'GETTING_STARTED', ['شروع', 'امتیاز', 'گام‌به‌گام'], ['STRATEGIC', 'RELIABILITY'], 4, 'تیم محصول',
+      '۱) یک سازمان و سپس یک رابطه بسازید (منوی «روابط» → «رابطهٔ جدید»). هنگام ساخت، پرسش‌نامهٔ اختیاری معیارها ظاهر می‌شود؛ آریا فناوری را با پترو صنعت وصل کنید. \n۲) به صفحهٔ همان رابطه بروید. کارت «امتیاز معیارها» عدد، پوشش اطلاعات و اطمینان را نشان می‌دهد. اگر تازه شروع کرده‌اید برچسب «داده کافی نیست» را می‌بینید — این طبیعی است و عمداً عددی نمی‌سازد. \n۳) روی «ثبت ارزیابی» بزنید و تنها پرسش‌هایی را پاسخ دهید که مطمئن هستید. هر پاسخ «ناشناخته» را از بین نمی‌برد؛ فقط آن معیار را روشن می‌کند. \n۴) تعامل‌ها، جلسه‌ها، تعهدها و فرصت‌های همان رابطه به‌صورت خودکار به‌عنوان «رفتار واقعی» وارد مدل می‌شوند و سهم مشاهده‌شده را بالا می‌برند. \n۵) برای رتبه‌بندی، پوشش باید به آستانهٔ تعریف‌شده (پیش‌فرض ۴۰٪) برسد. زیر آن، رکورد صادقانه «قابل مقایسه نیست» می‌ماند.', { views: 312, helpful: 41 }), kb('kb-scoring-model', 'how-scoring-works', 'مدل امتیازدهی دقیقاً چطور کار می‌کند؟', 'وزن خانواده‌ها، قطبیت هر معیار، سقف‌های دروازه و نقش اطمینان — تا بتوانید عدد را بخوانید، نه فقط ببینید.', 'SCORING', ['وزن‌ها', 'دروازه', 'اطمینان'], ['STRATEGIC', 'VALUE', 'CAPABILITY', 'RELIABILITY', 'ACCESS', 'FINANCIAL', 'RISK', 'NETWORK'], 6, 'تیم محصول', 'هر رابطه، سازمان، شخص و فرصت از یک کاتالوگ معیار امتیاز می‌گیرد: هر معیار به یک خانواده تعلق دارد (راهبردی، ارزش، توانمندی، قابلیت اعتماد، دسترسی، مالی، ریسک، شبکه) و وزن ۱ تا ۳ دارد. \nامتیاز هر خانواده، میانگین وزن‌دار معیارهای پاسخ‌داده‌شدهٔ همان خانواده است؛ سپس خانواده‌ها با وزن سازمانی (قابل تغییر در «مدیریت → معیارها») ترکیب می‌شوند. خانوادۀ بدون داده در تقسیم وزن حساب نمی‌شود تا «نبودِ اطلاعات» خودش نمره نشود. \nقطبیت مهم است: معیارهای ریسک (BAD) بالاتر بودن یعنی بدتر؛ معیارهای مثبت (GOOD) بالاتر یعنی بهتر. هر دو به مقیاس ۰ تا ۱۰۰ نگاشت می‌شوند. \nدروازهٔ ریسک (Gate) از میانگین‌گیری مستثناست: اگر شرطش فعال شود، سقف امتیاز را تحمیل می‌کند — مثلاً «سقف ۴۰». این یعنی یک معیار بحرانی را چند معیار خوب «جبران» نمی‌کنند. \nدر نهایت، امتیاز بدون اطمینان ارائه نمی‌شود: پوشش (چند درصد از وزن مدل داده دارد؟) و اطمینان (کیفیت و تازگی پاسخ‌ها) کنار هر عدد می‌آیند و امتیاز رتبه‌بندی = امتیاز × (۰٫۷ + ۰٫۳ × اطمینان).', { views: 540, helpful: 86 }), kb('kb-manual', 'manual-override', 'تنظیم دستی امتیاز: چه وقت، چرا و تا کجا؟', 'وقتی دانش شما از مدل جلوتر است؛ چطور با ±۲۵ و دلیلِ الزامی این کار را بکنید و مدل را دست‌نخورده نگه دارید.', 'SCORING', ['دستی', 'ممیزی'], ['RISK', 'STRATEGIC'], 3, 'تیم محصول', 'مدل بر شواهد ساخته می‌شود؛ اما گاهی شما چیزی می‌دانید که هنوز در سیستم ثبت نشده — مانند امضای اولیهٔ قرارداد. برای همین در کارت «امتیاز معیارها» دکمهٔ «تنظیم دستی» است. \nجابه‌جایی فقط تا ±۲۵ نقطه مجاز است (عدد بزرگ‌تر یعنی احتمالاً باید دادهٔ اصلی را ثبت کنید نه امتیاز را تکان دهید). دلیل تنظیم الزامی است؛ چون در ممیزی ثبت می‌شود و بعداً باید قابل بازبینی باشد. \nانقضا را انتخاب کنید (۳۰/۹۰/۱۸۰ روز یا دائمی). پس از انقضا، امتیاز خودکار به مدل برمی‌گردد و نشان «دستی» از روی Badgeها برداشته می‌شود. \nهر جا «دستی» می‌بینید، یعنی امتیاز موثر = مدل ± جابه‌جایی؛ مبنای مدل هرگز بازنویسی نمی‌شود. Badge «تنظیم دستی منقضی» هم هشدار می‌دهد که جابه‌جایی دیگر اعمال نمی‌شود.', { views: 198, helpful: 33 }), kb('kb-verdict', 'verdict-ladder', 'نردبان حکم: هر برچسب یعنی چه اقدامی؟', 'قابل اتکا، پیش‌نویس، داده کافی نیست، ضعیف و پرچم بحرانی — نقشهٔ اقدام هر وضعیت.', 'SCORING', ['حکم', 'اقدام'], [], 4, 'تیم محصول', 'پرچم بحرانی: یک دروازهٔ ریسک فعال است. تا جمع‌شدن آن، هیچ رتبه‌بندی و مقایسه‌ای انجام نشود؛ اول اقدام کنید. \nداده کافی نیست (پوشش زیر ۲۵٪): تصویر ساخته نشده. عددی که می‌بینید صرفاً پرسش‌های جواب‌داده است؛ مبنای تصمیم نگیرید. \nپیش‌نویس ارزیابی (اطمینان زیر ۴۰٪): شواهد کم یا کهنه است. چند پاسخ مستند می‌تواند امتیاز را به‌شکل معنادار جابه‌جا کند — روی «ثبت ارزیابی» تمرکز کنید. \nقابل اتکا / قوی: شواهد کافی است. اینجا مقایسهٔ رتبه‌ای و تصمیم‌گیری مجاز است. «قوی» یعنی امتیاز ۷۵+ با اطمینان ۶۵+. \nضعیف: شواهد کافی و وضعیت نامطلوب — نیازمند اقدام. به «نقاط ضعف» در همان کارت نگاه کنید: سه معیاری که بیشترین اثر منفی را دارند آنجا فهرست شده‌اند.', { views: 260, helpful: 51 }), kb('kb-coverage', 'coverage-honesty', 'چرا «داده کافی نیست» درست‌تر از یک عدد خوش‌بینانه است؟', 'فلسفهٔ ناشناخته‌ها: پاسخ‌ندادن صفر حساب نمی‌شود؛ و چرا این تصمیم، امتیاز را قابل اعتمادتر می‌کند.', 'SCORING', ['پوشش', 'ناشناخته'], [], 4, 'تیم محصول', 'در این مدل، معیار بی‌پاسخ هرگز صفر فرض نمی‌شود. معیار بی‌پاسخ در «ناشناخته» می‌ماند، وزن‌ش در تقسیم حذف می‌شود و در عوض پوشش و اطمینان پایین می‌آید. \nنتیجه: یک رابطه با پنج پاسخ خوب اما پوشش ۲۰٪ هرگز «قابل اتکا» رتبه نمی‌گیرد؛ برچسب‌اش صادقانه «داده کافی نیست» است. اگر ناشناخته‌ها صفر بودند، هر رکورد نیمه‌پر با عددی نیمه‌واقعی در مقایسه‌های بالایی می‌نشست. \nدروازهٔ رتبه‌بندی (پیش‌فرض ۴۰٪ پوشش) و حداقل اطمینان ۳۵٪ همین را سخت‌گیرانه اجرا می‌کنند. به‌جای بالا بردن عدد، روی «معیارهای بدون داده» کار کنید — کارت امتیاز دقیقاً می‌گوید کدام‌ها بیشترین وزن را دارند. \nاگر ۲۴۰ نویسه دلیل نیاز نیست؛ فقط یک پاسخ کوتاه و دقیق. امتیاز، خلاصهٔ کیفیت دادهٔ شماست.', { views: 174, helpful: 29 }), kb('kb-families', 'families-and-evidence', 'هشت خانوادهٔ معیار و شواهد هر کدام', 'چرا هر خانواده وجود دارد، به چه پژوهشی وصل است و چه رفتاری در سیستم آن را «مشاهده» می‌کند.', 'SCORING', ['خانواده‌ها', 'شواهد'], ['STRATEGIC', 'VALUE', 'CAPABILITY', 'RELIABILITY', 'ACCESS', 'FINANCIAL', 'RISK', 'NETWORK'], 7, 'تیم محصول', 'اهمیت و هم‌راستایی راهبردی: برجستگی شریک، تناسب با استراتژی و قدرت ذی‌نفع (پایه: Mitchell 1997). شاهد در سیستم: نوع رابطه، وضعیت، نقش سازمان در پروژه‌های مشترک. \nارزش اقتصادی: ارزش فعلی رابطه و چرخهٔ عمر آن. شاهد: ارزش فرصت‌ها و قراردادهای متصل. \nتوانمندی عملیاتی: کیفیت تحویل، ظرفیت، خدمت پس از فروش. شاهد: نتیجهٔ تعامل‌ها، جلسه‌ها و اقداماتِ خاتمه‌یافته. \nقابلیت اعتماد: ثبات رفتاری و پایبندی به قول‌ها. شاهد: تعهدهای سرموعد یا عقب‌افتاده. \nدسترسی و نفوذ: دسترسی به تصمیم‌گیرنده. شاهد: معرفی‌ها و نقش اشخاص کلیدی. \nمالی و منابع، ریسک و انطباق، شبکه و موقعیت: از وضعیت مالی، پرچم‌های ریسک، مسیرهای شبکه و مرکزیت استفاده می‌شود. هر معیار در کاتالوگ «منبع» دارد و طول عمر پاسخ‌اش (نیمه‌عمر) تعیین می‌کند چه وقت کهنه می‌شود.', { views: 233, helpful: 44 }), kb('kb-workflows', 'workflows-approvals', 'گردش‌کار و تأییدها: چه چیزی لازم است تأیید شود؟', 'اجراهای خودکار، قواعد تأیید و اینکه هر اقدام چه زمانی به «تأیید» گیر می‌کند.', 'PROCESS', ['گردش‌کار', 'تأیید'], [], 5, 'تیم محصول', 'گردش‌کارها، اقدام‌های خودکار روی رویدادها هستند (مثلاً ساخت رابطه یا وعدهٔ قرارداد). وضعیت اجرا را در «گردش‌کار و تأییدها → اجراها» ببینید. \nهر قاعده‌ای که روی «تأیید» بایستد، در صف «تأییدها» می‌آید و تا تصمیم کاربرِ دارای مجوز، اجرا متوقف می‌ماند — این عمدی است تا کارهای حساس بی‌اجازه نگذرند. \nخروجی گزارش‌ها هم همین‌طور است: «دریافت فایل» یک درخواست تأیید ثبت می‌کند و فایل واقعی پس از تأیید در صفحهٔ تأییدها صادر می‌شود. اگر پیام «ابتدا تأیید درخواست» دیدید، سراغ تأییدها بروید. \nاشخاص بدون مجوز، تنها می‌توانند اجراهایی را ببینند که در محدودهٔ سازمانی‌شان است؛ مالک سامانه همه‌چیز را می‌بیند.', { views: 121, helpful: 18 }), kb('kb-security', 'data-security', 'امنیت داده: طبقه‌بندی، تأیید دومرحله‌ای و نشست‌ها', 'مدارک واقعی: طبقه‌بندی اسناد، MFA، احراز هویت، نشست‌ها و رویدادهای امنیتی.', 'SECURITY', ['MFA', 'طبقه‌بندی', 'نشست'], [], 5, 'تیم محصول', 'ورود با تأیید دومرحله‌ای (MFA) محافظت می‌شود؛ دستگاه‌های تأییدشده و کدهای بازیابی در «امنیت → دستگاه‌های من» مدیریت می‌شوند. در دمو، هر کد شش‌رقمی پذیرفته می‌شود. \nاسناد چهار طبقه دارند: داخلی، محرمانه، محدود و عمومی. بارگذاری با اعتبارسنجی MIME/پسوند، قرنطینه و اسکن بدافزار همراه است؛ وضعیت هر فایل کنارش می‌آید. \nنشست‌های فعال خود را در «نشست‌های من» ببینید و از راه دور ببندید. رویدادهای ورود ناموفق، قفل حساب، تلاش بدون مجوز و صادرات در «امنیت → رویدادها» ثبت می‌شوند. \nنکتهٔ مهم: در حالت دمو (GitHub Pages) همه‌چیز در مرورگر شما اجرا می‌شود و داده‌ها برای همان نشست است؛ هیچ داده‌ای به سرور واقعی نمی‌رود.', { views: 149, helpful: 22 }), kb('kb-intel', 'reading-intelligence', 'خواندن هوشمندی: سیگنال‌ها، فرصت‌ها و پوشش راهبردی', 'چهار بخش صفحهٔ هوشمندی یعنی چه و هر کدام به کدام اقدام ختم می‌شود.', 'ANALYTICS', ['هوشمندی', 'ریسک', 'فرصت'], ['RISK', 'STRATEGIC'], 6, 'تیم محصول', 'سیگنال‌های ریسک از دادهٔ واقعی ساخته می‌شوند: اقدام عقب‌افتاده، تعهد عقب‌افتاده، اقدام مسدود، سلامت پایین و تعامل کهنه. شدت بالا (۶۰+) یعنی فوری؛ بالای ۴۰ متوسط، زیر آن ملایم. تأخیر بیش از دو برابر، شدت را بالا می‌برد. \nتشخیص فرصت دو نوع است: پیگیری (فرصتِ بازِ روی رابطه) و رشد (رابطه‌ای با امتیاز فرصت ۶۰+ ولی بدون فرصت باز) — یعنی به‌جای فهرست خیالی، به بازار رشد واقعی اشاره می‌کند. \nپوشش راهبردی، روابط استراتژیک (امتیاز راهبردی ۶۰+) را با وضعیت عملیاتی‌شان مقایسه می‌کند: اقدام باز، تعهد باز یا اقدام بعدیِ آینده. شکاف‌ها را با NO_OPEN_ITEMS و LOW_HEALTH می‌بیند. \nستون «معیارها» در همین جدول، امتیاز KPI هر رابطه را به امتیاز معیارها وصل می‌کند — همان عددی که در صفحهٔ رابطه می‌بینید.', { views: 205, helpful: 37 }), kb('kb-reports', 'reports-and-export', 'گزارش‌ها و خروجی: چه مجوزی لازم است؟', 'نقشهٔ گزارش‌ها، فرمت‌ها، محدودیت JSON برای مدیران و جریان تأیید خروجی.', 'PROCESS', ['گزارش', 'خروجی', 'مجوز'], [], 4, 'تیم محصول', 'گزارش‌ها بر اساس محدودهٔ سازمانی شما ساخته می‌شوند و همان‌جا می‌توانید CSV/XLSX/گزارش رنگی داشته باشید. \nفرمت JSON مخصوص مدیران سازمانی است؛ CSV برای بقیهٔ کاربران دارای مجوز خروجی. بدون مجوز report.export، دکمهٔ خروجی کار نمی‌کند. \nجریان تأیید: ابتدا «دریافت فایل» (ثبت درخواست)، بعد در «تأییدها» approve، سپس دوباره تلاش کنید. هر خروجی در لاگ تحویل و رویدادهای امنیتی ثبت می‌شود. \nدر دمو، خروجی CSV واقعی تولید می‌شود ولی XLSX/PDF به CSV برمی‌گردند تا بدون سرور افزوده هم کار کنند.', { views: 96, helpful: 14 }), kb('kb-network', 'network-spof', 'شبکه: مرکزیت، پل‌ها و نقطهٔ شکست واحد', 'چرا یک گره «مرکزیت» بالا یا «نقطهٔ شکست واحد» می‌گیرد و چرا این برای شما مهم است.', 'ANALYTICS', ['شبکه', 'ریسک'], ['NETWORK', 'RISK'], 4, 'تیم محصول', 'مرکزیت شبکه، گره‌هایی را نشان می‌دهد که بیشترین پیوند را دارند — آنها کانون ارتباط شما هستند؛ از دست دادن‌شان گران است. \nپل‌ها (Bridge People) اشخاصی هستند که دو خوشهٔ متفاوت را به هم می‌رسانند؛ معمولاً مدیرانی که در چند وضعیت نقش دارند. \nنقطهٔ شکست واحد (SPOF) گره‌ای است که حذف آن شبکه را از هم باز می‌کند. اگر همان گره با پیوندهای پرریسک همراه باشد، بالاترین اولویت اقدام را دارد: حداقل یک مسیر جایگزین بسازید. \nبه یاد داشته باشید که امتیازهای این صفحه با امتیازهای معیاریِ همان گره یکی نیستند؛ اعداد شبکه ساختاری‌اند و اعداد معیار، کیفیت رابطه را می‌سنجند.', { views: 158, helpful: 26 }), kb('kb-ai', 'ai-and-brief', 'بریف اجرایی و دستیار: کجا به عددها اعتماد کنیم؟', 'تفاوت خلاصهٔ خودکار با امتیاز معیارها و مرز اعتماد در خروجی هوش مصنوعی.', 'ANALYTICS', ['هوش مصنوعی', 'بریف'], [], 4, 'تیم محصول', 'دستیار هوشمند و بریف اجرایی، متن را از همان دادهٔ ساخت‌یافته می‌سازند؛ اطلاعات جدید به پایگاه داده اضافه نمی‌کنند. برای همین قبل از اعتماد، سند مرتبط را چک کنید. \nعددهای بریف (میانگین سلامت، ریسک، فرصت) از دادهٔ واقعی و با محدودهٔ سازمانی محاسبه می‌شوند، ولی «تفسیر» متن خودکار است. \nبه‌عنوان قاعدهٔ سرانگشتی: هر جا «امتیاز معیارها» را می‌بینید، همان عدد مقیاس ۰–۱۰۰ با پوشش و اطمینان است؛ هر جا درصد یا شمارش در بریف است، منبع‌اش به دادهٔ خام وصل است. \nاگر متن بریف با امتیاز معیارها نخواند، اول پوشش را چک کنید— معمولاً دلیلش دادهٔ ناقص است نه اشتباه مدل.', { views: 172, helpful: 25 }), ]; }  
+/* اسناد واقعی مرکز دانش — در دمو بدون فایل واقعی، اما با چرخهٔ واقعی وضعیت/اسکن/ایندکس */
+function seedDocuments() {
+  const at = (d) => new Date(Date.now() - d * 86400000).toISOString();
+  return [
+    { id: 'doc-1', name: 'راهنمای امتیازدهی معیارها.pdf', mimeType: 'application/pdf', sizeBytes: 1284500, classification: 'INTERNAL', uploadedBy: 'demo@srip.local', organizationId: null, scanStatus: 'CLEAN', uploadStatus: 'READY', indexStatus: 'INDEXED', createdAt: at(9), updatedAt: at(9) },
+    { id: 'doc-2', name: 'فرم معرفی شریک راهبردی.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', sizeBytes: 348000, classification: 'CONFIDENTIAL', uploadedBy: 'demo@srip.local', organizationId: null, scanStatus: 'CLEAN', uploadStatus: 'READY', indexStatus: 'PENDING', createdAt: at(6), updatedAt: at(6) },
+    { id: 'doc-3', name: 'الگوی ارزیابی تأمین‌کننده.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', sizeBytes: 892000, classification: 'RESTRICTED', uploadedBy: 'client@arya-tech.ir', organizationId: 'org-3', scanStatus: 'CLEAN', uploadStatus: 'READY', indexStatus: 'INDEXED', createdAt: at(4), updatedAt: at(4) },
+    { id: 'doc-4', name: 'پیش‌نویس قرارداد چارچوب همکاری.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', sizeBytes: 612000, classification: 'CONFIDENTIAL', uploadedBy: 'demo@srip.local', organizationId: 'org-3', scanStatus: 'QUARANTINED', uploadStatus: 'PENDING', indexStatus: 'PENDING', createdAt: at(1), updatedAt: at(1) },
+  ];
+}
+const kbSummary = (a, uid) => ({
+  id: a.id, slug: a.slug, title: a.title, excerpt: a.excerpt, category: a.category,
+  tags: a.tags ?? [], families: a.families ?? [], readMinutes: a.readMinutes, author: a.author,
+  updatedAt: a.updatedAt, views: a.views ?? 0, helpful: a.helpful ?? 0, notHelpful: a.notHelpful ?? 0,
+  bookmarked: Array.isArray(a.bookmarks) && a.bookmarks.includes(uid), isMine: !!uid && a.author === uid,
+});
+
 let DB = null;
 function loadDb() {
   if (!DB) {
@@ -2623,7 +2666,7 @@ function loadDb() {
       actions: ACTIONS, commitments: COMMITMENTS, projects: PROJECTS, projectExtra: PROJECT_EXTRA,
       opportunities: OPPORTUNITIES, interactions: INTERACTIONS, notifications: NOTIFICATIONS,
       recs: RECS, aiUsage: AI_USAGE, personOrgs: PERSON_ORGS, audit: [], revokedJtis: [], nextId: 1,
-      assessments: seedCriteriaAssessments(), criteriaManual: [] };
+      assessments: seedCriteriaAssessments(), criteriaManual: [], knowledge: seedKnowledge(), documents: seedDocuments() };
   }
   // seed identities with real scrypt hashes (kept on disk afterwards)
   for (const [email, u] of Object.entries(SEED_USERS)) {
@@ -4835,9 +4878,116 @@ async function __handler(req, res) {
   if(is('/network/single-points-of-failure')&&method==='GET') return json(res,200,netAnalytics(req,'single-points-of-failure'));
   if(match('/network/:endpoint')&&method==='GET') return json(res,200,{count:0,items:[]});
 
+  /* ----------------------------- مرکز دانش ----------------------------- */
+  if(is('/knowledge')&&method==='GET'){
+    const uid=authUser?.id??null;
+    const qq=String(q.get('q')??'').trim().toLowerCase();
+    const cat=q.get('category')??'';
+    const tag=q.get('tag')??'';
+    const onlyMine=q.get('mine')==='1';
+    let list=(DB.knowledge??[]).map((a)=>({...a}));
+    if(onlyMine&&uid) list=list.filter((a)=>a.author===uid);
+    if(cat) list=list.filter((a)=>a.category===cat);
+    if(tag) list=list.filter((a)=>Array.isArray(a.tags)&&a.tags.includes(tag));
+    if(qq) list=list.filter((a)=>`${a.title} ${a.excerpt} ${a.body} ${(a.tags??[]).join(' ')}`.toLowerCase().includes(qq));
+    const tags=[...new Set((DB.knowledge??[]).flatMap((a)=>a.tags??[]))].sort((x,y)=>x.localeCompare(y,'fa'));
+    const stats={
+      total:(DB.knowledge??[]).length,
+      views:(DB.knowledge??[]).reduce((sum,a)=>sum+(a.views??0),0),
+      helpful:(DB.knowledge??[]).reduce((sum,a)=>sum+(a.helpful??0),0),
+      mine:uid?(DB.knowledge??[]).filter((a)=>a.author===uid).length:0,
+      bookmarks:uid?(DB.knowledge??[]).filter((a)=>Array.isArray(a.bookmarks)&&a.bookmarks.includes(uid)).length:0,
+    };
+    return json(res,200,{items:list.map((a)=>kbSummary(a,uid)),categories:KB_CATEGORIES,tags,stats});
+  }
+  {
+    const kBook=match('/knowledge/:id/bookmark');
+    const kVote=match('/knowledge/:id/vote');
+    const kId=match('/knowledge/:id');
+    if(kId||kBook||kVote){
+      const uid=authUser?.id??'u-demo';
+      const findArt=(idOrSlug)=>{
+        const key=String(idOrSlug);
+        return (DB.knowledge??[]).find((a)=>a.id===key||a.slug===key);
+      };
+      if(kBook&&method==='POST'){
+        const art=findArt(kBook[0]);
+        if(!art) return json(res,404,{message:'مقاله یافت نشد.'});
+        art.bookmarks=Array.isArray(art.bookmarks)?art.bookmarks:[];
+        const on=art.bookmarks.includes(uid);
+        art.bookmarks=on?art.bookmarks.filter((x)=>x!==uid):[...art.bookmarks,uid];
+        saveDb();
+        return json(res,200,{bookmarked:!on,count:art.bookmarks.length});
+      }
+      if(kVote&&method==='POST'){
+        const art=findArt(kVote[0]);
+        if(!art) return json(res,404,{message:'مقاله یافت نشد.'});
+        const b=await readBody(req);
+        const helpful=b?.helpful!==false;
+        if(helpful) art.helpful=(art.helpful??0)+1; else art.notHelpful=(art.notHelpful??0)+1;
+        saveDb();
+        return json(res,200,{kind:helpful?'helpful':'notHelpful',helpful:art.helpful,notHelpful:art.notHelpful});
+      }
+      if(kId&&method==='GET'){
+        const art=findArt(kId[0]);
+        if(!art) return json(res,404,{message:'مقاله یافت نشد.'});
+        art.views=(art.views??0)+1; saveDb();
+        const related=(DB.knowledge??[])
+          .filter((x)=>x.id!==art.id&&(x.category===art.category||(x.families??[]).some((f)=>(art.families??[]).includes(f))))
+          .sort((x,y)=>((y.views??0)-(x.views??0))).slice(0,4)
+          .map((x)=>kbSummary(x,uid));
+        return json(res,200,{...kbSummary(art,uid),body:art.body,related,familyLabels:KB_FAMILY_LABELS});
+      }
+      if(kId&&method==='PATCH'){
+        if(!authUser?.isOwner) return json(res,403,{message:'ویرایش مقاله فقط برای مالک است.'});
+        const art=findArt(kId[0]);
+        if(!art) return json(res,404,{message:'مقاله یافت نشد.'});
+        const b=await readBody(req);
+        for(const k of ['title','excerpt','body','category','readMinutes']){
+          if(b[k]!==undefined && (typeof b[k]==='string'||typeof b[k]==='number') && String(b[k]).trim()) art[k]=k==='readMinutes'?Math.max(1,Math.min(60,Number(b[k]))):b[k];
+        }
+        if(Array.isArray(b.tags)) art.tags=b.tags.map(String).filter(Boolean).slice(0,8);
+        if(Array.isArray(b.families)) art.families=b.families.filter((f)=>KB_FAMILY_LABELS[f]).slice(0,8);
+        art.updatedAt=nowIso();
+        saveDb();
+        audit(req,'UPDATE','KnowledgeArticle',art.id,'OK',{meta:{title:art.title}});
+        return json(res,200,kbSummary(art,uid));
+      }
+      if(kId&&method==='DELETE'){
+        if(!authUser?.isOwner) return json(res,403,{message:'حذف مقاله فقط برای مالک است.'});
+        const art=findArt(kId[0]);
+        if(!art) return json(res,404,{message:'مقاله یافت نشد.'});
+        DB.knowledge=(DB.knowledge??[]).filter((x)=>x.id!==art.id);
+        saveDb();
+        audit(req,'DELETE','KnowledgeArticle',art.id,'OK',{meta:{title:art.title}});
+        return json(res,200,{removed:true});
+      }
+    }
+  }
+  if(is('/knowledge')&&method==='POST'){
+    if(!authUser?.isOwner) return json(res,403,{message:'ساخت مقاله فقط برای مالک است.'});
+    const b=await readBody(req);
+    if(!String(b.title??'').trim()||!String(b.body??'').trim()) return json(res,400,{message:'عنوان و متن مقاله الزامی است.'});
+    const category=KB_CATEGORIES.find((c)=>c.key===b.category)?.key??'GETTING_STARTED';
+    const slug=String(b.title).trim().toLowerCase().replace(/[^a-z0-9؀-ۿ]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60)||'article-'+Date.now();
+    const art={id:'kb-'+Date.now(),slug,titleslug:slug,title:String(b.title).trim(),excerpt:String(b.excerpt??'').trim().slice(0,220)||String(b.body).trim().slice(0,180),category,tags:(Array.isArray(b.tags)?b.tags:[]).map(String).filter(Boolean).slice(0,8),families:(Array.isArray(b.families)?b.families:[]).filter((f)=>KB_FAMILY_LABELS[f]).slice(0,8),readMinutes:Math.max(1,Math.min(60,Number(b.readMinutes)|| Math.ceil(String(b.body).length/700))),author:authUser?.email??authUser?.name??'کارشناس',body:String(b.body),updatedAt:nowIso(),views:0,helpful:0,notHelpful:0,bookmarks:[]};
+    DB.knowledge=[...((DB.knowledge??[]).filter((x)=>x.id!==art.id)),art];
+    saveDb();
+    audit(req,'CREATE','KnowledgeArticle',art.id,'OK',{meta:{title:art.title,category}});
+    return json(res,201,kbSummary(art,authUser?.id??'u-demo'));
+  }
+
   /* ----------------------------- documents ----------------------------- */
-  if(is('/documents')&&method==='GET') return json(res,200,[]);
-  if(is('/documents/status')&&method==='GET') return json(res,200,{total:0,indexed:0,pending:0});
+  if(is('/documents')&&method==='GET'){
+    const organizationId=q.get('organizationId')??'';
+    let list=(DB.documents??seedDocuments()).map((d)=>({...d}));
+    if(organizationId) list=list.filter((d)=>d.organizationId===organizationId);
+    return json(res,200,list);
+  }
+  if(is('/documents/status')&&method==='GET'){
+    const list=DB.documents??seedDocuments();
+    return json(res,200,{module:'Documents',status:'READY',total:list.length,indexed:list.filter((d)=>d.indexStatus==='INDEXED').length,pending:list.filter((d)=>d.scanStatus==='QUARANTINED'||d.uploadStatus==='PENDING').length,capabilities:['MIME/Ext Validation','Quarantine','Malware Scan','Chunking + Redaction','Signed Download'],capabilitiesCount:5});
+  }
 
   /* ----------------------------- intelligence ----------------------------- */
   /* موتور تحلیلی: همهٔ خروجی‌ها از دادهٔ جاریِ محدودهٔ کاربر محاسبه می‌شود */
@@ -5488,10 +5638,29 @@ async function __handler(req, res) {
   }
 
   /* ---- documents actions ---- */
+  if(is('/documents/upload')&&method==='POST'){
+    const b=await readBody(req).catch(()=>({}));
+    const raw=typeof __rawHttpBody==='string'?__rawHttpBody:'';
+    const fname=(raw.match(/filename="([^"]+)"/)||[])[1]||String(b?.name??'سند-'+Date.now()+'.pdf');
+    const guess=fname.toLowerCase().endsWith('.pdf')?'application/pdf':fname.toLowerCase().endsWith('.xlsx')?'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':fname.toLowerCase().endsWith('.docx')?'application/vnd.openxmlformats-officedocument.wordprocessingml.document':fname.toLowerCase().endsWith('.csv')?'text/csv':'application/octet-stream';
+    const art={id:'doc-'+(DB.nextId++),name:fname,mimeType:String(b?.mimeType??guess),sizeBytes:Number(b?.sizeBytes)||Math.max(1024,Math.floor(raw.length*(guess==='application/pdf'?2:1))),classification:String(b?.classification??'INTERNAL'),uploadedBy:authUser?.email??'demo@srip.local',organizationId:String(b?.organizationId??'')||null,scanStatus:'CLEAN',uploadStatus:'READY',indexStatus:'PENDING',createdAt:nowIso(),updatedAt:nowIso()};
+    DB.documents=[art,...(DB.documents??seedDocuments())];
+    saveDb();
+    audit(req,'CREATE','Document',art.id,'OK',{name:fname,classification:art.classification});
+    return json(res,201,art);
+  }
   const docIndex=match('/documents/:id/index');
-  if(docIndex&&method==='POST') return json(res,200,{ok:true,indexed:true});
+  if(docIndex&&method==='POST'){
+    const doc=(DB.documents??[]).find((d)=>d.id===docIndex[0]);
+    if(doc){ doc.indexStatus='INDEXED'; doc.updatedAt=nowIso(); doc.indexedChunks=(doc.indexedChunks??0)+1; }
+    saveDb();
+    return json(res,200,{ok:true,indexed:true});
+  }
   const docUrl=match('/documents/:id/signed-url');
-  if(docUrl&&method==='GET') return json(res,200,{url:null,expiresAt:null});
+  if(docUrl&&method==='GET'){
+    const doc=(DB.documents??[]).find((d)=>d.id===docUrl[0]);
+    return json(res,200,{url:null,expiresAt:null,name:doc?.name??null,signed:false,message:doc?'برای دانلود واقعی در حالت سرور، امضای کوتاه‌مدت صادر می‌شود؛ در دمو URL نیست.':null});
+  }
 
   /* ---- admin / system ---- */
   if(is('/admin/overview')){
@@ -7179,6 +7348,7 @@ async function __swHandle(request) {
   for (const [k, v] of request.headers) headers[k.toLowerCase()] = v;
   const req = { method: request.method, url: path + url.search, headers, socket: { remoteAddress: '127.0.0.1' } };
   __bodyText = await request.text().catch(() => '');
+  __rawHttpBody = __bodyText;
   let __status = 200, __headers = {}, __body = null;
   const res = {
     setHeader() {},

@@ -163,6 +163,7 @@ const assert = (idx, what) => { if (idx < 0) throw new Error(`anchor not found: 
     '  for (const [k, v] of request.headers) headers[k.toLowerCase()] = v;',
     '  const req = { method: request.method, url: path + url.search, headers, socket: { remoteAddress: \'127.0.0.1\' } };',
     "  __bodyText = await request.text().catch(() => '');",
+    "  __rawHttpBody = __bodyText;",
     '  let __status = 200, __headers = {}, __body = null;',
     '  const res = {',
     '    setHeader() {},',

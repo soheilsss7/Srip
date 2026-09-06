@@ -8,6 +8,7 @@
    · CriteriaBadge: نشان فشردهٔ فهرست‌ها
    داده‌ها از /criteria/* خوانده می‌شود؛ کاتالوگ در کد فرانت‌اند تکرار نمی‌شود.
    ============================================================================ */
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../_lib/api';
 import { useWorkspace } from './workspace';
@@ -515,7 +516,8 @@ export function CriteriaScoreCard({
           )}
           <p className="criteria-foot">
             امتیاز فقط از {faNum(data.known)} معیارِ دارای داده ساخته شده است؛ {faNum(100 - data.coverage)}٪ وزن مدل هنوز بدون شواهد است.
-            {data.computedAt ? ` محاسبه: ${new Date(data.computedAt).toLocaleString('fa-IR')}.` : ''}
+            {data.computedAt ? ` محاسبه: ${new Date(data.computedAt).toLocaleString('fa-IR')}.` : ''}{' '}
+            <Link href="/documents" className="t-primary" style={{ fontWeight: 700 }}>چرا این عدد؟ ← دانشنامهٔ امتیازدهی</Link>
           </p>
         </>
       )}

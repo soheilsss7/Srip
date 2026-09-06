@@ -83,6 +83,7 @@ export default function HelpPage() {
           <p className="subtitle">همه‌چیز دربارهٔ پلتفرم: نقش‌ها، بخش‌ها، قابلیت‌ها و پاسخ پرسش‌های پرتکرار — در یک نگاه.</p>
         </div>
         <div className="heading-tools">
+          <Link className="btn btn-secondary btn-sm" href="/documents"><BookOpen size={13} /> دانشنامهٔ زنده</Link>
           <span className="chip info"><MessageCircleQuestion size={12}/> به‌روزرسانی: شهریور ۱۴۰۵</span>
         </div>
       </section>
