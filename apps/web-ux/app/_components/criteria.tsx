@@ -10,7 +10,8 @@
    ============================================================================ */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../_lib/api';
-import { AlertTriangle, BadgeCheck, Gauge, HelpCircle, Info, PenLine, RefreshCw, ShieldAlert } from 'lucide-react';
+import { useWorkspace } from './workspace';
+import { AlertTriangle, BadgeCheck, BellRing, Gauge, HelpCircle, Info, PenLine, RefreshCw, Save, ShieldAlert, SlidersHorizontal, Trash2 } from 'lucide-react';
 
 export type Anchor = { level: number; label: string; score: number };
 export type Question = {
@@ -19,12 +20,21 @@ export type Question = {
   criterion?: { name: string; why: string; sources: string[]; evidence: string } | null;
 };
 export type AnswerMap = Record<string, { level: number | null; note?: string; evidence?: string }>;
+export type Manual = {
+  id: string; subjectType: string; subjectId: string; delta: number; reason: string;
+  expiresAt?: string | null; enabled?: boolean; active?: boolean; expired?: boolean;
+  createdBy?: string; createdAt?: string; updatedAt?: string;
+};
 export type Summary = {
   score: number; coverage: number; confidence: number; uncertainty: number; rangeLow: number; rangeHigh: number;
   rankable: boolean; verdict: string; verdictLabel: string; verdictHint?: string; known: number; total: number;
   gateCap?: number | null;
   flags?: { code: string; severity: string; criterionCode: string; message?: string }[];
   computedAt?: string;
+  manual?: Manual | null;
+  effectiveScore?: number | null;
+  modelScore?: number | null;
+  scoreSource?: 'MODEL' | 'MODEL_MANUAL';
 };
 export type Line = {
   code: string; name: string; familyName: string; why: string; polarity: 'GOOD' | 'BAD'; value: number | null;
@@ -36,7 +46,7 @@ export type Line = {
   sources?: string[];
 };
 export type Assessment = Summary & {
-  subjectType: string; subjectId: string; rawScore: number; criteria: Line[];
+  subjectType: string; subjectId: string; rawScore: number; rankingScore?: number; criteria: Line[];
   unknown: { code: string; name: string; family: string; weightPct: number; prompt?: string; help?: string }[];
   reviewDue: { code: string; name: string; reason: string }[];
   flags: { code: string; severity: string; message: string; criterionCode: string }[];
@@ -62,13 +72,19 @@ const STATUS_LABEL: Record<Line['status'], string> = {
 export function CriteriaBadge({ criteria, showScore = true }: { criteria?: Summary | null; showScore?: boolean }) {
   if (!criteria) return <span className="criteria-badge muted" title="هنوز ارزیابی معیارمحور انجام نشده">بدون ارزیابی</span>;
   const tone = toneOf(criteria);
+  const manualOn = !!criteria.manual?.active && (criteria.scoreSource === 'MODEL_MANUAL');
+  const score = criteria.effectiveScore ?? criteria.score;
   const label = showScore
-    ? `${criteria.rankable ? 'امتیاز معیار' : 'ارزیابی ناقص'} ${faNum(criteria.score)} · ${faNum(criteria.coverage)}٪ اطلاعات`
+    ? `${criteria.rankable ? 'امتیاز معیار' : 'ارزیابی ناقص'} ${faNum(score)}${manualOn ? ' · دستی' : ''} · ${faNum(criteria.coverage)}٪ اطلاعات`
     : `${faNum(criteria.coverage)}٪ اطلاعات`;
+  const title = manualOn
+    ? `${criteria.verdictLabel} — مدل ${faNum(criteria.score)} ${(criteria.manual?.delta ?? 0) > 0 ? '+' : ''}${faNum(criteria.manual?.delta ?? 0)} دستی = ${faNum(score)}`
+    : `${criteria.verdictLabel} — ${criteria.verdictHint ?? ''}`;
   return (
-    <span className={`criteria-badge ${tone}`} title={`${criteria.verdictLabel} — ${criteria.verdictHint ?? ''}`}>
+    <span className={`criteria-badge ${tone}${manualOn ? ' manual' : ''}`} title={title}>
       {criteria.flags?.length ? <ShieldAlert size={12} /> : criteria.rankable ? <BadgeCheck size={12} /> : <HelpCircle size={12} />}
       {label}
+      {manualOn && <em className="criteria-badge-manual">دستی</em>}
     </span>
   );
 }
@@ -235,8 +251,8 @@ export function intakePayload(answers: AnswerMap) {
 
 /* ───────────────────────────── کارت امتیاز معیارها ───────────────────────────── */
 export function CriteriaScoreCard({
-  subjectType, subjectId, onEdit,
-}: { subjectType: 'ORGANIZATION' | 'PERSON' | 'RELATIONSHIP' | 'OPPORTUNITY'; subjectId: string; onEdit?: () => void }) {
+  subjectType, subjectId, onEdit, onRefresh,
+}: { subjectType: 'ORGANIZATION' | 'PERSON' | 'RELATIONSHIP' | 'OPPORTUNITY'; subjectId: string; onEdit?: () => void; onRefresh?: () => void }) {
   const [data, setData] = useState<Assessment | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -245,16 +261,61 @@ export function CriteriaScoreCard({
   const [missing, setMissing] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<AnswerMap>({});
+  const { can, me } = useWorkspace();
+  const isOwner = !!me?.permissions?.includes('*');
+  const canManage = isOwner || can('criteria.manage') || can('admin.users');
+  const [manualOpen, setManualOpen] = useState(false);
+  const [mDelta, setMDelta] = useState(0);
+  const [mReason, setMReason] = useState('');
+  const [mExpiry, setMExpiry] = useState('90');
+  const [mBusy, setMBusy] = useState(false);
+  const [mError, setMError] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true); setError(''); setMissing(false);
     try {
       const res: any = await api(`/criteria/assessment/${subjectType}/${subjectId}`);
       setData(res);
+      setMDelta(res?.manual?.active ? Number(res.manual.delta) : 0);
+      setMReason(res?.manual?.reason ?? '');
+      setMExpiry(res?.manual?.expiresAt ? '90' : 'permanent');
+      setMError('');
       setDraft(Object.fromEntries((res?.criteria ?? []).filter((l: Line) => l.assessed).map((l: Line) => [l.code, { level: l.assessed!.level, note: l.note ?? '', evidence: '' }])));
     } catch (e) { if (isMissingCriteriaApi(e)) setMissing(true); else setError((e as Error).message); } finally { setLoading(false); }
   }, [subjectType, subjectId]);
   useEffect(() => { load(); }, [load]);
+
+  async function saveManual() {
+    const delta = Number(mDelta);
+    if (!Number.isFinite(delta) || delta < -25 || delta > 25) { setMError('جابه‌جایی باید بین ۲۵- تا ۲۵+ باشد.'); return; }
+    if (!mReason.trim()) { setMError('دلیل تنظیم دستی الزامی است.'); return; }
+    setMBusy(true); setMError('');
+    try {
+      const payload: any = { delta, reason: mReason.trim(), enabled: true };
+      if (mExpiry !== 'permanent') payload.expiresInDays = Number(mExpiry) || 90;
+      await api(`/criteria/manual/${subjectType}/${subjectId}`, { method: 'POST', body: JSON.stringify(payload) });
+      setManualOpen(false);
+      await load();
+      onRefresh?.();
+    } catch (e) { setMError((e as Error).message); } finally { setMBusy(false); }
+  }
+  async function removeManual() {
+    setMBusy(true); setMError('');
+    try {
+      await api(`/criteria/manual/${subjectType}/${subjectId}`, { method: 'DELETE' });
+      setManualOpen(false);
+      await load();
+      onRefresh?.();
+    } catch (e) { setMError((e as Error).message); } finally { setMBusy(false); }
+  }
+
+  const [nudgeBusy, setNudgeBusy] = useState(false);
+  async function remind() {
+    setNudgeBusy(true);
+    try { await api(`/criteria/nudges/${subjectType}/${subjectId}`, { method: 'POST', body: JSON.stringify({ kind: 'REVIEW', note: 'بازبینی معیارها' }) }); }
+    catch { /* نمایشی */ }
+    finally { setNudgeBusy(false); }
+  }
 
   async function save() {
     const payload = intakePayload(draft);
@@ -286,14 +347,16 @@ export function CriteriaScoreCard({
         <div className="toolbar">
           <button className="btn btn-secondary btn-sm" onClick={load} disabled={loading}><RefreshCw size={13} /> بازخوانی</button>
           <button className="btn btn-primary btn-sm" onClick={() => setEditing((v) => !v)}><PenLine size={13} /> {editing ? 'انجام ویرایش' : 'ثبت ارزیابی'}</button>
+          {canManage && <button className="btn btn-secondary btn-sm" onClick={() => { setManualOpen((v) => !v); setMError(''); }}><SlidersHorizontal size={13} /> {data.manual?.active ? 'تنظیم دستی' : 'تنظیم دستی'}</button>}
         </div>
       </div>
 
       <div className="criteria-headline">
         <div className="criteria-score">
-          <strong>{faNum(data.score)}</strong>
+          <strong>{faNum(data.effectiveScore ?? data.score)}</strong>
           <span>از ۱۰۰</span>
-          <em>بازۀ قابل‌انتظار {faNum(data.rangeLow)} تا {faNum(data.rangeHigh)}</em>
+          {data.scoreSource === 'MODEL_MANUAL' && <em>مدل {faNum(data.modelScore ?? data.score)} {((data.manual?.delta ?? 0)) > 0 ? '+' : ''}{faNum(data.manual?.delta ?? 0)} = {faNum(data.effectiveScore ?? data.score)}</em>}
+          {data.scoreSource !== 'MODEL_MANUAL' && <em>بازۀ قابل‌انتظار {faNum(data.rangeLow)} تا {faNum(data.rangeHigh)}</em>}
         </div>
         <div className="criteria-gauges">
           <div><span>پوشش اطلاعات</span><Meter value={data.coverage} tone="info" /><b>{faNum(data.coverage)}٪</b></div>
@@ -303,9 +366,12 @@ export function CriteriaScoreCard({
         <div className="criteria-verdicts">
           <span className={`chip ${tone}`}>{data.verdictLabel}</span>
           {!data.rankable && <span className="chip warning" title="چون پوشش یا اطمینان کم است، این رکورد در فهرست‌های رتبه‌بندی رقابتی قرار نمی‌گیرد">قابل مقایسه نیست</span>}
+          {data.manual?.active && <span className="chip neutral" title={data.manual.reason}>تنظیم دستی {faNum(data.manual.delta)}</span>}
+          {data.manual && !data.manual.active && <span className="chip warning" title={data.manual.reason}>تنظیم دستی منقضی</span>}
           {data.gateCap != null && <span className="chip danger">سقف اجباری {faNum(data.gateCap)}</span>}
           {data.blend?.coldStart && <span className="chip neutral">شروع سرد — فقط ارزیابی انسانی</span>}
           {data.blend && !data.blend.coldStart && <span className="chip neutral" title="سهم رفتار واقعی در برابر ارزیابی انسانی">{faNum(data.blend.observedShare)}٪ از رفتار واقعی</span>}
+          {data.rankable && <span className="chip neutral" title="امتیاز برای رتبهبندی، در برابر مقایسهٔ منصفانه بین رکوردها">رتبه: {faNum(data.rankingScore ?? data.effectiveScore ?? data.score)}</span>}
         </div>
       </div>
 
@@ -318,6 +384,55 @@ export function CriteriaScoreCard({
             </li>
           ))}
         </ul>
+      )}
+
+      {!!data.reviewDue?.length && (
+        <div className="criteria-stale-banner">
+          <div>
+            <strong><BellRing size={13} /> {faNum(data.reviewDue.length)} معیار نیاز به بازبینی دارد</strong>
+            <small>{data.reviewDue.slice(0, 3).map((r: any) => r.name).join('، ')}{data.reviewDue.length > 3 ? ` و ${faNum(data.reviewDue.length - 3)} مورد دیگر` : ''} — پاسخ کهنه یا کم‌اطمینان است و امتیاز را خراب می‌کند.</small>
+          </div>
+          <button className="btn btn-secondary btn-sm" onClick={remind} disabled={nudgeBusy}><BellRing size={12} /> {nudgeBusy ? 'ارسال…' : 'یادآوری بده'}</button>
+        </div>
+      )}
+
+      {manualOpen && (
+        <div className="criteria-manual">
+          <h3>تنظیم دستی امتیاز (برای کارشناس)</h3>
+          <p>
+            مدل {faNum(data.effectiveScore ?? data.score)} را از {faNum(data.known)} معیار ساخته است. اینجا می‌توانید امتیاز را حداکثر تا ۲۵± جابه‌جا کنید؛ دلیلش الزامی است و مبنای مدل دست‌نخورده می‌ماند.
+          </p>
+          <div className="manual-grid">
+            <label className="manual-field">
+              <span className="manual-label">جابه‌جایی نسبت به مدل ({faNum(data.modelScore ?? data.score)}):</span>
+              <input type="number" min={-25} max={25} step={5} value={mDelta} onChange={(e) => setMDelta(Number(e.target.value))} />
+              <small>نتیجه: {faNum(Math.max(0, Math.min(100, (data.modelScore ?? data.score) + (Number(mDelta) || 0))))} از ۱۰۰</small>
+            </label>
+            <label className="manual-field manual-reason">
+              <span className="manual-label">دلیل (برای ممیزی):</span>
+              <textarea rows={2} maxLength={240} value={mReason} onChange={(e) => setMReason(e.target.value)} placeholder="مثلاً: قرارداد تمدید شده و ریسک زنجیرهٔ تأمین پایین آمده است." />
+            </label>
+            <label className="manual-field">
+              <span className="manual-label">اعتبار:</span>
+              <select value={mExpiry} onChange={(e) => setMExpiry(e.target.value)}>
+                <option value="permanent">دائمی (تا لغو)</option>
+                <option value="30">۳۰ روز</option>
+                <option value="90">۹۰ روز</option>
+                <option value="180">۱۸۰ روز</option>
+              </select>
+              <small>با انقضا، امتیاز خودکار به مدل برمی‌گردد.</small>
+            </label>
+          </div>
+          {mError && <div className="criteria-intake-error">{mError}</div>}
+          <div className="toolbar">
+            {data.manual && (
+              <button type="button" className="btn btn-danger btn-sm" onClick={removeManual} disabled={mBusy}><Trash2 size={13} /> حذف تنظیم دستی</button>
+            )}
+            <span style={{ flex: 1 }} />
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setManualOpen(false)} disabled={mBusy}>بستن</button>
+            <button type="button" className="btn btn-primary btn-sm" onClick={saveManual} disabled={mBusy}><Save size={13} /> {mBusy ? 'در حال ثبت…' : (data.manual?.active ? 'به‌روزرسانی' : 'ثبت')}</button>
+          </div>
+        </div>
       )}
 
       {editing && (
@@ -358,7 +473,7 @@ export function CriteriaScoreCard({
                         </div>
                         <div className="criteria-line-score">
                           {l.value == null ? <em>—</em> : <b>{faNum(l.value)}</b>}
-                          {l.value != null && <small>اطمینان {faNum(l.confidence)}٪</small>}
+                          {l.value != null && <small>سهم {faNum(Math.round((l.weightPct ?? 0) * (l.value ?? 0) / 100))} · اطمینان {faNum(l.confidence)}٪</small>}
                         </div>
                         <p className="criteria-line-hint">{l.actionHint}</p>
                         {l.note && <p className="criteria-line-note">یادداشت: {l.note}</p>}
@@ -381,7 +496,10 @@ export function CriteriaScoreCard({
                   <li key={u.code}><span>{u.name}</span>{u.weightPct >= 1.5 && <em>{faNum(u.weightPct)}٪ وزن</em>}{u.prompt && <small>{u.prompt}</small>}</li>
                 ))}
               </ul>
-              <button className="btn btn-secondary btn-sm" onClick={() => setEditing(true)}><PenLine size={13} /> پاسخ به این پرسش‌ها</button>
+              <div className="toolbar">
+                <button className="btn btn-secondary btn-sm" onClick={() => setEditing(true)}><PenLine size={13} /> پاسخ به این پرسش‌ها</button>
+                <button className="btn btn-secondary btn-sm" onClick={remind} disabled={nudgeBusy}><BellRing size={12} /> یادآوری بده</button>
+              </div>
             </div>
           )}
 

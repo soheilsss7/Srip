@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { api } from '../../_lib/api';
 import { fa } from '../../_lib/fa';
 import { Badge, ErrorCard, Loading, PageHeader } from '../../_components/page-ui';
+import { CriteriaScoreCard } from '../../_components/criteria';
 import { Award, CalendarClock, CheckCircle2, ChevronLeft, Coins, Handshake, RefreshCw, Save, ShieldX, Target, Trash2, TrendingUp, User, XCircle } from 'lucide-react';;
 
 const arr = (x: any): any[] => Array.isArray(x) ? x : Array.isArray(x?.items) ? x.items : Array.isArray(x?.data) ? x.data : Array.isArray(x?.rows) ? x.rows : [];
@@ -182,6 +183,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
             </div>
           </section>
 
+          <CriteriaScoreCard subjectType="OPPORTUNITY" subjectId={id} onRefresh={load} />
           <div className="split-panels">
             {/* جزئیات */}
             <section className="panel">

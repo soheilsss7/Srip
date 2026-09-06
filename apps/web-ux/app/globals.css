@@ -2276,7 +2276,47 @@ tr.row-muted td{opacity:.6}
 .criteria-badge.info{background:rgba(59,130,246,.1);color:#1d4ed8;border-color:rgba(59,130,246,.25)}
 .criteria-badge.success{background:rgba(34,197,94,.12);color:#15803d;border-color:rgba(34,197,94,.25)}
 .criteria-badge.warning{background:rgba(245,166,35,.14);color:#b45309;border-color:rgba(245,166,35,.3)}
-.criteria-badge.danger{background:rgba(251,77,73,.12);color:#b91c1c;border-color:rgba(251,77,73,.28)}
+.criteria-badge.danger{background:rgba(251,77,73,.12);color:#b91c1c;border-color:rgba(251,77,73,.28)}.criteria-badge.danger{background:rgba(251,77,73,.12);color:#b91c1c;border-color:rgba(251,77,73,.28)}
+.criteria-badge.manual{border-style:dashed;border-color:rgba(124,58,237,.55)}
+.criteria-badge-manual{font-style:normal;font-weight:700;background:rgba(124,58,237,.14);color:#6d28d9;border:1px solid rgba(124,58,237,.35);border-radius:999px;padding:0 6px;font-size:10px;line-height:16px}
+.criteria-manual{border:1px dashed rgba(124,58,237,.4);background:rgba(124,58,237,.05);border-radius:14px;padding:14px 16px;margin:12px 0}
+.criteria-manual h3{margin:0 0 4px;font-size:14px;color:var(--text-primary)}
+.criteria-manual>p{margin:0 0 12px;font-size:12.5px;color:var(--text-secondary)}
+.manual-grid{display:grid;grid-template-columns:200px 1fr 170px;gap:12px;align-items:start}
+.manual-field{display:flex;flex-direction:column;gap:5px}
+.manual-label{font-size:12px;font-weight:600;color:var(--text-primary)}
+.manual-field input,.manual-field select,.manual-field textarea{width:100%;border:1px solid var(--card-border);border-radius:10px;padding:8px 10px;background:var(--card-bg);color:var(--text-primary);font-size:13px}
+.manual-field small{font-size:11.5px;color:var(--text-secondary)}
+.criteria-manual .toolbar{margin-top:10px}
+.criteria-stale-banner{display:flex;align-items:center;gap:12px;border:1px solid rgba(245,166,35,.5);background:rgba(245,166,35,.08);border-radius:12px;padding:9px 12px;margin:10px 0}
+.criteria-stale-banner>div{flex:1;min-width:0}
+.criteria-stale-banner strong{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-primary)}
+.criteria-stale-banner small{font-size:11.5px;color:var(--text-secondary)}
+.criteria-stale-banner .btn{flex:0 0 auto}
+.nudge-banner{border:1px solid rgba(245,166,35,.45);background:linear-gradient(180deg,rgba(245,166,35,.1),rgba(245,166,35,.04));border-radius:14px;padding:12px 14px;margin:0 0 14px}
+.nudge-banner-danger{border-color:rgba(251,77,73,.5);background:linear-gradient(180deg,rgba(251,77,73,.1),rgba(251,77,73,.04))}
+.nudge-banner-head{display:flex;align-items:center;gap:10px}
+.nudge-banner-head strong{font-size:13.5px;color:var(--text-primary)}
+.nudge-banner-head small{display:block;font-size:11.5px;color:var(--text-secondary)}
+.nudge-banner-head>div{flex:1;min-width:0}
+.nudge-banner-list{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.nudge-banner-list.compact{max-height:190px;overflow:auto}
+.nudge-item{display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.55);border:1px solid var(--card-border);border-radius:10px;padding:6px 9px}
+html[data-theme="dark"] .nudge-item{background:rgba(255,255,255,.04)}
+.nudge-item>button{margin-inline-start:auto;flex:0 0 auto}
+.nudge-ico{width:26px;height:26px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+.nudge-ico.info{background:rgba(59,130,246,.12);color:#2563eb}
+.nudge-ico.warning{background:rgba(245,166,35,.14);color:#b45309}
+.nudge-ico.danger{background:rgba(251,77,73,.12);color:#b91c1c}
+.nudge-body{flex:1;min-width:0}
+.nudge-body small{color:var(--text-secondary)}
+.nudge-link{font-size:12px;color:var(--text-primary);text-decoration:none;display:inline-block;max-width:600px;white-space:normal}
+.nudge-link:hover{text-decoration:underline}
+.nudge-list{display:flex;flex-direction:column;gap:8px}
+.nudge-row{display:flex;align-items:center;gap:10px;border:1px solid var(--card-border);border-radius:10px;padding:8px 10px;background:var(--card-bg-soft)}
+
+@media(max-width:860px){.manual-grid{grid-template-columns:1fr}}
+
 .criteria-badge.muted{opacity:.7}
 [data-theme="dark"] .criteria-badge.info{color:#93c5fd}
 [data-theme="dark"] .criteria-badge.success{color:#86efac}

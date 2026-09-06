@@ -2539,7 +2539,7 @@ function computeCriteria(subjectType, subjectId, options = {}) {
   const weakest = lines.filter((l) => l.value != null && (l.polarity === 'GOOD' ? l.value < 45 : l.value > 55)).sort((a, b) => b.weightPct - a.weightPct).slice(0, 3).map((l) => l.name);
   if (weakest.length) hints.push(`ضعیف‌ترین نقاط: ${weakest.join('، ')}.`);
   if (flags.length) hints.push(`${flags.length} پرچم ثبت شده است؛ ابتدا موارد بحرانی/بالا.`);
-  return {
+  const out = {
     subjectType, subjectId, score, rawScore, uncertainty, rangeLow: Math.max(0, score - uncertainty), rangeHigh: Math.min(100, score + uncertainty),
     coverage, confidence, rankingScore: rankable ? Math.round(score * (0.7 + 0.3 * (confidence / 100))) : score, rankable, gateCap,
     ...verdict, families: families.filter((f) => f.modelWeight > 0), criteria: lines,
@@ -2547,6 +2547,7 @@ function computeCriteria(subjectType, subjectId, options = {}) {
     answeredCount, blend: { behavioralEvidence: behavioral, observedShare: Math.round(evidenceShare * 100), coldStart: behavioral === 0 && coverage < 25 },
     criteriaVersion: CRITERIA_VERSION, computedAt: new Date().toISOString(), hints,
   };
+  return applyManual(subjectType, subjectId, out);
 }
 function criteriaSummaryLite(a) {
   if (!a) return null;
@@ -2557,7 +2558,44 @@ function criteriaSummaryLite(a) {
     flags: a.flags.map((f) => ({ code: f.code, severity: f.severity, criterionCode: f.criterionCode })),
     families: a.families.map((f) => ({ family: f.family, name: f.name, score: f.score, weightPct: f.weightPct, coveragePct: f.coveragePct })),
     version: a.criteriaVersion, computedAt: a.computedAt,
+    manual: a.manual ?? null, effectiveScore: a.effectiveScore ?? a.score, scoreSource: a.scoreSource ?? 'MODEL',
   };
+}
+
+/* ─────────────── تنظیم دستی امتیاز (manual nudge) ───────────────
+   کارشناس می‌تواند امتیاز مدل را با یک «جابه‌جایی مستند» (±۲۵) اصلاح کند؛
+   منشأ اصلی امتیاز همیشه مدل می‌ماند و این تنظیم در ممیزی ثبت می‌شود. */
+function manualFor(subjectType, subjectId) {
+  const rows = DB?.criteriaManual ?? [];
+  const m = rows.find((x) => x.subjectType === subjectType && x.subjectId === subjectId);
+  if (!m) return null;
+  const expired = m.expiresAt ? new Date(m.expiresAt).getTime() <= Date.now() : false;
+  return { ...m, active: m.enabled !== false && !expired, expired };
+}
+function applyManual(subjectType, subjectId, a) {
+  if (!a) return a;
+  const m = manualFor(subjectType, subjectId);
+  const model = Number(a.score ?? 0);
+  const effective = m?.active ? Math.max(0, Math.min(100, model + (Number(m.delta) || 0))) : model;
+  return {
+    ...a,
+    manual: m,
+    effectiveScore: effective,
+    scoreSource: m?.active ? 'MODEL_MANUAL' : 'MODEL',
+    modelScore: model,
+  };
+}
+function subjectLabel(type, id) {
+  try {
+    if (type === 'ORGANIZATION') return orgById(id)?.name ?? id;
+    if (type === 'PERSON') { const p = PEOPLE.find((x) => x.id === id); return p ? `${p.firstName} ${p.lastName}` : id; }
+    if (type === 'RELATIONSHIP') { const r = RELS.find((x) => x.id === id); if (!r) return id; return `${orgById(r.sourceOrganizationId)?.name ?? '—'} ↔ ${orgById(r.targetOrganizationId)?.name ?? '—'}`; }
+    if (type === 'OPPORTUNITY') return OPPORTUNITIES.find((x) => x.id === id)?.name ?? id;
+  } catch { /* fall back to id */ }
+  return id;
+}
+function safeCriteriaLite(subjectType, subjectId) {
+  try { return criteriaSummaryLite(computeCriteria(subjectType, subjectId)); } catch { return null; }
 }
 const attachCriteria = (subjectType, rows) => rows.map((row) => {
   const id = String(row?.id ?? '');
@@ -2584,7 +2622,8 @@ function loadDb() {
     DB = { version: 2, users: {}, orgs: ORGS, people: PEOPLE, rels: RELS, meetings: MEETINGS,
       actions: ACTIONS, commitments: COMMITMENTS, projects: PROJECTS, projectExtra: PROJECT_EXTRA,
       opportunities: OPPORTUNITIES, interactions: INTERACTIONS, notifications: NOTIFICATIONS,
-      recs: RECS, aiUsage: AI_USAGE, personOrgs: PERSON_ORGS, audit: [], revokedJtis: [], nextId: 1, assessments: seedCriteriaAssessments() };
+      recs: RECS, aiUsage: AI_USAGE, personOrgs: PERSON_ORGS, audit: [], revokedJtis: [], nextId: 1,
+      assessments: seedCriteriaAssessments(), criteriaManual: [] };
   }
   // seed identities with real scrypt hashes (kept on disk afterwards)
   for (const [email, u] of Object.entries(SEED_USERS)) {
@@ -4381,7 +4420,7 @@ async function __handler(req, res) {
   }
   if(is('/commitments')&&method==='GET') return json(res,200,scopedCommitments(req).map(commitmentView));
   if(is('/projects')&&method==='GET') return json(res,200,scopedProjects(req).map(projectView));
-  if(is('/opportunities')&&method==='GET') return json(res,200,scopedOpps(req).map(opportunityView));
+  if(is('/opportunities')&&method==='GET') return json(res,200,attachCriteria('OPPORTUNITY',scopedOpps(req).map(opportunityView)));
   const INTERACTION_KIND_FA={CALL:'تماس تلفنی',EMAIL:'ایمیل',MEETING:'جلسه',NOTE:'یادداشت',MESSAGE:'پیام',OTHER:'سایر'};
   const INTERACTION_KIND_LIST=['CALL','EMAIL','MEETING','NOTE','MESSAGE','OTHER'];
   const PRIORITY_LIST=['LOW','MEDIUM','HIGH','CRITICAL'];
@@ -4876,6 +4915,7 @@ async function __handler(req, res) {
       if((r.healthScore??0)<60) gaps.push({type:'LOW_HEALTH',title:`سلامت ${r.healthScore} زیر آستانهٔ ۶۰`});
       if(openComs.some(c=>c.status==='OVERDUE')) gaps.push({type:'OVERDUE_COMMITMENT',title:'تعهد عقب‌افتاده دارد'});
       return {id:r.id,name:relName(r),status:r.status,strategicScore:r.strategicScore,healthScore:r.healthScore,
+        criteria:safeCriteriaLite('RELATIONSHIP',r.id),
         resilienceScore:r.resilienceScore,riskScore:r.riskScore,opportunityScore:r.opportunityScore,
         covered,coverageGaps:gaps,openActions:openActs.length,openCommitments:openComs.length,
         nextActionAt:r.nextActionAt??null};
@@ -5082,7 +5122,7 @@ async function __handler(req, res) {
     const o=OPPORTUNITIES.find(x=>x.id===opportunityId[0]);
     if(!o) return json(res,404,{message:'فرصت یافت نشد'});
     if(!scopedOpps(req).includes(o)) return json(res,403,{message:'دسترسی به این فرصت مجاز نیست.'});
-    return json(res,200,opportunityView(o));
+    return json(res,200,attachCriteria('OPPORTUNITY',[opportunityView(o)])[0]);
   }
   if(opportunityId&&method==='PATCH'){
     const o=OPPORTUNITIES.find(x=>x.id===opportunityId[0]);
@@ -6969,8 +7009,8 @@ async function __handler(req, res) {
       const subject=String(aMatch[0]).toUpperCase();
       if(!['ORGANIZATION','PERSON','RELATIONSHIP','OPPORTUNITY'].includes(subject)) return json(res,400,{message:'نوع سوژه نامعتبر است.'});
       const subjectId=aMatch[1];
-      const orgOf = (type,id)=>type==='ORGANIZATION'?id:type==='PERSON'?(PEOPLE.find(x=>x.id===id)?.organizationId??null):(RELS.find(x=>x.id===id)?.sourceOrganizationId??null);
-      const record = subject==='ORGANIZATION'?ORGS.find(x=>x.id===subjectId):subject==='PERSON'?PEOPLE.find(x=>x.id===subjectId):RELS.find(x=>x.id===subjectId);
+      const orgOf = (type,id)=>type==='ORGANIZATION'?id:type==='PERSON'?(PEOPLE.find(x=>x.id===id)?.organizationId??null):type==='OPPORTUNITY'?(RELS.find(x=>x.id===OPPORTUNITIES.find(o=>o.id===id)?.relationshipId)?.sourceOrganizationId??null):(RELS.find(x=>x.id===id)?.sourceOrganizationId??null);
+      const record = subject==='ORGANIZATION'?ORGS.find(x=>x.id===subjectId):subject==='PERSON'?PEOPLE.find(x=>x.id===subjectId):subject==='OPPORTUNITY'?OPPORTUNITIES.find(x=>x.id===subjectId):RELS.find(x=>x.id===subjectId);
       if(!record) return json(res,404,{message:'رکورد موردنظر یافت نشد.'});
       const ownerOrg = orgOf(subject,subjectId);
       if(ownerOrg && !inScope(req,ownerOrg)) return json(res,403,{message:'دسترسی به ارزیابی این رکورد مجاز نیست.'});
@@ -7033,6 +7073,86 @@ async function __handler(req, res) {
       const minForRanking=Math.ceil(criteriaForSubject(subject).length*0.35);
       const rows=ids.map(id=>{const a=storedAnswers(subject,id);const answered=Object.keys(a).filter(k=>a[k].level!=null||a[k].value!=null).length;return {subjectId:id,answered,ready:answered>=minForRanking};});
       return json(res,200,{subjectType:subject,assessed:rows.filter(r=>r.answered>0).length,rankable:rows.filter(r=>r.ready).length,total:rows.length,minAnswersForRanking:minForRanking,rows});
+    }
+  }
+
+
+  /* ─────────────── تنظیم دستی امتیاز (manual nudge) ─────────────── */
+  if(is('/criteria/manual')&&method==='GET'){
+    const rows=(DB.criteriaManual??[]).map((m)=>({...m,subjectLabel:subjectLabel(m.subjectType,m.subjectId),active:(m.enabled!==false)&&!(m.expiresAt&&new Date(m.expiresAt).getTime()<=Date.now())}));
+    return json(res,200,{items:rows.sort((a,b)=>String(b.updatedAt??'').localeCompare(String(a.updatedAt??'')))});
+  }
+  {
+    const mMatch=match('/criteria/manual/:subjectType/:subjectId');
+    if(mMatch&&['GET','POST','PATCH','DELETE'].includes(method)){
+      const subject=String(mMatch[0]).toUpperCase();
+      const subjectId=mMatch[1];
+      if(!['ORGANIZATION','PERSON','RELATIONSHIP','OPPORTUNITY'].includes(subject)) return json(res,400,{message:'نوع سوژه نامعتبر است.'});
+      const record = subject==='ORGANIZATION'?ORGS.find(x=>x.id===subjectId):subject==='PERSON'?PEOPLE.find(x=>x.id===subjectId):subject==='OPPORTUNITY'?OPPORTUNITIES.find(x=>x.id===subjectId):RELS.find(x=>x.id===subjectId);
+      if(!record) return json(res,404,{message:'رکورد موردنظر یافت نشد.'});
+      const ownerOrg = subject==='ORGANIZATION'?subjectId:subject==='PERSON'?(PEOPLE.find(x=>x.id===subjectId)?.organizationId??null):subject==='OPPORTUNITY'?(OPPORTUNITIES.find(x=>x.id===subjectId)?.relationshipId?RELS.find(r=>r.id===OPPORTUNITIES.find(o=>o.id===subjectId).relationshipId)?.sourceOrganizationId??null:null):(RELS.find(x=>x.id===subjectId)?.sourceOrganizationId??null);
+      if(ownerOrg && !inScope(req,ownerOrg)) return json(res,403,{message:'تنظیم امتیاز این رکورد مجاز نیست.'});
+      if(method==='GET'){
+        const m=manualFor(subject,subjectId);
+        let assessment=null; try { assessment=applyManual(subject,subjectId,computeCriteria(subject,subjectId)); } catch {}
+        return json(res,200,{manual:m,assessment});
+      }
+      if(method==='DELETE'){
+        DB.criteriaManual=(DB.criteriaManual??[]).filter(x=>!(x.subjectType===subject&&x.subjectId===subjectId));
+        saveDb();
+        audit(req,'DELETE','criteria-manual',`${subject}:${subjectId}`,'OK',{action:'remove manual nudge'});
+        return json(res,200,{removed:true});
+      }
+      const b=await readBody(req);
+      const delta=Number(b.delta);
+      if(!Number.isFinite(delta)||delta<-25||delta>25) return json(res,400,{message:'جابه‌جایی باید عددی بین ۲۵- تا ۲۵+ باشد.'});
+      const reason=String(b.reason??'').trim();
+      if(!reason) return json(res,400,{message:'دلیل تنظیم دستی الزامی است (برای ممیزی و بازبینی بعدی).'});
+      if(reason.length>240) return json(res,400,{message:'دلیل حداکثر ۲۴۰ نویسه.'});
+      const days=Number(b.expiresInDays);
+      const expiresAt=Number.isFinite(days)&&days>0?new Date(Date.now()+days*86400000).toISOString():null;
+      const existing=manualFor(subject,subjectId);
+      const manual={id:existing?.id??'m-'+Date.now(),subjectType:subject,subjectId,delta:Math.round(delta),
+        reason,expiresAt,enabled:b.enabled!==false,createdBy:authUser?.name??authUser?.email??'کارشناس',
+        createdAt:existing?.createdAt??new Date().toISOString(),updatedAt:new Date().toISOString()};
+      DB.criteriaManual=(DB.criteriaManual??[]).filter(x=>!(x.subjectType===subject&&x.subjectId===subjectId));
+      DB.criteriaManual.push(manual);
+      saveDb();
+      audit(req,'UPDATE','criteria-manual',`${subject}:${subjectId}`,'OK',{delta,reason,expiresAt});
+      NOTIFICATIONS.unshift({id:`n-crit-m-${Date.now()}`,userId:authUser?.id??'u-demo',type:'INFO',title:'تنظیم دستی امتیاز ثبت شد',body:`${subjectLabel(subject,subjectId)}: ${delta>0?'+':''}${delta} — ${reason}`,channel:'IN_APP',priority:'MEDIUM',createdAt:new Date().toISOString(),readAt:null,data:{subjectType:subject,subjectId}});
+      let assessment=null; try { assessment=applyManual(subject,subjectId,computeCriteria(subject,subjectId)); } catch {}
+      return json(res,200,{manual,assessment});
+    }
+  }
+
+
+  /* ─────────────── اخطارهای دادهٔ ناقص / کهنه (nudge) ─────────────── */
+  if(is('/criteria/nudges')&&method==='GET'){
+    const activeOrg=req.headers['x-tenancy-org']||req.headers['x-workspace-org']||req.headers['x-org-id']||null;
+    const category=(DB.criteriaManual??[]).filter((m)=>m.reason).map((m)=>({kind:'MANUAL_ACTIVE',subjectType:m.subjectType,subjectId:m.subjectId,severity:'INFO',title:'تنظیم دستی امتیاز فعال است',body:`${subjectLabel(m.subjectType,m.subjectId)} — ${m.reason}`}));
+    const slow=[];
+    for(const [key,bucket] of Object.entries(assessmentStore())){
+      const [subjectType,subjectId]=key.split(':');
+      for(const [code,a] of Object.entries(bucket??{})){
+        const c=criterionByCode(code); if(!c) continue;
+        const age=a.answeredAt?Math.floor((Date.now()-new Date(a.answeredAt).getTime())/86400000):9999;
+        if(age<c.halfLifeDays) continue;
+        slow.push({kind:'STALE_ANSWER',subjectType,subjectId,criterionCode:code,age,dueInDays:c.halfLifeDays-age,severity:age>c.halfLifeDays*2?'HIGH':'MEDIUM',title:'ارزیابی کهنهٔ معیارها',body:`${subjectLabel(subjectType,subjectId)}: ${c.name} — ${age>c.halfLifeDays*2?'اعتبار پاسخ گذشته (بیش از دو نیمه‌عمر)':'نزدیک به پایان اعتبار پاسخ'}`,data:{subjectType,subjectId}});
+      }
+    }
+    const all=[...category,...slow].sort((a,b)=>String(b.createdAt??'').localeCompare(String(a.createdAt??'')));
+    return json(res,200,{items:all,total:all.length});
+  }
+  {
+    const nM=match('/criteria/nudges/:subjectType/:subjectId');
+    if(nM&&method==='POST'){
+      const SUBJECTS=['ORGANIZATION','PERSON','RELATIONSHIP','OPPORTUNITY'];
+      const subject=String(nM[0]).toUpperCase(); const subjectId=nM[1];
+      if(!SUBJECTS.includes(subject)) return json(res,400,{message:'نوع سوژه نامعتبر است.'});
+      const b=await readBody(req);
+      const kind=String(b.kind??'REVIEW'); const note=String(b.note??'').slice(0,200);
+      NOTIFICATIONS.unshift({id:`n-nudge-${Date.now()}`,userId:authUser?.id??'u-demo',type:'INFO',title:'به‌روزرسانی معیارها لازم است',body:`${subjectLabel(subject,subjectId)} — ${note||'داده‌های معیارها کهنه شده‌اند.'}`,channel:'IN_APP',priority:'MEDIUM',createdAt:new Date().toISOString(),readAt:null,data:{subjectType:subject,subjectId,kind}});
+      return json(res,200,{queued:true,kind});
     }
   }
 

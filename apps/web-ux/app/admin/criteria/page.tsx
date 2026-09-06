@@ -8,7 +8,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../../_lib/api';
 import { AdminNav, ErrorCard, Loading, PageHeader, StatusBadge } from '../../_components/page-ui';
-import { BookOpenCheck, Gauge, Scale, Save, ShieldAlert } from 'lucide-react';
+import HubTabs from '../../_components/hub-tabs';
+import { NudgeBanner, NudgeList, useNudges } from '../../_components/nudges';
+import { BellRing, BookOpenCheck, Database, Gauge, Scale, Save, ShieldAlert } from 'lucide-react';
 
 type Family = { key: string; name: string; nameEn: string; rationale: string; criteria: string[] };
 type Criterion = {
@@ -39,6 +41,7 @@ export default function Page() {
   const [minCoverage, setMinCoverage] = useState(40);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState('');
+  const nudges = useNudges();
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
@@ -90,7 +93,13 @@ export default function Page() {
         actions={<span className="chip info">{catalog?.version ?? 'criteria'}</span>}
       />
       <AdminNav />
+      <HubTabs tabs={[
+        { href: '/admin/scoring', label: 'قواعد امتیاز', icon: <Scale size={13} /> },
+        { href: '/admin/criteria', label: 'معیارها', icon: <BookOpenCheck size={13} /> },
+        { href: '/admin/master-data', label: 'دادهٔ مبنایی', icon: <Database size={13} /> },
+      ]} />
       <ErrorCard message={error} />
+      <NudgeBanner items={nudges.items} loading={nudges.loading} onRefresh={nudges.refresh} />
 
       <div className="criteria-admin-grid">
         <section className="section-card">
@@ -185,21 +194,30 @@ export default function Page() {
         {!queue?.total ? (
           <p className="criteria-saved">هیچ معیاری نیازمند بازبینی نیست.</p>
         ) : (
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>سوژه</th><th>معیار</th><th>علت</th><th>سن پاسخ</th></tr></thead>
-              <tbody>
-                {queue.staleAnswers.slice(0, 40).map((row: any, i: number) => (
-                  <tr key={`${row.subjectId}-${row.criterionCode}-${i}`}>
-                    <td>{row.subjectType} · {row.subjectId}</td>
-                    <td>{row.name}</td>
-                    <td>{row.reason}</td>
-                    <td>{faNum(row.age)} روز</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <div className="criteria-review-actions">
+              <NudgeList items={nudges.items} refresh={nudges.refresh} />
+            </div>
+            <div className="table-wrap" style={{ marginTop: 10 }}>
+              <table>
+                <thead><tr><th>سوژه</th><th>معیار</th><th>علت</th><th>سن پاسخ</th><th></th></tr></thead>
+                <tbody>
+                  {queue.staleAnswers.slice(0, 40).map((row: any, i: number) => (
+                    <tr key={`${row.subjectId}-${row.criterionCode}-${i}`}>
+                      <td>{row.subjectType} · {row.subjectId}</td>
+                      <td>{row.name}</td>
+                      <td>{row.reason}</td>
+                      <td>{faNum(row.age)} روز</td>
+                      <td><button className="btn btn-ghost btn-sm" aria-label="یادآوری"
+                        onClick={() => api(`/criteria/nudges/${row.subjectType}/${row.subjectId}`, { method: 'POST', body: JSON.stringify({ kind: 'STALE_ANSWER' }) }).then(nudges.refresh).catch(() => undefined)}>
+                        <BellRing size={12} /> یادآوری
+                      </button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </section>
     </main>

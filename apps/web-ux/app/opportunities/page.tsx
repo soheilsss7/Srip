@@ -7,6 +7,7 @@ import { useWorkspace } from '../_components/workspace';
 import { Badge, ErrorCard, Modal, PageHeader, StatCard, Toolbar } from '../_components/page-ui';
 import { CheckCircle2, ChevronLeft, Coins, Handshake, Plus, RefreshCw, Search, TrendingUp, ArrowDownWideNarrow, CalendarClock } from 'lucide-react';;
 import { JalaliDateField } from '../_components/jalali-date-field';
+import { CriteriaBadge, type Summary as CriteriaSummary } from '../_components/criteria';
 
 type Opportunity = {
   id: string; name: string; status: string; description?: string | null;
@@ -18,6 +19,7 @@ type Opportunity = {
   ownerId?: string | null;
   relationship?: { id: string; sourceOrganization?: { name?: string } | null; targetOrganization?: { name?: string } | null } | null;
   project?: { id: string; name: string } | null;
+  criteria?: CriteriaSummary | null;
 };
 type Person = { id: string; firstName: string; lastName: string; organization?: { id?: string; name?: string } | null };
 type Org = { id: string; name: string };
@@ -239,6 +241,7 @@ export default function OpportunitiesPage() {
                 <th>ارزش</th>
                 <th>احتمال</th>
                 <th>موعد بستن</th>
+                <th>امتیاز معیارها</th>
                 <th>وضعیت</th>
                 <th></th>
               </tr>
@@ -272,6 +275,9 @@ export default function OpportunitiesPage() {
                   </td>
                   <td>
                     {o.expectedDate ? <span className="cell-count"><CalendarClock size={12} /> {fmtDate(o.expectedDate)}</span> : <span className="t-muted">—</span>}
+                  </td>
+                  <td>
+                    <CriteriaBadge criteria={o.criteria} />
                   </td>
                   <td>
                     {writable ? (

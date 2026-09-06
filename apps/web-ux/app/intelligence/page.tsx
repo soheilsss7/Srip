@@ -6,6 +6,7 @@ import { api } from '../_lib/api';
 import { fa } from '../_lib/fa';
 import { useWorkspace } from '../_components/workspace';
 import { Badge, ErrorCard, Loading, PageHeader, StatCard } from '../_components/page-ui';
+import { NudgeBanner, useNudges } from '../_components/nudges';
 import { Activity, AlertTriangle, ArrowUpRight, CheckCircle2, ChevronLeft, Clock3, Coins, GitBranch, Handshake, HeartPulse, Lightbulb, Link2, Network, RefreshCw, ShieldAlert, TrendingUp, User, Zap } from 'lucide-react';;
 
 /* --------------------------------- types --------------------------------- */
@@ -27,6 +28,7 @@ type CoverageRow = {
   id: string; name: string; status?: string; strategicScore?: number; healthScore?: number;
   resilienceScore?: number; riskScore?: number; covered: boolean;
   coverageGaps?: { type: string; title: string }[]; openActions?: number; openCommitments?: number;
+  criteria?: { coverage?: number; rankable?: boolean; rankingScore?: number; effectiveScore?: number } | null;
 };
 type Intel = {
   generatedAt?: string;
@@ -94,6 +96,7 @@ export default function IntelligencePage() {
   const [data, setData] = useState<Intel | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const nudges = useNudges();
 
   const load = useCallback(async () => {
     if (!can('analytics.read')) { setLoading(false); return; }
@@ -131,6 +134,7 @@ export default function IntelligencePage() {
         {href:'/reports',label:'گزارش‌ها'},
       ]}/>
       <ErrorCard message={error} />
+      <NudgeBanner items={nudges.items} loading={nudges.loading} onRefresh={nudges.refresh} compact />
 
       {loading ? (
         <>
@@ -247,7 +251,7 @@ export default function IntelligencePage() {
               <div className="table-wrap" style={{ marginTop: 12 }}>
                 <table>
                   <thead>
-                    <tr><th>رابطه</th><th>وضعیت</th><th>استراتژیک</th><th>سلامت</th><th>تاب‌آوری</th><th>پوشش</th><th></th></tr>
+                    <tr><th>رابطه</th><th>وضعیت</th><th>استراتژیک</th><th>سلامت</th><th>تاب‌آوری</th><th>معیارها</th><th>پوشش</th><th></th></tr>
                   </thead>
                   <tbody>
                     {coverage.relationships.map(r => (
@@ -261,6 +265,14 @@ export default function IntelligencePage() {
                         <td><strong style={{ fontSize: 12.5 }}>{fmtNum(r.strategicScore)}</strong></td>
                         <td><span className={r.healthScore != null && r.healthScore < 60 ? 'h-crit' : ''} style={{ fontWeight: 700 }}>{fmtNum(r.healthScore)}</span></td>
                         <td><span style={{ fontWeight: 700 }}>{fmtNum(r.resilienceScore)}</span></td>
+                        <td>
+                          {r.criteria?.coverage != null ? (
+                            <span title={r.criteria.rankable ? 'قابل رتبه‌بندی' : 'داده ناکافی — قابل مقایسه نیست'}>
+                              <strong style={{ fontSize: 12.5 }}>{fmtNum(r.criteria.effectiveScore ?? r.criteria.rankingScore ?? 0)}</strong>
+                              <span className="t-muted" style={{ display: 'block', fontSize: 10.5 }}>{fmtNum(r.criteria.coverage)}٪ اطلاعات{r.criteria.rankable ? ' · رتبه‌پذیر' : ' · ناقص'}</span>
+                            </span>
+                          ) : <span className="t-muted">—</span>}
+                        </td>
                         <td>{r.covered
                           ? <Badge tone="success"><CheckCircle2 size={11} /> تحت پوشش</Badge>
                           : <Badge tone="warning"><AlertTriangle size={11} /> شکاف</Badge>}

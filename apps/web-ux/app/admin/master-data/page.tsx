@@ -5,8 +5,9 @@ import { useWorkspace } from '../../_components/workspace';
 import {
   Badge, ErrorCard, Modal, PageHeader, StatCard, Toolbar,
 } from '../../_components/page-ui';
+import HubTabs from '../../_components/hub-tabs';
 import {
-  Database, RefreshCw, Search, Plus, X, CheckCircle2, Layers, BookMarked,
+  Database, RefreshCw, Search, Plus, X, CheckCircle2, Layers, BookMarked, Scale, BookOpenCheck,
   Pencil, Trash2, Lock, Globe2, Factory, Building2, GitBranch, Save,
 } from 'lucide-react';
 
@@ -158,6 +159,12 @@ export default function AdminMasterDataPage() {
           </>
         }
       />
+
+      <HubTabs tabs={[
+        { href: '/admin/scoring', label: 'قواعد امتیاز', icon: <Scale size={13} /> },
+        { href: '/admin/criteria', label: 'معیارها', icon: <BookOpenCheck size={13} /> },
+        { href: '/admin/master-data', label: 'دادهٔ مبنایی', icon: <BookMarked size={13} /> },
+      ]} />
       <ErrorCard message={error} />
       {flash && <div className="flash-banner" role="status"><CheckCircle2 size={15} /> {flash}</div>}
 

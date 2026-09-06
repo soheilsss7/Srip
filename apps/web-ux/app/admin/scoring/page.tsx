@@ -5,8 +5,10 @@ import { useWorkspace } from '../../_components/workspace';
 import {
   Badge, ErrorCard, Modal, PageHeader, StatCard, Toolbar,
 } from '../../_components/page-ui';
+import HubTabs from '../../_components/hub-tabs';
+import { useNudges, NudgeBanner } from '../../_components/nudges';
 import {
-  Scale, RefreshCw, Search, Plus, X, CheckCircle2, Pencil, Power, Weight,
+  Scale, RefreshCw, Search, Plus, X, CheckCircle2, Pencil, Power, Weight, BookOpenCheck, Database,
   Layers, HeartPulse, ShieldAlert, Target, UserCog, Sparkles, Activity, Eye, EyeOff, Rows3,
 } from 'lucide-react';
 
@@ -81,6 +83,7 @@ export default function AdminScoringPage() {
   const [form, setForm] = useState({ key: '', name: '', scoreType: 'HEALTH', entityType: 'RELATIONSHIP', weight: '1', definition: '', active: true });
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
+  const nudges = useNudges();
 
   const load = useCallback(async () => {
     if (!isOwner) return;
@@ -200,7 +203,13 @@ export default function AdminScoringPage() {
           </>
         }
       />
+      <HubTabs tabs={[
+        { href: '/admin/scoring', label: 'قواعد امتیاز', icon: <Scale size={13} /> },
+        { href: '/admin/criteria', label: 'معیارها', icon: <BookOpenCheck size={13} /> },
+        { href: '/admin/master-data', label: 'دادهٔ مبنایی', icon: <Database size={13} /> },
+      ]} />
       <ErrorCard message={error} />
+      <NudgeBanner items={nudges.items} loading={nudges.loading} onRefresh={nudges.refresh} compact />
       {flash && <div className="flash-banner" role="status"><CheckCircle2 size={15} /> {flash}</div>}
 
       {loading ? (
