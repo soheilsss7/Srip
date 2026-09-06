@@ -11,11 +11,13 @@ if (isAndroid && !args.includes('--webpack')) {
 
 const nextBin = require.resolve('next/dist/bin/next');
 
-// Static GitHub Pages export (SRIP_PAGES=1) must talk to the embedded SW mock
-// under the /Srip basePath. Without this env the bundle would call /api/v1 at
-// the domain root (outside the SW scope) and every request 404s.
+// Static export (SRIP_PAGES=1) must talk to the embedded SW mock under the
+// same base path the site is served from (GitHub Pages: /Srip/srip2; a custom
+// host folder: whatever SRIP_BASE_PATH says). Without this env the bundle
+// would call /api/v1 at the domain root (outside the SW scope) and 404.
 if (process.env.SRIP_PAGES === '1' && !process.env.NEXT_PUBLIC_API_URL) {
-  process.env.NEXT_PUBLIC_API_URL = '/Srip/api/v1';
+  const base = process.env.SRIP_BASE_PATH || '/Srip/srip2';
+  process.env.NEXT_PUBLIC_API_URL = `${base.replace(/\/+$/, '')}/api/v1`;
 }
 
 const result = spawnSync(process.execPath, [nextBin, 'build', ...args], {

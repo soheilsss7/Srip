@@ -21,12 +21,16 @@ const securityHeaders=[
 const apiBase = process.env.NEXT_PUBLIC_API_URL;
 const useSameOriginProxy = !apiBase || apiBase.startsWith('/');
 const apiProxyTarget = process.env.API_PROXY_TARGET ?? 'http://localhost:4000';
+// Static export is served from a path: GitHub Pages uses /Srip/srip2, a custom
+// host can use any folder (e.g. /srip). SRIP_BASE_PATH makes it configurable;
+// it must match the folder the build is uploaded to.
+const basePath = isPages ? (process.env.SRIP_BASE_PATH || '/Srip/srip2') : '';
 
 const config:NextConfig={
   poweredByHeader:false,
   reactStrictMode:true,
   output:isPages?'export':undefined,
-  basePath:isPages?'/Srip/srip2':'',
+  basePath,
   // buildId تصادفی Next هر release را به یک diff ۶۰۰+ فایلی (فقط تغییر نام
   // پوشهٔ _next/static) تبدیل می‌کرد؛ ثابت‌کردن آن، diff را به تغییر واقعی
   // محتوا محدود می‌کند — برای نسخهٔ استاتیک (GitHub Pages) کاملاً امن است.
