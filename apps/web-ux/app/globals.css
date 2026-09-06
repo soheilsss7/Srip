@@ -346,6 +346,11 @@ h1{font-size:40px;margin:0 0 10px}
 .list{display:grid;gap:.65rem}
 .listRow{display:flex;justify-content:space-between;gap:1rem;padding:.85rem 0;border-bottom:1px solid var(--card-border)}
 .listRow:last-child{border-bottom:0}
+.listRow>*{min-width:0}
+/* ---------- word containment safety net (text never escapes its box) ---------- */
+body h1,body h2,body h3,body h4,body h5,body h6,body p,body a,body span,body small,
+body strong,body b,body em,body i,body td,body th,body label,body li,body dt,body dd,
+body legend,body button{overflow-wrap:break-word}
 .listRow small{display:block;opacity:.7;margin-top:.2rem}
 
 .badge{display:inline-flex;align-items:center;gap:5px;background:var(--card-bg-soft);color:var(--text-secondary);border:1px solid var(--card-border-strong);border-radius:999px;padding:4px 10px;font-size:11px;font-weight:800}
@@ -399,7 +404,8 @@ button.primary-action,button.secondary-action{border-radius:var(--radius-md)}
 .srip-badge{
   display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 10px;
   font-size:11px;font-weight:800;border:1px solid var(--card-border-strong);
-  background:var(--card-bg-soft);color:var(--text-secondary);white-space:nowrap;
+  background:var(--card-bg-soft);color:var(--text-secondary);
+  min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;line-height:1.35;
 }
 .srip-badge.success{background:color-mix(in srgb,var(--srip-success) 12%,transparent);color:var(--srip-success);border-color:color-mix(in srgb,var(--srip-success) 30%,transparent)}
 .srip-badge.warning{background:color-mix(in srgb,var(--srip-amber) 12%,transparent);color:var(--srip-amber);border-color:color-mix(in srgb,var(--srip-amber) 30%,transparent)}
@@ -758,7 +764,7 @@ textarea{resize:vertical}
 .stat-card .st-value{font-size:30px;font-weight:800;letter-spacing:-.02em;line-height:1;color:var(--text-primary);font-variant-numeric:tabular-nums}
 .stat-card .spark{height:30px;width:100%}
 .stat-card .st-foot{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-top:auto;padding-top:4px}
-.stat-card .st-delta{font-size:10px;font-weight:800;border-radius:999px;padding:3px 9px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.stat-card .st-delta{font-size:10px;font-weight:800;border-radius:999px;padding:3px 9px;min-width:0;max-width:100%;overflow-wrap:anywhere;line-height:1.35;font-variant-numeric:tabular-nums}
 .stat-card .st-delta.up{color:var(--green);background:color-mix(in srgb,var(--green) 12%,transparent)}
 .stat-card .st-delta.down{color:var(--red);background:color-mix(in srgb,var(--red) 12%,transparent)}
 .stat-card .st-delta.flat{color:var(--text-muted);background:var(--card-bg-soft)}
@@ -1443,9 +1449,10 @@ textarea{resize:vertical}
 
 /* ---------- Buttons (v4 aliases) ---------- */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:var(--radius-md);
-  padding:10px 16px;font-size:13px;font-weight:800;min-height:40px;cursor:pointer;white-space:nowrap;
+  padding:10px 16px;font-size:13px;font-weight:800;min-height:40px;cursor:pointer;white-space:normal;
+  min-width:0;max-width:100%;overflow-wrap:anywhere;text-align:center;
   border:1px solid transparent;transition:background .15s,border-color .15s,color .15s,transform .1s,box-shadow .15s;
-  text-decoration:none;line-height:1}
+  text-decoration:none;line-height:1.2}
 .btn:active{transform:translateY(1px)}
 .btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
 .btn-primary{background:var(--srip-accent);color:#fff;border-color:var(--srip-accent);box-shadow:0 4px 14px -6px color-mix(in srgb,var(--srip-accent) 65%,transparent)}
@@ -1513,8 +1520,8 @@ a.stat-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-
 .segmented button.active .count{background:var(--srip-accent-soft);border-color:transparent}
 
 /* ---------- Chips & tags ---------- */
-.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 11px;font-size:11px;font-weight:800;
-  background:var(--card-bg-soft);color:var(--text-secondary);border:1px solid var(--card-border-strong);white-space:nowrap}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 11px;font-size:11px;font-weight:800;min-width:0;max-width:100%;overflow-wrap:anywhere;line-height:1.35;
+  background:var(--card-bg-soft);color:var(--text-secondary);border:1px solid var(--card-border-strong)}
 .chip svg{width:12px;height:12px;opacity:.8}
 .chip.success{background:color-mix(in srgb,var(--srip-success) 12%,transparent);color:var(--srip-success);border-color:color-mix(in srgb,var(--srip-success) 32%,transparent)}
 .chip.danger{background:var(--srip-danger-soft);color:var(--srip-danger);border-color:color-mix(in srgb,var(--srip-danger) 32%,transparent)}
@@ -1534,7 +1541,7 @@ html[data-theme="dark"] .chip.warning{color:var(--srip-amber)}
 .section-card .section-head .section-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 
 /* ---------- Tables (v4 refinements) ---------- */
-.table-wrap{border-radius:var(--radius-lg);border-color:var(--card-border);overflow:hidden}
+.table-wrap{border-radius:var(--radius-lg);border-color:var(--card-border);overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
 .table-wrap table{min-width:720px}
 .table-wrap th{position:sticky;top:0;z-index:2;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;
   background:var(--card-bg-soft);border-bottom:1px solid var(--card-border-strong)}
