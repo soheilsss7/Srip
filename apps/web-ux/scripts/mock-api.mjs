@@ -120,12 +120,21 @@ let NOTIFICATIONS = [
 ];
 
 let REFERRALS = [
-  { id:'ref-1', title:'معرفی مدیر فروش به پترو صنعت', message:'معرفی سارا محمدی برای مدیریت حساب پترو صنعت', sourcePersonId:'p-1', targetPersonId:'p-2', sourceOrganizationId:'org-2', targetOrganizationId:'org-4', relationshipId:'r-1', status:'ACCEPTED', createdById:'u-1', recipientUserId:null, completedAt:null, notes:null, createdAt:'2026-08-18T09:00:00.000Z' },
-  { id:'ref-2', title:'معرفی برای همکاری بانکی', message:'آشنایی با مدیر روابط بانکی پارس برای خط اعتباری', sourcePersonId:'p-6', targetPersonId:'p-3', sourceOrganizationId:'org-1', targetOrganizationId:'org-3', relationshipId:'r-2', status:'PENDING', createdById:'u-1', recipientUserId:null, completedAt:null, notes:null, createdAt:'2026-08-22T10:30:00.000Z' },
-  { id:'ref-3', title:'معرفی تأمین‌کننده قطعات', message:'معرفی مدیر کیفیت البرز برای ارزیابی تأمین', sourcePersonId:'p-1', targetPersonId:'p-5', sourceOrganizationId:'org-2', targetOrganizationId:'org-6', relationshipId:'r-4', status:'COMPLETED', createdById:'u-1', recipientUserId:null, completedAt:'2026-08-28T11:00:00.000Z', notes:'تأمین‌کننده تأیید شد و قرارداد اولیه امضا گردید.', createdAt:'2026-08-10T08:15:00.000Z' },
-  { id:'ref-4', title:'معرفی مدیر پروژه به تیم آریا', message:'آشنایی با مدیر پروژهٔ سدنا برای هم‌افزایی در پروژهٔ مشترک', sourcePersonId:'p-7', targetPersonId:null, sourceOrganizationId:'org-1', targetOrganizationId:null, relationshipId:null, status:'PENDING', createdById:'u-1', recipientUserId:'u-2', completedAt:null, notes:null, createdAt:'2026-08-29T14:20:00.000Z' },
-  { id:'ref-5', title:'معرفی مشاور سرمایه‌گذاری به صندوق امید', message:'همکاری مشاورانه برای سبد سرمایه‌گذاری', sourcePersonId:'p-8', targetPersonId:'p-4', sourceOrganizationId:'org-7', targetOrganizationId:'org-5', relationshipId:'r-5', status:'DECLINED', createdById:'u-1', recipientUserId:null, completedAt:'2026-07-20T12:00:00.000Z', notes:'به دلیل تغییر اولویت‌ها رد شد.', createdAt:'2026-07-10T09:40:00.000Z' },
-  { id:'ref-6', title:'معرفی مدیر خرید به سازه گستر', message:'', sourcePersonId:'p-2', targetPersonId:null, sourceOrganizationId:'org-2', targetOrganizationId:'org-8', relationshipId:null, status:'CANCELLED', createdById:'u-1', recipientUserId:null, completedAt:'2026-08-02T10:00:00.000Z', notes:null, createdAt:'2026-07-28T09:10:00.000Z' },
+  { id:'ref-1', title:'معرفی مدیر فروش به پترو صنعت', message:'معرفی سارا محمدی برای مدیریت حساب پترو صنعت', sourcePersonId:'p-1', targetPersonId:'p-2', sourceOrganizationId:'org-2', targetOrganizationId:'org-4', relationshipId:'r-1', status:'ACCEPTED', createdById:'u-1', recipientUserId:null, completedAt:null, notes:null, createdAt:'2026-08-18T09:00:00.000Z', acceptedAt:'2026-08-19T09:30:00.000Z',
+    instruction:{goal:'معرفی سارا محمدی به‌عنوان حساب‌دار اصلی پترو صنعت؛ هدف: آغاز همکاری فروش در ۳۰ روز.',allowed:['قیمت‌های مصوب و تخفیف‌های قراردادی','زمان‌بندی تحویل','پروژه‌های مشترک فعلی'],forbidden:['مذاکره دربارهٔ قیمت جدید بدون تأیید مدیر فروش','اشاره به مشتریان دیگر پترو','مذاکره قرارداد مستقیم'],boundaries:'حداکثر ۲ جلسهٔ مقدماتی؛ همهٔ مذاکرات با حضور مدیر حساب. نتیجه حداکثر تا ۳۰ روز ثبت شود.',dueDays:30},
+    baselineCriteria:null, postCheckins:{} },
+  { id:'ref-2', title:'معرفی برای همکاری بانکی', message:'آشنایی با مدیر روابط بانکی پارس برای خط اعتباری', sourcePersonId:'p-6', targetPersonId:'p-3', sourceOrganizationId:'org-1', targetOrganizationId:'org-3', relationshipId:'r-2', status:'PENDING', createdById:'u-1', recipientUserId:null, completedAt:null, notes:null, createdAt:'2026-08-22T10:30:00.000Z',
+    instruction:null, baselineCriteria:null, postCheckins:{} },
+  { id:'ref-3', title:'معرفی تأمین‌کننده قطعات', message:'معرفی مدیر کیفیت البرز برای ارزیابی تأمین', sourcePersonId:'p-1', targetPersonId:'p-5', sourceOrganizationId:'org-2', targetOrganizationId:'org-6', relationshipId:'r-4', status:'COMPLETED', createdById:'u-1', recipientUserId:null, completedAt:'2026-08-28T11:00:00.000Z', notes:'تأمین‌کننده تأیید شد و قرارداد اولیه امضا گردید.', createdAt:'2026-08-10T08:15:00.000Z', acceptedAt:'2026-08-11T09:00:00.000Z',
+    instruction:{goal:'ارزیابی تأمین‌کننده قطعات برای قرارداد سالانه.',allowed:['ظرفیت تولید','زمان تحویل','کیفیت و گواهی‌ها'],forbidden:['تعهد حجم بدون تأیید خرید','تغییر شرایط پرداخت'],boundaries:'فقط ارزیابی؛ قرارداد با تأیید مدیر خرید.',dueDays:30},
+    baselineCriteria:{score:49,coverage:43,confidence:48,verdict:'SOLID'}, postCheckins:{FOLLOW_UP:{at:'2026-08-13T10:00:00.000Z',note:'جلسهٔ ارزیابی برگزار شد'},OUTCOME:{at:'2026-08-28T11:00:00.000Z',note:'قرارداد اولیه امضا شد'}} },
+  { id:'ref-4', title:'معرفی مدیر پروژه به تیم آریا', message:'آشنایی با مدیر پروژهٔ سدنا برای هم‌افزایی در پروژهٔ مشترک', sourcePersonId:'p-7', targetPersonId:null, sourceOrganizationId:'org-1', targetOrganizationId:null, relationshipId:null, status:'PENDING', createdById:'u-1', recipientUserId:'u-2', completedAt:null, notes:null, createdAt:'2026-08-29T14:20:00.000Z',
+    instruction:{goal:'هم‌افزایی تیم پروژهٔ سدنا با تیم آریا روی فاز دوم.',allowed:['مایلاستون‌های فاز دوم','تخصیص منابع'],forbidden:['تعیین سهم مالی پروژه'],boundaries:'معرفی داخلی؛ نتیجه در جلسهٔ هفتگی تیم بررسی شود.',dueDays:14},
+    baselineCriteria:null, postCheckins:{} },
+  { id:'ref-5', title:'معرفی مشاور سرمایه‌گذاری به صندوق امید', message:'همکاری مشاورانه برای سبد سرمایه‌گذاری', sourcePersonId:'p-8', targetPersonId:'p-4', sourceOrganizationId:'org-7', targetOrganizationId:'org-5', relationshipId:'r-5', status:'DECLINED', createdById:'u-1', recipientUserId:null, completedAt:'2026-07-20T12:00:00.000Z', notes:'به دلیل تغییر اولویت‌ها رد شد.', createdAt:'2026-07-10T09:40:00.000Z',
+    instruction:null, baselineCriteria:null, postCheckins:{} },
+  { id:'ref-6', title:'معرفی مدیر خرید به سازه گستر', message:'', sourcePersonId:'p-2', targetPersonId:null, sourceOrganizationId:'org-2', targetOrganizationId:'org-8', relationshipId:null, status:'CANCELLED', createdById:'u-1', recipientUserId:null, completedAt:'2026-08-02T10:00:00.000Z', notes:null, createdAt:'2026-07-28T09:10:00.000Z',
+    instruction:null, baselineCriteria:null, postCheckins:{} },
 ];
 
 let RECS = [
@@ -1381,6 +1390,93 @@ function seedReferralStore(){
   }
 }
 const REF_STATUS_FLOW={PENDING:['ACCEPTED','DECLINED','CANCELLED'],ACCEPTED:['COMPLETED','DECLINED','CANCELLED'],COMPLETED:[],DECLINED:[],CANCELLED:[]};
+
+/* ---------- ممیزی معرفی (بدون آسیب به رابطه) ---------- */
+const refRelCriteria = (rid) => { try { return criteriaSummaryLite(computeCriteria('RELATIONSHIP', rid)); } catch { return null; } };
+const refTargetFlags = (oid) => { try { const a = computeCriteria('ORGANIZATION', oid); return (a?.flags ?? []).filter((f) => f.severity === 'CRITICAL' || f.severity === 'HIGH'); } catch { return []; } };
+const refInstruction = (r) => (r.instruction && typeof r.instruction === 'object') ? r.instruction : null;
+function referralAudit(r) {
+  const checks = [];
+  const ins = refInstruction(r);
+  // ۱) سلامت رابطهٔ پیوند (جلوگیری از خراب‌کردن رابطه)
+  if (r.relationshipId) {
+    const c = refRelCriteria(r.relationshipId);
+    if (!c) checks.push({ code: 'RELATIONSHIP_SAFE', label: 'رابطهٔ پیوند قابل ارزیابی نیست', level: 'WARN', detail: 'رابطهٔ رسمی پیدا نشد؛ بدون رابطهٔ ثبت‌شده اثر معرفی قابل سنجش نیست.', evidence: r.relationshipId });
+    else if (c.verdict === 'CRITICAL') checks.push({ code: 'RELATIONSHIP_SAFE', label: 'رابطه در وضعیت بحرانی است', level: 'BLOCK', detail: 'دروازهٔ ریسک فعال است؛ معرفی در این وضعیت می‌تواند رابطه را خراب کند. ابتدا پرچم بحرانی را جمع کنید.', evidence: `verdict=${c.verdict}; score=${c.effectiveScore ?? c.score}` });
+    else if (c.verdict === 'AT_RISK') checks.push({ code: 'RELATIONSHIP_SAFE', label: 'رابطه ضعیف است', level: 'WARN', detail: 'امتیاز معیارها پایین است؛ معرفی فقط با دستورالعمل سخت‌گیرانه و پیگیری نزدیک.', evidence: `score=${c.effectiveScore ?? c.score}; coverage=${c.coverage}%` });
+    else if (c.coverage < 40) checks.push({ code: 'RELATIONSHIP_SAFE', label: 'دادهٔ رابطه ناقص است', level: 'WARN', detail: `پوشش معیارها ${c.coverage}٪ است؛ اثر معرفی بعداً قابل سنجش نیست. پاسخ به معیارها را تکمیل کنید.`, evidence: `coverage=${c.coverage}%` });
+    else if (c.manual?.active) checks.push({ code: 'RELATIONSHIP_SAFE', label: 'تنظیم دستی روی رابطه فعال است', level: 'WARN', detail: 'امتیاز رابطه با تنظیم دستی (±' + (c.manual.delta || 0) + ') جابه‌جا شده؛ قبل از معرفی دقت کنید.', evidence: 'manual-active' });
+    else checks.push({ code: 'RELATIONSHIP_SAFE', label: 'رابطه برای معرفی امن است', level: 'PASS', detail: `امتیاز معیارها ${c.effectiveScore ?? c.score} با پوشش ${c.coverage}٪ و حکم «${c.verdictLabel}».`, evidence: `score=${c.effectiveScore ?? c.score}` });
+  } else {
+    checks.push({ code: 'RELATIONSHIP_SAFE', label: 'بدون رابطهٔ رسمی', level: 'WARN', detail: 'این معرفی به رابطهٔ ثبت‌شده وصل نیست؛ اگر هدفش یک رابطهٔ موجود است، رابطه را انتخاب کنید.', evidence: 'no-relationship' });
+  }
+  // ۲) مقصد معتبر و فعال
+  if (r.targetOrganizationId) {
+    const o = orgById(r.targetOrganizationId);
+    if (!o) checks.push({ code: 'TARGET_VALID', label: 'سازمان مقصد یافت نشد', level: 'BLOCK', detail: 'شناسهٔ مقصد نامعتبر است؛ معرفی ثبت نمی‌شود.', evidence: r.targetOrganizationId });
+    else if (o.status && o.status !== 'ACTIVE' && o.status !== 'ACTIVE_') checks.push({ code: 'TARGET_VALID', label: 'سازمان مقصد فعال نیست', level: 'WARN', detail: `وضعیت مقصد «${o.status}» است؛ با یک طرفِ غیرفعال معرفی نسازید.`, evidence: o.status });
+    else checks.push({ code: 'TARGET_VALID', label: 'مقصد معتبر و فعال است', level: 'PASS', detail: `«${o.name}» (${o.type ?? '—'})`, evidence: o.id });
+  } else if (r.recipientUserId) {
+    checks.push({ code: 'TARGET_VALID', label: 'مسیر داخلی (کاربر) است', level: 'PASS', detail: 'معرفی به کاربر داخلی؛ محدودهٔ سازمانی گیرنده بررسی شود.', evidence: r.recipientUserId });
+  }
+  // ۳) پرچم‌های سازمان مقصد
+  if (r.targetOrganizationId) {
+    const flags = refTargetFlags(r.targetOrganizationId);
+    if (flags.some((f) => f.severity === 'CRITICAL')) checks.push({ code: 'TARGET_FLAGS', label: 'پرچم بحرانی روی مقصد', level: 'BLOCK', detail: flags[0].message, evidence: flags[0].code });
+    else if (flags.length) checks.push({ code: 'TARGET_FLAGS', label: 'هشدار روی مقصد', level: 'WARN', detail: flags.map((f) => f.message).join('؛ '), evidence: flags.map((f) => f.code).join(',') });
+    else checks.push({ code: 'TARGET_FLAGS', label: 'بدون پرچم ریسک', level: 'PASS', detail: 'سازمان مقصد پرچم فعال ندارد.', evidence: 'none' });
+  }
+  // ۴) تکرار (معرفی مشابه باز)
+  const dups = (DB.referrals ?? []).filter((x) => x.id !== r.id && ['PENDING', 'ACCEPTED'].includes(x.status)
+    && ((x.targetPersonId && x.targetPersonId === r.targetPersonId) || (x.targetOrganizationId && x.targetOrganizationId === r.targetOrganizationId && x.sourceOrganizationId === r.sourceOrganizationId)));
+  if (dups.length) checks.push({ code: 'DUPLICATE', label: 'معرفی مشابهی در جریان است', level: 'WARN', detail: `«${dups[0].title}» (${dups[0].status}) — قبل از ثبت، تکراری نباشد.`, evidence: dups[0].id });
+  else checks.push({ code: 'DUPLICATE', label: 'تکراری نیست', level: 'PASS', detail: 'معرفی مشابهِ باز وجود ندارد.', evidence: 'none' });
+  // ۵) دستورالعمل (هدف + مرزها)
+  if (!ins || !String(ins.goal ?? '').trim()) checks.push({ code: 'INSTRUCTION', label: 'بدون دستورالعمل', level: 'WARN', detail: 'هدف معرفی مشخص نشده؛ پذیرنده نمی‌داند «چرا» و «تا کجا» برود.', evidence: 'missing-goal' });
+  else if (!String(ins.boundaries ?? '').trim()) checks.push({ code: 'INSTRUCTION', label: 'بدون مرز و محدودیت', level: 'WARN', detail: 'هدف نوشته شده ولی مرزها (چه کاری ممنوع است) مشخص نیست.', evidence: 'missing-boundaries' });
+  else if (!Array.isArray(ins.forbidden) || !ins.forbidden.length) checks.push({ code: 'INSTRUCTION', label: 'بدون خط قرمز', level: 'WARN', detail: 'موضوعات ممنوع تعیین نشده؛ خطر توافق‌های بی‌اجازه.', evidence: 'missing-forbidden' });
+  else checks.push({ code: 'INSTRUCTION', label: 'دستورالعمل کامل است', level: 'PASS', detail: `هدف: ${String(ins.goal).slice(0, 90)}${ins.forbidden.length ? '؛ ' + ins.forbidden.length + ' خط قرمز' : ''}`, evidence: 'complete' });
+  // ۶) اشخاص مبدأ/مقصد
+  const missing = [!r.sourcePersonId || personById(r.sourcePersonId) ? null : 'مبدأ', !r.targetPersonId || personById(r.targetPersonId) ? null : 'مقصد'].filter(Boolean);
+  const peopleCheck = missing.length ? { code: 'PEOPLE', label: 'اشخاص معرفی نامعتبر', level: 'WARN', detail: `${missing.join(' و ')} یافت نشد.`, evidence: missing.join(',') } : { code: 'PEOPLE', label: 'اشخاص معتبرند', level: 'PASS', detail: 'مبدأ و مقصد شخصی دارند.', evidence: 'ok' };
+  checks.push(peopleCheck);
+  const level = checks.some((x) => x.level === 'BLOCK') ? 'BLOCKED' : checks.some((x) => x.level === 'WARN') ? 'WARN' : 'PASS';
+  return { gate: level, checks, checkedAt: nowIso(), summary: { pass: checks.filter((x) => x.level === 'PASS').length, warn: checks.filter((x) => x.level === 'WARN').length, block: checks.filter((x) => x.level === 'BLOCK').length } };
+}
+function referralPostAudit(r) {
+  if (!['ACCEPTED', 'COMPLETED'].includes(r.status)) return { gate: 'N/A', checks: [], summary: { pass: 0, warn: 0, block: 0 } };
+  const checks = [];
+  const accepted = r.acceptedAt ? new Date(r.acceptedAt).getTime() : null;
+  // پیگیری: تعامل/جلسه روی رابطه پس از پذیرش
+  const follow = accepted ? INTERACTIONS.filter((i) => (r.relationshipId && i.relationshipId === r.relationshipId) || (r.sourcePersonId && i.personId === r.sourcePersonId) || (r.targetPersonId && i.personId === r.targetPersonId))
+    .filter((i) => new Date(i.occurredAt ?? 0).getTime() >= accepted) : [];
+  const ci = r.postCheckins?.FOLLOW_UP;
+  if (r.status === 'COMPLETED' || (accepted && Date.now() - accepted > 7 * 86400000)) {
+    if (follow.length || ci) checks.push({ code: 'FOLLOW_UP', label: 'پیگیری پس از معرفی ثبت شده', level: 'PASS', detail: ci?.note ?? `نخستین تعامل: ${follow[0]?.subject ?? '—'}`, evidence: ci?.at ?? follow[0]?.occurredAt });
+    else checks.push({ code: 'FOLLOW_UP', label: 'پیگیری ثبت نشده است', level: 'BLOCK', detail: 'هیچ تعامل/جلسه‌ای پس از پذیرش ثبت نشده؛ معرفی بدون پیگیری رها شده.', evidence: 'none' });
+  } else checks.push({ code: 'FOLLOW_UP', label: 'پیگیری در مهلت', level: 'PASS', detail: 'تا ۷ روز پس از پذیرش فرصت ثبت پیگیری است.', evidence: 'due' });
+  // نتیجه
+  if (r.status === 'COMPLETED') {
+    checks.push(String(r.notes ?? '').trim() ? { code: 'OUTCOME', label: 'نتیجه ثبت شده', level: 'PASS', detail: r.notes, evidence: r.completedAt } : { code: 'OUTCOME', label: 'نتیجه ثبت نشده', level: 'WARN', detail: 'معرفی «انجام‌شده» است ولی نتیجه/یادداشت پایانی ندارد.', evidence: 'no-notes' });
+  }
+  // اثر بر رابطه
+  if (r.relationshipId) {
+    const now = refRelCriteria(r.relationshipId);
+    const base = r.baselineCriteria;
+    if (!base) checks.push({ code: 'RELATIONSHIP_IMPACT', label: 'اثر بر رابطه قابل سنجش نیست', level: 'WARN', detail: 'خط پایهٔ امتیاز هنگام پذیرش ثبت نشده؛ برای پذیرش‌های جدید خودکار ثبت می‌شود.', evidence: 'no-baseline' });
+    else if (!now) checks.push({ code: 'RELATIONSHIP_IMPACT', label: 'رابطه پیداشدنی نیست', level: 'WARN', detail: 'رابطهٔ پیوند حذف یا جابه‌جا شده است.', evidence: r.relationshipId });
+    else {
+      const delta = Math.round((now.effectiveScore ?? now.score) - (base.score ?? 0));
+      const degraded = now.verdict === 'CRITICAL' || now.verdict === 'AT_RISK';
+      if (degraded && delta < 0) checks.push({ code: 'RELATIONSHIP_IMPACT', label: 'معرفی به رابطه آسیب زده', level: 'BLOCK', detail: `امتیاز معیارها از ${base.score ?? '—'} به ${now.effectiveScore ?? now.score} رسید (${delta > 0 ? '+' : ''}${delta}) و حکم «${now.verdictLabel}» شد.`, evidence: `before=${base.score};after=${now.effectiveScore ?? now.score};delta=${delta}` });
+      else if (delta < -5) checks.push({ code: 'RELATIONSHIP_IMPACT', label: 'افت محسوس در رابطه', level: 'WARN', detail: `امتیاز معیارها ${delta} واحد افت کرده (${base.score ?? '—'} → ${now.effectiveScore ?? now.score}). پیگیری لازم است.`, evidence: `delta=${delta}` });
+      else checks.push({ code: 'RELATIONSHIP_IMPACT', label: 'رابطه سالم مانده', level: 'PASS', detail: `امتیاز معیارها ${base.score ?? '—'} → ${now.effectiveScore ?? now.score} (${delta > 0 ? '+' : ''}${delta})؛ حکم «${now.verdictLabel}».`, evidence: `delta=${delta}` });
+    }
+  }
+  const level = checks.some((x) => x.level === 'BLOCK') ? 'BLOCKED' : checks.some((x) => x.level === 'WARN') ? 'WARN' : 'PASS';
+  return { gate: level, checks, summary: { pass: checks.filter((x) => x.level === 'PASS').length, warn: checks.filter((x) => x.level === 'WARN').length, block: checks.filter((x) => x.level === 'BLOCK').length } };
+}
+
 
 /* ---------- requirement matching engine (RequirementMatchingService parity) ---------- */
 const REQ_STATUSES=['OPEN','IN_PROGRESS','SATISFIED','BLOCKED','CANCELLED'];
@@ -4465,6 +4561,10 @@ const server=http.createServer(async(req,res)=>{
       targetOrganization:orgById(r.targetOrganizationId)?{id:r.targetOrganizationId,name:orgById(r.targetOrganizationId).name}:null,
       createdBy:userById(r.createdById)?{id:r.createdById,name:userById(r.createdById).name,email:userById(r.createdById).email}:null,
       recipientUser:userById(r.recipientUserId)?{id:r.recipientUserId,name:userById(r.recipientUserId).name,email:userById(r.recipientUserId).email}:null,
+      instruction:refInstruction(r),
+      audit:referralAudit(r),
+      postAudit:referralPostAudit(r),
+      relationshipCriteria:r.relationshipId?refRelCriteria(r.relationshipId):null,
     });
     return json(res,200,list.sort((a,b)=>String(b.createdAt??'').localeCompare(String(a.createdAt??''))).map(enrich));
   }
@@ -4474,10 +4574,14 @@ const server=http.createServer(async(req,res)=>{
     if(!b.sourceOrganizationId&&!b.sourcePersonId) return json(res,400,{message:'مبدأ معرفی (سازمان یا شخص) لازم است.'});
     if(!b.targetOrganizationId&&!b.targetPersonId&&!b.recipientUserId) return json(res,400,{message:'مقصد معرفی (سازمان، شخص یا کاربر گیرنده) لازم است.'});
     if(!authUser?.isOwner&&b.sourceOrganizationId&&!inScope(req,b.sourceOrganizationId)) return json(res,403,{message:'سازمان مبدأ خارج از محدودهٔ دسترسی شماست.'});
-    const r={id:`ref-${Date.now()}`,title:String(b.title).trim(),message:b.message??null,sourcePersonId:b.sourcePersonId??null,targetPersonId:b.targetPersonId??null,sourceOrganizationId:b.sourceOrganizationId??null,targetOrganizationId:b.targetOrganizationId??null,relationshipId:b.relationshipId??null,status:'PENDING',createdById:authUser.id,recipientUserId:b.recipientUserId??null,completedAt:null,notes:null,createdAt:nowIso()};
+    const ins=(b.instruction&&typeof b.instruction==='object')?{
+      goal:String(b.instruction.goal??'').trim(),allowed:(Array.isArray(b.instruction.allowed)?b.instruction.allowed:[]).map(String).slice(0,6),forbidden:(Array.isArray(b.instruction.forbidden)?b.instruction.forbidden:[]).map(String).slice(0,6),boundaries:String(b.instruction.boundaries??'').trim(),dueDays:Math.max(3,Math.min(365,Number(b.instruction.dueDays)||30))}:null;
+    const r={id:`ref-${Date.now()}`,title:String(b.title).trim(),message:b.message??null,sourcePersonId:b.sourcePersonId??null,targetPersonId:b.targetPersonId??null,sourceOrganizationId:b.sourceOrganizationId??null,targetOrganizationId:b.targetOrganizationId??null,relationshipId:b.relationshipId??null,status:'PENDING',createdById:authUser.id,recipientUserId:b.recipientUserId??null,completedAt:null,notes:null,createdAt:nowIso(),acceptedAt:null,instruction:ins,baselineCriteria:null,postCheckins:{}};
     DB.referrals.unshift(r); saveDb();
-    audit(req,'CREATE','Referral',r.id,'OK',{meta:{title:r.title,status:'PENDING'}});
-    return json(res,201,{...r,createdBy:userById(r.createdById)?{id:r.createdById,name:userById(r.createdById).name}:null,recipientUser:userById(r.recipientUserId)?{id:r.recipientUserId,name:userById(r.recipientUserId).name}:null});
+    const auditRes=referralAudit(r);
+    audit(req,'CREATE','Referral',r.id,'OK',{meta:{title:r.title,status:'PENDING',gate:auditRes.gate}});
+    if(auditRes.gate==='BLOCKED') NOTIFICATIONS.unshift({id:`n-ref-${Date.now()}`,userId:authUser.id,type:'ALERT',title:'معرفی به ممیزی خورد',body:`«${r.title}»: ${auditRes.checks.filter((x)=>x.level==='BLOCK').map((x)=>x.label).join('، ')} — ابتدا شرایط را اصلاح کنید.`,channel:'IN_APP',priority:'HIGH',createdAt:nowIso(),readAt:null,data:{referralId:r.id}});
+    return json(res,201,{...r,createdBy:userById(r.createdById)?{id:r.createdById,name:userById(r.createdById).name}:null,recipientUser:userById(r.recipientUserId)?{id:r.recipientUserId,name:userById(r.recipientUserId).name}:null,instruction:ins,audit:auditRes});
   }
   const refPatch=match('/core-domain/referrals/:id');
   if(refPatch&&method==='PATCH'){
@@ -4489,15 +4593,54 @@ const server=http.createServer(async(req,res)=>{
     if(b.title!==undefined){ if(!String(b.title).trim()) return json(res,400,{message:'عنوان معرفی لازم است.'}); r.title=String(b.title).trim(); }
     if(b.message!==undefined) r.message=b.message??null;
     if(b.notes!==undefined) r.notes=b.notes??null;
+    if(b.instruction&&typeof b.instruction==='object'){
+      const i=r.instruction??{goal:'',allowed:[],forbidden:[],boundaries:'',dueDays:30};
+      if(b.instruction.goal!==undefined) i.goal=String(b.instruction.goal).trim();
+      if(Array.isArray(b.instruction.allowed)) i.allowed=b.instruction.allowed.map(String).slice(0,6);
+      if(Array.isArray(b.instruction.forbidden)) i.forbidden=b.instruction.forbidden.map(String).slice(0,6);
+      if(b.instruction.boundaries!==undefined) i.boundaries=String(b.instruction.boundaries).trim();
+      if(b.instruction.dueDays!==undefined) i.dueDays=Math.max(3,Math.min(365,Number(b.instruction.dueDays)||30));
+      r.instruction=i;
+    }
     if(b.status!==undefined&&b.status!==r.status){
       const allowed=REF_STATUS_FLOW[r.status]??[];
       if(!allowed.includes(b.status)) return json(res,409,{message:`تغییر وضعیت از «${r.status}» به «${b.status}» مجاز نیست.`});
+      if(b.status==='ACCEPTED'){
+        const ar=referralAudit(r);
+        if(ar.gate==='BLOCKED') return json(res,409,{message:'ممیزی پیش از معرفی اجازه نمیدهد — '+(ar.checks.filter((x)=>x.level==='BLOCK').map((x)=>x.label).join('؛ ')),audit:ar});
+        r.baselineCriteria=r.relationshipId?refRelCriteria(r.relationshipId):null;
+        r.acceptedAt=nowIso();
+      }
       r.status=b.status;
       r.completedAt=(b.status==='COMPLETED')?nowIso():null;
+      if(b.status==='COMPLETED'){ const pa=referralPostAudit(r); if(pa.gate==='BLOCKED') NOTIFICATIONS.unshift({id:`n-refp-${Date.now()}`,userId:authUser.id,type:'ALERT',title:'معرفی به رابطه آسیب زده',body:`«${r.title}»: ${pa.checks.filter((x)=>x.level==='BLOCK').map((x)=>x.label).join('، ')}`,channel:'IN_APP',priority:'HIGH',createdAt:nowIso(),readAt:null,data:{referralId:r.id}}); }
     }
     saveDb();
     audit(req,'UPDATE','Referral',r.id,'OK',{meta:{title:r.title,from:before.status,to:r.status,reason:'Referral status changed'}});
     return json(res,200,r);
+  }
+  const refAudit=match('/core-domain/referrals/:id/audit');
+  if(refAudit&&method==='POST'){
+    const r=(DB.referrals??[]).find(x=>x.id===refAudit[0]);
+    if(!r) return json(res,404,{message:'معرفی یافت نشد.'});
+    if(!authUser?.isOwner&&!inScope(req,r.sourceOrganizationId)&&!inScope(req,r.targetOrganizationId)) return json(res,403,{message:'این معرفی خارج از محدودهٔ دسترسی شماست.'});
+    const auditRes=referralAudit(r);
+    audit(req,'UPDATE','Referral',r.id,'OK',{meta:{reason:'pre-audit re-run',gate:auditRes.gate}});
+    return json(res,200,auditRes);
+  }
+  const refCheckin=match('/core-domain/referrals/:id/checkin');
+  if(refCheckin&&method==='POST'){
+    const r=(DB.referrals??[]).find(x=>x.id===refCheckin[0]);
+    if(!r) return json(res,404,{message:'معرفی یافت نشد.'});
+    if(!authUser?.isOwner&&!inScope(req,r.sourceOrganizationId)&&!inScope(req,r.targetOrganizationId)) return json(res,403,{message:'این معرفی خارج از محدودهٔ دسترسی شماست.'});
+    const b=await readBody(req);
+    const code=String(b.code??'').toUpperCase();
+    if(!['FOLLOW_UP','OUTCOME'].includes(code)) return json(res,400,{message:'کد ثبت ناشناخته است.'});
+    r.postCheckins=r.postCheckins??{};
+    r.postCheckins[code]={at:nowIso(),note:String(b.note??'').slice(0,240)};
+    saveDb();
+    audit(req,'UPDATE','Referral',r.id,'OK',{meta:{reason:'post-audit checkin',code}});
+    return json(res,200,{code,at:r.postCheckins[code].at,postAudit:referralPostAudit(r)});
   }
   /* ---------- enterprise governance engine (EnterpriseController parity) ---------- */
   const entOrgIds=(qOrg)=>authUser?.isOwner?(qOrg?[qOrg]:null):(qOrg&&visibleOrgIds(req).includes(qOrg)?[qOrg]:visibleOrgIds(req));

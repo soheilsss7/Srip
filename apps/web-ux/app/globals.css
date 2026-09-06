@@ -2314,6 +2314,38 @@ tr.row-muted td{opacity:.6}
 .criteria-stale-banner strong{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-primary)}
 .criteria-stale-banner small{font-size:11.5px;color:var(--text-secondary)}
 .criteria-stale-banner .btn{flex:0 0 auto}
+/* ---------- معرفی‌ها: دستورالعمل و ممیزی ---------- */
+.ref-gate{white-space:nowrap}
+.ref-audit-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.ref-audit-item{display:flex;gap:8px;align-items:flex-start;padding:9px 11px;border-radius:10px;border:1px solid var(--border,#e5e7eb);background:var(--surface,#fff)}
+.ref-audit-item.pass{border-color:#bbf7d0;background:#f0fdf4}
+.ref-audit-item.warn{border-color:#fde68a;background:#fffbeb}
+.ref-audit-item.block{border-color:#fecaca;background:#fef2f2}
+.ref-audit-item>div{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.ref-audit-item b{font-size:12px;color:var(--text,#111827)}
+.ref-audit-item small{font-size:11px;color:var(--text-muted,#6b7280);line-height:1.7}
+.ref-audit-ico{margin-top:1px;color:var(--text-muted,#6b7280)}
+.ref-audit-item.pass .ref-audit-ico{color:#16a34a}
+.ref-audit-item.warn .ref-audit-ico{color:#d97706}
+.ref-audit-item.block .ref-audit-ico{color:#dc2626}
+.ref-audit-evidence{font-size:9.5px;color:#6b7280;background:#f3f4f6;border-radius:5px;padding:1px 5px;width:fit-content;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.ref-instruction-box{border:1px dashed #a5b4fc;background:#eef2ff;border-radius:12px;padding:12px}
+.ref-instruction-head{display:flex;align-items:center;gap:6px;font-weight:700;font-size:12.5px;color:#3730a3;margin-bottom:8px}
+.ref-instruction-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ref-due{max-width:160px}
+.ref-detail{display:flex;flex-direction:column;gap:10px}
+.ref-rel-line{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#1e40af;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:8px 10px}
+.ref-instruction-panel{border:1px solid #c7d2fe;background:#f5f7ff;border-radius:12px;padding:12px}
+.ref-instruction-panel>p{font-size:12px;color:var(--text,#111827);line-height:1.8;margin:4px 0}
+.ref-instr-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:6px 0}
+.ref-instr-cols>div{background:rgba(255,255,255,.72);border-radius:10px;padding:8px 10px}
+.ref-instr-cols small{display:block;font-weight:700;font-size:10.5px;color:#1d4ed8;margin-bottom:4px}
+.ref-instr-cols .ref-instr-danger small{color:#b91c1c}
+.ref-instr-cols ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px}
+.ref-instr-cols li{font-size:11px;color:var(--text,#111827)}
+.ref-audit-panel{border:1px solid #e5e7eb;border-radius:12px;padding:12px}
+@media (max-width:680px){.ref-instruction-grid,.ref-instr-cols{grid-template-columns:1fr}.ref-due{max-width:none}}
+
 /* ---------- مرکز دانش ---------- */
 .kb-filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 0 14px}
 .kb-chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--card-border);background:var(--card-bg-soft);color:var(--text-secondary);border-radius:999px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
