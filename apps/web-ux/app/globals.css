@@ -2643,6 +2643,20 @@ html,body{overflow-x:clip;max-width:100%}
   .table-wrap.table-wrap th:first-child,.table-wrap.table-wrap td:first-child{
     position:sticky;inset-inline-start:0;z-index:2;background:var(--card-bg)}
   .table-wrap.table-wrap thead th:first-child{z-index:4;background:var(--card-bg-soft)}
+  /* ۳) سلول‌ها تک‌خطی — اسکرول افقی جایگزین شکستنِ حرف‌به‌حرف می‌شود.
+        بدون این، محتوای ستون‌های باریک (بدج/دکمه/تاریخ) داخل عرضِ کوچک
+        به «هر حرف در یک خط» می‌شکست. */
+  .table-wrap.table-wrap table{width:max-content;min-width:100%}
+  .table-wrap.table-wrap td,.table-wrap.table-wrap th{white-space:nowrap}
+  .table-wrap.table-wrap td .btn,.table-wrap.table-wrap td .chip,
+  .table-wrap.table-wrap td .srip-badge{white-space:nowrap}
+  /* ۴) نوار ریسک داشبورد — سربرگ و پیل‌ها روی موبایل تمام‌عرض؛
+        نامِ nowrap نباید پیل را از باکس بیرون بزند (min-width:0 لازم است). */
+  .alert-strip{flex-direction:column;align-items:stretch}
+  .alert-strip-head{min-width:0;max-width:100%}
+  .alert-strip-list{flex:1 1 100%;width:100%}
+  .alert-pill{min-width:0;max-width:100%}
+  .alert-pill-name,.alert-pill-meta{min-width:0;max-width:100%}
   .card.table-wrap,.panel.table-wrap{padding:0}
 
   /* ۴) هدف ضربهٔ بزرگ‌تر + ورودی ۱۶px (ضد زوم اجباری iOS) */

@@ -339,7 +339,12 @@ html,body{overflow-x:clip;max-width:100%}
     position:sticky;inset-inline-start:0;z-index:2;background:var(--card-bg)}
   .table-wrap.table-wrap thead th:first-child{z-index:4;background:var(--card-bg-soft)}
   .card.table-wrap,.panel.table-wrap{padding:0}
+  /* سلول‌ها تک‌خطی — اسکرول افقی به‌جای شکستن حرف‌به‌حرف (همان قواعد globals) */
+  .table-wrap.table-wrap table{width:max-content;min-width:100%}
+  .table-wrap.table-wrap td,.table-wrap.table-wrap th{white-space:nowrap}
+  .table-wrap.table-wrap td .btn,.table-wrap.table-wrap td .chip,
+  .table-wrap.table-wrap td .srip-badge{white-space:nowrap}
 }
 @media(max-width:760px){
-  .table-wrap.table-wrap table{min-width:520px;width:100%}
+  .table-wrap.table-wrap table{min-width:max-content}
 }
