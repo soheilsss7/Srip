@@ -6,7 +6,7 @@ import { ScoringBaseService, clampScore } from './scoring-base.service';
 import { AuditService } from '../audit/audit.service';
 import { Prisma } from '@prisma/client';
 import { CriteriaService } from '../criteria/criteria.service';
-import { factorAssessment, summarizeAssessment } from '../criteria/criteria.engine';
+import { factorAssessment } from '../criteria/criteria.engine';
 import { CRITERIA_VERSION } from '../criteria/criteria.engine';
 
 export const RELATIONSHIP_SCORE_FACTORS = [
@@ -199,7 +199,11 @@ export class CanonicalRelationshipScoreService extends ScoringBaseService {
     const evidenceShare = behavioralEvidence / (behavioralEvidence + 6);
     const factorValues = criteriaAssessment ? factorAssessment(criteriaAssessment) : null;
     const blended: Record<RelationshipFactor, number> = { ...factors };
-    const blend: Partial<Record<RelationshipFactor, { basis: string; assessed: number | null; confidence: number }>> = {};
+    // سه ساختار موازی و تخت: `ScoreResult.factors` در `metadata.factors` (JSON) ذخیره می‌شود و
+    // نوعش فقط scalar یا «رکورد عددی» را می‌پذیرد، پس شیء تودرتو برای هر فاکتور در آن جا نمی‌شود.
+    const blendAssessed: Record<string, number> = {};
+    const blendConfidence: Record<string, number> = {};
+    const blendBasis: string[] = [];
     if (factorValues) {
       for (const factor of RELATIONSHIP_SCORE_FACTORS) {
         const assessed = factorValues[factor];
@@ -208,11 +212,10 @@ export class CanonicalRelationshipScoreService extends ScoringBaseService {
         const total = evidenceShare + assessedShare;
         if (total <= 0) continue;
         blended[factor] = clampScore((factors[factor] * evidenceShare + assessed.value * assessedShare) / total);
-        blend[factor] = {
-          basis: assessedShare > evidenceShare * 1.15 ? 'ASSESSED_DOMINANT' : evidenceShare > assessedShare * 1.15 ? 'OBSERVED_DOMINANT' : 'BALANCED',
-          assessed: assessed.value,
-          confidence: assessed.confidence,
-        };
+        const basis = assessedShare > evidenceShare * 1.15 ? 'ASSESSED_DOMINANT' : evidenceShare > assessedShare * 1.15 ? 'OBSERVED_DOMINANT' : 'BALANCED';
+        blendAssessed[factor] = assessed.value;
+        blendConfidence[factor] = assessed.confidence;
+        blendBasis.push(`${factor}=${basis}`);
       }
     }
     const coldStart = behavioralEvidence === 0 && !!criteriaAssessment && criteriaAssessment.coverage < 25;
@@ -249,8 +252,24 @@ export class CanonicalRelationshipScoreService extends ScoringBaseService {
         coldStart,
         scoreBasis: coldStart ? 'COLD_START_ASSESSED' : criteriaAssessment ? 'BLENDED' : 'OBSERVED_ONLY',
         criteriaVersion: CRITERIA_VERSION,
-        ...(criteriaAssessment ? { criteria: summarizeAssessment(criteriaAssessment), criteriaFamilies: criteriaAssessment.families.map((f) => ({ family: f.family, name: f.name, score: f.score, coveragePct: f.coveragePct, confidence: f.confidence, weightPct: f.weightPct })) } : {}),
-        factorBlend: blend,
+        ...(criteriaAssessment ? {
+          criteriaScore: criteriaAssessment.score,
+          criteriaRankingScore: criteriaAssessment.rankingScore,
+          criteriaCoverage: criteriaAssessment.coverage,
+          criteriaConfidence: criteriaAssessment.confidence,
+          criteriaUncertainty: criteriaAssessment.uncertainty,
+          criteriaRangeLow: criteriaAssessment.rangeLow,
+          criteriaRangeHigh: criteriaAssessment.rangeHigh,
+          criteriaKnown: criteriaAssessment.knownCriteria,
+          criteriaTotal: criteriaAssessment.totalCriteria,
+          criteriaRankable: criteriaAssessment.rankable,
+          criteriaGateCap: criteriaAssessment.gateCap,
+          criteriaVerdict: criteriaAssessment.verdict,
+          criteriaVerdictLabel: criteriaAssessment.verdictLabel,
+          criteriaFlagCount: criteriaAssessment.flags.length,
+          criteriaFamilyCovered: criteriaAssessment.families.filter((f) => f.coveragePct > 0).length,
+        } : {}),
+        ...(Object.keys(blendAssessed).length ? { factorBlend: blendAssessed, factorBlendConfidence: blendConfidence, factorBlendBasis: blendBasis.join(' · ') } : {}),
       },
     };
     return persist ? this.persist(userId, result, relationship.sourceOrganizationId) : result;
