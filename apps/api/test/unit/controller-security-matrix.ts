@@ -30,6 +30,7 @@ export const CONTROLLER_SECURITY_MATRIX: Record<string, ControllerSecurityRule> 
   'auth.controller.ts': { category: 'PUBLIC', exceptions: ['POST auth/email/resend requires AuthGuard'] },
   'authorization-admin.controller.ts': { category: 'AUTHORIZED', requiredGuards: ['AuthGuard','AuthorizationGuard'], requirePermission: true },
   'commitments.controller.ts': { category: 'AUTHORIZED', requiredGuards: ['AuthGuard','AuthorizationGuard'], requirePermission: true },
+  'criteria.controller.ts': { category: 'AUTHORIZED', requiredGuards: ['AuthGuard','AuthorizationGuard'], requirePermission: true },
   'data-lifecycle.controller.ts': { category: 'AUTHORIZED', requiredGuards: ['AuthGuard','AuthorizationGuard'], requirePermission: true },
   'mfa.controller.ts': { category: 'AUTHENTICATED', requiredGuards: ['AuthGuard'] },
   'custom-fields.controller.ts': { category: 'AUTHORIZED', requiredGuards: ['AuthGuard','AuthorizationGuard'], requirePermission: true },
