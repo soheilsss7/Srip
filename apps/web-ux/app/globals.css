@@ -2845,3 +2845,23 @@ html,body{overflow-x:clip;max-width:100%}
   border-radius:999px;padding:3px 9px;white-space:nowrap;font-family:inherit}
 .wf-live-dot{width:9px;height:9px;border-radius:50%;background:var(--srip-success);box-shadow:0 0 0 4px color-mix(in srgb,var(--srip-success) 18%,transparent);animation:pulse-live 1.6s ease-in-out infinite}
 @keyframes pulse-live{0%,100%{opacity:1}50%{opacity:.45}}
+.wf-coverage{background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius-md);
+  padding:12px 14px;margin:0 0 12px}
+.wf-cov-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px}
+.wf-cov-title{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:var(--text-primary)}
+.wf-cov-title svg{width:14px;height:14px;color:var(--srip-success)}
+.chip.info{background:color-mix(in srgb,var(--srip-primary) 10%,transparent);color:var(--srip-primary);border-color:color-mix(in srgb,var(--srip-primary) 30%,transparent)}
+.chip.neutral{background:var(--bg-soft);color:var(--text-muted);border-color:var(--card-border)}
+.wf-cov-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.wf-cov-cell{border:1px solid var(--card-border);border-radius:var(--radius-sm);padding:9px 10px;background:var(--bg-soft);min-width:0}
+.wf-cov-cell.on{border-color:color-mix(in srgb,var(--srip-success) 38%,transparent);
+  background:color-mix(in srgb,var(--srip-success) 5%,transparent)}
+.wf-cov-cell-top{display:flex;align-items:center;justify-content:space-between;gap:6px;margin:0 0 6px}
+.wf-cov-entity{font-size:12px;font-weight:800;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wf-cov-dot{width:8px;height:8px;border-radius:50%;background:var(--card-border);flex:none}
+.wf-cov-dot.on{background:var(--srip-success);box-shadow:0 0 0 3px color-mix(in srgb,var(--srip-success) 18%,transparent)}
+.wf-cov-nums{display:flex;align-items:baseline;gap:6px}
+.wf-cov-nums b{font-size:16px;color:var(--srip-success)}
+.wf-cov-nums span{font-size:10.5px;color:var(--text-muted)}
+.wf-cov-sub{font-size:10.5px;color:var(--text-muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:560px){.wf-cov-grid{grid-template-columns:repeat(2,1fr)}.wf-cov-head .chip{font-size:10px;padding:4px 8px}}

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import HubTabs from '../_components/hub-tabs';
 import { api } from '../_lib/api';
@@ -9,7 +9,8 @@ import { Badge, ErrorCard, Loading, Modal, PageHeader, SectionCard, StatCard } f
 import {
   AlertTriangle, Bell, BellRing, CheckCircle2, ChevronDown, ChevronLeft, CircleDashed, Clock3, FileText,
   GitBranch, GitCommitHorizontal, GitMerge, GripVertical, History, ListChecks, Lock, MessageSquareText,
-  Play, Plus, Power, RefreshCw, Scale, ShieldCheck, Target, Trash2, Users, Workflow, X, Zap,
+  Play, Plus, Power, RadioTower, RefreshCw, Scale, ShieldCheck, Target, Trash2, Users, Workflow, X, Zap,
+  Handshake,
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
@@ -28,6 +29,8 @@ const ENTITY_OPTIONS = [
   { key: 'Action', fa: 'اقدام', icon: <Zap size={14} /> },
   { key: 'Opportunity', fa: 'فرصت', icon: <Target size={14} /> },
   { key: 'Project', fa: 'پروژه', icon: <GitCommitHorizontal size={14} /> },
+  { key: 'Referral', fa: 'معرفی', icon: <Handshake size={14} /> },
+  { key: 'Interaction', fa: 'تعامل', icon: <MessageSquareText size={14} /> },
 ];
 const ACTION_META: Record<string, { fa: string; icon: React.ReactNode; tone: 'info' | 'success' | 'warning' | 'danger' | 'neutral'; color: string }> = {
   CREATE_NOTIFICATION: { fa: 'اعلان', icon: <BellRing size={14} />, tone: 'info', color: '#3b82f6' },
@@ -39,15 +42,28 @@ const ACTION_META: Record<string, { fa: string; icon: React.ReactNode; tone: 'in
 };
 
 const TRIGGER_FA: Record<string, string> = {
-  RELATIONSHIP_UPDATED: 'به‌روزرسانی رابطه', MEETING_CREATED: 'ایجاد جلسه', ACTION_CREATED: 'ایجاد اقدام',
-  OPPORTUNITY_CREATED: 'ایجاد فرصت', RELATIONSHIP_CREATED: 'ایجاد رابطه',
+  MANUAL: 'اجرای دستی',
+  RELATIONSHIP_CREATED: 'ایجاد رابطه', RELATIONSHIP_UPDATED: 'به‌روزرسانی رابطه',
+  MEETING_CREATED: 'ایجاد جلسه', MEETING_COMPLETED: 'ثبت نتیجهٔ جلسه',
+  ACTION_CREATED: 'ایجاد اقدام', ACTION_UPDATED: 'به‌روزرسانی اقدام', ACTION_COMPLETED: 'انجام اقدام',
+  COMMITMENT_CREATED: 'ایجاد تعهد', COMMITMENT_UPDATED: 'به‌روزرسانی تعهد', COMMITMENT_FULFILLED: 'انجام تعهد',
+  INTERACTION_CREATED: 'ثبت تعامل',
+  OPPORTUNITY_CREATED: 'ایجاد فرصت', OPPORTUNITY_UPDATED: 'به‌روزرسانی فرصت', OPPORTUNITY_WON: 'پیروزی فرصت', OPPORTUNITY_LOST: 'از دست رفتن فرصت',
+  PROJECT_CREATED: 'ایجاد پروژه', PROJECT_UPDATED: 'به‌روزرسانی پروژه',
+  REFERRAL_CREATED: 'ایجاد معرفی', REFERRAL_UPDATED: 'به‌روزرسانی معرفی',
+  REFERRAL_ACCEPTED: 'پذیرش معرفی', REFERRAL_COMPLETED: 'انجام معرفی', REFERRAL_DECLINED: 'رد معرفی',
+  PERSON_CREATED: 'ایجاد شخص', PERSON_UPDATED: 'به‌روزرسانی شخص',
+  ORGANIZATION_CREATED: 'ایجاد سازمان', ORGANIZATION_UPDATED: 'به‌روزرسانی سازمان',
 };
+const TRIGGER_OPTIONS = Object.keys(TRIGGER_FA).filter(t => t !== 'MANUAL');
 const PRIORITY_FA: Record<string, string> = { LOW: 'کم', MEDIUM: 'متوسط', HIGH: 'زیاد', CRITICAL: 'بحرانی' };
 
 type WfAction = { type: string; [k: string]: any };
 type WfDef = { trigger?: { type?: string; entityType?: string }; conditions?: any[]; actions?: WfAction[] };
 type WfRow = { id: string; name: string; entityType: string; organizationId?: string | null; organizationName?: string | null; isActive: boolean; definition: WfDef; actionCount: number; steps?: Array<{ type: string; summary: string }>; triggerType: string; createdAt: string; updatedAt?: string | null };
 type ExecRow = { id: string; workflowId: string; workflowName?: string | null; entityType: string; entityId: string; status: string; currentActionIndex?: number; resumeAt?: string | null; context?: any; createdAt?: string; startedAt?: string | null; finishedAt?: string | null };
+type CoverageRow = { entityType: string; fa: string; workflows: number; active: number; executions: number; running: number; completed: number; failed: number; events: number; lastEventAt?: string | null; lastTrigger?: string | null };
+type Coverage = { generatedAt: string; engine: string; totals: { workflows: number; active: number; executions: number; live: number; completed: number; failed: number; approvalsPending: number; coveredEntities: number }; byEntity: CoverageRow[]; byTrigger: Array<{ type: string; fa: string; count: number; lastAt?: string | null }> };
 type RelMini = { id: string; sourceOrganization?: { name?: string } | null; targetOrganization?: { name?: string } | null };
 type OrgMini = { id: string; name: string };
 
@@ -180,13 +196,16 @@ export default function WorkflowsPage({ initialTab = 'workflows' }: { initialTab
   const [rels, setRels] = useState<RelMini[]>([]);
   const [orgs, setOrgs] = useState<OrgMini[]>([]);
   const [showEntityHelp, setShowEntityHelp] = useState(false);
+  const [coverage, setCoverage] = useState<Coverage | null>(null);
+  const autoResumedRef = useRef<Record<string, string>>({}); // execId -> resumeAt (یک تلاش خودکار برای هر مهلت)
 
   const isDraft = (s: WfAction[]) => s.every(x => x.type === 'CREATE_NOTIFICATION' && !x.title && !x.body);
 
   const entityIcon = (t: string) => ENTITY_OPTIONS.find(e => e.key === t)?.fa ?? t;
 
-  const [liveAt, setLiveAt] = useState<string>(() => new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }));
+  const [liveAt, setLiveAt] = useState<string>('—');
   useEffect(() => {
+    setLiveAt(new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }));
     const t = setInterval(async () => {
       await refreshLive().catch(() => {});
       setLiveAt(new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }));
@@ -196,7 +215,8 @@ export default function WorkflowsPage({ initialTab = 'workflows' }: { initialTab
   }, []);
   async function refreshLive() {
     try {
-      const [exList, apList] = await Promise.all([
+      const [cov, exList, apList] = await Promise.all([
+        api<any>('/workflows/coverage').catch(() => null),
         api<any[]>('/workflows/executions').catch(() => []),
         api<any[]>('/workflows/approvals').catch(() => []),
       ]);
@@ -215,6 +235,17 @@ export default function WorkflowsPage({ initialTab = 'workflows' }: { initialTab
         }
       }
       setApprovals(apMap);
+      // ادامهٔ خودکار: اجراهای WAITING که مهلت انتظارشان گذشته باشد (بجز در انتظار تأیید دونفره)
+      for (const e of (exList ?? []) as any[]) {
+        if (e.status !== 'WAITING' || !e.resumeAt || e.context?.pendingApprovalId) continue;
+        if (new Date(e.resumeAt).getTime() > Date.now()) continue;
+        if (autoResumedRef.current[e.id] === e.resumeAt) continue;
+        autoResumedRef.current[e.id] = e.resumeAt;
+        void api<any>(`/workflows/executions/${e.id}/resume`, { method: 'POST', body: JSON.stringify({}) })
+          .then(() => { setFlash('گردش کار در انتظار، به‌صورت خودکار ادامه یافت.'); refreshLive(); })
+          .catch(() => { delete autoResumedRef.current[e.id]; });
+      }
+      if (cov && (cov as any).totals) setCoverage(cov as unknown as Coverage);
     } catch { /* non-fatal */ }
   }
   async function load() {
@@ -447,9 +478,29 @@ export default function WorkflowsPage({ initialTab = 'workflows' }: { initialTab
       <div className="wf-engine" role="note">
         <span className="wf-live-dot" aria-hidden="true" />
         <b>موتور اتوماسیون فعال</b>
-        <span className="wf-engine-desc">رویدادهای ثبت‌شده (رابطه، جلسه، اقدام، فرصت) گردش‌کارهای هم‌محرک را خودکار اجرا می‌کنند؛ اجراها هر ۸ ثانیه به‌روز می‌شوند.</span>
+        <span className="wf-engine-desc">رویدادهای ثبت‌شده در سراسر سامانه (رابطه، جلسه، اقدام، تعهد، تعامل، فرصت، معرفی، پروژه، شخص و سازمان) گردش‌کارهای هم‌محرک را خودکار و دقیق اجرا می‌کنند؛ اجراها هر ۸ ثانیه به‌روز می‌شوند.</span>
         <code className="wf-engine-time">آخرین بازخوانی {liveAt}</code>
       </div>
+
+      {coverage && (
+        <div className="wf-coverage" role="region" aria-label="پوشش سراسری گردش کار">
+          <div className="wf-cov-head">
+            <span className="wf-cov-title"><RadioTower size={14} /> پوشش سراسری رویدادها</span>
+            <span className="chip success">پوشش {fmtNum(coverage.totals.coveredEntities)} از {fmtNum(coverage.byEntity.length)} نهاد</span>
+            <span className="chip info">اجرا: {fmtNum(coverage.totals.executions)} · زنده: {fmtNum(coverage.totals.live)}</span>
+            <span className="chip neutral">تأیید در انتظار: {fmtNum(coverage.totals.approvalsPending)}</span>
+          </div>
+          <div className="wf-cov-grid">
+            {coverage.byEntity.map((c) => (
+              <div key={c.entityType} className={`wf-cov-cell ${c.active > 0 && c.workflows > 0 ? 'on' : 'off'}`} title={c.lastTrigger ? `آخرین رویداد: ${TRIGGER_FA[c.lastTrigger] ?? c.lastTrigger}${c.lastEventAt ? ' · ' + new Date(c.lastEventAt).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }) : ''}` : ''}>
+                <div className="wf-cov-cell-top"><span className="wf-cov-entity">{c.fa}</span><span className={`wf-cov-dot ${c.active > 0 ? 'on' : ''}`} aria-hidden="true" /></div>
+                <div className="wf-cov-nums"><b>{fmtNum(c.active)}</b><span>از {fmtNum(c.workflows)} گردش فعال</span></div>
+                <div className="wf-cov-sub">{fmtNum(c.events)} رویداد دریافت‌شده · {fmtNum(c.executions)} اجرا</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <HubTabs base tabs={[
         { href: '/workflows', label: `گردش کارها (${fmtNum(rows.length)})` },
@@ -580,7 +631,7 @@ export default function WorkflowsPage({ initialTab = 'workflows' }: { initialTab
             <label><span className="field-label">محرک</span>
               <select value={form.triggerType} onChange={e => setForm(f => ({ ...f, triggerType: e.target.value }))}>
                 <option value="MANUAL">دستی (فقط با دکمهٔ اجرا)</option>
-                {['RELATIONSHIP_UPDATED', 'MEETING_CREATED', 'ACTION_CREATED', 'OPPORTUNITY_CREATED', 'RELATIONSHIP_CREATED'].map(t => <option key={t} value={t}>{`خودکار · رویداد ${TRIGGER_FA[t] ?? t}`}</option>)}
+                {TRIGGER_OPTIONS.map(t => <option key={t} value={t}>{`خودکار · رویداد ${TRIGGER_FA[t] ?? t}`}</option>)}
               </select>
             </label>
             <label className="full"><span className="field-label">شرط (اختیاری)</span>

@@ -19,7 +19,7 @@ const PORT = Number(process.env.MOCK_API_PORT || 4000);
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.06.17';
+const DEMO_MOCK_VERSION = '2026.09.07.18';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -3136,30 +3136,97 @@ function dqDetectCandidates(entityType,data,oid,orgScope){
   return out.sort((a,b)=>b.score-a.score).slice(0,10);
 }
 
+/* گردش‌کارهای پیش‌فرض: هر نهاد اصلی سیستم یک محرک خودکار دارد تا موتور اتوماسیون
+   «همهٔ سامانه» را پوشش دهد — رابطه، جلسه، اقدام، تعهد، تعامل، فرصت، معرفی، پروژه، شخص، سازمان. */
+const WFLOW_ENTITY_FA = { Relationship:'رابطه', Organization:'سازمان', Person:'شخص', Meeting:'جلسه', Commitment:'تعهد', Action:'اقدام', Opportunity:'فرصت', Project:'پروژه', Referral:'معرفی', Interaction:'تعامل' };
+const WFLOW_TRIGGER_FA = { MANUAL:'دستی', RELATIONSHIP_CREATED:'ایجاد رابطه', RELATIONSHIP_UPDATED:'به‌روزرسانی رابطه', MEETING_CREATED:'ایجاد جلسه', MEETING_COMPLETED:'ثبت نتیجهٔ جلسه', ACTION_CREATED:'ایجاد اقدام', ACTION_UPDATED:'به‌روزرسانی اقدام', ACTION_COMPLETED:'انجام اقدام', COMMITMENT_CREATED:'ایجاد تعهد', COMMITMENT_UPDATED:'به‌روزرسانی تعهد', COMMITMENT_FULFILLED:'انجام تعهد', INTERACTION_CREATED:'ثبت تعامل', OPPORTUNITY_CREATED:'ایجاد فرصت', OPPORTUNITY_UPDATED:'به‌روزرسانی فرصت', OPPORTUNITY_WON:'پیروزی فرصت', OPPORTUNITY_LOST:'از دست رفتن فرصت', PROJECT_CREATED:'ایجاد پروژه', PROJECT_UPDATED:'به‌روزرسانی پروژه', REFERRAL_CREATED:'ایجاد معرفی', REFERRAL_UPDATED:'به‌روزرسانی معرفی', REFERRAL_ACCEPTED:'پذیرش معرفی', REFERRAL_COMPLETED:'انجام معرفی', REFERRAL_DECLINED:'رد معرفی', PERSON_CREATED:'ایجاد شخص', PERSON_UPDATED:'به‌روزرسانی شخص', ORGANIZATION_CREATED:'ایجاد سازمان', ORGANIZATION_UPDATED:'به‌روزرسانی سازمان' };
+const seedWorkflowDefs = () => {
+  const t=(d,h)=>{const x=new Date(Date.now()-d*86400000);x.setHours(10-h,15,0,0);return x.toISOString();};
+  return [
+    {id:'wf-1',name:'پیگیری هفتگی روابط کلیدی',entityType:'Relationship',organizationId:null,isActive:true,
+     definition:{trigger:{type:'MANUAL'},conditions:[],actions:[
+       {type:'CREATE_ACTION',title:'ثبت پیگیری هفتگی رابطه',priority:'MEDIUM',status:'OPEN'},
+       {type:'CREATE_NOTIFICATION',title:'پیگیری رابطه ثبت شد',body:'گردش کار «پیگیری هفتگی» برای این رابطه اقدام ساخت و این اعلان را صادر کرد.',channel:'IN_APP',priority:'LOW'},
+     ]},createdAt:t(9,1),updatedAt:t(9,1)},
+    {id:'wf-2',name:'اعلان و تعهد پس از به‌روزرسانی رابطه',entityType:'Relationship',organizationId:null,isActive:true,
+     definition:{trigger:{type:'RELATIONSHIP_UPDATED'},conditions:[],actions:[
+       {type:'CREATE_NOTIFICATION',title:'رابطه به‌روزرسانی شد',body:'محرک رویداد رابطه فعال شد و تعهد بازبینی زیر ثبت گردید.',channel:'IN_APP',priority:'MEDIUM'},
+       {type:'CREATE_COMMITMENT',description:'بازبینی برنامهٔ تعاملات و اقدام بعدی این رابطه',status:'OPEN',risk:'MEDIUM'},
+     ]},createdAt:t(6,3),updatedAt:t(6,3)},
+    {id:'wf-3',name:'تأیید دونفره و انتظار برای فرصت تازه',entityType:'Opportunity',organizationId:null,isActive:true,
+     definition:{trigger:{type:'OPPORTUNITY_CREATED'},conditions:[{path:'opportunity.value',exists:true}],actions:[
+       {type:'REQUEST_APPROVAL',payload:{title:'اجرای گردش کار ادامه یابد؟',note:'تأیید برای ادامهٔ خودکار مراحل بعدی (انتظار و اعلان پایانی) لازم است.'}},
+       {type:'WAIT',minutes:1},
+       {type:'CREATE_NOTIFICATION',title:'گردش کار فرصت کامل شد',body:'پس از تأیید و پایان مهلت انتظار، گردش کار «تأیید دونفره» به پایان رسید.',channel:'IN_APP',priority:'LOW'},
+     ]},createdAt:t(3,5),updatedAt:t(3,5)},
+    {id:'wf-4',name:'پیگیری خودکار پس از جلسه',entityType:'Meeting',organizationId:null,isActive:true,
+     definition:{trigger:{type:'MEETING_CREATED'},conditions:[],actions:[
+       {type:'CREATE_ACTION',title:'پیگیری مصوبات جلسه (اقدام بعدی)',priority:'HIGH'},
+       {type:'CREATE_NOTIFICATION',title:'جلسه ثبت شد و پیگیری ساخته شد',body:'گردش کار «پیگیری خودکار پس از جلسه» اجرا شد؛ اقدام بعدی برای این جلسه ساخته شد.',channel:'IN_APP',priority:'MEDIUM'},
+     ]},createdAt:t(8,2),updatedAt:t(8,2)},
+    {id:'wf-5',name:'ثبت نتیجهٔ جلسه',entityType:'Meeting',organizationId:null,isActive:true,
+     definition:{trigger:{type:'MEETING_COMPLETED'},conditions:[{path:'meeting.outcome',exists:true}],actions:[
+       {type:'CREATE_COMMITMENT',description:'پیگیری نتیجهٔ ثبت‌شدهٔ جلسه (تعهد بعدی)',status:'OPEN',risk:'MEDIUM'},
+       {type:'CREATE_NOTIFICATION',title:'نتیجه جلسه ثبت شد',body:'پس از ثبت نتیجهٔ جلسه، تعهد پیگیری به‌صورت خودکار ساخته شد.',channel:'IN_APP',priority:'MEDIUM'},
+     ]},createdAt:t(7,1),updatedAt:t(7,1)},
+    {id:'wf-6',name:'بستن اقدام با تعهد',entityType:'Action',organizationId:null,isActive:true,
+     definition:{trigger:{type:'ACTION_COMPLETED'},conditions:[],actions:[
+       {type:'CREATE_COMMITMENT',description:'استمرار پس از اتمام اقدام (نتیجه و درس‌آموخته)',status:'OPEN',risk:'LOW'},
+       {type:'CREATE_NOTIFICATION',title:'اقدام بسته شد',body:'اقدام به پایان رسید؛ گردش کار «بستن اقدام با تعهد» یک تعهد استمراری ساخت.',channel:'IN_APP',priority:'LOW'},
+     ]},createdAt:t(5,2),updatedAt:t(5,2)},
+    {id:'wf-7',name:'انجام تعهد → اعلان',entityType:'Commitment',organizationId:null,isActive:true,
+     definition:{trigger:{type:'COMMITMENT_FULFILLED'},conditions:[],actions:[
+       {type:'CREATE_NOTIFICATION',title:'تعهد انجام شد',body:'تعهد به وضعیت «انجام‌شده» رفت و این اعلان خودکار صادر شد.',channel:'IN_APP',priority:'MEDIUM'},
+     ]},createdAt:t(5,4),updatedAt:t(5,4)},
+    {id:'wf-8',name:'پیگیری تعامل‌های مهم',entityType:'Interaction',organizationId:null,isActive:true,
+     definition:{trigger:{type:'INTERACTION_CREATED'},conditions:[{path:'interaction.importance',equals:'HIGH'},{path:'interaction.followUpRequired',exists:true}],actions:[
+       {type:'CREATE_ACTION',title:'پیگیری تعامل مهم',priority:'HIGH'},
+       {type:'CREATE_NOTIFICATION',title:'تعامل مهم ثبت شد',body:'تعامل با اولویت زیاد ثبت شد؛ اقدام پیگیری به‌صورت خودکار ساخته شد.',channel:'IN_APP',priority:'HIGH'},
+     ]},createdAt:t(4,2),updatedAt:t(4,2)},
+    {id:'wf-9',name:'خوش‌آمد و تکمیل پروفایل شخص',entityType:'Person',organizationId:null,isActive:true,
+     definition:{trigger:{type:'PERSON_CREATED'},conditions:[],actions:[
+       {type:'CREATE_ACTION',title:'تکمیل پروفایل و آشنایی با شخص تازه',priority:'MEDIUM'},
+       {type:'CREATE_NOTIFICATION',title:'شخص تازه ثبت شد',body:'پروفایل شخص جدید ثبت شد؛ اقدام آشنایی به‌صورت خودکار ساخته شد.',channel:'IN_APP',priority:'LOW'},
+     ]},createdAt:t(6,5),updatedAt:t(6,5)},
+    {id:'wf-10',name:'راستی‌آزمایی سازمان تازه',entityType:'Organization',organizationId:null,isActive:true,
+     definition:{trigger:{type:'ORGANIZATION_CREATED'},conditions:[],actions:[
+       {type:'CREATE_ACTION',title:'راستی‌آزمایی و تکمیل پروفایل سازمان',priority:'HIGH'},
+       {type:'CREATE_NOTIFICATION',title:'سازمان تازه ثبت شد',body:'پروفایل سازمان جدید ثبت شد؛ اقدام راستی‌آزمایی به‌صورت خودکار ساخته شد.',channel:'IN_APP',priority:'MEDIUM'},
+     ]},createdAt:t(6,6),updatedAt:t(6,6)},
+    {id:'wf-11',name:'پذیرش معرفی → تعهد پیگیری',entityType:'Referral',organizationId:null,isActive:true,
+     definition:{trigger:{type:'REFERRAL_UPDATED'},conditions:[{path:'referral.status',equals:'ACCEPTED'}],actions:[
+       {type:'CREATE_COMMITMENT',description:'پیگیری معرفی پذیرفته‌شده (گام بعدی و نتیجه)',status:'OPEN',risk:'MEDIUM'},
+       {type:'CREATE_NOTIFICATION',title:'معرفی پذیرفته شد',body:'پذیرش معرفی ثبت شد؛ تعهد پیگیری به‌صورت خودکار ساخته شد.',channel:'IN_APP',priority:'MEDIUM'},
+     ]},createdAt:t(3,2),updatedAt:t(3,2)},
+    {id:'wf-12',name:'نتیجهٔ معرفی → فرصت تازه',entityType:'Referral',organizationId:null,isActive:true,
+     definition:{trigger:{type:'REFERRAL_UPDATED'},conditions:[{path:'referral.status',equals:'COMPLETED'}],actions:[
+       {type:'CREATE_NOTIFICATION',title:'معرفی به نتیجه رسید',body:'معرفی کامل شد؛ فرصت مشتق‌شده به‌صورت خودکار ساخته شد.',channel:'IN_APP',priority:'MEDIUM'},
+       {type:'CREATE_OPPORTUNITY',name:'فرصت حاصل از معرفی',sourceType:'REFERRAL',probability:60},
+     ]},createdAt:t(3,3),updatedAt:t(3,3)},
+    {id:'wf-13',name:'برنامه‌ریزی پروژه تازه',entityType:'Project',organizationId:null,isActive:true,
+     definition:{trigger:{type:'PROJECT_CREATED'},conditions:[],actions:[
+       {type:'CREATE_ACTION',title:'برنامه‌ریزی گام‌های بعدی پروژه',priority:'MEDIUM'},
+       {type:'CREATE_NOTIFICATION',title:'پروژه تازه ثبت شد',body:'پروژه جدید ثبت شد؛ اقدام برنامه‌ریزی به‌صورت خودکار ساخته شد.',channel:'IN_APP',priority:'LOW'},
+     ]},createdAt:t(4,4),updatedAt:t(4,4)},
+    {id:'wf-14',name:'پیروزی فرصت → درس‌آموخته',entityType:'Opportunity',organizationId:null,isActive:true,
+     definition:{trigger:{type:'OPPORTUNITY_UPDATED'},conditions:[{path:'opportunity.status',equals:'WON'}],actions:[
+       {type:'CREATE_NOTIFICATION',title:'فرصت به پیروزی رسید',body:'وضعیت فرصت به «برنده» تغییر کرد؛ این اعلان خودکار صادر شد.',channel:'IN_APP',priority:'HIGH'},
+       {type:'CREATE_ACTION',title:'ثبت درس‌آموختهٔ فرصت برنده',priority:'MEDIUM'},
+     ]},createdAt:t(2,1),updatedAt:t(2,1)},
+  ];
+};
 function seedWorkflowStore(){
   if(!Array.isArray(DB.workflows)) DB.workflows=[];
   if(!Array.isArray(DB.workflowExecutions)) DB.workflowExecutions=[];
   if(!Array.isArray(DB.workflowApprovals)) DB.workflowApprovals=[];
-  if(DB.workflows.length===0){
-    const t=(d,h)=>{const x=new Date(Date.now()-d*86400000);x.setHours(10-h,15,0,0);return x.toISOString();};
-    DB.workflows=[
-      {id:'wf-1',name:'پیگیری هفتگی روابط کلیدی',entityType:'Relationship',organizationId:null,isActive:true,
-       definition:{trigger:{type:'MANUAL'},conditions:[],actions:[
-         {type:'CREATE_ACTION',title:'ثبت پیگیری هفتگی رابطه',priority:'MEDIUM',status:'OPEN'},
-         {type:'CREATE_NOTIFICATION',title:'پیگیری رابطه ثبت شد',body:'گردش کار «پیگیری هفتگی» برای این رابطه اقدام ساخت و این اعلان را صادر کرد.',channel:'IN_APP',priority:'LOW'},
-       ]},createdAt:t(9,1),updatedAt:t(9,1)},
-      {id:'wf-2',name:'اعلان و تعهد پس از به‌روزرسانی رابطه',entityType:'Relationship',organizationId:null,isActive:true,
-       definition:{trigger:{type:'RELATIONSHIP_UPDATED'},conditions:[],actions:[
-         {type:'CREATE_NOTIFICATION',title:'رابطه به‌روزرسانی شد',body:'محرک رویداد رابطه فعال شد و تعهد بازبینی زیر ثبت گردید.',channel:'IN_APP',priority:'MEDIUM'},
-         {type:'CREATE_COMMITMENT',description:'بازبینی برنامهٔ تعاملات و اقدام بعدی این رابطه',status:'OPEN',risk:'MEDIUM'},
-       ]},createdAt:t(6,3),updatedAt:t(6,3)},
-      {id:'wf-3',name:'تأیید دونفره و انتظار برای فرصت تازه',entityType:'Opportunity',organizationId:null,isActive:true,
-       definition:{trigger:{type:'OPPORTUNITY_CREATED'},conditions:[{path:'opportunity.value',exists:true}],actions:[
-         {type:'REQUEST_APPROVAL',payload:{title:'اجرای گردش کار ادامه یابد؟',note:'تأیید برای ادامهٔ خودکار مراحل بعدی (انتظار و اعلان پایانی) لازم است.'}},
-         {type:'WAIT',minutes:1},
-         {type:'CREATE_NOTIFICATION',title:'گردش کار فرصت کامل شد',body:'پس از تأیید و پایان مهلت انتظار، گردش کار «تأیید دونفره» به پایان رسید.',channel:'IN_APP',priority:'LOW'},
-       ]},createdAt:t(3,5),updatedAt:t(3,5)},
-    ];
+  /* ارتقای نسخهٔ بذر: گردش‌کارهای تازه به فهرست موجود هم اضافه می‌شوند (بدون حذف دستی) */
+  const seedVer=Number(DB.workflowSeedVersion||0);
+  if(seedVer<2){
+    const defs=seedWorkflowDefs();
+    for(const w of defs){
+      if(!DB.workflows.some(x=>x.id===w.id)) DB.workflows.push(w);
+    }
+    DB.workflowSeedVersion=2;
   }
 }
 function approvalFlowSafe(deciderId,a,decision,isOwner){
@@ -3667,6 +3734,7 @@ const server=http.createServer(async(req,res)=>{
     if (authUser && !authUser.isOwner && Array.isArray(authUser.accessibleOrganizationIds) && !authUser.accessibleOrganizationIds.includes(o.id)) authUser.accessibleOrganizationIds.push(o.id);
     if (intake.length) saveStoredAnswers('ORGANIZATION', o.id, intake);
     audit(req,'CREATE','organization',o.id,'OK',{name:o.name,criteriaAnswers:intake.length});
+    await autoRunWorkflows('Organization',o.id,'ORGANIZATION_CREATED',{organization:{id:o.id,name:o.name,type:o.type,industry:o.industry,country:o.country}});
     return json(res,201,attachCriteria('ORGANIZATION',[{...o,owner:{name:'کاربر دمو'},_count:orgCounts(o)}])[0]);
   }
   const orgId=match('/organizations/:id');
@@ -3721,6 +3789,7 @@ const server=http.createServer(async(req,res)=>{
     if(aff.isPrimary) PERSON_ORGS.forEach(a=>{ if(a.personId===p.id) a.isPrimary=false; });
     PERSON_ORGS.push(aff);
     audit(req,'CREATE','person_organization',`${p.id}:${b.organizationId}`,'OK');
+    await autoRunWorkflows('Person',p.id,'PERSON_UPDATED',{person:{id:p.id,firstName:p.firstName,lastName:p.lastName,title:p.title,organizationId:p.organizationId,change:'affiliation'}});
     return json(res,201,{...aff,organization:{id:org.id,name:org.name}});
   }
   const personOrgDel=match('/people/:id/organizations/:orgId');
@@ -3953,6 +4022,7 @@ const server=http.createServer(async(req,res)=>{
     m.completedAt=nowIso();
     audit(req,'MEETING_OUTCOME','meeting',m.id,'OK');
     NOTIFICATIONS.unshift({id:`n-${Date.now()}`,title:'نتیجه جلسه ثبت شد',body:`نتیجهٔ «${m.title}» ثبت شد: ${b.outcome.trim()}`,type:'SYSTEM',priority:'information',isRead:false,createdAt:nowIso()});
+    await autoRunWorkflows('Meeting',m.id,'MEETING_COMPLETED',{meeting:{id:m.id,title:m.title,outcome:b.outcome.trim(),relationshipId:m.relationshipId??null,organizationId:m.organizationId??null}});
     return json(res,200,meetingView(m));
   }
   const meetingId=match('/meetings/:id');
@@ -4845,6 +4915,7 @@ const server=http.createServer(async(req,res)=>{
     PEOPLE.push(p);
     if(personIntake.length) saveStoredAnswers('PERSON',p.id,personIntake);
     audit(req,'CREATE','person',p.id,'OK',{name:`${p.firstName} ${p.lastName}`,answers:personIntake.length});
+    await autoRunWorkflows('Person',p.id,'PERSON_CREATED',{person:{id:p.id,firstName:p.firstName,lastName:p.lastName,title:p.title,organizationId:p.organizationId,status:p.status}});
     return json(res,201,attachCriteria('PERSON',[{...p,organization:orgById(p.organizationId)?{id:p.organizationId,name:orgById(p.organizationId).name}:null}])[0]);
   }
 
@@ -4860,6 +4931,7 @@ const server=http.createServer(async(req,res)=>{
     const c={id:`c-${Date.now()}`,description:b.description,dueAt:b.dueAt??null,reminderAt:b.reminderAt??null,status:b.status??'OPEN',risk:b.risk??'MEDIUM',direction:b.direction==='THEIRS'?'THEIRS':'OURS',notes:b.notes??null,organizationId:orgId,ownerId:b.ownerId??null,personId:b.personId??null,relationshipId:b.relationshipId??null,meetingId:b.meetingId??null,projectId:b.projectId??null,createdAt:nowIso(),fulfilledAt:b.status==='FULFILLED'?nowIso():null};
     COMMITMENTS.push(c);
     audit(req,'CREATE','commitment',c.id,'OK',{description:c.description});
+    await autoRunWorkflows('Commitment',c.id,'COMMITMENT_CREATED',{commitment:{id:c.id,description:c.description,status:c.status,risk:c.risk,organizationId:c.organizationId??null,relationshipId:c.relationshipId??null}});
     return json(res,201,commitmentView(c));
   }
   const commitmentId=match('/commitments/:id');
@@ -4892,8 +4964,13 @@ const server=http.createServer(async(req,res)=>{
       if(b.status==='FULFILLED'&&c.status!=='FULFILLED') c.fulfilledAt=nowIso();
       if(c.status==='FULFILLED'&&b.status!=='FULFILLED') c.fulfilledAt=null;
     }
+    const commitmentBefore={...c};
     Object.assign(c,b);
     audit(req,'UPDATE','commitment',c.id,'OK',{description:c.description});
+    const commCtx={commitment:{id:c.id,description:c.description,status:c.status,risk:c.risk,organizationId:c.organizationId??null,relationshipId:c.relationshipId??null}};
+    await autoRunWorkflows('Commitment',c.id,'COMMITMENT_UPDATED',commCtx,`commitment:${c.id}:updated:${Date.now()}`);
+    if(c.status==='FULFILLED'&&commitmentBefore.status!=='FULFILLED')
+      await autoRunWorkflows('Commitment',c.id,'COMMITMENT_FULFILLED',commCtx,`commitment:${c.id}:fulfilled:${Date.now()}`);
     return json(res,200,commitmentView(c));
   }
   if(commitmentId&&method==='DELETE'){
@@ -4910,6 +4987,7 @@ const server=http.createServer(async(req,res)=>{
     if(!c) return json(res,404,{message:'تعهد یافت نشد'});
     c.status='OVERDUE';
     audit(req,'UPDATE','commitment',c.id,'OK',{status:'OVERDUE'});
+    await autoRunWorkflows('Commitment',c.id,'COMMITMENT_UPDATED',{commitment:{id:c.id,description:c.description,status:c.status,risk:c.risk,organizationId:c.organizationId??null,relationshipId:c.relationshipId??null}},`commitment:${c.id}:overdue:${Date.now()}`);
     return json(res,200,commitmentView(c));
   }
 
@@ -4944,6 +5022,7 @@ const server=http.createServer(async(req,res)=>{
     applyInteractionToRel(rel,x);
     audit(req,'CREATE','Interaction',x.id,'OK',{meta:{subject:x.subject,type:x.type,organizationId:orgId}});
     saveDb();
+    await autoRunWorkflows('Interaction',x.id,'INTERACTION_CREATED',{interaction:{id:x.id,subject:x.subject,type:x.type,importance,organizationId:orgId,relationshipId:x.relationshipId??null,personId:x.personId??null,followUpRequired:!!x.followUpRequired}});
     return json(res,201,interactionCardView(x));
   }
 
@@ -4996,8 +5075,15 @@ const server=http.createServer(async(req,res)=>{
     }
     if(b.sourceType!==undefined){const st=String(b.sourceType).toUpperCase(); if(!OPPORTUNITY_SOURCE_LIST.includes(st)) return json(res,400,{message:'منبع فرصت نامعتبر است.'}); o.sourceType=st; delete b.sourceType;}
     if(b.sourceReferralId!==undefined){ o.sourceReferralId=b.sourceReferralId??null; delete b.sourceReferralId; }
+    const oppBefore={...o};
     Object.assign(o,b);
     audit(req,'UPDATE','opportunity',o.id,'OK',{name:o.name});
+    const oppCtx={opportunity:{id:o.id,name:o.name,status:o.status,value:o.value,probability:o.probability,relationshipId:o.relationshipId??null,organizationId:o.organizationId??null}};
+    await autoRunWorkflows('Opportunity',o.id,'OPPORTUNITY_UPDATED',oppCtx,`opportunity:${o.id}:updated:${Date.now()}`);
+    if(b.status&&b.status!==oppBefore.status){
+      if(b.status==='WON') await autoRunWorkflows('Opportunity',o.id,'OPPORTUNITY_WON',oppCtx,`opportunity:${o.id}:won:${Date.now()}`);
+      if(b.status==='LOST') await autoRunWorkflows('Opportunity',o.id,'OPPORTUNITY_LOST',oppCtx,`opportunity:${o.id}:lost:${Date.now()}`);
+    }
     return json(res,200,opportunityView(o));
   }
   if(opportunityId&&method==='DELETE'){
@@ -5082,7 +5168,13 @@ const server=http.createServer(async(req,res)=>{
     if(b.relationshipId===''||b.relationshipId===null){ a.relationshipId=null; delete b.relationshipId; }
     if(b.relationshipId){ const nr=RELS.find(r=>r.id===b.relationshipId); if(!nr) return json(res,400,{message:'رابطهٔ انتخابی یافت نشد.'}); if(!relInScope(req,nr)) return json(res,403,{message:'رابطهٔ اقدام خارج از محدودهٔ دسترسی شماست.'}); }
     if(b.organizationId&&!inScope(req,b.organizationId)) return json(res,403,{message:'سازمانِ اقدام خارج از محدودهٔ دسترسی شماست.'});
+    const actionBefore={...a};
     Object.assign(a,b);
+    const actionCtx={action:{id:a.id,title:a.title,status:a.status,priority:a.priority,relationshipId:a.relationshipId??null,organizationId:a.organizationId??null}};
+    await autoRunWorkflows('Action',a.id,'ACTION_UPDATED',actionCtx,`action:${a.id}:updated:${Date.now()}`);
+    const finalStatus=['DONE','COMPLETED','CANCELLED'].includes(a.status);
+    if(finalStatus&&!['DONE','COMPLETED','CANCELLED'].includes(actionBefore.status))
+      await autoRunWorkflows('Action',a.id,'ACTION_COMPLETED',actionCtx,`action:${a.id}:completed:${Date.now()}`);
     return json(res,200,actionView(a));
   }
   if(actionId&&method==='DELETE'){
@@ -5119,6 +5211,7 @@ const server=http.createServer(async(req,res)=>{
     PROJECTS.push(pr);
     PROJECT_EXTRA[pr.id]={requirements:[],risks:[],milestones:[],relationships:[]};
     audit(req,'CREATE','project',pr.id,'OK',{name:pr.name});
+    await autoRunWorkflows('Project',pr.id,'PROJECT_CREATED',{project:{id:pr.id,name:pr.name,status:pr.status,priority:pr.priority,organizationId:pr.organizationId}});
     return json(res,201,projectView(pr));
   }
   /* الزامات پروژه */
@@ -5232,6 +5325,7 @@ const server=http.createServer(async(req,res)=>{
     }
     Object.assign(pr,b);
     audit(req,'UPDATE','project',pr.id,'OK',{name:pr.name});
+    await autoRunWorkflows('Project',pr.id,'PROJECT_UPDATED',{project:{id:pr.id,name:pr.name,status:pr.status,priority:pr.priority,organizationId:pr.organizationId??null}},`project:${pr.id}:updated:${Date.now()}`);
     return json(res,200,projectView(pr));
   }
   if(projectId&&method==='DELETE'){
@@ -5942,6 +6036,7 @@ const server=http.createServer(async(req,res)=>{
     DB.referrals.unshift(r); saveDb();
     const auditRes=referralAudit(r);
     audit(req,'CREATE','Referral',r.id,'OK',{meta:{title:r.title,status:'PENDING',gate:auditRes.gate}});
+    await autoRunWorkflows('Referral',r.id,'REFERRAL_CREATED',{referral:{id:r.id,title:r.title,status:r.status,sourcePersonId:r.sourcePersonId??null,targetPersonId:r.targetPersonId??null,sourceOrganizationId:r.sourceOrganizationId??null,targetOrganizationId:r.targetOrganizationId??null,relationshipId:r.relationshipId??null}});
     if(auditRes.gate==='BLOCKED') NOTIFICATIONS.unshift({id:`n-ref-${Date.now()}`,userId:authUser.id,type:'ALERT',title:'معرفی به ممیزی خورد',body:`«${r.title}»: ${auditRes.checks.filter((x)=>x.level==='BLOCK').map((x)=>x.label).join('، ')} — ابتدا شرایط را اصلاح کنید.`,channel:'IN_APP',priority:'HIGH',createdAt:nowIso(),readAt:null,data:{referralId:r.id}});
     return json(res,201,{...r,createdBy:userById(r.createdById)?{id:r.createdById,name:userById(r.createdById).name}:null,recipientUser:userById(r.recipientUserId)?{id:r.recipientUserId,name:userById(r.recipientUserId).name}:null,instruction:ins,audit:auditRes,acceptedSuggestion});
   }
@@ -5968,6 +6063,7 @@ const server=http.createServer(async(req,res)=>{
     if(b.outcome!==undefined){const oc=String(b.outcome).toUpperCase(); if(!REF_OUTCOME_LIST.includes(oc)) return json(res,400,{message:'نتیجهٔ معرفی نامعتبر است.'}); r.outcome=oc;}
     if(b.outcomeNote!==undefined) r.outcomeNote=b.outcomeNote?String(b.outcomeNote).slice(0,240):null;
     if(b.opportunityId!==undefined){ if(b.opportunityId){ const o=OPPORTUNITIES.find(x=>x.id===b.opportunityId); if(!o) return json(res,404,{message:'فرصت یافت نشد.'}); r.opportunityId=b.opportunityId; } else r.opportunityId=null; }
+    const refStatusBefore=r.status;
     if(b.status!==undefined&&b.status!==r.status){
       const allowed=REF_STATUS_FLOW[r.status]??[];
       if(!allowed.includes(b.status)) return json(res,409,{message:`تغییر وضعیت از «${r.status}» به «${b.status}» مجاز نیست.`});
@@ -5983,6 +6079,13 @@ const server=http.createServer(async(req,res)=>{
     }
     saveDb();
     audit(req,'UPDATE','Referral',r.id,'OK',{meta:{title:r.title,from:before.status,to:r.status,reason:'Referral status changed'}});
+    const refCtx={referral:{id:r.id,title:r.title,status:r.status,sourcePersonId:r.sourcePersonId??null,targetPersonId:r.targetPersonId??null,sourceOrganizationId:r.sourceOrganizationId??null,targetOrganizationId:r.targetOrganizationId??null,relationshipId:r.relationshipId??null}};
+    await autoRunWorkflows('Referral',r.id,'REFERRAL_UPDATED',refCtx,`referral:${r.id}:updated:${Date.now()}`);
+    if(r.status!==refStatusBefore){
+      if(r.status==='ACCEPTED') await autoRunWorkflows('Referral',r.id,'REFERRAL_ACCEPTED',refCtx,`referral:${r.id}:accepted:${Date.now()}`);
+      if(r.status==='COMPLETED') await autoRunWorkflows('Referral',r.id,'REFERRAL_COMPLETED',refCtx,`referral:${r.id}:completed:${Date.now()}`);
+      if(r.status==='DECLINED') await autoRunWorkflows('Referral',r.id,'REFERRAL_DECLINED',refCtx,`referral:${r.id}:declined:${Date.now()}`);
+    }
     return json(res,200,r);
   }
   const refAudit=match('/core-domain/referrals/:id/audit');
@@ -6401,6 +6504,7 @@ const server=http.createServer(async(req,res)=>{
     if(t==='commitment') return e(COMMITMENTS)?.organizationId??null;
     if(t==='project') return e(PROJECTS)?.organizationId??null;
     if(t==='opportunity') return e(OPPORTUNITIES)?.organizationId??null;
+    if(t==='referral'){ const rr=(DB.referrals??[]).find(x=>x.id===id); return rr?.targetOrganizationId??rr?.sourceOrganizationId??null; }
     if(t==='action'){ const a=e(ACTIONS); if(a?.organizationId) return a.organizationId; const r=a?.relationshipId?RELS.find(x=>x.id===a.relationshipId):null; return r?.sourceOrganizationId??null; }
     return null;
   }
@@ -6425,6 +6529,7 @@ const server=http.createServer(async(req,res)=>{
       personId:action.personId??c.personId,
       organizationId:action.organizationId??c.organizationId??fallbackOrgId??null,
       recommendationId:action.recommendationId??c.recommendationId??null,
+      sourceReferralId:action.sourceReferralId??c.sourceReferralId??null,
     };
     const t=String(type??'').toLowerCase();
     if(t==='relationship'&&!links.relationshipId) links.relationshipId=id;
@@ -6433,6 +6538,11 @@ const server=http.createServer(async(req,res)=>{
     if(t==='person'&&!links.personId) links.personId=id;
     if(t==='organization'&&!links.organizationId) links.organizationId=id;
     if(t==='recommendation'&&!links.recommendationId) links.recommendationId=id;
+    if(t==='referral'){
+      if(!links.sourceReferralId) links.sourceReferralId=id;
+      if(!links.relationshipId&&c.referral?.relationshipId) links.relationshipId=c.referral.relationshipId;
+      if(!links.organizationId) links.organizationId=c.referral?.targetOrganizationId??c.referral?.sourceOrganizationId??fallbackOrgId??null;
+    }
     return links;
   }
   function wfView(w){
@@ -6493,7 +6603,7 @@ const server=http.createServer(async(req,res)=>{
           COMMITMENTS.push(row); audit(req,'CREATE','commitment',row.id,'OK',{meta:{reason:`workflow:${wf.id}`,execution:exec.id}});
           log.push(`✓ گام ${i+1}: تعهد «${row.description.slice(0,60)}» ساخته شد (${row.id})`);
         } else if(a.type==='CREATE_OPPORTUNITY'){
-          const row={id:`o-${Date.now()}`,name:a.name??'فرصت گردش کار',status:a.status??'IDENTIFIED',probability:a.probability??0,value:a.value??0,expectedDate:a.expectedDate??null,organizationId:links.organizationId,relationshipId:links.relationshipId??null,projectId:links.projectId??null,ownerId:a.ownerId??null,createdAt:nowIso()};
+          const row={id:`o-${Date.now()}`,name:a.name??'فرصت گردش کار',status:a.status??'IDENTIFIED',probability:a.probability??0,value:a.value??0,expectedDate:a.expectedDate??null,organizationId:links.organizationId,relationshipId:links.relationshipId??null,projectId:links.projectId??null,ownerId:a.ownerId??null,sourceType:a.sourceType??'EVENT',sourceReferralId:links.sourceReferralId??null,reason:a.reason??null,createdAt:nowIso()};
           OPPORTUNITIES.push(row); audit(req,'CREATE','opportunity',row.id,'OK',{meta:{name:row.name,reason:`workflow:${wf.id}`,execution:exec.id}});
           log.push(`✓ گام ${i+1}: فرصت «${row.name}» ساخته شد (${row.id})`);
         } else if(a.type==='CREATE_NOTIFICATION'){
@@ -6523,8 +6633,20 @@ const server=http.createServer(async(req,res)=>{
     audit(req2,'WORKFLOW_EXECUTED','WorkflowExecution',exec.id,'OK',{meta:{workflow:wf.id,trigger:triggerType,entityType,entityId}});
     return wfRun(wf,exec,0,log);
   }
-  /* اجرای خودکار: بعد از ساخت/به‌روزرسانی نهاد، گردش‌کارهای هم‌محرک و فعال خودشان اجرا می‌شوند */
-  async function autoRunWorkflows(entityType,entityId,triggerType,context={}){
+  /* اجرای خودکار: بعد از ساخت/به‌روزرسانی هر نهاد، گردش‌کارهای هم‌محرک و فعال خودشان اجرا می‌شوند.
+     آمار رویدادها برای «پوشش سراسری» ثبت می‌شود؛ eventKey مانع اجرای دوبارهٔ همان رویداد است. */
+  async function autoRunWorkflows(entityType,entityId,triggerType,context={},eventKey){
+    if(!Array.isArray(DB.wfEventSeen)) DB.wfEventSeen=[];
+    const key=eventKey??`${entityType}:${entityId}:${triggerType}:${Date.now()}:${Math.random().toString(36).slice(2,7)}`;
+    if(DB.wfEventSeen.includes(key)) return 0;
+    DB.wfEventSeen.push(key);
+    if(DB.wfEventSeen.length>800) DB.wfEventSeen.splice(0,DB.wfEventSeen.length-800);
+    /* آمار پوشش (بدون توجه به اینکه گردش کاری اجرا شد یا نه) */
+    DB.workflowStats=DB.workflowStats??{triggers:{},entities:{}};
+    const tg=DB.workflowStats.triggers[triggerType]=DB.workflowStats.triggers[triggerType]??{count:0,lastAt:null};
+    tg.count++; tg.lastAt=nowIso();
+    const en=DB.workflowStats.entities[entityType]=DB.workflowStats.entities[entityType]??{count:0,lastAt:null,lastTrigger:null};
+    en.count++; en.lastAt=nowIso(); en.lastTrigger=triggerType;
     const wfs=(DB.workflows??[]).filter(w=>w.isActive&&w.entityType===entityType&&wfScopeOk(w));
     let runs=0;
     for(const wf of wfs){
@@ -6534,6 +6656,7 @@ const server=http.createServer(async(req,res)=>{
       try{ wfStart(req,wf,entityType,entityId,context,triggerType,[]); runs++; }catch(e){/* دمو پایدار بماند */}
     }
     if(runs) saveDb();
+    return runs;
   }
   function wfConditionsPass(conditions,context){
     return (conditions??[]).every(c=>{
@@ -6553,6 +6676,30 @@ const server=http.createServer(async(req,res)=>{
     if(!wfPerm('workflow.read')) return json(res,403,{message:'شما مجوز «مشاهده گردش کارها» (workflow.read) را ندارید.'});
     const rows=(DB.workflowApprovals??[]).filter(a=>{const exec=(DB.workflowExecutions??[]).find(x=>x.id===a.workflowExecutionId);const wf=exec?(DB.workflows??[]).find(x=>x.id===exec.workflowId):null;return wf&&wfScopeOk(wf);}).sort((a,b)=>String(b.createdAt??'').localeCompare(String(a.createdAt??'')));
     return json(res,200,rows.map(wfApprovalView));
+  }
+  if(is('/workflows/coverage')&&method==='GET'){
+    if(!wfPerm('workflow.read')) return json(res,403,{message:'شما مجوز «مشاهده گردش کارها» (workflow.read) را ندارید.'});
+    const wfs=(DB.workflows??[]).filter(w=>wfScopeOk(w));
+    const execs=(DB.workflowExecutions??[]).filter(e=>{const wf=(DB.workflows??[]).find(x=>x.id===e.workflowId);return wf&&wfScopeOk(wf);});
+    const stats=DB.workflowStats??{triggers:{},entities:{}};
+    const byEntity=Object.keys(WFLOW_ENTITY_FA).map(t=>{
+      const list=wfs.filter(w=>w.entityType===t);
+      const ex=execs.filter(e=>e.entityType===t);
+      const st=stats.entities[t]??{count:0,lastAt:null,lastTrigger:null};
+      return {entityType:t,fa:WFLOW_ENTITY_FA[t],workflows:list.length,active:list.filter(w=>w.isActive).length,
+        executions:ex.length,running:ex.filter(e=>['RUNNING','WAITING'].includes(e.status)).length,
+        completed:ex.filter(e=>e.status==='COMPLETED').length,failed:ex.filter(e=>e.status==='FAILED').length,
+        events:st.count,lastEventAt:st.lastAt,lastTrigger:st.lastTrigger};
+    }).filter(x=>x.workflows>0||x.events>0);
+    const byTrigger=Object.entries(stats.triggers).map(([type,st])=>({type,fa:WFLOW_TRIGGER_FA[type]??type,count:st.count??0,lastAt:st.lastAt??null}))
+      .sort((a,b)=>b.count-a.count);
+    return json(res,200,{generatedAt:nowIso(),engine:'running',
+      totals:{workflows:wfs.length,active:wfs.filter(w=>w.isActive).length,executions:execs.length,
+        live:execs.filter(e=>['RUNNING','WAITING'].includes(e.status)).length,
+        completed:execs.filter(e=>e.status==='COMPLETED').length,failed:execs.filter(e=>e.status==='FAILED').length,
+        approvalsPending:(DB.workflowApprovals??[]).filter(a=>a.status==='PENDING').length,
+        coveredEntities:byEntity.filter(x=>x.active>0).length},
+      byEntity,byTrigger});
   }
   if(is('/workflows')&&method==='GET'){
     if(!wfPerm('workflow.read')) return json(res,403,{message:'شما مجوز «مشاهده گردش کارها» (workflow.read) را ندارید.'});
