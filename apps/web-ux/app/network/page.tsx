@@ -207,7 +207,6 @@ export default function Page() {
   const [path, setPath] = useState<any>(null);
   const [columns, setColumns] = useState<any[] | null>(null);
   const [sna, setSna] = useState<any | null>(null);
-  const [snaBusy, setSnaBusy] = useState('');
   const [predict, setPredict] = useState<any | null>(null);
   // گراف ۴ ستونی: ستون هر پیوند از edgeCategory روی گراف/پیوند می‌آید
   useEffect(() => {
@@ -236,11 +235,23 @@ export default function Page() {
     retry();
     return () => { alive = false; };
   }, []);
-  const acceptEdge = async (id: string) => {
-    setSnaBusy(id);
-    try { setSna(await apiPost<any>(`/network/edge-suggestions/${encodeURIComponent(id)}/accept`, {})); }
-    catch (e: any) { setError(e?.message || 'پذیرش پیوند ناموفق بود'); }
-    finally { setSnaBusy(''); }
+  /* «پذیرش و پیگیری معرفی»: فرم معرفی را با دادهٔ شکاف باز میکند؛ پس از ثبت،
+     معرفی در فهرست معرفیها میآید و همین پیشنهاد در شبکه پذیرفتهشده حساب میشود. */
+  const openReferral = (h: any) => {
+    const p = new URLSearchParams();
+    p.set('new', '1');
+    p.set('title', `معرفی ${h.viaPerson ?? h.fromOrgName ?? ''} به ${h.toPerson ?? h.toOrgName ?? ''}`);
+    const srcPerson = h.viaPersonId ?? '';
+    const dstPerson = h.toPersonId ?? '';
+    if (srcPerson) { p.set('srcType', 'person'); p.set('src', srcPerson); }
+    else { p.set('srcType', 'org'); p.set('src', h.fromOrg ?? ''); }
+    if (dstPerson) { p.set('dstType', 'person'); p.set('dst', dstPerson); }
+    else { p.set('dstType', 'org'); p.set('dst', h.toOrg ?? ''); }
+    p.set('goal', h.reason ?? `برقراری ارتباط میان «${h.fromOrgName}» و «${h.toOrgName}»`);
+    p.set('message', `پیشنهاد شبکه: ${h.reason ?? ''}`);
+    p.set('suggestion', h.id ?? '');
+    router.push(`/referrals?${p.toString()}`);
+    log(`باز کردن فرم معرفی برای شکاف «${h.fromOrgName}» ↔ «${h.toOrgName}»`);
   };
   const [analysis, setAnalysis] = useState<any>(null);
   const [analysisKind, setAnalysisKind] = useState('');
@@ -753,9 +764,10 @@ export default function Page() {
                     <small className="t-muted" style={{ display: 'block' }}>{h.reason}</small>
                   </span>
                   {h.expectedValue > 0 && <span className="chip info">{fmtNum(h.expectedValue / 1e9)} میلیارد تومان</span>}
-                  <button className="btn btn-primary" style={{ minHeight: 0, padding: '5px 12px', fontSize: 12 }} disabled={snaBusy === h.id}
-                    onClick={() => acceptEdge(h.id)}>
-                    {snaBusy === h.id ? '…' : 'پذیرش و پیگیری معرفی'}
+                  <button className="btn btn-primary" style={{ minHeight: 0, padding: '5px 12px', fontSize: 12 }}
+                    onClick={() => openReferral(h)} title="باز کردن فرم معرفی با دادهٔ این شکاف">
+                    <UserPlus size={12} style={{ verticalAlign: '-2px', marginInlineEnd: 4 }} />
+                    پذیرش و پیگیری معرفی
                   </button>
                 </div>
               ))}

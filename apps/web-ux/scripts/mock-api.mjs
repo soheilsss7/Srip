@@ -19,7 +19,7 @@ const PORT = Number(process.env.MOCK_API_PORT || 4000);
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.06.16';
+const DEMO_MOCK_VERSION = '2026.09.06.17';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -5893,7 +5893,14 @@ const server=http.createServer(async(req,res)=>{
   }
 /* ------------------------------ referrals ------------------------------ */
   if(is('/core-domain/referrals')&&method==='GET'){
-    const list=(DB.referrals??[]).filter(r=>inScope(req,r.sourceOrganizationId)||inScope(req,r.targetOrganizationId));
+    /* معرفی شخص→شخص هم باید دیده شود: محدوده از سازمانِ اشخاص مبدأ/مقصد تعیین میشود */
+    const refInScope=(r)=>{
+      const sp=r.sourcePersonId?personById(r.sourcePersonId):null;
+      const tp=r.targetPersonId?personById(r.targetPersonId):null;
+      return inScope(req,r.sourceOrganizationId)||inScope(req,r.targetOrganizationId)
+        ||(sp&&inScope(req,sp.organizationId))||(tp&&inScope(req,tp.organizationId));
+    };
+    const list=(DB.referrals??[]).filter(refInScope);
     const enrich=(r)=>({...r,
       sourcePerson:personById(r.sourcePersonId)?{id:r.sourcePersonId,firstName:personById(r.sourcePersonId).firstName,lastName:personById(r.sourcePersonId).lastName}:null,
       targetPerson:personById(r.targetPersonId)?{id:r.targetPersonId,firstName:personById(r.targetPersonId).firstName,lastName:personById(r.targetPersonId).lastName}:null,
@@ -5922,11 +5929,21 @@ const server=http.createServer(async(req,res)=>{
     if(b.outcome&&!REF_OUTCOME_LIST.includes(String(b.outcome).toUpperCase())) return json(res,400,{message:'نتیجهٔ معرفی نامعتبر است.'});
     if(b.opportunityId&&!OPPORTUNITIES.some(x=>x.id===b.opportunityId)) return json(res,404,{message:'فرصت یافت نشد.'});
     const r={id:`ref-${Date.now()}`,title:String(b.title).trim(),message:b.message??null,sourcePersonId:b.sourcePersonId??null,targetPersonId:b.targetPersonId??null,sourceOrganizationId:b.sourceOrganizationId??null,targetOrganizationId:b.targetOrganizationId??null,relationshipId:b.relationshipId??null,status:'PENDING',createdById:authUser.id,recipientUserId:b.recipientUserId??null,completedAt:null,notes:null,createdAt:nowIso(),acceptedAt:null,instruction:ins,baselineCriteria:null,postCheckins:{},requestStatus:b.requestStatus?String(b.requestStatus).toUpperCase():null,requestedAt:b.requestStatus==='REQUESTED'?nowIso():null,outcome:b.outcome?String(b.outcome).toUpperCase():null,outcomeNote:b.outcomeNote??null,opportunityId:b.opportunityId??null};
+    let acceptedSuggestion=false;
+    if(b.suggestionId){
+      const sid=String(b.suggestionId);
+      DB.edgeSuggestionAccepts=Array.isArray(DB.edgeSuggestionAccepts)?DB.edgeSuggestionAccepts:[];
+      if(!DB.edgeSuggestionAccepts.some(x=>x.suggestionId===sid)){
+        DB.edgeSuggestionAccepts.push({suggestionId:sid,userId:authUser.id,referralId:r.id,at:nowIso()});
+        NOTIFICATIONS.unshift({id:`n-${Date.now()}`,userId:authUser.id,title:'پیشنهاد معرفی پذیرفته شد',body:`معرفی «${r.title}» از پیشنهاد شبکه ثبت و پذیرفته شد و به فهرست معرفیها اضافه شد.`,type:'INFO',priority:'MEDIUM',isRead:false,createdAt:nowIso()});
+      }
+      acceptedSuggestion=true;
+    }
     DB.referrals.unshift(r); saveDb();
     const auditRes=referralAudit(r);
     audit(req,'CREATE','Referral',r.id,'OK',{meta:{title:r.title,status:'PENDING',gate:auditRes.gate}});
     if(auditRes.gate==='BLOCKED') NOTIFICATIONS.unshift({id:`n-ref-${Date.now()}`,userId:authUser.id,type:'ALERT',title:'معرفی به ممیزی خورد',body:`«${r.title}»: ${auditRes.checks.filter((x)=>x.level==='BLOCK').map((x)=>x.label).join('، ')} — ابتدا شرایط را اصلاح کنید.`,channel:'IN_APP',priority:'HIGH',createdAt:nowIso(),readAt:null,data:{referralId:r.id}});
-    return json(res,201,{...r,createdBy:userById(r.createdById)?{id:r.createdById,name:userById(r.createdById).name}:null,recipientUser:userById(r.recipientUserId)?{id:r.recipientUserId,name:userById(r.recipientUserId).name}:null,instruction:ins,audit:auditRes});
+    return json(res,201,{...r,createdBy:userById(r.createdById)?{id:r.createdById,name:userById(r.createdById).name}:null,recipientUser:userById(r.recipientUserId)?{id:r.recipientUserId,name:userById(r.recipientUserId).name}:null,instruction:ins,audit:auditRes,acceptedSuggestion});
   }
   const refPatch=match('/core-domain/referrals/:id');
   if(refPatch&&method==='PATCH'){

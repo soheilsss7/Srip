@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { api } from '../_lib/api';
 import { fa } from '../_lib/fa';
 import { useWorkspace } from '../_components/workspace';
@@ -120,6 +120,9 @@ export default function ReferralsPage() {
   });
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
+  /* پیش‌پرشدن فرم از «پیشنهاد معرفی» شبکهٔ ارتباطات (پارامترهای آدرس) */
+  const prefillRef = useRef(false);
+  const suggestionRef = useRef('');
 
   const [detail, setDetail] = useState<RefRow | null>(null);
   const [finishFor, setFinishFor] = useState<RefRow | null>(null);
@@ -149,6 +152,46 @@ export default function ReferralsPage() {
     finally { setLoading(false); }
   }, []);
   useEffect(() => { load(); }, [load]);
+
+  /* پر کردن خودکار فرم از «پذیرش و پیگیری معرفی» در شبکهٔ ارتباطات */
+  useEffect(() => {
+    if (loading || prefillRef.current || typeof window === 'undefined') return;
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get('new') !== '1') return;
+    prefillRef.current = true;
+    const ppl = people as MiniPerson[];
+    const orgsL = orgs as MiniOrg[];
+    const usersL = users as MiniUser[];
+    const srcType = sp.get('srcType') === 'org' ? 'org' : 'person';
+    const dstType = sp.get('dstType') === 'user' ? 'user' : sp.get('dstType') === 'org' ? 'org' : 'person';
+    const srcRaw = sp.get('src') ?? '';
+    const dstRaw = sp.get('dst') ?? '';
+    const srcOk = srcType === 'org' ? orgsL.some(o => o.id === srcRaw) : ppl.some(p => p.id === srcRaw);
+    const dstOk = dstType === 'user' ? usersL.some(u => u.id === dstRaw) : dstType === 'org' ? orgsL.some(o => o.id === dstRaw) : ppl.some(p => p.id === dstRaw);
+    const srcLabel = srcType === 'org'
+      ? orgsL.find(o => o.id === srcRaw)?.name ?? ''
+      : personName(ppl.find(p => p.id === srcRaw));
+    const dstLabel = dstType === 'user'
+      ? usersL.find(u => u.id === dstRaw)?.email ?? ''
+      : dstType === 'org'
+        ? orgsL.find(o => o.id === dstRaw)?.name ?? ''
+        : personName(ppl.find(p => p.id === dstRaw));
+    suggestionRef.current = sp.get('suggestion') ?? '';
+    setForm(f => ({
+      ...f,
+      title: sp.get('title') || (srcLabel && dstLabel ? `معرفی ${srcLabel} به ${dstLabel}` : ''),
+      srcType, srcId: srcOk ? srcRaw : '',
+      dstType, dstId: dstOk ? dstRaw : '',
+      message: sp.get('message') ?? '',
+      goal: sp.get('goal') || (srcLabel && dstLabel ? `برقراری ارتباط و بررسی فرصت همکاری میان «${srcLabel}» و «${dstLabel}»` : ''),
+      forbidden: sp.get('forbidden') || 'مذاکره یا توافق نهایی بدون هماهنگی با واحد روابط',
+      boundaries: sp.get('boundaries') || 'حداکثر دو جلسهٔ مقدماتی؛ نتیجه حداکثر در ۳۰ روز ثبت شود.',
+      dueDays: sp.get('dueDays') || '30',
+    }));
+    setOpen(true);
+    setFormError('');
+    try { window.history.replaceState(null, '', window.location.pathname + window.location.hash); } catch {}
+  }, [loading, people, orgs, users]);
 
   const stats = useMemo(() => {
     const by = (s: string) => rows.filter(r => r.status === s).length;
@@ -184,6 +227,7 @@ export default function ReferralsPage() {
     else if (form.dstType === 'person') body.targetPersonId = form.dstId;
     else body.recipientUserId = form.dstId;
     if (form.relationshipId) body.relationshipId = form.relationshipId;
+    if (suggestionRef.current) body.suggestionId = suggestionRef.current;
     body.instruction = {
       goal: form.goal.trim(),
       allowed: form.allowed.split(/[,،;]/).map(s => s.trim()).filter(Boolean).slice(0, 6),
@@ -193,14 +237,19 @@ export default function ReferralsPage() {
     };
     try {
       const res: any = await api('/core-domain/referrals', { method: 'POST', body: JSON.stringify(body) });
+      const fromSuggestion = !!suggestionRef.current;
+      suggestionRef.current = '';
       setOpen(false);
       setForm({ title: '', srcType: 'person', srcId: '', dstType: 'org', dstId: '', message: '', goal: '', allowed: '', forbidden: '', boundaries: '', dueDays: '30', relationshipId: '' });
       const g = res?.audit?.gate;
-      setFlash(g === 'BLOCKED'
+      const gateMsg = g === 'BLOCKED'
         ? 'معرفی ثبت شد اما ممیزی قرمز است — پذیرش تا رفع موارد مسدودکننده ممکن نیست.'
         : g === 'WARN'
           ? 'معرفی ثبت شد؛ ممیزی زرد است — موارد هشدار را در جزئیات ببینید.'
-          : 'معرفی ثبت شد و ممیزی پیش از پذیرش سبز است.');
+          : 'معرفی ثبت شد و ممیزی پیش از پذیرش سبز است.';
+      setFlash(fromSuggestion
+        ? `معرفی از پیشنهاد شبکه ثبت شد و به فهرست معرفیها اضافه شد — ${gateMsg}`
+        : gateMsg);
       await load();
     } catch (x) { setFormError((x as Error).message); }
     finally { setSaving(false); }
