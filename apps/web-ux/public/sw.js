@@ -9433,10 +9433,11 @@ async function __handler(req, res) {
     let rows=(DB.publicsMembers??[]);
     if(orgId){ if(!inScope(req,orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'}); rows=rows.filter(m=>m.orgId===orgId); }
     else rows=rows.filter(m=>inScope(req,m.orgId));
-    const cat=q.get('categoryId'); if(cat) rows=rows.filter(m=>m.categoryId===cat);
     const stance=q.get('stance'); if(stance) rows=rows.filter(m=>m.stance===stance);
     const stage=q.get('stage'); if(stage) rows=rows.filter(m=>m.stage===stage);
-    const views=rows.map(pubMemberView).sort((a,b)=>String(a.groupFa??'').localeCompare(String(b.groupFa??''),'fa'));
+    let views=rows.map(pubMemberView);
+    const cat=q.get('categoryId'); if(cat) views=views.filter(m=>m.categoryId===cat);
+    views.sort((a,b)=>String(a.groupFa??'').localeCompare(String(b.groupFa??''),'fa'));
     return json(res,200,{items:views,total:views.length,orgId:orgId??null});
   }
   if(is('/publics/members')&&method==='POST'){
@@ -9546,6 +9547,11 @@ async function __handler(req, res) {
     }
     DB.exportLog=(DB.exportLog??[]); // keep consistency with other exports
     return json(res,200,{orgId,generatedAt:nowIso(),total:rows.length,items:rows});
+  }
+  if(is('/publics/media')&&method==='GET'){
+    if(!hasPerm('publics.read')) return json(res,403,{message:'شما مجوز «مشاهده عموم‌ها» (publics.read) را ندارید.'});
+    const rows=(DB.mediaStore??[]).slice().sort((a,b)=>String(a.createdAt??'').localeCompare(String(b.createdAt??'')));
+    return json(res,200,{items:rows,total:rows.length});
   }
   if(is('/publics/media')&&method==='POST'){
     if(!hasPerm('publics.write')) return json(res,403,{message:'شما مجوز «مدیریت عموم‌ها» (publics.write) را ندارید.'});
