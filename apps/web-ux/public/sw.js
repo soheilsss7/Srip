@@ -9626,13 +9626,21 @@ async function __handler(req, res) {
     if(!orgId) return json(res,400,{message:'سازمان (orgId) مشخص نشده است.'});
     if(!inScope(req,orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
     const rows=(DB.publicsMembers??[]).filter(m=>m.orgId===orgId).map(pubMemberView);
-    const fmt=q.get('format')==='csv'?'csv':'json';
+    const fmt=q.get('format')==='csv'?'csv':q.get('format')==='xls'?'xls':'json';
     if(fmt==='csv'){
       const head=['id','group','category','linkage','stage','stance','power','interest','sourceType','sourceName','note','assessedAt','reviewDue'];
       const esc=(v)=>`"${String(v??'').replace(/"/g,'""')}"`;
       const csv=[head.join(','),...rows.map(r=>[r.id,r.groupFa,r.categoryFa,r.linkageFa,r.stageFa,r.stanceFa,r.power,r.interest,r.sourceType,r.sourceName,r.note,r.assessedAt,r.reviewDue].map(esc).join(','))].join('\n');
       res.writeHead(200,{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':`attachment; filename="publics-${orgId}.csv"`});
       return res.end('\ufeff'+csv);
+    }
+    if(fmt==='xls'){
+      /* Excel-compatible HTML table (RTL) — بدون وابستگی خارجی */
+      const hesc=(v)=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const tr=(cells)=>`<tr>${cells.map(c=>`<td>${hesc(c)}</td>`).join('')}</tr>`;
+      const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>نقشه عموم‌ها</x:Name><x:WorksheetOptions><x:DisplayRightToLeft/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body><table border="1"><thead>${tr(head)}</thead><tbody>${rows.map(r=>tr([r.id,r.groupFa,r.categoryFa,r.linkageFa,r.stageFa,r.stanceFa,r.power,r.interest,r.sourceType,r.sourceName,r.note,r.assessedAt,r.reviewDue])).join('')}</tbody></table></body></html>`;
+      res.writeHead(200,{'Content-Type':'application/vnd.ms-excel; charset=utf-8','Content-Disposition':`attachment; filename="publics-${orgId}.xls"`});
+      return res.end(html);
     }
     DB.exportLog=(DB.exportLog??[]); // keep consistency with other exports
     return json(res,200,{orgId,generatedAt:nowIso(),total:rows.length,items:rows});

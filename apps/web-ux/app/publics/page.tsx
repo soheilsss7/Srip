@@ -7,6 +7,7 @@ import {
   Building2, Users2, Radar, AlertTriangle, Download, FileJson, FileSpreadsheet, Fingerprint,
   Plus, RefreshCw, Trash2, SlidersHorizontal, Megaphone, Newspaper, Target, Eye, Heart,
   CheckCircle2, ChevronLeft, Layers, Landmark, GraduationCap, Briefcase, Newspaper as News2, Cpu,
+  Copy, Sparkles, UserPlus,
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
@@ -321,7 +322,7 @@ export default function PublicsPage() {
   };
 
   /* ---------- export ---------- */
-  const downloadExport = async (format: 'json' | 'csv') => {
+  const downloadExport = async (format: 'json' | 'csv' | 'xls') => {
     setBusy(`exp-${format}`);
     try {
       if (format === 'json') {
@@ -332,10 +333,11 @@ export default function PublicsPage() {
         a.href = url; a.download = `publics-${orgId}.json`; a.click();
         URL.revokeObjectURL(url);
       } else {
-        const blob = await apiBlob(`/publics/export?orgId=${encodeURIComponent(orgId)}&format=csv`);
+        const fmt = format === 'xls' ? 'xls' : 'csv';
+        const blob = await apiBlob(`/publics/export?orgId=${encodeURIComponent(orgId)}&format=${fmt}`);
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url; a.download = `publics-${orgId}.csv`; a.click();
+        a.href = url; a.download = `publics-${orgId}.${fmt}`; a.click();
         URL.revokeObjectURL(url);
       }
       notify('خروجی نقشهٔ عمومها آماده شد.');
@@ -373,6 +375,22 @@ export default function PublicsPage() {
     return out;
   }, [me, orgs]);
   const selectedOrgName = orgOptions.find(o => o.id === orgId)?.name ?? selfRow?.orgName ?? orgId;
+
+  const briefText = useMemo(() => {
+    const cov = coverage?.totals;
+    const pct = cov && cov.groupsExpected ? Math.round((cov.groupsCovered / cov.groupsExpected) * 100) : 0;
+    const crit = (gaps?.gaps ?? []).filter(g => g.severity === 'CRITICAL');
+    const top = crit.slice(0, 3);
+    const route = top[0]?.pathSuggestion?.route.map(r => r.label).join(' ← ') ?? '—';
+    return [
+      `${coverage?.orgName ?? orgId} — بریف نقشهٔ عموم‌ها`,
+      `قالب: ${coverage?.templateFa ?? '—'} · ${fmtNum(cov?.groupsExpected ?? 0)} گروه هدف · ${fmtNum(cov?.members ?? 0)} عضو ثبت‌شده · پوشش ${fmtNum(pct)}٪`,
+      `گپ‌ها: ${fmtNum(gaps?.totals.gaps ?? 0)} (که ${fmtNum(gaps?.totals.criticalGaps ?? 0)} بحرانی) · بازیگر کلیدی ${fmtNum(cov?.keyPlayers ?? 0)}`,
+      top.length ? `اولویت‌های فوری: ${top.map(g => `${g.groupFa}${g.categoryFa ? ` (${g.categoryFa})` : ''}`).join('؛ ')}` : 'گپ بحرانی فعلی وجود ندارد.',
+      `اقدام اول: ${top[0]?.action ?? 'بازبینی دوره‌ای و تعامل با بازیگران کلیدی'} — مسیر پیشنهادی: ${route}`,
+      `پیشنهاد: ${crit[0]?.pathSuggestion?.direct ? 'ورود مستقیم به گپ' : (top[0]?.pathSuggestion ? 'تقویت کانال موجود در شبکه' : 'بازبینی و تکمیل نقشه')}`,
+    ].join('\n');
+  }, [coverage, gaps, orgId]);
 
   if (!canRead) {
     return (
@@ -618,12 +636,24 @@ export default function PublicsPage() {
           {/* ---------------- گپها و اقدام ---------------- */}
           {tab === 'gaps' && (
             <div className="stack" style={{ gap: 14 }}>
-              <div className="stat-grid">
+              <div className="stat-grid" data-kpi="publics">
+                <StatCard icon={<Layers size={16} />} iconClass="ic-blue" label="پوشش قالب" value={`${fmtNum(coverage?.totals.groupsExpected ? Math.round((coverage.totals.groupsCovered / coverage.totals.groupsExpected) * 100) : 0)}٪`} sub={`${fmtNum(coverage?.totals.groupsCovered ?? 0)} از ${fmtNum(coverage?.totals.groupsExpected ?? 0)} گروه`} />
+                <StatCard icon={<Target size={16} />} iconClass="ic-orange" label="گپ بحرانی" value={fmtNum(gaps?.totals.criticalGaps ?? 0)} />
                 <StatCard icon={<AlertTriangle size={16} />} iconClass="ic-red" label="گپها" value={fmtNum(gaps?.totals.gaps ?? 0)} />
-                <StatCard icon={<Target size={16} />} iconClass="ic-orange" label="بحرانی" value={fmtNum(gaps?.totals.criticalGaps ?? 0)} />
-                <StatCard icon={<Layers size={16} />} iconClass="ic-blue" label="غایب" value={fmtNum(gaps?.totals.missing ?? 0)} />
-                <StatCard icon={<ClockIcon />} iconClass="ic-purple" label="عقبمانده" value={fmtNum(gaps?.totals.lagging ?? 0)} />
+                <StatCard icon={<Users2 size={16} />} iconClass="ic-purple" label="بازیگر کلیدی" value={fmtNum(coverage?.totals.keyPlayers ?? 0)} />
+                <StatCard icon={<ClockIcon />} iconClass="ic-amber" label="سررسید بازبینی" value={fmtNum((members ?? []).filter(m => m.reviewDue && new Date(m.reviewDue).getTime() < Date.now()).length)} />
+                <StatCard icon={<UserPlus size={16} />} iconClass="ic-green" label="عقبمانده" value={fmtNum(gaps?.totals.lagging ?? 0)} />
               </div>
+              <SectionCard
+                title="بریف یکصفحهای عمومها"
+                icon={<Sparkles size={15} />}
+                description="خلاصهٔ اجرایی برای هیئت/مدیریت — از دادهٔ همین نقشه"
+                actions={
+                  <button className="btn" onClick={() => { navigator.clipboard?.writeText(briefText).then(() => notify('بریف کپی شد.')).catch(() => notify('کپی بریف ناموفق بود.')); }}><Copy size={13} /> کپی بریف</button>
+                }
+              >
+                <pre data-brief="publics" dir="rtl" style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: 12.5, lineHeight: 1.9, margin: 0, background: 'var(--card-bg-soft, #F7F9FC)', padding: '12px 14px', borderRadius: 10 }}>{briefText}</pre>
+              </SectionCard>
               <SectionCard
                 title="گپهای نقشهٔ عمومها"
                 icon={<AlertTriangle size={15} />}
@@ -686,6 +716,7 @@ export default function PublicsPage() {
                 <div className="stack" style={{ gap: 8 }}>
                   <button className="btn btn-primary" disabled={busy === 'exp-json'} onClick={() => downloadExport('json')}><FileJson size={14} /> خروجی JSON</button>
                   <button className="btn" disabled={busy === 'exp-csv'} onClick={() => downloadExport('csv')}><FileSpreadsheet size={14} /> خروجی CSV</button>
+                  <button className="btn" disabled={busy === 'exp-xls'} onClick={() => downloadExport('xls')}><FileSpreadsheet size={14} /> خروجی Excel</button>
                   <span className="field-hint">در CSV ستونها: گروه، دسته، پیوند، مرحله، موضع، قدرت/علاقه، منبع، سررسید بازبینی.</span>
                 </div>
               </SectionCard>
