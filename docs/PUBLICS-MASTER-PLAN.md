@@ -255,4 +255,24 @@ SRIP_BASE_PATH=/SRIP SRIP_OUT_DIR=/tmp/srip-host-deploy bash scripts/release-ux.
 
 ---
 
+## ۹) وضعیت P1 — موتور بک‌اند (پیاده‌سازی‌شده در `mock-api.mjs`)
+
+**روت‌های API (همه با مجوز `publics.read`/`publics.write` و محدودهٔ سازمانی):**
+- `GET /publics/catalog` — کاتالوگ: ۶ دسته، ۵ پیوند، ۴ مرحله، ۴ موضع، ۷ قالب شرکت (HOLDING با ۱۰۵ گروه).
+- `GET/PUT /publics/self/:orgId` — «من کیستم»: نوع شرکت + قالب + ساختار (۱۲ حوزه، زیرمجموعه‌ها) + دورهٔ بازبینی.
+- `GET/POST /publics/members`، `PATCH/DELETE /publics/members/:id` — اعضا؛ ثبت با پیشنهاد خودکار (پیوند/مرحله/قدرت-علاقه/موضع از روی منبع و سیگنال‌های ۹۰ روزه) و ارزیابی دستی.
+- `GET /publics/coverage?orgId=` — پوشش به تفکیک ۶ دسته (گروه‌های پوشش/غایب، توزیع مرحله و موضع، ٪ پوشش).
+- `GET /publics/gaps?orgId=` — گپ‌ها: عموم کلیدی غایب (بحرانی)، عقب‌مانده (key player غیر فعال)، نبود پوشش رسانه‌ای.
+- `GET /publics/review-due?orgId=` — سررسید بازبینی + اجرای محرک `PUBLIC_REVIEW_DUE`.
+- `GET /publics/export?orgId=&format=json|csv` — خروجی نقشهٔ عموم‌ها.
+- `POST /publics/media` — موجودیت جدید `Media` (زومیت/دیجیاتو/پیوست/دنیای اقتصاد نمونه‌کار) + محرک `MEDIA_CREATED`.
+
+**محرک‌های گردش‌کار (`/workflows/coverage`):** `PUBLIC_MEMBER_ADDED`، `PUBLIC_STAGE_CHANGED`، `PUBLIC_GAP_DETECTED`، `PUBLIC_REVIEW_DUE`، `MEDIA_CREATED` — گردش‌کارهای `wf-15..wf-19` و موجودیت‌های جدید `PublicMember`/`Publics`/`Media` ثبت شده‌اند.
+
+**پایگاه داده دمو:** `DB.publicsCatalog/self/members/mediaStore` + `DB.workflowStats`؛ نسخهٔ بذر گردش‌کار `3`. `DEMO_MOCK_VERSION=2026.09.08.19`.
+
+**تست:** `/tmp/publics-e2e.sh` — ۱۸ بررسی سبز (کاتالوگ، خودشناسی، اعضا، پوشش، گپ، ارزیابی، خروجی CSV/JSON، محرک‌ها، محدودهٔ دسترسی). تأیید نهایی شما → P2 (هاب UI).
+
+---
+
 *منبع متنی استخراج‌شده: `docs/عموم‌ها-extracted.md` — ۳۴۹ بلوک، ۳۷٬۷۰۰ نویسهٔ محتوا، ۳۲ جدول. سند اصلی (`docs/عموم‌ها.docx`) همین‌جا نگهداری می‌شود تا در بستهٔ انتشار بماند.*

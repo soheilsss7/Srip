@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.07.18';
+const DEMO_MOCK_VERSION = '2026.09.08.19';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -3729,6 +3729,7 @@ function loadDb() {
   seedReferralStore();
   seedApprovals();
   seedWorkflowStore();
+  seedPublicsStore();
   seedSecurityEvents();
   seedPrivacyStore();
   seedEnterpriseStore();
@@ -3755,8 +3756,8 @@ function audit(req, action, entity, entityId, outcome = 'OK', meta = {}) {
 
 /* --------------------------- admin: RBAC catalog & access recompute ----- */
 const ROLE_LABELS_ADMIN={SUPER_ADMIN:'مدیر کل سیستم',HOLDING_ADMIN:'مدیر هلدینگ',HOLDING_EXECUTIVE:'مدیر ارشد هلدینگ',SUBSIDIARY_ADMIN:'مدیر شرکت',SUBSIDIARY_EXECUTIVE:'مدیر ارشد شرکت',RELATIONSHIP_MANAGER:'مدیر روابط',PROJECT_MANAGER:'مدیر پروژه',ANALYST:'تحلیلگر',STANDARD_USER:'کاربر استاندارد',READ_ONLY:'فقط خواندنی'};
-const R_READ=['dashboard.read','organization.read','person.read','relationship.read','network.read','interaction.read','meeting.read','action.read','commitment.read','project.read','opportunity.read','recommendation.read','report.read','document.read','notification.read','search.read','calendar.read','help.read','user.read','session.read','analytics.read','ai.query','ai.executive_brief'];
-const R_WRITE=['person.write','relationship.write','interaction.write','meeting.write','action.write','commitment.write','project.write','opportunity.write','recommendation.تأیید','document.write','data.manage'];
+const R_READ=['dashboard.read','publics.read','organization.read','person.read','relationship.read','network.read','interaction.read','meeting.read','action.read','commitment.read','project.read','opportunity.read','recommendation.read','report.read','document.read','notification.read','search.read','calendar.read','help.read','user.read','session.read','analytics.read','ai.query','ai.executive_brief'];
+const R_WRITE=['publics.write','person.write','relationship.write','interaction.write','meeting.write','action.write','commitment.write','project.write','opportunity.write','recommendation.تأیید','document.write','data.manage'];
 const R_READONLY_PERMS=R_READ.filter(p=>!['ai.query','ai.executive_brief','analytics.read','recommendation.read'].includes(p));
 const ROLE_CATALOG=[
   {key:'SUPER_ADMIN',name:ROLE_LABELS_ADMIN.SUPER_ADMIN,description:'مالک سامانه — دسترسی کامل، غیرقابل واگذاری.',holding:true,perms:['*']},
@@ -3772,7 +3773,7 @@ const ROLE_CATALOG=[
 ];
 
 /* ---------- permission catalog (system-wide, deterministic) ---------- */
-const PERMISSION_GROUPS_FA={General:'عمومی',Core:'هسته',Meetings:'جلسات',Work:'اقدامات و پروژه‌ها',Intelligence:'هوش و تحلیل',Knowledge:'دانش و جستجو',Account:'حساب و نشست',DataGovernance:'داده و کیفیت',Security:'امنیت',Admin:'مدیریت و یکپارچه‌سازی'};
+const PERMISSION_GROUPS_FA={General:'عمومی',Core:'هسته',Meetings:'جلسات',Work:'اقدامات و پروژه‌ها',Intelligence:'هوش و تحلیل',Knowledge:'دانش و جستجو',Account:'حساب و نشست',DataGovernance:'داده و کیفیت',Security:'امنیت',Admin:'مدیریت و یکپارچه‌سازی',Publics:'عموم‌ها'};
 const P_DEFS=[
   ['General','dashboard.read','مشاهده داشبورد'],
   ['Core','organization.read','مشاهده سازمان‌ها'],['Core','organization.write','ثبت و ویرایش سازمان'],['Core','org.read','مشاهده سازمان (سازگاری)'],
@@ -3786,6 +3787,7 @@ const P_DEFS=[
   ['Work','project.read','مشاهده پروژه‌ها'],['Work','project.write','مدیریت پروژه'],
   ['Work','opportunity.read','مشاهده فرصت‌ها'],['Work','opportunity.write','ثبت و تغییر فرصت'],
   ['Work','approval.read','مشاهده تأییدها'],['Work','workflow.read','مشاهده گردش کارها'],
+  ['Publics','publics.read','مشاهده عموم‌ها'],['Publics','publics.write','مدیریت عموم‌ها'],
   ['Intelligence','analytics.read','تحلیل و هوشمندی'],['Intelligence','analytics.write','ثبت رویداد و نتیجهٔ سنجش'],['Intelligence','ai.query','پرس‌وجوی هوشمند'],['Intelligence','ai.executive_brief','گزارش راهبردی هوش مصنوعی'],
   ['Intelligence','recommendation.read','مشاهده پیشنهادها'],['Intelligence','recommendation.تأیید','تأیید پیشنهاد'],['Intelligence','report.read','مشاهده و خروجی گزارش‌ها'],
   ['Knowledge','document.read','مشاهده اسناد'],['Knowledge','document.write','بارگذاری و ویرایش سند'],
@@ -4806,8 +4808,182 @@ function dqDetectCandidates(entityType,data,oid,orgScope){
 
 /* گردش‌کارهای پیش‌فرض: هر نهاد اصلی سیستم یک محرک خودکار دارد تا موتور اتوماسیون
    «همهٔ سامانه» را پوشش دهد — رابطه، جلسه، اقدام، تعهد، تعامل، فرصت، معرفی، پروژه، شخص، سازمان. */
-const WFLOW_ENTITY_FA = { Relationship:'رابطه', Organization:'سازمان', Person:'شخص', Meeting:'جلسه', Commitment:'تعهد', Action:'اقدام', Opportunity:'فرصت', Project:'پروژه', Referral:'معرفی', Interaction:'تعامل' };
-const WFLOW_TRIGGER_FA = { MANUAL:'دستی', RELATIONSHIP_CREATED:'ایجاد رابطه', RELATIONSHIP_UPDATED:'به‌روزرسانی رابطه', MEETING_CREATED:'ایجاد جلسه', MEETING_COMPLETED:'ثبت نتیجهٔ جلسه', ACTION_CREATED:'ایجاد اقدام', ACTION_UPDATED:'به‌روزرسانی اقدام', ACTION_COMPLETED:'انجام اقدام', COMMITMENT_CREATED:'ایجاد تعهد', COMMITMENT_UPDATED:'به‌روزرسانی تعهد', COMMITMENT_FULFILLED:'انجام تعهد', INTERACTION_CREATED:'ثبت تعامل', OPPORTUNITY_CREATED:'ایجاد فرصت', OPPORTUNITY_UPDATED:'به‌روزرسانی فرصت', OPPORTUNITY_WON:'پیروزی فرصت', OPPORTUNITY_LOST:'از دست رفتن فرصت', PROJECT_CREATED:'ایجاد پروژه', PROJECT_UPDATED:'به‌روزرسانی پروژه', REFERRAL_CREATED:'ایجاد معرفی', REFERRAL_UPDATED:'به‌روزرسانی معرفی', REFERRAL_ACCEPTED:'پذیرش معرفی', REFERRAL_COMPLETED:'انجام معرفی', REFERRAL_DECLINED:'رد معرفی', PERSON_CREATED:'ایجاد شخص', PERSON_UPDATED:'به‌روزرسانی شخص', ORGANIZATION_CREATED:'ایجاد سازمان', ORGANIZATION_UPDATED:'به‌روزرسانی سازمان' };
+const WFLOW_ENTITY_FA = { Relationship:'رابطه', Organization:'سازمان', Person:'شخص', Meeting:'جلسه', Commitment:'تعهد', Action:'اقدام', Opportunity:'فرصت', Project:'پروژه', Referral:'معرفی', Interaction:'تعامل', PublicMember:'عضو عموم', Publics:'عموم‌ها', Media:'رسانه' };
+const WFLOW_TRIGGER_FA = { MANUAL:'دستی', RELATIONSHIP_CREATED:'ایجاد رابطه', RELATIONSHIP_UPDATED:'به‌روزرسانی رابطه', MEETING_CREATED:'ایجاد جلسه', MEETING_COMPLETED:'ثبت نتیجهٔ جلسه', ACTION_CREATED:'ایجاد اقدام', ACTION_UPDATED:'به‌روزرسانی اقدام', ACTION_COMPLETED:'انجام اقدام', COMMITMENT_CREATED:'ایجاد تعهد', COMMITMENT_UPDATED:'به‌روزرسانی تعهد', COMMITMENT_FULFILLED:'انجام تعهد', INTERACTION_CREATED:'ثبت تعامل', OPPORTUNITY_CREATED:'ایجاد فرصت', OPPORTUNITY_UPDATED:'به‌روزرسانی فرصت', OPPORTUNITY_WON:'پیروزی فرصت', OPPORTUNITY_LOST:'از دست رفتن فرصت', PROJECT_CREATED:'ایجاد پروژه', PROJECT_UPDATED:'به‌روزرسانی پروژه', REFERRAL_CREATED:'ایجاد معرفی', REFERRAL_UPDATED:'به‌روزرسانی معرفی', REFERRAL_ACCEPTED:'پذیرش معرفی', REFERRAL_COMPLETED:'انجام معرفی', REFERRAL_DECLINED:'رد معرفی', PERSON_CREATED:'ایجاد شخص', PERSON_UPDATED:'به‌روزرسانی شخص', ORGANIZATION_CREATED:'ایجاد سازمان', ORGANIZATION_UPDATED:'به‌روزرسانی سازمان', PUBLIC_MEMBER_ADDED:'افزودن عضو عموم', PUBLIC_STAGE_CHANGED:'تغییر مرحلهٔ عموم', PUBLIC_GAP_DETECTED:'کشف گپ عموم', PUBLIC_REVIEW_DUE:'سررسید بازبینی عموم', MEDIA_CREATED:'ثبت رسانه' };
+
+/* ====================== Publics (عموم‌ها) — کاتالوگ و قالب‌ها ====================== */
+const PUBLIC_LINKAGE_FA = {"ENABLING": "فعال‌کننده", "FUNCTIONAL_INPUT": "کارکردی-ورودی", "FUNCTIONAL_OUTPUT": "کارکردی-خروجی", "NORMATIVE": "هنجاری", "DIFFUSED": "پراکنده"};
+const PUBLIC_STAGE_FA = {"NON_PUBLIC": "غیرعموم", "LATENT": "نهفته", "AWARE": "آگاه", "ACTIVE": "فعال"};
+const PUBLIC_STANCE_FA = {"KEY_PLAYER": "بازیگر کلیدی", "INFLUENCER": "تأثیرگذار", "SUPPORTER": "حامی", "OBSERVER": "ناظر"};
+const PUBLIC_CATEGORY_FA = {"INTERNAL": "داخلی", "INSTITUTIONAL": "نهادی و حاکمیتی", "ACADEMIC": "علمی، دانشگاهی و پژوهشی", "ECONOMIC": "اقتصادی و سرمایه‌گذاری", "MEDIA": "رسانه‌ای و عمومی", "ECOSYSTEM": "اکوسیستم فناوری و صنعت"};
+const PUBLIC_CATEGORY_ORDER = ["INTERNAL", "INSTITUTIONAL", "ACADEMIC", "ECONOMIC", "MEDIA", "ECOSYSTEM"];
+const G=(id,cat,fa,link,smin,smax,stance,kanal,note='')=>({id,cat,fa,link,stage:[smin,smax],stance,kanal,note});
+const PUBLICS_TEMPLATE_LIST = [
+{ id:"HOLDING", fa:"هلدینگ / سرمایه‌گذاری چندبخشی", focus:["INTERNAL", "INSTITUTIONAL", "ACADEMIC", "ECONOMIC", "MEDIA", "ECOSYSTEM"], note:"الگوی کامل از سند پارس (۱۲ VC): ۱۰۳+ نهاد در ۶ دسته", groups:[
+    G("h-i1","INTERNAL","هیئت‌مدیره هلدینگ","ENABLING","ACTIVE","ACTIVE","KEY_PLAYER","گفت‌وگوی مستقیم و مستمر","تصمیم‌گیرنده نهایی؛ روایت هسته ابتدا اینجا تثبیت می‌شود"),
+    G("h-i2","INTERNAL","مدیرعامل و تیم C-level (CFO/CTO/CHRO…)","ENABLING","ACTIVE","ACTIVE","KEY_PLAYER","اولین دریافت‌کنندگان هر پیام کلیدی","سخنگویان طبیعی مرجعیت"),
+    G("h-i3","INTERNAL","مدیران‌عامل ۱۲ VC","ENABLING","AWARE","ACTIVE","KEY_PLAYER","برنامهٔ توانمندسازی و روایت مستقل حوزه","بزرگ‌ترین ریسک پراکندگی پیام"),
+    G("h-i4","INTERNAL","مدیران میانی و روسای واحد هر VC","FUNCTIONAL_INPUT","LATENT","AWARE","INFLUENCER","هم‌راستاسازی پیام هسته","مجرای انتقال به صف مقدم"),
+    G("h-i5","INTERNAL","کارکنان عملیاتی ۱۲ VC و زیرمجموعه‌ها","FUNCTIONAL_INPUT","LATENT","LATENT","SUPPORTER","روایت‌سازی داخلی و شبکهٔ سفیران","بزرگ‌ترین جمعیت عموم داخلی"),
+    G("h-i6","INTERNAL","تیم PR و ارتباطات داخلی هلدینگ","ENABLING","ACTIVE","ACTIVE","KEY_PLAYER","شفافیت کامل استراتژی","هم مجری نقشه است، هم خودش عموم داخلی است"),
+    G("h-i7","INTERNAL","بنیان‌گذاران/شرکای مؤسس هر VC","ENABLING","ACTIVE","ACTIVE","KEY_PLAYER","نفوذ غیررسمی و حساسیت رسانه‌ای","وزن فراتر از رسمی؛ دیده نمی‌شوند اما حساس‌اند"),
+    G("h-i8","INTERNAL","کمیته‌های تخصصی (سرمایه‌گذاری/ریسک/فناوری)","ENABLING","AWARE","ACTIVE","INFLUENCER","جریان مستمر تحولات تخصصی","مجرای پیام‌های تخصصی"),
+    G("h-i9","INTERNAL","کارکنان شرکت‌های زیرمجموعهٔ هر VC (لایهٔ دوم)","FUNCTIONAL_INPUT","NON_PUBLIC","LATENT","OBSERVER","آگاهی از اکوسیستم بزرگ‌تر","هویت سازمانی با شرکت زیرمجموعه است"),
+    G("h-i10","INTERNAL","کارکنان و مدیران سابق کلیدی (آلومنای)","DIFFUSED","LATENT","ACTIVE","INFLUENCER","برنامهٔ آف‌بوردینگ ارتباطی","سفیر غیررسمی یا منبع ریسک افشاگری"),
+    G("h-n1","INSTITUTIONAL","شورای ملی راهبری هوش مصنوعی","ENABLING","AWARE","ACTIVE","KEY_PLAYER","گفت‌وگوی رسمی و حضور در جلسات","بالاترین رکن سیاست‌گذاری AI"),
+    G("h-n2","INSTITUTIONAL","ستاد توسعه فناوری و کاربردی‌سازی هوش مصنوعی","ENABLING","AWARE","ACTIVE","KEY_PLAYER","همکاری اجرایی و مشاوره","جانشین سازمان ملی AI؛ کانال اصلی روزمره"),
+    G("h-n3","INSTITUTIONAL","معاونت علمی، فناوری و اقتصاد دانش‌بنیان ریاست‌جمهوری","ENABLING","AWARE","AWARE","KEY_PLAYER","ترمینال رسمی حمایت","سرمایه و اعتبار هم‌زمان"),
+    G("h-n4","INSTITUTIONAL","صندوق توسعهٔ ملی","ENABLING","LATENT","AWARE","INFLUENCER","گزارش مالی و برنامه","کانال مالی-اعتباری پروژه‌های AI"),
+    G("h-n5","INSTITUTIONAL","کمیسیون‌های تخصصی مجلس (صنایع/فرهنگی و لایحهٔ AI)","ENABLING","AWARE","AWARE","KEY_PLAYER","لایحهٔ AI و شنیده شدن","قانون‌گذار نهایی چارچوب فعالیت"),
+    G("h-n6","INSTITUTIONAL","شورای عالی فضای مجازی","ENABLING","AWARE","AWARE","INFLUENCER","سیاست داده و زیرساخت دیجیتال","تنظیم‌گر بالادستی داده"),
+    G("h-n7","INSTITUTIONAL","شورای عالی انقلاب فرهنگی","ENABLING","AWARE","AWARE","INFLUENCER","چارچوب‌های فرهنگی و محتوایی","مرجع محتوای مدل فارسی"),
+    G("h-n8","INSTITUTIONAL","پژوهشگاه ارتباطات و فناوری اطلاعات","ENABLING","AWARE","AWARE","INFLUENCER","گزارش مشترک و کارشناسی","شریک راهبری فکری"),
+    G("h-n9","INSTITUTIONAL","سازمان نظام صنفی رایانه‌ای","NORMATIVE","AWARE","AWARE","INFLUENCER","عضویت و هم‌صدایی صنفی","پل ارتباط با کل صنعت فناوری"),
+    G("h-n10","INSTITUTIONAL","معاونت حقوقی ریاست‌جمهوری و پژوهشگاه قوهٔ قضاییه","ENABLING","LATENT","AWARE","INFLUENCER","چارچوب ریسک حقوقی","مسئولیت الگوریتمی و مالکیت داده"),
+    G("h-ns1","INSTITUTIONAL","تنظیم‌گر بخشی VC انرژی (وزارت نیرو، وزارت نفت، سازمان بهره‌وری انرژی ایران)","ENABLING","AWARE","AWARE","INFLUENCER","مستندسازی پایبندی و مکاتبهٔ رسمی","هر VC تنظیم‌گر بخشی مستقل دارد"),
+    G("h-ns2","INSTITUTIONAL","تنظیم‌گر بخشی VC آموزش (وزارت آموزش‌وپرورش، وزارت علوم)","ENABLING","AWARE","AWARE","INFLUENCER","مستندسازی پایبندی و مکاتبهٔ رسمی","هر VC تنظیم‌گر بخشی مستقل دارد"),
+    G("h-ns3","INSTITUTIONAL","تنظیم‌گر بخشی VC خدمات اجتماعی (وزارت تعاون، کار و رفاه اجتماعی)","ENABLING","AWARE","AWARE","INFLUENCER","مستندسازی پایبندی و مکاتبهٔ رسمی","هر VC تنظیم‌گر بخشی مستقل دارد"),
+    G("h-ns4","INSTITUTIONAL","تنظیم‌گر بخشی VC سلامت (وزارت بهداشت، سازمان غذا و دارو)","ENABLING","AWARE","AWARE","INFLUENCER","مستندسازی پایبندی و مکاتبهٔ رسمی","هر VC تنظیم‌گر بخشی مستقل دارد"),
+    G("h-ns5","INSTITUTIONAL","تنظیم‌گر بخشی VC کشاورزی (وزارت جهاد کشاورزی)","ENABLING","AWARE","AWARE","INFLUENCER","مستندسازی پایبندی و مکاتبهٔ رسمی","هر VC تنظیم‌گر بخشی مستقل دارد"),
+    G("h-ns6","INSTITUTIONAL","تنظیم‌گر بخشی VC مالی (بانک مرکزی، سازمان بورس)","ENABLING","AWARE","AWARE","INFLUENCER","مستندسازی پایبندی و مکاتبهٔ رسمی","هر VC تنظیم‌گر بخشی مستقل دارد"),
+    G("h-ns7","INSTITUTIONAL","تنظیم‌گر بخشی VC مسکن (وزارت راه و شهرسازی)","ENABLING","AWARE","AWARE","INFLUENCER","مستندسازی پایبندی و مکاتبهٔ رسمی","هر VC تنظیم‌گر بخشی مستقل دارد"),
+    G("h-ns8","INSTITUTIONAL","تنظیم‌گر بخشی VC صنعت (وزارت صمت)","ENABLING","AWARE","AWARE","INFLUENCER","مستندسازی پایبندی و مکاتبهٔ رسمی","هر VC تنظیم‌گر بخشی مستقل دارد"),
+    G("h-ns9","INSTITUTIONAL","تنظیم‌گر بخشی VC اعتباری (بانک مرکزی، شورای پول و اعتبار)","ENABLING","AWARE","AWARE","INFLUENCER","مستندسازی پایبندی و مکاتبهٔ رسمی","هر VC تنظیم‌گر بخشی مستقل دارد"),
+    G("h-ns10","INSTITUTIONAL","تنظیم‌گر بخشی VC طراحی صنعتی (وزارت صمت، سازمان استاندارد ملی)","ENABLING","AWARE","AWARE","INFLUENCER","مستندسازی پایبندی و مکاتبهٔ رسمی","هر VC تنظیم‌گر بخشی مستقل دارد"),
+    G("h-ns11","INSTITUTIONAL","تنظیم‌گر بخشی VC لجستیک (وزارت راه و شهرسازی، سازمان راهداری)","ENABLING","AWARE","AWARE","INFLUENCER","مستندسازی پایبندی و مکاتبهٔ رسمی","هر VC تنظیم‌گر بخشی مستقل دارد"),
+    G("h-ns12","INSTITUTIONAL","تنظیم‌گر بخشی VC محتوا (وزارت فرهنگ و ارشاد، شورای عالی انقلاب فرهنگی)","ENABLING","AWARE","AWARE","INFLUENCER","مستندسازی پایبندی و مکاتبهٔ رسمی","هر VC تنظیم‌گر بخشی مستقل دارد"),
+    G("h-a1","ACADEMIC","دانشگاه صنعتی شریف (برق و کامپیوتر/CSICC)","NORMATIVE","ACTIVE","ACTIVE","KEY_PLAYER","همکاری پژوهشی و رویداد مشترک","برترین قطب کامپیوتر/AI کشور"),
+    G("h-a2","ACADEMIC","دانشگاه تهران (ریاضی، آمار و علوم کامپیوتر)","NORMATIVE","ACTIVE","ACTIVE","KEY_PLAYER","پروژهٔ مشترک و سخنرانی تخصصی","بزرگ‌ترین دانشگاه جامع کشور"),
+    G("h-a3","ACADEMIC","دانشگاه صنعتی امیرکبیر (NLPIC/ISCISC)","NORMATIVE","ACTIVE","ACTIVE","KEY_PLAYER","همکاری NLP فارسی","مرجع تخصصی مدل زبانی فارسی"),
+    G("h-a4","ACADEMIC","دانشگاه علم و صنعت ایران","NORMATIVE","AWARE","AWARE","INFLUENCER","پروژهٔ داده و NLP","پیوند صنعتی قوی"),
+    G("h-a5","ACADEMIC","دانشگاه خواجه نصیرالدین طوسی","NORMATIVE","AWARE","AWARE","INFLUENCER","استخدام و کارآموزی","تربیت مستقیم متخصص AI"),
+    G("h-a6","ACADEMIC","دانشگاه‌های شهید بهشتی/فردوسی مشهد/شیراز","NORMATIVE","LATENT","AWARE","SUPPORTER","رویدادهای منطقه‌ای","پوشش «مرجعیت ملی» نه فقط تهرانی"),
+    G("h-a7","ACADEMIC","مرکز نوآوری پردازش زبان طبیعی (NLPIC)","NORMATIVE","ACTIVE","ACTIVE","KEY_PLAYER","همکاری محتوایی و GEO","شریک بالقوهٔ مستقیم VC محتوا"),
+    G("h-a8","ACADEMIC","هسته‌های پژوهشی یادگیری ماشین و پردازش تصویر","NORMATIVE","AWARE","ACTIVE","INFLUENCER","میزبانی محتوای مشترک","تولیدکنندهٔ اصلی محتوای فنی"),
+    G("h-a9","ACADEMIC","انجمن کامپیوتر ایران (CSI)","NORMATIVE","ACTIVE","ACTIVE","KEY_PLAYER","حضور در CSICC","نهاد علمی رسمی کشور"),
+    G("h-a10","ACADEMIC","انجمن ملی هوش مصنوعی ایران","NORMATIVE","ACTIVE","ACTIVE","KEY_PLAYER","همکاری کنفرانس و نشریه","انجمن تخصصی با نشریهٔ علمی"),
+    G("h-a11","ACADEMIC","انجمن رمز ایران (ISCISC)","NORMATIVE","AWARE","AWARE","INFLUENCER","همکاری امنیت AI","نهاد تخصصی امنیت و رمزنگاری"),
+    G("h-a12","ACADEMIC","انجمن‌های علمی دانشجویی علوم کامپیوتر","NORMATIVE","ACTIVE","ACTIVE","SUPPORTER","کارگاه و رویداد استعدادیابی","سریع‌ترین بازتاب‌دهندهٔ محتوا"),
+    G("h-as1","ACADEMIC","دانشگاه تخصصی بخشی VC سلامت (دانشگاه‌های علوم پزشکی تهران/بهشتی/ایران)","NORMATIVE","LATENT","AWARE","SUPPORTER","همکاری پژوهشی بخشی","لایهٔ دانشگاهی متناظر هر VC"),
+    G("h-as2","ACADEMIC","دانشگاه تخصصی بخشی VC کشاورزی (پردیس کشاورزی کرج، تربیت مدرس)","NORMATIVE","LATENT","AWARE","SUPPORTER","همکاری پژوهشی بخشی","لایهٔ دانشگاهی متناظر هر VC"),
+    G("h-as3","ACADEMIC","دانشگاه تخصصی بخشی VC انرژی (دانشگاه صنعت نفت، مهندسی انرژی شریف)","NORMATIVE","LATENT","AWARE","SUPPORTER","همکاری پژوهشی بخشی","لایهٔ دانشگاهی متناظر هر VC"),
+    G("h-as4","ACADEMIC","دانشگاه تخصصی بخشی VC مسکن (معماری و شهرسازی علم‌وصنعت/تهران)","NORMATIVE","LATENT","AWARE","SUPPORTER","همکاری پژوهشی بخشی","لایهٔ دانشگاهی متناظر هر VC"),
+    G("h-as5","ACADEMIC","دانشگاه تخصصی بخشی VC مالی و اعتباری (مدیریت تهران، علامه طباطبائی)","NORMATIVE","LATENT","AWARE","SUPPORTER","همکاری پژوهشی بخشی","لایهٔ دانشگاهی متناظر هر VC"),
+    G("h-as6","ACADEMIC","دانشگاه تخصصی بخشی VC آموزش (تربیت مدرس، پژوهشگاه مطالعات آموزش‌وپرورش)","NORMATIVE","LATENT","AWARE","SUPPORTER","همکاری پژوهشی بخشی","لایهٔ دانشگاهی متناظر هر VC"),
+    G("h-as7","ACADEMIC","دانشگاه تخصصی بخشی VC صنعت و طراحی صنعتی (مهندسی صنایع شریف/امیرکبیر؛ هنر تهران)","NORMATIVE","LATENT","AWARE","SUPPORTER","همکاری پژوهشی بخشی","لایهٔ دانشگاهی متناظر هر VC"),
+    G("h-as8","ACADEMIC","دانشگاه تخصصی بخشی VC لجستیک (مهندسی صنایع و حمل‌ونقل علم‌وصنعت)","NORMATIVE","LATENT","AWARE","SUPPORTER","همکاری پژوهشی بخشی","لایهٔ دانشگاهی متناظر هر VC"),
+    G("h-as9","ACADEMIC","دانشگاه تخصصی بخشی VC خدمات اجتماعی (علوم اجتماعی تهران/علامه)","NORMATIVE","LATENT","AWARE","SUPPORTER","همکاری پژوهشی بخشی","لایهٔ دانشگاهی متناظر هر VC"),
+    G("h-as10","ACADEMIC","دانشگاه تخصصی بخشی VC محتوا (ارتباطات و رسانه علامه؛ NLPIC امیرکبیر)","NORMATIVE","LATENT","AWARE","SUPPORTER","همکاری پژوهشی بخشی","لایهٔ دانشگاهی متناظر هر VC"),
+    G("h-e1","ECONOMIC","سازمان بورس و اوراق بهادار","ENABLING","AWARE","ACTIVE","INFLUENCER","گزارش‌های رسمی و پاسخ‌گویی","تنظیم‌گر اصلی بازار سرمایه"),
+    G("h-e2","ECONOMIC","بورس اوراق بهادار تهران","ENABLING","LATENT","AWARE","INFLUENCER","اعتبار حضور در بازار","مرجع نمادین هلدینگ‌های بزرگ"),
+    G("h-e3","ECONOMIC","فرابورس ایران (بازار نوآفرین)","ENABLING","AWARE","AWARE","KEY_PLAYER","پذیرش و تأمین مالی","تابلوی رشد و دانش‌بنیان"),
+    G("h-e4","ECONOMIC","صندوق نوآوری و شکوفایی","ENABLING","AWARE","ACTIVE","KEY_PLAYER","پروندهٔ تسهیلات","منبع مالی دانش‌بنیان"),
+    G("h-e5","ECONOMIC","رویداد «دوشنبه‌های استارتاپی»","FUNCTIONAL_INPUT","ACTIVE","ACTIVE","KEY_PLAYER","حضور و ارائه","جذب سرمایهٔ جسورانه"),
+    G("h-e6","ECONOMIC","صندوق‌های پژوهش و فناوری خطرپذیر شرکتی (CVC)","FUNCTIONAL_INPUT","AWARE","ACTIVE","KEY_PLAYER","مذاکرهٔ سرمایه‌گذاری مشترک","روند رو به رشد CVC صنعتی"),
+    G("h-e7","ECONOMIC","صندوق‌های تخصصی سرمایه‌گذاری خطرپذیر","FUNCTIONAL_INPUT","AWARE","AWARE","KEY_PLAYER","داده و بازده","تأمین مالی مراحل اولیه"),
+    G("h-e8","ECONOMIC","سرمایه‌گذاران فرشته (Angel)","FUNCTIONAL_INPUT","LATENT","AWARE","SUPPORTER","شبکه‌سازی","سرمایه‌گذاران فردی اولیه"),
+    G("h-e9","ECONOMIC","اتاق بازرگانی، صنایع، معادن و کشاورزی ایران","NORMATIVE","AWARE","AWARE","INFLUENCER","عضویت و هم‌صدایی","بزرگ‌ترین نهاد رسمی بخش خصوصی"),
+    G("h-e10","ECONOMIC","اتاق‌های بازرگانی استانی و تخصصی","NORMATIVE","LATENT","AWARE","SUPPORTER","تعامل منطقه‌ای","مرتبط با هر VC"),
+    G("h-e11","ECONOMIC","بانک‌های تجاری و تخصصی (سرمایه‌گذاری/شرکتی)","FUNCTIONAL_INPUT","AWARE","AWARE","INFLUENCER","گزارش مالی و بانکداری شرکتی","تأمین مالی سنتی"),
+    G("h-e12","ECONOMIC","صندوق‌های بازنشستگی و سرمایه‌گذاران نهادی بزرگ","FUNCTIONAL_INPUT","LATENT","AWARE","INFLUENCER","گزارش بلندمدت","افق چندساله"),
+    G("h-m1","MEDIA","زومیت (Zoomit)","DIFFUSED","ACTIVE","ACTIVE","KEY_PLAYER","روایت تخصصی با دسترسی آزاد","بخش «اخبار فناوری ایران»"),
+    G("h-m2","MEDIA","دیجیاتو (Digiato)","DIFFUSED","ACTIVE","ACTIVE","KEY_PLAYER","روایت تخصصی","پیشگام رسانهٔ فناوری ایران"),
+    G("h-m3","MEDIA","پیوست","DIFFUSED","ACTIVE","ACTIVE","KEY_PLAYER","تحلیل سیاست‌گذاری/رگولاتوری","رسانهٔ تخصصی فاوا"),
+    G("h-mx1","MEDIA","اتحاد رسانه‌ای زومیت–دیجیاتو–پیوست","DIFFUSED","ACTIVE","ACTIVE","KEY_PLAYER","کانال متمرکز؛ پایش ریسک تک‌کاناله","تفاهم‌نامهٔ اسفند ۱۴۰۳"),
+    G("h-m4","MEDIA","خبرگزاری ایسنا","DIFFUSED","AWARE","ACTIVE","INFLUENCER","اخبار علمی/دانشگاهی","پل دانشگاه↔رسانه"),
+    G("h-m5","MEDIA","خبرگزاری مهر","DIFFUSED","AWARE","ACTIVE","INFLUENCER","گزارش سیاست‌گذاری AI","پوشش حکمرانی AI"),
+    G("h-m6","MEDIA","خبرگزاری ایرنا","DIFFUSED","AWARE","AWARE","INFLUENCER","کانال رسمی بیانیه‌ها","خبرگزاری رسمی کشور"),
+    G("h-m7","MEDIA","خبرگزاری فارس و تسنیم","DIFFUSED","AWARE","AWARE","INFLUENCER","پوشش اقتصادی/فناوری","مخاطب عمومی گسترده"),
+    G("h-m8","MEDIA","تجمیع‌کننده‌های اخبار حکمرانی AI","DIFFUSED","AWARE","AWARE","INFLUENCER","پروندهٔ تحلیلی مشترک","نقش خبرگزاری تحلیلی"),
+    G("h-m9","MEDIA","روزنامهٔ دنیای اقتصاد","DIFFUSED","AWARE","ACTIVE","KEY_PLAYER","تحلیل سرمایه‌گذاری","مرجع تحلیل اقتصادی کشور"),
+    G("h-m10","MEDIA","تجارت‌نیوز و اقتصادنیوز","DIFFUSED","AWARE","AWARE","INFLUENCER","اخبار استارتاپی و دانش‌بنیان","آنلاین اقتصادی فعال"),
+    G("h-m11","MEDIA","رسانه‌های تخصصی بازار سرمایه (فرابورس/بورس)","DIFFUSED","LATENT","AWARE","INFLUENCER","پوشش بازار نوآفرین","اخبار بازار سرمایه"),
+    G("h-m12","MEDIA","شبکهٔ خبر صدا و سیما","DIFFUSED","AWARE","AWARE","INFLUENCER","پوشش رویدادهای کلان","گسترده‌ترین لایهٔ غیرآنلاین"),
+    G("h-m13","MEDIA","برنامه‌های اقتصادی صدا و سیما","DIFFUSED","LATENT","AWARE","INFLUENCER","مصاحبهٔ مدیران ارشد","دسترسی به عموم سنتی"),
+    G("h-m14","MEDIA","خبرنگاران تخصصی فناوری و AI","DIFFUSED","ACTIVE","ACTIVE","KEY_PLAYER","ثبت فردی در پایگاه روابط","دروازه‌بان روایت رسانه‌ای"),
+    G("h-m15","MEDIA","تحلیل‌گران و کارشناسان مهمان برنامه‌های اقتصادی/فناوری","DIFFUSED","AWARE","ACTIVE","INFLUENCER","جلب اعتماد و تقویت","صدای معتبر ثالث"),
+    G("h-m16","MEDIA","اینفلوئنسرهای فناوری و AI (اینستاگرام/یوتیوب فارسی)","DIFFUSED","AWARE","ACTIVE","INFLUENCER","محتوای بصری، همکاری غیررسمی","مخاطب جوان و پرتعامل"),
+    G("h-m17","MEDIA","حساب‌های تخصصی ایکس و لینکدین فارسی","DIFFUSED","ACTIVE","ACTIVE","INFLUENCER","پاسخ‌گویی سریع","سریع‌ترین واکنش تصمیم‌سازان"),
+    G("h-m18","MEDIA","کانال‌های تلگرامی تخصصی اقتصاد و استارتاپی","DIFFUSED","AWARE","ACTIVE","INFLUENCER","توزیع سریع خبر","جامعهٔ فعال اکوسیستم"),
+    G("h-m19","MEDIA","کاربران نهایی محصولات ۱۲ VC","DIFFUSED","LATENT","AWARE","SUPPORTER","تجربهٔ مستقیم و روایت خام","نزدیک‌ترین عموم عمومی"),
+    G("h-m20","MEDIA","شهروندان علاقه‌مند عمومی به اخبار AI","DIFFUSED","AWARE","AWARE","OBSERVER","محتوای ساده‌سازی‌شده","بدون تخصص فنی"),
+    G("h-m21","MEDIA","عموم غیرمرتبط با فناوری (Non-public فعلی)","DIFFUSED","NON_PUBLIC","NON_PUBLIC","OBSERVER","فقط پایش؛ آمادهٔ بحران","در بحران ملی ناگهان فعال می‌شود"),
+    G("h-x1","ECOSYSTEM","پارک فناوری پردیس","NORMATIVE","ACTIVE","ACTIVE","KEY_PLAYER","حضور در رویدادهای بزرگ","میزبان رقابت بذرپاشان"),
+    G("h-x2","ECOSYSTEM","کارخانهٔ نوآوری (شعبهٔ پردیس)","NORMATIVE","ACTIVE","ACTIVE","INFLUENCER","مشارکت در برنامه‌ها","نخستین کارخانهٔ نوآوری کشور"),
+    G("h-x3","ECOSYSTEM","مرکز شتاب‌دهی و نوآوری جهش","NORMATIVE","AWARE","ACTIVE","INFLUENCER","رویداد مشترک شتاب‌دهی","زیرساخت متاورسی «جهش پارک»"),
+    G("h-x4","ECOSYSTEM","پارک‌های علم و فناوری دانشگاهی (تهران/شریف)","NORMATIVE","AWARE","AWARE","SUPPORTER","همکاری واسط دانشگاه-صنعت","پل دانشگاه (دستهٔ ۳) و صنعت"),
+    G("h-x5","ECOSYSTEM","آواتک (Avatech)","NORMATIVE","ACTIVE","ACTIVE","KEY_PLAYER","شتاب‌دهی مشترک","وابسته به سرآوا؛ فعال از ۱۳۹۳"),
+    G("h-x6","ECOSYSTEM","فینوا (Finnova)","NORMATIVE","ACTIVE","ACTIVE","KEY_PLAYER","شتاب‌دهی فین‌تک","تخصصی حوزهٔ فین‌تک"),
+    G("h-x7","ECOSYSTEM","شتاب‌دهنده‌های تخصصی عمودی (ماینتک و…)","NORMATIVE","AWARE","ACTIVE","INFLUENCER","همکاری عمودی","الگوی شتاب‌دهی بخشی"),
+    G("h-x8","ECOSYSTEM","گروه سرمایه‌گذاری سرآوا","NORMATIVE","ACTIVE","ACTIVE","KEY_PLAYER","سرمایه‌گذاری مشترک","فعال‌ترین مجموعهٔ سرمایه‌گذاری استارتاپی"),
+    G("h-x9","ECOSYSTEM","هلدینگ‌های سرمایه‌گذاری چندبخشی هم‌رده","NORMATIVE","AWARE","AWARE","INFLUENCER","اتحاد و هم‌صدایی","ساختار مشابه با تمرکز متفاوت"),
+    G("h-x10","ECOSYSTEM","دیجی‌کالا","NORMATIVE","AWARE","ACTIVE","INFLUENCER","همکاری زیرساخت لجستیک/داده","بزرگ‌ترین پلتفرم تجارت الکترونیک"),
+    G("h-x11","ECOSYSTEM","اسنپ (Snapp)","NORMATIVE","AWARE","AWARE","INFLUENCER","همکاری دادهٔ جغرافیایی","هوش مصنوعی مسیریابی"),
+    G("h-x12","ECOSYSTEM","دیوار","NORMATIVE","LATENT","AWARE","SUPPORTER","همکاری مسکن و کالا","بزرگ‌ترین پلتفرم آگهی"),
+    G("h-x13","ECOSYSTEM","تپسی (Tapsi)","NORMATIVE","LATENT","AWARE","SUPPORTER","همکاری حمل‌ونقل هوشمند","رقیب مستقیم اسنپ"),
+    G("h-x14","ECOSYSTEM","ابرآروان (ArvanCloud)","NORMATIVE","AWARE","ACTIVE","INFLUENCER","همکاری ابری و CDN","زیرساخت ابری داخلی"),
+    G("h-x15","ECOSYSTEM","اپراتورهای مخابراتی دارای مرکز داده (همراه اول)","NORMATIVE","AWARE","AWARE","INFLUENCER","زیرساخت ملی","شبکه و محاسبات ابری ملی"),
+    G("h-x16","ECOSYSTEM","انجمن تجارت الکترونیک (کمیسیون ریتیل‌تک)","NORMATIVE","AWARE","AWARE","INFLUENCER","عضویت و هم‌صدایی","نهاد صنفی رسمی کسب‌وکار دیجیتال"),
+    G("h-x17","ECOSYSTEM","سازمان نظام صنفی رایانه‌ای","NORMATIVE","ACTIVE","ACTIVE","INFLUENCER","عضویت و کمیسیون‌ها","نهاد صنفی رسمی شرکت‌های فناوری"),
+  ] },
+{ id:"BANK", fa:"بانک و نهاد مالی", focus:["INTERNAL", "INSTITUTIONAL", "ECONOMIC", "MEDIA", "ECOSYSTEM"], note:"بازتفسیر سند: تنظیم‌گری، سپرده‌گذار، فین‌تک", groups:[
+    G("b-i1","INTERNAL","هیئت‌مدیره و مدیران ارشد","ENABLING","ACTIVE","ACTIVE","KEY_PLAYER","گفت‌وگوی مستقیم",""),
+    G("b-i2","INTERNAL","کارکنان شعبه و مشتری‌محور","FUNCTIONAL_INPUT","LATENT","LATENT","SUPPORTER","کانال داخلی",""),
+    G("b-i3","INSTITUTIONAL","بانک مرکزی و شورای پول و اعتبار","ENABLING","AWARE","AWARE","KEY_PLAYER","مکاتبهٔ رسمی و مستندسازی",""),
+    G("b-i4","INSTITUTIONAL","وزارت اقتصاد و نهادهای بالادستی","ENABLING","AWARE","AWARE","INFLUENCER","گزارش رسمی",""),
+    G("b-e1","ECONOMIC","سپرده‌گذاران و مشتریان بزرگ","FUNCTIONAL_OUTPUT","AWARE","AWARE","KEY_PLAYER","خدمت و اعتماد",""),
+    G("b-e2","ECONOMIC","مشتریان شرکتی و SME","FUNCTIONAL_OUTPUT","AWARE","AWARE","KEY_PLAYER","رابط شرکتی",""),
+    G("b-e3","ECONOMIC","نهادهای مالی و بازار سرمایه","ENABLING","AWARE","AWARE","INFLUENCER","گزارش Performance",""),
+    G("b-m1","MEDIA","رسانهٔ اقتصادی و خبرگزاری‌ها","DIFFUSED","AWARE","AWARE","INFLUENCER","روایت اقتصادی",""),
+    G("b-x1","ECOSYSTEM","فین‌تک‌ها و شرکت‌های دانش‌بنیان","NORMATIVE","AWARE","AWARE","INFLUENCER","همکاری و نظارت",""),
+  ] },
+{ id:"MANUFACTURER", fa:"تولیدی و صنعتی", focus:["INTERNAL", "INSTITUTIONAL", "ECONOMIC", "ACADEMIC", "MEDIA", "ECOSYSTEM"], note:"بازتفسیر سند برای صنعت", groups:[
+    G("mf-i1","INTERNAL","کارکنان و مهندسان","FUNCTIONAL_INPUT","LATENT","LATENT","SUPPORTER","روایت‌سازی داخلی",""),
+    G("mf-n1","INSTITUTIONAL","وزارت صمت و استاندارد ملی","ENABLING","AWARE","AWARE","KEY_PLAYER","مستندسازی و مجوز",""),
+    G("mf-n2","INSTITUTIONAL","سازمان حفاظت محیط‌زیست","ENABLING","LATENT","AWARE","INFLUENCER","انطباق زیست‌محیطی",""),
+    G("mf-s1","ECONOMIC","تأمین‌کنندگان مواد اولیه","FUNCTIONAL_INPUT","AWARE","ACTIVE","KEY_PLAYER","قرارداد و تأمین",""),
+    G("mf-c1","ECONOMIC","مشتریان صنعتی و شبکهٔ توزیع","FUNCTIONAL_OUTPUT","AWARE","ACTIVE","KEY_PLAYER","کیفیت و تحویل",""),
+    G("mf-a1","ACADEMIC","پژوهشکده‌های صنعتی و دانشگاه‌های فنی","NORMATIVE","LATENT","AWARE","SUPPORTER","همکاری R&D",""),
+    G("mf-m1","MEDIA","رسانهٔ صنعت و اقتصادی","DIFFUSED","AWARE","AWARE","INFLUENCER","روایت صنعتی",""),
+    G("mf-x1","ECOSYSTEM","انجمن صنفی و رقبای هم‌راستا","NORMATIVE","AWARE","AWARE","INFLUENCER","هم‌صدایی صنفی",""),
+  ] },
+{ id:"SUPPLIER", fa:"تأمین‌کننده", focus:["ECONOMIC", "INSTITUTIONAL", "ECOSYSTEM", "MEDIA", "INTERNAL"], note:"بازتفسیر سند", groups:[
+    G("sp-c1","ECONOMIC","مشتریان کلیدی صنعتی","FUNCTIONAL_OUTPUT","AWARE","ACTIVE","KEY_PLAYER","قرارداد و خدمت",""),
+    G("sp-n1","INSTITUTIONAL","مراجع مجوز و استاندارد","ENABLING","AWARE","AWARE","KEY_PLAYER","مستندسازی",""),
+    G("sp-e1","ECONOMIC","بانک و تأمین مالی","FUNCTIONAL_INPUT","LATENT","AWARE","INFLUENCER","گزارش مالی",""),
+    G("sp-x1","ECOSYSTEM","اتحادیه و تأمین‌کنندگان هم‌رده","NORMATIVE","AWARE","AWARE","INFLUENCER","هم‌صدایی",""),
+    G("sp-m1","MEDIA","رسانهٔ تخصصی صنعت","DIFFUSED","LATENT","AWARE","OBSERVER","پایش",""),
+    G("sp-i1","INTERNAL","کارکنان و پیمانکاران تولید","FUNCTIONAL_INPUT","LATENT","LATENT","SUPPORTER","کانال داخلی",""),
+  ] },
+{ id:"CONSTRUCTION", fa:"ساختمانی و املاک", focus:["INSTITUTIONAL", "ECONOMIC", "MEDIA"], note:"بازتفسیر سند", groups:[
+    G("cs-n1","INSTITUTIONAL","شهرداری و راه‌وشهرسازی","ENABLING","AWARE","AWARE","KEY_PLAYER","مجوز و هماهنگی",""),
+    G("cs-n2","INSTITUTIONAL","نظام مهندسی و مقررات ملی","ENABLING","AWARE","AWARE","INFLUENCER","انطباق",""),
+    G("cs-c1","ECONOMIC","کارفرمایان و مالکان","FUNCTIONAL_OUTPUT","AWARE","ACTIVE","KEY_PLAYER","قرارداد و تحویل",""),
+    G("cs-s1","ECONOMIC","پیمانکاران جزء و تأمین‌کنندگان مصالح","FUNCTIONAL_INPUT","AWARE","ACTIVE","KEY_PLAYER","زنجیرهٔ اجرا",""),
+    G("cs-e1","ECONOMIC","بانک و صندوق مسکن","FUNCTIONAL_INPUT","LATENT","AWARE","INFLUENCER","تأمین مالی",""),
+    G("cs-m1","MEDIA","رسانهٔ ساختمان و اقتصادی","DIFFUSED","LATENT","AWARE","OBSERVER","پایش",""),
+    G("cs-p1","MEDIA","ساکنان و شهروندان محلی","DIFFUSED","NON_PUBLIC","LATENT","OBSERVER","پایش و شفافیت",""),
+  ] },
+{ id:"GOVERNMENT", fa:"دولتی و عمومی", focus:["MEDIA", "INSTITUTIONAL", "ECONOMIC", "ACADEMIC", "INTERNAL"], note:"بازتفسیر سند", groups:[
+    G("gv-p1","MEDIA","شهروندان و ذی‌نفعان خدمت","FUNCTIONAL_OUTPUT","LATENT","AWARE","SUPPORTER","شفافیت و اطلاع‌رسانی",""),
+    G("gv-m1","MEDIA","رسانهٔ ملی و خبرگزاری‌ها","DIFFUSED","AWARE","ACTIVE","KEY_PLAYER","روایت رسمی",""),
+    G("gv-n1","INSTITUTIONAL","نهادهای بالادستی و قوهٔ قضاییه","ENABLING","AWARE","AWARE","KEY_PLAYER","هماهنگی رسمی",""),
+    G("gv-e1","ECONOMIC","بخش خصوصی و اتاق بازرگانی","NORMATIVE","AWARE","AWARE","INFLUENCER","تعامل اقتصادی",""),
+    G("gv-a1","ACADEMIC","مراکز پژوهشی و دانشگاه‌ها","NORMATIVE","AWARE","AWARE","INFLUENCER","پژوهش مشترک",""),
+    G("gv-i1","INTERNAL","کارکنان و مدیران دستگاه","FUNCTIONAL_INPUT","LATENT","AWARE","SUPPORTER","روایت‌سازی داخلی",""),
+  ] },
+{ id:"TECHNOLOGY", fa:"فناوری و نرم‌افزار", focus:["INTERNAL", "ECOSYSTEM", "ACADEMIC", "ECONOMIC", "MEDIA", "INSTITUTIONAL"], note:"بازتفسیر سند", groups:[
+    G("tc-i1","INTERNAL","مهندسان و مدیران محصول","FUNCTIONAL_INPUT","AWARE","ACTIVE","KEY_PLAYER","روایت‌سازی داخلی",""),
+    G("tc-x1","ECOSYSTEM","پارک‌ها، شتاب‌دهنده‌ها و بیگ‌تک‌ها","NORMATIVE","AWARE","ACTIVE","KEY_PLAYER","حضور و همکاری",""),
+    G("tc-a1","ACADEMIC","دانشگاه‌ها و آزمایشگاه‌های AI","NORMATIVE","AWARE","ACTIVE","KEY_PLAYER","همکاری پژوهشی",""),
+    G("tc-e1","ECONOMIC","سرمایه‌گذاران و صندوق‌ها","FUNCTIONAL_INPUT","AWARE","AWARE","KEY_PLAYER","داده و بازده",""),
+    G("tc-m1","MEDIA","رسانهٔ فنی و اینفلوئنسرها","DIFFUSED","AWARE","ACTIVE","INFLUENCER","روایت تخصصی",""),
+    G("tc-n1","INSTITUTIONAL","نظام صنفی و تنظیم‌گر","ENABLING","AWARE","AWARE","INFLUENCER","مستندسازی",""),
+    G("tc-c1","ECONOMIC","مشتریان و کاربران محصول","FUNCTIONAL_OUTPUT","AWARE","ACTIVE","KEY_PLAYER","تجربهٔ محصول",""),
+  ] }
+];
+const PUBLICS_TEMPLATES = Object.fromEntries(PUBLICS_TEMPLATE_LIST.map(t => [t.id, t]));
+
 const seedWorkflowDefs = () => {
   const t=(d,h)=>{const x=new Date(Date.now()-d*86400000);x.setHours(10-h,15,0,0);return x.toISOString();};
   return [
@@ -4881,6 +5057,30 @@ const seedWorkflowDefs = () => {
        {type:'CREATE_NOTIFICATION',title:'فرصت به پیروزی رسید',body:'وضعیت فرصت به «برنده» تغییر کرد؛ این اعلان خودکار صادر شد.',channel:'IN_APP',priority:'HIGH'},
        {type:'CREATE_ACTION',title:'ثبت درس‌آموختهٔ فرصت برنده',priority:'MEDIUM'},
      ]},createdAt:t(2,1),updatedAt:t(2,1)},
+    {id:'wf-15',name:'برنامهٔ تعامل با عضو تازهٔ عموم',entityType:'PublicMember',organizationId:null,isActive:true,
+     definition:{trigger:{type:'PUBLIC_MEMBER_ADDED'},conditions:[],actions:[
+       {type:'CREATE_ACTION',title:'برنامهٔ تعامل با عموم تازه (کانال: گروه هدف)',priority:'MEDIUM'},
+       {type:'CREATE_NOTIFICATION',title:'عموم تازه ثبت شد',body:'عضو تازه به نقشهٔ عموم‌ها افزوده شد؛ اقدام تعامل به‌صورت خودکار ساخته شد.',channel:'IN_APP',priority:'MEDIUM'},
+     ]},createdAt:t(2,2),updatedAt:t(2,2)},
+    {id:'wf-16',name:'تغییر مرحلهٔ عموم → اعلان راهبردی',entityType:'PublicMember',organizationId:null,isActive:true,
+     definition:{trigger:{type:'PUBLIC_STAGE_CHANGED'},conditions:[],actions:[
+       {type:'CREATE_NOTIFICATION',title:'مرحلهٔ عموم تغییر کرد',body:'مرحلهٔ بلوغ یک عموم تغییر کرد؛ بازبینی روایت/تعامل لازم است.',channel:'IN_APP',priority:'HIGH'},
+     ]},createdAt:t(1,3),updatedAt:t(1,3)},
+    {id:'wf-17',name:'گپ عموم → برنامهٔ پوشش',entityType:'Publics',organizationId:null,isActive:true,
+     definition:{trigger:{type:'PUBLIC_GAP_DETECTED'},conditions:[],actions:[
+       {type:'CREATE_ACTION',title:'برنامهٔ رفع گپ عموم‌ها',priority:'HIGH'},
+       {type:'CREATE_NOTIFICATION',title:'گپ در نقشهٔ عموم‌ها',body:'گپ (عموم کلیدی غایب یا عقب‌مانده) شناسایی شد؛ برنامهٔ پوشش ساخته شد.',channel:'IN_APP',priority:'HIGH'},
+     ]},createdAt:t(1,1),updatedAt:t(1,1)},
+    {id:'wf-18',name:'سررسید بازبینی عموم',entityType:'PublicMember',organizationId:null,isActive:true,
+     definition:{trigger:{type:'PUBLIC_REVIEW_DUE'},conditions:[],actions:[
+       {type:'CREATE_ACTION',title:'بازبینی دوره‌ای عموم (داده و موضع)',priority:'MEDIUM'},
+       {type:'CREATE_NOTIFICATION',title:'بازبینی عموم سررسید شد',body:'ارزیابی داده/موضع این عموم کهنه شده؛ بازبینی را انجام دهید.',channel:'IN_APP',priority:'MEDIUM'},
+     ]},createdAt:t(1,2),updatedAt:t(1,2)},
+    {id:'wf-19',name:'رسانهٔ تازه → پایش روایت',entityType:'Media',organizationId:null,isActive:true,
+     definition:{trigger:{type:'MEDIA_CREATED'},conditions:[],actions:[
+       {type:'CREATE_ACTION',title:'راه‌اندازی پایش رسانهٔ تازه',priority:'MEDIUM'},
+       {type:'CREATE_NOTIFICATION',title:'رسانهٔ تازه ثبت شد',body:'منبع رسانه‌ای تازه به فهرست رسانه‌ها افزوده شد؛ پایش روایت ساخته شد.',channel:'IN_APP',priority:'LOW'},
+     ]},createdAt:t(1,4),updatedAt:t(1,4)},
   ];
 };
 function seedWorkflowStore(){
@@ -4889,13 +5089,184 @@ function seedWorkflowStore(){
   if(!Array.isArray(DB.workflowApprovals)) DB.workflowApprovals=[];
   /* ارتقای نسخهٔ بذر: گردش‌کارهای تازه به فهرست موجود هم اضافه می‌شوند (بدون حذف دستی) */
   const seedVer=Number(DB.workflowSeedVersion||0);
-  if(seedVer<2){
+  if(seedVer<3){
     const defs=seedWorkflowDefs();
     for(const w of defs){
       if(!DB.workflows.some(x=>x.id===w.id)) DB.workflows.push(w);
     }
-    DB.workflowSeedVersion=2;
+    DB.workflowSeedVersion=3;
   }
+}
+/* ------------------------- Publics (عموم‌ها) — داده و موتور ------------------------- */
+const PUBLIC_SECTORS = ['انرژی','آموزش','خدمات اجتماعی','سلامت','کشاورزی','مالی','مسکن','صنعت','اعتباری','طراحی صنعتی','لجستیک','محتوا'];
+const pubTplById=(id)=>PUBLICS_TEMPLATES[id]??PUBLICS_TEMPLATES.HOLDING;
+const pubGroup=(tplId,gid)=>(pubTplById(tplId).groups??[]).find(g=>g.id===gid)??null;
+const pubByOrg=(orgId)=>(DB.publicsSelf??[]).find(x=>x.orgId===orgId)??null;
+const pubTemplateIdFor=(companyType)=>PUBLICS_TEMPLATES[companyType]?companyType:'OTHER';
+const pubTerms=(orgId)=>{
+  const self=pubByOrg(orgId); const tpl=pubTplById(self?.templateId??'HOLDING');
+  return {self,tpl,members:(DB.publicsMembers??[]).filter(m=>m.orgId===orgId)};
+};
+function seedPublicsStore(){
+  if(!DB.publicsCatalog){ DB.publicsCatalog={version:1,generatedAt:nowIso(),categories:PUBLIC_CATEGORY_ORDER.map(id=>({id,fa:PUBLIC_CATEGORY_FA[id]})),linkages:PUBLIC_LINKAGE_FA,stages:PUBLIC_STAGE_FA,stances:PUBLIC_STANCE_FA,templates:PUBLICS_TEMPLATES}; }
+  if(!Array.isArray(DB.publicsSelf)) DB.publicsSelf=[];
+  if(!Array.isArray(DB.publicsMembers)) DB.publicsMembers=[];
+  if(!Array.isArray(DB.mediaStore)) DB.mediaStore=[];
+  DB.publicsStats=DB.publicsStats??{gaps:{},stageMoves:[],generatedAt:null};
+  /* دمو: هلدینگ آریا خودش را «هلدینگ چندبخشی» معرفی می‌کند (قالب کامل سند پارس) */
+  if(!DB.publicsSelf.some(x=>x.orgId==='org-1')){
+    DB.publicsSelf.push({orgId:'org-1',companyType:'HOLDING',templateId:'HOLDING',structure:{sectors:PUBLIC_SECTORS.slice(),subsidiaries:['org-2'],ownership:'PRIVATE'},missionTopic:'مرجعیت هوش مصنوعی کشور',reviewedAt:nowIso(),reviewIntervalDays:90,updatedBy:null});
+  }
+  if(DB.mediaStore.length===0){
+    DB.mediaStore.push(
+      {id:'m-1',name:'زومیت',type:'TECH_MEDIA',url:'zoomit.ir',audience:'تخصصی فناوری',country:'ایران',note:'بخش «اخبار فناوری ایران» با پوشش سیاست‌گذاری AI',createdAt:nowIso()},
+      {id:'m-2',name:'دیجیاتو',type:'TECH_MEDIA',url:'digiato.com',audience:'تخصصی فناوری',country:'ایران',note:'بیش از ۱۰ سال؛ محصول، استارتاپ، سیاست‌گذاری',createdAt:nowIso()},
+      {id:'m-3',name:'پیوست',type:'TECH_MEDIA',url:'peivast.com',audience:'تخصصی فاوا',country:'ایران',note:'تحلیل سیاست‌گذاری و رگولاتوری',createdAt:nowIso()},
+      {id:'m-4',name:'دنیای اقتصاد',type:'ECONOMIC_MEDIA',url:'donya-e-eqtesad.com',audience:'اقتصادی',country:'ایران',note:'مرجع تحلیل سرمایه‌گذاری',createdAt:nowIso()},
+    );
+  }
+  if(DB.publicsMembers.length===0){
+    const mk=(orgId,groupId,sourceType,sourceId,stage,power,interest,note='')=>({id:`pm-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,orgId,groupId,sourceType,sourceId,linkage:null,stage,power,interest,stance:null,note,assessedAt:nowIso(),reviewDue:new Date(Date.now()+90*86400000).toISOString()});
+    const arr=[
+      mk('org-1','h-n1','organization','org-8','AWARE',85,65,'نمونه: نهاد حاکمیتی طرف مکاتبه'),
+      mk('org-1','h-e11','organization','org-3','AWARE',70,75,'بانک طرف قرارداد مالی'),
+      mk('org-1','h-i3','organization','org-2','ACTIVE',70,90,'زیرمجموعهٔ اصلی (نمونهٔ مدیران VC)'),
+      mk('org-1','h-m1','media','m-1','ACTIVE',60,80,'رسانهٔ تخصصی پوشش‌دهنده'),
+    ];
+    DB.publicsMembers.push(...arr);
+    // پیشنهاد پیوند/قدرت-علاقه با موتور (بدون بازنویسی ورودی کاربر)
+    for(const m of DB.publicsMembers){ const sug=pubSuggester(m); m.linkage=m.linkage??sug.linkage; m.stance=m.stance??sug.stance; }
+  }
+}
+/* --------------------- Publics: موتور پیشنهاد، پوشش و گپ --------------------- */
+function pubSourceOf(m){
+  if(m.sourceType==='organization') return orgById(m.sourceId)??null;
+  if(m.sourceType==='person') return personById(m.sourceId)??null;
+  if(m.sourceType==='relationship') return RELS.find(r=>r.id===m.sourceId)??null;
+  if(m.sourceType==='media') return (DB.mediaStore??[]).find(x=>x.id===m.sourceId)??null;
+  return null;
+}
+function pubSourceName(m){
+  const src=pubSourceOf(m); if(!src) return null;
+  if(m.sourceType==='person') return `${src.firstName??''} ${src.lastName??''}`.trim()||null;
+  return src.name??src.title??src.id??null;
+}
+function pubSignalCount(m){
+  const since=Date.now()-90*86400000;
+  const after=(iso)=>!!iso&&new Date(iso).getTime()>since;
+  const f=(arr,key)=>Array.isArray(arr)?arr.filter(x=>x[key]===m.sourceId&&after(x.createdAt??x.startAt)).length:0;
+  let n=0;
+  if(m.sourceType==='organization'){
+    n=f(INTERACTIONS,'organizationId')+f(MEETINGS,'organizationId')+f(ACTIONS,'organizationId')+f(COMMITMENTS,'organizationId');
+  } else if(m.sourceType==='person'){
+    n=f(INTERACTIONS,'personId')+f(MEETINGS,'personId')+f(ACTIONS,'personId')+f(COMMITMENTS,'personId');
+  } else if(m.sourceType==='relationship'){
+    n=f(INTERACTIONS,'relationshipId')+f(MEETINGS,'relationshipId')+f(ACTIONS,'relationshipId')+f(COMMITMENTS,'relationshipId');
+  }
+  return n;
+}
+function pubSuggester(m){
+  const self=(DB.publicsSelf??[]).find(x=>x.orgId===m.orgId);
+  const g=pubGroup(self?.templateId??'HOLDING',m.groupId??'')??{};
+  const src=pubSourceOf(m);
+  let linkage=g.linkage??'DIFFUSED';
+  if(m.sourceType==='relationship'&&src){
+    const rt=String(src.relationshipType??'').toUpperCase();
+    linkage={REGULATORY:'ENABLING',GOVERNMENT:'ENABLING',MERGER:'ENABLING',ACQUISITION:'ENABLING',
+      SUPPLIER:'FUNCTIONAL_INPUT',SHAREHOLDER:'FUNCTIONAL_INPUT',INVESTOR:'FUNCTIONAL_INPUT',INVESTMENT:'FUNCTIONAL_INPUT',PARENT_SUBSIDIARY:'FUNCTIONAL_INPUT',
+      CUSTOMER:'FUNCTIONAL_OUTPUT',DISTRIBUTION:'FUNCTIONAL_OUTPUT',
+      PARTNERSHIP:'NORMATIVE',COLLABORATION:'NORMATIVE',STRATEGIC_ALLIANCE:'NORMATIVE',STRATEGIC:'NORMATIVE',INTERNAL:'NORMATIVE',PARTNER:'NORMATIVE',JOINT_VENTURE:'NORMATIVE',COMMERCIAL:'NORMATIVE',COMPETITOR:'NORMATIVE',OTHER:'NORMATIVE'}[rt]??linkage;
+  } else if(m.sourceType==='organization'&&src){
+    const ot=String(src.type??'').toUpperCase();
+    linkage={GOVERNMENT:'ENABLING',BANK:'FUNCTIONAL_INPUT',INVESTOR:'FUNCTIONAL_INPUT',SUPPLIER:'FUNCTIONAL_INPUT',SUBSIDIARY:'FUNCTIONAL_INPUT',
+      HOLDING:'NORMATIVE',PARTNER:'NORMATIVE',CUSTOMER:'FUNCTIONAL_OUTPUT'}[ot]??linkage;
+  } else if(m.sourceType==='media') linkage='DIFFUSED';
+  const sig=pubSignalCount(m);
+  const base=Array.isArray(g.stage)&&g.stage[0]?g.stage[0]:'LATENT';
+  let stage=sig>=3?'ACTIVE':sig>=1?'AWARE':base;
+  if(sig>=1&&stage==='NON_PUBLIC') stage='AWARE';
+  let power=50,interest=60;
+  if(m.sourceType==='organization'&&src){
+    const ot=String(src.type??'').toUpperCase();
+    power={GOVERNMENT:85,BANK:80,INVESTOR:75,HOLDING:70,PARTNER:65,CUSTOMER:60,SUPPLIER:55,SUBSIDIARY:40}[ot]??50;
+    if(ot==='CUSTOMER') interest=70;
+  }
+  if(m.sourceType==='relationship') power=65;
+  if(m.sourceType==='media') power=60;
+  if(g.stance==='KEY_PLAYER') interest=75;
+  else if(g.stance==='INFLUENCER') interest=55;
+  else if(g.stance==='SUPPORTER') interest=65;
+  else interest=30;
+  const stance=(power>=60&&interest>=60)?'KEY_PLAYER':power>=60?'INFLUENCER':interest>=60?'SUPPORTER':'OBSERVER';
+  return {linkage,stage,power,interest,stance,signals:sig};
+}
+function pubStanceOf(power,interest){
+  const p=Number(power)||0,i=Number(interest)||0;
+  return (p>=60&&i>=60)?'KEY_PLAYER':p>=60?'INFLUENCER':i>=60?'SUPPORTER':'OBSERVER';
+}
+function pubMemberView(m){
+  const self=(DB.publicsSelf??[]).find(x=>x.orgId===m.orgId);
+  const g=pubGroup(self?.templateId??'HOLDING',m.groupId??'')??{};
+  const sug=pubSuggester(m);
+  return {...m,orgName:orgById(m.orgId)?.name??null,sourceName:pubSourceName(m),
+    sourceLabel:m.sourceType==='organization'?'سازمان':m.sourceType==='person'?'شخص':m.sourceType==='relationship'?'رابطه':'رسانه',
+    groupFa:g.fa??null,categoryId:g.cat??null,categoryFa:g.cat?PUBLIC_CATEGORY_FA[g.cat]:null,
+    linkageFa:PUBLIC_LINKAGE_FA[m.linkage]??null,stageFa:PUBLIC_STAGE_FA[m.stage]??null,stanceFa:PUBLIC_STANCE_FA[m.stance]??null,
+    kanal:g.kanal??null,signals:sug.signals,suggested:{linkage:sug.linkage,stage:sug.stage,power:sug.power,interest:sug.interest,stance:sug.stance}};
+}
+function pubCoverage(orgId){
+  const self=pubByOrg(orgId);
+  const tpl=pubTplById(self?.templateId??'HOLDING');
+  const members=(DB.publicsMembers??[]).filter(m=>m.orgId===orgId);
+  const cats=tpl.focus??PUBLIC_CATEGORY_ORDER;
+  const byCategory=cats.map(cid=>{
+    const groups=(tpl.groups??[]).filter(g=>g.cat===cid);
+    const ids=new Set(groups.map(g=>g.id));
+    const mems=members.filter(m=>ids.has(m.groupId));
+    const gapGroups=groups.filter(g=>!mems.some(m=>m.groupId===g.id));
+    const stages={NON_PUBLIC:0,LATENT:0,AWARE:0,ACTIVE:0},stances={KEY_PLAYER:0,INFLUENCER:0,SUPPORTER:0,OBSERVER:0};
+    for(const m of mems){ stages[m.stage]=(stages[m.stage]??0)+1; stances[m.stance]=(stances[m.stance]??0)+1; }
+    return {categoryId:cid,fa:PUBLIC_CATEGORY_FA[cid],expected:groups.length,covered:groups.length-gapGroups.length,
+      members:mems.length,stages,stances,coveragePct:groups.length?Math.round((groups.length-gapGroups.length)/groups.length*100):0,
+      criticalGaps:gapGroups.filter(g=>g.stance==='KEY_PLAYER').map(g=>g.id),gapGroups:gapGroups.map(g=>g.id)};
+  });
+  const sum=(k)=>byCategory.reduce((a,b)=>a+b[k],0);
+  const sumLen=(k)=>byCategory.reduce((a,b)=>a+b[k].length,0);
+  return {orgId,orgName:orgById(orgId)?.name??null,companyType:self?.companyType??null,templateId:self?.templateId??null,
+    templateFa:tpl.fa??null,missionTopic:self?.missionTopic??null,reviewedAt:self?.reviewedAt??null,
+    reviewIntervalDays:self?.reviewIntervalDays??90,generatedAt:nowIso(),byCategory,
+    totals:{categories:byCategory.length,groupsExpected:sum('expected'),groupsCovered:sum('covered'),members:members.length,
+      keyPlayers:members.filter(m=>m.stance==='KEY_PLAYER').length,active:members.filter(m=>m.stage==='ACTIVE').length,
+      gaps:sumLen('gapGroups'),criticalGaps:sumLen('criticalGaps')}};
+}
+function pubGaps(orgId){
+  const cov=pubCoverage(orgId);
+  const tpl=pubTplById(cov.templateId??'HOLDING');
+  const rows=[];
+  for(const c of cov.byCategory){
+    for(const gid of c.gapGroups){
+      const g=pubGroup(cov.templateId??'HOLDING',gid)??{};
+      const isCrit=g.stance==='KEY_PLAYER';
+      rows.push({gapId:`${c.categoryId}:${gid}`,groupId:gid,groupFa:g.fa??gid,categoryId:c.categoryId,categoryFa:c.fa,
+        kind:'missing',severity:isCrit?'CRITICAL':'HIGH',stance:g.stance??'OBSERVER',stanceFa:PUBLIC_STANCE_FA[g.stance]??null,
+        action:isCrit?'برنامهٔ تعامل مستقیم با عموم کلیدی غایب':`جذب و پایش ${c.fa}`});
+    }
+  }
+  for(const m of (DB.publicsMembers??[]).filter(x=>x.orgId===orgId&&x.stance==='KEY_PLAYER'&&['NON_PUBLIC','LATENT','AWARE'].includes(x.stage))){
+    const g=pubGroup(cov.templateId??'HOLDING',m.groupId)??{};
+    rows.push({gapId:`stage:${m.id}`,groupId:m.groupId,groupFa:g.fa??m.groupId,categoryId:g.cat??null,categoryFa:g.cat?PUBLIC_CATEGORY_FA[g.cat]:null,
+      kind:'lagging',severity:'HIGH',stance:'KEY_PLAYER',stanceFa:'بازیگر کلیدی',memberId:m.id,sourceName:pubSourceName(m),
+      action:'تعامل دوطرفهٔ مستقیم برای حرکت به «فعال»'});
+  }
+  const media=cov.byCategory.find(c=>c.categoryId==='MEDIA');
+  if(media&&media.covered===0) rows.push({gapId:'MEDIA:no-cover',groupId:null,groupFa:'رسانه و افکار عمومی',categoryId:'MEDIA',categoryFa:PUBLIC_CATEGORY_FA.MEDIA,
+    kind:'missing',severity:'HIGH',stance:'OBSERVER',stanceFa:'ناظر',action:'برنامهٔ روایت رسانه‌ای (حداقل پایش)'});
+  const order={CRITICAL:0,HIGH:1,MEDIUM:2,LOW:3};
+  rows.sort((a,b)=>(order[a.severity]??9)-(order[b.severity]??9));
+  return {orgId,generatedAt:nowIso(),totals:{categories:cov.byCategory.length,groupsExpected:cov.totals.groupsExpected,
+    groupsCovered:cov.totals.groupsCovered,members:cov.totals.members,keyPlayers:cov.totals.keyPlayers,
+    active:cov.totals.active,missing:cov.totals.gaps,lagging:rows.filter(g=>g.kind==='lagging').length,
+    gaps:rows.length,criticalGaps:rows.filter(g=>g.severity==='CRITICAL').length},gaps:rows};
 }
 function approvalFlowSafe(deciderId,a,decision,isOwner){
   if(!isOwner) return 'فقط مالک سامانه می‌تواند درخواست‌ها را تصمیم بگیرد.';
@@ -8170,6 +8541,9 @@ async function __handler(req, res) {
     if(t==='project') return e(PROJECTS)?.organizationId??null;
     if(t==='opportunity') return e(OPPORTUNITIES)?.organizationId??null;
     if(t==='referral'){ const rr=(DB.referrals??[]).find(x=>x.id===id); return rr?.targetOrganizationId??rr?.sourceOrganizationId??null; }
+    if(t==='publicmember'){ const pm=(DB.publicsMembers??[]).find(x=>x.id===id); return pm?.orgId??null; }
+    if(t==='publics') return id??null;
+    if(t==='media') return null;
     if(t==='action'){ const a=e(ACTIONS); if(a?.organizationId) return a.organizationId; const r=a?.relationshipId?RELS.find(x=>x.id===a.relationshipId):null; return r?.sourceOrganizationId??null; }
     return null;
   }
@@ -8183,6 +8557,10 @@ async function __handler(req, res) {
     if(t==='project') return PROJECTS.some(x=>x.id===id);
     if(t==='opportunity') return OPPORTUNITIES.some(x=>x.id===id);
     if(t==='action') return ACTIONS.some(x=>x.id===id);
+    if(t==='referral') return (DB.referrals??[]).some(x=>x.id===id);
+    if(t==='publicmember') return (DB.publicsMembers??[]).some(x=>x.id===id);
+    if(t==='publics') return !!orgById(id);
+    if(t==='media') return (DB.mediaStore??[]).some(x=>x.id===id);
     return null; // unknown type → not enforced
   }
   function wfResolveLinks(type,id,context,action,fallbackOrgId){
@@ -8208,6 +8586,14 @@ async function __handler(req, res) {
       if(!links.relationshipId&&c.referral?.relationshipId) links.relationshipId=c.referral.relationshipId;
       if(!links.organizationId) links.organizationId=c.referral?.targetOrganizationId??c.referral?.sourceOrganizationId??fallbackOrgId??null;
     }
+    if(t==='publicmember'){
+      const pm=(DB.publicsMembers??[]).find(x=>x.id===id);
+      if(!links.organizationId&&pm?.orgId) links.organizationId=pm.orgId;
+      const src=pm?.sourceType==='relationship'?RELS.find(r=>r.id===pm.sourceId):null;
+      if(src&&!links.relationshipId) links.relationshipId=src.id;
+      if(src&&!links.organizationId) links.organizationId=src.targetOrganizationId??src.sourceOrganizationId;
+    }
+    if(t==='publics'&&!links.organizationId) links.organizationId=id??null;
     return links;
   }
   function wfView(w){
@@ -8981,6 +9367,198 @@ async function __handler(req, res) {
       NOTIFICATIONS.unshift({id:`n-nudge-${Date.now()}`,userId:authUser?.id??'u-demo',type:'INFO',title:'به‌روزرسانی معیارها لازم است',body:`${subjectLabel(subject,subjectId)} — ${note||'داده‌های معیارها کهنه شده‌اند.'}`,channel:'IN_APP',priority:'MEDIUM',createdAt:new Date().toISOString(),readAt:null,data:{subjectType:subject,subjectId,kind}});
       return json(res,200,{queued:true,kind});
     }
+  }
+
+  /* ─────────────── عموم‌ها (Publics) ─────────────── */
+  const pubOrgIdParam=()=>{
+    const h=req.headers['x-tenancy-org']||req.headers['x-workspace-org']||req.headers['x-org-id']||null;
+    return q.get('orgId')||h||null;
+  };
+  const pubHomeOrg=()=>{
+    const pid=pubOrgIdParam();
+    if(pid) return pid;
+    const vis=visibleOrgIds(req);
+    if(vis.length) return vis[0];
+    return null;
+  };
+  const pubMemberSource=(sourceType,sourceId)=>{
+    const t=String(sourceType??'').toLowerCase();
+    if(t==='organization'){ const o=orgById(sourceId); return o?{ok:true,label:o.name}:{ok:false,msg:'سازمان مبدأ یافت نشد.'}; }
+    if(t==='person'){ const p=personById(sourceId); return p?{ok:true,label:`${p.firstName??''} ${p.lastName??''}`.trim()||p.id}:{ok:false,msg:'شخص مبدأ یافت نشد.'}; }
+    if(t==='relationship'){ const r=RELS.find(x=>x.id===sourceId); return r?{ok:true,label:r.id}:{ok:false,msg:'رابطهٔ مبدأ یافت نشد.'}; }
+    if(t==='media'){ const m=(DB.mediaStore??[]).find(x=>x.id===sourceId); return m?{ok:true,label:m.name}:{ok:false,msg:'رسانهٔ مبدأ یافت نشد.'}; }
+    return {ok:false,msg:'نوع مبدأ نامعتبر است (organization/person/relationship/media).'};
+  };
+  if(is('/publics/catalog')&&method==='GET'){
+    if(!hasPerm('publics.read')) return json(res,403,{message:'شما مجوز «مشاهده عموم‌ها» (publics.read) را ندارید.'});
+    const cat=DB.publicsCatalog??{version:1,categories:PUBLIC_CATEGORY_ORDER.map(id=>({id,fa:PUBLIC_CATEGORY_FA[id]})),linkages:PUBLIC_LINKAGE_FA,stages:PUBLIC_STAGE_FA,stances:PUBLIC_STANCE_FA,templates:PUBLICS_TEMPLATES};
+    return json(res,200,cat);
+  }
+  const pubSelfRoute=match('/publics/self/:orgId');
+  if(pubSelfRoute&&method==='GET'){
+    if(!hasPerm('publics.read')) return json(res,403,{message:'شما مجوز «مشاهده عموم‌ها» (publics.read) را ندارید.'});
+    const orgId=pubSelfRoute[0];
+    if(!inScope(req,orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
+    const self=pubByOrg(orgId);
+    const tpl=pubTplById(self?.templateId??'HOLDING');
+    const totals=pubCoverage(orgId).totals;
+    return json(res,200,{orgId,orgName:orgById(orgId)?.name??null,self:self??null,
+      template:{id:tpl.id,fa:tpl.fa,focus:tpl.focus??[],groups:(tpl.groups??[]).length},
+      structure:self?.structure??null,missionTopic:self?.missionTopic??null,
+      reviewedAt:self?.reviewedAt??null,reviewIntervalDays:self?.reviewIntervalDays??90,
+      coverage:totals,templateCatalog:DB.publicsCatalog??null});
+  }
+  if(pubSelfRoute&&method==='PUT'){
+    if(!hasPerm('publics.write')) return json(res,403,{message:'شما مجوز «مدیریت عموم‌ها» (publics.write) را ندارید.'});
+    const orgId=pubSelfRoute[0];
+    if(!inScope(req,orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
+    const b=await readBody(req);
+    const companyType=String(b.companyType??'HOLDING');
+    if(!PUBLICS_TEMPLATES[companyType]) return json(res,400,{message:`قالب شرکت «${companyType}» در کاتالوگ عموم‌ها وجود ندارد.`});
+    const cur=pubByOrg(orgId);
+    const row=Object.assign(cur??{orgId},{
+      companyType,templateId:companyType,
+      structure:b.structure??cur?.structure??{sectors:PUBLIC_SECTORS.slice(),subsidiaries:[],ownership:'PRIVATE'},
+      missionTopic:String(b.missionTopic??cur?.missionTopic??'').trim()||null,
+      reviewedAt:nowIso(),reviewIntervalDays:Number(b.reviewIntervalDays)||90,
+      updatedBy:authUser?.email??null});
+    if(!cur) DB.publicsSelf.push(row);
+    saveDb();
+    audit(req,'UPSERT','Publics',orgId,'OK',{meta:{companyType,templateId:companyType,missionTopic:row.missionTopic}});
+    return json(res,200,row);
+  }
+  if(is('/publics/members')&&method==='GET'){
+    if(!hasPerm('publics.read')) return json(res,403,{message:'شما مجوز «مشاهده عموم‌ها» (publics.read) را ندارید.'});
+    const orgId=pubOrgIdParam();
+    let rows=(DB.publicsMembers??[]);
+    if(orgId){ if(!inScope(req,orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'}); rows=rows.filter(m=>m.orgId===orgId); }
+    else rows=rows.filter(m=>inScope(req,m.orgId));
+    const cat=q.get('categoryId'); if(cat) rows=rows.filter(m=>m.categoryId===cat);
+    const stance=q.get('stance'); if(stance) rows=rows.filter(m=>m.stance===stance);
+    const stage=q.get('stage'); if(stage) rows=rows.filter(m=>m.stage===stage);
+    const views=rows.map(pubMemberView).sort((a,b)=>String(a.groupFa??'').localeCompare(String(b.groupFa??''),'fa'));
+    return json(res,200,{items:views,total:views.length,orgId:orgId??null});
+  }
+  if(is('/publics/members')&&method==='POST'){
+    if(!hasPerm('publics.write')) return json(res,403,{message:'شما مجوز «مدیریت عموم‌ها» (publics.write) را ندارید.'});
+    const b=await readBody(req);
+    const orgId=String(b.orgId??''); const groupId=String(b.groupId??'');
+    if(!orgId||!groupId) return json(res,400,{message:'سازمان (orgId) و گروه (groupId) لازم است.'});
+    if(!inScope(req,orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
+    const self=pubByOrg(orgId)??{orgId,templateId:'HOLDING'};
+    if(!pubGroup(self.templateId,groupId)) return json(res,400,{message:'گروه انتخابی در قالب عموم‌های این سازمان وجود ندارد.'});
+    const sourceType=String(b.sourceType??'organization'); const sourceId=String(b.sourceId??'');
+    if(!sourceId) return json(res,400,{message:'شناسهٔ مبدأ (sourceId) لازم است.'});
+    const src=pubMemberSource(sourceType,sourceId); if(!src.ok) return json(res,400,{message:src.msg});
+    const raw={orgId,groupId,sourceType,sourceId,linkage:b.linkage??null,stage:b.stage??null,
+      power:b.power!=null?Number(b.power):null,interest:b.interest!=null?Number(b.interest):null,stance:b.stance??null,note:String(b.note??'')};
+    const sug=pubSuggester(raw);
+    const row={id:`pm-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,orgId,groupId,sourceType,sourceId,
+      linkage:b.linkage??sug.linkage,stage:b.stage??sug.stage,power:Number.isFinite(Number(b.power))?Number(b.power):sug.power,
+      interest:Number.isFinite(Number(b.interest))?Number(b.interest):sug.interest,stance:b.stance??sug.stance,
+      note:String(b.note??''),assessedAt:nowIso(),reviewDue:new Date(Date.now()+(Number(self.reviewIntervalDays)||90)*86400000).toISOString()};
+    DB.publicsMembers.push(row);
+    const ctx={publicMember:pubMemberView(row),groupId,orgId,sourceType,sourceId};
+    await autoRunWorkflows('PublicMember',row.id,'PUBLIC_MEMBER_ADDED',ctx,`pm-added:${row.id}`);
+    // گپ: عموم کلیدی با مرحلهٔ غیرفعال، یا نبود پوشش رسانه‌ای
+    const gaps=pubGaps(orgId).gaps;
+    const lag=gaps.find(g=>g.memberId===row.id);
+    const gMedia=gaps.find(g=>g.gapId?.startsWith('MEDIA:'));
+    if(lag||gMedia){
+      const key=`pm-gap:${row.id}:${lag?'lag':''}${gMedia?'media':''}`;
+      await autoRunWorkflows('Publics',orgId,'PUBLIC_GAP_DETECTED',{orgId,gapIds:(gaps.filter(g=>g.memberId===row.id||g.gapId?.startsWith('MEDIA:')).map(g=>g.gapId)),publicMemberId:row.id},key);
+    }
+    saveDb();
+    audit(req,'CREATE','PublicMember',row.id,'OK',{meta:{orgId,groupId,sourceType,sourceId,stage:row.stage,stance:row.stance}});
+    return json(res,201,pubMemberView(row));
+  }
+  const pubMemberRoute=match('/publics/members/:id');
+  if(pubMemberRoute&&method==='PATCH'){
+    if(!hasPerm('publics.write')) return json(res,403,{message:'شما مجوز «مدیریت عموم‌ها» (publics.write) را ندارید.'});
+    const m=(DB.publicsMembers??[]).find(x=>x.id===pubMemberRoute[0]);
+    if(!m) return json(res,404,{message:'عضو عموم یافت نشد.'});
+    if(!inScope(req,m.orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
+    const b=await readBody(req);
+    const before={stage:m.stage,stance:m.stance,linkage:m.linkage,power:m.power,interest:m.interest};
+    if(b.stage!==undefined){ if(!PUBLIC_STAGE_FA[b.stage]) return json(res,400,{message:'مرحلهٔ نامعتبر است.'}); m.stage=b.stage; }
+    if(b.linkage!==undefined){ if(!PUBLIC_LINKAGE_FA[b.linkage]) return json(res,400,{message:'نوع پیوند نامعتبر است.'}); m.linkage=b.linkage; }
+    if(b.stance!==undefined){ if(!PUBLIC_STANCE_FA[b.stance]) return json(res,400,{message:'موضع نامعتبر است.'}); m.stance=b.stance; }
+    if(b.power!==undefined){ const v=Number(b.power); if(!Number.isFinite(v)||v<0||v>100) return json(res,400,{message:'قدرت باید ۰ تا ۱۰۰ باشد.'}); m.power=v; }
+    if(b.interest!==undefined){ const v=Number(b.interest); if(!Number.isFinite(v)||v<0||v>100) return json(res,400,{message:'علاقه باید ۰ تا ۱۰۰ باشد.'}); m.interest=v; }
+    if(b.note!==undefined) m.note=String(b.note).slice(0,240);
+    if(b.power!==undefined||b.interest!==undefined||b.stage!==undefined) m.stance=pubStanceOf(m.power,m.interest);
+    if(b.assess!==false){ m.assessedAt=nowIso(); m.reviewDue=new Date(Date.now()+(Number(b.reviewIntervalDays)||90)*86400000).toISOString(); }
+    const ctx={publicMember:pubMemberView(m),orgId:m.orgId,groupId:m.groupId,before,after:{stage:m.stage,stance:m.stance,linkage:m.linkage},sourceType:m.sourceType,sourceId:m.sourceId};
+    if(m.stage!==before.stage) await autoRunWorkflows('PublicMember',m.id,'PUBLIC_STAGE_CHANGED',ctx,`pm-stage:${m.id}:${before.stage}>${m.stage}`);
+    const gaps=pubGaps(m.orgId).gaps;
+    const lag=gaps.find(g=>g.memberId===m.id);
+    if(lag||m.stance==='KEY_PLAYER'&&m.stage!=='ACTIVE') await autoRunWorkflows('Publics',m.orgId,'PUBLIC_GAP_DETECTED',{orgId:m.orgId,gapIds:gaps.filter(g=>g.memberId===m.id).map(g=>g.gapId),publicMemberId:m.id},`pm-gap:${m.id}:${m.stage}:${m.stance}`);
+    saveDb();
+    audit(req,'UPDATE','PublicMember',m.id,'OK',{meta:{before,after:{stage:m.stage,stance:m.stance}}});
+    return json(res,200,pubMemberView(m));
+  }
+  if(pubMemberRoute&&method==='DELETE'){
+    if(!hasPerm('publics.write')) return json(res,403,{message:'شما مجوز «مدیریت عموم‌ها» (publics.write) را ندارید.'});
+    const m=(DB.publicsMembers??[]).find(x=>x.id===pubMemberRoute[0]);
+    if(!m) return json(res,404,{message:'عضو عموم یافت نشد.'});
+    if(!inScope(req,m.orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
+    DB.publicsMembers=DB.publicsMembers.filter(x=>x.id!==m.id); saveDb();
+    audit(req,'DELETE','PublicMember',m.id,'OK',{meta:{orgId:m.orgId,groupId:m.groupId}});
+    return json(res,200,{removed:true});
+  }
+  if(is('/publics/coverage')&&method==='GET'){
+    if(!hasPerm('publics.read')) return json(res,403,{message:'شما مجوز «مشاهده عموم‌ها» (publics.read) را ندارید.'});
+    const orgId=pubHomeOrg();
+    if(!orgId) return json(res,400,{message:'سازمان (orgId) مشخص نشده است.'});
+    if(!inScope(req,orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
+    return json(res,200,pubCoverage(orgId));
+  }
+  if(is('/publics/gaps')&&method==='GET'){
+    if(!hasPerm('publics.read')) return json(res,403,{message:'شما مجوز «مشاهده عموم‌ها» (publics.read) را ندارید.'});
+    const orgId=pubHomeOrg();
+    if(!orgId) return json(res,400,{message:'سازمان (orgId) مشخص نشده است.'});
+    if(!inScope(req,orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
+    return json(res,200,pubGaps(orgId));
+  }
+  if(is('/publics/review-due')&&method==='GET'){
+    if(!hasPerm('publics.read')) return json(res,403,{message:'شما مجوز «مشاهده عموم‌ها» (publics.read) را ندارید.'});
+    const orgId=pubHomeOrg();
+    if(!orgId) return json(res,400,{message:'سازمان (orgId) مشخص نشده است.'});
+    if(!inScope(req,orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
+    const now=Date.now();
+    const due=(DB.publicsMembers??[]).filter(m=>m.orgId===orgId&&m.reviewDue&&new Date(m.reviewDue).getTime()<=now);
+    for(const m of due) await autoRunWorkflows('PublicMember',m.id,'PUBLIC_REVIEW_DUE',{publicMember:pubMemberView(m),orgId,groupId:m.groupId},`pm-review:${m.id}:${m.reviewDue}`);
+    return json(res,200,{orgId,generatedAt:nowIso(),items:due.map(pubMemberView),total:due.length});
+  }
+  if(is('/publics/export')&&method==='GET'){
+    if(!hasPerm('publics.read')) return json(res,403,{message:'شما مجوز «مشاهده عموم‌ها» (publics.read) را ندارید.'});
+    const orgId=pubHomeOrg();
+    if(!orgId) return json(res,400,{message:'سازمان (orgId) مشخص نشده است.'});
+    if(!inScope(req,orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
+    const rows=(DB.publicsMembers??[]).filter(m=>m.orgId===orgId).map(pubMemberView);
+    const fmt=q.get('format')==='csv'?'csv':'json';
+    if(fmt==='csv'){
+      const head=['id','group','category','linkage','stage','stance','power','interest','sourceType','sourceName','note','assessedAt','reviewDue'];
+      const esc=(v)=>`"${String(v??'').replace(/"/g,'""')}"`;
+      const csv=[head.join(','),...rows.map(r=>[r.id,r.groupFa,r.categoryFa,r.linkageFa,r.stageFa,r.stanceFa,r.power,r.interest,r.sourceType,r.sourceName,r.note,r.assessedAt,r.reviewDue].map(esc).join(','))].join('\n');
+      res.writeHead(200,{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':`attachment; filename="publics-${orgId}.csv"`});
+      return res.end('\ufeff'+csv);
+    }
+    DB.exportLog=(DB.exportLog??[]); // keep consistency with other exports
+    return json(res,200,{orgId,generatedAt:nowIso(),total:rows.length,items:rows});
+  }
+  if(is('/publics/media')&&method==='POST'){
+    if(!hasPerm('publics.write')) return json(res,403,{message:'شما مجوز «مدیریت عموم‌ها» (publics.write) را ندارید.'});
+    const b=await readBody(req);
+    const name=String(b.name??'').trim();
+    if(!name) return json(res,400,{message:'نام رسانه لازم است.'});
+    const row={id:`m-${Date.now()}`,name,type:String(b.type??'TECH_MEDIA'),url:String(b.url??'').trim()||null,
+      audience:String(b.audience??'').trim()||null,country:String(b.country??'').trim()||null,
+      note:String(b.note??'').trim()||null,createdAt:nowIso()};
+    DB.mediaStore.push(row);
+    await autoRunWorkflows('Media',row.id,'MEDIA_CREATED',{media:row,id:row.id,name:row.name,type:row.type},`media-created:${row.id}`);
+    saveDb(); audit(req,'CREATE','Media',row.id,'OK',{meta:{name:row.name,type:row.type}});
+    return json(res,201,row);
   }
 
   json(res,404,{message:`مسیر ${method} ${path} در Mock API وجود ندارد.`});
