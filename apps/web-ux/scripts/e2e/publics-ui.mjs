@@ -131,8 +131,13 @@ ok('add member flash', addFlash);
   ok('assess flash', await waitForText('ارزیابی «') && await waitForText('بازبینی'));
 
   // 7) coverage tab
-  await clickByText('button[role="tab"]', 'پوشش');
-  ok('coverage totals', await waitForText('گروههای قالب') && await waitForText('۱۰۵'));
+  await page.evaluate(() => { const b = [...document.querySelectorAll('button[role="tab"]')].find(x => (x.textContent ?? '').includes('پوشش')); if (b) b.click(); });
+  const covOk = await page.waitForFunction(() => {
+    const t = [...document.querySelectorAll('button[role="tab"]')].find(x => (x.textContent ?? '').includes('پوشش'));
+    const body = document.body.textContent ?? '';
+    return !!t && t.className.includes('active') && body.includes('۱۰۵') && body.includes('٪ پوشش');
+  }, { timeout: 20000 }).then(() => true).catch(() => false);
+  ok('coverage totals', covOk);
   ok('coverage category cards', await page.evaluate(() => (document.body.textContent ?? '').includes('نهادی و حاکمیتی') && (document.body.textContent ?? '').includes('اکوسیستم فناوری و صنعت')));
 
   // 8) gaps tab
