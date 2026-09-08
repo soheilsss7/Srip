@@ -5,13 +5,14 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import { usePathname, useRouter } from 'next/navigation';
 import { api, clearSession, getAccessToken, getRefreshToken, apiPost, setScope, getScope } from '../_lib/api';
 import { AppShellEnhancement } from './app-shell-enhancement';
+import Portal from './portal';
 import { Button } from '@srip/design-system';
 import {
   LayoutDashboard, Building2, Users, Share2, Network, MessagesSquare,   CalendarDays, Zap,
   ShieldCheck, FolderKanban, Target, BrainCircuit, FileText, ThumbsUp, BarChart3, BookOpen,
   Bell, Search, Calendar, ListChecks, UserCheck, CheckCircle2, Settings, Settings2, Sparkles, Timer, Database,
   Shield, Plug, Workflow, LineChart, Gauge, Activity, Table2, Flag, FileDown, KeyRound,
-  DatabaseBackup, Archive, ScrollText, HeartPulse, ChevronDown, ChevronUp
+  DatabaseBackup, Archive, ScrollText, HeartPulse, ChevronDown, ChevronUp, Landmark, Radar
 } from 'lucide-react';
 
 type Role = 'SUPER_ADMIN'|'HOLDING_ADMIN'|'HOLDING_EXECUTIVE'|'SUBSIDIARY_ADMIN'|'SUBSIDIARY_EXECUTIVE'|'RELATIONSHIP_MANAGER'|'PROJECT_MANAGER'|'ANALYST'|'STANDARD_USER'|'READ_ONLY';
@@ -24,8 +25,9 @@ const WorkspaceContext = createContext<WorkspaceContextValue|null>(null);
 export const ROLE_LABELS: Record<Role,string> = { SUPER_ADMIN:'مدیر کل سیستم', HOLDING_ADMIN:'مدیر هلدینگ', HOLDING_EXECUTIVE:'مدیر ارشد هلدینگ', SUBSIDIARY_ADMIN:'مدیر شرکت', SUBSIDIARY_EXECUTIVE:'مدیر ارشد شرکت', RELATIONSHIP_MANAGER:'مدیر روابط', PROJECT_MANAGER:'مدیر پروژه', ANALYST:'تحلیلگر', STANDARD_USER:'کاربر استاندارد', READ_ONLY:'فقط خواندنی' };
 
 /**
- * کاوش نشست با مهلت — در نسخۀ استاتیک ممکن است API هرگز پاسخ ندهد و پردۀ
- * «در حال بررسی نشست…» کاربر را تا ابد قفل کند.
+ * کاوش نشست با مهلت.
+ * در نسخۀ استاتیک روی GitHub Pages ممکن است API هرگز پاسخ ندهد؛ بدون این مهلت،
+ * `loading` تا ابد true می‌ماند و پردۀ «در حال بررسی نشست…» کاربر را قفل می‌کند.
  */
 const SESSION_PROBE_TIMEOUT_MS = 4500;
 function probeMe(): Promise<Me> {
@@ -86,74 +88,145 @@ export function useWorkspace() {
 }
 
 /* ---------------------------------------------------------------------------
-   Navigation model — grouped into MAIN / INTELLIGENCE / SYSTEM (+ ADMIN).
-   Permissions are the same real backend permission keys used elsewhere.
+   معماری اطلاعات ۳.۰ — «شش خانهٔ کاری + مرکز سیستم»
+   - منوی واحد (بدون سوییچ ساده/کامل)؛ هر نقش فقط موارد مجازش را می‌بیند.
+   - گردش کار/تأییدها از انتهای منوی ادمین به «اتوماسیون و هماهنگی» منتقل شد.
+   - URLها دست‌نخورده‌اند؛ فقط جای‌گیری و گروه‌بندی تغییر کرده است.
    --------------------------------------------------------------------------- */
-const MAIN_NAV: Array<readonly [string, string, string]> = [
-  ['/', 'داشبورد', 'dashboard.read'],
+type NavItem = readonly [string, string, string]; // href, label, permission
+
+const HOME_NAV: NavItem[] = [['/', 'پیشخوان', 'dashboard.read']];
+const PEOPLE_NAV: NavItem[] = [
   ['/organizations', 'سازمان‌ها', 'organization.read'],
   ['/people', 'اشخاص', 'person.read'],
+];
+const NETWORK_NAV: NavItem[] = [
   ['/relationships', 'روابط', 'relationship.read'],
-  ['/network', 'شبکه اطلاعاتی', 'network.read'],
+  ['/network', 'شبکهٔ روابط', 'network.read'],
+  ['/publics', 'عموم‌ها', 'publics.read'],
   ['/interactions', 'تعاملات', 'interaction.read'],
-] as const;
-const INTELLIGENCE_NAV: Array<readonly [string, string, string]> = [
+  ['/referrals', 'معرفی‌ها', 'relationship.read'],
+];
+const WORK_NAV: NavItem[] = [
   ['/meetings', 'جلسات', 'meeting.read'],
+  ['/calendar', 'تقویم', 'meeting.read'],
   ['/actions', 'اقدامات', 'action.read'],
   ['/commitments', 'تعهدات', 'commitment.read'],
   ['/projects', 'پروژه‌ها', 'project.read'],
   ['/opportunities', 'فرصت‌ها', 'opportunity.read'],
-  ['/intelligence', 'هوشمندی', 'analytics.read'],
-  ['/ai', 'هوش مصنوعی', 'ai.query'],
-  ['/ai-executive-brief', 'گزارش هوش مصنوعی', 'ai.executive_brief'],
-  ['/recommendations', 'پیشنهادات', 'recommendation.read'],
-  ['/reports', 'گزارش‌ها', 'report.read'],
-] as const;
-const SYSTEM_NAV: Array<readonly [string, string, string]> = [
-  ['/documents', 'دانش', 'document.read'],
-  ['/notifications', 'اعلان‌ها', 'notification.read'],
-  ['/search', 'جستجو', 'search.read'],
-  ['/calendar', 'تقویم جلسات', 'meeting.read'],
-  ['/data-exchange', 'تبادل داده', 'report.read'],
   ['/requirements', 'نیازمندی‌ها', 'project.read'],
-  ['/referrals', 'معرفی‌ها', 'relationship.read'],
-  ['/approvals', 'تأییدها', 'approval.read'],
-  ['/settings', 'تنظیمات', 'user.read'],
-  ['/sessions', 'نشست‌ها', 'session.read'],
-  ['/help', 'راهنما', 'help.read'],
-] as const;
-const ADMIN_NAV: Array<readonly [string, string, string]> = [
-  ['/admin', 'مدیریت سیستم', 'admin.users'],
-  ['/data-management', 'داده و کیفیت', 'data.manage'],
-  ['/privacy', 'حریم خصوصی', 'privacy.read'],
-  ['/integrations', 'یکپارچه‌سازی', 'integration.read'],
-  ['/workflows', 'گردش کار', 'workflow.read'],
-  ['/analytics', 'تحلیل محصول', 'analytics.read'],
-  ['/data-quality', 'کیفیت داده', 'data.quality.read'],
-  ['/metrics', 'سنجه‌ها', 'metrics.read'],
-  ['/observability', 'مشاهده‌پذیری', 'metrics.read'],
-  ['/monitoring', 'پایش', 'metrics.read'],
-  ['/admin/master-data', 'داده‌های مبنایی', 'org.read'],
-  ['/admin/feature-flags', 'پرچم‌های ویژگی', 'feature_flag.read'],
-  ['/admin/exports', 'کنترل خروجی داده', 'audit.read'],
-  ['/admin/sessions', 'مدیریت نشست‌ها', 'session.read'],
-  ['/admin/retention', 'نگهداری داده', 'privacy.manage'],
-  ['/security', 'امنیت', 'security.read'],
-  ['/security-events', 'رویدادهای امنیتی', 'security.read'],
-  ['/governance', 'حاکمیت', 'enterprise.security'],
-  ['/enterprise', 'حاکمیت سازمانی', 'enterprise.read'],
-  ['/data-lifecycle', 'چرخهٔ حیات داده', 'data.lifecycle_status'],
-  ['/health', 'سلامت زمان اجرا', 'health.read'],
-] as const;
+];
+const SMART_NAV: NavItem[] = [
+  ['/intelligence', 'هوشمندی و توصیه‌ها', 'analytics.read'],
+  ['/board', 'هیئت‌مدیره', 'analytics.read'],
+  ['/ai', 'دستیار هوشمند', 'ai.query'],
+  ['/strategy', 'تحلیل راهبردی', 'strategy.read'],
+];
+const COLLAB_NAV: NavItem[] = [
+  ['/workflows', 'گردش کار و تأییدها', 'workflow.read'],
+  ['/documents', 'مرکز دانش', 'document.read'],
+  ['/data-management', 'داده و کیفیت', 'data.quality.read'],
+  ['/data-exchange', 'تبادل داده', 'report.read'],
+  ['/settings', 'تنظیمات من', 'user.read'],
+  ['/sessions', 'نشست‌های من', 'session.read'],
+];
+/** منوی واحد — همهٔ خانه‌ها همیشه در دسترس‌اند (بر اساس مجوز، نه حالت نما) */
+const NAV_ZONES: Array<[string, string, NavItem[]]> = [
+  ['خانه', 'کار امروز من', HOME_NAV],
+  ['مخاطب‌ها', 'سازمان‌ها و افراد کلیدی', PEOPLE_NAV],
+  ['روابط', 'وضعیت پیوندها و شبکه', NETWORK_NAV],
+  ['کار و اجرا', 'جلسه‌ها، قول‌ها و پروژه‌ها', WORK_NAV],
+  ['هوش', 'دستیار، بریف و تحلیل‌ها', SMART_NAV],
+  ['اتوماسیون و هماهنگی', 'گردش کار، اسناد و داده', COLLAB_NAV],
+];
+/** زیرصفحه‌های «مرکز سیستم» — از هاب /admin در دسترس‌اند (نه در سایدبار) */
+const ADMIN_SUBS: Array<[string, NavItem[]]> = [
+  ['کاربران و مجوزها', [
+    ['/admin', 'مرکز سیستم', 'admin.users'],
+    ['/admin/users', 'کاربران و دسترسی‌ها', 'admin.users'],
+    ['/admin/roles', 'نقش‌ها', 'admin.users'],
+    ['/admin/permissions', 'مجوزها', 'admin.users'],
+    ['/admin/audit', 'ممیزی', 'audit.read'],
+    ['/admin/feature-flags', 'پرچم‌های ویژگی', 'feature_flag.read'],
+    ['/admin/scoring', 'قواعد امتیازدهی', 'admin.users'],
+    ['/admin/tags', 'برچسب‌ها', 'admin.users'],
+    ['/admin/custom-fields', 'فیلدهای سفارشی', 'admin.users'],
+    ['/admin/criteria', 'معیارهای ارزیابی', 'admin.users'],
+    ['/admin/notification-rules', 'قواعد اعلان', 'admin.users'],
+    ['/admin/exports', 'کنترل خروجی داده', 'audit.read'],
+    ['/admin/sessions', 'مدیریت نشست‌ها', 'session.read'],
+    ['/admin/retention', 'نگهداری داده', 'privacy.manage'],
+  ]],
+  ['امنیت و حاکمیت', [
+    ['/security', 'امنیت', 'security.read'],
+    ['/security-events', 'رویدادهای امنیتی', 'security.read'],
+    ['/governance', 'حاکمیت', 'enterprise.security'],
+    ['/enterprise', 'حاکمیت سازمانی', 'enterprise.read'],
+    ['/privacy', 'حریم خصوصی', 'privacy.read'],
+    ['/data-lifecycle', 'چرخهٔ حیات داده', 'data.lifecycle_status'],
+  ]],
+  ['داده و یکپارچه‌سازی', [
+    ['/data-management', 'داده و کیفیت', 'data.manage'],
+    ['/data-quality', 'کیفیت داده', 'data.quality.read'],
+    ['/admin/master-data', 'داده‌های مبنایی', 'org.read'],
+    ['/integrations', 'یکپارچه‌سازی', 'integration.read'],
+    ['/workflows', 'گردش کار', 'workflow.read'],
+    ['/approvals', 'تأییدها', 'approval.read'],
+  ]],
+  ['پایش و سلامت', [
+    ['/monitoring', 'مرکز پایش', 'metrics.read'],
+    ['/analytics', 'تحلیل محصول', 'analytics.read'],
+    ['/health', 'سلامت زمان اجرا', 'health.read'],
+    ['/observability', 'مشاهده‌پذیری', 'metrics.read'],
+    ['/metrics', 'سنجه‌ها', 'metrics.read'],
+  ]],
+];
 
-/** نوار تب پایین موبایل — چهار خانهٔ اصلی؛ بقیه از دراور کناری.
+/** نوار تب پایین موبایل — چهار خانهٔ اصلی که هر روز استفاده می‌شوند.
+ *  بقیهٔ بخش‌ها از دکمهٔ «بیشتر» (دراور کناری) در دسترس‌اند.
  *  فقط در ≤900px دیده می‌شود (همان‌جا که سایدبار دراور می‌شود). */
-const MOBILE_TABS: Array<readonly [string, string, string]> = [
+const MOBILE_TABS: NavItem[] = [
   ['/', 'خانه', 'dashboard.read'],
   ['/organizations', 'سازمان‌ها', 'organization.read'],
   ['/network', 'شبکه', 'network.read'],
   ['/interactions', 'تعامل‌ها', 'interaction.read'],
 ];
+
+/** واژه‌نامهٔ یک‌خطی — «این بخش چیست؟» برای هر مسیر */
+const GLOSS_KEY_PERM: Record<string, string> = { '/': 'dashboard.read', '/organizations': 'organization.read', '/people': 'person.read', '/relationships': 'relationship.read', '/network': 'network.read', '/interactions': 'interaction.read', '/referrals': 'relationship.read', '/intelligence': 'analytics.read', '/board': 'analytics.read', '/meetings': 'meeting.read', '/calendar': 'meeting.read', '/actions': 'action.read', '/commitments': 'commitment.read', '/projects': 'project.read', '/opportunities': 'opportunity.read', '/ai': 'ai.query', '/ai-executive-brief': 'ai.executive_brief', '/recommendations': 'recommendation.read', '/reports': 'report.read', '/documents': 'document.read', '/requirements': 'project.read', '/approvals': 'approval.read', '/data-exchange': 'report.read', '/settings': 'user.read', '/sessions': 'session.read', '/data-management': 'data.quality.read', '/workflows': 'workflow.read', '/publics': 'publics.read', '/strategy': 'strategy.read' };
+const ADMIN_PERM: Record<string, string> = { '/admin': 'admin.users', '/admin/feature-flags': 'feature_flag.read', '/admin/exports': 'audit.read', '/admin/sessions': 'session.read', '/admin/retention': 'privacy.manage', '/security': 'security.read', '/security-events': 'security.read', '/governance': 'enterprise.security', '/enterprise': 'enterprise.read', '/privacy': 'privacy.read', '/data-lifecycle': 'data.lifecycle_status', '/data-management': 'data.manage', '/data-quality': 'data.quality.read', '/admin/master-data': 'org.read', '/integrations': 'integration.read', '/workflows': 'workflow.read', '/analytics': 'analytics.read', '/metrics': 'metrics.read', '/observability': 'metrics.read', '/monitoring': 'metrics.read', '/health': 'health.read' };
+
+const GLOSS: Record<string, string> = {
+  '/': 'کار امروز شما: اولویت‌ها، هشدارها و جلسات پیش رو در یک نگاه',
+  '/organizations': 'شرکت‌ها/سازمان‌های عضو شبکه و اطلاعات هرکدام',
+  '/people': 'افراد کلیدی هر سازمان و ارتباطات آن‌ها',
+  '/relationships': 'پیوند رسمی بین دو سازمان — با تفکیک بازاری/غیربازاری، نقطهٔ ورود به بازار، امتیاز سلامت/ریسک و هشدار هوشمند',
+  '/network': 'نقشهٔ گرافیکی روابط: خوشه‌ها، مسیرها و تحلیل شبکه',
+  '/interactions': 'هر تماس/جلسه/مکاتبه‌ای که روی یک رابطه رخ داده است',
+  '/referrals': 'معرفی‌ها و واسطه‌های رسیدن به یک سازمان',
+  '/intelligence': 'سیگنال‌های ریسک، فرصت‌های در جریان و پیشنهاد رشد',
+  '/board': 'گزارش هیئت‌مدیره: بازده سرمایهٔ رابطه، سرمایه، سلامت پرتفوی و ریسک تک‌نقطه',
+  '/meetings': 'جلسات برنامه‌ریزی‌شده با ثبت دستور و خلاصه',
+  '/calendar': 'نمای تقویمی جلسات در محدودهٔ شما',
+  '/actions': 'کارهایی که کسی قول داده تا موعد معین انجام دهد',
+  '/commitments': 'قول‌های بلندمدت‌تر میان طرفین با سررسید',
+  '/projects': 'پروژه‌های مشترک و مرحله‌های آن‌ها',
+  '/opportunities': 'فرصت‌های تجاری شناسایی‌شده با ارزش و احتمال',
+  '/ai': 'گفتگو با داده‌های شبکه: بپرسید و توصیه بگیرید',
+  '/ai-executive-brief': 'گزارش دوره‌ای خودکار وضعیت روابط و هشدارها',
+  '/recommendations': 'توصیه‌های داده‌محور برای قدم بعدی',
+  '/reports': 'گزارش‌ها و خروجی‌های تحلیلی',
+  '/documents': 'اسناد، دانش و قالب‌های اشتراکی',
+  '/requirements': 'نیازمندی‌های پروژه‌ها',
+  '/approvals': 'درخواست‌های در انتظار تأیید شما',
+  '/data-exchange': 'ورود/خروج و تبادل داده بین سامانه‌ها',
+  '/settings': 'تنظیمات حساب و ترجیحات شما',
+  '/sessions': 'نشست‌های فعال ورود شما در دستگاه‌ها',
+  '/data-management': 'مرکز داده: کیفیت، ورود و حاکمیت داده در یک نگاه',
+  '/workflows': 'زنجیره‌های خودکار تصمیم، اجرا و تأییدها',
+  '/publics': 'نقشهٔ عموم‌ها: شناسنامهٔ سازمان، دسته‌بندی بازیگران و شکاف‌های اثرگذار',
+  '/strategy': 'تحلیل رقابت و تعامل راهبردی',
+};
 
 const NAV_ICONS: Record<string, React.ReactNode> = {
   '/': <LayoutDashboard size={16}/>,
@@ -161,6 +234,9 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   '/people': <Users size={16}/>,
   '/relationships': <Share2 size={16}/>,
   '/network': <Network size={16}/>,
+  '/publics': <Radar size={16}/>,
+  '/strategy': <Target size={16}/>,
+
   '/interactions': <MessagesSquare size={16}/>,
   '/meetings': <CalendarDays size={16}/>,
   '/actions': <Zap size={16}/>,
@@ -168,6 +244,7 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   '/projects': <FolderKanban size={16}/>,
   '/opportunities': <Target size={16}/>,
   '/intelligence': <BrainCircuit size={16}/>,
+  '/board': <Landmark size={16}/>,
   '/ai': <Sparkles size={16}/>,
   '/ai-executive-brief': <FileText size={16}/>,
   '/recommendations': <ThumbsUp size={16}/>,
@@ -204,22 +281,6 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   '/health': <HeartPulse size={16}/>,
 };
 
-function NavGroup({ title, items, pathname, collapsible = false, defaultOpen = true }: { title: string; items: Array<readonly [string, string, string]>; pathname: string; collapsible?: boolean; defaultOpen?: boolean }) {
-  const [open, setOpen] = useState(defaultOpen);
-  const activeHref = items.find(([href]) => pathname === href || pathname.startsWith(href + '/'))?.[0];
-  return (
-    <>
-      <div className={`nav-group-title ${collapsible ? 'nav-group-toggle' : ''}`} onClick={collapsible ? () => setOpen(o => !o) : undefined} role={collapsible ? 'button' : undefined} tabIndex={collapsible ? 0 : undefined} onKeyDown={collapsible ? e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(o => !o); } } : undefined}>
-        <span>{title}</span>
-        {collapsible && (open ? <ChevronUp size={13} aria-hidden="true"/> : <ChevronDown size={13} aria-hidden="true"/>)}
-      </div>
-      {(open || !collapsible) && items.map(([href, label]) => (
-        <Link href={href} key={href} className={href === activeHref ? 'active' : ''}>{NAV_ICONS[href]}{label}</Link>
-      ))}
-    </>
-  );
-}
-
 function ThemeToggle() {
   const [dark, setDark] = useState(false);
   useEffect(() => {
@@ -250,6 +311,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { me, loading, error, scopeId, setScopeId, role, can, isAdmin } = useWorkspace();
   const [navOpen, setNavOpen] = useState(false);
+  const [dictOpen, setDictOpen] = useState(false);
   // Close the mobile drawer on navigation
   useEffect(() => { setNavOpen(false); }, [pathname]);
   // Close on Escape
@@ -342,10 +404,31 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {primaryMembership && <strong className="role-org">{primaryMembership.organizationName}</strong>}
         </div>
         <nav className="side-nav" aria-label="ناوبری فضای کاری">
-          <NavGroup title="اصلی" items={group(MAIN_NAV)} pathname={pathname} />
-          <NavGroup title="هوشمندی" items={group(INTELLIGENCE_NAV)} pathname={pathname} />
-          <NavGroup title="سیستم" items={group(SYSTEM_NAV)} pathname={pathname} />
-          {isAdmin && <NavGroup title="مدیریت سیستم" items={group(ADMIN_NAV)} pathname={pathname} collapsible defaultOpen={false} />}
+          {NAV_ZONES.map(([title, sub, items]) => {
+            const vis = items.filter(([href, , perm]) => href === '/' || perm === 'dashboard.read' || can(perm) || (isAdmin && perm === 'admin.users'));
+            if (!vis.length) return null;
+            return (
+              <div className="nav-zone" key={title}>
+                <div className="nav-zone-title"><span>{title}</span>{sub ? <small>{sub}</small> : null}</div>
+                {vis.map(([href, label]) => {
+                  const active = pathname === href || pathname.startsWith(href + '/');
+                  return (
+                    <Link href={href} key={href} className={active ? 'active' : ''} title={GLOSS[href] ?? label}>
+                      {NAV_ICONS[href]}{label}
+                    </Link>
+                  );
+                })}
+              </div>
+            );
+          })}
+          {isAdmin && (
+            <div className="nav-zone nav-admin">
+              <div className="nav-zone-title"><span>سیستم</span><small>مرکز مدیریت</small></div>
+              <Link href="/admin" className={pathname === '/admin' || pathname.startsWith('/admin/') ? 'active' : ''} title="کاربران، حاکمیت، داده و پایش">
+                {NAV_ICONS['/admin']}مرکز سیستم
+              </Link>
+            </div>
+          )}
         </nav>
         <div className="engine-card">
           <div className="ec-top">
@@ -359,7 +442,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <polyline points="0,16 14,12 28,14 42,9 56,12 70,6 84,10 98,5 120,8" fill="none" stroke="var(--srip-success)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" opacity=".8" />
           </svg>
         </div>
-        <Button className="logout-button ghost" onClick={logout}><span className="logout-label">خروج امن</span></Button>
+        <div className="sidebar-bottom-actions">
+          <button className="icon-btn dict-btn" onClick={() => setDictOpen(true)} title="واژه‌نامه و راهنما — هر بخش یعنی چه؟" aria-label="واژه‌نامه و راهنما">؟</button>
+          <Button className="logout-button ghost" onClick={logout}><span className="logout-label">خروج امن</span></Button>
+        </div>
       </aside>
       <div className="app-main">
         <header className="global-header" role="banner">
@@ -369,7 +455,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </button>
             <div className="global-search">
               <Link href="/search">
-                <Search size={13}/> جستجوی سراسری…
+                <Search size={13}/>
+                <span className="gs-label">جستجوی سراسری…</span>
                 <kbd className="kbd">⌘K</kbd>
               </Link>
             </div>
@@ -385,11 +472,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {scopeOptions.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
               </select>
             </label>
-            <Link className="ai-btn" href="/ai"><Sparkles size={14}/> دستیار هوش مصنوعی</Link>
+            <Link className="ai-btn" href="/ai"><Sparkles size={14}/> دستیار هوشمند</Link>
             <AppShellEnhancement />
             <ThemeToggle />
-            <Link href="/admin" className="user-chip" aria-label="پروفایل">
-              <span className="avatar">{(me?.name ?? 'U').slice(0, 1)}</span>
+            <Link href="/settings" className="user-chip" aria-label="پروفایل">
+              <span className="avatar">{(me?.name ?? 'کاربر').slice(0, 1)}</span>
               <span className="uc-meta">
                 <strong>{me?.name ?? 'کاربر'}</strong>
                 <small>{ROLE_LABELS[role]}</small>
@@ -419,6 +506,41 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <span className="mt-label">بیشتر</span>
         </button>
       </nav>
+      {dictOpen && (
+        <Portal>
+        <div className="command-overlay" onClick={() => setDictOpen(false)} role="dialog" aria-modal="true" aria-label="واژه‌نامه">
+          <div className="dict-card" onClick={(e) => e.stopPropagation()}>
+            <header>
+              <div><span className="eyebrow">راهنمای سریع</span><h2>این بخش یعنی چه؟</h2></div>
+              <button onClick={() => setDictOpen(false)} aria-label="بستن">×</button>
+            </header>
+            <div className="dict-list">
+              {NAV_ZONES.flatMap(([, , items]) => items)
+                .filter(([href]) => href === '/' || can(GLOSS_KEY_PERM[href] ?? ''))
+                .map(([href, label]) => (
+                  <div className="dict-row" key={href}>
+                    <b>{label}</b>
+                    <span>{GLOSS[href] ?? ''}</span>
+                  </div>
+                ))}
+              {isAdmin && ADMIN_SUBS.flatMap(([sub, items]) => items.map(([href, label]) => ({ href, label, sub })))
+                .filter(({ href }) => href === '/admin' || can(ADMIN_PERM[href] ?? ''))
+                .map(({ href, label, sub }) => (
+                  <div className="dict-row" key={href}>
+                    <b>{label} <small>· {sub}</small></b>
+                    <span>{GLOSS[href] ?? 'بخش مدیریتی — فقط مدیران'}</span>
+                  </div>
+                ))}
+              <div className="dict-row"><b>جستجو و اعلان‌ها</b><span>جستجوی سراسری و اعلان‌ها همیشه در نوار بالا در دسترس‌اند.</span></div>
+            </div>
+            <footer className="dict-foot">
+              <Link href="/help" onClick={() => setDictOpen(false)}>راهنمای کامل ←</Link>
+              <span>هر آیتم منو نیز با نگه‌داشتن نشانگر، توضیح کوتاه نشان می‌دهد.</span>
+            </footer>
+          </div>
+        </div>
+        </Portal>
+      )}
     </>
   );
 }

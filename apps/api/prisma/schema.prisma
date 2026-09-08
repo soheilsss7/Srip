@@ -306,6 +306,12 @@ enum ImportPipelineStage {
   REPORT
 }
 
+enum RelationshipMarketKind {
+  MARKET
+  NON_MARKET
+  HYBRID
+}
+
 
 
 
@@ -706,6 +712,9 @@ model PersonRelationship {
   resilienceScore Int @default(0)
   sensitivity DataClassification @default(INTERNAL)
   engagementScore Int @default(0)
+  marketKind RelationshipMarketKind @default(MARKET)
+  isMarketEntry Boolean @default(false)
+  marketSegment String?
   ownerId String?
   backupOwnerId String?
   reviewCadenceDays Int @default(90)
@@ -753,6 +762,9 @@ model Relationship {
   resilienceScore Int @default(0)
   sensitivity DataClassification @default(INTERNAL)
   engagementScore Int @default(0)
+  marketKind RelationshipMarketKind @default(MARKET)
+  isMarketEntry Boolean @default(false)
+  marketSegment String?
   ownerId String?
   backupOwnerId String?
   reviewCadenceDays Int @default(90)
@@ -784,6 +796,10 @@ model Relationship {
   @@index([sourceOrganizationId, deletedAt, status])
   @@index([targetOrganizationId, deletedAt, status])
   @@index([sourceOrganizationId, targetOrganizationId, healthScore])
+  @@index([marketKind])
+  @@index([isMarketEntry])
+  @@index([marketKind, status])
+  @@index([marketSegment])
   calibrations ScoreCalibration[]
   referrals Referral[]
   tags RelationshipTag[]

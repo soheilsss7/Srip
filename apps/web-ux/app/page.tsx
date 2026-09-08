@@ -9,7 +9,7 @@ import { suggestGlobal } from './_lib/connections';
 import {
   Building2, Users, Share2, CalendarDays, Zap, ShieldCheck, FolderKanban, Target,
   Activity, HeartPulse, TrendingUp, Gauge, Bell, Workflow, Sparkles, Crown,
-  AlertTriangle, Clock, ChevronLeft, CircleCheck, Flame, ListTodo,
+  AlertTriangle, Clock, ChevronLeft, CircleCheck, Flame, ListTodo, Store, Landmark, Layers, DoorOpen, Siren, Globe,
 } from 'lucide-react';
 
 /* ---------------------------------- types --------------------------------- */
@@ -135,6 +135,8 @@ export default function Dashboard() {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [actions, setActions] = useState<ActionItem[]>([]);
   const [riskSignals, setRiskSignals] = useState<RiskSignal[]>([]);
+  const [relAlerts, setRelAlerts] = useState<any[]>([]);
+  const [relAlertSummary, setRelAlertSummary] = useState<any>(null);
   const [lists, setLists] = useState<GraphLists | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -184,6 +186,7 @@ export default function Dashboard() {
       if (!alive) return;
       setLists({ orgs: unwrap(o), people: unwrap(p), rels: unwrap(r), interactions: unwrap(i) });
     }).catch(() => { });
+    api<any>('/relationships/alerts').then((a:any)=>{ if(!alive) return; setRelAlerts(a.items ?? []); setRelAlertSummary(a.summary ?? null); }).catch(()=>{});
     return () => { alive = false; };
   }, [scopeId, can]);
 
@@ -350,25 +353,41 @@ export default function Dashboard() {
         ))}
       </section>
 
+      {/* بازار — در یک نگاه — کجا ورود ما به بازار است؟ */}
+      {lists?.rels?.length ? (
+        <section className="panel" aria-label="نقشهٔ بازار در پیشخوان" style={{marginTop:14}}>
+          <div className="panel-title">
+            <div><h2 style={{display:'inline-flex', gap:6, alignItems:'center'}}><Globe size={16}/> نقشهٔ بازار — تفکیک بازاری / غیربازاری</h2><p>روابط بازاری ارزش می‌سازند، روابط غیربازاری مسیر را باز/مسدود می‌کنند — نقطهٔ ورود، دروازهٔ شما به هر سگمنت است</p></div>
+            <Link className="head-link" href="/relationships">همهٔ روابط ←</Link>
+          </div>
+          <div className="stats-row" style={{margin:0}}>
+            <div className="stat-card"><div className="st-top"><span className={`kpi-ico ic-teal`}><Store size={16}/></span><span>بازاری</span></div><strong className="st-value">{fmtNum(lists.rels.filter((x:any)=>(x.marketKind??'MARKET')==='MARKET').length)}</strong><small className="t-muted">در زنجیرهٔ ارزش</small></div>
+            <div className="stat-card"><div className="st-top"><span className={`kpi-ico ic-purple`}><Landmark size={16}/></span><span>غیربازاری</span></div><strong className="st-value">{fmtNum(lists.rels.filter((x:any)=>x.marketKind==='NON_MARKET').length)}</strong><small className="t-muted">نهاد/تنظیم‌گر</small></div>
+            <div className="stat-card"><div className="st-top"><span className={`kpi-ico ic-gold`}><DoorOpen size={16}/></span><span>نقاط ورود</span></div><strong className="st-value">{fmtNum(lists.rels.filter((x:any)=>x.isMarketEntry).length)}</strong><small className="t-muted">{fmtNum(lists.rels.filter((x:any)=>x.isMarketEntry && (x.marketKind??'MARKET')==='MARKET').length)} بازاری · {fmtNum(lists.rels.filter((x:any)=>x.isMarketEntry && x.marketKind==='NON_MARKET').length)} غیربازاری</small></div>
+            <div className="stat-card"><div className="st-top"><span className={`kpi-ico ic-red`}><Layers size={16}/></span><span>هیبرید</span></div><strong className="st-value">{fmtNum(lists.rels.filter((x:any)=>x.marketKind==='HYBRID').length)}</strong><small className="t-muted">دو نقش همزمان</small></div>
+          </div>
+        </section>
+      ) : null}
 
-      {/* RISK STRIP */}
-      {riskyRels.length > 0 && (
-        <section className="alert-strip" aria-label="هشدارهای شبکه">
+      {/* RISK STRIP — بازاری / غیربازاری و نقاط ورود */}
+      {(relAlerts.length > 0 || riskyRels.length > 0) && (
+        <section className="alert-strip" aria-label="هشدارهای شبکه — بازاری و غیربازاری" style={{borderColor: (relAlertSummary?.danger ?? 0) > 0 ? 'var(--danger, #dc2626)' : undefined}}>
           <div className="alert-strip-head">
-            <Flame size={15} />
-            <span>روابط در معرض ریسک</span>
-            <b>{fmtNum(riskyRels.length)} رابطه</b>
+            <Siren size={15} />
+            <span>هشدارهای هوشمند — بازاری / غیربازاری و نقاط ورود</span>
+            <b>{fmtNum(relAlerts.length || riskyRels.length)} هشدار</b>
+            {relAlertSummary ? <><span className="chip danger" style={{fontSize:11}}>{fmtNum(relAlertSummary.danger)} بحرانی</span><span className="chip warning" style={{fontSize:11}}>{fmtNum(relAlertSummary.warning)} هشدار</span><span className="chip info" style={{fontSize:11}}><DoorOpen size={11} style={{display:'inline'}}/> {fmtNum(relAlertSummary.entry)} ورودی</span></> : null}
           </div>
           <div className="alert-strip-list">
-            {riskyRels.map((r: any) => (
-              <Link className="alert-pill" href={`/relationships/${r.id}`} key={r.id}>
-                <span className="alert-pill-name">{r.name}</span>
-                {r.risk ? <span className="alert-pill-meta">ریسک {fmtNum(r.risk)} · سلامت {fmtNum(r.health)}</span> : <span className="alert-pill-meta">هشدار تحلیلی</span>}
-                {r.why ? <span className="alert-pill-why">{r.why}</span> : null}
+            {(relAlerts.length ? relAlerts.slice(0,5) : riskyRels).map((r: any) => (
+              <Link className={`alert-pill ${r.tone==='danger'?'ap-danger':r.tone==='warning'?'ap-warning':''}`} href={r.relationshipId ? `/relationships/${r.relationshipId}` : `/relationships/${r.id}`} key={r.id}>
+                <span className="alert-pill-name">{r.title ?? r.name}</span>
+                <span className="alert-pill-meta">{r.marketKind ? (r.marketKind==='MARKET'?'بازاری':r.marketKind==='NON_MARKET'?'غیربازاری':'دوگانه') : ''}{r.isMarketEntry ? ' · نقطهٔ ورود' : ''}{r.segment ? ` · ${r.segment}` : ''}{r.risk ? ` · ریسک ${fmtNum(r.risk)}` : ''}</span>
+                {r.body || r.why ? <span className="alert-pill-why">{r.body ?? r.why}</span> : null}
               </Link>
             ))}
           </div>
-          <Link className="alert-strip-more" href="/relationships"><ChevronLeft size={13} /> همهٔ روابط</Link>
+          <Link className="alert-strip-more" href="/relationships"><ChevronLeft size={13} /> همهٔ روابط · نقشهٔ بازار</Link>
         </section>
       )}
 

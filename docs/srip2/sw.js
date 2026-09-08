@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.08.27';
+const DEMO_MOCK_VERSION = '2026.09.08.28';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -1749,12 +1749,15 @@ let PEOPLE = [
   { id:'p-13', firstName:'بهنام', lastName:'اقبالی', email:'behnam@sadena.ir', title:'مدیر فنی', department:'فنی', phone:'+98 21 88445588', organizationId:'org-5', status:'ACTIVE', influenceScore:64 },
 ];
 let RELS = [
-  { id:'r-1', relationshipType:'STRATEGIC_PARTNERSHIP', status:'ACTIVE', healthScore:78, riskScore:22, strategicScore:86, influenceScore:80, opportunityScore:72, resilienceScore:64, nextActionAt:'2026-09-05T09:00:00.000Z', lastInteractionAt:'2026-08-20T09:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-4' },
-  { id:'r-2', relationshipType:'BANKING', status:'ACTIVE', healthScore:64, riskScore:48, strategicScore:92, influenceScore:90, opportunityScore:81, resilienceScore:52, nextActionAt:'2026-09-02T09:00:00.000Z', lastInteractionAt:'2026-08-25T09:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-3' },
-  { id:'r-3', relationshipType:'CUSTOMER', status:'ACTIVE', healthScore:71, riskScore:35, strategicScore:74, influenceScore:66, opportunityScore:77, resilienceScore:58, nextActionAt:null, lastInteractionAt:'2026-08-10T09:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-5' },
-  { id:'r-4', relationshipType:'SUPPLY', status:'WATCH', healthScore:41, riskScore:66, strategicScore:69, influenceScore:60, opportunityScore:45, resilienceScore:38, nextActionAt:'2026-09-01T09:00:00.000Z', lastInteractionAt:'2026-07-28T09:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-6' },
-  { id:'r-5', relationshipType:'INVESTMENT', status:'ACTIVE', healthScore:82, riskScore:18, strategicScore:88, influenceScore:85, opportunityScore:90, resilienceScore:71, nextActionAt:null, lastInteractionAt:'2026-08-22T09:00:00.000Z', sourceOrganizationId:'org-1', targetOrganizationId:'org-7' },
-  { id:'r-6', relationshipType:'PARENT_SUBSIDIARY', status:'ACTIVE', healthScore:86, riskScore:12, strategicScore:84, influenceScore:70, opportunityScore:48, resilienceScore:82, nextActionAt:'2026-09-12T09:00:00.000Z', lastInteractionAt:'2026-09-02T09:00:00.000Z', sourceOrganizationId:'org-1', targetOrganizationId:'org-2' },
+  { id:'r-1', relationshipType:'STRATEGIC_PARTNERSHIP', status:'ACTIVE', healthScore:78, riskScore:22, strategicScore:86, influenceScore:80, opportunityScore:72, resilienceScore:64, nextActionAt:'2026-09-05T09:00:00.000Z', lastInteractionAt:'2026-08-20T09:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-4', marketKind:'MARKET', isMarketEntry:true, marketSegment:'پتروشیمی و انرژی' },
+  { id:'r-2', relationshipType:'BANKING', status:'ACTIVE', healthScore:64, riskScore:48, strategicScore:92, influenceScore:90, opportunityScore:81, resilienceScore:52, nextActionAt:'2026-09-02T09:00:00.000Z', lastInteractionAt:'2026-08-25T09:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-3', marketKind:'MARKET', isMarketEntry:true, marketSegment:'بانکداری و تأمین مالی' },
+  { id:'r-3', relationshipType:'CUSTOMER', status:'ACTIVE', healthScore:71, riskScore:35, strategicScore:74, influenceScore:66, opportunityScore:77, resilienceScore:58, nextActionAt:null, lastInteractionAt:'2026-08-10T09:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-5', marketKind:'MARKET', isMarketEntry:false, marketSegment:'ساخت‌وساز و پروژه‌های عمرانی' },
+  { id:'r-4', relationshipType:'SUPPLY', status:'WATCH', healthScore:41, riskScore:66, strategicScore:69, influenceScore:60, opportunityScore:45, resilienceScore:38, nextActionAt:'2026-09-01T09:00:00.000Z', lastInteractionAt:'2026-07-28T09:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-6', marketKind:'MARKET', isMarketEntry:false, marketSegment:'قطعات و زنجیره تأمین' },
+  { id:'r-5', relationshipType:'INVESTMENT', status:'ACTIVE', healthScore:82, riskScore:18, strategicScore:88, influenceScore:85, opportunityScore:90, resilienceScore:71, nextActionAt:null, lastInteractionAt:'2026-08-22T09:00:00.000Z', sourceOrganizationId:'org-1', targetOrganizationId:'org-7', marketKind:'MARKET', isMarketEntry:false, marketSegment:'سرمایه‌گذاری' },
+  { id:'r-6', relationshipType:'PARENT_SUBSIDIARY', status:'ACTIVE', healthScore:86, riskScore:12, strategicScore:84, influenceScore:70, opportunityScore:48, resilienceScore:82, nextActionAt:'2026-09-12T09:00:00.000Z', lastInteractionAt:'2026-09-02T09:00:00.000Z', sourceOrganizationId:'org-1', targetOrganizationId:'org-2', marketKind:'HYBRID', isMarketEntry:false, marketSegment:'درون‌هلدینگی' },
+  // روابط غیربازاری نمونه — نهاد/تنظیم‌گر/رسانه که بازار را شکل می‌دهند بدون مبادله مستقیم
+  { id:'r-7', relationshipType:'GOVERNMENT', status:'ACTIVE', healthScore:58, riskScore:42, strategicScore:90, influenceScore:88, opportunityScore:35, resilienceScore:55, nextActionAt:'2026-09-08T09:00:00.000Z', lastInteractionAt:'2026-08-18T09:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-8', marketKind:'NON_MARKET', isMarketEntry:true, marketSegment:'مجوز و تنظیم‌گری دولتی' },
+  { id:'r-8', relationshipType:'PARTNER', status:'ACTIVE', healthScore:63, riskScore:38, strategicScore:76, influenceScore:67, opportunityScore:62, resilienceScore:60, nextActionAt:null, lastInteractionAt:'2026-08-12T09:00:00.000Z', sourceOrganizationId:'org-1', targetOrganizationId:'org-4', marketKind:'MARKET', isMarketEntry:false, marketSegment:'همکاری فناورانه' },
 ];
 /* کیدنس دمو بر اساس نوع رابطه (P0-4) */
 [['r-1',30],['r-2',30],['r-3',45],['r-4',30],['r-5',60],['r-6',30]].forEach(([id,cd])=>{const r=RELS.find(v=>v.id===id); if(r) r.cadenceDays=cd;});
@@ -6326,6 +6329,13 @@ async function __handler(req, res) {
     let list=scopedRels(req);
     const orgParam=q.get('organizationId');
     if(orgParam) list=list.filter(r=>r.sourceOrganizationId===orgParam||r.targetOrganizationId===orgParam);
+    const mk=q.get('marketKind');
+    if(mk && ['MARKET','NON_MARKET','HYBRID'].includes(mk)) list=list.filter(r=>r.marketKind===mk);
+    const ent=q.get('isMarketEntry');
+    if(ent==='true') list=list.filter(r=>r.isMarketEntry);
+    else if(ent==='false') list=list.filter(r=>!r.isMarketEntry);
+    const seg=q.get('marketSegment');
+    if(seg) list=list.filter(r=>String(r.marketSegment||'').includes(seg));
     return json(res,200,attachCriteria('RELATIONSHIP',list.map(r=>({...relWithOrgs(r), riskDrivers:riskDrivers(req,r)}))));
   }
   if(is('/relationships')&&method==='POST'){
@@ -6335,7 +6345,9 @@ async function __handler(req, res) {
     const relIntake=normalizeCriteriaAnswers(b.criteriaAnswers??b.assessment);
     const relIntakeScope=criteriaScopeError('RELATIONSHIP',relIntake);
     if(relIntakeScope) return json(res,400,{message:relIntakeScope});
-        const r={id:`r-${Date.now()}`,relationshipType:b.relationshipType??'OTHER',status:b.status??'ACTIVE',cadenceDays:CADENCE_DEFAULT[b.relationshipType]??60,healthScore:b.healthScore??60,riskScore:b.riskScore??30,strategicScore:b.strategicScore??50,influenceScore:b.influenceScore??50,opportunityScore:b.opportunityScore??50,resilienceScore:b.resilienceScore??50,nextActionAt:null,lastInteractionAt:nowIso(),sourceOrganizationId:b.sourceOrganizationId,targetOrganizationId:b.targetOrganizationId};
+        const mk = ['MARKET','NON_MARKET','HYBRID'].includes(String(b.marketKind)) ? String(b.marketKind) : 'MARKET';
+        const seg = typeof b.marketSegment==='string' ? String(b.marketSegment).trim().slice(0,120) || null : null;
+        const r={id:`r-${Date.now()}`,relationshipType:b.relationshipType??'OTHER',status:b.status??'ACTIVE',cadenceDays:CADENCE_DEFAULT[b.relationshipType]??60,healthScore:b.healthScore??60,riskScore:b.riskScore??30,strategicScore:b.strategicScore??50,influenceScore:b.influenceScore??50,opportunityScore:b.opportunityScore??50,resilienceScore:b.resilienceScore??50,nextActionAt:null,lastInteractionAt:nowIso(),sourceOrganizationId:b.sourceOrganizationId,targetOrganizationId:b.targetOrganizationId, marketKind:mk, isMarketEntry:!!b.isMarketEntry, marketSegment:seg};
     RELS.push(r); saveDb();
     if(relIntake.length) saveStoredAnswers('RELATIONSHIP',r.id,relIntake);
     audit(req,'CREATE','relationship',r.id,'OK',{source:r.sourceOrganizationId,target:r.targetOrganizationId,answers:relIntake.length});
@@ -6356,6 +6368,43 @@ async function __handler(req, res) {
       withPlan:rows.filter(x=>x.plan.exists).length,
       openOpportunityValue:rows.reduce((s,x)=>s+x.openValue,0),
     }});
+  }
+  // هشدارهای هوشمند روابط — بازاری/غیربازاری + نقطه ورود به بازار
+  if(is('/relationships/alerts')&&method==='GET'){
+    const rels=scopedRels(req).filter(r=>!r.deletedAt);
+    const now=Date.now();
+    const alerts=[];
+    for(const r of rels){
+      const name = `${orgById(r.sourceOrganizationId)?.name ?? r.sourceOrganizationId} ↔ ${orgById(r.targetOrganizationId)?.name ?? r.targetOrganizationId}`;
+      const daysStale = r.lastInteractionAt ? Math.floor((now - new Date(r.lastInteractionAt).getTime())/86400000) : 999;
+      const cad = r.cadenceDays ?? 60;
+      // هشدار حوزه بازار
+      if(r.marketKind==='MARKET'){
+        if((r.healthScore??100) < 45) alerts.push({id:`a-${r.id}-mHealth`, relationshipId:r.id, tone:'danger', kind:'MARKET_HEALTH', title:'رابطهٔ بازاری بحرانی', body:`«${name}» سلامت ${r.healthScore} — در زنجیرهٔ بازار مستقیم اختلال ایجاد می‌کند.`, marketKind:r.marketKind, isMarketEntry:r.isMarketEntry, health:r.healthScore, segment:r.marketSegment});
+        else if((r.riskScore??0) >= 60) alerts.push({id:`a-${r.id}-mRisk`, relationshipId:r.id, tone:'warning', kind:'MARKET_RISK', title:'ریسک بالای رابطهٔ بازاری', body:`«${name}» ریسک ${r.riskScore} و بدون اقدام اصلاحی باز.`, marketKind:r.marketKind, isMarketEntry:r.isMarketEntry, risk:r.riskScore, segment:r.marketSegment});
+        if(r.isMarketEntry && daysStale > cad) alerts.push({id:`a-${r.id}-entryStale`, relationshipId:r.id, tone:'danger', kind:'ENTRY_STALE', title:'نقطهٔ ورود به بازار راکد', body:`«${name}» ورودی بازار «${r.marketSegment||'—'}» است ولی ${daysStale} روز بدون تعامل مانده (هدف هر ${cad} روز).`, daysStale, cadence:cad, marketKind:r.marketKind, isMarketEntry:true, segment:r.marketSegment});
+        if(daysStale > cad+15) alerts.push({id:`a-${r.id}-mStale`, relationshipId:r.id, tone: daysStale>cad+30?'danger':'warning', kind:'MARKET_STALE', title:'رابطهٔ بازاری کهنه', body:`«${name}» ${daysStale} روز بدون تعامل — خطر از دست دادن سهم بازار.`, daysStale, cadence:cad, marketKind:r.marketKind, segment:r.marketSegment});
+      } else if(r.marketKind==='NON_MARKET'){
+        if((r.healthScore??100) < 50) alerts.push({id:`a-${r.id}-nmHealth`, relationshipId:r.id, tone:'warning', kind:'NONMARKET_HEALTH', title:'رابطهٔ غیربازاری ناپایدار', body:`«${name}» (غیربازاری — ${r.marketSegment||'نهاد/تنظیم‌گر'}) سلامت ${r.healthScore}؛ می‌تواند مسیر ورود به بازار را مسدود کند.`, marketKind:r.marketKind, health:r.healthScore, segment:r.marketSegment});
+        if((r.riskScore??0)>=55 && r.isMarketEntry) alerts.push({id:`a-${r.id}-nmBlock`, relationshipId:r.id, tone:'danger', kind:'NONMARKET_BLOCK', title:'انسداد احتمالی ورود به بازار', body:`«${name}» به‌عنوان دروازهٔ ورود «${r.marketSegment||'—'}» پرریسک شده (ریسک ${r.riskScore}). بازبینی حاکمیتی لازم است.`, marketKind:r.marketKind, isMarketEntry:true, risk:r.riskScore, segment:r.marketSegment});
+      }
+      if(r.marketKind==='HYBRID' && (r.healthScore??100) < 50) alerts.push({id:`a-${r.id}-hyb`, relationshipId:r.id, tone:'warning', kind:'HYBRID_RISK', title:'رابطهٔ دوگانه ناپایدار', body:`«${name}» (هیبرید — هم بازار، هم نهاد) نیازمند مراقبت دوگانه است.`, marketKind:r.marketKind, health:r.healthScore});
+      // هشدار کیدنس عمومی (هر بازار)
+      if(daysStale > cad && r.status==='ACTIVE' && !alerts.some(a=>a.relationshipId===r.id && a.kind.includes('STALE'))){
+        alerts.push({id:`a-${r.id}-cad`, relationshipId:r.id, tone: daysStale>cad+20?'danger':'warning', kind:'CADENCE_BREAK', title:'کیدنس شکسته', body:`«${name}» ${daysStale} روز بدون تعامل (هدف ${cad} روز).`, daysStale, cadence:cad, marketKind:r.marketKind, segment:r.marketSegment});
+      }
+    }
+    // هشدار فقدان ورودی بازار برای هر سگمنت بازار هدف که هنوز ورودی ندارد
+    const segments = [...new Set(rels.filter(r=>r.marketKind==='MARKET').map(r=>r.marketSegment).filter(Boolean))];
+    const entrySegments = new Set(rels.filter(r=>r.isMarketEntry).map(r=>r.marketSegment).filter(Boolean));
+    for(const seg of ['پتروشیمی و انرژی','بانکداری و تأمین مالی','ساخت‌وساز و پروژه‌های عمرانی','فناوری']){
+      if(!entrySegments.has(seg) && !segments.includes(seg)) alerts.push({id:`a-missing-${seg}`, tone:'info', kind:'MISSING_ENTRY', title:'بازار بدون نقطهٔ ورود', body:`برای سگمنت «${seg}» هنوز نقطهٔ ورود بازاری ثبت نشده — فرصت یا ریسک پوشش.`, segment:seg});
+    }
+    // مرتب‌سازی: بحرانی اول
+    const order={danger:0,warning:1,info:2};
+    alerts.sort((a,b)=> (order[a.tone]??9)-(order[b.tone]??9) || String(a.kind).localeCompare(String(b.kind)));
+    return json(res,200,{generatedAt:nowIso(), total:alerts.length, items:alerts.slice(0,30), summary:{danger:alerts.filter(a=>a.tone==='danger').length, warning:alerts.filter(a=>a.tone==='warning').length, info:alerts.filter(a=>a.tone==='info').length, market:alerts.filter(a=>a.marketKind==='MARKET').length, nonMarket:alerts.filter(a=>a.marketKind==='NON_MARKET').length, entry:alerts.filter(a=>a.isMarketEntry).length}});
+  }
   }
   const relPulse=match('/relationships/:id/pulse');
   if(relPulse&&method==='GET'){
@@ -7947,6 +7996,9 @@ async function __handler(req, res) {
     if(!r) return json(res,404,{message:'رابطه یافت نشد'});
     const b=await readBody(req);
     if(b.cadenceDays!==undefined){const cd=Number(b.cadenceDays); if(!Number.isFinite(cd)||cd<7||cd>365) return json(res,400,{message:'کیدنس باید بین ۷ تا ۳۶۵ روز باشد.'}); r.cadenceDays=Math.round(cd); delete b.cadenceDays;}
+    if(b.marketKind!==undefined){ const mk=String(b.marketKind).trim().toUpperCase(); if(!['MARKET','NON_MARKET','HYBRID'].includes(mk)) return json(res,400,{message:'marketKind باید MARKET/NON_MARKET/HYBRID باشد.'}); b.marketKind=mk; }
+    if(b.marketSegment!==undefined){ b.marketSegment = typeof b.marketSegment==='string' ? String(b.marketSegment).trim().slice(0,120) || null : null; }
+    if(b.isMarketEntry!==undefined) b.isMarketEntry=!!b.isMarketEntry;
     Object.assign(r,b);
     audit(req,'UPDATE','relationship',r.id,'OK',{patch:Object.keys(b).join(',')});
     await autoRunWorkflows('Relationship', r.id, 'RELATIONSHIP_UPDATED', { relationship: { id: r.id, sourceOrganizationId: r.sourceOrganizationId, targetOrganizationId: r.targetOrganizationId, relationshipType: r.relationshipType, status: r.status, healthScore: r.healthScore, strategicScore: r.strategicScore, riskScore: r.riskScore } });

@@ -4,7 +4,7 @@ import { use, useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../../_lib/api';
 import { fa } from '../../_lib/fa';
 import { Badge, ErrorCard, Loading, PageHeader } from '../../_components/page-ui';
-import { CalendarDays, HeartPulse, RefreshCw, Archive, RotateCcw, AlertTriangle, ChevronLeft } from 'lucide-react';
+import { CalendarDays, HeartPulse, RefreshCw, Archive, RotateCcw, AlertTriangle, ChevronLeft, TrendingUp, Gauge, FileClock, MessageCircle, Users, Store, Landmark, Layers, DoorOpen, Briefcase, Siren, Globe } from 'lucide-react';
 import { CriteriaScoreCard } from '../../_components/criteria';
 
 const arr = (x: any): any[] => Array.isArray(x) ? x : Array.isArray(x?.items) ? x.items : Array.isArray(x?.data) ? x.data : Array.isArray(x?.rows) ? x.rows : [];
@@ -47,6 +47,10 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [r, setR] = useState<any>(null);
   const [tl, setTl] = useState<any[]>([]);
+  const [pulse, setPulse] = useState<any>(null);
+  const [survey, setSurvey] = useState<any>(null);
+  const [surveyAnswers, setSurveyAnswers] = useState<Record<string, number>>({});
+  const [transfer, setTransfer] = useState<any>(null);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [busy, setBusy] = useState('');
@@ -54,8 +58,15 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const load = useCallback(async () => {
     setError('');
     try {
-      const [a, b] = await Promise.all([api(`/relationships/${id}`), api(`/relationships/${id}/timeline`)]);
-      setR(a); setTl(arr(b));
+      const [a, b, p, s, t] = await Promise.all([
+        api<any>(`/relationships/${id}`),
+        api<any>(`/relationships/${id}/timeline`),
+        api<any>(`/relationships/${id}/pulse`).catch(() => null),
+        api<any>(`/relationships/${id}/pulse-survey`).catch(() => null),
+        api<any>(`/intelligence/knowledge-transfer?relationshipId=${id}`).catch(() => null),
+      ]);
+      setR(a); setTl(arr(b)); setPulse(p); setSurvey(s); setTransfer(t);
+      if (s?.last) setSurveyAnswers(Object.fromEntries(((s.last as any)?.answers ?? []).map((x: any) => [x.questionId, x.score])));
     } catch (e) { setError((e as Error).message); }
   }, [id]);
   useEffect(() => { load(); }, [load]);
@@ -85,13 +96,18 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
       <PageHeader
         eyebrow="حوزهٔ اصلی · پروفایل رابطه"
         title={name}
-        description={`${fa(r?.relationshipType ?? '')} · ${fa(r?.status ?? '')}`}
+        description={`${fa(r?.relationshipType ?? '')} · ${fa(r?.status ?? '')}` + (r?.marketKind ? ' · ' + fa(r.marketKind) : '') + (r?.isMarketEntry ? ' · نقطهٔ ورود به بازار' : '') + (r?.marketSegment ? ' · ' + r.marketSegment : '')}
         actions={
           <div className="toolbar" style={{ flexWrap: 'wrap' }}>
             <button className="secondary-action" onClick={load} disabled={!!busy}><RefreshCw size={14} /> بازخوانی</button>
             <label className="inline-label">وضعیت
               <select value={r?.status ?? 'ACTIVE'} disabled={!!busy} onChange={e => doIt('status', () => api(`/relationships/${id}`, { method: 'PATCH', body: JSON.stringify({ status: e.target.value }) }), 'وضعیت به‌روزرسانی شد.')}>
                 {STATUS_OPTIONS.map(s => <option key={s} value={s}>{fa(s)}</option>)}
+              </select>
+            </label>
+            <label className="inline-label">کیدنس (هر چند روز)
+              <select value={r?.cadence?.cadenceDays ?? 30} disabled={!!busy} onChange={e => doIt('cadence', () => api(`/relationships/${id}`, { method: 'PATCH', body: JSON.stringify({ cadenceDays: Number(e.target.value) }) }), 'کیدنس رابطه به‌روزرسانی شد.')}>
+                {[14, 21, 30, 45, 60, 90].map(d => <option key={d} value={d}>{d} روز</option>)}
               </select>
             </label>
             <label className="inline-label">مرحلهٔ چرخهٔ زندگی
@@ -116,9 +132,48 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
       />
       <ErrorCard message={error} />
       {info && <div className="success-card" role="status">{info}</div>}
+      {r?.cadence && r.cadence.status !== 'FRESH' && (
+        <div className="info-card" style={{ background: r.cadence.status === 'CRITICAL' ? 'color-mix(in srgb, var(--srip-danger) 10%, transparent)' : undefined, borderColor: r.cadence.status === 'CRITICAL' ? 'color-mix(in srgb, var(--srip-danger) 32%, transparent)' : undefined, color: r.cadence.status === 'CRITICAL' ? 'var(--srip-danger)' : undefined }} role="status">
+          {r.cadence.status === 'CRITICAL' ? 'کیدنس رابطه شکسته است' : 'کیدنس رابطه عقب افتاده است'} — آخرین تعامل {fmtNum(r.cadence.daysSinceLastInteraction)} روز پیش؛ هدف {fmtNum(r.cadence.cadenceDays)} روز. یک تعامل معنادار ثبت کنید یا مهلت را تغییر دهید.
+        </div>
+      )}
 
       {r && (
         <>
+          {/* بازار — جنسیت و نقطه ورود */}
+          <section className="panel" style={{marginTop:14, borderInlineStart: r?.marketKind==='NON_MARKET' ? '4px solid var(--info)' : r?.marketKind==='HYBRID' ? '4px solid var(--warning)' : '4px solid var(--success)'}}>
+            <div className="panel-title">
+              <div>
+                <h2 style={{display:'inline-flex', gap:6, alignItems:'center'}}>{r?.marketKind==='NON_MARKET' ? <Landmark size={16}/> : r?.marketKind==='HYBRID' ? <Layers size={16}/> : <Store size={16}/>} بازار — {fa(r?.marketKind ?? 'MARKET')} {r?.isMarketEntry ? <span className="chip warning" style={{marginInlineStart:6}}><DoorOpen size={11}/> نقطهٔ ورود</span> : null}</h2>
+                <p>{r?.marketKind==='MARKET' ? 'این رابطه مستقیماً در زنجیرهٔ ارزش/مبادله عمل می‌کند.' : r?.marketKind==='NON_MARKET' ? 'این رابطه شکل‌دهندهٔ بازار است — مجوز/اعتبار/مانع بدون مبادلهٔ مستقیم.' : 'این رابطه هیبرید است — هم مبادله، هم نقش نهادی.'} {r?.marketSegment ? `سگمنت: ${r.marketSegment}` : 'سگمنت ثبت نشده'}</p>
+              </div>
+              <Badge tone={r?.marketKind==='NON_MARKET' ? 'info' : r?.marketKind==='HYBRID' ? 'warning' : 'success'}>{fa(r?.marketKind ?? 'MARKET')}</Badge>
+            </div>
+            {(r?.marketKind==='NON_MARKET' || r?.riskScore>=40) && (r?.cadence?.status==='CRITICAL' || r?.healthScore<55) && (
+              <div className="wf-alert" style={{marginTop:8}}><Siren size={13}/> هشدار بازار: {r?.marketKind==='NON_MARKET' ? 'اختلال در این گرهٔ غیربازاری می‌تواند دسترسی کل سگمنت را مسدود کند.' : 'رابطهٔ بازاری در معرض ریسک — کیدنس یا سلامت نیازمند اقدام فوری است.'}</div>
+            )}
+            <div className="toolbar" style={{flexWrap:'wrap', gap:8, marginTop:10}}>
+              <label className="inline-label">جنسیت بازار
+                <select value={r?.marketKind ?? 'MARKET'} disabled={!!busy} onChange={e => doIt('marketKind', () => api(`/relationships/${id}`, { method: 'PATCH', body: JSON.stringify({ marketKind: e.target.value }) }), 'جنسیت بازار به‌روزرسانی شد.')}>
+                  <option value="MARKET">{fa('MARKET')} — زنجیرهٔ ارزش</option>
+                  <option value="NON_MARKET">{fa('NON_MARKET')} — نهاد/تنظیم‌گر</option>
+                  <option value="HYBRID">{fa('HYBRID')} — دوگانه</option>
+                </select>
+              </label>
+              <label className="inline-label" style={{display:'inline-flex', alignItems:'center', gap:6}}>
+                <input type="checkbox" checked={!!r?.isMarketEntry} disabled={!!busy} onChange={e => doIt('isMarketEntry', () => api(`/relationships/${id}`, { method: 'PATCH', body: JSON.stringify({ isMarketEntry: e.target.checked }) }), e.target.checked ? 'به‌عنوان نقطهٔ ورود علامت‌گذاری شد.' : 'علامت نقطهٔ ورود برداشته شد.')} />
+                نقطهٔ ورود به بازار
+              </label>
+              <label className="inline-label" style={{flex:1, minWidth:180}}>سگمنت/بازار هدف
+                <input defaultValue={r?.marketSegment ?? ''} placeholder="مثلاً: پتروشیمی، بانکداری…" maxLength={120} id="seg-input"
+                  onKeyDown={e=>{ if(e.key==='Enter'){ const v=(e.target as HTMLInputElement).value; doIt('marketSegment', ()=> api(`/relationships/${id}`, {method:'PATCH', body: JSON.stringify({ marketSegment: v }) }), 'سگمنت به‌روزرسانی شد.'); } }}
+                  onBlur={e=>{ const v=e.target.value; if(v!== (r?.marketSegment ?? '')) doIt('marketSegment', ()=> api(`/relationships/${id}`, {method:'PATCH', body: JSON.stringify({ marketSegment: v }) }), 'سگمنت به‌روزرسانی شد.'); }}
+                />
+              </label>
+            </div>
+            <div className="t-muted" style={{fontSize:11, marginTop:6, lineHeight:1.7}}><Globe size={11} style={{display:'inline', verticalAlign:'middle'}}/> <b>کجا ورود ما به بازار است؟</b> فقط دروازه‌های اصلی را «نقطهٔ ورود» علامت بزنید — گزارش نقشهٔ بازار و هشدارهای هوشمند دقیقاً روی همین‌ها کار می‌کنند.</div>
+          </section>
+
           {/* خلاصهٔ وضعیت */}
           <CriteriaScoreCard subjectType="RELATIONSHIP" subjectId={id} onEdit={load} />
 
@@ -177,6 +232,258 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
             )}
           </section>
 
+          {/* P1: سرمایهٔ رابطه، روند و برنامهٔ ۹۰ روزه */}
+          {pulse && (
+            <section className="panel" style={{ marginTop: 14 }}>
+              <div className="panel-title">
+                <div>
+                  <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Gauge size={16} /> سرمایهٔ رابطه و روند ۹۰ روزه</h2>
+                  <p>سرمایه = قدرت (سلامت) × نفوذ × پتانسیل · روند از اسنپ‌شات ۹۰روزه · اعتماد از تعداد منابع و تازگی شواهد</p>
+                </div>
+                <span className={`chip ${pulse.classKey === 'RISK' ? 'danger' : pulse.classKey === 'GROWTH' ? 'success' : 'info'}`}>{pulse.classLabel}</span>
+              </div>
+              <div className="rel-status-metrics">
+                <div className="rel-metric">
+                  <span>سرمایهٔ رابطه</span>
+                  <div className="rel-metric-value"><b className={clsOf(pulse.capital?.capital)}>{fmtNum(pulse.capital?.capital)}</b><small>از ۱۰۰</small></div>
+                  <div className="rel-metric-bar"><span className={clsOf(pulse.capital?.capital)} style={{ width: `${Math.min(100, pulse.capital?.capital ?? 0)}%` }} /></div>
+                </div>
+                <div className="rel-metric">
+                  <span>قدرت × نفوذ × پتانسیل</span>
+                  <div className="rel-metric-value" style={{ flexWrap: 'wrap', gap: 4 }}>
+                    <b style={{ fontSize: 14 }}>{fmtNum(pulse.capital?.strength)}</b><small>قدرت</small>
+                    <b style={{ fontSize: 14 }}>× {fmtNum(pulse.capital?.influence)}</b><small>نفوذ</small>
+                    <b style={{ fontSize: 14 }}>× {fmtNum(pulse.capital?.potential)}</b><small>پتانسیل</small>
+                  </div>
+                </div>
+                <div className="rel-metric">
+                  <span>روند ۹۰ روزه</span>
+                  <div className="rel-metric-value">
+                    <b className={pulse.trend?.trend === 'DOWN' ? 'h-crit' : pulse.trend?.trend === 'UP' ? 'h-hi' : 'h-mid'}>
+                      {pulse.trend?.trend === 'UP' ? '↗' : pulse.trend?.trend === 'DOWN' ? '↘' : '→'} {fmtNum(pulse.trend?.current)} ({pulse.trend?.delta90d != null && pulse.trend?.delta90d > 0 ? '+' : ''}{fmtNum(pulse.trend?.delta90d)})
+                    </b>
+                    <small>پایه: {fmtNum(pulse.trend?.baseline)}</small>
+                  </div>
+                </div>
+                <div className="rel-metric">
+                  <span>اعتماد امتیاز</span>
+                  <div className="rel-metric-value"><b>{fmtNum(pulse.trend?.confidence)}٪</b><small>{pulse.trend?.evidence?.sources ?? 0} منبع · {(pulse.trend?.evidence?.sourceTypes ?? []).map((x: any) => fa(x)).join('، ') || 'شاهد محدود'}</small></div>
+                </div>
+                <div className="rel-metric">
+                  <span>ارزش در معرض ریسک</span>
+                  <div className="rel-metric-value">
+                    <b style={{ fontSize: 15 }}>{pulse.capital?.valueAtRisk ? new Intl.NumberFormat('fa-IR', { notation: 'compact' }).format(pulse.capital.valueAtRisk) : '—'}</b>
+                    <small>از {pulse.capital?.openValue ? new Intl.NumberFormat('fa-IR', { notation: 'compact' }).format(pulse.capital.openValue) : '۰'} تومان فرصت باز</small>
+                  </div>
+                </div>
+              </div>
+              {Array.isArray(pulse.trend?.snapshots) && pulse.trend.snapshots.length > 1 && (
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 52, marginTop: 10 }}>
+                  {pulse.trend.snapshots.map((s: any) => (
+                    <div key={s.daysAgo} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }} title={`${fmtNum(s.daysAgo)} روز پیش: ${fmtNum(s.score)} · اعتماد ${fmtNum(s.confidence)}٪`}>
+                      <span style={{ width: '100%', height: Math.max(6, Math.round(s.score * 0.44)), borderRadius: 4, background: s.daysAgo === 0 ? 'var(--accent,#2563eb)' : 'color-mix(in srgb, var(--accent,#2563eb) 45%, transparent)' }} />
+                      <small className="t-muted" style={{ fontSize: 9.5 }}>{s.daysAgo === 0 ? 'اکنون' : fmtNum(s.daysAgo) + 'پ'}</small>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {Array.isArray(pulse.openOpportunities) && pulse.openOpportunities.length > 0 && (
+                <div className="t-muted" style={{ marginTop: 8 }}>
+                  فرصت‌های باز متصل: {pulse.openOpportunities.map((o: any) => `«${o.name}» (${fmtNum(o.probability)}٪)`).join(' · ')}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* P1: برنامهٔ ۹۰ روزهٔ حساب */}
+          <section className="panel" style={{ marginTop: 14 }}>
+            <div className="panel-title">
+              <div>
+                <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><FileClock size={16} /> برنامهٔ ۹۰ روزهٔ حساب {pulse?.plan ? <span className={`chip ${pulse.plan.status === 'ON_TRACK' ? 'success' : 'warning'}`}>{fa(pulse.plan.status)}</span> : null}</h2>
+                <p>اقدامات، مالک، مهلت و ریسک‌نامه — مرور ماهانه (هر {fmtNum(pulse?.plan?.reviewCycleDays ?? 30)} روز)</p>
+              </div>
+            </div>
+            {pulse?.plan ? (
+              <>
+                {pulse.plan.riskNote && (
+                  <div className="wf-alert" role="note"><AlertTriangle size={13} /> <b>ریسک‌نامه:</b> {pulse.plan.riskNote}</div>
+                )}
+                <div className="list" style={{ marginTop: 8 }}>
+                  {pulse.plan.items.map((it: any) => {
+                    const due = it.dueAt ? new Date(it.dueAt).getTime() : null;
+                    const overdue = due != null && due < Date.now() && it.status !== 'DONE';
+                    return (
+                      <article className="panel compact" key={it.id}>
+                        <div className="panel-title">
+                          <div>
+                            <strong>{it.title} {overdue ? <span className="chip danger">موعد گذشته</span> : null}</strong>
+                            <small className="t-muted">{it.focus} · مالک: {it.owner?.name ?? '—'} · مهلت: {fmtDate(it.dueAt)}</small>
+                          </div>
+                          <select value={it.status} aria-label={`وضعیت ${it.title}`} onChange={async (e) => {
+                            setBusy(it.id); setError(''); setInfo('');
+                            try {
+                              await api(`/relationships/${id}/account-plan/items/${it.id}`, { method: 'PATCH', body: JSON.stringify({ status: e.target.value }) });
+                              setInfo('وضعیت اقدام برنامه به‌روزرسانی شد.'); await load();
+                            } catch (x) { setError((x as Error).message); }
+                            finally { setBusy(''); }
+                          }} disabled={busy === it.id}>
+                            {['TODO', 'IN_PROGRESS', 'DONE', 'BLOCKED'].map(s => <option key={s} value={s}>{fa(s)}</option>)}
+                          </select>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+                <form className="entity-form" style={{ marginTop: 10, gap: 8 }} onSubmit={async (e) => {
+                  e.preventDefault();
+                  const t = (e.currentTarget.elements.namedItem('plan-title') as HTMLInputElement)?.value ?? '';
+                  const d = (e.currentTarget.elements.namedItem('plan-due') as HTMLInputElement)?.value ?? '';
+                  if (!t.trim()) { setError('عنوان اقدام الزامی است.'); return; }
+                  setBusy('new'); setError(''); setInfo('');
+                  try {
+                    await api(`/relationships/${id}/account-plan`, { method: 'POST', body: JSON.stringify({ title: t.trim(), dueAt: d ? new Date(d).toISOString() : null, ownerId: '' }) });
+                    setInfo('اقدام جدید به برنامهٔ ۹۰ روزه اضافه شد.'); await load();
+                    e.currentTarget.reset();
+                  } catch (x) { setError((x as Error).message); }
+                  finally { setBusy(''); }
+                }}>
+                  <div className="field" style={{ flex: 2 }}>
+                    <label className="field-label" htmlFor="plan-title">اقدام جدید</label>
+                    <input id="plan-title" name="plan-title" placeholder="مثلاً: جلسهٔ بازبینی با مدیر خرید" maxLength={220} />
+                  </div>
+                  <div className="field">
+                    <label className="field-label" htmlFor="plan-due">مهلت</label>
+                    <input id="plan-due" name="plan-due" type="date" />
+                  </div>
+                  <button className="btn btn-primary" style={{ alignSelf: 'flex-end', minHeight: 0, padding: '9px 16px' }} disabled={busy === 'new'}>{busy === 'new' ? 'در حال ثبت…' : 'افزودن'}</button>
+                </form>
+              </>
+            ) : (
+              <p className="t-muted">برنامهٔ ۹۰ روزه برای این رابطه ثبت نشده — از فهرست روابط یا صفحهٔ تحلیل، برنامه بسازید.</p>
+            )}
+          </section>
+
+          {/* P2-5: پالس ۹۰ روزه — پرسش، پیوند به معیار و حلقهٔ بسته */}
+          {survey && (
+            <section className="panel" style={{ marginTop: 14 }}>
+              <div className="panel-title">
+                <div>
+                  <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><MessageCircle size={16} /> پالس ۹۰ روزه</h2>
+                  <p>۳ پرسش کوتاه از وضعیت رابطه — هر پاسخ به یک خانوادهٔ معیار پیوند می‌خورد و نتیجه در حلقهٔ بسته به اقدام بدل می‌شود</p>
+                </div>
+                {survey.last ? (
+                  <span className={`chip ${survey.last.avgScore >= 70 ? 'success' : survey.last.avgScore >= 45 ? 'warning' : 'danger'}`}>آخرین پالس: {fmtNum(survey.last.avgScore)} از ۱۰۰</span>
+                ) : <Badge tone="info">هنوز پاسخ داده نشده</Badge>}
+              </div>
+              {survey.last && (
+                <div className="info-card" role="status">
+                  آخرین پاسخ {fmtDate(survey.last.answeredAt)} — {survey.last.interpretation} · موعد بعدی: {fmtDate(survey.last.nextDueAt)} ({fmtNum(survey.cycleDays ?? 90)} روز پس از پاسخ).
+                  {!survey.canSubmit && <span style={{ display: 'block', marginTop: 4 }}>برای پاسخ جدید تا موعد بعدی صبر کنید (حلقهٔ بسته: یک پاسخ در هر ۹۰ روز).</span>}
+                </div>
+              )}
+              {survey.canSubmit && (
+                <form className="entity-form" style={{ marginTop: 10, gap: 14 }} onSubmit={async (e) => {
+                  e.preventDefault();
+                  setBusy('survey'); setError(''); setInfo('');
+                  try {
+                    const answers = (survey.questions ?? []).map((q: any) => ({ questionId: q.id, score: surveyAnswers[q.id] ?? 50 }));
+                    const out: any = await api(`/relationships/${id}/pulse-survey`, { method: 'POST', body: JSON.stringify({ answers }) });
+                    setSurvey(out.view); setInfo(`پالس ثبت شد: ${fmtNum(out.result.avgScore)} از ۱۰۰ — ${out.result.interpretation} · موعد بعدی ${fmtDate(out.result.nextDueAt)}`);
+                  } catch (x) { setError((x as Error).message); }
+                  finally { setBusy(''); }
+                }}>
+                  {(survey.questions ?? []).map((q: any) => (
+                    <div key={q.id} className="field" style={{ width: '100%' }}>
+                      <label className="field-label" htmlFor={`q-${q.id}`}>{q.text} <span className="t-muted" style={{ fontWeight: 400 }}>— {fa(q.criteriaFamily)}</span></label>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        {[0, 25, 50, 75, 100].map((v) => (
+                          <button key={v} type="button" className={`btn ${surveyAnswers[q.id] === v ? 'btn-primary' : 'btn-ghost'}`}
+                            style={{ minHeight: 0, padding: '5px 12px', fontSize: 11 }} onClick={() => setSurveyAnswers((s) => ({ ...s, [q.id]: v }))}>
+                            {v === 0 ? '۰' : v === 100 ? '۱۰۰' : fmtNum(v)}
+                          </button>
+                        ))}
+                        <span className="t-muted" style={{ fontSize: 10.5, flex: 1 }}>{q.anchor}</span>
+                      </div>
+                    </div>
+                  ))}
+                  <button className="btn btn-primary" style={{ justifySelf: 'start' }} disabled={busy === 'survey'}>{busy === 'survey' ? 'در حال ثبت…' : 'ثبت پالس'}</button>
+                </form>
+              )}
+              {(survey.history ?? []).length > 1 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+                  {(survey.history ?? []).map((h: any) => (
+                    <span key={h.id} className={`chip ${h.avgScore >= 70 ? 'success' : h.avgScore >= 45 ? 'warning' : 'danger'}`}>
+                      {fmtDate(h.answeredAt)}: {fmtNum(h.avgScore)}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* P3-2: حافظهٔ نهادی و انتقال دانش */}
+          {transfer && (
+            <section className="panel" style={{ marginTop: 14 }}>
+              <div className="panel-title">
+                <div>
+                  <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Users size={16} /> حافظهٔ نهادی و انتقال دانش</h2>
+                  <p>«چه کسی چه کسی را می‌شناسد» + بستهٔ انتقال + بریف جانشین — برای خروج/جابه‌جایی بدون از دست رفتن دانش رابطه</p>
+                </div>
+                <Badge tone={transfer.transferred ? 'success' : 'info'}>{transfer.transferred ? `تحویل شده در ${fmtDate(transfer.transferred.handedOverAt)}` : 'در انتظار تحویل'}</Badge>
+              </div>
+              <div className="split-panels" style={{ marginTop: 4 }}>
+                <section>
+                  <b style={{ fontSize: 11.5 }}>بریف جانشین</b>
+                  <pre className="notice" role="note" style={{ whiteSpace: 'pre-line', fontFamily: 'inherit', fontSize: 11.5, marginTop: 6 }}>{transfer.brief}</pre>
+                  {transfer.access === 'full' && (
+                    <div style={{ marginTop: 8 }}>
+                      <b style={{ fontSize: 11.5 }}>چه کسی چه کسی را می‌شناسد</b>
+                      <div className="list" style={{ marginTop: 6 }}>
+                        {(transfer.whoKnowsWho ?? []).length === 0 && <p className="t-muted" style={{ fontSize: 11 }}>شناخت متقابل ثبت‌نشده‌ای نیست؛ برای معرفی، از پیشنهاد پیوند شبکه استفاده کنید.</p>}
+                        {(transfer.whoKnowsWho ?? []).map((w: any) => (
+                          <div className="listRow" key={w.person.id}>
+                            <span style={{ flex: 1, minWidth: 0 }}>
+                              <b style={{ fontSize: 12.5 }}>{w.person.name}</b> <small className="t-muted">{w.person.title} · {w.org}</small>
+                              <small className="t-muted" style={{ display: 'block' }}>ما می‌شناسیم: {w.ourContacts.join('، ')}</small>
+                            </span>
+                            <Badge tone="info">{fmtNum(w.meetingCount)} جلسه</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </section>
+                <section>
+                  <b style={{ fontSize: 11.5 }}>مخاطبین کلیدی</b>
+                  <div className="list" style={{ marginTop: 6 }}>
+                    {(transfer.contacts ?? []).map((c: any) => (
+                      <div className="listRow" key={c.id}>
+                        <span style={{ flex: 1, minWidth: 0 }}>
+                          <b style={{ fontSize: 12.5 }}>{c.name}</b> {c.champion && <span className="chip success" style={{ marginInlineStart: 4 }}>حامی</span>}
+                          <small className="t-muted" style={{ display: 'block' }}>{c.title} · {c.organization}{c.role ? ` · نقش تصمیم: ${fa(c.role)}` : ''}</small>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                    <Link className="btn btn-primary" href={`/people`} style={{ minHeight: 0, padding: '8px 14px' }}>مدیریت اشخاص</Link>
+                    {!transfer.transferred && (
+                      <button className="btn btn-secondary" style={{ minHeight: 0, padding: '8px 14px' }} disabled={busy === 'handoff'} onClick={async () => {
+                        setBusy('handoff'); setError(''); setInfo('');
+                        try {
+                          const out: any = await api(`/intelligence/knowledge-transfer/${id}/handoff`, { method: 'POST', body: '{}' });
+                          setTransfer(out.view);
+                          setInfo(`انتقال دانش ثبت شد — بریف برای ${out.transfer?.toName ?? 'جانشین'} ارسال شد.`);
+                        } catch (x) { setError((x as Error).message); }
+                        finally { setBusy(''); }
+                      }}>{busy === 'handoff' ? 'در حال ثبت…' : 'ثبت تحویل دانش'}</button>
+                    )}
+                  </div>
+                </section>
+              </div>
+            </section>
+          )}
+
           <div className="split-panels">
             {/* امتیازها */}
             <section className="panel">
@@ -204,6 +511,9 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                   ['سازمان مقصد', r.targetOrganization?.name],
                   ['نوع رابطه', r.relationshipType ? fa(r.relationshipType) : null],
                   ['مرحلهٔ چرخهٔ زندگی', r.lifecycleStage ? fa(r.lifecycleStage) : null],
+                  ['جنسیت بازار', r.marketKind ? fa(r.marketKind) : null],
+                  ['سگمنت بازار', r.marketSegment ?? null],
+                  ['نقطهٔ ورود به بازار', r.isMarketEntry ? 'بله — دروازهٔ بازار' : 'خیر'],
                   ['مالک', r.owner?.name],
                   ['مالک جایگزین', r.backupOwner?.name],
                   ['آخرین تعامل', r.lastInteractionAt ? timeAgo(r.lastInteractionAt) : null],

@@ -4,7 +4,7 @@ import { use, useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../../_lib/api';
 import { fa } from '../../_lib/fa';
 import { Badge, ErrorCard, Loading, PageHeader } from '../../_components/page-ui';
-import { CalendarDays, HeartPulse, RefreshCw, Archive, RotateCcw, AlertTriangle, ChevronLeft, TrendingUp, Gauge, FileClock, MessageCircle, Users } from 'lucide-react';
+import { CalendarDays, HeartPulse, RefreshCw, Archive, RotateCcw, AlertTriangle, ChevronLeft, TrendingUp, Gauge, FileClock, MessageCircle, Users, Store, Landmark, Layers, DoorOpen, Briefcase, Siren, Globe } from 'lucide-react';
 import { CriteriaScoreCard } from '../../_components/criteria';
 
 const arr = (x: any): any[] => Array.isArray(x) ? x : Array.isArray(x?.items) ? x.items : Array.isArray(x?.data) ? x.data : Array.isArray(x?.rows) ? x.rows : [];
@@ -96,7 +96,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
       <PageHeader
         eyebrow="حوزهٔ اصلی · پروفایل رابطه"
         title={name}
-        description={`${fa(r?.relationshipType ?? '')} · ${fa(r?.status ?? '')}`}
+        description={`${fa(r?.relationshipType ?? '')} · ${fa(r?.status ?? '')}` + (r?.marketKind ? ' · ' + fa(r.marketKind) : '') + (r?.isMarketEntry ? ' · نقطهٔ ورود به بازار' : '') + (r?.marketSegment ? ' · ' + r.marketSegment : '')}
         actions={
           <div className="toolbar" style={{ flexWrap: 'wrap' }}>
             <button className="secondary-action" onClick={load} disabled={!!busy}><RefreshCw size={14} /> بازخوانی</button>
@@ -140,6 +140,40 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
 
       {r && (
         <>
+          {/* بازار — جنسیت و نقطه ورود */}
+          <section className="panel" style={{marginTop:14, borderInlineStart: r?.marketKind==='NON_MARKET' ? '4px solid var(--info)' : r?.marketKind==='HYBRID' ? '4px solid var(--warning)' : '4px solid var(--success)'}}>
+            <div className="panel-title">
+              <div>
+                <h2 style={{display:'inline-flex', gap:6, alignItems:'center'}}>{r?.marketKind==='NON_MARKET' ? <Landmark size={16}/> : r?.marketKind==='HYBRID' ? <Layers size={16}/> : <Store size={16}/>} بازار — {fa(r?.marketKind ?? 'MARKET')} {r?.isMarketEntry ? <span className="chip warning" style={{marginInlineStart:6}}><DoorOpen size={11}/> نقطهٔ ورود</span> : null}</h2>
+                <p>{r?.marketKind==='MARKET' ? 'این رابطه مستقیماً در زنجیرهٔ ارزش/مبادله عمل می‌کند.' : r?.marketKind==='NON_MARKET' ? 'این رابطه شکل‌دهندهٔ بازار است — مجوز/اعتبار/مانع بدون مبادلهٔ مستقیم.' : 'این رابطه هیبرید است — هم مبادله، هم نقش نهادی.'} {r?.marketSegment ? `سگمنت: ${r.marketSegment}` : 'سگمنت ثبت نشده'}</p>
+              </div>
+              <Badge tone={r?.marketKind==='NON_MARKET' ? 'info' : r?.marketKind==='HYBRID' ? 'warning' : 'success'}>{fa(r?.marketKind ?? 'MARKET')}</Badge>
+            </div>
+            {(r?.marketKind==='NON_MARKET' || r?.riskScore>=40) && (r?.cadence?.status==='CRITICAL' || r?.healthScore<55) && (
+              <div className="wf-alert" style={{marginTop:8}}><Siren size={13}/> هشدار بازار: {r?.marketKind==='NON_MARKET' ? 'اختلال در این گرهٔ غیربازاری می‌تواند دسترسی کل سگمنت را مسدود کند.' : 'رابطهٔ بازاری در معرض ریسک — کیدنس یا سلامت نیازمند اقدام فوری است.'}</div>
+            )}
+            <div className="toolbar" style={{flexWrap:'wrap', gap:8, marginTop:10}}>
+              <label className="inline-label">جنسیت بازار
+                <select value={r?.marketKind ?? 'MARKET'} disabled={!!busy} onChange={e => doIt('marketKind', () => api(`/relationships/${id}`, { method: 'PATCH', body: JSON.stringify({ marketKind: e.target.value }) }), 'جنسیت بازار به‌روزرسانی شد.')}>
+                  <option value="MARKET">{fa('MARKET')} — زنجیرهٔ ارزش</option>
+                  <option value="NON_MARKET">{fa('NON_MARKET')} — نهاد/تنظیم‌گر</option>
+                  <option value="HYBRID">{fa('HYBRID')} — دوگانه</option>
+                </select>
+              </label>
+              <label className="inline-label" style={{display:'inline-flex', alignItems:'center', gap:6}}>
+                <input type="checkbox" checked={!!r?.isMarketEntry} disabled={!!busy} onChange={e => doIt('isMarketEntry', () => api(`/relationships/${id}`, { method: 'PATCH', body: JSON.stringify({ isMarketEntry: e.target.checked }) }), e.target.checked ? 'به‌عنوان نقطهٔ ورود علامت‌گذاری شد.' : 'علامت نقطهٔ ورود برداشته شد.')} />
+                نقطهٔ ورود به بازار
+              </label>
+              <label className="inline-label" style={{flex:1, minWidth:180}}>سگمنت/بازار هدف
+                <input defaultValue={r?.marketSegment ?? ''} placeholder="مثلاً: پتروشیمی، بانکداری…" maxLength={120} id="seg-input"
+                  onKeyDown={e=>{ if(e.key==='Enter'){ const v=(e.target as HTMLInputElement).value; doIt('marketSegment', ()=> api(`/relationships/${id}`, {method:'PATCH', body: JSON.stringify({ marketSegment: v }) }), 'سگمنت به‌روزرسانی شد.'); } }}
+                  onBlur={e=>{ const v=e.target.value; if(v!== (r?.marketSegment ?? '')) doIt('marketSegment', ()=> api(`/relationships/${id}`, {method:'PATCH', body: JSON.stringify({ marketSegment: v }) }), 'سگمنت به‌روزرسانی شد.'); }}
+                />
+              </label>
+            </div>
+            <div className="t-muted" style={{fontSize:11, marginTop:6, lineHeight:1.7}}><Globe size={11} style={{display:'inline', verticalAlign:'middle'}}/> <b>کجا ورود ما به بازار است؟</b> فقط دروازه‌های اصلی را «نقطهٔ ورود» علامت بزنید — گزارش نقشهٔ بازار و هشدارهای هوشمند دقیقاً روی همین‌ها کار می‌کنند.</div>
+          </section>
+
           {/* خلاصهٔ وضعیت */}
           <CriteriaScoreCard subjectType="RELATIONSHIP" subjectId={id} onEdit={load} />
 
@@ -477,6 +511,9 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                   ['سازمان مقصد', r.targetOrganization?.name],
                   ['نوع رابطه', r.relationshipType ? fa(r.relationshipType) : null],
                   ['مرحلهٔ چرخهٔ زندگی', r.lifecycleStage ? fa(r.lifecycleStage) : null],
+                  ['جنسیت بازار', r.marketKind ? fa(r.marketKind) : null],
+                  ['سگمنت بازار', r.marketSegment ?? null],
+                  ['نقطهٔ ورود به بازار', r.isMarketEntry ? 'بله — دروازهٔ بازار' : 'خیر'],
                   ['مالک', r.owner?.name],
                   ['مالک جایگزین', r.backupOwner?.name],
                   ['آخرین تعامل', r.lastInteractionAt ? timeAgo(r.lastInteractionAt) : null],

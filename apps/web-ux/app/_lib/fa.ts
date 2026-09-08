@@ -234,6 +234,10 @@ export const REL_TYPE_FA: Record<string, string> = {
   LOCATION:'مکان',
   UPCOMING:'پیشِ رو',
   MOBILE:'تلفن همراه',
+  MARKET:'بازاری', NON_MARKET:'غیربازاری', HYBRID:'دوگانه (هیبرید)',
+  MARKET_HEALTH:'سلامت بازاری', NONMARKET_HEALTH:'سلامت غیربازاری',
+  MARKET_RISK:'ریسک بازاری', ENTRY_STALE:'ورودی راکد', MARKET_STALE:'بازاری کهنه',
+  MISSING_ENTRY:'بدون ورودی', CADENCE_BREAK:'کیدنس شکسته',
 
 };
 const TYPE_FA: Record<string, string> = {

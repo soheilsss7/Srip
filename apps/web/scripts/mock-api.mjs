@@ -17,6 +17,7 @@ import crypto from 'node:crypto';
 
 const PORT = Number(process.env.MOCK_API_PORT || 4000);
 const V1 = '/api/v1';
+const DEMO_MOCK_VERSION = '2026.09.08.28';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -40,12 +41,17 @@ let PEOPLE = [
   { id:'p-8', firstName:'حمید', lastName:'توکلی', email:'hamid@arya-tech.ir', title:'مدیر توسعه کسب‌وکار', department:'فروش', phone:'+98 21 88005566', organizationId:'org-2', status:'ACTIVE', influenceScore:71 },
 ];
 let RELS = [
-  { id:'r-1', relationshipType:'STRATEGIC_PARTNERSHIP', status:'ACTIVE', healthScore:78, riskScore:22, strategicScore:86, influenceScore:80, opportunityScore:72, resilienceScore:64, nextActionAt:'2026-09-05T09:00:00.000Z', lastInteractionAt:'2026-08-20T09:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-4' },
-  { id:'r-2', relationshipType:'BANKING', status:'ACTIVE', healthScore:64, riskScore:48, strategicScore:92, influenceScore:90, opportunityScore:81, resilienceScore:52, nextActionAt:'2026-09-02T09:00:00.000Z', lastInteractionAt:'2026-08-25T09:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-3' },
-  { id:'r-3', relationshipType:'CUSTOMER', status:'ACTIVE', healthScore:71, riskScore:35, strategicScore:74, influenceScore:66, opportunityScore:77, resilienceScore:58, nextActionAt:null, lastInteractionAt:'2026-08-10T09:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-5' },
-  { id:'r-4', relationshipType:'SUPPLY', status:'WATCH', healthScore:41, riskScore:66, strategicScore:69, influenceScore:60, opportunityScore:45, resilienceScore:38, nextActionAt:'2026-09-01T09:00:00.000Z', lastInteractionAt:'2026-07-28T09:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-6' },
-  { id:'r-5', relationshipType:'INVESTMENT', status:'ACTIVE', healthScore:82, riskScore:18, strategicScore:88, influenceScore:85, opportunityScore:90, resilienceScore:71, nextActionAt:null, lastInteractionAt:'2026-08-22T09:00:00.000Z', sourceOrganizationId:'org-1', targetOrganizationId:'org-7' },
+  { id:'r-1', relationshipType:'STRATEGIC_PARTNERSHIP', status:'ACTIVE', healthScore:78, riskScore:22, strategicScore:86, influenceScore:80, opportunityScore:72, resilienceScore:64, nextActionAt:'2026-09-05T09:00:00.000Z', lastInteractionAt:'2026-08-20T09:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-4', marketKind:'MARKET', isMarketEntry:true, marketSegment:'پتروشیمی و انرژی' },
+  { id:'r-2', relationshipType:'BANKING', status:'ACTIVE', healthScore:64, riskScore:48, strategicScore:92, influenceScore:90, opportunityScore:81, resilienceScore:52, nextActionAt:'2026-09-02T09:00:00.000Z', lastInteractionAt:'2026-08-25T09:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-3', marketKind:'MARKET', isMarketEntry:true, marketSegment:'بانکداری و تأمین مالی' },
+  { id:'r-3', relationshipType:'CUSTOMER', status:'ACTIVE', healthScore:71, riskScore:35, strategicScore:74, influenceScore:66, opportunityScore:77, resilienceScore:58, nextActionAt:null, lastInteractionAt:'2026-08-10T09:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-5', marketKind:'MARKET', isMarketEntry:false, marketSegment:'ساخت‌وساز و پروژه‌های عمرانی' },
+  { id:'r-4', relationshipType:'SUPPLY', status:'WATCH', healthScore:41, riskScore:66, strategicScore:69, influenceScore:60, opportunityScore:45, resilienceScore:38, nextActionAt:'2026-09-01T09:00:00.000Z', lastInteractionAt:'2026-07-28T09:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-6', marketKind:'MARKET', isMarketEntry:false, marketSegment:'قطعات و زنجیره تأمین' },
+  { id:'r-5', relationshipType:'INVESTMENT', status:'ACTIVE', healthScore:82, riskScore:18, strategicScore:88, influenceScore:85, opportunityScore:90, resilienceScore:71, nextActionAt:null, lastInteractionAt:'2026-08-22T09:00:00.000Z', sourceOrganizationId:'org-1', targetOrganizationId:'org-7', marketKind:'MARKET', isMarketEntry:false, marketSegment:'سرمایه‌گذاری' },
+  { id:'r-6', relationshipType:'PARENT_SUBSIDIARY', status:'ACTIVE', healthScore:86, riskScore:12, strategicScore:84, influenceScore:70, opportunityScore:48, resilienceScore:82, nextActionAt:'2026-09-12T09:00:00.000Z', lastInteractionAt:'2026-09-02T09:00:00.000Z', sourceOrganizationId:'org-1', targetOrganizationId:'org-2', marketKind:'HYBRID', isMarketEntry:false, marketSegment:'درون‌هلدینگی' },
+  { id:'r-7', relationshipType:'GOVERNMENT', status:'ACTIVE', healthScore:58, riskScore:42, strategicScore:90, influenceScore:88, opportunityScore:35, resilienceScore:55, nextActionAt:'2026-09-08T09:00:00.000Z', lastInteractionAt:'2026-08-18T09:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-8', marketKind:'NON_MARKET', isMarketEntry:true, marketSegment:'مجوز و تنظیم‌گری دولتی' },
+  { id:'r-8', relationshipType:'PARTNER', status:'ACTIVE', healthScore:63, riskScore:38, strategicScore:76, influenceScore:67, opportunityScore:62, resilienceScore:60, nextActionAt:null, lastInteractionAt:'2026-08-12T09:00:00.000Z', sourceOrganizationId:'org-1', targetOrganizationId:'org-4', marketKind:'MARKET', isMarketEntry:false, marketSegment:'همکاری فناورانه' },
 ];
+/* کیدنس دمو بر اساس نوع رابطه (P0-4) */
+[['r-1',30],['r-2',30],['r-3',45],['r-4',30],['r-5',60],['r-6',30]].forEach(([id,cd])=>{const r=RELS.find(v=>v.id===id); if(r) r.cadenceDays=cd;});
 let MEETINGS = [
   { id:'m-1', title:'جلسهٔ راهبردی Q3 با پترو صنعت', startAt:'2026-09-03T09:30:00.000Z', endAt:'2026-09-03T11:00:00.000Z', objective:'بررسی همکاری راهبردی و برنامه توسعه', agenda:'1) گزارش عملکرد ۲ فصل\n2) برنامه توسعه بازار\n3) زمان‌بندی قرارداد جدید', organizationId:'org-4', relationshipId:'r-1', participants:[{personId:'p-2'},{personId:'p-6'}], actions:[], commitments:[], preMeetingBrief:'تمرکز بر تمدید قرارداد و نرخ جدید.' },
   { id:'m-2', title:'مذاکره با بانک ملّی پارس', startAt:'2026-09-07T10:00:00.000Z', endAt:'2026-09-07T11:30:00.000Z', objective:'افتتاح خط اعتباری', agenda:'ارائه صورت‌های مالی و طرح توجیهی', organizationId:'org-3', relationshipId:'r-2', participants:[{personId:'p-3'}], actions:[], commitments:[], preMeetingBrief:null },
@@ -2049,13 +2055,57 @@ const server=http.createServer(async(req,res)=>{
     let list=scopedRels(req);
     const orgParam=q.get('organizationId');
     if(orgParam) list=list.filter(r=>r.sourceOrganizationId===orgParam||r.targetOrganizationId===orgParam);
+    // فیلترهای بازار
+    const mk=q.get('marketKind'); const ent=q.get('isMarketEntry'); const seg=q.get('marketSegment');
+    if(mk) list=list.filter(r=> (r.marketKind??'MARKET')===mk);
+    if(ent==='true') list=list.filter(r=> r.isMarketEntry===true);
+    else if(ent==='false') list=list.filter(r=> !r.isMarketEntry);
+    if(seg) list=list.filter(r=> (r.marketSegment??'').includes(seg));
     return json(res,200,list.map(r=>({...relWithOrgs(r), riskDrivers:riskDrivers(req,r)})));
+  }
+  // هشدارهای هوشمند بازاری/غیربازاری — قبل از هندلر :id
+  if(is('/relationships/alerts')&&method==='GET'){
+    const rels=scopedRels(req);
+    const alerts=[];
+    const mkLabel=(k)=> k==='MARKET'?'بازاری':k==='NON_MARKET'?'غیربازاری':k==='HYBRID'?'دوگانه':k;
+    for(const r of rels){
+      const name=relLabel(r) ?? r.id;
+      const mk=r.marketKind ?? 'MARKET';
+      const seg=r.marketSegment ?? null;
+      const cad=r.cadenceDays ?? 30;
+      const since=r.lastInteractionAt ? Math.floor((Date.now()-new Date(r.lastInteractionAt).getTime())/86400000) : 999;
+      const health=r.healthScore ?? 50; const risk=r.riskScore ?? 0;
+      const overdue=since>cad;
+      // سلامت ضعیف
+      if(mk==='MARKET' && health<55) alerts.push({id:`a-${r.id}-mh`, relationshipId:r.id, tone: health<40?'danger':'warning', kind: health<40?'MARKET_RISK':'MARKET_HEALTH', title:`رابطهٔ بازاری نیازمند توجه — ${name}`, body: `سلامت ${health} · ${overdue?`کیدنس شکسته (${since} روز از ${cad})`:`ریسک ${risk}`} — ${seg??'بدون سگمنت'}`, marketKind:mk, isMarketEntry:!!r.isMarketEntry, segment:seg, health, risk});
+      if(mk==='NON_MARKET' && health<60) alerts.push({id:`a-${r.id}-nmh`, relationshipId:r.id, tone: risk>=50?'danger':'info', kind: 'NONMARKET_HEALTH', title:`گرهٔ غیربازاری ضعیف — ${name}`, body:`این گره تنظیم‌گری/رسانه با سلامت ${health} می‌تواند مسیر بازار را مسدود کند — ${seg??''}`.trim(), marketKind:mk, isMarketEntry:!!r.isMarketEntry, segment:seg, health, risk});
+      if(mk==='HYBRID' && risk>=40) alerts.push({id:`a-${r.id}-hy`, relationshipId:r.id, tone:'warning', kind:'HYBRID_RISK', title:`هیبرید پرریسک — ${name}`, body:`ریسک ${risk} در نقش دوگانه — هر دو وجه را بررسی کنید.`, marketKind:mk, isMarketEntry:!!r.isMarketEntry, segment:seg, health, risk});
+      if(overdue){
+        const kind = r.isMarketEntry ? 'ENTRY_STALE' : mk==='MARKET'?'MARKET_STALE':'CADENCE_BREAK';
+        alerts.push({id:`a-${r.id}-cad`, relationshipId:r.id, tone: r.isMarketEntry?'danger':'warning', kind, title:`${r.isMarketEntry?'نقطهٔ ورود راکد':'کیدنس شکسته'} — ${name}`, body:`آخرین تعامل ${since} روز پیش · هدف هر ${cad} روز — ${mkLabel(mk)}${r.isMarketEntry?' · دروازهٔ بازار':''}`, marketKind:mk, isMarketEntry:!!r.isMarketEntry, segment:seg, health, risk, overdueDays: since-cad});
+      }
+      if(!r.nextActionAt) alerts.push({id:`a-${r.id}-na`, relationshipId:r.id, tone:'info', kind:'MISSING_ENTRY', title:`بدون اقدام بعدی — ${name}`, body:`برای ${r.isMarketEntry?'دروازهٔ بازار ':''}${seg??'این رابطه'} اقدام بعدی ثبت کنید.`, marketKind:mk, isMarketEntry:!!r.isMarketEntry, segment:seg});
+    }
+    // سگمنت‌های بدون نقطهٔ ورود
+    const segments=[...new Set(rels.map(r=>r.marketSegment).filter(Boolean))];
+    for(const seg of segments){
+      const segRels=rels.filter(r=>r.marketSegment===seg);
+      if(segRels.length && !segRels.some(r=>r.isMarketEntry)){
+        alerts.push({id:`a-seg-${seg}`, tone:'warning', kind:'MISSING_ENTRY', title:`سگمنت «${seg}» بدون نقطهٔ ورود`, body:`هیچ رابطه‌ای در این سگمنت به‌عنوان دروازهٔ ورود علامت‌گذاری نشده — ورود به بازار مبهم است.`, marketKind:'MARKET', segment:seg});
+      }
+    }
+    alerts.sort((a,b)=> (a.tone==='danger'?0:a.tone==='warning'?1:2)-(b.tone==='danger'?0:b.tone==='warning'?1:2));
+    const summary={ total: alerts.length, danger: alerts.filter(a=>a.tone==='danger').length, warning: alerts.filter(a=>a.tone==='warning').length, info: alerts.filter(a=>a.tone==='info').length, market: alerts.filter(a=>a.marketKind==='MARKET').length, nonMarket: alerts.filter(a=>a.marketKind==='NON_MARKET').length, entry: alerts.filter(a=>a.isMarketEntry).length };
+    return json(res,200,{items: alerts.slice(0,30), summary});
   }
   if(is('/relationships')&&method==='POST'){
     const b=await readBody(req);
     if(!b.sourceOrganizationId||!b.targetOrganizationId) return json(res,400,{message:'سازمان مبدأ و مقصد لازم است.'});
     if(!inScope(req,b.sourceOrganizationId)||!inScope(req,b.targetOrganizationId)) return json(res,403,{message:'یکی از سازمان‌ها خارج از محدوده است.'});
-    const r={id:`r-${Date.now()}`,relationshipType:b.relationshipType??'OTHER',status:b.status??'ACTIVE',healthScore:b.healthScore??60,riskScore:b.riskScore??30,strategicScore:b.strategicScore??50,influenceScore:b.influenceScore??50,opportunityScore:b.opportunityScore??50,resilienceScore:b.resilienceScore??50,nextActionAt:null,lastInteractionAt:nowIso(),sourceOrganizationId:b.sourceOrganizationId,targetOrganizationId:b.targetOrganizationId};
+    const mk=['MARKET','NON_MARKET','HYBRID'].includes(b.marketKind)?b.marketKind:'MARKET';
+    const seg=(typeof b.marketSegment==='string'&& b.marketSegment.trim())? b.marketSegment.trim().slice(0,120) : null;
+    const isEnt=!!b.isMarketEntry;
+    const r={id:`r-${Date.now()}`,relationshipType:b.relationshipType??'OTHER',status:b.status??'ACTIVE',healthScore:b.healthScore??60,riskScore:b.riskScore??30,strategicScore:b.strategicScore??50,influenceScore:b.influenceScore??50,opportunityScore:b.opportunityScore??50,resilienceScore:b.resilienceScore??50,nextActionAt:null,lastInteractionAt:nowIso(),sourceOrganizationId:b.sourceOrganizationId,targetOrganizationId:b.targetOrganizationId, marketKind:mk, isMarketEntry:isEnt, marketSegment:seg};
     RELS.push(r); saveDb();
     audit(req,'CREATE','relationship',r.id,'OK',{source:r.sourceOrganizationId,target:r.targetOrganizationId});
     return json(res,201,relWithOrgs(r));
@@ -3202,7 +3252,11 @@ const server=http.createServer(async(req,res)=>{
     const r=RELS.find(x=>x.id===relPatch[0]);
     if(!r) return json(res,404,{message:'رابطه یافت نشد'});
     const b=await readBody(req);
+    if('marketKind' in b){ const v=b.marketKind; if(!['MARKET','NON_MARKET','HYBRID'].includes(v)) return json(res,400,{message:'marketKind نامعتبر'}); r.marketKind=v; delete b.marketKind; }
+    if('isMarketEntry' in b){ r.isMarketEntry=!!b.isMarketEntry; delete b.isMarketEntry; }
+    if('marketSegment' in b){ const seg=(typeof b.marketSegment==='string'&& b.marketSegment.trim())? b.marketSegment.trim().slice(0,120): null; r.marketSegment=seg; delete b.marketSegment; }
     Object.assign(r,b);
+    saveDb();
     return json(res,200,relWithOrgs(r));
   }
 
