@@ -19,7 +19,7 @@ const PORT = Number(process.env.MOCK_API_PORT || 4000);
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.08.25';
+const DEMO_MOCK_VERSION = '2026.09.08.26';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -3480,6 +3480,30 @@ const PUBLIC_SECTORS = ['انرژی','آموزش','خدمات اجتماعی','�
 const pubTplById=(id)=>PUBLICS_TEMPLATES[id]??PUBLICS_TEMPLATES.HOLDING;
 const pubGroup=(tplId,gid)=>(pubTplById(tplId).groups??[]).find(g=>g.id===gid)??null;
 const pubByOrg=(orgId)=>(DB.publicsSelf??[]).find(x=>x.orgId===orgId)??null;
+const PUB_STAGE_ORDER=['NON_PUBLIC','LATENT','AWARE','ACTIVE'];
+/* گروه‌های مؤثر هر سازمان = الگو + بازنویسی‌های خودش + گروه‌های اختصاصی‌اش.
+   فقط دسته‌ها مشترک‌اند؛ پوشش/گپ/اعضا همیشه از همین فهرست ساخته می‌شوند. */
+const pubEffectiveGroups=(orgId)=>{
+  const self=pubByOrg(orgId);
+  const tpl=pubTplById(self?.templateId??'HOLDING');
+  const ovs={};
+  for(const o of (DB.publicsGroupOverrides??[])) if(o.orgId===orgId) ovs[o.groupId]=o;
+  const out=[];
+  for(const g of (tpl.groups??[])){
+    const o=ovs[g.id]??{};
+    const link=o.link??g.link;
+    out.push({id:g.id,cat:o.cat??g.cat,fa:o.fa??g.fa,link,linkage:link,
+      stage:[o.smin??g.stage[0],o.smax??g.stage[1]],stance:o.stance??g.stance,
+      kanal:o.kanal??g.kanal,note:o.note!==undefined?o.note:(g.note??''),
+      source:'template',overridden:['fa','note','link','smin','smax','stance','kanal','cat'].some(k=>o[k]!==undefined),
+      active:o.active!==false,templateNote:g.note??''});
+  }
+  for(const c of (DB.publicsCustomGroups??[]).filter(x=>x.orgId===orgId))
+    out.push({id:c.id,cat:c.cat,fa:c.fa,link:c.link,linkage:c.link,stage:[c.smin,c.smax],stance:c.stance,
+      kanal:c.kanal,note:c.note??'',source:'custom',overridden:false,active:true,templateNote:''});
+  return out;
+};
+const pubEffGroup=(orgId,gid)=>(pubEffectiveGroups(orgId).find(g=>g.id===gid)??null);
 const pubTemplateIdFor=(companyType)=>PUBLICS_TEMPLATES[companyType]?companyType:'OTHER';
 const pubTerms=(orgId)=>{
   const self=pubByOrg(orgId); const tpl=pubTplById(self?.templateId??'HOLDING');
@@ -3490,10 +3514,15 @@ function seedPublicsStore(){
   if(!Array.isArray(DB.publicsSelf)) DB.publicsSelf=[];
   if(!Array.isArray(DB.publicsMembers)) DB.publicsMembers=[];
   if(!Array.isArray(DB.mediaStore)) DB.mediaStore=[];
+  if(!Array.isArray(DB.publicsGroupOverrides)) DB.publicsGroupOverrides=[];
+  if(!Array.isArray(DB.publicsCustomGroups)) DB.publicsCustomGroups=[];
   DB.publicsStats=DB.publicsStats??{gaps:{},stageMoves:[],generatedAt:null};
-  /* دمو: هلدینگ آریا خودش را «هلدینگ چندبخشی» معرفی می‌کند (قالب کامل سند پارس) */
+  /* دمو: هلدینگ آریا (هلدینگ چندبخشی، ۱۰۵ گروه) + آریا فناوری (شرکت نرم‌افزاری، ۷ گروه) — هر شرکت نقشهٔ خودش را دارد */
   if(!DB.publicsSelf.some(x=>x.orgId==='org-1')){
-    DB.publicsSelf.push({orgId:'org-1',companyType:'HOLDING',templateId:'HOLDING',structure:{sectors:PUBLIC_SECTORS.slice(),subsidiaries:['org-2'],ownership:'PRIVATE'},missionTopic:'مرجعیت هوش مصنوعی کشور',reviewedAt:nowIso(),reviewIntervalDays:90,updatedBy:null});
+    DB.publicsSelf.push({orgId:'org-1',companyType:'HOLDING',templateId:'HOLDING',structure:{sectors:PUBLIC_SECTORS.slice(),subsidiaries:['org-2'],ownership:'PRIVATE'},missionTopic:'سرمایه‌گذاری پیشرو در فناوری‌های نوین کشور',reviewedAt:nowIso(),reviewIntervalDays:90,updatedBy:null});
+  }
+  if(!DB.publicsSelf.some(x=>x.orgId==='org-2')){
+    DB.publicsSelf.push({orgId:'org-2',companyType:'TECHNOLOGY',templateId:'TECHNOLOGY',structure:{sectors:['فناوری'],subsidiaries:[],ownership:'PRIVATE'},missionTopic:'محصول نرم‌افزاری قابل اتکا برای هلدینگ و بازار',reviewedAt:nowIso(),reviewIntervalDays:90,updatedBy:null});
   }
   if(DB.mediaStore.length===0){
     DB.mediaStore.push(
@@ -3506,10 +3535,12 @@ function seedPublicsStore(){
   if(DB.publicsMembers.length===0){
     const mk=(orgId,groupId,sourceType,sourceId,stage,power,interest,note='')=>({id:`pm-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,orgId,groupId,sourceType,sourceId,linkage:null,stage,power,interest,stance:null,note,assessedAt:nowIso(),reviewDue:new Date(Date.now()+90*86400000).toISOString()});
     const arr=[
-      mk('org-1','h-n1','organization','org-8','AWARE',85,65,'نمونه: نهاد حاکمیتی طرف مکاتبه'),
-      mk('org-1','h-e11','organization','org-3','AWARE',70,75,'بانک طرف قرارداد مالی'),
-      mk('org-1','h-i3','organization','org-2','ACTIVE',70,90,'زیرمجموعهٔ اصلی (نمونهٔ مدیران VC)'),
-      mk('org-1','h-m1','media','m-1','ACTIVE',60,80,'رسانهٔ تخصصی پوشش‌دهنده'),
+      mk('org-1','h-n1','organization','org-8','AWARE',85,65,'طرف مکاتبه در مجوزهای استانی هلدینگ'),
+      mk('org-1','h-e11','organization','org-3','AWARE',70,75,'بانک عامل تسهیلات و ضمانت‌نامه‌های هلدینگ'),
+      mk('org-1','h-i3','organization','org-2','ACTIVE',70,90,'زیرمجموعهٔ فناور؛ مجری پروژه‌های نرم‌افزاری هلدینگ'),
+      mk('org-1','h-m1','media','m-1','ACTIVE',60,80,'رسانهٔ مرجع پوشش اخبار هلدینگ و زیرمجموعه‌ها'),
+      mk('org-2','tc-i1','person','p-1','ACTIVE',70,90,'مدیر فروش محصول نرم‌افزاری'),
+      mk('org-2','tc-m1','media','m-1','AWARE',60,55,'رسانهٔ مرجع نقد و معرفی محصول'),
     ];
     DB.publicsMembers.push(...arr);
     // پیشنهاد پیوند/قدرت-علاقه با موتور (بدون بازنویسی ورودی کاربر)
@@ -3545,7 +3576,7 @@ function pubSignalCount(m){
 }
 function pubSuggester(m){
   const self=(DB.publicsSelf??[]).find(x=>x.orgId===m.orgId);
-  const g=pubGroup(self?.templateId??'HOLDING',m.groupId??'')??{};
+  const g=pubEffGroup(m.orgId,m.groupId??'')??{};
   const src=pubSourceOf(m);
   let linkage=g.linkage??'DIFFUSED';
   if(m.sourceType==='relationship'&&src){
@@ -3584,7 +3615,7 @@ function pubStanceOf(power,interest){
 }
 function pubMemberView(m){
   const self=(DB.publicsSelf??[]).find(x=>x.orgId===m.orgId);
-  const g=pubGroup(self?.templateId??'HOLDING',m.groupId??'')??{};
+  const g=pubEffGroup(m.orgId,m.groupId??'')??{};
   const sug=pubSuggester(m);
   return {...m,orgName:orgById(m.orgId)?.name??null,sourceName:pubSourceName(m),
     sourceLabel:m.sourceType==='organization'?'سازمان':m.sourceType==='person'?'شخص':m.sourceType==='relationship'?'رابطه':'رسانه',
@@ -3598,7 +3629,7 @@ function pubCoverage(orgId){
   const members=(DB.publicsMembers??[]).filter(m=>m.orgId===orgId);
   const cats=tpl.focus??PUBLIC_CATEGORY_ORDER;
   const byCategory=cats.map(cid=>{
-    const groups=(tpl.groups??[]).filter(g=>g.cat===cid);
+    const groups=pubEffectiveGroups(orgId).filter(g=>g.active!==false&&g.cat===cid);
     const ids=new Set(groups.map(g=>g.id));
     const mems=members.filter(m=>ids.has(m.groupId));
     const gapGroups=groups.filter(g=>!mems.some(m=>m.groupId===g.id));
@@ -3654,7 +3685,7 @@ function pubGapPathSuggestion(orgId, gap){
     if(route && (bestRoute===null || route.length<bestRoute.length)){ best=o; bestRoute=route; }
   }
   const tpl=pubTplById(pubByOrg(orgId)?.templateId??'HOLDING');
-  const groups=(tpl.groups??[]).filter(g=>g.cat===cat).slice(0,3);
+  const groups=pubEffectiveGroups(orgId).filter(g=>g.active!==false&&g.cat===cat).slice(0,3);
   const mediaNames=(DB.mediaStore??[]).slice(0,3).map(m=>m.name);
   const candidates=cat==='MEDIA'?mediaNames:groups.map(g=>g.fa);
   if(best){
@@ -3674,7 +3705,7 @@ function pubGaps(orgId){
   const rows=[];
   for(const c of cov.byCategory){
     for(const gid of c.gapGroups){
-      const g=pubGroup(cov.templateId??'HOLDING',gid)??{};
+      const g=pubEffGroup(orgId,gid)??{};
       const isCrit=g.stance==='KEY_PLAYER';
       rows.push({gapId:`${c.categoryId}:${gid}`,groupId:gid,groupFa:g.fa??gid,categoryId:c.categoryId,categoryFa:c.fa,
         kind:'missing',severity:isCrit?'CRITICAL':'HIGH',stance:g.stance??'OBSERVER',stanceFa:PUBLIC_STANCE_FA[g.stance]??null,
@@ -3682,7 +3713,7 @@ function pubGaps(orgId){
     }
   }
   for(const m of (DB.publicsMembers??[]).filter(x=>x.orgId===orgId&&x.stance==='KEY_PLAYER'&&['NON_PUBLIC','LATENT','AWARE'].includes(x.stage))){
-    const g=pubGroup(cov.templateId??'HOLDING',m.groupId)??{};
+    const g=pubEffGroup(orgId,m.groupId)??{};
     rows.push({gapId:`stage:${m.id}`,groupId:m.groupId,groupFa:g.fa??m.groupId,categoryId:g.cat??null,categoryFa:g.cat?PUBLIC_CATEGORY_FA[g.cat]:null,
       kind:'lagging',severity:'HIGH',stance:'KEY_PLAYER',stanceFa:'بازیگر کلیدی',memberId:m.id,sourceName:pubSourceName(m),
       action:'تعامل دوطرفهٔ مستقیم برای حرکت به «فعال»'});
@@ -8165,6 +8196,7 @@ const server=http.createServer(async(req,res)=>{
     const totals=pubCoverage(orgId).totals;
     return json(res,200,{orgId,orgName:orgById(orgId)?.name??null,self:self??null,
       template:{id:tpl.id,fa:tpl.fa,focus:tpl.focus??[],groups:(tpl.groups??[]).length},
+      effective:(()=>{const eg=pubEffectiveGroups(orgId);return {total:eg.length,active:eg.filter(x=>x.active!==false).length,custom:eg.filter(x=>x.source==='custom').length,overridden:eg.filter(x=>x.overridden).length};})(),
       structure:self?.structure??null,missionTopic:self?.missionTopic??null,
       reviewedAt:self?.reviewedAt??null,reviewIntervalDays:self?.reviewIntervalDays??90,
       coverage:totals,templateCatalog:DB.publicsCatalog??null});
@@ -8188,6 +8220,106 @@ const server=http.createServer(async(req,res)=>{
     audit(req,'UPSERT','Publics',orgId,'OK',{meta:{companyType,templateId:companyType,missionTopic:row.missionTopic}});
     return json(res,200,row);
   }
+  const pubGroupsRoute=match('/publics/groups/:orgId');
+  const pubGroupOneRoute=match('/publics/groups/:orgId/:groupId');
+  if(pubGroupsRoute&&method==='GET'){
+    if(!hasPerm('publics.read')) return json(res,403,{message:'شما مجوز «مشاهده عموم‌ها» (publics.read) را ندارید.'});
+    const orgId=pubGroupsRoute[0];
+    if(!inScope(req,orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
+    const self=pubByOrg(orgId); const tpl=pubTplById(self?.templateId??'HOLDING');
+    const groups=pubEffectiveGroups(orgId);
+    return json(res,200,{orgId,orgName:orgById(orgId)?.name??null,templateId:tpl.id,templateFa:tpl.fa,
+      groups,totals:{total:groups.length,active:groups.filter(g=>g.active!==false).length,
+      inactive:groups.filter(g=>g.active===false).length,custom:groups.filter(g=>g.source==='custom').length,
+      overridden:groups.filter(g=>g.overridden).length}});
+  }
+  if(pubGroupsRoute&&method==='POST'){
+    if(!hasPerm('publics.write')) return json(res,403,{message:'شما مجوز «مدیریت عموم‌ها» (publics.write) را ندارید.'});
+    const orgId=pubGroupsRoute[0];
+    if(!inScope(req,orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
+    const b=await readBody(req);
+    const fa=String(b.fa??'').trim();
+    if(!fa) return json(res,400,{message:'نام گروه لازم است.'});
+    const cat=String(b.cat??'');
+    if(!PUBLIC_CATEGORY_ORDER.includes(cat)) return json(res,400,{message:'دستهٔ گروه معتبر نیست.'});
+    const link=String(b.link??'DIFFUSED');
+    if(!PUBLIC_LINKAGE_FA[link]) return json(res,400,{message:'نوع پیوند معتبر نیست.'});
+    const smin=String(b.smin??'AWARE'),smax=String(b.smax??'ACTIVE');
+    if(!PUBLIC_STAGE_FA[smin]||!PUBLIC_STAGE_FA[smax]) return json(res,400,{message:'بازهٔ مرحله معتبر نیست.'});
+    if(PUB_STAGE_ORDER.indexOf(smin)>PUB_STAGE_ORDER.indexOf(smax)) return json(res,400,{message:'شروع بازهٔ مرحله نمی‌تواند بعد از پایان آن باشد.'});
+    const stance=String(b.stance??'OBSERVER');
+    if(!PUBLIC_STANCE_FA[stance]) return json(res,400,{message:'موضع پایه معتبر نیست.'});
+    const row={id:`cg-${Date.now().toString(36)}${Math.random().toString(36).slice(2,6)}`,orgId,cat,fa,link,
+      smin,smax,stance,kanal:String(b.kanal??'').trim(),note:String(b.note??'').trim(),
+      createdAt:nowIso(),createdBy:authUser?.email??null};
+    DB.publicsCustomGroups.push(row); saveDb();
+    audit(req,'CREATE','PublicGroup',row.id,'OK',{meta:{orgId,cat,fa}});
+    return json(res,201,pubEffGroup(orgId,row.id));
+  }
+  if(pubGroupOneRoute&&(method==='PUT'||method==='DELETE')){
+    if(!hasPerm('publics.write')) return json(res,403,{message:'شما مجوز «مدیریت عموم‌ها» (publics.write) را ندارید.'});
+    const orgId=pubGroupOneRoute[0],groupId=pubGroupOneRoute[1];
+    if(!inScope(req,orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
+    const b=method==='PUT'?await readBody(req):{};
+    const custom=(DB.publicsCustomGroups??[]).find(x=>x.orgId===orgId&&x.id===groupId);
+    if(custom){
+      if(method==='DELETE'){
+        const n=(DB.publicsMembers??[]).filter(m=>m.orgId===orgId&&m.groupId===groupId).length;
+        if(n>0) return json(res,400,{message:`این گروه ${n} عضو دارد؛ اول اعضا را حذف یا به گروه دیگری منتقل کنید.`});
+        DB.publicsCustomGroups=DB.publicsCustomGroups.filter(x=>x.id!==groupId); saveDb();
+        audit(req,'DELETE','PublicGroup',groupId,'OK',{meta:{orgId}});
+        return json(res,200,{ok:true,deleted:groupId});
+      }
+      for(const k of ['cat','fa','link','smin','smax','stance','kanal','note']){
+        if(b[k]===undefined) continue;
+        const v=String(b[k]??'').trim();
+        if(k==='cat'&&!PUBLIC_CATEGORY_ORDER.includes(v)) return json(res,400,{message:'دستهٔ گروه معتبر نیست.'});
+        if(k==='link'&&!PUBLIC_LINKAGE_FA[v]) return json(res,400,{message:'نوع پیوند معتبر نیست.'});
+        if((k==='smin'||k==='smax')&&!PUBLIC_STAGE_FA[v]) return json(res,400,{message:'بازهٔ مرحله معتبر نیست.'});
+        if(k==='stance'&&!PUBLIC_STANCE_FA[v]) return json(res,400,{message:'موضع پایه معتبر نیست.'});
+        if(k==='fa'&&!v) return json(res,400,{message:'نام گروه لازم است.'});
+        custom[k]=v;
+      }
+      if(PUB_STAGE_ORDER.indexOf(custom.smin)>PUB_STAGE_ORDER.indexOf(custom.smax)) return json(res,400,{message:'شروع بازهٔ مرحله نمی‌تواند بعد از پایان آن باشد.'});
+      saveDb();
+      audit(req,'UPDATE','PublicGroup',groupId,'OK',{meta:{orgId}});
+      return json(res,200,pubEffGroup(orgId,groupId));
+    }
+    const self=pubByOrg(orgId); const tpl=pubTplById(self?.templateId??'HOLDING');
+    const base=(tpl.groups??[]).find(g=>g.id===groupId);
+    if(!base) return json(res,404,{message:'این گروه در الگوی شرکت شما وجود ندارد.'});
+    if(method==='DELETE') return json(res,400,{message:'گروه الگو حذف نمی‌شود؛ اگر به آن نیاز ندارید، غیرفعالش کنید.'});
+    if(b.restore===true){
+      DB.publicsGroupOverrides=(DB.publicsGroupOverrides??[]).filter(x=>!(x.orgId===orgId&&x.groupId===groupId));
+      saveDb();
+      audit(req,'UPDATE','PublicGroup',groupId,'OK',{meta:{orgId,restored:true}});
+      return json(res,200,pubEffGroup(orgId,groupId));
+    }
+    if(b.active===false){
+      const n=(DB.publicsMembers??[]).filter(m=>m.orgId===orgId&&m.groupId===groupId).length;
+      if(n>0) return json(res,400,{message:`این گروه ${n} عضو دارد؛ اول اعضا را حذف یا به گروه دیگری منتقل کنید.`});
+    }
+    let ov=(DB.publicsGroupOverrides??[]).find(x=>x.orgId===orgId&&x.groupId===groupId);
+    if(!ov){ ov={orgId,groupId}; DB.publicsGroupOverrides.push(ov); }
+    for(const k of ['cat','fa','link','smin','smax','stance','kanal']){
+      if(b[k]===undefined||b[k]===null||b[k]==='') continue;
+      const v=String(b[k]).trim();
+      if(k==='cat'&&!PUBLIC_CATEGORY_ORDER.includes(v)) return json(res,400,{message:'دستهٔ گروه معتبر نیست.'});
+      if(k==='link'&&!PUBLIC_LINKAGE_FA[v]) return json(res,400,{message:'نوع پیوند معتبر نیست.'});
+      if((k==='smin'||k==='smax')&&!PUBLIC_STAGE_FA[v]) return json(res,400,{message:'بازهٔ مرحله معتبر نیست.'});
+      if(k==='stance'&&!PUBLIC_STANCE_FA[v]) return json(res,400,{message:'موضع پایه معتبر نیست.'});
+      if(k==='fa'&&!v) return json(res,400,{message:'نام گروه لازم است.'});
+      ov[k]=v;
+    }
+    if(b.note!==undefined) ov.note=String(b.note??'');
+    if(b.active!==undefined) ov.active=b.active!==false;
+    const okeys=Object.keys(ov).filter(k=>!['orgId','groupId'].includes(k));
+    if(!okeys.length||(okeys.length===1&&okeys[0]==='active'&&ov.active!==false))
+      DB.publicsGroupOverrides=DB.publicsGroupOverrides.filter(x=>x!==ov);
+    saveDb();
+    audit(req,'UPDATE','PublicGroup',groupId,'OK',{meta:{orgId,fields:okeys}});
+    return json(res,200,pubEffGroup(orgId,groupId));
+  }
   if(is('/publics/members')&&method==='GET'){
     if(!hasPerm('publics.read')) return json(res,403,{message:'شما مجوز «مشاهده عموم‌ها» (publics.read) را ندارید.'});
     const orgId=pubOrgIdParam();
@@ -8208,7 +8340,9 @@ const server=http.createServer(async(req,res)=>{
     if(!orgId||!groupId) return json(res,400,{message:'سازمان (orgId) و گروه (groupId) لازم است.'});
     if(!inScope(req,orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
     const self=pubByOrg(orgId)??{orgId,templateId:'HOLDING'};
-    if(!pubGroup(self.templateId,groupId)) return json(res,400,{message:'گروه انتخابی در قالب عموم‌های این سازمان وجود ندارد.'});
+    const effG=pubEffGroup(orgId,groupId);
+    if(!effG) return json(res,400,{message:'گروه انتخابی در نقشهٔ عموم‌های این سازمان وجود ندارد.'});
+    if(effG.active===false) return json(res,400,{message:'این گروه در نقشهٔ شما غیرفعال است؛ اول آن را فعال کنید.'});
     const sourceType=String(b.sourceType??'organization'); const sourceId=String(b.sourceId??'');
     if(!sourceId) return json(res,400,{message:'شناسهٔ مبدأ (sourceId) لازم است.'});
     const src=pubMemberSource(sourceType,sourceId); if(!src.ok) return json(res,400,{message:src.msg});

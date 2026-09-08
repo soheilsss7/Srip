@@ -152,6 +152,78 @@ ok('add member flash', addFlash);
   ok('media seeded', await waitForText('زومیت'));
   ok('export json button', await page.evaluate(() => [...document.querySelectorAll('button')].some(b => b.textContent.includes('خروجی JSON'))));
 
+  // 10b) per-org groups: تب «گروه‌های من»
+  page.on('dialog', async d => { await d.accept().catch(() => {}); });
+  await clickByText('button[role="tab"]', 'گروه‌های من');
+  await new Promise(r => setTimeout(r, 900));
+  ok('groups tab', await waitForText('گروههای نقشهٔ من'));
+  ok('groups rows 100+', await page.evaluate(() => document.querySelectorAll('tr[data-gid]').length) >= 100);
+  await page.evaluate(() => { const b = document.querySelector('tr[data-gid="h-m5"] button[data-act="toggle"]'); if (b) b.click(); });
+  await new Promise(r => setTimeout(r, 1500));
+  ok('group deactivated', await page.evaluate(() => (document.querySelector('tr[data-gid="h-m5"]')?.textContent ?? '').includes('غیرفعال')));
+  await clickByText('button[role="tab"]', 'پوشش');
+  await new Promise(r => setTimeout(r, 900));
+  ok('coverage 104 after deactivate', await page.evaluate(() => (document.body.textContent ?? '').includes('۱۰۴')));
+  await clickByText('button[role="tab"]', 'گروه‌های من');
+  await new Promise(r => setTimeout(r, 900));
+  await page.evaluate(() => { const b = document.querySelector('tr[data-gid="h-m5"] button[data-act="restore"]'); if (b) b.click(); });
+  await new Promise(r => setTimeout(r, 1500));
+  ok('group restored', await page.evaluate(() => { const t = document.querySelector('tr[data-gid="h-m5"]')?.textContent ?? ''; return t.includes('فعال') && !t.includes('غیرفعال'); }));
+  await clickByText('button[role="tab"]', 'پوشش');
+  await new Promise(r => setTimeout(r, 900));
+  ok('coverage 105 after restore', await page.evaluate(() => (document.body.textContent ?? '').includes('۱۰۵')));
+  await clickByText('button[role="tab"]', 'گروه‌های من');
+  await new Promise(r => setTimeout(r, 900));
+  await clickByText('button', 'گروه تازه');
+  await new Promise(r => setTimeout(r, 600));
+  await page.evaluate(() => {
+    const card = [...document.querySelectorAll('.modal-card')].at(-1);
+    const inp = card?.querySelector('input[data-gi="fa"]');
+    if (inp) {
+      const proto = Object.getPrototypeOf(inp);
+      const desc = Object.getOwnPropertyDescriptor(proto, 'value') ?? Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+      desc?.set?.call(inp, 'کارگروه تست خودکار');
+      inp.dispatchEvent(new Event('input', { bubbles: true }));
+      inp.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
+  await new Promise(r => setTimeout(r, 300));
+  await page.evaluate(() => {
+    const card = [...document.querySelectorAll('.modal-card')].at(-1);
+    const btn = [...(card?.querySelectorAll('button') ?? [])].find(b => (b.textContent ?? '').includes('ساخت گروه'));
+    if (btn) btn.click();
+  });
+  await new Promise(r => setTimeout(r, 1500));
+  ok('custom group created', await waitForText('کارگروه تست خودکار'));
+  const customGid = await page.evaluate(() => [...document.querySelectorAll('tr[data-gid]')].find(tr => (tr.textContent ?? '').includes('کارگروه تست خودکار'))?.getAttribute('data-gid'));
+  await page.evaluate((gid) => { const b = document.querySelector(`tr[data-gid="${gid}"] button[data-act="delete"]`); if (b) b.click(); }, customGid);
+  await new Promise(r => setTimeout(r, 1500));
+  ok('custom group deleted', await page.evaluate(() => !((document.body.textContent ?? '').includes('کارگروه تست خودکار'))));
+  await page.evaluate(() => { const b = document.querySelector('tr[data-gid="h-m1"] button[data-act="edit"]'); if (b) b.click(); });
+  await new Promise(r => setTimeout(r, 600));
+  await page.evaluate(() => {
+    const card = [...document.querySelectorAll('.modal-card')].at(-1);
+    const ta = card?.querySelector('textarea[data-gi="note"]');
+    if (ta) {
+      const proto = Object.getPrototypeOf(ta);
+      const desc = Object.getOwnPropertyDescriptor(proto, 'value') ?? Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value');
+      desc?.set?.call(ta, 'یادداشت اختصاصی تست');
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+      ta.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
+  await new Promise(r => setTimeout(r, 300));
+  await page.evaluate(() => {
+    const card = [...document.querySelectorAll('.modal-card')].at(-1);
+    const btn = [...(card?.querySelectorAll('button') ?? [])].find(b => (b.textContent ?? '').trim() === 'ذخیره');
+    if (btn) btn.click();
+  });
+  await new Promise(r => setTimeout(r, 1500));
+  ok('group note overridden', await waitForText('یادداشت اختصاصی تست'));
+  ok('group flagged overridden', await page.evaluate(() => (document.querySelector('tr[data-gid="h-m1"]')?.textContent ?? '').includes('ویرایششده')));
+  await page.evaluate(() => { const b = document.querySelector('tr[data-gid="h-m1"] button[data-act="restore"]'); if (b) b.click(); });
+  await new Promise(r => setTimeout(r, 1500));
+  ok('group note restored', await page.evaluate(() => !((document.body.textContent ?? '').includes('یادداشت اختصاصی تست'))));
 
   // 11) P3: graph categories, ego, filter
   await page.goto(`${BASE}/network`, { waitUntil: 'networkidle0', timeout: 60000 });

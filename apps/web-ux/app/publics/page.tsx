@@ -7,13 +7,13 @@ import {
   Building2, Users2, Radar, AlertTriangle, Download, FileJson, FileSpreadsheet, Fingerprint,
   Plus, RefreshCw, Trash2, SlidersHorizontal, Megaphone, Newspaper, Target, Eye, Heart,
   CheckCircle2, ChevronLeft, Layers, Landmark, GraduationCap, Briefcase, Newspaper as News2, Cpu,
-  Copy, Sparkles, UserPlus,
+  Copy, Sparkles, UserPlus, Pencil, RotateCcw, Power,
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
 /*  عموم‌ها (Publics) — شناخت خود، بازیگران و گپ‌ها                      */
-/*  GET catalog/self/:orgId · members · coverage · gaps · review-due    */
-/*  PUT self/:orgId · POST/PATCH/DELETE members · POST media · export   */
+/*  GET catalog/self/:orgId · groups/:orgId · members · coverage · gaps */
+/*  PUT self/:orgId · groups CRUD · POST/PATCH/DELETE members · export  */
 /* ------------------------------------------------------------------ */
 
 type CatMeta = { id: string; fa: string };
@@ -22,6 +22,13 @@ type PubGroup = {
   stance: string; kanal: string; note?: string;
 };
 type PubTpl = { id: string; fa: string; focus: string[]; note?: string; groups?: PubGroup[] };
+type EffGroup = {
+  id: string; cat: string; fa: string; link: string; stage: [string, string];
+  stance: string; kanal: string; note: string; source: 'template' | 'custom';
+  overridden: boolean; active: boolean; templateNote: string;
+};
+type GroupTotals = { total: number; active: number; inactive: number; custom: number; overridden: number };
+type GroupsResp = { orgId: string; orgName: string | null; templateId: string; templateFa: string; groups: EffGroup[]; totals: GroupTotals };
 type Catalog = {
   version: number; categories: CatMeta[]; linkages: Record<string, string>;
   stages: Record<string, string>; stances: Record<string, string>; templates: Record<string, PubTpl>;
@@ -35,6 +42,7 @@ type SelfRow = {
   template: { id: string; fa: string; focus: string[]; groups: number };
   structure: { sectors?: string[]; subsidiaries?: string[]; ownership?: string } | null;
   missionTopic: string | null; reviewedAt: string | null; reviewIntervalDays: number;
+  effective: { total: number; active: number; custom: number; overridden: number } | null;
   coverage: CovTotals; templateCatalog: Catalog | null;
 };
 type MemberView = {
@@ -119,7 +127,7 @@ export default function PublicsPage() {
   useEffect(() => { if (orgId !== scopeId && scopeId !== 'all') setOrgId(scopeId); }, [scopeId, orgId]);
   useEffect(() => { if (!orgId && primaryOrg) setOrgId(primaryOrg); }, [orgId, primaryOrg]);
 
-  const [tab, setTab] = useState<'self' | 'members' | 'coverage' | 'gaps' | 'export'>('self');
+  const [tab, setTab] = useState<'self' | 'groups' | 'members' | 'coverage' | 'gaps' | 'export'>('self');
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [selfRow, setSelfRow] = useState<SelfRow | null>(null);
   const [members, setMembers] = useState<MemberView[]>([]);
@@ -129,6 +137,8 @@ export default function PublicsPage() {
   const [orgs, setOrgs] = useState<OrgMini[]>([]);
   const [people, setPeople] = useState<PersonMini[]>([]);
   const [rels, setRels] = useState<RelMini[]>([]);
+  const [groups, setGroups] = useState<EffGroup[]>([]);
+  const [groupTotals, setGroupTotals] = useState<GroupTotals | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [flash, setFlash] = useState('');
@@ -139,6 +149,9 @@ export default function PublicsPage() {
   const [fStance, setFStance] = useState('');
   const [fStage, setFStage] = useState('');
   const [q, setQ] = useState('');
+  const [gCat, setGCat] = useState('');
+  const [gSrc, setGSrc] = useState('');
+  const [gQ, setGQ] = useState('');
 
   /* add-member */
   const [addOpen, setAddOpen] = useState(false);
@@ -160,6 +173,11 @@ export default function PublicsPage() {
   const [mediaOpen, setMediaOpen] = useState(false);
   const [mediaForm, setMediaForm] = useState({ name: '', type: 'TECH_MEDIA', url: '', audience: '', country: '', note: '' });
 
+  /* group manager */
+  const [gModal, setGModal] = useState<{ mode: 'create' } | { mode: 'edit'; g: EffGroup } | null>(null);
+  const [gForm, setGForm] = useState({ cat: 'INTERNAL', fa: '', link: 'DIFFUSED', smin: 'AWARE', smax: 'ACTIVE', stance: 'OBSERVER', kanal: '', note: '' });
+  const [gBusy, setGBusy] = useState(false);
+
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const notify = (msg: string) => {
     setFlash(msg);
@@ -170,9 +188,10 @@ export default function PublicsPage() {
   const refresh = useCallback(async (oid: string) => {
     setLoading(true); setError('');
     try {
-      const [cat, self, mem, cov, gap, med, orgsList, ppl, rls] = await Promise.all([
+      const [cat, self, grp, mem, cov, gap, med, orgsList, ppl, rls] = await Promise.all([
         api<Catalog>('/publics/catalog'),
         api<SelfRow>(`/publics/self/${oid}`).catch(() => null),
+        api<GroupsResp>(`/publics/groups/${oid}`).catch(() => null),
         api<{ items: MemberView[] } & MemberView[]>(`/publics/members?orgId=${encodeURIComponent(oid)}`).catch(() => null),
         api<Coverage>(`/publics/coverage?orgId=${encodeURIComponent(oid)}`).catch(() => null),
         api<GapsResp>(`/publics/gaps?orgId=${encodeURIComponent(oid)}`).catch(() => null),
@@ -183,6 +202,8 @@ export default function PublicsPage() {
       ]);
       setCatalog(cat ?? null);
       setSelfRow(self);
+      setGroups(grp?.groups ?? []);
+      setGroupTotals(grp?.totals ?? null);
       setMembers(unwrapList<MemberView>(mem));
       setCoverage(cov);
       setGaps(gap);
@@ -217,11 +238,10 @@ export default function PublicsPage() {
     return catalog?.templates[id] ?? catalog?.templates.HOLDING ?? null;
   }, [catalog, selfRow]);
   const groupsByCat = useMemo(() => {
-    const groups = tpl?.groups ?? [];
-    const map: Record<string, PubGroup[]> = {};
-    for (const g of groups) { (map[g.cat] ??= []).push(g); }
+    const map: Record<string, EffGroup[]> = {};
+    for (const g of groups.filter(x => x.active !== false)) { (map[g.cat] ??= []).push(g); }
     return map;
-  }, [tpl]);
+  }, [groups]);
   const catMeta = catalog?.categories ?? [];
   const catOf = (id?: string | null) => catMeta.find(c => c.id === id)?.fa ?? id ?? '—';
 
@@ -234,6 +254,65 @@ export default function PublicsPage() {
       (!needle || [m.groupFa, m.sourceName, m.categoryFa, m.sourceLabel].some(v => v && String(v).includes(needle))),
     );
   }, [members, fCat, fStance, fStage, q]);
+
+  /* ---------- group manager ---------- */
+  const filteredGroups = useMemo(() => {
+    const needle = (gQ || '').trim();
+    return groups.filter(g =>
+      (!gCat || g.cat === gCat) &&
+      (!gSrc || (gSrc === 'custom' ? g.source === 'custom' : gSrc === 'overridden' ? g.overridden : gSrc === 'inactive' ? g.active === false : g.source === 'template' && !g.overridden)) &&
+      (!needle || [g.fa, g.note, g.kanal].some(v => v && String(v).includes(needle))),
+    );
+  }, [groups, gCat, gSrc, gQ]);
+  const openGroupCreate = () => {
+    setGForm({ cat: 'INTERNAL', fa: '', link: 'DIFFUSED', smin: 'AWARE', smax: 'ACTIVE', stance: 'OBSERVER', kanal: '', note: '' });
+    setGModal({ mode: 'create' });
+  };
+  const openGroupEdit = (g: EffGroup) => {
+    setGForm({ cat: g.cat, fa: g.fa, link: g.link, smin: g.stage[0], smax: g.stage[1], stance: g.stance, kanal: g.kanal, note: g.note });
+    setGModal({ mode: 'edit', g });
+  };
+  const saveGroup = async () => {
+    if (!gModal) return;
+    if (!gForm.fa.trim()) { notify('نام گروه لازم است.'); return; }
+    setGBusy(true);
+    try {
+      if (gModal.mode === 'create') {
+        await api<EffGroup>(`/publics/groups/${orgId}`, { method: 'POST', body: JSON.stringify({ ...gForm, fa: gForm.fa.trim(), kanal: gForm.kanal.trim(), note: gForm.note.trim() }) });
+        notify(`گروه «${gForm.fa.trim()}» ساخته شد و به نقشهٔ همین شرکت اضافه شد.`);
+      } else {
+        await api<EffGroup>(`/publics/groups/${orgId}/${gModal.g.id}`, { method: 'PUT', body: JSON.stringify({ ...gForm, fa: gForm.fa.trim(), kanal: gForm.kanal.trim(), note: gForm.note.trim() }) });
+        notify(`گروه «${gForm.fa.trim()}» ذخیره شد — فقط در نقشهٔ همین شرکت.`);
+      }
+      setGModal(null);
+      await refresh(orgId);
+    } catch (e) { notify(`خطا: ${(e as Error).message}`); } finally { setGBusy(false); }
+  };
+  const toggleGroup = async (g: EffGroup) => {
+    setBusy(`gtog-${g.id}`);
+    try {
+      await api<EffGroup>(`/publics/groups/${orgId}/${g.id}`, { method: 'PUT', body: JSON.stringify({ active: g.active === false }) });
+      notify(g.active === false ? `گروه «${g.fa}» فعال شد و به پوشش برگشت.` : `گروه «${g.fa}» غیرفعال شد و از پوشش کنار رفت.`);
+      await refresh(orgId);
+    } catch (e) { notify(`خطا: ${(e as Error).message}`); } finally { setBusy(''); }
+  };
+  const restoreGroup = async (g: EffGroup) => {
+    setBusy(`gres-${g.id}`);
+    try {
+      await api<EffGroup>(`/publics/groups/${orgId}/${g.id}`, { method: 'PUT', body: JSON.stringify({ restore: true }) });
+      notify(`گروه «${g.fa}» به حالت الگو برگشت.`);
+      await refresh(orgId);
+    } catch (e) { notify(`خطا: ${(e as Error).message}`); } finally { setBusy(''); }
+  };
+  const deleteGroup = async (g: EffGroup) => {
+    if (!window.confirm(`گروه اختصاصی «${g.fa}» برای همیشه حذف شود؟`)) return;
+    setBusy(`gdel-${g.id}`);
+    try {
+      await api(`/publics/groups/${orgId}/${g.id}`, { method: 'DELETE' });
+      notify('گروه اختصاصی حذف شد.');
+      await refresh(orgId);
+    } catch (e) { notify(`خطا: ${(e as Error).message}`); } finally { setBusy(''); }
+  };
 
   /* ---------- self save ---------- */
   const saveSelf = async () => {
@@ -316,7 +395,7 @@ export default function PublicsPage() {
       await api<MediaRow>('/publics/media', { method: 'POST', body: JSON.stringify(mediaForm) });
       setMediaOpen(false);
       setMediaForm({ name: '', type: 'TECH_MEDIA', url: '', audience: '', country: '', note: '' });
-      notify('رسانه ثبت شد — گردشکار پایش رسانه (MEDIA_CREATED) اجرا شد.');
+      notify('رسانه ثبت شد و به فهرست منابع اضافه شد.');
       await refresh(orgId);
     } catch (e) { notify(`خطا: ${(e as Error).message}`); } finally { setBusy(''); }
   };
@@ -355,6 +434,7 @@ export default function PublicsPage() {
 
   const TABS: Array<{ key: typeof tab; label: string; icon?: React.ReactNode }> = [
     { key: 'self', label: 'من کیستم', icon: <Fingerprint size={14} /> },
+    { key: 'groups', label: 'گروه‌های من', icon: <Layers size={14} /> },
     { key: 'members', label: 'اعضا و ارزیابی', icon: <Users2 size={14} /> },
     { key: 'coverage', label: 'پوشش', icon: <Radar size={14} /> },
     { key: 'gaps', label: 'گپها و اقدام', icon: <AlertTriangle size={14} /> },
@@ -406,7 +486,7 @@ export default function PublicsPage() {
       <PageHeader
         eyebrow="عمومها"
         title="نقشهٔ عمومها"
-        description="برای هر شرکت مشخص است: شناخت خود با دستهبندی درست، شناخت روابط و بازیگران اثرگذار و گپهای نقشه"
+        description="گامبهگام: ۱) خودتان را معرفی کنید ۲) گروهها را مال خودتان کنید ۳) اعضا را ثبت و ارزیابی کنید ۴) گپها را به اقدام تبدیل کنید — فقط دستهها مشترکاند"
         actions={
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <label className="scope-chip" title="سازمانی که نقشهٔ عمومهایش را میبینید">
@@ -444,26 +524,28 @@ export default function PublicsPage() {
                 <SectionCard
                   title="شناسنامهٔ خودشناسی"
                   icon={<Fingerprint size={15} />}
-                  description={canWrite ? 'نوع شرکت را انتخاب کنید؛ قالب ۶ دستهای عمومها همانجا مشخص میشود.' : 'نمای خواندنی'}
+                  description={canWrite ? 'این کارت را کامل و «ذخیرهٔ شناسنامه» را بزنید؛ مبنای پوشش، گپها و بریف همین است.' : 'نمای خواندنی'}
                   actions={canWrite && <button className="btn btn-primary" disabled={busy === 'self'} onClick={saveSelf}><CheckCircle2 size={14} /> ذخیرهٔ شناسنامه</button>}
                 >
                   <div className="form-grid">
                     <div className="field full">
-                      <label className="field-label">نوع شرکت</label>
+                      <label className="field-label">نوع شرکت (الگوی شروع)</label>
                       <select value={selfForm.companyType} disabled={!canWrite} onChange={e => { setSelfForm(f => ({ ...f, companyType: e.target.value })); setSelfDirty(true); }}>
                         {(Object.values(catalog?.templates ?? {}) as PubTpl[]).map(t => (
-                          <option key={t.id} value={t.id}>{t.fa} ({t.id})</option>
+                          <option key={t.id} value={t.id}>{t.fa}</option>
                         ))}
                       </select>
-                      <span className="field-hint">{tpl?.note ?? 'قالب پیشفرض: هلدینگ/سرمایهگذاری چندبخشی'}</span>
+                      <span className="field-hint">الگو فقط فهرست اولیه است؛ در «گروههای من» آن را مال خودتان کنید.{tpl?.note ? ` راهنمای الگو: ${tpl.note}` : ''}</span>
                     </div>
                     <div className="field full">
-                      <label className="field-label">موضوع مأموریت (سوژهٔ اصلی روایت)</label>
+                      <label className="field-label">مأموریت / سوژهٔ اصلی روایت این شرکت</label>
                       <input value={selfForm.missionTopic} disabled={!canWrite} placeholder="مثلاً: مرجعیت هوش مصنوعی کشور" onChange={e => { setSelfForm(f => ({ ...f, missionTopic: e.target.value })); setSelfDirty(true); }} />
+                      <span className="field-hint">هر شرکت مأموریت خودش را مینویسد؛ در بریف و اولویت گپها استفاده میشود.</span>
                     </div>
                     <div className="field">
-                      <label className="field-label">دورهٔ بازبینی (روز)</label>
+                      <label className="field-label">دورهٔ بازبینی شناسنامه (روز)</label>
                       <input type="number" min={30} max={365} value={selfForm.reviewIntervalDays} disabled={!canWrite} onChange={e => { setSelfForm(f => ({ ...f, reviewIntervalDays: Number(e.target.value) })); setSelfDirty(true); }} />
+                      <span className="field-hint">هر چند روز یکبار این کارت را بازبینی میکنید؟</span>
                     </div>
                     <div className="field">
                       <label className="field-label">نوع مالکیت</label>
@@ -484,15 +566,16 @@ export default function PublicsPage() {
                           );
                         })}
                       </div>
+                      <span className="field-hint">شرکتهای زیرمجموعه؛ در تب «اعضا» میتوانید به نقشه وصلشان کنید.</span>
                     </div>
                   </div>
                   {selfDirty && <div className="field-hint" style={{ marginTop: 8 }}>تغییرات ذخیره نشده — «ذخیرهٔ شناسنامه» را بزنید.</div>}
                 </SectionCard>
 
-                <SectionCard title="کارت «من کیستم»" icon={<Fingerprint size={15} />} description={`${selectedOrgName} · ${selfRow?.template?.fa ?? '—'}`}>
+                <SectionCard title="کارت «من کیستم»" icon={<Fingerprint size={15} />} description={`${selectedOrgName} · الگوی شروع: ${selfRow?.template?.fa ?? '—'} · ${fmtNum(selfRow?.effective?.active ?? 0)} گروه فعال در نقشه`} actions={<button className="chip info" onClick={() => setTab('groups')}>مدیریت گروهها <ChevronLeft size={12} /></button>}>
                   <div className="stat-grid" style={{ marginBottom: 12 }}>
                     <StatCard icon={<Building2 size={16} />} iconClass="ic-teal" label="سازمان" value={selectedOrgName} />
-                    <StatCard icon={<Layers size={16} />} iconClass="ic-blue" label="گروههای قالب" value={fmtNum(selfRow?.template?.groups ?? tpl?.groups?.length ?? 0)} sub={`${fmtNum(selfRow?.coverage.groupsCovered ?? 0)} پوشش دادهشده`} />
+                    <StatCard icon={<Layers size={16} />} iconClass="ic-blue" label="گروههای قالب" value={fmtNum(selfRow?.template?.groups ?? tpl?.groups?.length ?? 0)} sub={`${fmtNum(selfRow?.effective?.active ?? selfRow?.coverage.groupsExpected ?? 0)} فعال در نقشه · ${fmtNum(selfRow?.coverage.groupsCovered ?? 0)} پوشش دادهشده`} />
                     <StatCard icon={<Users2 size={16} />} iconClass="ic-purple" label="اعضای ثبتشده" value={fmtNum(selfRow?.coverage.members ?? members.length)} sub={`${fmtNum(selfRow?.coverage.keyPlayers ?? 0)} بازیگر کلیدی`} />
                     <StatCard icon={<Radar size={16} />} iconClass="ic-orange" label="پوشش" value={`${Math.round(((selfRow?.coverage.groupsCovered ?? 0) / Math.max(1, selfRow?.coverage.groupsExpected ?? 1)) * 100)}٪`} sub={`${fmtNum(selfRow?.coverage.groupsExpected ?? 0)} گروه`} />
                   </div>
@@ -533,7 +616,7 @@ export default function PublicsPage() {
               <SectionCard
                 title="ماتریس قدرت × علاقه"
                 icon={<SlidersHorizontal size={15} />}
-                description="هر نقطه یک عضو است؛ رنگ = دسته. بازیگران کلیدی (بالا-راست) نیازمند تعامل مستقیماند."
+                description="هر نقطه یک عضو است؛ رنگ = دسته. روی نقطه بزنید تا ارزیابی شود. هدف: همهٔ بازیگران کلیدی بالا-راست (قدرت و علاقهٔ بالا) باشند."
               >
                 <Matrix members={members} catOf={catOf} openAssess={openAssess} canWrite={canWrite} />
               </SectionCard>
@@ -595,11 +678,74 @@ export default function PublicsPage() {
             </div>
           )}
 
+          {/* ---------------- گروههای من ---------------- */}
+          {tab === 'groups' && (
+            <div className="stack" style={{ gap: 14 }}>
+              <div className="stat-grid">
+                <StatCard icon={<Layers size={16} />} iconClass="ic-blue" label="گروههای فعال نقشه" value={fmtNum(groupTotals?.active ?? 0)} sub={`${fmtNum(groupTotals?.total ?? 0)} گروه در نقشه`} />
+                <StatCard icon={<Sparkles size={16} />} iconClass="ic-purple" label="اختصاصی من" value={fmtNum(groupTotals?.custom ?? 0)} sub="ساختهٔ خودتان" />
+                <StatCard icon={<Pencil size={16} />} iconClass="ic-teal" label="ویرایششده از الگو" value={fmtNum(groupTotals?.overridden ?? 0)} sub="نام/یادداشت/کانال عوض شده" />
+                <StatCard icon={<Power size={16} />} iconClass="ic-orange" label="غیرفعال" value={fmtNum(groupTotals?.inactive ?? 0)} sub="در پوشش حساب نمیشود" />
+              </div>
+              <SectionCard
+                title="گروههای نقشهٔ من"
+                icon={<Layers size={15} />}
+                description="الگو فقط نقطهٔ شروع است: نام، یادداشت، کانال و موضع هر گروه را مال خودتان کنید؛ گروه بیمصرف را غیرفعال کنید و گروه تازه بسازید. پوشش، گپها و بریف از همین فهرست ساخته میشوند."
+                actions={canWrite && <button className="btn btn-primary" onClick={openGroupCreate}><Plus size={14} /> گروه تازه</button>}
+              >
+                <Toolbar search={gQ} onSearch={setGQ} searchPlaceholder="جستجوی گروه/یادداشت…">
+                  <select aria-label="دسته" value={gCat} onChange={e => setGCat(e.target.value)}>
+                    <option value="">همه دستهها</option>
+                    {catMeta.map(c => <option key={c.id} value={c.id}>{c.fa}</option>)}
+                  </select>
+                  <select aria-label="منبع" value={gSrc} onChange={e => setGSrc(e.target.value)}>
+                    <option value="">همه منابع</option>
+                    <option value="custom">اختصاصی من</option>
+                    <option value="overridden">ویرایششده</option>
+                    <option value="template">دستنخوردهٔ الگو</option>
+                    <option value="inactive">غیرفعالها</option>
+                  </select>
+                </Toolbar>
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr><th>گروه</th><th>دسته</th><th>منبع</th><th>وضعیت</th><th>یادداشت من</th>{canWrite && <th>اقدام</th>}</tr>
+                    </thead>
+                    <tbody>
+                      {filteredGroups.map(g => (
+                        <tr key={g.id} data-gid={g.id} data-active={g.active === false ? 'false' : 'true'}>
+                          <td><b style={{ fontSize: 12 }}>{g.fa}</b>{g.kanal && <div className="t-muted" style={{ fontSize: 10.5 }}>کانال: {g.kanal}</div>}<div className="t-muted" style={{ fontSize: 10.5 }}>{PUBLIC_G(g.link)} · موضع پایه: {PUBLIC_S(g.stance)}</div></td>
+                          <td><StatusBadge tone="neutral">{CAT_ICONS[g.cat]}{catOf(g.cat)}</StatusBadge></td>
+                          <td>{g.source === 'custom' ? <Badge tone="info">اختصاصی</Badge> : g.overridden ? <Badge tone="warning">ویرایششده</Badge> : <Badge tone="neutral">الگو</Badge>}</td>
+                          <td>{g.active === false ? <Badge tone="neutral">غیرفعال</Badge> : <Badge tone="success">فعال</Badge>}</td>
+                          <td className="t-muted" style={{ fontSize: 11 }}>{g.note || '—'}{g.overridden && g.templateNote && g.templateNote !== g.note && <div style={{ fontSize: 10.5 }}>یادداشت الگو: {g.templateNote}</div>}</td>
+                          {canWrite && (
+                            <td>
+                              <div style={{ display: 'flex', gap: 4 }}>
+                                <button className="btn icon-only" data-act="edit" title="ویرایش" onClick={() => openGroupEdit(g)}><Pencil size={13} /></button>
+                                <button className="btn icon-only" data-act="toggle" title={g.active === false ? 'فعالسازی' : 'غیرفعالسازی'} disabled={busy === `gtog-${g.id}`} onClick={() => toggleGroup(g)}><Power size={13} /></button>
+                                {(g.overridden || g.active === false) && g.source === 'template' && <button className="btn icon-only" data-act="restore" title="بازگردانی به الگو" disabled={busy === `gres-${g.id}`} onClick={() => restoreGroup(g)}><RotateCcw size={13} /></button>}
+                                {g.source === 'custom' && <button className="btn icon-only danger" data-act="delete" title="حذف" disabled={busy === `gdel-${g.id}`} onClick={() => deleteGroup(g)}><Trash2 size={13} /></button>}
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                      {!filteredGroups.length && (
+                        <tr><td colSpan={canWrite ? 6 : 5}><div className="empty-state-v4" style={{ padding: 18 }}><p>گروهی با این فیلترها نیست.</p></div></td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </SectionCard>
+            </div>
+          )}
+
           {/* ---------------- پوشش ---------------- */}
           {tab === 'coverage' && (
             <div className="stack" style={{ gap: 14 }}>
               <div className="stat-grid">
-                <StatCard icon={<Layers size={16} />} iconClass="ic-blue" label="گروههای قالب" value={fmtNum(coverage?.totals.groupsExpected ?? 0)} sub={`${fmtNum(coverage?.totals.groupsCovered ?? 0)} پوشش دادهشده`} />
+                <StatCard icon={<Layers size={16} />} iconClass="ic-blue" label="گروههای نقشه" value={fmtNum(coverage?.totals.groupsExpected ?? 0)} sub={`${fmtNum(coverage?.totals.groupsCovered ?? 0)} پوشش دادهشده`} />
                 <StatCard icon={<Radar size={16} />} iconClass="ic-teal" label="٪ پوشش" value={`${Math.round(((coverage?.totals.groupsCovered ?? 0) / Math.max(1, coverage?.totals.groupsExpected ?? 1)) * 100)}٪`} />
                 <StatCard icon={<AlertTriangle size={16} />} iconClass="ic-orange" label="گپها" value={fmtNum(coverage?.totals.gaps ?? 0)} sub={`${fmtNum(coverage?.totals.criticalGaps ?? 0)} بحرانی`} />
                 <StatCard icon={<Eye size={16} />} iconClass="ic-purple" label="اعضای فعال" value={fmtNum(coverage?.totals.active ?? 0)} />
@@ -712,7 +858,7 @@ export default function PublicsPage() {
           {/* ---------------- خروجی و رسانه ---------------- */}
           {tab === 'export' && (
             <div className="grid-2" style={{ gap: 14 }}>
-              <SectionCard title="خروجی نقشهٔ عمومها" icon={<Download size={15} />} description="کل نقشهٔ بههمراه ارزیابیها؛ برای گزارش هیئت یا تحلیلگر">
+              <SectionCard title="خروجی نقشهٔ عمومها" icon={<Download size={15} />} description="کل نقشه با ارزیابیها؛ برای گزارش هیئت مدیره یا تحلیل بیرونی">
                 <div className="stack" style={{ gap: 8 }}>
                   <button className="btn btn-primary" disabled={busy === 'exp-json'} onClick={() => downloadExport('json')}><FileJson size={14} /> خروجی JSON</button>
                   <button className="btn" disabled={busy === 'exp-csv'} onClick={() => downloadExport('csv')}><FileSpreadsheet size={14} /> خروجی CSV</button>
@@ -723,7 +869,7 @@ export default function PublicsPage() {
               <SectionCard
                 title="رسانهها و منابع پخش"
                 icon={<Newspaper size={15} />}
-                description="موجودیت «Media» — مبنای پیوند پراکنده (DIFFUSED) و محرک MEDIA_CREATED"
+                description="رسانههایی که رصد میکنید؛ مبنای پوشش دستهٔ «رسانه و افکار عمومی»"
                 actions={canWrite && <button className="btn btn-primary" onClick={() => setMediaOpen(true)}><Plus size={14} /> رسانهٔ تازه</button>}
               >
                 <div className="table-wrap">
@@ -749,7 +895,7 @@ export default function PublicsPage() {
       )}
 
       {/* ---------- modals ---------- */}
-      <Modal open={addOpen} title="افزودن عضو عموم" description={addFromGap.current ? 'از گپ انتخابشده برای تکمیل نقشه استفاده میکنید' : 'منبع را از سازمان/شخص/رابطه/رسانهٔ موجود انتخاب کنید؛ موتور پیوند و مرحله را پیشنهاد میدهد.'} onClose={() => setAddOpen(false)}
+      <Modal open={addOpen} title="افزودن عضو عموم" description={addFromGap.current ? 'از گپ انتخابشده برای تکمیل نقشه استفاده میکنید' : 'گروه را از نقشهٔ خودتان انتخاب کنید؛ موتور مرحله و قدرت/علاقهٔ اولیه را پیشنهاد میدهد و شما تأیید میکنید.'} onClose={() => setAddOpen(false)}
         footer={<><button className="btn" onClick={() => setAddOpen(false)}>انصراف</button><button className="btn btn-primary" disabled={busy === 'add'} onClick={addMember}><Plus size={14} /> افزودن</button></>}>
         <div className="form-grid">
           <div className="field full">
@@ -764,7 +910,7 @@ export default function PublicsPage() {
                 </optgroup>
               ))}
             </select>
-            {addForm.groupId && (() => { const g = tpl?.groups?.find(x => x.id === addForm.groupId); return g ? <span className="field-hint">کانال پیشنهادی: {g.kanal}{g.note ? ` · ${g.note}` : ''} · موضع پایهٔ قالب: {PUBLIC_S(g.stance)}</span> : null; })()}
+            {addForm.groupId && (() => { const g = (groups ?? []).find(x => x.id === addForm.groupId); return g ? <span className="field-hint">پیشنهاد نقشه: {g.kanal ? `کانال «${g.kanal}» · ` : ''}موضع پایه «{PUBLIC_S(g.stance)}»{g.note ? ` · راهنما: ${g.note}` : ''}</span> : null; })()}
           </div>
           <div className="field">
             <label className="field-label">نوع منبع <span className="req">*</span></label>
@@ -785,6 +931,57 @@ export default function PublicsPage() {
           <div className="field full">
             <label className="field-label">یادداشت (اختیاری)</label>
             <input value={addForm.note} onChange={e => setAddForm(f => ({ ...f, note: e.target.value }))} placeholder="مثلاً: طرف مکاتبه در پروندهٔ …" />
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={gModal !== null} title={gModal?.mode === 'create' ? 'ساخت گروه تازه' : `ویرایش گروه: ${gModal?.mode === 'edit' ? gModal.g.fa : ''}`} description="این تغییر فقط مال نقشهٔ همین شرکت است؛ الگوی مشترک دست نمیخورد." onClose={() => setGModal(null)}
+        footer={<><button className="btn" onClick={() => setGModal(null)}>انصراف</button><button className="btn btn-primary" disabled={gBusy} onClick={saveGroup}>{gModal?.mode === 'create' ? 'ساخت گروه' : 'ذخیره'}</button></>}>
+        <div className="form-grid">
+          <div className="field full">
+            <label className="field-label">نام گروه <span className="req">*</span></label>
+            <input data-gi="fa" value={gForm.fa} onChange={e => setGForm(f => ({ ...f, fa: e.target.value }))} placeholder="مثلاً: کارگروه تحول دیجیتال" />
+          </div>
+          <div className="field">
+            <label className="field-label">دسته</label>
+            <select data-gi="cat" value={gForm.cat} onChange={e => setGForm(f => ({ ...f, cat: e.target.value }))}>
+              {catMeta.map(c => <option key={c.id} value={c.id}>{c.fa}</option>)}
+            </select>
+          </div>
+          <div className="field">
+            <label className="field-label">نوع پیوند</label>
+            <select data-gi="link" value={gForm.link} onChange={e => setGForm(f => ({ ...f, link: e.target.value }))}>
+              {Object.entries(catalog?.linkages ?? {}).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </div>
+          <div className="field">
+            <label className="field-label">موضع پایه</label>
+            <select data-gi="stance" value={gForm.stance} onChange={e => setGForm(f => ({ ...f, stance: e.target.value }))}>
+              {Object.entries(catalog?.stances ?? {}).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </div>
+          <div className="field">
+            <label className="field-label">کانال پیشنهادی</label>
+            <input data-gi="kanal" value={gForm.kanal} onChange={e => setGForm(f => ({ ...f, kanal: e.target.value }))} placeholder="مثلاً: مکاتبه رسمی" />
+          </div>
+          <div className="field">
+            <label className="field-label">شروع بازهٔ مرحله</label>
+            <select data-gi="smin" value={gForm.smin} onChange={e => setGForm(f => ({ ...f, smin: e.target.value }))}>
+              {Object.entries(catalog?.stages ?? {}).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </div>
+          <div className="field">
+            <label className="field-label">پایان بازهٔ مرحله</label>
+            <select data-gi="smax" value={gForm.smax} onChange={e => setGForm(f => ({ ...f, smax: e.target.value }))}>
+              {Object.entries(catalog?.stages ?? {}).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </div>
+          <div className="field full">
+            <label className="field-label">یادداشت من برای این گروه</label>
+            <textarea data-gi="note" value={gForm.note} onChange={e => setGForm(f => ({ ...f, note: e.target.value }))} placeholder="راهنمای عملی: با این گروه چه کار کنم؟" />
+            {gModal?.mode === 'edit' && gModal.g.source === 'template' && gModal.g.templateNote && (
+              <span className="field-hint">یادداشت الگو: {gModal.g.templateNote}</span>
+            )}
           </div>
         </div>
       </Modal>
@@ -834,7 +1031,7 @@ export default function PublicsPage() {
         </div>
       </Modal>
 
-      <Modal open={mediaOpen} title="ثبت رسانهٔ تازه" description="رسانه/اینفلوئنسر به فهرست منابع میپیوندد و گردشکار پایش (MEDIA_CREATED) اجرا میشود." onClose={() => setMediaOpen(false)}
+      <Modal open={mediaOpen} title="ثبت رسانهٔ تازه" description="رسانه به فهرست منابع اضافه میشود تا در نقشه قابل اتصال باشد." onClose={() => setMediaOpen(false)}
         footer={<><button className="btn" onClick={() => setMediaOpen(false)}>انصراف</button><button className="btn btn-primary" disabled={busy === 'media'} onClick={addMedia}><Megaphone size={14} /> ثبت</button></>}>
         <div className="form-grid">
           <div className="field full">
