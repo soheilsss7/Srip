@@ -19,7 +19,7 @@ const PORT = Number(process.env.MOCK_API_PORT || 4000);
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.08.23';
+const DEMO_MOCK_VERSION = '2026.09.08.25';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -1873,7 +1873,8 @@ function seedKnowledge() {
   return [
     kb('kb-start', '5-minute-first-score', 'در پنج دقیقه به اولین امتیاز معیارها برسید', 'مسیر کوتاه از ورود تا داشتن یک امتیاز قابل اتکا برای نخستین رابطه؛ جایی که باید بروید و هر عدد یعنی چه.', 'GETTING_STARTED', ['شروع', 'امتیاز', 'گام‌به‌گام'], ['STRATEGIC', 'RELIABILITY'], 4, 'تیم محصول',
       '۱) یک سازمان و سپس یک رابطه بسازید (منوی «روابط» → «رابطهٔ جدید»). هنگام ساخت، پرسش‌نامهٔ اختیاری معیارها ظاهر می‌شود؛ آریا فناوری را با پترو صنعت وصل کنید. \n۲) به صفحهٔ همان رابطه بروید. کارت «امتیاز معیارها» عدد، پوشش اطلاعات و اطمینان را نشان می‌دهد. اگر تازه شروع کرده‌اید برچسب «داده کافی نیست» را می‌بینید — این طبیعی است و عمداً عددی نمی‌سازد. \n۳) روی «ثبت ارزیابی» بزنید و تنها پرسش‌هایی را پاسخ دهید که مطمئن هستید. هر پاسخ «ناشناخته» را از بین نمی‌برد؛ فقط آن معیار را روشن می‌کند. \n۴) تعامل‌ها، جلسه‌ها، تعهدها و فرصت‌های همان رابطه به‌صورت خودکار به‌عنوان «رفتار واقعی» وارد مدل می‌شوند و سهم مشاهده‌شده را بالا می‌برند. \n۵) برای رتبه‌بندی، پوشش باید به آستانهٔ تعریف‌شده (پیش‌فرض ۴۰٪) برسد. زیر آن، رکورد صادقانه «قابل مقایسه نیست» می‌ماند.', { views: 312, helpful: 41 }), kb('kb-scoring-model', 'how-scoring-works', 'مدل امتیازدهی دقیقاً چطور کار می‌کند؟', 'وزن خانواده‌ها، قطبیت هر معیار، سقف‌های دروازه و نقش اطمینان — تا بتوانید عدد را بخوانید، نه فقط ببینید.', 'SCORING', ['وزن‌ها', 'دروازه', 'اطمینان'], ['STRATEGIC', 'VALUE', 'CAPABILITY', 'RELIABILITY', 'ACCESS', 'FINANCIAL', 'RISK', 'NETWORK'], 6, 'تیم محصول', 'هر رابطه، سازمان، شخص و فرصت از یک کاتالوگ معیار امتیاز می‌گیرد: هر معیار به یک خانواده تعلق دارد (راهبردی، ارزش، توانمندی، قابلیت اعتماد، دسترسی، مالی، ریسک، شبکه) و وزن ۱ تا ۳ دارد. \nامتیاز هر خانواده، میانگین وزن‌دار معیارهای پاسخ‌داده‌شدهٔ همان خانواده است؛ سپس خانواده‌ها با وزن سازمانی (قابل تغییر در «مدیریت → معیارها») ترکیب می‌شوند. خانوادۀ بدون داده در تقسیم وزن حساب نمی‌شود تا «نبودِ اطلاعات» خودش نمره نشود. \nقطبیت مهم است: معیارهای ریسک (منفی) بالاتر بودن یعنی بدتر؛ معیارهای مثبت (مثبت) بالاتر یعنی بهتر. هر دو به مقیاس ۰ تا ۱۰۰ نگاشت می‌شوند. \nدروازهٔ ریسک (دروازه) از میانگین‌گیری مستثناست: اگر شرطش فعال شود، سقف امتیاز را تحمیل می‌کند — مثلاً «سقف ۴۰». این یعنی یک معیار بحرانی را چند معیار خوب «جبران» نمی‌کنند. \nدر نهایت، امتیاز بدون اطمینان ارائه نمی‌شود: پوشش (چند درصد از وزن مدل داده دارد؟) و اطمینان (کیفیت و تازگی پاسخ‌ها) کنار هر عدد می‌آیند و امتیاز رتبه‌بندی = امتیاز × (۰٫۷ + ۰٫۳ × اطمینان).', { views: 540, helpful: 86 }), kb('kb-manual', 'manual-override', 'تنظیم دستی امتیاز: چه وقت، چرا و تا کجا؟', 'وقتی دانش شما از مدل جلوتر است؛ چطور با ±۲۵ و دلیلِ الزامی این کار را بکنید و مدل را دست‌نخورده نگه دارید.', 'SCORING', ['دستی', 'ممیزی'], ['RISK', 'STRATEGIC'], 3, 'تیم محصول', 'مدل بر شواهد ساخته می‌شود؛ اما گاهی شما چیزی می‌دانید که هنوز در سیستم ثبت نشده — مانند امضای اولیهٔ قرارداد. برای همین در کارت «امتیاز معیارها» دکمهٔ «تنظیم دستی» است. \nجابه‌جایی فقط تا ±۲۵ نقطه مجاز است (عدد بزرگ‌تر یعنی احتمالاً باید دادهٔ اصلی را ثبت کنید نه امتیاز را تکان دهید). دلیل تنظیم الزامی است؛ چون در ممیزی ثبت می‌شود و بعداً باید قابل بازبینی باشد. \nانقضا را انتخاب کنید (۳۰/۹۰/۱۸۰ روز یا دائمی). پس از انقضا، امتیاز خودکار به مدل برمی‌گردد و نشان «دستی» از روی نشان‌ها برداشته می‌شود. \nهر جا «دستی» می‌بینید، یعنی امتیاز موثر = مدل ± جابه‌جایی؛ مبنای مدل هرگز بازنویسی نمی‌شود. نشان «تنظیم دستی منقضی» هم هشدار می‌دهد که جابه‌جایی دیگر اعمال نمی‌شود.', { views: 198, helpful: 33 }), kb('kb-verdict', 'verdict-ladder', 'نردبان حکم: هر برچسب یعنی چه اقدامی؟', 'قابل اتکا، پیش‌نویس، داده کافی نیست، ضعیف و پرچم بحرانی — نقشهٔ اقدام هر وضعیت.', 'SCORING', ['حکم', 'اقدام'], [], 4, 'تیم محصول', 'پرچم بحرانی: یک دروازهٔ ریسک فعال است. تا جمع‌شدن آن، هیچ رتبه‌بندی و مقایسه‌ای انجام نشود؛ اول اقدام کنید. \nداده کافی نیست (پوشش زیر ۲۵٪): تصویر ساخته نشده. عددی که می‌بینید صرفاً پرسش‌های جواب‌داده است؛ مبنای تصمیم نگیرید. \nپیش‌نویس ارزیابی (اطمینان زیر ۴۰٪): شواهد کم یا کهنه است. چند پاسخ مستند می‌تواند امتیاز را به‌شکل معنادار جابه‌جا کند — روی «ثبت ارزیابی» تمرکز کنید. \nقابل اتکا / قوی: شواهد کافی است. اینجا مقایسهٔ رتبه‌ای و تصمیم‌گیری مجاز است. «قوی» یعنی امتیاز ۷۵+ با اطمینان ۶۵+. \nضعیف: شواهد کافی و وضعیت نامطلوب — نیازمند اقدام. به «نقاط ضعف» در همان کارت نگاه کنید: سه معیاری که بیشترین اثر منفی را دارند آنجا فهرست شده‌اند.', { views: 260, helpful: 51 }), kb('kb-coverage', 'coverage-honesty', 'چرا «داده کافی نیست» درست‌تر از یک عدد خوش‌بینانه است؟', 'فلسفهٔ ناشناخته‌ها: پاسخ‌ندادن صفر حساب نمی‌شود؛ و چرا این تصمیم، امتیاز را قابل اعتمادتر می‌کند.', 'SCORING', ['پوشش', 'ناشناخته'], [], 4, 'تیم محصول', 'در این مدل، معیار بی‌پاسخ هرگز صفر فرض نمی‌شود. معیار بی‌پاسخ در «ناشناخته» می‌ماند، وزن‌ش در تقسیم حذف می‌شود و در عوض پوشش و اطمینان پایین می‌آید. \nنتیجه: یک رابطه با پنج پاسخ خوب اما پوشش ۲۰٪ هرگز «قابل اتکا» رتبه نمی‌گیرد؛ برچسب‌اش صادقانه «داده کافی نیست» است. اگر ناشناخته‌ها صفر بودند، هر رکورد نیمه‌پر با عددی نیمه‌واقعی در مقایسه‌های بالایی می‌نشست. \nدروازهٔ رتبه‌بندی (پیش‌فرض ۴۰٪ پوشش) و حداقل اطمینان ۳۵٪ همین را سخت‌گیرانه اجرا می‌کنند. به‌جای بالا بردن عدد، روی «معیارهای بدون داده» کار کنید — کارت امتیاز دقیقاً می‌گوید کدام‌ها بیشترین وزن را دارند. \nاگر ۲۴۰ نویسه دلیل نیاز نیست؛ فقط یک پاسخ کوتاه و دقیق. امتیاز، خلاصهٔ کیفیت دادهٔ شماست.', { views: 174, helpful: 29 }), kb('kb-families', 'families-and-evidence', 'هشت خانوادهٔ معیار و شواهد هر کدام', 'چرا هر خانواده وجود دارد، به چه پژوهشی وصل است و چه رفتاری در سیستم آن را «مشاهده» می‌کند.', 'SCORING', ['خانواده‌ها', 'شواهد'], ['STRATEGIC', 'VALUE', 'CAPABILITY', 'RELIABILITY', 'ACCESS', 'FINANCIAL', 'RISK', 'NETWORK'], 7, 'تیم محصول', 'اهمیت و هم‌راستایی راهبردی: برجستگی شریک، تناسب با استراتژی و قدرت ذی‌نفع (پایه: میتچل 1997). شاهد در سیستم: نوع رابطه، وضعیت، نقش سازمان در پروژه‌های مشترک. \nارزش اقتصادی: ارزش فعلی رابطه و چرخهٔ عمر آن. شاهد: ارزش فرصت‌ها و قراردادهای متصل. \nتوانمندی عملیاتی: کیفیت تحویل، ظرفیت، خدمت پس از فروش. شاهد: نتیجهٔ تعامل‌ها، جلسه‌ها و اقداماتِ خاتمه‌یافته. \nقابلیت اعتماد: ثبات رفتاری و پایبندی به قول‌ها. شاهد: تعهدهای سرموعد یا عقب‌افتاده. \nدسترسی و نفوذ: دسترسی به تصمیم‌گیرنده. شاهد: معرفی‌ها و نقش اشخاص کلیدی. \nمالی و منابع، ریسک و انطباق، شبکه و موقعیت: از وضعیت مالی، پرچم‌های ریسک، مسیرهای شبکه و مرکزیت استفاده می‌شود. هر معیار در کاتالوگ «منبع» دارد و طول عمر پاسخ‌اش (نیمه‌عمر) تعیین می‌کند چه وقت کهنه می‌شود.', { views: 233, helpful: 44 }), kb('kb-workflows', 'workflows-approvals', 'گردش‌کار و تأییدها: چه چیزی لازم است تأیید شود؟', 'اجراهای خودکار، قواعد تأیید و اینکه هر اقدام چه زمانی به «تأیید» گیر می‌کند.', 'PROCESS', ['گردش‌کار', 'تأیید'], [], 5, 'تیم محصول', 'گردش‌کارها، اقدام‌های خودکار روی رویدادها هستند (مثلاً ساخت رابطه یا وعدهٔ قرارداد). وضعیت اجرا را در «گردش‌کار و تأییدها → اجراها» ببینید. \nهر قاعده‌ای که روی «تأیید» بایستد، در صف «تأییدها» می‌آید و تا تصمیم کاربرِ دارای مجوز، اجرا متوقف می‌ماند — این عمدی است تا کارهای حساس بی‌اجازه نگذرند. \nخروجی گزارش‌ها هم همین‌طور است: «دریافت فایل» یک درخواست تأیید ثبت می‌کند و فایل واقعی پس از تأیید در صفحهٔ تأییدها صادر می‌شود. اگر پیام «ابتدا تأیید درخواست» دیدید، سراغ تأییدها بروید. \nاشخاص بدون مجوز، تنها می‌توانند اجراهایی را ببینند که در محدودهٔ سازمانی‌شان است؛ مالک سامانه همه‌چیز را می‌بیند.', { views: 121, helpful: 18 }), kb('kb-security', 'data-security', 'امنیت داده: طبقه‌بندی، تأیید دومرحله‌ای و نشست‌ها', 'مدارک واقعی: طبقه‌بندی اسناد، تأیید دومرحله‌ای، احراز هویت، نشست‌ها و رویدادهای امنیتی.', 'SECURITY', ['تأیید دومرحله‌ای', 'طبقه‌بندی', 'نشست'], [], 5, 'تیم محصول', 'ورود با تأیید دومرحله‌ای محافظت می‌شود؛ دستگاه‌های تأییدشده و کدهای بازیابی در «امنیت → دستگاه‌های من» مدیریت می‌شوند. در دمو، هر کد شش‌رقمی پذیرفته می‌شود. \nاسناد چهار طبقه دارند: داخلی، محرمانه، محدود و عمومی. بارگذاری با اعتبارسنجی نوع فایل/پسوند، قرنطینه و اسکن بدافزار همراه است؛ وضعیت هر فایل کنارش می‌آید. \nنشست‌های فعال خود را در «نشست‌های من» ببینید و از راه دور ببندید. رویدادهای ورود ناموفق، قفل حساب، تلاش بدون مجوز و صادرات در «امنیت → رویدادها» ثبت می‌شوند. \nنکتهٔ مهم: در حالت دمو (سرویس میزبانی استاتیک) همه‌چیز در مرورگر شما اجرا می‌شود و داده‌ها برای همان نشست است؛ هیچ داده‌ای به سرور واقعی نمی‌رود.', { views: 149, helpful: 22 }), kb('kb-intel', 'reading-intelligence', 'خواندن هوشمندی: سیگنال‌ها، فرصت‌ها و پوشش راهبردی', 'چهار بخش صفحهٔ هوشمندی یعنی چه و هر کدام به کدام اقدام ختم می‌شود.', 'ANALYTICS', ['هوشمندی', 'ریسک', 'فرصت'], ['RISK', 'STRATEGIC'], 6, 'تیم محصول', 'سیگنال‌های ریسک از دادهٔ واقعی ساخته می‌شوند: اقدام عقب‌افتاده، تعهد عقب‌افتاده، اقدام مسدود، سلامت پایین و تعامل کهنه. شدت بالا (۶۰+) یعنی فوری؛ بالای ۴۰ متوسط، زیر آن ملایم. تأخیر بیش از دو برابر، شدت را بالا می‌برد. \nتشخیص فرصت دو نوع است: پیگیری (فرصتِ بازِ روی رابطه) و رشد (رابطه‌ای با امتیاز فرصت ۶۰+ ولی بدون فرصت باز) — یعنی به‌جای فهرست پیوندها، به بازار رشد واقعی اشاره می‌کند. \nپوشش راهبردی، روابط استراتژیک (امتیاز راهبردی ۶۰+) را با وضعیت عملیاتی‌شان مقایسه می‌کند: اقدام باز، تعهد باز یا اقدام بعدیِ آینده. شکاف‌ها را با بدون اقدام باز و سلامت پایین می‌بیند. \nستون «معیارها» در همین جدول، امتیاز شاخص هر رابطه را به امتیاز معیارها وصل می‌کند — همان عددی که در صفحهٔ رابطه می‌بینید.', { views: 205, helpful: 37 }), kb('kb-reports', 'reports-and-export', 'گزارش‌ها و خروجی: چه مجوزی لازم است؟', 'نقشهٔ گزارش‌ها، فرمت‌ها، محدودیت متن ساختاریافته برای مدیران و جریان تأیید خروجی.', 'PROCESS', ['گزارش', 'خروجی', 'مجوز'], [], 4, 'تیم محصول', 'گزارش‌ها بر اساس محدودهٔ سازمانی شما ساخته می‌شوند و همان‌جا می‌توانید فایل جدولی/XLSX/گزارش رنگی داشته باشید. \nفرمت متن ساختاریافته مخصوص مدیران سازمانی است؛ فایل جدولی برای بقیهٔ کاربران دارای مجوز خروجی. بدون مجوز خروجی گزارش، دکمهٔ خروجی کار نمی‌کند. \nجریان تأیید: ابتدا «دریافت فایل» (ثبت درخواست)، بعد در «تأییدها» تأیید، سپس دوباره تلاش کنید. هر خروجی در لاگ تحویل و رویدادهای امنیتی ثبت می‌شود. \nدر دمو، خروجی فایل جدولی واقعی تولید می‌شود ولی صفحهٔ گسترده/سند به فایل جدولی برمی‌گردند تا بدون سرور افزوده هم کار کنند.', { views: 96, helpful: 14 }), kb('kb-network', 'network-spof', 'شبکه: مرکزیت، پل‌ها و نقطهٔ شکست واحد', 'چرا یک گره «مرکزیت» بالا یا «نقطهٔ شکست واحد» می‌گیرد و چرا این برای شما مهم است.', 'ANALYTICS', ['شبکه', 'ریسک'], ['NETWORK', 'RISK'], 4, 'تیم محصول', 'مرکزیت شبکه، گره‌هایی را نشان می‌دهد که بیشترین پیوند را دارند — آنها کانون ارتباط شما هستند؛ از دست دادن‌شان گران است. \nپل‌های ارتباطی اشخاصی هستند که دو خوشهٔ متفاوت را به هم می‌رسانند؛ معمولاً مدیرانی که در چند وضعیت نقش دارند. \nنقطهٔ شکست واحد  گره‌ای است که حذف آن شبکه را از هم باز می‌کند. اگر همان گره با پیوندهای پرریسک همراه باشد، بالاترین اولویت اقدام را دارد: حداقل یک مسیر جایگزین بسازید. \nبه یاد داشته باشید که امتیازهای این صفحه با امتیازهای معیاریِ همان گره یکی نیستند؛ اعداد شبکه ساختاری‌اند و اعداد معیار، کیفیت رابطه را می‌سنجند.', { views: 158, helpful: 26 }), kb('kb-ai', 'ai-and-brief', 'بریف اجرایی و دستیار: کجا به عددها اعتماد کنیم؟', 'تفاوت خلاصهٔ خودکار با امتیاز معیارها و مرز اعتماد در خروجی هوش مصنوعی.', 'ANALYTICS', ['هوش مصنوعی', 'بریف'], [], 4, 'تیم محصول', 'دستیار هوشمند و بریف اجرایی، متن را از همان دادهٔ ساخت‌یافته می‌سازند؛ اطلاعات جدید به پایگاه داده اضافه نمی‌کنند. برای همین قبل از اعتماد، سند مرتبط را چک کنید. \nعددهای بریف (میانگین سلامت، ریسک، فرصت) از دادهٔ واقعی و با محدودهٔ سازمانی محاسبه می‌شوند، ولی «تفسیر» متن خودکار است. \nبه‌عنوان قاعدهٔ سرانگشتی: هر جا «امتیاز معیارها» را می‌بینید، همان عدد مقیاس ۰–۱۰۰ با پوشش و اطمینان است؛ هر جا درصد یا شمارش در بریف است، منبع‌اش به دادهٔ خام وصل است. \nاگر متن بریف با امتیاز معیارها نخواند، اول پوشش را چک کنید— معمولاً دلیلش دادهٔ ناقص است نه اشتباه مدل.', { views: 172, helpful: 25 }),
-  kb('kb-publics', 'publics-map', 'نقشهٔ عموم‌ها: شش دسته، خودشناسی و گپ‌ها', 'هاب عموم‌ها چطور خوانده شود: قالب شرکت، ماتریس قدرت/علاقه، پوشش دسته‌ها، گپ بحرانی و مسیر پیشنهادی.', 'ANALYTICS', ['عموم‌ها', 'گپ', 'خودشناسی'], ['STRATEGIC', 'NETWORK'], 5, 'تیم محصول', '«عموم‌ها» ذی‌نفعان اثرگذار بیرون از روابط قراردادی‌اند؛ نقشهٔ آن‌ها در شش دسته ساخته می‌شود: داخلی، نهادی و حاکمیتی، علمی و دانشگاهی، اقتصادی و سرمایه‌گذاری، رسانه‌ای و عمومی، و اکوسیستم فناوری و صنعت. \nتب «من کیستم» نوع شرکت را تعیین می‌کند و قالب همان نوع، فهرست گروه‌های هدف را می‌سازد؛ «اعضا و ارزیابی» هر عموم را با پیوند (مثلاً توانمندساز یا خروجی عملکردی)، مرحلهٔ بلوغ (پنهان تا فعال)، موضع (ناظر تا بازیگر کلیدی) و قدرت/علاقه ثبت می‌کند و همان دو عدد، جایگاه گره را در ماتریس ۲×۲ می‌دهد. \n«پوشش» به تفکیک دسته نشان می‌دهد چند گروه هدف عضو دارند و کدام دسته خالی است؛ «گپ‌ها و اقدام» گپ‌های بحرانی (بازیگر کلیدی غایب یا عقب‌مانده) را با اقدام پیشنهادی و مسیر پیشنهادی روی شبکهٔ واقعی روابط می‌آورد. \nگره‌های گراف شبکه با رنگ دستهٔ عموم‌ها و حلقهٔ طلایی «خودِ شرکت» برچسب می‌خورند؛ فیلتر دسته در همان صفحه گراف را تفکیک می‌کند. برای هیئت، بریف یک‌صفحه‌ای از همین داده ساخته می‌شود و خروجی JSON/CSV/Excel قابل دانلود است. \nمحرک‌های خودکار (PUBLIC_MEMBER_ADDED، PUBLIC_STAGE_CHANGED، PUBLIC_GAP_DETECTED، PUBLIC_REVIEW_DUE، MEDIA_CREATED) گردش‌کار می‌سازند و اقدام و اعلان واقعی ثبت می‌کنند.', { views: 87, helpful: 12 }), ]; }  
+  kb('kb-publics', 'publics-map', 'نقشهٔ عموم‌ها: شش دسته، خودشناسی و گپ‌ها', 'هاب عموم‌ها چطور خوانده شود: قالب شرکت، ماتریس قدرت/علاقه، پوشش دسته‌ها، گپ بحرانی و مسیر پیشنهادی.', 'ANALYTICS', ['عموم‌ها', 'گپ', 'خودشناسی'], ['STRATEGIC', 'NETWORK'], 5, 'تیم محصول', '«عموم‌ها» ذی‌نفعان اثرگذار بیرون از روابط قراردادی‌اند؛ نقشهٔ آن‌ها در شش دسته ساخته می‌شود: داخلی، نهادی و حاکمیتی، علمی و دانشگاهی، اقتصادی و سرمایه‌گذاری، رسانه‌ای و عمومی، و اکوسیستم فناوری و صنعت. \nتب «من کیستم» نوع شرکت را تعیین می‌کند و قالب همان نوع، فهرست گروه‌های هدف را می‌سازد؛ «اعضا و ارزیابی» هر عموم را با پیوند (مثلاً توانمندساز یا خروجی عملکردی)، مرحلهٔ بلوغ (پنهان تا فعال)، موضع (ناظر تا بازیگر کلیدی) و قدرت/علاقه ثبت می‌کند و همان دو عدد، جایگاه گره را در ماتریس ۲×۲ می‌دهد. \n«پوشش» به تفکیک دسته نشان می‌دهد چند گروه هدف عضو دارند و کدام دسته خالی است؛ «گپ‌ها و اقدام» گپ‌های بحرانی (بازیگر کلیدی غایب یا عقب‌مانده) را با اقدام پیشنهادی و مسیر پیشنهادی روی شبکهٔ واقعی روابط می‌آورد. \nگره‌های گراف شبکه با رنگ دستهٔ عموم‌ها و حلقهٔ طلایی «خودِ شرکت» برچسب می‌خورند؛ فیلتر دسته در همان صفحه گراف را تفکیک می‌کند. برای هیئت، بریف یک‌صفحه‌ای از همین داده ساخته می‌شود و خروجی JSON/CSV/Excel قابل دانلود است. \nمحرک‌های خودکار (PUBLIC_MEMBER_ADDED، PUBLIC_STAGE_CHANGED، PUBLIC_GAP_DETECTED، PUBLIC_REVIEW_DUE، MEDIA_CREATED) گردش‌کار می‌سازند و اقدام و اعلان واقعی ثبت می‌کنند.', { views: 87, helpful: 12 }),
+    kb('kb-strategy', 'strategy-game-theory', 'تحلیل راهبردی با نظریه بازی‌ها: سناریو، تعادل، شبیه‌سازی', 'هاب تحلیل راهبردی چطور خوانده شود: سناریو، ماتریس عایدی، تعادل نش، شبیه‌سازی تکراری، پیش‌بینی و واکنش.', 'ANALYTICS', ['راهبرد', 'تعادل نش', 'شبیه‌سازی', 'رقبا'], ['STRATEGIC', 'VALUE'], 6, 'تیم محصول', '«تحلیل راهبردی» رقابت و تعامل با طرف‌ها را با روش نظریه بازی‌ها تحلیل می‌کند؛ اسم این ماژول «بازی» نیست. \\nتب «نمای کلی» سناریوها و قالب‌های کلاسیک (معمای زندانی، شکار گوزن، تقابل، هماهنگی، سکهٔ مشابه، بازدارندگی ورود، جنگ قیمت) را نشان می‌دهد؛ «رقبا» طرف‌ها را از سازمان‌های سامانه یا دستی تعریف می‌کند. \\n«اتصال داده» دادهٔ هر پلتفرم دیگر را با قالب JSON/CSV و اعتبارسنجی سطر‌به‌سطر وارد می‌کند؛ «شبیه‌سازی» ماتریس عایدی، بهترین‌پاسخ‌ها، تعادل نش خالص و مختلط (۲×۲)، حذف غلبه، مسیر تعادل درخت ترتیبی و شبیه‌سازی تکراری بذردار را اجرا می‌کند. \\n«پیش‌بینی و واکنش» حرکت بعدی رقیب را از تاریخچه پیش‌بینی و بهترین پاسخ را توصیه می‌کند؛ «خروجی» بریف یک‌صفحه‌ای و دانلود JSON/CSV/Excel می‌دهد. \\nمحرک‌های خودکار (STRATEGY_SCENARIO_CREATED، STRATEGY_SIMULATED، STRATEGY_PREDICTED، STRATEGY_IMPORT_COMPLETED) گردش‌کار می‌سازند و اقدام و اعلان واقعی ثبت می‌کنند.', { views: 41, helpful: 9 }), ]; }  
 /* اسناد واقعی مرکز دانش — در دمو بدون فایل واقعی، اما با چرخهٔ واقعی وضعیت/اسکن/ایندکس */
 function seedDocuments() {
   const at = (d) => new Date(Date.now() - d * 86400000).toISOString();
@@ -2092,7 +2093,7 @@ function resetDbInPlace(){
   seedRoleStore(); seedTagStore(); seedCustomFields(); seedScoringRules();
   seedNotificationRules(); seedAuditDemo(); seedFeatureFlags(); seedExportLog();
   seedRetention(); seedMasterData(); seedIntegrations(); seedReferralStore();
-  seedApprovals(); seedWorkflowStore(); seedPublicsStore(); seedSecurityEvents();
+  seedApprovals(); seedWorkflowStore(); seedPublicsStore(); seedStrategyStore(); seedSecurityEvents();
   seedPrivacyStore(); seedEnterpriseStore(); seedSettingsStore(); seedSessionsStore();
   seedAnalyticsStore(); saveDb();
 }
@@ -2113,8 +2114,8 @@ function audit(req, action, entity, entityId, outcome = 'OK', meta = {}) {
 
 /* --------------------------- admin: RBAC catalog & access recompute ----- */
 const ROLE_LABELS_ADMIN={SUPER_ADMIN:'مدیر کل سیستم',HOLDING_ADMIN:'مدیر هلدینگ',HOLDING_EXECUTIVE:'مدیر ارشد هلدینگ',SUBSIDIARY_ADMIN:'مدیر شرکت',SUBSIDIARY_EXECUTIVE:'مدیر ارشد شرکت',RELATIONSHIP_MANAGER:'مدیر روابط',PROJECT_MANAGER:'مدیر پروژه',ANALYST:'تحلیلگر',STANDARD_USER:'کاربر استاندارد',READ_ONLY:'فقط خواندنی'};
-const R_READ=['dashboard.read','publics.read','organization.read','person.read','relationship.read','network.read','interaction.read','meeting.read','action.read','commitment.read','project.read','opportunity.read','recommendation.read','report.read','document.read','notification.read','search.read','calendar.read','help.read','user.read','session.read','analytics.read','ai.query','ai.executive_brief'];
-const R_WRITE=['publics.write','person.write','relationship.write','interaction.write','meeting.write','action.write','commitment.write','project.write','opportunity.write','recommendation.تأیید','document.write','data.manage'];
+const R_READ=['dashboard.read','publics.read','strategy.read','organization.read','person.read','relationship.read','network.read','interaction.read','meeting.read','action.read','commitment.read','project.read','opportunity.read','recommendation.read','report.read','document.read','notification.read','search.read','calendar.read','help.read','user.read','session.read','analytics.read','ai.query','ai.executive_brief'];
+const R_WRITE=['strategy.write','publics.write','person.write','relationship.write','interaction.write','meeting.write','action.write','commitment.write','project.write','opportunity.write','recommendation.تأیید','document.write','data.manage'];
 const R_READONLY_PERMS=R_READ.filter(p=>!['ai.query','ai.executive_brief','analytics.read','recommendation.read'].includes(p));
 const ROLE_CATALOG=[
   {key:'SUPER_ADMIN',name:ROLE_LABELS_ADMIN.SUPER_ADMIN,description:'مالک سامانه — دسترسی کامل، غیرقابل واگذاری.',holding:true,perms:['*']},
@@ -2130,7 +2131,7 @@ const ROLE_CATALOG=[
 ];
 
 /* ---------- permission catalog (system-wide, deterministic) ---------- */
-const PERMISSION_GROUPS_FA={General:'عمومی',Core:'هسته',Meetings:'جلسات',Work:'اقدامات و پروژه‌ها',Intelligence:'هوش و تحلیل',Knowledge:'دانش و جستجو',Account:'حساب و نشست',DataGovernance:'داده و کیفیت',Security:'امنیت',Admin:'مدیریت و یکپارچه‌سازی',Publics:'عموم‌ها'};
+const PERMISSION_GROUPS_FA={General:'عمومی',Core:'هسته',Meetings:'جلسات',Work:'اقدامات و پروژه‌ها',Intelligence:'هوش و تحلیل',Knowledge:'دانش و جستجو',Account:'حساب و نشست',DataGovernance:'داده و کیفیت',Security:'امنیت',Admin:'مدیریت و یکپارچه‌سازی',Publics:'عموم‌ها',Strategy:'تحلیل راهبردی'};
 const P_DEFS=[
   ['General','dashboard.read','مشاهده داشبورد'],
   ['Core','organization.read','مشاهده سازمان‌ها'],['Core','organization.write','ثبت و ویرایش سازمان'],['Core','org.read','مشاهده سازمان (سازگاری)'],
@@ -2145,6 +2146,7 @@ const P_DEFS=[
   ['Work','opportunity.read','مشاهده فرصت‌ها'],['Work','opportunity.write','ثبت و تغییر فرصت'],
   ['Work','approval.read','مشاهده تأییدها'],['Work','workflow.read','مشاهده گردش کارها'],
   ['Publics','publics.read','مشاهده عموم‌ها'],['Publics','publics.write','مدیریت عموم‌ها'],
+  ['Strategy','strategy.read','مشاهده تحلیل راهبردی'],['Strategy','strategy.write','مدیریت تحلیل راهبردی'],
   ['Intelligence','analytics.read','تحلیل و هوشمندی'],['Intelligence','analytics.write','ثبت رویداد و نتیجهٔ سنجش'],['Intelligence','ai.query','پرس‌وجوی هوشمند'],['Intelligence','ai.executive_brief','گزارش راهبردی هوش مصنوعی'],
   ['Intelligence','recommendation.read','مشاهده پیشنهادها'],['Intelligence','recommendation.تأیید','تأیید پیشنهاد'],['Intelligence','report.read','مشاهده و خروجی گزارش‌ها'],
   ['Knowledge','document.read','مشاهده اسناد'],['Knowledge','document.write','بارگذاری و ویرایش سند'],
@@ -3166,7 +3168,7 @@ function dqDetectCandidates(entityType,data,oid,orgScope){
 /* گردش‌کارهای پیش‌فرض: هر نهاد اصلی سیستم یک محرک خودکار دارد تا موتور اتوماسیون
    «همهٔ سامانه» را پوشش دهد — رابطه، جلسه، اقدام، تعهد، تعامل، فرصت، معرفی، پروژه، شخص، سازمان. */
 const WFLOW_ENTITY_FA = { Relationship:'رابطه', Organization:'سازمان', Person:'شخص', Meeting:'جلسه', Commitment:'تعهد', Action:'اقدام', Opportunity:'فرصت', Project:'پروژه', Referral:'معرفی', Interaction:'تعامل', PublicMember:'عضو عموم', Publics:'عموم‌ها', Media:'رسانه' };
-const WFLOW_TRIGGER_FA = { MANUAL:'دستی', RELATIONSHIP_CREATED:'ایجاد رابطه', RELATIONSHIP_UPDATED:'به‌روزرسانی رابطه', MEETING_CREATED:'ایجاد جلسه', MEETING_COMPLETED:'ثبت نتیجهٔ جلسه', ACTION_CREATED:'ایجاد اقدام', ACTION_UPDATED:'به‌روزرسانی اقدام', ACTION_COMPLETED:'انجام اقدام', COMMITMENT_CREATED:'ایجاد تعهد', COMMITMENT_UPDATED:'به‌روزرسانی تعهد', COMMITMENT_FULFILLED:'انجام تعهد', INTERACTION_CREATED:'ثبت تعامل', OPPORTUNITY_CREATED:'ایجاد فرصت', OPPORTUNITY_UPDATED:'به‌روزرسانی فرصت', OPPORTUNITY_WON:'پیروزی فرصت', OPPORTUNITY_LOST:'از دست رفتن فرصت', PROJECT_CREATED:'ایجاد پروژه', PROJECT_UPDATED:'به‌روزرسانی پروژه', REFERRAL_CREATED:'ایجاد معرفی', REFERRAL_UPDATED:'به‌روزرسانی معرفی', REFERRAL_ACCEPTED:'پذیرش معرفی', REFERRAL_COMPLETED:'انجام معرفی', REFERRAL_DECLINED:'رد معرفی', PERSON_CREATED:'ایجاد شخص', PERSON_UPDATED:'به‌روزرسانی شخص', ORGANIZATION_CREATED:'ایجاد سازمان', ORGANIZATION_UPDATED:'به‌روزرسانی سازمان', PUBLIC_MEMBER_ADDED:'افزودن عضو عموم', PUBLIC_STAGE_CHANGED:'تغییر مرحلهٔ عموم', PUBLIC_GAP_DETECTED:'کشف گپ عموم', PUBLIC_REVIEW_DUE:'سررسید بازبینی عموم', MEDIA_CREATED:'ثبت رسانه' };
+const WFLOW_TRIGGER_FA = { MANUAL:'دستی', RELATIONSHIP_CREATED:'ایجاد رابطه', RELATIONSHIP_UPDATED:'به‌روزرسانی رابطه', MEETING_CREATED:'ایجاد جلسه', MEETING_COMPLETED:'ثبت نتیجهٔ جلسه', ACTION_CREATED:'ایجاد اقدام', ACTION_UPDATED:'به‌روزرسانی اقدام', ACTION_COMPLETED:'انجام اقدام', COMMITMENT_CREATED:'ایجاد تعهد', COMMITMENT_UPDATED:'به‌روزرسانی تعهد', COMMITMENT_FULFILLED:'انجام تعهد', INTERACTION_CREATED:'ثبت تعامل', OPPORTUNITY_CREATED:'ایجاد فرصت', OPPORTUNITY_UPDATED:'به‌روزرسانی فرصت', OPPORTUNITY_WON:'پیروزی فرصت', OPPORTUNITY_LOST:'از دست رفتن فرصت', PROJECT_CREATED:'ایجاد پروژه', PROJECT_UPDATED:'به‌روزرسانی پروژه', REFERRAL_CREATED:'ایجاد معرفی', REFERRAL_UPDATED:'به‌روزرسانی معرفی', REFERRAL_ACCEPTED:'پذیرش معرفی', REFERRAL_COMPLETED:'انجام معرفی', REFERRAL_DECLINED:'رد معرفی', PERSON_CREATED:'ایجاد شخص', PERSON_UPDATED:'به‌روزرسانی شخص', ORGANIZATION_CREATED:'ایجاد سازمان', ORGANIZATION_UPDATED:'به‌روزرسانی سازمان', PUBLIC_MEMBER_ADDED:'افزودن عضو عموم', PUBLIC_STAGE_CHANGED:'تغییر مرحلهٔ عموم', PUBLIC_GAP_DETECTED:'کشف گپ عموم', PUBLIC_REVIEW_DUE:'سررسید بازبینی عموم', MEDIA_CREATED:'ثبت رسانه', STRATEGY_SCENARIO_CREATED:'ایجاد سناریوی راهبردی', STRATEGY_SIMULATED:'اجرای شبیه‌سازی راهبردی', STRATEGY_PREDICTED:'پیش‌بینی و توصیهٔ واکنشی', STRATEGY_IMPORT_COMPLETED:'ورود دادهٔ راهبردی' };
 
 /* ====================== Publics (عموم‌ها) — کاتالوگ و قالب‌ها ====================== */
 const PUBLIC_LINKAGE_FA = {"ENABLING": "فعال‌کننده", "FUNCTIONAL_INPUT": "کارکردی-ورودی", "FUNCTIONAL_OUTPUT": "کارکردی-خروجی", "NORMATIVE": "هنجاری", "DIFFUSED": "پراکنده"};
@@ -3438,6 +3440,25 @@ const seedWorkflowDefs = () => {
        {type:'CREATE_ACTION',title:'راه‌اندازی پایش رسانهٔ تازه',priority:'MEDIUM'},
        {type:'CREATE_NOTIFICATION',title:'رسانهٔ تازه ثبت شد',body:'منبع رسانه‌ای تازه به فهرست رسانه‌ها افزوده شد؛ پایش روایت ساخته شد.',channel:'IN_APP',priority:'LOW'},
      ]},createdAt:t(1,4),updatedAt:t(1,4)},
+    {id:'wf-20',name:'سناریوی راهبردی تازه → بازبینی',entityType:'Strategy',organizationId:null,isActive:true,
+     definition:{trigger:{type:'STRATEGY_SCENARIO_CREATED'},conditions:[],actions:[
+       {type:'CREATE_ACTION',title:'بازبینی سناریوی راهبردی تازه',priority:'MEDIUM'},
+       {type:'CREATE_NOTIFICATION',title:'سناریوی راهبردی تازه ثبت شد',body:'سناریوی تازه در هاب تحلیل راهبردی ساخته شد؛ بازبینی و اجرای شبیه‌سازی لازم است.',channel:'IN_APP',priority:'MEDIUM'},
+     ]},createdAt:t(0,4),updatedAt:t(0,4)},
+    {id:'wf-21',name:'شبیه‌سازی راهبردی → اطلاع‌رسانی',entityType:'Strategy',organizationId:null,isActive:true,
+     definition:{trigger:{type:'STRATEGY_SIMULATED'},conditions:[],actions:[
+       {type:'CREATE_NOTIFICATION',title:'شبیه‌سازی راهبردی کامل شد',body:'شبیه‌سازی تکراری سناریو اجرا شد؛ نتیجه در تب شبیه‌سازی قابل مشاهده است.',channel:'IN_APP',priority:'MEDIUM'},
+     ]},createdAt:t(0,3),updatedAt:t(0,3)},
+    {id:'wf-22',name:'توصیهٔ واکنشی → اقدام',entityType:'Strategy',organizationId:null,isActive:true,
+     definition:{trigger:{type:'STRATEGY_PREDICTED'},conditions:[],actions:[
+       {type:'CREATE_ACTION',title:'اقدام روی توصیهٔ واکنشی',priority:'HIGH'},
+       {type:'CREATE_NOTIFICATION',title:'توصیهٔ واکنشی تازه',body:'پیش‌بینی حرکت رقیب و توصیهٔ بهترین پاسخ آماده شد؛ اقدام متناظر ساخته شد.',channel:'IN_APP',priority:'HIGH'},
+     ]},createdAt:t(0,2),updatedAt:t(0,2)},
+    {id:'wf-23',name:'ورود دادهٔ راهبردی → راستی‌آزمایی',entityType:'Strategy',organizationId:null,isActive:true,
+     definition:{trigger:{type:'STRATEGY_IMPORT_COMPLETED'},conditions:[],actions:[
+       {type:'CREATE_ACTION',title:'راستی‌آزمایی دادهٔ واردشده از پلتفرم خارجی',priority:'MEDIUM'},
+       {type:'CREATE_NOTIFICATION',title:'ورود دادهٔ راهبردی انجام شد',body:'دادهٔ پلتفرم خارجی وارد و سناریو ساخته شد؛ راستی‌آزمایی عایدی‌ها لازم است.',channel:'IN_APP',priority:'MEDIUM'},
+     ]},createdAt:t(0,1),updatedAt:t(0,1)},
   ];
 };
 function seedWorkflowStore(){
@@ -3676,6 +3697,320 @@ function pubGaps(orgId){
     groupsCovered:cov.totals.groupsCovered,members:cov.totals.members,keyPlayers:cov.totals.keyPlayers,
     active:cov.totals.active,missing:cov.totals.gaps,lagging:rows.filter(g=>g.kind==='lagging').length,
     gaps:rows.length,criticalGaps:rows.filter(g=>g.severity==='CRITICAL').length},gaps:rows};
+}
+/* ================= STRATEGY: تحلیل راهبردی (روش: نظریه بازی‌ها) =================
+   دامنهٔ دقیق: تحلیل تعادل فقط برای بازی ۲بازیکنه؛ شبیه‌سازی تکراری برای ۲+ بازیکن.
+   ترتیب عایدی در درخت ترتیبی همیشه [خود، رقیب] است. موتور قطعی است (PRNG بذردار). */
+const ST_EPS = 1e-9;
+const ST_RULES_FA = { TFT:'تلافی‌مثل', GRIM:'ماشه‌ای', ALLC:'همیشه‌همکاری', ALLD:'همیشه‌نقض', BESTRESP:'بهترین‌پاسخ', RANDOM:'تصادفی بذردار' };
+const ST_RULES_ORDER = ['TFT','GRIM','ALLC','ALLD','BESTRESP','RANDOM'];
+function stHashSeed(str){ let h=2166136261; const s=String(str??'srip'); for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
+function stRng(seed){ let a=(seed>>>0)||1; return ()=>{ a|=0; a=(a+0x6D2B79F5)|0; let t=Math.imul(a^(a>>>15),1|a); t=(t+Math.imul(t^(t>>>7),61|t))^t; return ((t^(t>>>14))>>>0)/4294967296; }; }
+const STRATEGY_ARCHETYPES=[
+  {id:'PD',fa:'معمای زندانی',kind:'normal',story:'هر دو از همکاری سود می‌برند، اما هر یک وسوسهٔ نقض یک‌طرفه دارد؛ تعادل، نقض متقابل است (مثل شکست قیمت هم‌زمان).',
+   self:['همکاری','نقض'],rival:['همکاری','نقض'],paySelf:[[3,0],[5,1]],payRival:[[3,5],[0,1]]},
+  {id:'STAG',fa:'شکار گوزن',kind:'normal',story:'هماهنگی روی هدف بزرگ بهترین است، اما هراس از تنها ماندن، همه را به هدف کوچک امن می‌کشاند (مثل سرمایه‌گذاری مشترک).',
+   self:['گوزن (بزرگ)','خرگوش (امن)'],rival:['گوزن (بزرگ)','خرگوش (امن)'],paySelf:[[4,0],[3,1]],payRival:[[4,3],[0,1]]},
+  {id:'CHICKEN',fa:'تقابل (جوجه)',kind:'normal',story:'هر که عقب بکشد می‌بازد، اما پافشاری دوطرفه فاجعه است (مثل مزایدهٔ فرسایشی). دو تعادل نامتقارن دارد.',
+   self:['گذشت','پافشاری'],rival:['گذشت','پافشاری'],paySelf:[[0,-1],[1,-10]],payRival:[[0,1],[-1,-10]]},
+  {id:'COORD',fa:'هماهنگی',kind:'normal',story:'مهم هم‌جهت شدن است نه جهت خاص (مثل انتخاب استاندارد مشترک). دو تعادل قطری دارد.',
+   self:['گزینه الف','گزینه ب'],rival:['گزینه الف','گزینه ب'],paySelf:[[2,0],[0,1]],payRival:[[2,0],[0,1]]},
+  {id:'PENNIES',fa:'سکهٔ مشابه',kind:'normal',story:'بازی حاصل‌جمع‌صفر بدون تعادل خالص؛ تنها تعادل، مختلط ۵۰-۵۰ است (مثل حدس حرکت رقیب در مناقصهٔ کور).',
+   self:['شیر','خط'],rival:['شیر','خط'],paySelf:[[1,-1],[-1,1]],payRival:[[-1,1],[1,-1]]},
+  {id:'ENTRY',fa:'بازدارندگی ورود (ترتیبی)',kind:'sequential',story:'رقیب تازه‌وارد اول تصمیم می‌گیرد؛ شرکت مستقر بعد واکنش نشان می‌دهد. با استقرای پسرو حل می‌شود.',
+   self:[''],rival:[''],paySelf:[],payRival:[],
+   tree:{player:'rival',actions:[
+     {label:'ورود به بازار',child:{player:'self',actions:[
+       {label:'جنگ قیمت',pay:[-2,-2]},
+       {label:'پذیرش و تسهیم',pay:[2,2]}]}},
+     {label:'عدم ورود',pay:[5,0]}]}},
+  {id:'PRICEW',fa:'جنگ قیمت (تکراری)',kind:'repeated',story:'سناریوی آمادهٔ شبیه‌سازی: معمای زندانی با برچسب قیمتی، ۱۰ دور، تلافی‌مثل در برابر تلافی‌مثل.',
+   self:['تثبیت قیمت','شکست قیمت'],rival:['تثبیت قیمت','شکست قیمت'],paySelf:[[3,0],[5,1]],payRival:[[3,5],[0,1]],
+   suggestSim:{rounds:10,delta:0.9,selfRule:'TFT',rivalRule:'TFT'}},
+];
+const stArchetype=(id)=>STRATEGY_ARCHETYPES.find(a=>a.id===id)??null;
+/* بهترین‌پاسخ‌ها: selfBR[ستون]=سطرها، rivalBR[سطر]=ستون‌ها */
+function stBestResponses(A,B){
+  const m=A.length,n=A[0].length,selfBR=[],rivalBR=[];
+  for(let j=0;j<n;j++){ let mx=-Infinity; for(let i=0;i<m;i++) mx=Math.max(mx,A[i][j]);
+    selfBR.push(A.map((row,i)=>row[j]>=mx-ST_EPS?i:-1).filter(x=>x>=0)); }
+  for(let i=0;i<m;i++){ let mx=-Infinity; for(let j=0;j<n;j++) mx=Math.max(mx,B[i][j]);
+    rivalBR.push(B[i].map((v,j)=>v>=mx-ST_EPS?j:-1).filter(x=>x>=0)); }
+  return {selfBR,rivalBR};
+}
+function stPureNE(A,B){
+  const {selfBR,rivalBR}=stBestResponses(A,B),out=[];
+  for(let i=0;i<A.length;i++) for(let j=0;j<A[0].length;j++)
+    if(selfBR[j].includes(i)&&rivalBR[i].includes(j)) out.push({i,j,pay:[A[i][j],B[i][j]]});
+  return out;
+}
+/* تعادل مختلط دقیقاً ۲×۲: q احتمال ستون۰، p احتمال سطر۰ */
+function stMixed22(A,B){
+  const a=A[0][0],b=A[0][1],c=A[1][0],d=A[1][1],e=B[0][0],f=B[0][1],g=B[1][0],h=B[1][1];
+  const dq=a-b-c+d,dp=e-f-g+h;
+  if(Math.abs(dq)<ST_EPS||Math.abs(dp)<ST_EPS) return {valid:false,reason:'مخرج کسر صفر است؛ ترکیب بی‌تفاوت‌کننده یکتا وجود ندارد.'};
+  const q=(d-b)/dq,p=(h-g)/dp;
+  if(!(p>0&&p<1&&q>0&&q<1)) return {valid:false,reason:'جواب بیرون از بازهٔ (۰،۱) است؛ تعادل مختلط درونی وجود ندارد.',p,q};
+  const eSelf=q*a+(1-q)*b,eRival=p*e+(1-p)*g;
+  return {valid:true,p,q,expPay:[eSelf,eRival],note:'در این ترکیب، هر بازیکن طرف مقابل را بی‌تفاوت می‌کند.'};
+}
+/* حذف تکراری راهبرد اکیداً مغلوب */
+function stDominance(A,B,selfLabels,rivalLabels){
+  let rows=A.map((_,i)=>i),cols=A[0].map((_,j)=>j); const steps=[];
+  for(;;){
+    let cut=null;
+    for(const i of rows){ const dom=rows.find(k=>k!==i&&cols.every(j=>A[k][j]>A[i][j]+ST_EPS));
+      if(dom!==undefined){ cut={type:'row',index:i,label:selfLabels[i],by:selfLabels[dom]}; rows=rows.filter(x=>x!==i); break; } }
+    if(!cut) for(const j of cols){ const dom=cols.find(k=>k!==j&&rows.every(i=>B[i][k]>B[i][j]+ST_EPS));
+      if(dom!==undefined){ cut={type:'col',index:j,label:rivalLabels[j],by:rivalLabels[dom]}; cols=cols.filter(x=>x!==j); break; } }
+    if(!cut) break; steps.push(cut);
+  }
+  return {steps,remaining:{rows,cols}};
+}
+/* استقرای پسرو روی درخت متناهی اطلاعات‌کامل */
+function stBackward(node){
+  const steps=[];
+  const solve=(nd,path)=>{
+    if(!nd||!nd.actions) throw new Error('گرهٔ درخت معتبر نیست.');
+    let best=null;
+    for(const a of nd.actions){
+      const sub=a.pay?{pay:a.pay,path:[...path,a.label]}:solve(a.child,[...path,a.label]);
+      const mine=nd.player==='self'?sub.pay[0]:sub.pay[1];
+      if(!best||mine>best.mine+ST_EPS) best={...sub,mine,choice:a.label};
+    }
+    steps.push({player:nd.player,choice:best.choice,pay:best.pay});
+    return {pay:best.pay,path:best.path};
+  };
+  const r=solve(node,[]);
+  return {spePath:r.path,pay:r.pay,steps};
+}
+/* شرط پایداری همکاری ماشه‌ای با فرض نظم [همکاری،نقض] */
+function stDeltaCondition(A){
+  if(A.length!==2||A[0].length!==2) return {computable:false,reason:'فقط برای ماتریس ۲×۲ با فرض سطر/ستون اول = همکاری.'};
+  const R=A[0][0],S=A[0][1],T=A[1][0],P=A[1][1];
+  if(!(T>R&&R>P&&P>S)) return {computable:false,reason:'نظم T>R>P>S برقرار نیست؛ فرمول ماشه‌ای اعتبار ندارد.',values:{T,R,P,S}};
+  return {computable:true,deltaStar:(T-R)/(T-P),values:{T,R,P,S},rule:'اگر عامل تنزیل δ دست‌کم این مقدار باشد، همکاری با تهدید ماشه‌ای پایدار است.'};
+}
+/* شبیه‌سازی تکراری: coop=اندیس ۰، defect=آخرین اندیس */
+function stSimulate(A,B,m,n,o={}){
+  const rounds=Math.max(1,Math.min(200,Number(o.rounds??10)||10));
+  const delta=Math.max(0,Math.min(0.999,Number(o.delta??0.9)));
+  const rng=stRng(stHashSeed(o.seed??'srip-strategy'));
+  const rules={self:o.selfRule??'TFT',rival:o.rivalRule??'TFT'};
+  const argmax=(arr)=>{ let bi=0; for(let k=1;k<arr.length;k++) if(arr[k]>arr[bi]+ST_EPS) bi=k; return bi; };
+  const hist=[]; let grimS=false,grimR=false,totS=0,totR=0,discS=0,discR=0,coopJoint=0;
+  for(let r=0;r<rounds;r++){
+    const prev=hist[hist.length-1];
+    const pick=(who)=>{
+      const rule=rules[who],opp=who==='self'?'rival':'self';
+      const lastSelf=prev?prev.self:0,lastRival=prev?prev.rival:0;
+      const oppLast=who==='self'?lastRival:lastSelf,ownM=who==='self'?m:n;
+      if(rule==='ALLC') return 0;
+      if(rule==='ALLD') return ownM-1;
+      if(rule==='RANDOM') return Math.floor(rng()*ownM);
+      if(rule==='TFT') return r===0?0:Math.min(oppLast,ownM-1);
+      if(rule==='GRIM'){ if(who==='self'){ if(r>0&&lastRival!==0) grimS=true; return grimS?m-1:0; } if(r>0&&lastSelf!==0) grimR=true; return grimR?n-1:0; }
+      if(rule==='BESTRESP'){ if(who==='self') return argmax(A.map(row=>row[Math.min(oppLast,n-1)])); return argmax(B[Math.min(oppLast,m-1)]); }
+      return 0;
+    };
+    const si=pick('self'),ri=pick('rival'),ps=A[si][ri],pr=B[si][ri];
+    const df=Math.pow(delta,r);
+    totS+=ps; totR+=pr; discS+=ps*df; discR+=pr*df; if(si===0&&ri===0) coopJoint++;
+    hist.push({round:r+1,self:si,rival:ri,paySelf:ps,payRival:pr});
+  }
+  const r2=(v)=>Math.round(v*100)/100;
+  return {rounds,delta,rules,seed:String(o.seed??'srip-strategy'),history:hist,
+    totals:{self:totS,rival:totR,discSelf:r2(discS),discRival:r2(discR)},
+    coopJointRate:Math.round(coopJoint/rounds*1000)/10};
+}
+/* پیش‌بینی حرکت بعدی رقیب از تاریخچه + توصیهٔ بهترین پاسخ */
+function stPredict(A,B,history){
+  const n=B[0].length,freq=new Array(n).fill(0);
+  for(const h of history??[]) if(Number.isInteger(h.rival)&&h.rival>=0&&h.rival<n) freq[h.rival]++;
+  const total=freq.reduce((a,b)=>a+b,0);
+  if(!total) return {ok:false,reason:'تاریخچه‌ای برای پیش‌بینی وجود ندارد؛ ابتدا شبیه‌سازی کنید یا تاریخچه وارد کنید.'};
+  const dist=freq.map(f=>Math.round(f/total*1000)/1000);
+  let pred=0; for(let j=1;j<n;j++) if(freq[j]>freq[pred]+ST_EPS) pred=j;
+  const ties=freq.filter(f=>Math.abs(f-freq[pred])<ST_EPS).length>1;
+  let tftHits=0,tftN=0;
+  for(let t=1;t<(history??[]).length;t++){ const h=history[t],p=history[t-1]; if(h&&p&&Number.isInteger(h.rival)){ tftN++; if(h.rival===p.self) tftHits++; } }
+  const expSelf=A.map(row=>row.reduce((s,v,j)=>s+v*dist[j],0));
+  let rec=0; for(let i=1;i<expSelf.length;i++) if(expSelf[i]>expSelf[rec]+ST_EPS) rec=i;
+  const r3=(v)=>Math.round(v*1000)/1000;
+  return {ok:true,total,dist,predicted:pred,predictedTie:ties,tftMatchRate:tftN?Math.round(tftHits/tftN*1000)/10:null,
+    recommend:rec,expPaySelf:expSelf.map(r3),bestRespToPredicted:A.map(row=>row[pred]).map((_,i)=>i).reduce((a,i)=>expSelf[i]>expSelf[a]+ST_EPS?i:a,0)};
+}
+/* ---------- ورود داده از پلتفرم دیگر: CSV/JSON + اعتبارسنجی ---------- */
+function stParseCsv(text){
+  const rows=[]; let row=[],cell='',q=false;
+  const s=String(text??'').replace(/^\uFEFF/,'');
+  for(let i=0;i<s.length;i++){
+    const c=s[i];
+    if(q){ if(c==='"'){ if(s[i+1]==='"'){ cell+='"'; i++; } else q=false; } else cell+=c; }
+    else if(c==='"') q=true;
+    else if(c===','){ row.push(cell); cell=''; }
+    else if(c==='\n'){ row.push(cell); rows.push(row); row=[]; cell=''; }
+    else if(c!=='\r') cell+=c;
+  }
+  if(cell!==''||row.length) { row.push(cell); rows.push(row); }
+  return rows.map(r=>r.map(x=>x.trim())).filter(r=>r.some(x=>x!==''));
+}
+function stNum(v){ if(typeof v==='number') return Number.isFinite(v)?v:null; if(typeof v==='string'&&v.trim()!==''&&Number.isFinite(Number(v))) return Number(v); return null; }
+function stValidateImport(format,payload,kind){
+  const errors=[],warnings=[];
+  const fail=(msg)=>{ errors.push(msg); };
+  if(format==='json'){
+    let d; try{ d=JSON.parse(String(payload??'')); }catch{ fail('متن JSON معتبر نیست.'); return {ok:false,errors,warnings}; }
+    if(!d||typeof d!=='object') { fail('سند JSON باید یک شیء باشد.'); return {ok:false,errors,warnings}; }
+    if(d.version!==1) warnings.push('فیلد version برابر ۱ نیست؛ با اسکیمای نسخهٔ ۱ خوانده شد.');
+    const players=Array.isArray(d.players)?d.players:[];
+    if(players.length!==2) fail('بخش players باید دقیقاً ۲ بازیکن داشته باشد.');
+    const st=d.strategies??{};
+    const ss=Array.isArray(st.self)?st.self:[],rs=Array.isArray(st.rival)?st.rival:[];
+    if(ss.length<2) fail('راهبردهای خود (strategies.self) دست‌کم ۲ مورد لازم دارد.');
+    if(rs.length<2) fail('راهبردهای رقیب (strategies.rival) دست‌کم ۲ مورد لازم دارد.');
+    const bad=new Set();
+    const chkMat=(M,who,m,n)=>{ if(!Array.isArray(M)||M.length!==m){ fail(`ماتریس ${who} باید ${m} سطر داشته باشد.`); return; }
+      M.forEach((r,i)=>{ if(!Array.isArray(r)||r.length!==n){ fail(`سطر ${i+1} ماتریس ${who} باید ${n} ستون داشته باشد.`); return; }
+        r.forEach((v,j)=>{ if(stNum(v)===null){ fail(`خانهٔ (${i+1}،${j+1}) ماتریس ${who} عدد معتبر نیست.`); bad.add(i+','+j); } }); }); };
+    const m=ss.length,n=rs.length;
+    chkMat(d.payoffs?.self,'خود',m,n); chkMat(d.payoffs?.rival,'رقیب',m,n);
+    let rounds=null;
+    if(d.rounds!==undefined){
+      if(!Array.isArray(d.rounds)) fail('بخش rounds باید آرایه باشد.');
+      else { rounds=[]; const idxS=(v)=>typeof v==='number'?v:ss.indexOf(v),idxR=(v)=>typeof v==='number'?v:rs.indexOf(v);
+        d.rounds.forEach((h,t)=>{ const si=idxS(h.self),ri=idxR(h.rival);
+          if(!Number.isInteger(si)||si<0||si>=m||!Number.isInteger(ri)||ri<0||ri>=n){ fail(`دور ${t+1}: ارجاع راهبرد نامعتبر است.`); return; }
+          rounds.push({round:Number(h.round??t+1),self:si,rival:ri,paySelf:stNum(h.paySelf)??d.payoffs.self[si][ri],payRival:stNum(h.payRival)??d.payoffs.rival[si][ri]}); }); }
+    }
+    if(errors.length) return {ok:false,errors,warnings};
+    if(m>8||n>8) warnings.push('ماتریس بزرگ‌تر از ۸×۸ است؛ تحلیل تعادل کند می‌شود.');
+    return {ok:true,errors,warnings,scenario:{kind:'normal',self:{name:String(players[0]?.name??'خود')},rival:{name:String(players[1]?.name??'رقیب')},
+      selfStrats:ss.map(String),rivalStrats:rs.map(String),
+      paySelf:d.payoffs.self.map(r=>r.map(stNum)),payRival:d.payoffs.rival.map(r=>r.map(stNum)),
+      payoffSource:'imported',importRounds:rounds}};
+  }
+  if(format==='csv'){
+    const rows=stParseCsv(payload);
+    if(!rows.length){ fail('فایل CSV خالی است.'); return {ok:false,errors,warnings}; }
+    const head=rows[0].map(h=>h.toLowerCase());
+    if(kind==='matrix'){
+      const need=['strategy_self','strategy_rival','pay_self','pay_rival'];
+      const miss=need.filter(h=>!head.includes(h));
+      if(miss.length){ fail('سرستون ناقص است؛ لازم: '+need.join('، ')); return {ok:false,errors,warnings}; }
+      const ci=(h)=>head.indexOf(h),ss=[],rs=[],cells={};
+      rows.slice(1).forEach((r,t)=>{ const a=r[ci('strategy_self')]??'',b=r[ci('strategy_rival')]??'';
+        const ps=stNum(r[ci('pay_self')]),pr=stNum(r[ci('pay_rival')]);
+        if(!a||!b){ fail(`سطر ${t+2}: نام راهبرد خالی است.`); return; }
+        if(ps===null||pr===null){ fail(`سطر ${t+2}: عایدی عدد معتبر نیست.`); return; }
+        if(!ss.includes(a)) ss.push(a); if(!rs.includes(b)) rs.push(b);
+        const k=a+''+b; if(cells[k]) warnings.push(`سطر ${t+2}: خانهٔ تکراری؛ آخرین مقدار نگه داشته شد.`);
+        cells[k]=[ps,pr]; });
+      if(errors.length) return {ok:false,errors,warnings};
+      if(ss.length<2||rs.length<2){ fail('دست‌کم ۲ راهبرد برای هر طرف لازم است.'); return {ok:false,errors,warnings}; }
+      const A=ss.map(a=>rs.map(b=>cells[a+''+b]?cells[a+''+b][0]:null));
+      const B=ss.map(a=>rs.map(b=>cells[a+''+b]?cells[a+''+b][1]:null));
+      const missing=[]; A.forEach((r,i)=>r.forEach((v,j)=>{ if(v===null) missing.push(`(${ss[i]}،${rs[j]})`); }));
+      if(missing.length){ fail('خانه‌های بدون داده: '+missing.slice(0,6).join('؛ ')+(missing.length>6?' و …':'')); return {ok:false,errors,warnings}; }
+      return {ok:true,errors,warnings,scenario:{kind:'normal',self:{name:'خود'},rival:{name:'رقیب'},selfStrats:ss,rivalStrats:rs,paySelf:A,payRival:B,payoffSource:'imported',importRounds:null}};
+    }
+    /* rounds: میانگین تجربی هر خانه؛ خانهٔ دیده‌نشده صفر + هشدار صریح */
+    const need=['round','self','rival'];
+    const miss=need.filter(h=>!head.includes(h));
+    if(miss.length){ fail('سرستون ناقص است؛ لازم: '+need.join('، ')+' (و paySelf/payRival اختیاری)'); return {ok:false,errors,warnings}; }
+    const ci=(h)=>head.indexOf(h),ss=[],rs=[],acc={};
+    rows.slice(1).forEach((r,t)=>{ const a=r[ci('self')]??'',b=r[ci('rival')]??'';
+      if(!a||!b){ fail(`سطر ${t+2}: نام راهبرد خالی است.`); return; }
+      if(!ss.includes(a)) ss.push(a); if(!rs.includes(b)) rs.push(b);
+      const k=a+''+b; acc[k]=acc[k]??{s:[],r:[]};
+      const ps=stNum(r[ci('payself')]??''),pr=stNum(r[ci('payrival')]??'');
+      if(ps!==null) acc[k].s.push(ps); if(pr!==null) acc[k].r.push(pr); });
+    if(errors.length) return {ok:false,errors,warnings};
+    if(ss.length<2||rs.length<2){ fail('دست‌کم ۲ راهبرد برای هر طرف لازم است.'); return {ok:false,errors,warnings}; }
+    const mean=(a)=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+    const unseen=[];
+    const A=ss.map(a=>rs.map(b=>{ const k=a+''+b; if(!acc[k]||!acc[k].s.length) unseen.push(`(${a}،${b})`); return Math.round(mean(acc[k]?.s??[])*100)/100; }));
+    const B=ss.map(a=>rs.map(b=>{ const k=a+''+b; return Math.round(mean(acc[k]?.r??[])*100)/100; }));
+    if(unseen.length) warnings.push('خانه‌های دیده‌نشده با صفر پر شد و نیازمند بازبینی است: '+unseen.slice(0,6).join('؛ ')+(unseen.length>6?' و …':''));
+    warnings.push('عایدی‌ها میانگین تجربی تاریخچه است (منبع: تجربی) نه اظهار قطعی.');
+    return {ok:true,errors,warnings,scenario:{kind:'normal',self:{name:'خود'},rival:{name:'رقیب'},selfStrats:ss,rivalStrats:rs,paySelf:A,payRival:B,payoffSource:'empirical',importRounds:null}};
+  }
+  fail('قالب نامعتبر است؛ json یا csv.');
+  return {ok:false,errors,warnings};
+}
+/* اعتبارسنجی سناریوی دستی/درخت */
+function stValidateScenario(d){
+  const errors=[];
+  if(!d||typeof d!=='object') return {ok:false,errors:['بدنهٔ درخواست معتبر نیست.']};
+  if(d.kind==='sequential'){
+    const seen={n:0};
+    const walk=(nd,depth)=>{
+      if(!nd||typeof nd!=='object'){ errors.push('گرهٔ درخت معتبر نیست.'); return; }
+      if(depth>6){ errors.push('عمق درخت بیش از ۶ است.'); return; }
+      if(!['self','rival'].includes(nd.player)){ errors.push('بازیکن گره باید self یا rival باشد.'); return; }
+      if(!Array.isArray(nd.actions)||nd.actions.length<2||nd.actions.length>6){ errors.push('هر گره ۲ تا ۶ شاخه لازم دارد.'); return; }
+      for(const a of nd.actions){ seen.n++;
+        if(!a||!a.label){ errors.push('برچسب شاخه خالی است.'); continue; }
+        if(a.pay){ if(!Array.isArray(a.pay)||a.pay.length!==2||stNum(a.pay[0])===null||stNum(a.pay[1])===null) errors.push(`عایدی برگ «${a.label}» باید ۲ عدد باشد.`); }
+        else if(a.child) walk(a.child,depth+1); else errors.push(`شاخهٔ «${a.label}» نه برگ است نه زیرگره دارد.`);
+      }
+    };
+    walk(d.tree,0);
+    if(!errors.length&&seen.n<2) errors.push('درخت دست‌کم ۲ شاخه لازم دارد.');
+    return {ok:!errors.length,errors};
+  }
+  const ss=Array.isArray(d.selfStrats)?d.selfStrats:[],rs=Array.isArray(d.rivalStrats)?d.rivalStrats:[];
+  if(ss.length<2||rs.length<2) errors.push('هر طرف دست‌کم ۲ راهبرد لازم دارد.');
+  if(ss.length>12||rs.length>12) errors.push('بیش از ۱۲ راهبرد پشتیبانی نمی‌شود.');
+  const chk=(M,who)=>{ if(!Array.isArray(M)||M.length!==ss.length){ errors.push(`ماتریس ${who} باید ${ss.length} سطر داشته باشد.`); return; }
+    M.forEach((r,i)=>{ if(!Array.isArray(r)||r.length!==rs.length){ errors.push(`سطر ${i+1} ماتریس ${who} باید ${rs.length} ستون داشته باشد.`); return; }
+      r.forEach(v=>{ if(stNum(v)===null) errors.push(`یک خانهٔ ماتریس ${who} عدد نیست.`); }); }); };
+  chk(d.paySelf,'خود'); chk(d.payRival,'رقیب');
+  return {ok:!errors.length,errors:[...new Set(errors)].slice(0,12)};
+}
+/* پیشنهاد راهبرد از روی نوع سازمان */
+const ST_ORG_STRATS={HOLDING:['تثبیت','توسعه'],SUBSIDIARY:['همکاری','رقابت'],BANK:['تثبیت نرخ','رقابت قیمتی'],PARTNER:['همکاری بلندمدت','بازنگری قرارداد'],CUSTOMER:['وفاداری','چانه‌زنی'],SUPPLIER:['همکاری بلندمدت','فروش نقدی'],INVESTOR:['سرمایه‌گذاری','خروج'],GOVERNMENT:['حمایت','محدودیت']};
+function stOrgSuggest(orgId){
+  const o=orgById(orgId);
+  if(!o) return null;
+  return {orgId:o.id,name:o.name,type:o.type??null,industry:o.industry??null,suggested:ST_ORG_STRATS[o.type]??['همکاری','رقابت']};
+}
+/* بریف یک‌صفحه‌ای */
+function stBrief(sc,analysis,sim){
+  const L=[];
+  L.push(`سناریو: ${sc.name} — ${sc.self?.name??'خود'} در برابر ${sc.rival?.name??'رقیب'}`);
+  if(sc.kind==='sequential'){
+    L.push(`نوع: بازی ترتیبی؛ مسیر تعادل کامل زیربازی: ${(analysis?.spe?.spePath??[]).join(' ← ')||'—'}`);
+    L.push(`عایدی مسیر تعادل: خود ${analysis?.spe?.pay?.[0]??'—'}، رقیب ${analysis?.spe?.pay?.[1]??'—'}`);
+  } else {
+    const ne=analysis?.pureNE??[];
+    L.push(`ماتریس ${sc.selfStrats.length}×${sc.rivalStrats.length}؛ تعادل نش خالص: ${ne.length?ne.map(c=>`(${sc.selfStrats[c.i]}،${sc.rivalStrats[c.j]})`).join('؛ '):'هیچ'}`);
+    if(analysis?.mixed?.valid) L.push(`تعادل مختلط: خود ${Math.round(analysis.mixed.p*100)}٪ سطر اول، رقیب ${Math.round(analysis.mixed.q*100)}٪ ستون اول`);
+    if(analysis?.delta?.computable) L.push(`آستانهٔ پایداری همکاری (ماشه‌ای): δ ≥ ${Math.round(analysis.delta.deltaStar*1000)/1000}`);
+  }
+  if(sim) L.push(`شبیه‌سازی ${sim.rounds} دوره (${ST_RULES_FA[sim.rules.self]} در برابر ${ST_RULES_FA[sim.rules.rival]}): عایدی انباشتهٔ خود ${sim.totals.self}، رقیب ${sim.totals.rival}، همکاری دوطرفه ${sim.coopJointRate}٪`);
+  if(analysis?.prediction?.ok) L.push(`پیش‌بینی حرکت بعدی رقیب: ${sc.rivalStrats[analysis.prediction.predicted]}؛ واکنش توصیه‌شده: ${sc.selfStrats[analysis.prediction.recommend]}`);
+  return L;
+}
+/* ---------- فروشگاه سناریوها ---------- */
+function seedStrategyStore(){
+  if(!Array.isArray(DB.strategyScenarios)) DB.strategyScenarios=[];
+  if(!Array.isArray(DB.strategyImports)) DB.strategyImports=[];
+  if(!DB.strategySims) DB.strategySims={};
+  if(!DB.strategyScenarios.some(s=>s.id==='sc-price')){
+    DB.strategyScenarios.push({id:'sc-price',orgId:'org-1',name:'جنگ قیمت با پترو صنعت',kind:'normal',archetypeId:'PD',
+      self:{name:'هلدینگ آریا',orgId:'org-1'},rival:{name:'شرکت پترو صنعت',orgId:'org-4'},
+      selfStrats:['تثبیت قیمت','شکست قیمت'],rivalStrats:['تثبیت قیمت','شکست قیمت'],
+      paySelf:[[3,0],[5,1]],payRival:[[3,5],[0,1]],payoffSource:'stated',source:'seed',
+      createdAt:nowIso(),updatedAt:nowIso()});
+  }
+  if(!DB.strategyScenarios.some(s=>s.id==='sc-entry')){
+    const t=stArchetype('ENTRY');
+    DB.strategyScenarios.push({id:'sc-entry',orgId:'org-1',name:'تهدید ورود البرز به بازار قطعات',kind:'sequential',archetypeId:'ENTRY',
+      self:{name:'هلدینگ آریا',orgId:'org-1'},rival:{name:'تأمین‌کننده قطعات البرز',orgId:'org-6'},
+      selfStrats:[],rivalStrats:[],paySelf:[],payRival:[],tree:JSON.parse(JSON.stringify(t.tree)),
+      payoffSource:'stated',source:'seed',createdAt:nowIso(),updatedAt:nowIso()});
+  }
 }
 function approvalFlowSafe(deciderId,a,decision,isOwner){
   if(!isOwner) return 'فقط مالک سامانه می‌تواند درخواست‌ها را تصمیم بگیرد.';
@@ -7955,6 +8290,238 @@ const server=http.createServer(async(req,res)=>{
     const due=(DB.publicsMembers??[]).filter(m=>m.orgId===orgId&&m.reviewDue&&new Date(m.reviewDue).getTime()<=now);
     for(const m of due) await autoRunWorkflows('PublicMember',m.id,'PUBLIC_REVIEW_DUE',{publicMember:pubMemberView(m),orgId,groupId:m.groupId},`pm-review:${m.id}:${m.reviewDue}`);
     return json(res,200,{orgId,generatedAt:nowIso(),items:due.map(pubMemberView),total:due.length});
+  }
+  /* ---------- STRATEGY: تحلیل راهبردی ---------- */
+  const stOrg=()=>{ const o=q.get('orgId')||pubHomeOrg(); return o; };
+  const stGet=(id)=>{ seedStrategyStore(); return (DB.strategyScenarios??[]).find(s=>s.id===id)??null; };
+  const stAnalysis=(sc)=>{
+    if(sc.kind==='sequential'){
+      try{ const spe=stBackward(sc.tree); return {kind:'sequential',spe}; }
+      catch(e){ return {kind:'sequential',error:String(e?.message??e)}; }
+    }
+    const A=sc.paySelf,B=sc.payRival;
+    const out={kind:'normal',bestResponses:stBestResponses(A,B),pureNE:stPureNE(A,B),
+      mixed:null,delta:stDeltaCondition(A),dominance:stDominance(A,B,sc.selfStrats,sc.rivalStrats)};
+    if(A.length===2&&A[0].length===2) out.mixed=stMixed22(A,B);
+    return out;
+  };
+  if(is('/strategy/archetypes')&&method==='GET'){
+    if(!hasPerm('strategy.read')) return json(res,403,{message:'شما مجوز «مشاهده تحلیل راهبردی» (strategy.read) را ندارید.'});
+    return json(res,200,{items:STRATEGY_ARCHETYPES.map(a=>({...a}))});
+  }
+  if(is('/strategy/scenarios')&&method==='GET'){
+    if(!hasPerm('strategy.read')) return json(res,403,{message:'شما مجوز «مشاهده تحلیل راهبردی» (strategy.read) را ندارید.'});
+    seedStrategyStore();
+    const orgId=stOrg();
+    if(!orgId) return json(res,400,{message:'سازمان (orgId) مشخص نشده است.'});
+    if(!inScope(req,orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
+    const items=(DB.strategyScenarios??[]).filter(s=>s.orgId===orgId);
+    return json(res,200,{orgId,items,total:items.length});
+  }
+  if(is('/strategy/scenarios')&&method==='POST'){
+    if(!hasPerm('strategy.write')) return json(res,403,{message:'شما مجوز «مدیریت تحلیل راهبردی» (strategy.write) را ندارید.'});
+    const b=await readBody(req);
+    const orgId=b.orgId||stOrg();
+    if(!orgId) return json(res,400,{message:'سازمان (orgId) مشخص نشده است.'});
+    if(!inScope(req,orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
+    let d=b;
+    if(b.archetypeId&&!b.selfStrats){ const a=stArchetype(b.archetypeId);
+      if(!a) return json(res,400,{message:'قالب کلاسیک نامعتبر است.'});
+      d={...b,kind:a.kind==='repeated'?'normal':a.kind,selfStrats:[...(a.self??[])],rivalStrats:[...(a.rival??[])],
+        paySelf:(a.paySelf??[]).map(r=>[...r]),payRival:(a.payRival??[]).map(r=>[...r]),
+        tree:a.tree?JSON.parse(JSON.stringify(a.tree)):undefined}; }
+    const v=stValidateScenario(d);
+    if(!v.ok) return json(res,400,{message:'سناریو معتبر نیست.',errors:v.errors});
+    const id=`sc-${Date.now().toString(36)}-${(DB.nextId=(DB.nextId??1)+1)}`;
+    const row={id,orgId,name:String(d.name??'سناریوی بدون نام').slice(0,120),kind:d.kind==='sequential'?'sequential':'normal',
+      archetypeId:d.archetypeId??null,self:{name:String(d.self?.name??'خود').slice(0,80),orgId:d.self?.orgId??null},
+      rival:{name:String(d.rival?.name??'رقیب').slice(0,80),orgId:d.rival?.orgId??null},
+      selfStrats:(d.selfStrats??[]).map(x=>String(x).slice(0,60)),rivalStrats:(d.rivalStrats??[]).map(x=>String(x).slice(0,60)),
+      paySelf:(d.paySelf??[]).map(r=>r.map(stNum)),payRival:(d.payRival??[]).map(r=>r.map(stNum)),
+      tree:d.tree??null,payoffSource:d.payoffSource??'stated',source:d.source??'ui',seed:String(d.seed??id),
+      createdAt:nowIso(),updatedAt:nowIso()};
+    seedStrategyStore(); DB.strategyScenarios.push(row);
+    await autoRunWorkflows('Strategy',row.id,'STRATEGY_SCENARIO_CREATED',{scenario:row,id:row.id,name:row.name,orgId},`strategy-created:${row.id}`);
+    saveDb(); audit(req,'CREATE','StrategyScenario',row.id,'OK',{meta:{name:row.name,kind:row.kind}});
+    return json(res,201,row);
+  }
+  const stIdRoute=match('/strategy/scenarios/:id');
+  if(stIdRoute&&method==='GET'){
+    if(!hasPerm('strategy.read')) return json(res,403,{message:'شما مجوز «مشاهده تحلیل راهبردی» (strategy.read) را ندارید.'});
+    const sc=stGet(stIdRoute[0]);
+    if(!sc) return json(res,404,{message:'سناریو یافت نشد.'});
+    if(!inScope(req,sc.orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
+    return json(res,200,sc);
+  }
+  if(stIdRoute&&method==='PUT'){
+    if(!hasPerm('strategy.write')) return json(res,403,{message:'شما مجوز «مدیریت تحلیل راهبردی» (strategy.write) را ندارید.'});
+    const sc=stGet(stIdRoute[0]);
+    if(!sc) return json(res,404,{message:'سناریو یافت نشد.'});
+    if(!inScope(req,sc.orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
+    const b=await readBody(req);
+    const d={kind:sc.kind,selfStrats:sc.selfStrats,rivalStrats:sc.rivalStrats,paySelf:sc.paySelf,payRival:sc.payRival,tree:sc.tree,...b};
+    const v=stValidateScenario(d);
+    if(!v.ok) return json(res,400,{message:'سناریو معتبر نیست.',errors:v.errors});
+    Object.assign(sc,{name:String(b.name??sc.name).slice(0,120),
+      self:{name:String(b.self?.name??sc.self?.name??'خود').slice(0,80),orgId:b.self?.orgId??sc.self?.orgId??null},
+      rival:{name:String(b.rival?.name??sc.rival?.name??'رقیب').slice(0,80),orgId:b.rival?.orgId??sc.rival?.orgId??null},
+      selfStrats:d.selfStrats.map(x=>String(x).slice(0,60)),rivalStrats:d.rivalStrats.map(x=>String(x).slice(0,60)),
+      paySelf:d.paySelf.map(r=>r.map(stNum)),payRival:d.payRival.map(r=>r.map(stNum)),
+      tree:d.tree??null,updatedAt:nowIso()});
+    delete DB.strategySims[sc.id];
+    saveDb(); audit(req,'UPDATE','StrategyScenario',sc.id,'OK',{});
+    return json(res,200,sc);
+  }
+  if(stIdRoute&&method==='DELETE'){
+    if(!hasPerm('strategy.write')) return json(res,403,{message:'شما مجوز «مدیریت تحلیل راهبردی» (strategy.write) را ندارید.'});
+    const sc=stGet(stIdRoute[0]);
+    if(!sc) return json(res,404,{message:'سناریو یافت نشد.'});
+    if(!inScope(req,sc.orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
+    DB.strategyScenarios=DB.strategyScenarios.filter(x=>x.id!==sc.id);
+    delete DB.strategySims[sc.id];
+    saveDb(); audit(req,'DELETE','StrategyScenario',sc.id,'OK',{});
+    return json(res,200,{removed:true});
+  }
+  const stAnRoute=match('/strategy/scenarios/:id/analysis');
+  if(stAnRoute&&method==='GET'){
+    if(!hasPerm('strategy.read')) return json(res,403,{message:'شما مجوز «مشاهده تحلیل راهبردی» (strategy.read) را ندارید.'});
+    const sc=stGet(stAnRoute[0]);
+    if(!sc) return json(res,404,{message:'سناریو یافت نشد.'});
+    if(!inScope(req,sc.orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
+    return json(res,200,{scenarioId:sc.id,generatedAt:nowIso(),...stAnalysis(sc)});
+  }
+  const stSimRoute=match('/strategy/scenarios/:id/simulate');
+  if(stSimRoute&&method==='POST'){
+    if(!hasPerm('strategy.write')) return json(res,403,{message:'شما مجوز «مدیریت تحلیل راهبردی» (strategy.write) را ندارید.'});
+    const sc=stGet(stSimRoute[0]);
+    if(!sc) return json(res,404,{message:'سناریو یافت نشد.'});
+    if(!inScope(req,sc.orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
+    if(sc.kind!=='normal') return json(res,400,{message:'شبیه‌سازی تکراری فقط برای سناریوی ماتریسی است؛ سناریوی ترتیبی با استقرای پسرو حل می‌شود.'});
+    const b=await readBody(req);
+    const rules={self:ST_RULES_FA[b.selfRule]?b.selfRule:'TFT',rival:ST_RULES_FA[b.rivalRule]?b.rivalRule:'TFT'};
+    const out=stSimulate(sc.paySelf,sc.payRival,sc.selfStrats.length,sc.rivalStrats.length,{rounds:b.rounds,delta:b.delta,selfRule:rules.self,rivalRule:rules.rival,seed:b.seed??sc.id});
+    out.scenarioId=sc.id; out.selfStrats=sc.selfStrats; out.rivalStrats=sc.rivalStrats;
+    seedStrategyStore(); DB.strategySims[sc.id]=out;
+    await autoRunWorkflows('Strategy',sc.id,'STRATEGY_SIMULATED',{scenarioId:sc.id,name:sc.name,rounds:out.rounds,totals:out.totals},`strategy-sim:${sc.id}:${out.rounds}:${rules.self}:${rules.rival}`);
+    saveDb(); audit(req,'SIMULATE','StrategyScenario',sc.id,'OK',{meta:{rounds:out.rounds}});
+    return json(res,200,out);
+  }
+  const stPrRoute=match('/strategy/scenarios/:id/predict');
+  if(stPrRoute&&method==='POST'){
+    if(!hasPerm('strategy.write')) return json(res,403,{message:'شما مجوز «مدیریت تحلیل راهبردی» (strategy.write) را ندارید.'});
+    const sc=stGet(stPrRoute[0]);
+    if(!sc) return json(res,404,{message:'سناریو یافت نشد.'});
+    if(!inScope(req,sc.orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
+    if(sc.kind!=='normal') return json(res,400,{message:'پیش‌بینی فقط برای سناریوی ماتریسی است.'});
+    const b=await readBody(req);
+    const hist=Array.isArray(b.history)&&b.history.length?b.history:(DB.strategySims[sc.id]?.history??[]);
+    const pred=stPredict(sc.paySelf,sc.payRival,hist);
+    if(!pred.ok) return json(res,400,{message:pred.reason});
+    const out={scenarioId:sc.id,generatedAt:nowIso(),predictedLabel:sc.rivalStrats[pred.predicted],recommendLabel:sc.selfStrats[pred.recommend],
+      rivalStrats:sc.rivalStrats,selfStrats:sc.selfStrats,...pred};
+    await autoRunWorkflows('Strategy',sc.id,'STRATEGY_PREDICTED',{scenarioId:sc.id,name:sc.name,predicted:out.predictedLabel,recommend:out.recommendLabel},`strategy-pred:${sc.id}:${Date.now()}`);
+    saveDb(); audit(req,'PREDICT','StrategyScenario',sc.id,'OK',{});
+    return json(res,200,out);
+  }
+  if(is('/strategy/imports/template')&&method==='GET'){
+    if(!hasPerm('strategy.read')) return json(res,403,{message:'شما مجوز «مشاهده تحلیل راهبردی» (strategy.read) را ندارید.'});
+    const fmt=q.get('format')==='csv'?'csv':'json',kind=q.get('kind')==='rounds'?'rounds':'matrix';
+    if(fmt==='csv'&&kind==='matrix'){
+      const csv='strategy_self,strategy_rival,pay_self,pay_rival\nتثبیت قیمت,تثبیت قیمت,3,3\nتثبیت قیمت,شکست قیمت,0,5\nشکست قیمت,تثبیت قیمت,5,0\nشکست قیمت,شکست قیمت,1,1\n';
+      res.writeHead(200,{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename="strategy-matrix-template.csv"'});
+      return res.end('﻿'+csv);
+    }
+    if(fmt==='csv'){
+      const csv='round,self,rival,paySelf,payRival\n1,تثبیت قیمت,تثبیت قیمت,3,3\n2,تثبیت قیمت,شکست قیمت,0,5\n3,شکست قیمت,تثبیت قیمت,5,0\n4,شکست قیمت,شکست قیمت,1,1\n';
+      res.writeHead(200,{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename="strategy-rounds-template.csv"'});
+      return res.end('﻿'+csv);
+    }
+    const tpl={version:1,players:[{key:'self',name:'هلدینگ آریا'},{key:'rival',name:'شرکت پترو صنعت'}],
+      strategies:{self:['تثبیت قیمت','شکست قیمت'],rival:['تثبیت قیمت','شکست قیمت']},
+      payoffs:{self:[[3,0],[5,1]],rival:[[3,5],[0,1]]},meta:{source:'template',note:'مثال معمای زندانی با برچسب قیمتی'}};
+    res.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Content-Disposition':'attachment; filename="strategy-template.json"'});
+    return res.end(JSON.stringify(tpl,null,2));
+  }
+  if(is('/strategy/imports/validate')&&method==='POST'){
+    if(!hasPerm('strategy.write')) return json(res,403,{message:'شما مجوز «مدیریت تحلیل راهبردی» (strategy.write) را ندارید.'});
+    const b=await readBody(req);
+    return json(res,200,stValidateImport(b.format,b.payload,b.kind??'matrix'));
+  }
+  if(is('/strategy/imports')&&method==='POST'){
+    if(!hasPerm('strategy.write')) return json(res,403,{message:'شما مجوز «مدیریت تحلیل راهبردی» (strategy.write) را ندارید.'});
+    const b=await readBody(req);
+    const orgId=b.orgId||stOrg();
+    if(!orgId) return json(res,400,{message:'سازمان (orgId) مشخص نشده است.'});
+    if(!inScope(req,orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
+    const v=stValidateImport(b.format,b.payload,b.kind??'matrix');
+    if(!v.ok) return json(res,400,{message:'دادهٔ واردشده معتبر نیست.',errors:v.errors,warnings:v.warnings});
+    const id=`sc-${Date.now().toString(36)}-${(DB.nextId=(DB.nextId??1)+1)}`;
+    const row={id,orgId,name:String(b.name??'سناریوی واردشده').slice(0,120),kind:'normal',archetypeId:null,
+      ...v.scenario,source:'import',seed:id,createdAt:nowIso(),updatedAt:nowIso()};
+    delete row.importRounds;
+    seedStrategyStore(); DB.strategyScenarios.push(row);
+    DB.strategyImports.unshift({id:`imp-${id}`,format:b.format,kind:b.kind??'matrix',name:row.name,scenarioId:id,
+      warnings:v.warnings??[],createdAt:nowIso(),by:currentUser(req)?.email??null});
+    if(DB.strategyImports.length>50) DB.strategyImports.length=50;
+    await autoRunWorkflows('Strategy',row.id,'STRATEGY_IMPORT_COMPLETED',{scenarioId:id,name:row.name,format:b.format},`strategy-imp:${id}`);
+    saveDb(); audit(req,'IMPORT','StrategyScenario',id,'OK',{meta:{format:b.format}});
+    return json(res,201,{scenario:row,warnings:v.warnings??[]});
+  }
+  if(is('/strategy/imports')&&method==='GET'){
+    if(!hasPerm('strategy.read')) return json(res,403,{message:'شما مجوز «مشاهده تحلیل راهبردی» (strategy.read) را ندارید.'});
+    seedStrategyStore();
+    return json(res,200,{items:DB.strategyImports??[],total:(DB.strategyImports??[]).length});
+  }
+  const stBriefRoute=match('/strategy/brief/:id');
+  if(stBriefRoute&&method==='GET'){
+    if(!hasPerm('strategy.read')) return json(res,403,{message:'شما مجوز «مشاهده تحلیل راهبردی» (strategy.read) را ندارید.'});
+    const sc=stGet(stBriefRoute[0]);
+    if(!sc) return json(res,404,{message:'سناریو یافت نشد.'});
+    if(!inScope(req,sc.orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
+    const sim=DB.strategySims[sc.id]??null;
+    let pred=null;
+    if(sc.kind==='normal'&&sim?.history?.length) pred=stPredict(sc.paySelf,sc.payRival,sim.history);
+    const an=stAnalysis(sc); if(pred?.ok) an.prediction=pred;
+    return json(res,200,{scenarioId:sc.id,generatedAt:nowIso(),lines:stBrief(sc,an,sim)});
+  }
+  if(is('/strategy/export')&&method==='GET'){
+    if(!hasPerm('strategy.read')) return json(res,403,{message:'شما مجوز «مشاهده تحلیل راهبردی» (strategy.read) را ندارید.'});
+    const orgId=stOrg();
+    if(!orgId) return json(res,400,{message:'سازمان (orgId) مشخص نشده است.'});
+    if(!inScope(req,orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
+    const sid=q.get('scenarioId');
+    const list=sid?(DB.strategyScenarios??[]).filter(s=>s.id===sid&&s.orgId===orgId):(DB.strategyScenarios??[]).filter(s=>s.orgId===orgId);
+    if(sid&&!list.length) return json(res,404,{message:'سناریو یافت نشد.'});
+    const fmt=q.get('format')==='csv'?'csv':q.get('format')==='xls'?'xls':'json';
+    if(fmt==='csv'){
+      const esc=(v)=>`"${String(v??'').replace(/"/g,'""')}"`;
+      const lines=['scenario,self,rival,strategy_self,strategy_rival,pay_self,pay_rival'];
+      for(const s of list){ if(s.kind!=='normal') continue;
+        s.selfStrats.forEach((a,i)=>s.rivalStrats.forEach((bb,j)=>lines.push([s.name,s.self?.name,s.rival?.name,a,bb,s.paySelf[i][j],s.payRival[i][j]].map(esc).join(',')))); }
+      res.writeHead(200,{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':`attachment; filename="strategy-${orgId}.csv"`});
+      return res.end('﻿'+lines.join('\n'));
+    }
+    if(fmt==='xls'){
+      const hesc=(v)=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const tr=(cells)=>`<tr>${cells.map(c=>`<td>${hesc(c)}</td>`).join('')}</tr>`;
+      let tables='';
+      for(const s of list){ tables+=`<h3>${hesc(s.name)}</h3>`;
+        if(s.kind==='normal'){ const head=['خود \\ رقیب',...s.rivalStrats];
+          tables+=`<table border="1"><thead>${tr(head)}</thead><tbody>${s.selfStrats.map((a,i)=>tr([a,...s.rivalStrats.map((bb,j)=>`${s.paySelf[i][j]}، ${s.payRival[i][j]}`)])).join('')}</tbody></table>`; }
+        else tables+=`<p>بازی ترتیبی: ${(stAnalysis(s).spe?.spePath??[]).join(' ← ')}</p>`; }
+      const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>تحلیل راهبردی</x:Name><x:WorksheetOptions><x:DisplayRightToLeft/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>${tables}</body></html>`;
+      res.writeHead(200,{'Content-Type':'application/vnd.ms-excel; charset=utf-8','Content-Disposition':`attachment; filename="strategy-${orgId}.xls"`});
+      return res.end(html);
+    }
+    DB.exportLog=(DB.exportLog??[]);
+    return json(res,200,{orgId,generatedAt:nowIso(),total:list.length,items:list.map(s=>({...s,analysis:stAnalysis(s),sim:DB.strategySims[s.id]??null}))});
+  }
+  if(is('/strategy/orgs/suggest')&&method==='GET'){
+    if(!hasPerm('strategy.read')) return json(res,403,{message:'شما مجوز «مشاهده تحلیل راهبردی» (strategy.read) را ندارید.'});
+    const oid=q.get('orgId');
+    if(oid){ const s=stOrgSuggest(oid); if(!s) return json(res,404,{message:'سازمان یافت نشد.'}); return json(res,200,s); }
+    const vis=visibleOrgIds(req);
+    return json(res,200,{items:vis.map(stOrgSuggest).filter(Boolean)});
   }
   if(is('/publics/export')&&method==='GET'){
     if(!hasPerm('publics.read')) return json(res,403,{message:'شما مجوز «مشاهده عموم‌ها» (publics.read) را ندارید.'});

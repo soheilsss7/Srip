@@ -120,6 +120,7 @@ const SMART_NAV: NavItem[] = [
   ['/intelligence', 'هوشمندی و توصیه‌ها', 'analytics.read'],
   ['/board', 'هیئت‌مدیره', 'analytics.read'],
   ['/ai', 'دستیار هوشمند', 'ai.query'],
+  ['/strategy', 'تحلیل راهبردی', 'strategy.read'],
 ];
 const COLLAB_NAV: NavItem[] = [
   ['/workflows', 'گردش کار و تأییدها', 'workflow.read'],
@@ -192,7 +193,7 @@ const MOBILE_TABS: NavItem[] = [
 ];
 
 /** واژه‌نامهٔ یک‌خطی — «این بخش چیست؟» برای هر مسیر */
-const GLOSS_KEY_PERM: Record<string, string> = { '/': 'dashboard.read', '/organizations': 'organization.read', '/people': 'person.read', '/relationships': 'relationship.read', '/network': 'network.read', '/interactions': 'interaction.read', '/referrals': 'relationship.read', '/intelligence': 'analytics.read', '/board': 'analytics.read', '/meetings': 'meeting.read', '/calendar': 'meeting.read', '/actions': 'action.read', '/commitments': 'commitment.read', '/projects': 'project.read', '/opportunities': 'opportunity.read', '/ai': 'ai.query', '/ai-executive-brief': 'ai.executive_brief', '/recommendations': 'recommendation.read', '/reports': 'report.read', '/documents': 'document.read', '/requirements': 'project.read', '/approvals': 'approval.read', '/data-exchange': 'report.read', '/settings': 'user.read', '/sessions': 'session.read', '/data-management': 'data.quality.read', '/workflows': 'workflow.read', '/publics': 'publics.read' };
+const GLOSS_KEY_PERM: Record<string, string> = { '/': 'dashboard.read', '/organizations': 'organization.read', '/people': 'person.read', '/relationships': 'relationship.read', '/network': 'network.read', '/interactions': 'interaction.read', '/referrals': 'relationship.read', '/intelligence': 'analytics.read', '/board': 'analytics.read', '/meetings': 'meeting.read', '/calendar': 'meeting.read', '/actions': 'action.read', '/commitments': 'commitment.read', '/projects': 'project.read', '/opportunities': 'opportunity.read', '/ai': 'ai.query', '/ai-executive-brief': 'ai.executive_brief', '/recommendations': 'recommendation.read', '/reports': 'report.read', '/documents': 'document.read', '/requirements': 'project.read', '/approvals': 'approval.read', '/data-exchange': 'report.read', '/settings': 'user.read', '/sessions': 'session.read', '/data-management': 'data.quality.read', '/workflows': 'workflow.read', '/publics': 'publics.read', '/strategy': 'strategy.read' };
 const ADMIN_PERM: Record<string, string> = { '/admin': 'admin.users', '/admin/feature-flags': 'feature_flag.read', '/admin/exports': 'audit.read', '/admin/sessions': 'session.read', '/admin/retention': 'privacy.manage', '/security': 'security.read', '/security-events': 'security.read', '/governance': 'enterprise.security', '/enterprise': 'enterprise.read', '/privacy': 'privacy.read', '/data-lifecycle': 'data.lifecycle_status', '/data-management': 'data.manage', '/data-quality': 'data.quality.read', '/admin/master-data': 'org.read', '/integrations': 'integration.read', '/workflows': 'workflow.read', '/analytics': 'analytics.read', '/metrics': 'metrics.read', '/observability': 'metrics.read', '/monitoring': 'metrics.read', '/health': 'health.read' };
 
 const GLOSS: Record<string, string> = {
@@ -224,6 +225,7 @@ const GLOSS: Record<string, string> = {
   '/data-management': 'مرکز داده: کیفیت، ورود و حاکمیت داده در یک نگاه',
   '/workflows': 'زنجیره‌های خودکار تصمیم، اجرا و تأییدها',
   '/publics': 'نقشهٔ عموم‌ها: شناخت خود، دسته‌بندی بازیگران و گپ‌های اثرگذار',
+  '/strategy': 'تحلیل رقابت و تعامل با روش نظریه بازی‌ها',
 };
 
 const NAV_ICONS: Record<string, React.ReactNode> = {
@@ -233,6 +235,8 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   '/relationships': <Share2 size={16}/>,
   '/network': <Network size={16}/>,
   '/publics': <Radar size={16}/>,
+  '/strategy': <Target size={16}/>,
+
   '/interactions': <MessagesSquare size={16}/>,
   '/meetings': <CalendarDays size={16}/>,
   '/actions': <Zap size={16}/>,
