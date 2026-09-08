@@ -6,12 +6,12 @@ import { Badge, ErrorCard, Loading, Modal, PageHeader, SectionCard, StatCard } f
 import {
   Target, Users2, Database, FlaskConical, Telescope, FileDown, Plus, RefreshCw, Trash2,
   Copy, CheckCircle2, AlertTriangle, Layers, GitBranch, Upload, FileJson, FileSpreadsheet,
-  Table2, Sparkles, ChevronLeft, Info, Download, Building2,
+  Table2, Sparkles, ChevronLeft, Info, Download, Building2, Plug2,
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
-/*  تحلیل راهبردی (Strategy) — رقابت و تعامل با روش نظریه بازی‌ها        */
-/*  اسم این ماژول «بازی» نیست. تحلیل تعادل فقط ۲بازیکنه.                 */
+/*  تحلیل راهبردی (Strategy) — رقابت و تعامل راهبردی                      */
+/*  نام هیچ‌چیز «بازی» نیست. تحلیل تعادل فقط ۲طرفه.                      */
 /* ------------------------------------------------------------------ */
 
 type TreeAction = { label: string; pay?: [number, number]; child?: TreeNode };
@@ -50,6 +50,7 @@ type PredResult = {
   predictedLabel: string; recommendLabel: string; rivalStrats: string[]; selfStrats: string[];
 };
 type ImportRow = { id: string; format: string; kind: string; name: string; scenarioId: string; warnings: string[]; createdAt: string };
+type ConnRow = { id: string; name: string; url: string; path: string; lastStatus: number | string | null; lastAt: string | null; createdAt: string };
 type OrgSuggest = { orgId: string; name: string; type: string | null; industry: string | null; suggested: string[] };
 
 const TABS = [
@@ -135,6 +136,15 @@ export default function StrategyPage() {
   const [impText, setImpText] = useState('');
   const [impName, setImpName] = useState('');
   const [impResult, setImpResult] = useState<{ ok: boolean; errors: string[]; warnings: string[] } | null>(null);
+  const [conns, setConns] = useState<ConnRow[]>([]);
+  const [connId, setConnId] = useState('');
+  const [connName, setConnName] = useState('');
+  const [connUrl, setConnUrl] = useState('');
+  const [connPath, setConnPath] = useState('');
+  const [connTest, setConnTest] = useState('');
+  const [connPreview, setConnPreview] = useState('');
+  const [connPayload, setConnPayload] = useState('');
+  const [connResult, setConnResult] = useState<{ ok: boolean; errors: string[]; warnings: string[] } | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   /* شبیه‌سازی */
@@ -164,16 +174,18 @@ export default function StrategyPage() {
   const refresh = useCallback(async (oid: string) => {
     setLoading(true); setError('');
     try {
-      const [arch, scs, imps, sugg] = await Promise.all([
+      const [arch, scs, imps, sugg, cn] = await Promise.all([
         api<{ items: Archetype[] }>('/strategy/archetypes').catch(() => null),
         api<{ items: Scenario[] }>(`/strategy/scenarios?orgId=${encodeURIComponent(oid)}`).catch(() => null),
         api<{ items: ImportRow[] }>('/strategy/imports').catch(() => null),
         api<{ items: OrgSuggest[] }>('/strategy/orgs/suggest').catch(() => null),
+        api<{ items: ConnRow[] }>('/strategy/connections').catch(() => null),
       ]);
       setArchetypes(arch?.items ?? []);
       setScenarios(scs?.items ?? []);
       setImports(imps?.items ?? []);
       setOrgs(sugg?.items ?? []);
+      setConns(cn?.items ?? []);
       if (!selectedId && (scs?.items ?? []).length) setSelectedId((scs?.items ?? [])[0].id);
     } catch (e) { setError((e as Error).message); } finally { setLoading(false); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -334,6 +346,122 @@ export default function StrategyPage() {
     } catch (e) { notify(`خطا: ${(e as Error).message}`); } finally { setBusy(''); }
   };
 
+  const CONN_SAMPLE = 'data:application/json,' + encodeURIComponent(JSON.stringify({ version: 1, players: [{ name: 'خود' }, { name: 'رقیب' }], strategies: { self: ['الف', 'ب'], rival: ['الف', 'ب'] }, payoffs: { self: [[2, 0], [0, 1]], rival: [[2, 0], [0, 1]] } }));
+
+  const fetchConnText = async (url: string): Promise<{ status: number; text: string }> => {
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 15000);
+    try {
+      const r = await fetch(url, { signal: ctrl.signal });
+      const text = await r.text();
+      if (!r.ok) throw new Error(`وضعیت ${fmtNum(r.status)}`);
+      return { status: r.status, text };
+    } finally { clearTimeout(to); }
+  };
+
+  const extractConnPath = (text: string, path: string): string => {
+    const d = JSON.parse(text);
+    const p = path.trim();
+    if (!p) return JSON.stringify(d);
+    let cur: unknown = d;
+    for (const k of p.split('.')) cur = (cur as Record<string, unknown> | null)?.[k];
+    if (cur === undefined) throw new Error(`مسیر «${p}» در پاسخ پیدا نشد.`);
+    return JSON.stringify(cur);
+  };
+
+  const touchConn = async (id: string, lastStatus: number | string) => {
+    try {
+      const row = await api<ConnRow>(`/strategy/connections/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify({ lastStatus, lastAt: new Date().toISOString() }) });
+      setConns(c => c.map(x => (x.id === row.id ? row : x)));
+    } catch { /* ذخیره وضعیت اختیاری است */ }
+  };
+
+  const sampleConn = () => {
+    setConnId(''); setConnName('اتصال نمونه'); setConnUrl(CONN_SAMPLE); setConnPath('');
+    setConnTest(''); setConnPreview(''); setConnPayload(''); setConnResult(null);
+    notify('نمونه بارگذاری شد؛ «آزمایش اتصال» را بزنید.');
+  };
+
+  const testConn = async () => {
+    if (!connUrl.trim()) { notify('نشانی اتصال را بنویسید.'); return; }
+    setBusy('ctest'); setConnTest(''); setConnPreview('');
+    try {
+      const r = await fetchConnText(connUrl.trim());
+      setConnTest(`پاسخ دریافت شد (وضعیت ${fmtNum(r.status)}، ${fmtNum(r.text.length)} نویسه)`);
+      setConnPreview(r.text.slice(0, 500));
+      if (connId) touchConn(connId, r.status);
+    } catch (e) { setConnTest(`آزمایش ناموفق: ${(e as Error).message}`); }
+    finally { setBusy(''); }
+  };
+
+  const pullConn = async () => {
+    if (!guardWrite()) return;
+    if (!connUrl.trim()) { notify('نشانی اتصال را بنویسید.'); return; }
+    setBusy('cpull'); setConnResult(null); setConnPayload('');
+    try {
+      const r = await fetchConnText(connUrl.trim());
+      let payload: string;
+      try { payload = extractConnPath(r.text, connPath); }
+      catch (e) { setConnResult({ ok: false, errors: [(e as Error).message], warnings: [] }); return; }
+      const v = await api<{ ok: boolean; errors: string[]; warnings: string[] }>('/strategy/imports/validate', {
+        method: 'POST', body: JSON.stringify({ format: 'json', payload }),
+      });
+      setConnResult(v);
+      if (v.ok) { setConnPayload(payload); notify('داده معتبر است؛ می‌توانید سناریو بسازید.'); }
+      else notify(`دادهٔ دریافتی نامعتبر: ${v.errors.length} خطا`);
+      if (connId) touchConn(connId, r.status);
+    } catch (e) { setConnResult({ ok: false, errors: [`دریافت ناموفق: ${(e as Error).message}`], warnings: [] }); }
+    finally { setBusy(''); }
+  };
+
+  const createFromConn = async () => {
+    if (!guardWrite()) return;
+    if (!connPayload) { notify('ابتدا «دریافت و اعتبارسنجی» را بزنید.'); return; }
+    setBusy('cmake');
+    try {
+      const r = await api<{ scenario: Scenario; warnings: string[] }>('/strategy/imports', {
+        method: 'POST', body: JSON.stringify({ orgId, format: 'json', payload: connPayload, name: (connName.trim() || 'اتصال خارجی') + ' (اتصال)' }),
+      });
+      setScenarios(s => [r.scenario, ...s]);
+      setSelectedId(r.scenario.id);
+      notify(`سناریوی «${r.scenario.name}» از اتصال ساخته شد.`);
+    } catch (e) { notify(`خطا: ${(e as Error).message}`); } finally { setBusy(''); }
+  };
+
+  const saveConn = async () => {
+    if (!guardWrite()) return;
+    if (!connName.trim() || !connUrl.trim()) { notify('نام و نشانی اتصال لازم است.'); return; }
+    setBusy('csave');
+    try {
+      if (connId) {
+        const row = await api<ConnRow>(`/strategy/connections/${encodeURIComponent(connId)}`, { method: 'PUT', body: JSON.stringify({ name: connName.trim(), url: connUrl.trim(), path: connPath.trim() }) });
+        setConns(c => c.map(x => (x.id === row.id ? row : x)));
+        notify('اتصال به‌روزرسانی شد.');
+      } else {
+        const row = await api<ConnRow>('/strategy/connections', { method: 'POST', body: JSON.stringify({ name: connName.trim(), url: connUrl.trim(), path: connPath.trim() }) });
+        setConns(c => [row, ...c]);
+        setConnId(row.id);
+        notify(`اتصال «${row.name}» ذخیره شد.`);
+      }
+    } catch (e) { notify(`خطا: ${(e as Error).message}`); } finally { setBusy(''); }
+  };
+
+  const delConn = async (id: string) => {
+    if (!guardWrite()) return;
+    setBusy('cdel:' + id);
+    try {
+      await api(`/strategy/connections/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      setConns(c => c.filter(x => x.id !== id));
+      if (connId === id) { setConnId(''); setConnName(''); setConnUrl(''); setConnPath(''); }
+      notify('اتصال حذف شد.');
+    } catch (e) { notify(`خطا: ${(e as Error).message}`); } finally { setBusy(''); }
+  };
+
+  const fillConn = (c: ConnRow) => {
+    setConnId(c.id); setConnName(c.name); setConnUrl(c.url); setConnPath(c.path ?? '');
+    setConnTest(''); setConnPreview(''); setConnPayload(''); setConnResult(null);
+  };
+
   const downloadTemplate = async (format: 'json' | 'csv', kind: 'matrix' | 'rounds') => {
     try {
       const blob = await apiBlob(`/strategy/imports/template?format=${format}&kind=${kind}`);
@@ -427,7 +555,7 @@ export default function StrategyPage() {
   if (!canRead) {
     return (
       <div className="page">
-        <PageHeader eyebrow="هوشمندی" title="تحلیل راهبردی" description="رقابت و تعامل با روش نظریه بازی‌ها" />
+        <PageHeader eyebrow="هوشمندی" title="تحلیل راهبردی" description="رقابت و تعامل راهبردی" />
         <ErrorCard message="مجوز مشاهدهٔ ماژول «تحلیل راهبردی» را ندارید." />
       </div>
     );
@@ -438,7 +566,7 @@ export default function StrategyPage() {
       <PageHeader
         eyebrow="هوشمندی"
         title="تحلیل راهبردی"
-        description="رقابت و تعامل با روش نظریه بازی‌ها: سناریو، تعادل نش، شبیه‌سازی تکراری، پیش‌بینی و واکنش"
+        description="رقابت و تعامل راهبردی: سناریو، تعادل نش، شبیه‌سازی تکراری، پیش‌بینی و واکنش"
         actions={<><button className="btn" onClick={() => orgId && refresh(orgId)}><RefreshCw size={14} /> به‌روزرسانی</button></>}
       />
       {flash && <div className="notice success" role="status">{flash}</div>}
@@ -483,7 +611,7 @@ export default function StrategyPage() {
                   ))}
                 </div>
               </SectionCard>
-              <SectionCard title="قالب‌های کلاسیک نظریه بازی‌ها" icon={<Info size={14} />} description="نقطه شروع آماده با عایدی‌های متعارف و روایت کسب‌وکاری">
+              <SectionCard title="قالب‌های کلاسیک تحلیل راهبردی" icon={<Info size={14} />} description="نقطه شروع آماده با عایدی‌های متعارف و روایت کسب‌وکاری">
                 <div className="item-list">
                   {archetypes.map(a => (
                     <div key={a.id} className="list-card">
@@ -576,6 +704,44 @@ export default function StrategyPage() {
                 </div>
                 <p className="t-muted">سرستون ماتریس: strategy_self و strategy_rival و pay_self و pay_rival — سرستون دورها: round و self و rival (و paySelf و payRival اختیاری). در CSV دورها، عایدی هر خانه میانگین تجربی همان خانه است و خانهٔ دیده‌نشده با هشدار صریح صفر می‌شود.</p>
               </SectionCard>
+              <SectionCard title="اتصال به پلتفرم دیگر" icon={<Plug2 size={14} />} description="نشانی سامانهٔ دیگر را بدهید تا داده همان‌جا خوانده و با همان اعتبارسنجی وارد شود">
+                <div className="form-grid">
+                  <div className="field"><label className="field-label">نام اتصال</label><input value={connName} onChange={e => setConnName(e.target.value)} placeholder="نام اتصال…" /></div>
+                  <div className="field"><label className="field-label">نشانی (URL)</label><input value={connUrl} onChange={e => setConnUrl(e.target.value)} placeholder="https://…/strategy.json" dir="ltr" /></div>
+                  <div className="field full"><label className="field-label">مسیر داده در پاسخ (اختیاری)</label><input value={connPath} onChange={e => setConnPath(e.target.value)} placeholder="مثلاً data.result — خالی یعنی ریشهٔ پاسخ" dir="ltr" /></div>
+                </div>
+                <div className="row-actions">
+                  <button className="btn" disabled={busy === 'ctest'} onClick={testConn}><Plug2 size={14} /> آزمایش اتصال</button>
+                  {canWrite && <button className="btn" disabled={busy === 'cpull'} onClick={pullConn}><Download size={14} /> دریافت و اعتبارسنجی</button>}
+                  {canWrite && <button className="btn btn-primary" disabled={busy === 'cmake' || !connPayload} onClick={createFromConn}><Plus size={14} /> ساخت سناریو از داده دریافتی</button>}
+                  <button className="btn" onClick={sampleConn}><Sparkles size={14} /> بارگذاری نمونه</button>
+                  {canWrite && <button className="btn" disabled={busy === 'csave'} onClick={saveConn}><CheckCircle2 size={14} /> ذخیره اتصال</button>}
+                </div>
+                <p className="t-muted">مرورگر فقط نشانی‌هایی را می‌خواند که اجازهٔ دسترسی بدهند (CORS)؛ اگر ناموفق شد، همان JSON را دانلود و در «متن داده» بچسبانید.</p>
+                {connTest && <div className={connTest.startsWith('پاسخ دریافت شد') ? 'notice success' : 'notice danger'}>{connTest}</div>}
+                {connPreview && <pre className="preview" dir="ltr">{connPreview}</pre>}
+                {connResult && (
+                  <div>
+                    {!connResult.ok && connResult.errors.map((e, i) => <div key={i} className="notice danger" role="alert"><AlertTriangle size={14} /> {e}</div>)}
+                    {connResult.warnings.map((w, i) => <div key={i} className="notice warning"><Info size={14} /> {w}</div>)}
+                    {connResult.ok && <div className="notice success"><CheckCircle2 size={14} /> داده معتبر است.</div>}
+                  </div>
+                )}
+                {!!conns.length && (
+                  <div className="item-list">
+                    {conns.map(c => (
+                      <div key={c.id} className="list-card">
+                        <div><strong>{c.name}</strong> <span className="t-muted" dir="ltr">{c.url.slice(0, 60)}</span></div>
+                        <div className="t-muted">آخرین وضعیت: {c.lastStatus == null ? '—' : fmtNum(c.lastStatus)} {c.lastAt ? `— ${fmtDT(c.lastAt)}` : ''}</div>
+                        <div className="row-actions">
+                          <button className="btn btn-sm" onClick={() => fillConn(c)}>بارگذاری در فرم</button>
+                          {canWrite && <button className="btn btn-sm btn-danger" disabled={busy === 'cdel:' + c.id} onClick={() => delConn(c.id)}><Trash2 size={12} /></button>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </SectionCard>
               <SectionCard title="ورود داده" icon={<Upload size={14} />} description="متن را بچسبانید یا فایل انتخاب کنید؛ اول اعتبارسنجی، بعد ورود">
                 <div className="form-grid">
                   <div className="field"><label className="field-label">قالب</label>
@@ -634,7 +800,7 @@ export default function StrategyPage() {
               {selected && !analysis && <Loading label="در حال تحلیل سناریو…" />}
               {selected && analysis?.error && <ErrorCard message={analysis.error} />}
               {selected && analysis && !analysis.error && selected.kind === 'sequential' && (
-                <SectionCard title="مسیر تعادل کامل زیربازی (استقرای پسرو)" icon={<GitBranch size={14} />} description="درخت ترتیبی با استقرای پسرو حل می‌شود؛ شبیه‌سازی تکراری مخصوص سناریوی ماتریسی است">
+                <SectionCard title="مسیر تعادل (استقرای پسرو)" icon={<GitBranch size={14} />} description="درخت ترتیبی با استقرای پسرو حل می‌شود؛ شبیه‌سازی تکراری مخصوص سناریوی ماتریسی است">
                   <div className="stat-grid">
                     <StatCard icon={<ChevronLeft size={16} />} iconClass="ic-green" label="مسیر تعادل" value={(analysis.spe?.spePath ?? []).join(' ← ') || '—'} />
                     <StatCard icon={<Target size={16} />} iconClass="ic-blue" label="عایدی مسیر" value={`خود ${fmtNum(analysis.spe?.pay?.[0])}، رقیب ${fmtNum(analysis.spe?.pay?.[1])}`} />

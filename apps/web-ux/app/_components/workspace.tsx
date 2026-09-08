@@ -225,7 +225,7 @@ const GLOSS: Record<string, string> = {
   '/data-management': 'مرکز داده: کیفیت، ورود و حاکمیت داده در یک نگاه',
   '/workflows': 'زنجیره‌های خودکار تصمیم، اجرا و تأییدها',
   '/publics': 'نقشهٔ عموم‌ها: شناخت خود، دسته‌بندی بازیگران و گپ‌های اثرگذار',
-  '/strategy': 'تحلیل رقابت و تعامل با روش نظریه بازی‌ها',
+  '/strategy': 'تحلیل رقابت و تعامل راهبردی',
 };
 
 const NAV_ICONS: Record<string, React.ReactNode> = {

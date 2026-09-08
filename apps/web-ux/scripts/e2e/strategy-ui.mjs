@@ -118,7 +118,10 @@ try {
     setter.call(ta, '{"version":1,"players":[{"name":"a"}],"strategies":{"self":["x"],"rival":["y"]},"payoffs":{"self":[[1]],"rival":[[1]]}}');
     ta.dispatchEvent(new Event('input', { bubbles: true }));
   });
-  await clickByText('button', 'اعتبارسنجی');
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll('button')].find(x => (x.textContent ?? '').trim() === 'اعتبارسنجی');
+    if (b) b.click();
+  });
   ok('import invalid', await waitForText('دست‌کم ۲ مورد'));
   await page.evaluate(() => {
     const ta = document.querySelector('textarea');
@@ -132,8 +135,33 @@ try {
       nameInp.dispatchEvent(new Event('input', { bubbles: true }));
     }
   });
-  await clickByText('button', 'ورود و ساخت سناریو');
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll('button')].find(x => (x.textContent ?? '').trim() === 'ورود و ساخت سناریو');
+    if (b) b.click();
+  });
   ok('import created', await waitForText('از دادهٔ خارجی ساخته شد'));
+
+  // 7b) اتصال به پلتفرم دیگر (نمونهٔ قطعی data:)
+  ok('conn section', await page.evaluate(() => (document.body.textContent ?? '').includes('اتصال به پلتفرم دیگر')));
+  await clickByText('button', 'بارگذاری نمونه');
+  await new Promise(r => setTimeout(r, 600));
+  ok('conn sample', await page.evaluate(() => [...document.querySelectorAll('.field input')].some(i => (i.value ?? '').startsWith('data:application/json'))));
+  await clickByText('button', 'آزمایش اتصال');
+  ok('conn test ok', await waitForText('پاسخ دریافت شد'));
+  await clickByText('button', 'دریافت و اعتبارسنجی');
+  ok('conn pulled valid', await waitForText('داده معتبر است'));
+  await clickByText('button', 'ساخت سناریو از داده دریافتی');
+  ok('conn scenario', await waitForText('از اتصال ساخته شد'));
+  await page.evaluate(() => {
+    const urlInp = [...document.querySelectorAll('.field input')].find(i => (i.placeholder ?? '').includes('https://'));
+    if (urlInp) {
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+      setter.call(urlInp, 'ht!tp://::bad');
+      urlInp.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  });
+  await clickByText('button', 'آزمایش اتصال');
+  ok('conn bad url', await waitForText('ناموفق'));
 
   ok('select price war sim', await selectScenario('جنگ قیمت با پترو صنعت'));
   await gotoTab('شبیه‌سازی');
