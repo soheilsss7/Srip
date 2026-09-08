@@ -3,7 +3,7 @@ import Link from 'next/link';
 import {
   BookOpen, Crown, Building2, Share2, Network, CalendarDays, Sparkles, BrainCircuit,
   Download, Upload, ShieldCheck, Search, HelpCircle, MessageCircleQuestion, KeyRound, LayoutDashboard,
-  Code2, Server, Workflow, Database, HeartPulse,
+  Code2, Server, Workflow, Database, HeartPulse, Radar,
 } from 'lucide-react';
 
 const SECTIONS = [
@@ -22,6 +22,10 @@ const SECTIONS = [
   {
     icon: <Network size={16} />, title: 'شبکه اطلاعاتی', id: 'network',
     body: 'گراف تعاملی کل روابط. با تب‌های «همه / شرکت‌ها / اشخاص / پروژه‌ها» می‌توان هر دسته را جداگانه دید؛ هر دسته گراف مخصوص خودش را دارد. روی هر گره کلیک کنید تا پروفایل دقیق همان موجودیت باز شود.',
+  },
+  {
+    icon: <Radar size={16} />, title: 'نقشهٔ عموم‌ها', id: 'publics',
+    body: 'هاب «عموم‌ها» برای شناخت خود و بازیگران اثرگذار است: تب «من کیستم» نوع شرکت و قالب شش‌دسته‌ای (داخلی، نهادی و حاکمیتی، علمی و پژوهشی، اقتصادی و سرمایه‌گذاری، رسانه‌ای و عمومی، اکوسیستم فناوری و صنعت) را تعیین می‌کند. تب «اعضا و ارزیابی» هر عموم را با پیوند، مرحلهٔ بلوغ، موضع و قدرت/علاقه (ماتریس ۲×۲) ثبت می‌کند. «پوشش» خلأهای هر دسته را نشان می‌دهد و «گپ‌ها و اقدام» گپ‌های بحرانی را با مسیر پیشنهادی و بریف یک‌صفحه‌ای می‌دهد. خروجی‌ها در «خروجی و رسانه»: JSON، CSV و Excel. گره‌های گراف «شبکهٔ روابط» با رنگ دسته و حلقهٔ طلایی «خودِ شرکت» برچسب می‌خورند و با فیلتر دسته قابل تفکیک‌اند.',
   },
   {
     icon: <Share2 size={16} />, title: 'روابط', id: 'relationships',

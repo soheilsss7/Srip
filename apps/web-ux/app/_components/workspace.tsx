@@ -12,7 +12,7 @@ import {
   ShieldCheck, FolderKanban, Target, BrainCircuit, FileText, ThumbsUp, BarChart3, BookOpen,
   Bell, Search, Calendar, ListChecks, UserCheck, CheckCircle2, Settings, Settings2, Sparkles, Timer, Database,
   Shield, Plug, Workflow, LineChart, Gauge, Activity, Table2, Flag, FileDown, KeyRound,
-  DatabaseBackup, Archive, ScrollText, HeartPulse, ChevronDown, ChevronUp, Landmark
+  DatabaseBackup, Archive, ScrollText, HeartPulse, ChevronDown, ChevronUp, Landmark, Radar
 } from 'lucide-react';
 
 type Role = 'SUPER_ADMIN'|'HOLDING_ADMIN'|'HOLDING_EXECUTIVE'|'SUBSIDIARY_ADMIN'|'SUBSIDIARY_EXECUTIVE'|'RELATIONSHIP_MANAGER'|'PROJECT_MANAGER'|'ANALYST'|'STANDARD_USER'|'READ_ONLY';
@@ -103,6 +103,7 @@ const PEOPLE_NAV: NavItem[] = [
 const NETWORK_NAV: NavItem[] = [
   ['/relationships', 'روابط', 'relationship.read'],
   ['/network', 'شبکهٔ روابط', 'network.read'],
+  ['/publics', 'عموم‌ها', 'publics.read'],
   ['/interactions', 'تعاملات', 'interaction.read'],
   ['/referrals', 'معرفی‌ها', 'relationship.read'],
 ];
@@ -191,7 +192,7 @@ const MOBILE_TABS: NavItem[] = [
 ];
 
 /** واژه‌نامهٔ یک‌خطی — «این بخش چیست؟» برای هر مسیر */
-const GLOSS_KEY_PERM: Record<string, string> = { '/': 'dashboard.read', '/organizations': 'organization.read', '/people': 'person.read', '/relationships': 'relationship.read', '/network': 'network.read', '/interactions': 'interaction.read', '/referrals': 'relationship.read', '/intelligence': 'analytics.read', '/board': 'analytics.read', '/meetings': 'meeting.read', '/calendar': 'meeting.read', '/actions': 'action.read', '/commitments': 'commitment.read', '/projects': 'project.read', '/opportunities': 'opportunity.read', '/ai': 'ai.query', '/ai-executive-brief': 'ai.executive_brief', '/recommendations': 'recommendation.read', '/reports': 'report.read', '/documents': 'document.read', '/requirements': 'project.read', '/approvals': 'approval.read', '/data-exchange': 'report.read', '/settings': 'user.read', '/sessions': 'session.read', '/data-management': 'data.quality.read', '/workflows': 'workflow.read' };
+const GLOSS_KEY_PERM: Record<string, string> = { '/': 'dashboard.read', '/organizations': 'organization.read', '/people': 'person.read', '/relationships': 'relationship.read', '/network': 'network.read', '/interactions': 'interaction.read', '/referrals': 'relationship.read', '/intelligence': 'analytics.read', '/board': 'analytics.read', '/meetings': 'meeting.read', '/calendar': 'meeting.read', '/actions': 'action.read', '/commitments': 'commitment.read', '/projects': 'project.read', '/opportunities': 'opportunity.read', '/ai': 'ai.query', '/ai-executive-brief': 'ai.executive_brief', '/recommendations': 'recommendation.read', '/reports': 'report.read', '/documents': 'document.read', '/requirements': 'project.read', '/approvals': 'approval.read', '/data-exchange': 'report.read', '/settings': 'user.read', '/sessions': 'session.read', '/data-management': 'data.quality.read', '/workflows': 'workflow.read', '/publics': 'publics.read' };
 const ADMIN_PERM: Record<string, string> = { '/admin': 'admin.users', '/admin/feature-flags': 'feature_flag.read', '/admin/exports': 'audit.read', '/admin/sessions': 'session.read', '/admin/retention': 'privacy.manage', '/security': 'security.read', '/security-events': 'security.read', '/governance': 'enterprise.security', '/enterprise': 'enterprise.read', '/privacy': 'privacy.read', '/data-lifecycle': 'data.lifecycle_status', '/data-management': 'data.manage', '/data-quality': 'data.quality.read', '/admin/master-data': 'org.read', '/integrations': 'integration.read', '/workflows': 'workflow.read', '/analytics': 'analytics.read', '/metrics': 'metrics.read', '/observability': 'metrics.read', '/monitoring': 'metrics.read', '/health': 'health.read' };
 
 const GLOSS: Record<string, string> = {
@@ -222,6 +223,7 @@ const GLOSS: Record<string, string> = {
   '/sessions': 'نشست‌های فعال ورود شما در دستگاه‌ها',
   '/data-management': 'مرکز داده: کیفیت، ورود و حاکمیت داده در یک نگاه',
   '/workflows': 'زنجیره‌های خودکار تصمیم، اجرا و تأییدها',
+  '/publics': 'نقشهٔ عموم‌ها: شناخت خود، دسته‌بندی بازیگران و گپ‌های اثرگذار',
 };
 
 const NAV_ICONS: Record<string, React.ReactNode> = {
@@ -230,6 +232,7 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   '/people': <Users size={16}/>,
   '/relationships': <Share2 size={16}/>,
   '/network': <Network size={16}/>,
+  '/publics': <Radar size={16}/>,
   '/interactions': <MessagesSquare size={16}/>,
   '/meetings': <CalendarDays size={16}/>,
   '/actions': <Zap size={16}/>,
