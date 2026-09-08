@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
-/*  عموم‌ها (Publics) — شناخت خود، بازیگران و گپ‌ها                      */
+/*  عموم‌ها (Publics) — شناسنامهٔ سازمان، بازیگران و شکاف‌ها                      */
 /*  GET catalog/self/:orgId · groups/:orgId · members · coverage · gaps */
 /*  PUT self/:orgId · groups CRUD · POST/PATCH/DELETE members · export  */
 /* ------------------------------------------------------------------ */
@@ -279,10 +279,10 @@ export default function PublicsPage() {
     try {
       if (gModal.mode === 'create') {
         await api<EffGroup>(`/publics/groups/${orgId}`, { method: 'POST', body: JSON.stringify({ ...gForm, fa: gForm.fa.trim(), kanal: gForm.kanal.trim(), note: gForm.note.trim() }) });
-        notify(`گروه «${gForm.fa.trim()}» ساخته شد و به نقشهٔ همین شرکت اضافه شد.`);
+        notify(`گروه «${gForm.fa.trim()}» ساخته و به نقشهٔ سازمان اضافه شد.`);
       } else {
         await api<EffGroup>(`/publics/groups/${orgId}/${gModal.g.id}`, { method: 'PUT', body: JSON.stringify({ ...gForm, fa: gForm.fa.trim(), kanal: gForm.kanal.trim(), note: gForm.note.trim() }) });
-        notify(`گروه «${gForm.fa.trim()}» ذخیره شد — فقط در نقشهٔ همین شرکت.`);
+        notify(`تغییرات گروه «${gForm.fa.trim()}» فقط در نقشهٔ همین سازمان ذخیره شد.`);
       }
       setGModal(null);
       await refresh(orgId);
@@ -292,7 +292,7 @@ export default function PublicsPage() {
     setBusy(`gtog-${g.id}`);
     try {
       await api<EffGroup>(`/publics/groups/${orgId}/${g.id}`, { method: 'PUT', body: JSON.stringify({ active: g.active === false }) });
-      notify(g.active === false ? `گروه «${g.fa}» فعال شد و به پوشش برگشت.` : `گروه «${g.fa}» غیرفعال شد و از پوشش کنار رفت.`);
+      notify(g.active === false ? `گروه «${g.fa}» فعال شد و به پوشش بازگشت.` : `گروه «${g.fa}» غیرفعال شد و از پوشش خارج شد.`);
       await refresh(orgId);
     } catch (e) { notify(`خطا: ${(e as Error).message}`); } finally { setBusy(''); }
   };
@@ -300,12 +300,12 @@ export default function PublicsPage() {
     setBusy(`gres-${g.id}`);
     try {
       await api<EffGroup>(`/publics/groups/${orgId}/${g.id}`, { method: 'PUT', body: JSON.stringify({ restore: true }) });
-      notify(`گروه «${g.fa}» به حالت الگو برگشت.`);
+      notify(`گروه «${g.fa}» به حالت الگو بازگشت.`);
       await refresh(orgId);
     } catch (e) { notify(`خطا: ${(e as Error).message}`); } finally { setBusy(''); }
   };
   const deleteGroup = async (g: EffGroup) => {
-    if (!window.confirm(`گروه اختصاصی «${g.fa}» برای همیشه حذف شود؟`)) return;
+    if (!window.confirm(`گروه اختصاصی «${g.fa}» به‌طور دائم حذف شود؟`)) return;
     setBusy(`gdel-${g.id}`);
     try {
       await api(`/publics/groups/${orgId}/${g.id}`, { method: 'DELETE' });
@@ -316,7 +316,7 @@ export default function PublicsPage() {
 
   /* ---------- self save ---------- */
   const saveSelf = async () => {
-    if (!canWrite) { notify('مجوز ویرایش «عمومها» را ندارید.'); return; }
+    if (!canWrite) { notify('مجوز ویرایش «عموم‌ها» را ندارید.'); return; }
     setBusy('self');
     try {
       await api(`/publics/self/${orgId}`, {
@@ -328,7 +328,7 @@ export default function PublicsPage() {
           structure: { sectors: selfForm.sectors, subsidiaries: selfForm.subsidiaries, ownership: selfForm.ownership },
         }),
       });
-      notify('شناسنامهٔ «من کیستم» ذخیره شد — قالب عمومها بهروزرسانی شد.');
+      notify('شناسنامهٔ سازمان ذخیره شد؛ نقشهٔ عموم‌ها به‌روزرسانی شد.');
       setSelfDirty(false);
       await refresh(orgId);
     } catch (e) { notify(`خطا: ${(e as Error).message}`); } finally { setBusy(''); }
@@ -341,7 +341,7 @@ export default function PublicsPage() {
     setAddOpen(true);
   };
   const addMember = async () => {
-    if (!addForm.groupId || !addForm.sourceId) { notify('گروه عموم و منبع را انتخاب کنید.'); return; }
+    if (!addForm.groupId || !addForm.sourceId) { notify('گروه و منبع را انتخاب کنید.'); return; }
     setBusy('add');
     try {
       const created = await api<MemberView>('/publics/members', {
@@ -350,7 +350,7 @@ export default function PublicsPage() {
       });
       setAddOpen(false);
       const s = created.suggested;
-      notify(`«${created.groupFa ?? created.groupId}» افزوده شد — پیشنهاد موتور: ${created.linkageFa ?? created.linkage}، ${created.stageFa ?? created.stage}، قدرت ${s?.power ?? created.power}/علاقه ${s?.interest ?? created.interest}، ${created.stanceFa ?? created.stance}${addFromGap.current ? ' — گپ انتخابشده پوشش داده شد.' : ''}`);
+      notify(`عضو «${created.groupFa ?? created.groupId}» افزوده شد — پیشنهاد موتور: ${created.linkageFa ?? created.linkage}، ${created.stageFa ?? created.stage}، قدرت ${s?.power ?? created.power}/علاقه ${s?.interest ?? created.interest}، ${created.stanceFa ?? created.stance}${addFromGap.current ? ' — شکاف انتخاب‌شده پوشش داده شد.' : ''}`);
       await refresh(orgId);
     } catch (e) { notify(`خطا: ${(e as Error).message}`); } finally { setBusy(''); }
   };
@@ -378,11 +378,11 @@ export default function PublicsPage() {
     } catch (e) { notify(`خطا: ${(e as Error).message}`); } finally { setBusy(''); }
   };
   const removeMember = async (m: MemberView) => {
-    if (!window.confirm(`«${m.groupFa ?? m.groupId}» از نقشهٔ عمومها حذف شود؟`)) return;
+    if (!window.confirm(`«${m.groupFa ?? m.groupId}» از نقشهٔ عموم‌ها حذف شود؟`)) return;
     setBusy(`del-${m.id}`);
     try {
       await api(`/publics/members/${m.id}`, { method: 'DELETE' });
-      notify('عضو عموم حذف شد.');
+      notify('عضو از نقشه حذف شد.');
       await refresh(orgId);
     } catch (e) { notify(`خطا: ${(e as Error).message}`); } finally { setBusy(''); }
   };
@@ -419,7 +419,7 @@ export default function PublicsPage() {
         a.href = url; a.download = `publics-${orgId}.${fmt}`; a.click();
         URL.revokeObjectURL(url);
       }
-      notify('خروجی نقشهٔ عمومها آماده شد.');
+      notify('خروجی نقشهٔ عموم‌ها آماده شد.');
     } catch (e) { notify(`خطا: ${(e as Error).message}`); } finally { setBusy(''); }
   };
 
@@ -427,17 +427,17 @@ export default function PublicsPage() {
     setBusy('review');
     try {
       const r = await api<{ total: number }>(`/publics/review-due?orgId=${encodeURIComponent(orgId)}`);
-      notify(r.total ? `${fmtNum(r.total)} عموم بازبینی سررسیدشده پیدا شد — گردشکار بازبینی اجرا شد.` : 'هیچ بازبینی سررسیدشدهای نیست؛ همهٔ اعضا تازه ارزیابی شدهاند.');
+      notify(r.total ? `بازبینی ${fmtNum(r.total)} عموم سررسید شده است؛ گردش‌کار بازبینی اجرا شد.` : 'بازبینی سررسیدشده‌ای وجود ندارد؛ همهٔ اعضا به‌تازگی ارزیابی شده‌اند.');
       await refresh(orgId);
     } catch (e) { notify(`خطا: ${(e as Error).message}`); } finally { setBusy(''); }
   };
 
   const TABS: Array<{ key: typeof tab; label: string; icon?: React.ReactNode }> = [
-    { key: 'self', label: 'من کیستم', icon: <Fingerprint size={14} /> },
-    { key: 'groups', label: 'گروه‌های من', icon: <Layers size={14} /> },
+    { key: 'self', label: 'شناسنامهٔ سازمان', icon: <Fingerprint size={14} /> },
+    { key: 'groups', label: 'گروه‌ها', icon: <Layers size={14} /> },
     { key: 'members', label: 'اعضا و ارزیابی', icon: <Users2 size={14} /> },
     { key: 'coverage', label: 'پوشش', icon: <Radar size={14} /> },
-    { key: 'gaps', label: 'گپها و اقدام', icon: <AlertTriangle size={14} /> },
+    { key: 'gaps', label: 'شکاف‌ها و اقدام', icon: <AlertTriangle size={14} /> },
     { key: 'export', label: 'خروجی و رسانه', icon: <Download size={14} /> },
   ];
 
@@ -463,10 +463,10 @@ export default function PublicsPage() {
     const top = crit.slice(0, 3);
     const route = top[0]?.pathSuggestion?.route.map(r => r.label).join(' ← ') ?? '—';
     return [
-      `${coverage?.orgName ?? orgId} — بریف نقشهٔ عموم‌ها`,
-      `قالب: ${coverage?.templateFa ?? '—'} · ${fmtNum(cov?.groupsExpected ?? 0)} گروه هدف · ${fmtNum(cov?.members ?? 0)} عضو ثبت‌شده · پوشش ${fmtNum(pct)}٪`,
-      `گپ‌ها: ${fmtNum(gaps?.totals.gaps ?? 0)} (که ${fmtNum(gaps?.totals.criticalGaps ?? 0)} بحرانی) · بازیگر کلیدی ${fmtNum(cov?.keyPlayers ?? 0)}`,
-      top.length ? `اولویت‌های فوری: ${top.map(g => `${g.groupFa}${g.categoryFa ? ` (${g.categoryFa})` : ''}`).join('؛ ')}` : 'گپ بحرانی فعلی وجود ندارد.',
+      `${coverage?.orgName ?? orgId} — خلاصهٔ مدیریتی نقشهٔ عموم‌ها`,
+      `الگو: ${coverage?.templateFa ?? '—'} · ${fmtNum(cov?.groupsExpected ?? 0)} گروه · ${fmtNum(cov?.members ?? 0)} عضو ثبت‌شده · پوشش ${fmtNum(pct)}٪`,
+      `شکاف‌ها: ${fmtNum(gaps?.totals.gaps ?? 0)} مورد (${fmtNum(gaps?.totals.criticalGaps ?? 0)} بحرانی) · بازیگر کلیدی: ${fmtNum(cov?.keyPlayers ?? 0)}`,
+      top.length ? `اولویت‌های فوری: ${top.map(g => `${g.groupFa}${g.categoryFa ? ` (${g.categoryFa})` : ''}`).join('؛ ')}` : 'شکاف بحرانی فعالی وجود ندارد.',
       `اقدام اول: ${top[0]?.action ?? 'بازبینی دوره‌ای و تعامل با بازیگران کلیدی'} — مسیر پیشنهادی: ${route}`,
       `پیشنهاد: ${crit[0]?.pathSuggestion?.direct ? 'ورود مستقیم به گپ' : (top[0]?.pathSuggestion ? 'تقویت کانال موجود در شبکه' : 'بازبینی و تکمیل نقشه')}`,
     ].join('\n');
@@ -475,8 +475,8 @@ export default function PublicsPage() {
   if (!canRead) {
     return (
       <div className="page">
-        <PageHeader eyebrow="عمومها" title="نقشهٔ عمومها" description="شناخت خود و بازیگران اثرگذار" />
-        <ErrorCard message="مجوز مشاهدهٔ ماژول «عمومها» را ندارید." />
+        <PageHeader eyebrow="عموم‌ها" title="نقشهٔ عموم‌ها" description="شناسنامهٔ سازمان و بازیگران اثرگذار" />
+        <ErrorCard message="مجوز مشاهدهٔ ماژول «عموم‌ها» را ندارید." />
       </div>
     );
   }
@@ -484,12 +484,12 @@ export default function PublicsPage() {
   return (
     <div className="page">
       <PageHeader
-        eyebrow="عمومها"
-        title="نقشهٔ عمومها"
-        description="گامبهگام: ۱) خودتان را معرفی کنید ۲) گروهها را مال خودتان کنید ۳) اعضا را ثبت و ارزیابی کنید ۴) گپها را به اقدام تبدیل کنید — فقط دستهها مشترکاند"
+        eyebrow="عموم‌ها"
+        title="نقشهٔ عموم‌ها"
+        description="شناخت سازمان، چیدمان گروه‌ها، ارزیابی اعضا و تبدیل شکاف‌ها به اقدام"
         actions={
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <label className="scope-chip" title="سازمانی که نقشهٔ عمومهایش را میبینید">
+            <label className="scope-chip" title="سازمانی که نقشهٔ عموم‌های آن را مشاهده می‌کنید">
               <span className="globe"><Building2 size={13} /></span>
               <span className="scope-label">{selectedOrgName}</span>
               <select aria-label="سازمان" value={orgId} onChange={e => setOrgId(e.target.value)}>
@@ -505,11 +505,11 @@ export default function PublicsPage() {
 
       {flash && <div className="notice success" role="status">{flash}</div>}
       {error && <ErrorCard message={error} />}
-      {loading && <Loading label="در حال بارگذاری نقشهٔ عمومها…" />}
+      {loading && <Loading label="در حال بارگذاری نقشهٔ عموم‌ها…" />}
 
       {!loading && (
         <>
-          <nav className="tabs" role="tablist" aria-label="بخشهای عمومها">
+          <nav className="tabs" role="tablist" aria-label="بخش‌های عموم‌ها">
             {TABS.map(t => (
               <button key={t.key} role="tab" aria-selected={tab === t.key} className={tab === t.key ? 'tab-active' : ''} onClick={() => setTab(t.key)}>
                 {t.icon}{t.label}
@@ -517,14 +517,14 @@ export default function PublicsPage() {
             ))}
           </nav>
 
-          {/* ---------------- من کیستم ---------------- */}
+          {/* ---------------- شناسنامهٔ سازمان ---------------- */}
           {tab === 'self' && (
             <div className="stack" style={{ gap: 14 }}>
               <div className="grid-2" style={{ gap: 14 }}>
                 <SectionCard
-                  title="شناسنامهٔ خودشناسی"
+                  title="ویرایش شناسنامه"
                   icon={<Fingerprint size={15} />}
-                  description={canWrite ? 'این کارت را کامل و «ذخیرهٔ شناسنامه» را بزنید؛ مبنای پوشش، گپها و بریف همین است.' : 'نمای خواندنی'}
+                  description={canWrite ? 'مشخصات سازمان را کامل کنید و «ذخیرهٔ شناسنامه» را بزنید؛ مبنای پوشش، شکاف‌ها و خلاصهٔ مدیریتی همین است.' : 'نمای خواندنی'}
                   actions={canWrite && <button className="btn btn-primary" disabled={busy === 'self'} onClick={saveSelf}><CheckCircle2 size={14} /> ذخیرهٔ شناسنامه</button>}
                 >
                   <div className="form-grid">
@@ -535,17 +535,17 @@ export default function PublicsPage() {
                           <option key={t.id} value={t.id}>{t.fa}</option>
                         ))}
                       </select>
-                      <span className="field-hint">الگو فقط فهرست اولیه است؛ در «گروههای من» آن را مال خودتان کنید.{tpl?.note ? ` راهنمای الگو: ${tpl.note}` : ''}</span>
+                      <span className="field-hint">الگو فقط فهرست آغازین است؛ در تب «گروه‌ها» آن را ویژهٔ سازمان خود کنید.{tpl?.note ? ` راهنمای الگو: ${tpl.note}` : ''}</span>
                     </div>
                     <div className="field full">
-                      <label className="field-label">مأموریت / سوژهٔ اصلی روایت این شرکت</label>
+                      <label className="field-label">مأموریت سازمان</label>
                       <input value={selfForm.missionTopic} disabled={!canWrite} placeholder="مثلاً: مرجعیت هوش مصنوعی کشور" onChange={e => { setSelfForm(f => ({ ...f, missionTopic: e.target.value })); setSelfDirty(true); }} />
-                      <span className="field-hint">هر شرکت مأموریت خودش را مینویسد؛ در بریف و اولویت گپها استفاده میشود.</span>
+                      <span className="field-hint">جملهٔ راهنمای سازمان شما؛ در خلاصهٔ مدیریتی و اولویت‌بندی شکاف‌ها به کار می‌رود.</span>
                     </div>
                     <div className="field">
-                      <label className="field-label">دورهٔ بازبینی شناسنامه (روز)</label>
+                      <label className="field-label">دورهٔ بازبینی (روز)</label>
                       <input type="number" min={30} max={365} value={selfForm.reviewIntervalDays} disabled={!canWrite} onChange={e => { setSelfForm(f => ({ ...f, reviewIntervalDays: Number(e.target.value) })); setSelfDirty(true); }} />
-                      <span className="field-hint">هر چند روز یکبار این کارت را بازبینی میکنید؟</span>
+                      <span className="field-hint">شناسنامه هر چند روز یک‌بار بازبینی می‌شود؟</span>
                     </div>
                     <div className="field">
                       <label className="field-label">نوع مالکیت</label>
@@ -554,7 +554,7 @@ export default function PublicsPage() {
                       </select>
                     </div>
                     <div className="field full">
-                      <label className="field-label">زیرمجموعهها / شرکتهای تابعه</label>
+                      <label className="field-label">شرکت‌های تابعه</label>
                       <div className="chip-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                         {orgs.filter(o => o.id !== orgId).map(o => {
                           const on = selfForm.subsidiaries.includes(o.id);
@@ -566,22 +566,22 @@ export default function PublicsPage() {
                           );
                         })}
                       </div>
-                      <span className="field-hint">شرکتهای زیرمجموعه؛ در تب «اعضا» میتوانید به نقشه وصلشان کنید.</span>
+                      <span className="field-hint">شرکت‌های زیرمجموعهٔ شما؛ در تب «اعضا و ارزیابی» می‌توانید آن‌ها را به نقشه بیفزایید.</span>
                     </div>
                   </div>
-                  {selfDirty && <div className="field-hint" style={{ marginTop: 8 }}>تغییرات ذخیره نشده — «ذخیرهٔ شناسنامه» را بزنید.</div>}
+                  {selfDirty && <div className="field-hint" style={{ marginTop: 8 }}>تغییرات ذخیره نشده است؛ دکمهٔ «ذخیرهٔ شناسنامه» را بزنید.</div>}
                 </SectionCard>
 
-                <SectionCard title="کارت «من کیستم»" icon={<Fingerprint size={15} />} description={`${selectedOrgName} · الگوی شروع: ${selfRow?.template?.fa ?? '—'} · ${fmtNum(selfRow?.effective?.active ?? 0)} گروه فعال در نقشه`} actions={<button className="chip info" onClick={() => setTab('groups')}>مدیریت گروهها <ChevronLeft size={12} /></button>}>
+                <SectionCard title="شناسنامهٔ سازمان" icon={<Fingerprint size={15} />} description={`${selectedOrgName} · الگوی شروع: ${selfRow?.template?.fa ?? '—'} · ${fmtNum(selfRow?.effective?.active ?? 0)} گروه فعال`} actions={<button className="chip info" onClick={() => setTab('groups')}>مدیریت گروه‌ها <ChevronLeft size={12} /></button>}>
                   <div className="stat-grid" style={{ marginBottom: 12 }}>
                     <StatCard icon={<Building2 size={16} />} iconClass="ic-teal" label="سازمان" value={selectedOrgName} />
-                    <StatCard icon={<Layers size={16} />} iconClass="ic-blue" label="گروههای قالب" value={fmtNum(selfRow?.template?.groups ?? tpl?.groups?.length ?? 0)} sub={`${fmtNum(selfRow?.effective?.active ?? selfRow?.coverage.groupsExpected ?? 0)} فعال در نقشه · ${fmtNum(selfRow?.coverage.groupsCovered ?? 0)} پوشش دادهشده`} />
-                    <StatCard icon={<Users2 size={16} />} iconClass="ic-purple" label="اعضای ثبتشده" value={fmtNum(selfRow?.coverage.members ?? members.length)} sub={`${fmtNum(selfRow?.coverage.keyPlayers ?? 0)} بازیگر کلیدی`} />
+                    <StatCard icon={<Layers size={16} />} iconClass="ic-blue" label="گروه‌های الگو" value={fmtNum(selfRow?.template?.groups ?? tpl?.groups?.length ?? 0)} sub={`${fmtNum(selfRow?.effective?.active ?? selfRow?.coverage.groupsExpected ?? 0)} فعال در نقشه · ${fmtNum(selfRow?.coverage.groupsCovered ?? 0)} پوشش‌داده‌شده`} />
+                    <StatCard icon={<Users2 size={16} />} iconClass="ic-purple" label="اعضای ثبت‌شده" value={fmtNum(selfRow?.coverage.members ?? members.length)} sub={`${fmtNum(selfRow?.coverage.keyPlayers ?? 0)} بازیگر کلیدی`} />
                     <StatCard icon={<Radar size={16} />} iconClass="ic-orange" label="پوشش" value={`${Math.round(((selfRow?.coverage.groupsCovered ?? 0) / Math.max(1, selfRow?.coverage.groupsExpected ?? 1)) * 100)}٪`} sub={`${fmtNum(selfRow?.coverage.groupsExpected ?? 0)} گروه`} />
                   </div>
                   <div className="table-wrap">
                     <table>
-                      <thead><tr><th>دسته</th><th>گروهها</th><th>کانال اصلی</th><th>یادداشت</th></tr></thead>
+                      <thead><tr><th>دسته</th><th>گروه‌ها</th><th>کانال اصلی</th><th>یادداشت</th></tr></thead>
                       <tbody>
                         {(tpl?.focus ?? []).map(cid => {
                           const groups = groupsByCat[cid] ?? [];
@@ -616,7 +616,7 @@ export default function PublicsPage() {
               <SectionCard
                 title="ماتریس قدرت × علاقه"
                 icon={<SlidersHorizontal size={15} />}
-                description="هر نقطه یک عضو است؛ رنگ = دسته. روی نقطه بزنید تا ارزیابی شود. هدف: همهٔ بازیگران کلیدی بالا-راست (قدرت و علاقهٔ بالا) باشند."
+                description="هر نقطه یک عضو است و رنگ آن، دسته را نشان می‌دهد. برای ارزیابی، روی نقطه کلیک کنید. هدف: قرارگیری بازیگران کلیدی در ربع بالا-راست (قدرت و علاقهٔ بالا)."
               >
                 <Matrix members={members} catOf={catOf} openAssess={openAssess} canWrite={canWrite} />
               </SectionCard>
@@ -629,18 +629,18 @@ export default function PublicsPage() {
               >
                 <Toolbar search={q} onSearch={setQ} searchPlaceholder="جستجوی گروه/منبع…">
                   <select aria-label="دسته" value={fCat} onChange={e => setFCat(e.target.value)}>
-                    <option value="">همه دستهها</option>
+                    <option value="">همهٔ دسته‌ها</option>
                     {catMeta.map(c => <option key={c.id} value={c.id}>{c.fa}</option>)}
                   </select>
                   <select aria-label="موضع" value={fStance} onChange={e => setFStance(e.target.value)}>
-                    <option value="">همه مواضع</option>
+                    <option value="">همهٔ مواضع</option>
                     {Object.entries(catalog?.stances ?? {}).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select>
                   <select aria-label="مرحله" value={fStage} onChange={e => setFStage(e.target.value)}>
-                    <option value="">همه مراحل</option>
+                    <option value="">همهٔ مراحل</option>
                     {Object.entries(catalog?.stages ?? {}).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select>
-                  {canWrite && <button className="btn" onClick={() => openAdd()}><Plus size={14} /> عضو تازه</button>}
+                  {canWrite && <button className="btn" onClick={() => openAdd()}><Plus size={14} /> عضو جدید</button>}
                 </Toolbar>
                 <div className="table-wrap">
                   <table>
@@ -656,12 +656,12 @@ export default function PublicsPage() {
                           <td><Badge tone="info">{m.linkageFa ?? m.linkage}</Badge></td>
                           <td><Badge tone={STAGE_TONE[m.stage] ?? 'neutral'}>{m.stageFa ?? m.stage}</Badge></td>
                           <td><Badge tone={STANCE_TONE[m.stance] ?? 'neutral'}>{m.stanceFa ?? m.stance}</Badge></td>
-                          <td><b>{fmtNum(m.power)}</b><span className="t-muted"> / </span><b>{fmtNum(m.interest)}</b>{m.signals != null && <div className="t-muted" style={{ fontSize: 10.5 }}>{fmtNum(m.signals)} سیگنال(۹۰ روز)</div>}</td>
+                          <td><b>{fmtNum(m.power)}</b><span className="t-muted"> / </span><b>{fmtNum(m.interest)}</b>{m.signals != null && <div className="t-muted" style={{ fontSize: 10.5 }}>{fmtNum(m.signals)} سیگنال ۹۰ روز اخیر</div>}</td>
                           <td className="t-muted" style={{ fontSize: 11 }}>{fmtDT(m.reviewDue)}</td>
                           {canWrite && (
                             <td>
                               <div style={{ display: 'flex', gap: 4 }}>
-                                <button className="btn icon-only" title="ارزیابی/بهروزرسانی" onClick={() => openAssess(m)}><SlidersHorizontal size={13} /></button>
+                                <button className="btn icon-only" title="ارزیابی و به‌روزرسانی" onClick={() => openAssess(m)}><SlidersHorizontal size={13} /></button>
                                 <button className="btn icon-only danger" title="حذف" disabled={busy === `del-${m.id}`} onClick={() => removeMember(m)}><Trash2 size={13} /></button>
                               </div>
                             </td>
@@ -669,7 +669,7 @@ export default function PublicsPage() {
                         </tr>
                       ))}
                       {!filteredMembers.length && (
-                        <tr><td colSpan={canWrite ? 9 : 8}><div className="empty-state-v4" style={{ padding: 18 }}><p>عضوی با این فیلترها نیست — «افزودن عضو» را بزنید.</p></div></td></tr>
+                        <tr><td colSpan={canWrite ? 9 : 8}><div className="empty-state-v4" style={{ padding: 18 }}><p>عضوی با این فیلترها یافت نشد؛ از دکمهٔ «افزودن عضو» استفاده کنید.</p></div></td></tr>
                       )}
                     </tbody>
                   </table>
@@ -678,53 +678,53 @@ export default function PublicsPage() {
             </div>
           )}
 
-          {/* ---------------- گروههای من ---------------- */}
+          {/* ---------------- گروه‌ها ---------------- */}
           {tab === 'groups' && (
             <div className="stack" style={{ gap: 14 }}>
               <div className="stat-grid">
-                <StatCard icon={<Layers size={16} />} iconClass="ic-blue" label="گروههای فعال نقشه" value={fmtNum(groupTotals?.active ?? 0)} sub={`${fmtNum(groupTotals?.total ?? 0)} گروه در نقشه`} />
-                <StatCard icon={<Sparkles size={16} />} iconClass="ic-purple" label="اختصاصی من" value={fmtNum(groupTotals?.custom ?? 0)} sub="ساختهٔ خودتان" />
-                <StatCard icon={<Pencil size={16} />} iconClass="ic-teal" label="ویرایششده از الگو" value={fmtNum(groupTotals?.overridden ?? 0)} sub="نام/یادداشت/کانال عوض شده" />
-                <StatCard icon={<Power size={16} />} iconClass="ic-orange" label="غیرفعال" value={fmtNum(groupTotals?.inactive ?? 0)} sub="در پوشش حساب نمیشود" />
+                <StatCard icon={<Layers size={16} />} iconClass="ic-blue" label="گروه‌های فعال نقشه" value={fmtNum(groupTotals?.active ?? 0)} sub={`${fmtNum(groupTotals?.total ?? 0)} گروه در نقشه`} />
+                <StatCard icon={<Sparkles size={16} />} iconClass="ic-purple" label="گروه اختصاصی" value={fmtNum(groupTotals?.custom ?? 0)} sub="ساختهٔ شما" />
+                <StatCard icon={<Pencil size={16} />} iconClass="ic-teal" label="ویرایش‌شده از الگو" value={fmtNum(groupTotals?.overridden ?? 0)} sub="نام/یادداشت/کانال عوض شده" />
+                <StatCard icon={<Power size={16} />} iconClass="ic-orange" label="غیرفعال" value={fmtNum(groupTotals?.inactive ?? 0)} sub="در پوشش محاسبه نمی‌شود" />
               </div>
               <SectionCard
-                title="گروههای نقشهٔ من"
+                title="گروه‌های نقشه"
                 icon={<Layers size={15} />}
-                description="الگو فقط نقطهٔ شروع است: نام، یادداشت، کانال و موضع هر گروه را مال خودتان کنید؛ گروه بیمصرف را غیرفعال کنید و گروه تازه بسازید. پوشش، گپها و بریف از همین فهرست ساخته میشوند."
-                actions={canWrite && <button className="btn btn-primary" onClick={openGroupCreate}><Plus size={14} /> گروه تازه</button>}
+                description="الگو نقطهٔ شروع است: نام، یادداشت، کانال و موضع هر گروه را ویژهٔ سازمان خود کنید؛ گروه‌های غیرضروری را غیرفعال کنید و در صورت نیاز گروه جدید بسازید. پوشش، شکاف‌ها و خلاصهٔ مدیریتی از همین فهرست ساخته می‌شوند."
+                actions={canWrite && <button className="btn btn-primary" onClick={openGroupCreate}><Plus size={14} /> گروه جدید</button>}
               >
                 <Toolbar search={gQ} onSearch={setGQ} searchPlaceholder="جستجوی گروه/یادداشت…">
                   <select aria-label="دسته" value={gCat} onChange={e => setGCat(e.target.value)}>
-                    <option value="">همه دستهها</option>
+                    <option value="">همهٔ دسته‌ها</option>
                     {catMeta.map(c => <option key={c.id} value={c.id}>{c.fa}</option>)}
                   </select>
                   <select aria-label="منبع" value={gSrc} onChange={e => setGSrc(e.target.value)}>
-                    <option value="">همه منابع</option>
-                    <option value="custom">اختصاصی من</option>
-                    <option value="overridden">ویرایششده</option>
-                    <option value="template">دستنخوردهٔ الگو</option>
-                    <option value="inactive">غیرفعالها</option>
+                    <option value="">همهٔ منابع</option>
+                    <option value="custom">اختصاصی</option>
+                    <option value="overridden">ویرایش‌شده</option>
+                    <option value="template">بدون تغییر</option>
+                    <option value="inactive">غیرفعال‌ها</option>
                   </select>
                 </Toolbar>
                 <div className="table-wrap">
                   <table>
                     <thead>
-                      <tr><th>گروه</th><th>دسته</th><th>منبع</th><th>وضعیت</th><th>یادداشت من</th>{canWrite && <th>اقدام</th>}</tr>
+                      <tr><th>گروه</th><th>دسته</th><th>منبع</th><th>وضعیت</th><th>یادداشت</th>{canWrite && <th>اقدام</th>}</tr>
                     </thead>
                     <tbody>
                       {filteredGroups.map(g => (
                         <tr key={g.id} data-gid={g.id} data-active={g.active === false ? 'false' : 'true'}>
                           <td><b style={{ fontSize: 12 }}>{g.fa}</b>{g.kanal && <div className="t-muted" style={{ fontSize: 10.5 }}>کانال: {g.kanal}</div>}<div className="t-muted" style={{ fontSize: 10.5 }}>{PUBLIC_G(g.link)} · موضع پایه: {PUBLIC_S(g.stance)}</div></td>
                           <td><StatusBadge tone="neutral">{CAT_ICONS[g.cat]}{catOf(g.cat)}</StatusBadge></td>
-                          <td>{g.source === 'custom' ? <Badge tone="info">اختصاصی</Badge> : g.overridden ? <Badge tone="warning">ویرایششده</Badge> : <Badge tone="neutral">الگو</Badge>}</td>
+                          <td>{g.source === 'custom' ? <Badge tone="info">اختصاصی</Badge> : g.overridden ? <Badge tone="warning">ویرایش‌شده</Badge> : <Badge tone="neutral">الگو</Badge>}</td>
                           <td>{g.active === false ? <Badge tone="neutral">غیرفعال</Badge> : <Badge tone="success">فعال</Badge>}</td>
                           <td className="t-muted" style={{ fontSize: 11 }}>{g.note || '—'}{g.overridden && g.templateNote && g.templateNote !== g.note && <div style={{ fontSize: 10.5 }}>یادداشت الگو: {g.templateNote}</div>}</td>
                           {canWrite && (
                             <td>
                               <div style={{ display: 'flex', gap: 4 }}>
                                 <button className="btn icon-only" data-act="edit" title="ویرایش" onClick={() => openGroupEdit(g)}><Pencil size={13} /></button>
-                                <button className="btn icon-only" data-act="toggle" title={g.active === false ? 'فعالسازی' : 'غیرفعالسازی'} disabled={busy === `gtog-${g.id}`} onClick={() => toggleGroup(g)}><Power size={13} /></button>
-                                {(g.overridden || g.active === false) && g.source === 'template' && <button className="btn icon-only" data-act="restore" title="بازگردانی به الگو" disabled={busy === `gres-${g.id}`} onClick={() => restoreGroup(g)}><RotateCcw size={13} /></button>}
+                                <button className="btn icon-only" data-act="toggle" title={g.active === false ? 'فعال‌سازی' : 'غیرفعال‌سازی'} disabled={busy === `gtog-${g.id}`} onClick={() => toggleGroup(g)}><Power size={13} /></button>
+                                {(g.overridden || g.active === false) && g.source === 'template' && <button className="btn icon-only" data-act="restore" title="بازگشت به الگو" disabled={busy === `gres-${g.id}`} onClick={() => restoreGroup(g)}><RotateCcw size={13} /></button>}
                                 {g.source === 'custom' && <button className="btn icon-only danger" data-act="delete" title="حذف" disabled={busy === `gdel-${g.id}`} onClick={() => deleteGroup(g)}><Trash2 size={13} /></button>}
                               </div>
                             </td>
@@ -732,7 +732,7 @@ export default function PublicsPage() {
                         </tr>
                       ))}
                       {!filteredGroups.length && (
-                        <tr><td colSpan={canWrite ? 6 : 5}><div className="empty-state-v4" style={{ padding: 18 }}><p>گروهی با این فیلترها نیست.</p></div></td></tr>
+                        <tr><td colSpan={canWrite ? 6 : 5}><div className="empty-state-v4" style={{ padding: 18 }}><p>گروهی با این فیلترها یافت نشد.</p></div></td></tr>
                       )}
                     </tbody>
                   </table>
@@ -745,16 +745,16 @@ export default function PublicsPage() {
           {tab === 'coverage' && (
             <div className="stack" style={{ gap: 14 }}>
               <div className="stat-grid">
-                <StatCard icon={<Layers size={16} />} iconClass="ic-blue" label="گروههای نقشه" value={fmtNum(coverage?.totals.groupsExpected ?? 0)} sub={`${fmtNum(coverage?.totals.groupsCovered ?? 0)} پوشش دادهشده`} />
+                <StatCard icon={<Layers size={16} />} iconClass="ic-blue" label="گروه‌های نقشه" value={fmtNum(coverage?.totals.groupsExpected ?? 0)} sub={`${fmtNum(coverage?.totals.groupsCovered ?? 0)} پوشش‌داده‌شده`} />
                 <StatCard icon={<Radar size={16} />} iconClass="ic-teal" label="٪ پوشش" value={`${Math.round(((coverage?.totals.groupsCovered ?? 0) / Math.max(1, coverage?.totals.groupsExpected ?? 1)) * 100)}٪`} />
-                <StatCard icon={<AlertTriangle size={16} />} iconClass="ic-orange" label="گپها" value={fmtNum(coverage?.totals.gaps ?? 0)} sub={`${fmtNum(coverage?.totals.criticalGaps ?? 0)} بحرانی`} />
+                <StatCard icon={<AlertTriangle size={16} />} iconClass="ic-orange" label="شکاف‌ها" value={fmtNum(coverage?.totals.gaps ?? 0)} sub={`${fmtNum(coverage?.totals.criticalGaps ?? 0)} بحرانی`} />
                 <StatCard icon={<Eye size={16} />} iconClass="ic-purple" label="اعضای فعال" value={fmtNum(coverage?.totals.active ?? 0)} />
               </div>
               <div className="grid-2" style={{ gap: 14 }}>
                 {(coverage?.byCategory ?? []).map(c => {
                   const pct = Math.round((c.covered / Math.max(1, c.expected)) * 100);
                   return (
-                    <SectionCard key={c.categoryId} title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>{CAT_ICONS[c.categoryId]}{c.fa}</span>} description={`${fmtNum(c.covered)} از ${fmtNum(c.expected)} گروه پوشش دادهشده · ${fmtNum(c.members)} عضو`}>
+                    <SectionCard key={c.categoryId} title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>{CAT_ICONS[c.categoryId]}{c.fa}</span>} description={`${fmtNum(c.covered)} از ${fmtNum(c.expected)} گروه پوشش‌داده‌شده · ${fmtNum(c.members)} عضو`}>
                       <div style={{ marginBottom: 10 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                           <span style={{ fontSize: 11, fontWeight: 700 }}>پوشش گروهی</span>
@@ -769,8 +769,8 @@ export default function PublicsPage() {
                         {Object.entries(catalog?.stances ?? {}).map(([k, v]) => c.stances[k] ? <Badge key={k} tone={STANCE_TONE[k] ?? 'neutral'}>{v} {c.stances[k]}</Badge> : null)}
                       </div>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        {c.criticalGaps.length > 0 && <span className="chip danger"><AlertTriangle size={12} /> {fmtNum(c.criticalGaps.length)} گپ بحرانی</span>}
-                        <button className="chip info" onClick={() => { setFCat(c.categoryId); setTab('members'); }}>دیدن اعضای این دسته <ChevronLeft size={12} /></button>
+                        {c.criticalGaps.length > 0 && <span className="chip danger"><AlertTriangle size={12} /> {fmtNum(c.criticalGaps.length)} شکاف بحرانی</span>}
+                        <button className="chip info" onClick={() => { setFCat(c.categoryId); setTab('members'); }}>مشاهدهٔ اعضای این دسته <ChevronLeft size={12} /></button>
                       </div>
                     </SectionCard>
                   );
@@ -779,31 +779,31 @@ export default function PublicsPage() {
             </div>
           )}
 
-          {/* ---------------- گپها و اقدام ---------------- */}
+          {/* ---------------- شکاف‌ها و اقدام ---------------- */}
           {tab === 'gaps' && (
             <div className="stack" style={{ gap: 14 }}>
               <div className="stat-grid" data-kpi="publics">
-                <StatCard icon={<Layers size={16} />} iconClass="ic-blue" label="پوشش قالب" value={`${fmtNum(coverage?.totals.groupsExpected ? Math.round((coverage.totals.groupsCovered / coverage.totals.groupsExpected) * 100) : 0)}٪`} sub={`${fmtNum(coverage?.totals.groupsCovered ?? 0)} از ${fmtNum(coverage?.totals.groupsExpected ?? 0)} گروه`} />
-                <StatCard icon={<Target size={16} />} iconClass="ic-orange" label="گپ بحرانی" value={fmtNum(gaps?.totals.criticalGaps ?? 0)} />
-                <StatCard icon={<AlertTriangle size={16} />} iconClass="ic-red" label="گپها" value={fmtNum(gaps?.totals.gaps ?? 0)} />
+                <StatCard icon={<Layers size={16} />} iconClass="ic-blue" label="پوشش نقشه" value={`${fmtNum(coverage?.totals.groupsExpected ? Math.round((coverage.totals.groupsCovered / coverage.totals.groupsExpected) * 100) : 0)}٪`} sub={`${fmtNum(coverage?.totals.groupsCovered ?? 0)} از ${fmtNum(coverage?.totals.groupsExpected ?? 0)} گروه`} />
+                <StatCard icon={<Target size={16} />} iconClass="ic-orange" label="شکاف بحرانی" value={fmtNum(gaps?.totals.criticalGaps ?? 0)} />
+                <StatCard icon={<AlertTriangle size={16} />} iconClass="ic-red" label="شکاف‌ها" value={fmtNum(gaps?.totals.gaps ?? 0)} />
                 <StatCard icon={<Users2 size={16} />} iconClass="ic-purple" label="بازیگر کلیدی" value={fmtNum(coverage?.totals.keyPlayers ?? 0)} />
                 <StatCard icon={<ClockIcon />} iconClass="ic-amber" label="سررسید بازبینی" value={fmtNum((members ?? []).filter(m => m.reviewDue && new Date(m.reviewDue).getTime() < Date.now()).length)} />
-                <StatCard icon={<UserPlus size={16} />} iconClass="ic-green" label="عقبمانده" value={fmtNum(gaps?.totals.lagging ?? 0)} />
+                <StatCard icon={<UserPlus size={16} />} iconClass="ic-green" label="عقب‌مانده" value={fmtNum(gaps?.totals.lagging ?? 0)} />
               </div>
               <SectionCard
-                title="بریف یکصفحهای عمومها"
+                title="خلاصهٔ مدیریتی عموم‌ها"
                 icon={<Sparkles size={15} />}
-                description="خلاصهٔ اجرایی برای هیئت/مدیریت — از دادهٔ همین نقشه"
+                description="خلاصهٔ اجرایی برای هیئت‌مدیره؛ ساخته‌شده از دادهٔ همین نقشه"
                 actions={
-                  <button className="btn" onClick={() => { navigator.clipboard?.writeText(briefText).then(() => notify('بریف کپی شد.')).catch(() => notify('کپی بریف ناموفق بود.')); }}><Copy size={13} /> کپی بریف</button>
+                  <button className="btn" onClick={() => { navigator.clipboard?.writeText(briefText).then(() => notify('خلاصهٔ مدیریتی کپی شد.')).catch(() => notify('کپی خلاصهٔ مدیریتی ناموفق بود.')); }}><Copy size={13} /> کپی خلاصه</button>
                 }
               >
                 <pre data-brief="publics" dir="rtl" style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: 12.5, lineHeight: 1.9, margin: 0, background: 'var(--card-bg-soft, #F7F9FC)', padding: '12px 14px', borderRadius: 10 }}>{briefText}</pre>
               </SectionCard>
               <SectionCard
-                title="گپهای نقشهٔ عمومها"
+                title="شکاف‌های نقشهٔ عموم‌ها"
                 icon={<AlertTriangle size={15} />}
-                description="اول گپهای بحرانی (بازیگر کلیدی غایب یا غیرفعال)، سپس اقدام پیشنهادی برای هرکدام"
+                description="نخست شکاف‌های بحرانی (بازیگر کلیدیِ غایب یا غیرفعال)، سپس اقدام پیشنهادی هر شکاف"
                 actions={<button className="btn" disabled={busy === 'review'} onClick={runReview}><ClockIcon /> بررسی سررسید بازبینی</button>}
               >
                 <div className="stack" style={{ gap: 8 }}>
@@ -811,7 +811,7 @@ export default function PublicsPage() {
                     <div key={g.gapId} className="section-card" style={{ padding: '12px 14px', borderInlineStart: `3px solid ${g.severity === 'CRITICAL' ? 'var(--srip-danger)' : 'var(--srip-amber)'}` }}>
                       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                         <Badge tone={g.severity === 'CRITICAL' ? 'danger' : 'warning'}>{g.severity === 'CRITICAL' ? 'بحرانی' : 'بالا'}</Badge>
-                        <Badge tone="neutral">{g.kind === 'lagging' ? 'عقبمانده' : 'غایب'}</Badge>
+                        <Badge tone="neutral">{g.kind === 'lagging' ? 'عقب‌مانده' : 'غایب'}</Badge>
                         <span style={{ fontWeight: 800, fontSize: 12.5 }}>{g.groupFa ?? g.groupId ?? '—'}</span>
                         <span className="t-muted" style={{ fontSize: 11 }}>{g.categoryFa ?? catOf(g.categoryId)} · {g.stanceFa ?? g.stance ?? '—'}</span>
                         <span style={{ flex: 1 }} />
@@ -842,14 +842,14 @@ export default function PublicsPage() {
                           <div className="t-muted" style={{ fontSize: 10.8 }}>
                             {g.pathSuggestion.note}
                             {g.pathSuggestion.candidates && g.pathSuggestion.candidates.length > 0
-                              ? ` کاندیدا: ${g.pathSuggestion.candidates.join('، ')}`
+                              ? ` گزینه‌ها: ${g.pathSuggestion.candidates.join('، ')}`
                               : ''}
                           </div>
                         </div>
                       )}
                     </div>
                   ))}
-                  {!gaps?.gaps?.length && <div className="empty-state-v4" style={{ padding: 18 }}><p className="t-muted">نقشهٔ عمومها بدون گپ است ✨</p></div>}
+                  {!gaps?.gaps?.length && <div className="empty-state-v4" style={{ padding: 18 }}><p className="t-muted">نقشهٔ عموم‌ها شکافی ندارد.</p></div>}
                 </div>
               </SectionCard>
             </div>
@@ -858,23 +858,23 @@ export default function PublicsPage() {
           {/* ---------------- خروجی و رسانه ---------------- */}
           {tab === 'export' && (
             <div className="grid-2" style={{ gap: 14 }}>
-              <SectionCard title="خروجی نقشهٔ عمومها" icon={<Download size={15} />} description="کل نقشه با ارزیابیها؛ برای گزارش هیئت مدیره یا تحلیل بیرونی">
+              <SectionCard title="خروجی نقشهٔ عموم‌ها" icon={<Download size={15} />} description="کل نقشه با ارزیابی‌ها؛ برای گزارش هیئت‌مدیره یا تحلیل بیرونی">
                 <div className="stack" style={{ gap: 8 }}>
                   <button className="btn btn-primary" disabled={busy === 'exp-json'} onClick={() => downloadExport('json')}><FileJson size={14} /> خروجی JSON</button>
                   <button className="btn" disabled={busy === 'exp-csv'} onClick={() => downloadExport('csv')}><FileSpreadsheet size={14} /> خروجی CSV</button>
                   <button className="btn" disabled={busy === 'exp-xls'} onClick={() => downloadExport('xls')}><FileSpreadsheet size={14} /> خروجی Excel</button>
-                  <span className="field-hint">در CSV ستونها: گروه، دسته، پیوند، مرحله، موضع، قدرت/علاقه، منبع، سررسید بازبینی.</span>
+                  <span className="field-hint">ستون‌های خروجی: گروه، دسته، پیوند، مرحله، موضع، قدرت، علاقه، منبع، یادداشت، سررسید بازبینی.</span>
                 </div>
               </SectionCard>
               <SectionCard
-                title="رسانهها و منابع پخش"
+                title="رسانه‌ها و منابع خبری"
                 icon={<Newspaper size={15} />}
-                description="رسانههایی که رصد میکنید؛ مبنای پوشش دستهٔ «رسانه و افکار عمومی»"
-                actions={canWrite && <button className="btn btn-primary" onClick={() => setMediaOpen(true)}><Plus size={14} /> رسانهٔ تازه</button>}
+                description="رسانه‌هایی که رصد می‌کنید؛ مبنای پوشش دستهٔ «رسانه و افکار عمومی»"
+                actions={canWrite && <button className="btn btn-primary" onClick={() => setMediaOpen(true)}><Plus size={14} /> رسانهٔ جدید</button>}
               >
                 <div className="table-wrap">
                   <table>
-                    <thead><tr><th>نام</th><th>نوع</th><th>دامنه</th><th>کشور</th></tr></thead>
+                    <thead><tr><th>نام</th><th>نوع</th><th>مخاطب</th><th>کشور</th></tr></thead>
                     <tbody>
                       {media.map(m => (
                         <tr key={m.id}>
@@ -884,7 +884,7 @@ export default function PublicsPage() {
                           <td className="t-muted" style={{ fontSize: 11 }}>{m.country ?? '—'}</td>
                         </tr>
                       ))}
-                      {!media.length && <tr><td colSpan={4}><div className="empty-state-v4" style={{ padding: 14 }}><p>رسانهای ثبت نشده است.</p></div></td></tr>}
+                      {!media.length && <tr><td colSpan={4}><div className="empty-state-v4" style={{ padding: 14 }}><p>هنوز رسانه‌ای ثبت نشده است.</p></div></td></tr>}
                     </tbody>
                   </table>
                 </div>
@@ -895,11 +895,11 @@ export default function PublicsPage() {
       )}
 
       {/* ---------- modals ---------- */}
-      <Modal open={addOpen} title="افزودن عضو عموم" description={addFromGap.current ? 'از گپ انتخابشده برای تکمیل نقشه استفاده میکنید' : 'گروه را از نقشهٔ خودتان انتخاب کنید؛ موتور مرحله و قدرت/علاقهٔ اولیه را پیشنهاد میدهد و شما تأیید میکنید.'} onClose={() => setAddOpen(false)}
+      <Modal open={addOpen} title="افزودن عضو عموم" description={addFromGap.current ? 'از شکاف انتخاب‌شده برای تکمیل نقشه استفاده می‌کنید' : 'گروه را از نقشهٔ سازمان خود انتخاب کنید؛ موتور مرحله و قدرت و علاقهٔ اولیه را پیشنهاد می‌دهد و شما تأیید می‌کنید.'} onClose={() => setAddOpen(false)}
         footer={<><button className="btn" onClick={() => setAddOpen(false)}>انصراف</button><button className="btn btn-primary" disabled={busy === 'add'} onClick={addMember}><Plus size={14} /> افزودن</button></>}>
         <div className="form-grid">
           <div className="field full">
-            <label className="field-label">گروه عموم <span className="req">*</span></label>
+            <label className="field-label">گروه <span className="req">*</span></label>
             <select value={addForm.groupId} onChange={e => { setAddForm(f => ({ ...f, groupId: e.target.value })); addFromGap.current = null; }}>
               <option value="">انتخاب گروه…</option>
               {catMeta.map(c => (
@@ -935,7 +935,7 @@ export default function PublicsPage() {
         </div>
       </Modal>
 
-      <Modal open={gModal !== null} title={gModal?.mode === 'create' ? 'ساخت گروه تازه' : `ویرایش گروه: ${gModal?.mode === 'edit' ? gModal.g.fa : ''}`} description="این تغییر فقط مال نقشهٔ همین شرکت است؛ الگوی مشترک دست نمیخورد." onClose={() => setGModal(null)}
+      <Modal open={gModal !== null} title={gModal?.mode === 'create' ? 'گروه جدید' : `ویرایش گروه: ${gModal?.mode === 'edit' ? gModal.g.fa : ''}`} description="این تغییر فقط در نقشهٔ سازمان شما اعمال می‌شود؛ الگوی مشترک بدون تغییر می‌ماند." onClose={() => setGModal(null)}
         footer={<><button className="btn" onClick={() => setGModal(null)}>انصراف</button><button className="btn btn-primary" disabled={gBusy} onClick={saveGroup}>{gModal?.mode === 'create' ? 'ساخت گروه' : 'ذخیره'}</button></>}>
         <div className="form-grid">
           <div className="field full">
@@ -965,20 +965,20 @@ export default function PublicsPage() {
             <input data-gi="kanal" value={gForm.kanal} onChange={e => setGForm(f => ({ ...f, kanal: e.target.value }))} placeholder="مثلاً: مکاتبه رسمی" />
           </div>
           <div className="field">
-            <label className="field-label">شروع بازهٔ مرحله</label>
+            <label className="field-label">کف بازهٔ مرحله</label>
             <select data-gi="smin" value={gForm.smin} onChange={e => setGForm(f => ({ ...f, smin: e.target.value }))}>
               {Object.entries(catalog?.stages ?? {}).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
           </div>
           <div className="field">
-            <label className="field-label">پایان بازهٔ مرحله</label>
+            <label className="field-label">سقف بازهٔ مرحله</label>
             <select data-gi="smax" value={gForm.smax} onChange={e => setGForm(f => ({ ...f, smax: e.target.value }))}>
               {Object.entries(catalog?.stages ?? {}).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
           </div>
           <div className="field full">
-            <label className="field-label">یادداشت من برای این گروه</label>
-            <textarea data-gi="note" value={gForm.note} onChange={e => setGForm(f => ({ ...f, note: e.target.value }))} placeholder="راهنمای عملی: با این گروه چه کار کنم؟" />
+            <label className="field-label">یادداشت گروه</label>
+            <textarea data-gi="note" value={gForm.note} onChange={e => setGForm(f => ({ ...f, note: e.target.value }))} placeholder="راهنمای عملی کار با این گروه" />
             {gModal?.mode === 'edit' && gModal.g.source === 'template' && gModal.g.templateNote && (
               <span className="field-hint">یادداشت الگو: {gModal.g.templateNote}</span>
             )}
@@ -986,18 +986,18 @@ export default function PublicsPage() {
         </div>
       </Modal>
 
-      <Modal open={!!assessFor} title={`ارزیابی: ${assessFor?.groupFa ?? assessFor?.groupId ?? ''}`} description={assessFor?.sourceName ? `منبع: ${assessFor.sourceName} · ${sourceLabel(assessFor.sourceType)} · سیگنالهای ۹۰ روزه: ${fmtNum(assessFor.signals)}` : undefined} onClose={() => setAssessFor(null)}
+      <Modal open={!!assessFor} title={`ارزیابی: ${assessFor?.groupFa ?? assessFor?.groupId ?? ''}`} description={assessFor?.sourceName ? `منبع: ${assessFor.sourceName} · ${sourceLabel(assessFor.sourceType)} · سیگنال‌های ۹۰ روز اخیر: ${fmtNum(assessFor.signals)}` : undefined} onClose={() => setAssessFor(null)}
         footer={<><button className="btn" onClick={() => setAssessFor(null)}>انصراف</button><button className="btn btn-primary" disabled={busy === 'assess'} onClick={assessMember}><SlidersHorizontal size={14} /> ثبت ارزیابی</button></>}>
         <div className="form-grid">
           <div className="field full">
-            <label className="field-label">موضع خودکار از قدرت/علاقه: <b>{PUBLIC_S(stanceOf(assessForm.power, assessForm.interest))}</b></label>
+            <label className="field-label">موضع پیشنهادی بر اساس قدرت و علاقه: <b>{PUBLIC_S(stanceOf(assessForm.power, assessForm.interest))}</b></label>
             <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
               <div className="field" style={{ flex: '1 1 200px' }}>
                 <label className="field-label">قدرت (نفوذ) — {fmtNum(assessForm.power)}</label>
                 <input type="range" min={0} max={100} value={assessForm.power} onChange={e => setAssessForm(f => ({ ...f, power: Number(e.target.value) }))} />
               </div>
               <div className="field" style={{ flex: '1 1 200px' }}>
-                <label className="field-label">علاقه (خواست/تعهد) — {fmtNum(assessForm.interest)}</label>
+                <label className="field-label">علاقه (تمایل و تعهد) — {fmtNum(assessForm.interest)}</label>
                 <input type="range" min={0} max={100} value={assessForm.interest} onChange={e => setAssessForm(f => ({ ...f, interest: Number(e.target.value) }))} />
               </div>
             </div>
@@ -1021,17 +1021,17 @@ export default function PublicsPage() {
             </select>
           </div>
           <div className="field">
-            <label className="field-label">سررسید بازبینی تازه</label>
-            <label className="chip info" style={{ cursor: 'pointer' }}><input type="checkbox" checked={assessForm.assess} onChange={e => setAssessForm(f => ({ ...f, assess: e.target.checked }))} /> ارزیابی تازه (۹۰ روز از امروز)</label>
+            <label className="field-label">بازبینی جدید</label>
+            <label className="chip info" style={{ cursor: 'pointer' }}><input type="checkbox" checked={assessForm.assess} onChange={e => setAssessForm(f => ({ ...f, assess: e.target.checked }))} /> ثبت ارزیابی جدید (۹۰ روز از امروز)</label>
           </div>
           <div className="field full">
             <label className="field-label">یادداشت ارزیابی</label>
-            <textarea value={assessForm.note} onChange={e => setAssessForm(f => ({ ...f, note: e.target.value }))} placeholder="شاهد/دلیل تغییر مرحله یا موضع…" />
+            <textarea value={assessForm.note} onChange={e => setAssessForm(f => ({ ...f, note: e.target.value }))} placeholder="دلیل تغییر مرحله یا موضع…" />
           </div>
         </div>
       </Modal>
 
-      <Modal open={mediaOpen} title="ثبت رسانهٔ تازه" description="رسانه به فهرست منابع اضافه میشود تا در نقشه قابل اتصال باشد." onClose={() => setMediaOpen(false)}
+      <Modal open={mediaOpen} title="ثبت رسانهٔ جدید" description="رسانه به فهرست منابع اضافه می‌شود تا در نقشه قابل اتصال باشد." onClose={() => setMediaOpen(false)}
         footer={<><button className="btn" onClick={() => setMediaOpen(false)}>انصراف</button><button className="btn btn-primary" disabled={busy === 'media'} onClick={addMedia}><Megaphone size={14} /> ثبت</button></>}>
         <div className="form-grid">
           <div className="field full">
@@ -1067,7 +1067,7 @@ export default function PublicsPage() {
 }
 
 function PUBLIC_G(v: string) {
-  return ({ ENABLING: 'فعالکننده', FUNCTIONAL_INPUT: 'کارکردی-ورودی', FUNCTIONAL_OUTPUT: 'کارکردی-خروجی', NORMATIVE: 'هنجاری', DIFFUSED: 'پراکنده' } as Record<string, string>)[v] ?? v;
+  return ({ ENABLING: 'فعال‌کننده', FUNCTIONAL_INPUT: 'کارکردی-ورودی', FUNCTIONAL_OUTPUT: 'کارکردی-خروجی', NORMATIVE: 'هنجاری', DIFFUSED: 'پراکنده' } as Record<string, string>)[v] ?? v;
 }
 function PUBLIC_S(v: string) {
   return ({ KEY_PLAYER: 'بازیگر کلیدی', INFLUENCER: 'تأثیرگذار', SUPPORTER: 'حامی', OBSERVER: 'ناظر' } as Record<string, string>)[v] ?? v;

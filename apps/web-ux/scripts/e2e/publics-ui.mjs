@@ -59,11 +59,11 @@ try {
 
   // 2) open publics hub
   await page.goto(`${BASE}/publics`, { waitUntil: 'networkidle0', timeout: 60000 });
-  ok('hub header', await waitForText('نقشهٔ عمومها'));
-  ok('tab من کیستم', await waitForText('من کیستم'));
+  ok('hub header', await waitForText('نقشهٔ عموم‌ها'));
+  ok('tab شناسنامهٔ سازمان', await waitForText('شناسنامهٔ سازمان'));
 
   // 3) self tab content
-  ok('کارت من کیستم', await waitForText('کارت «من کیستم»'));
+  ok('کارت شناسنامهٔ سازمان', await waitForText('شناسنامهٔ سازمان'));
   ok('org هلدینگ آریا', await waitForText('هلدینگ آریا'));
   ok('6 kategori rows', await page.evaluate(() => document.querySelectorAll('.table-wrap tbody tr').length === 6), 'rows=' + await page.evaluate(() => document.querySelectorAll('.table-wrap tbody tr').length));
   ok('groups count 105', await waitForText('۱۰۵'));
@@ -141,9 +141,9 @@ ok('add member flash', addFlash);
   ok('coverage category cards', await page.evaluate(() => (document.body.textContent ?? '').includes('نهادی و حاکمیتی') && (document.body.textContent ?? '').includes('اکوسیستم فناوری و صنعت')));
 
   // 8) gaps tab
-  await clickByText('button[role="tab"]', 'گپها و اقدام');
+  await clickByText('button[role="tab"]', 'شکاف‌ها و اقدام');
   await new Promise(r => setTimeout(r, 800));
-  ok('gaps list', await page.evaluate(() => (document.body.textContent ?? '').includes('گپهای نقشهٔ عمومها')));
+  ok('gaps list', await page.evaluate(() => (document.body.textContent ?? '').includes('شکاف‌های نقشهٔ عموم‌ها')));
   ok('gap action buttons', await page.evaluate(() => [...document.querySelectorAll('button')].some(b => b.textContent.includes('افزودن عضو'))));
 
   // 9) export tab
@@ -152,11 +152,11 @@ ok('add member flash', addFlash);
   ok('media seeded', await waitForText('زومیت'));
   ok('export json button', await page.evaluate(() => [...document.querySelectorAll('button')].some(b => b.textContent.includes('خروجی JSON'))));
 
-  // 10b) per-org groups: تب «گروه‌های من»
+  // 10b) per-org groups: تب «گروه‌ها»
   page.on('dialog', async d => { await d.accept().catch(() => {}); });
-  await clickByText('button[role="tab"]', 'گروه‌های من');
+  await clickByText('button[role="tab"]', 'گروه‌ها');
   await new Promise(r => setTimeout(r, 900));
-  ok('groups tab', await waitForText('گروههای نقشهٔ من'));
+  ok('groups tab', await waitForText('گروه‌های نقشه'));
   ok('groups rows 100+', await page.evaluate(() => document.querySelectorAll('tr[data-gid]').length) >= 100);
   await page.evaluate(() => { const b = document.querySelector('tr[data-gid="h-m5"] button[data-act="toggle"]'); if (b) b.click(); });
   await new Promise(r => setTimeout(r, 1500));
@@ -164,7 +164,7 @@ ok('add member flash', addFlash);
   await clickByText('button[role="tab"]', 'پوشش');
   await new Promise(r => setTimeout(r, 900));
   ok('coverage 104 after deactivate', await page.evaluate(() => (document.body.textContent ?? '').includes('۱۰۴')));
-  await clickByText('button[role="tab"]', 'گروه‌های من');
+  await clickByText('button[role="tab"]', 'گروه‌ها');
   await new Promise(r => setTimeout(r, 900));
   await page.evaluate(() => { const b = document.querySelector('tr[data-gid="h-m5"] button[data-act="restore"]'); if (b) b.click(); });
   await new Promise(r => setTimeout(r, 1500));
@@ -172,9 +172,9 @@ ok('add member flash', addFlash);
   await clickByText('button[role="tab"]', 'پوشش');
   await new Promise(r => setTimeout(r, 900));
   ok('coverage 105 after restore', await page.evaluate(() => (document.body.textContent ?? '').includes('۱۰۵')));
-  await clickByText('button[role="tab"]', 'گروه‌های من');
+  await clickByText('button[role="tab"]', 'گروه‌ها');
   await new Promise(r => setTimeout(r, 900));
-  await clickByText('button', 'گروه تازه');
+  await clickByText('button', 'گروه جدید');
   await new Promise(r => setTimeout(r, 600));
   await page.evaluate(() => {
     const card = [...document.querySelectorAll('.modal-card')].at(-1);
@@ -220,7 +220,7 @@ ok('add member flash', addFlash);
   });
   await new Promise(r => setTimeout(r, 1500));
   ok('group note overridden', await waitForText('یادداشت اختصاصی تست'));
-  ok('group flagged overridden', await page.evaluate(() => (document.querySelector('tr[data-gid="h-m1"]')?.textContent ?? '').includes('ویرایششده')));
+  ok('group flagged overridden', await page.evaluate(() => (document.querySelector('tr[data-gid="h-m1"]')?.textContent ?? '').includes('ویرایش‌شده')));
   await page.evaluate(() => { const b = document.querySelector('tr[data-gid="h-m1"] button[data-act="restore"]'); if (b) b.click(); });
   await new Promise(r => setTimeout(r, 1500));
   ok('group note restored', await page.evaluate(() => !((document.body.textContent ?? '').includes('یادداشت اختصاصی تست'))));
@@ -254,34 +254,34 @@ ok('add member flash', addFlash);
   await page.goto(`${BASE}/publics`, { waitUntil: 'networkidle0', timeout: 60000 });
   await waitForText('نقشهٔ عموم‌ها');
   await new Promise(r => setTimeout(r, 1200));
-  await clickByText('button[role="tab"]', 'گپها و اقدام');
+  await clickByText('button[role="tab"]', 'شکاف‌ها و اقدام');
   await new Promise(r => setTimeout(r, 1500));
   const gapDbg = await page.evaluate(() => ({
     path: [...document.querySelectorAll('.gap-path')].length,
     has: (document.body.textContent ?? '').includes('مسیر پیشنهادی'),
-    gaps: (document.body.textContent ?? '').includes('گپهای نقشهٔ عموم‌ها'),
-    tabs: [...document.querySelectorAll('button[role="tab"]')].filter(b => (b.textContent ?? '').includes('گپ')).map(b => b.className),
+    gaps: (document.body.textContent ?? '').includes('شکاف‌های نقشهٔ عموم‌ها'),
+    tabs: [...document.querySelectorAll('button[role="tab"]')].filter(b => (b.textContent ?? '').includes('شکاف')).map(b => b.className),
   }));
   ok('gap path suggestion', gapDbg.has, JSON.stringify(gapDbg));
   ok('gap path note', await page.evaluate(() => (document.body.textContent ?? '').includes('نزدیک‌ترین گره') || (document.body.textContent ?? '').includes('ورود مستقیم')));
 
-  // 13) P4: KPI + بریف + Excel + گردش‌کار واقعی
+  // 13) P4: KPI + خلاصه + Excel + گردش‌کار واقعی
   const kpiCards = await page.evaluate(() => document.querySelectorAll('.stat-grid[data-kpi="publics"] .stat-card').length);
   ok('kpi cards 6+', kpiCards >= 6, 'cards=' + kpiCards);
-  ok('kpi پوشش قالب', await page.evaluate(() => (document.body.textContent ?? '').includes('پوشش قالب')));
-  ok('brief یک‌صفحه‌ای', await page.evaluate(() => !!document.querySelector('[data-brief="publics"]') && (document.querySelector('[data-brief="publics"]')?.textContent ?? '').includes('بریف نقشهٔ عموم‌ها')));
-  ok('brief گپ بحرانی', await page.evaluate(() => (document.body.textContent ?? '').includes('گپ بحرانی')));
+  ok('kpi پوشش نقشه', await page.evaluate(() => (document.body.textContent ?? '').includes('پوشش نقشه')));
+  ok('خلاصهٔ مدیریتی', await page.evaluate(() => !!document.querySelector('[data-brief="publics"]') && (document.querySelector('[data-brief="publics"]')?.textContent ?? '').includes('خلاصهٔ مدیریتی نقشهٔ عموم‌ها')));
+  ok('brief شکاف بحرانی', await page.evaluate(() => (document.body.textContent ?? '').includes('شکاف بحرانی')));
   await clickByText('button[role="tab"]', 'خروجی و رسانه');
   await new Promise(r => setTimeout(r, 800));
   ok('excel button', await page.evaluate(() => [...document.querySelectorAll('button')].some(b => (b.textContent ?? '').includes('خروجی Excel'))));
 
-  // 14) P4: اقدام/گردش‌کار واقعی از محرک گپ
+  // 14) P4: اقدام/گردش‌کار واقعی از محرک شکاف
   await page.goto(`${BASE}/actions`, { waitUntil: 'networkidle0', timeout: 60000 });
-  ok('wf created action', await waitForText('برنامهٔ رفع گپ عموم‌ها'));
+  ok('wf created action', await waitForText('برنامهٔ رفع شکاف عموم‌ها'));
   await page.goto(`${BASE}/workflows`, { waitUntil: 'networkidle0', timeout: 60000 });
-  ok('wf PUBLIC_GAP cover', await waitForText('گپ عموم') && await waitForText('برنامهٔ پوشش'));
+  ok('wf PUBLIC_GAP cover', await waitForText('شکاف عموم') && await waitForText('برنامهٔ پوشش'));
   // 10) sidebar has publics link
-  ok('sidebar عمومها', await page.evaluate(() => [...document.querySelectorAll('a')].some(a => (a.textContent ?? '').includes('عموم‌ها'))));
+  ok('sidebar عموم‌ها', await page.evaluate(() => [...document.querySelectorAll('a')].some(a => (a.textContent ?? '').includes('عموم‌ها'))));
 
 } catch (e) {
   console.log('FAIL exception', e.message); fails++;
