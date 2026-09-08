@@ -3740,6 +3740,30 @@ function loadDb() {
 }
 let USERS = null;
 
+/* P3: بازنشانی درجا (E2E/دمو) — همان seedهای راه‌اندازی، بدون دست‌کاری دیسک */
+function resetDbInPlace(){
+  DB = { version: 2, users: {}, orgs: ORGS, people: PEOPLE, rels: RELS, meetings: MEETINGS,
+    actions: ACTIONS, commitments: COMMITMENTS, projects: PROJECTS, projectExtra: PROJECT_EXTRA,
+    opportunities: OPPORTUNITIES, interactions: INTERACTIONS, notifications: NOTIFICATIONS,
+    recs: RECS, aiUsage: AI_USAGE, personOrgs: PERSON_ORGS, audit: [], revokedJtis: [], nextId: 1,
+    assessments: seedCriteriaAssessments(), criteriaManual: [], knowledge: seedKnowledge(), documents: seedDocuments(),
+    scoreSnapshots: seedScoreSnapshots(), accountPlans: seedAccountPlans(), careerEvents: seedCareerEvents(),
+    calibrationSettings: seedCalibrationSettings(), nbaExecutions: [], edgeSuggestionAccepts: [],
+    pulseSurveys: [], meetingIntelLabels: {}, compliance: seedComplianceStore(), knowledgeTransfers: [] };
+  // کاربران seed با هش‌های تازه (مثل راه‌اندازی first-run)
+  for (const [email, u] of Object.entries(SEED_USERS)) {
+    const salt = crypto.randomBytes(16).toString('hex');
+    DB.users[email] = { ...u, salt, passwordHash: hashPassword(u.password, salt) };
+    delete DB.users[email].password;
+  }
+  seedRoleStore(); seedTagStore(); seedCustomFields(); seedScoringRules();
+  seedNotificationRules(); seedAuditDemo(); seedFeatureFlags(); seedExportLog();
+  seedRetention(); seedMasterData(); seedIntegrations(); seedReferralStore();
+  seedApprovals(); seedWorkflowStore(); seedPublicsStore(); seedSecurityEvents();
+  seedPrivacyStore(); seedEnterpriseStore(); seedSettingsStore(); seedSessionsStore();
+  seedAnalyticsStore(); saveDb();
+}
+
 function currentUser(req) {
   const auth = (req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
   const p = verifyJwt(auth);
@@ -5239,6 +5263,57 @@ function pubCoverage(orgId){
       keyPlayers:members.filter(m=>m.stance==='KEY_PLAYER').length,active:members.filter(m=>m.stage==='ACTIVE').length,
       gaps:sumLen('gapGroups'),criticalGaps:sumLen('criticalGaps')}};
 }
+/* ------------ P3: برچسب دستهٔ عموم‌ها برای گراف شبکه + مسیر پیشنهادی گپ ------------ */
+// برچسب‌گذاری قطعی نمونه: هر سازمان در شبکهٔ روابط به کدام دستهٔ عموم‌ها تعلق
+// دارد؟ منبع اول: اعضای ثبت‌شدهٔ نقشهٔ عموم‌ها؛ منبع دوم: برچسب نمونهٔ آریا (P3).
+const PUBLIC_ORG_CATEGORY = {
+  'org-1': 'INTERNAL', 'org-2': 'INTERNAL', 'org-3': 'ECONOMIC', 'org-4': 'ECONOMIC',
+  'org-5': 'ECONOMIC', 'org-6': 'ECOSYSTEM', 'org-7': 'ECONOMIC', 'org-8': 'INSTITUTIONAL',
+};
+function pubCatOfOrg(orgId){
+  const m=(DB.publicsMembers??[]).find(x=>x.orgId===orgId&&x.sourceType==='organization');
+  if(m){ const g=pubGroupFromAny(m.groupId); return g?.cat??null; }
+  return PUBLIC_ORG_CATEGORY[orgId]??null;
+}
+function pubGroupFromAny(gid){
+  for(const t of PUBLICS_TEMPLATE_LIST){ const g=t.groups.find(x=>x.id===gid); if(g) return {...g, templateId:t.id}; }
+  return null;
+}
+/** مسیر کوتاه (بدون درخواست) میان سازمان‌ها بر پایهٔ RELS — برای پیشنهاد گپ. */
+function pubNetRoute(fromId,toId){
+  if(fromId===toId) return [fromId];
+  const adj=new Map(); const put=(a,b)=>{ if(!adj.has(a)) adj.set(a,[]); adj.get(a).push(b); };
+  for(const r of RELS){ put(r.sourceOrganizationId,r.targetOrganizationId); put(r.targetOrganizationId,r.sourceOrganizationId); }
+  const prev=new Map(); const q=[fromId]; const seen=new Set([fromId]);
+  while(q.length){ const u=q.shift(); for(const v of (adj.get(u)??[])){ if(seen.has(v)) continue; seen.add(v); prev.set(v,u); if(v===toId){ const out=[toId]; let cur=toId; while(prev.get(cur)!==undefined){ cur=prev.get(cur); out.unshift(cur); } return out; } q.push(v); } }
+  return null;
+}
+function pubGapPathSuggestion(orgId, gap){
+  const cat=gap.categoryId ?? gap.cat; if(!cat) return null;
+  const ego=orgById(orgId)?.name??orgId;
+  /* نزدیک‌ترین گرهٔ موجود در همان دسته که به ego پل می‌خورد */
+  let best=null; let bestRoute=null;
+  for(const o of ORGS){
+    if(o.id===orgId) continue;
+    if(pubCatOfOrg(o.id)!==cat) continue;
+    const route=pubNetRoute(orgId,o.id);
+    if(route && (bestRoute===null || route.length<bestRoute.length)){ best=o; bestRoute=route; }
+  }
+  const tpl=pubTplById(pubByOrg(orgId)?.templateId??'HOLDING');
+  const groups=(tpl.groups??[]).filter(g=>g.cat===cat).slice(0,3);
+  const mediaNames=(DB.mediaStore??[]).slice(0,3).map(m=>m.name);
+  const candidates=cat==='MEDIA'?mediaNames:groups.map(g=>g.fa);
+  if(best){
+    return {category:cat,categoryFa:PUBLIC_CATEGORY_FA[cat],route:bestRoute.map(id=>({id:`org:${id}`,label:orgById(id)?.name??id})),
+      hops:Math.max(0,bestRoute.length-1),direct:false,bridges:[best.id],
+      note:`نزدیک‌ترین گرهٔ موجود در دستهٔ «${PUBLIC_CATEGORY_FA[cat]}»؛ برای پوشش گپ، از همین کانال ورود استفاده کنید.`,
+      candidates};
+  }
+  return {category:cat,categoryFa:PUBLIC_CATEGORY_FA[cat],route:[{id:`org:${orgId}`,label:ego}],hops:0,direct:true,bridges:[],
+    note:cat==='MEDIA'?'هیچ گرهٔ رسانه‌ای در شبکه نیست — ورود مستقیم از رسانه‌های فهرست‌شده.':
+      `هیچ گرهٔ موجود در دستهٔ «${PUBLIC_CATEGORY_FA[cat]}» نیست — ورود مستقیم (یا از طریق معرف).`,
+    candidates};
+}
 function pubGaps(orgId){
   const cov=pubCoverage(orgId);
   const tpl=pubTplById(cov.templateId??'HOLDING');
@@ -5261,6 +5336,7 @@ function pubGaps(orgId){
   const media=cov.byCategory.find(c=>c.categoryId==='MEDIA');
   if(media&&media.covered===0) rows.push({gapId:'MEDIA:no-cover',groupId:null,groupFa:'رسانه و افکار عمومی',categoryId:'MEDIA',categoryFa:PUBLIC_CATEGORY_FA.MEDIA,
     kind:'missing',severity:'HIGH',stance:'OBSERVER',stanceFa:'ناظر',action:'برنامهٔ روایت رسانه‌ای (حداقل پایش)'});
+  for(const row of rows) row.pathSuggestion=pubGapPathSuggestion(orgId,row);
   const order={CRITICAL:0,HIGH:1,MEDIUM:2,LOW:3};
   rows.sort((a,b)=>(order[a.severity]??9)-(order[b.severity]??9));
   return {orgId,generatedAt:nowIso(),totals:{categories:cov.byCategory.length,groupsExpected:cov.totals.groupsExpected,
@@ -6547,6 +6623,12 @@ async function __handler(req, res) {
       if(term&&!`${p.firstName} ${p.lastName}`.toLowerCase().includes(term)) return;
       personNodes.push({id:`person:${p.id}`,label:`${p.firstName} ${p.lastName}`,type:'person',organizationId:p.organizationId});
     });
+    /* P3: برچسب دستهٔ عموم‌ها روی گره‌ها + گرهٔ «خودِ شرکت» (ego) */
+    const egoOrg=q.get('organizationId')||(visibleOrgIds(req)[0]??null);
+    for(const n of [...orgNodes,...personNodes]){
+      n.category=pubCatOfOrg(n.organizationId)??null;
+      n.ego=n.type==='organization'&&n.organizationId===egoOrg;
+    }
     const nodes=[...orgNodes,...personNodes];
     const nodeIds=new Set(nodes.map(n=>n.id));
     const edges=[];
@@ -9389,6 +9471,13 @@ async function __handler(req, res) {
     if(t==='media'){ const m=(DB.mediaStore??[]).find(x=>x.id===sourceId); return m?{ok:true,label:m.name}:{ok:false,msg:'رسانهٔ مبدأ یافت نشد.'}; }
     return {ok:false,msg:'نوع مبدأ نامعتبر است (organization/person/relationship/media).'};
   };
+  if(is('/dev/reset')&&method==='POST'){
+    const u=currentUser(req);
+    if(!u?.isOwner) return json(res,403,{message:'فقط مالک سامانه می‌تواند دادهٔ دمو را بازنشانی کند.'});
+    resetDbInPlace();
+    audit(req,'RESET','Demo','*','OK',{meta:{note:'resetDbInPlace'}});
+    return json(res,200,{ok:true,seededAt:nowIso()});
+  }
   if(is('/publics/catalog')&&method==='GET'){
     if(!hasPerm('publics.read')) return json(res,403,{message:'شما مجوز «مشاهده عموم‌ها» (publics.read) را ندارید.'});
     const cat=DB.publicsCatalog??{version:1,categories:PUBLIC_CATEGORY_ORDER.map(id=>({id,fa:PUBLIC_CATEGORY_FA[id]})),linkages:PUBLIC_LINKAGE_FA,stages:PUBLIC_STAGE_FA,stances:PUBLIC_STANCE_FA,templates:PUBLICS_TEMPLATES};

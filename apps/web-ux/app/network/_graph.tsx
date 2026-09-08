@@ -26,6 +26,9 @@ import {
   nodeDisplayName,
   edgeStatus,
   statusMeta,
+  nodeCategoryColor,
+  EGO_COLOR,
+  EGO_FA,
 } from './_nodes';
 
 export interface NetworkGraphHandle {
@@ -717,7 +720,8 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
           const focused = focusNodeId === n.id;
           const name = nodeDisplayName(n);
           const isOrg = n.type === 'organization';
-          const grad = acc ?? nodeGrad(n);
+          const catColor = nodeCategoryColor(n);
+          const grad = acc ?? catColor ?? nodeGrad(n);
           const st = nodeStats.get(n.id) ?? { degree: 0, relCount: 0, riskCount: 0, score: 100, status: 'ACTIVE', hasRel: false };
           const metaColor = st.hasRel ? statusMeta(st.status).color : null;
           const glow = focused || selected || (pathActive && pathNodeIds?.has(n.id));
@@ -726,6 +730,8 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
           return (
             <g
               key={n.id}
+              data-ego={n.ego ? 'true' : undefined}
+              data-cat={n.category ?? undefined}
               opacity={alpha}
               style={{ cursor: 'pointer', transition: 'opacity .18s ease' }}
               onPointerEnter={() => { setHoverNode(n.id); onNodeHover && onNodeHover(n); }}
@@ -826,6 +832,27 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
                       style={{ pointerEvents: 'none' }} />
                   )}
                 </g>
+              )}
+
+              {/* P3: نشان «خودِ شرکت» (ego) */}
+              {n.ego && (
+                <>
+                  {isOrg ? (
+                    <rect x={p.x - ORG_SIZE / 2 - 5.5} y={p.y - ORG_SIZE / 2 - 5.5} width={ORG_SIZE + 11} height={ORG_SIZE + 11}
+                      rx={19} fill="none" stroke={EGO_COLOR} strokeWidth={2.6}
+                      strokeDasharray="5 4" opacity={0.95} style={{ pointerEvents: 'none' }} />
+                  ) : (
+                    <circle cx={p.x} cy={p.y} r={(n.type === 'project' ? PROJECT_R : PERSON_R) + 8}
+                      fill="none" stroke={EGO_COLOR} strokeWidth={2.6}
+                      strokeDasharray="5 4" opacity={0.95} style={{ pointerEvents: 'none' }} />
+                  )}
+                  <g style={{ pointerEvents: 'none' }}>
+                    <rect x={p.x - 17} y={p.y - (isOrg ? ORG_SIZE / 2 + 30 : 34)} width={34} height={14} rx={7}
+                      fill={EGO_COLOR} />
+                    <text x={p.x} y={p.y - (isOrg ? ORG_SIZE / 2 + 30 : 34) + 10} textAnchor="middle"
+                      fontSize={8.6} fontWeight={900} fill="#FFFFFF">{EGO_FA}</text>
+                  </g>
+                </>
               )}
 
               {/* label under node */}

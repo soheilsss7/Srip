@@ -21,6 +21,10 @@ import {
   nodeEntityRoute,
   edgeStatus,
   statusMeta,
+  PUBLIC_CATEGORY_ORDER,
+  PUBLIC_CATEGORY_META,
+  EGO_COLOR,
+  EGO_FA,
 } from './_nodes';
 import NetworkGraph, { NetworkGraphHandle } from './_graph';
 
@@ -198,6 +202,7 @@ export default function Page() {
   const [q, setQ] = useState('');
   const [type, setType] = useState('all');
   const [status, setStatus] = useState('');
+  const [pubCat, setPubCat] = useState('');
   const [relType, setRelType] = useState('');
   const [focus, setFocus] = useState('');
   const [mode, setMode] = useState<'shortest' | 'best'>('shortest');
@@ -368,7 +373,33 @@ export default function Page() {
   // identity on every page render, forcing its layout memo + onRendered
   // effect to re-run each time (→ unbounded render/effect loop that froze
   // the tab and blocked navigation away from this page).
-  const graphProp = useMemo(() => (graph ? { ...graph, edges: renderedEdges } : EMPTY_GRAPH), [graph, renderedEdges]);
+  /* P3: فیلتر دستهٔ عموم‌ها (سمت کلاینت) — گره‌ها و پیوندهای هم‌راستا */
+  const catCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    let colored = 0;
+    for (const n of graph?.nodes ?? []) {
+      if (!n.category) continue;
+      colored += 1;
+      m.set(n.category, (m.get(n.category) ?? 0) + 1);
+    }
+    return { byCat: m, colored, total: graph?.nodes?.length ?? 0 };
+  }, [graph]);
+  const pubCatNodeIds = useMemo(() => {
+    if (!pubCat) return null;
+    return new Set((graph?.nodes ?? []).filter((n) => n.category === pubCat).map((n) => n.id));
+  }, [graph, pubCat]);
+  const catFilteredNodes = useMemo(
+    () => (pubCatNodeIds ? (graph?.nodes ?? []).filter((n) => pubCatNodeIds.has(n.id)) : graph?.nodes ?? []),
+    [graph, pubCatNodeIds],
+  );
+  const catFilteredEdges = useMemo(
+    () => renderedEdges.filter((e) => !pubCatNodeIds || (pubCatNodeIds.has(e.source) && pubCatNodeIds.has(e.target))),
+    [renderedEdges, pubCatNodeIds],
+  );
+  const graphProp = useMemo(
+    () => (graph ? { ...graph, nodes: catFilteredNodes, edges: catFilteredEdges } : EMPTY_GRAPH),
+    [graph, catFilteredNodes, catFilteredEdges],
+  );
 
   // Status distribution of rendered relationship edges (for chips + legend).
   const statusCounts = useMemo(() => {
@@ -450,6 +481,7 @@ export default function Page() {
   if (type !== 'all') activeFilters.push({ key: 'type', label: `type: ${type}`, onClear: () => setType('all') });
   if (status) activeFilters.push({ key: 'status', label: `status: ${status}`, onClear: () => setStatus('') });
   if (relType) activeFilters.push({ key: 'relType', label: `نوع رابطه: ${relType}`, onClear: () => setRelType('') });
+  if (pubCat) activeFilters.push({ key: 'pubCat', label: `دستهٔ عموم‌ها: ${PUBLIC_CATEGORY_META[pubCat]?.fa ?? pubCat}`, onClear: () => setPubCat('') });
   if (focus) {
     const focusNode = graph?.nodes.find((n) => n.id === focus);
     activeFilters.push({ key: 'focus', label: `focus: ${focusNode ? nodeDisplayName(focusNode) : focus}`, onClear: () => setFocus('') });
@@ -661,6 +693,7 @@ export default function Page() {
             <span><b>{fmtNum(graph?.meta?.relationshipCount ?? 0)}</b> رابطه سازمانی</span>
             <span><b>{fmtNum(graph?.meta?.personRelationshipCount ?? 0)}</b> رابطه شخص</span>
             <span><b>{fmtNum(renderCounts.nodes)}</b> گره رندر شده · <b>{fmtNum(renderCounts.edges)}</b> پیوند رندر شده</span>
+            <span title="گره‌های دارای برچسب دستهٔ عموم‌ها در نقشه"><b data-categorized-count={catCounts.colored}>{fmtNum(catCounts.colored)}</b> گرهٔ دسته‌بندی‌شده</span>
             {orphanEdges > 0 ? <span style={{ color: 'var(--srip-danger)' }}>{fmtNum(orphanEdges)} پیوند یتیم حذف شد</span> : null}
             {scopeId !== 'all' ? <span className="scope-badge">محدوده: {faEntityId(scopeId)}</span> : null}
           </div>
@@ -906,6 +939,40 @@ export default function Page() {
               </button>
             );
           })}
+        </div>
+        <div className="status-chips" role="group" aria-label="فیلتر دستهٔ عموم‌ها">
+          <button
+            className={`status-chip ${pubCat === '' ? 'active' : ''}`}
+            data-cat=""
+            onClick={() => { setPubCat(''); log('فیلتر دستهٔ عموم‌ها: همه'); }}
+          >
+            همهٔ دسته‌ها
+            <span className="status-count">{fmtNum(catCounts.colored)}</span>
+          </button>
+          {PUBLIC_CATEGORY_ORDER.map((k) => {
+            const meta = PUBLIC_CATEGORY_META[k];
+            const cnt = catCounts.byCat.get(k) ?? 0;
+            const active = pubCat === k;
+            return (
+              <button
+                key={k}
+                className={`status-chip ${active ? 'active' : ''}`}
+                data-cat={k}
+                data-count={cnt}
+                style={active ? { background: meta.color, borderColor: meta.color } : { color: meta.color }}
+                onClick={() => { setPubCat(active ? '' : k); log(`فیلتر دستهٔ عموم‌ها: ${meta.fa}`); }}
+                title={cnt ? `${meta.fa} — ${fmtNum(cnt)} گره` : `هنوز گره‌ای در دستهٔ ${meta.fa} نیست`}
+              >
+                <span className="status-dot" style={{ background: meta.color }} />
+                {meta.fa}
+                <span className="status-count">{fmtNum(cnt)}</span>
+              </button>
+            );
+          })}
+          <span className="lg" style={{ alignItems: 'center' }} title="گرهٔ خودِ شرکت">
+            <span className="sw" style={{ background: `repeating-linear-gradient(45deg, ${EGO_COLOR} 0 3px, #fff 3px 6px)`, borderRadius: 4 }} />
+            {EGO_FA}
+          </span>
         </div>
         <select aria-label="نوع رابطه" value={relType} onChange={(e) => setRelType(e.target.value)}>
           <option value="">همه انواع رابطه</option>
@@ -1160,6 +1227,21 @@ export default function Page() {
                 })}
                 <span className="lg"><span className="sw line" style={{ background: '#94A3B8' }} />عضویت (شخص ← سازمان)</span>
                 <span className="lg"><span className="sw line" style={{ background: PATH_COLOR }} />پیوند مسیر</span>
+              </div>
+              <div>
+                <strong>دستهٔ عموم‌ها (رنگ گره)</strong>{' '}
+                {PUBLIC_CATEGORY_ORDER.map((k) => {
+                  const meta = PUBLIC_CATEGORY_META[k];
+                  const cnt = catCounts.byCat.get(k) ?? 0;
+                  return (
+                    <span className="lg" key={k}>
+                      <span className="sw" style={{ background: meta.color, borderRadius: k === 'INTERNAL' ? 4 : '50%' }} />
+                      {meta.fa}
+                      <b className="lg-count">{fmtNum(cnt)}</b>
+                    </span>
+                  );
+                })}
+                <span className="lg"><span className="sw" style={{ background: `repeating-linear-gradient(45deg, ${EGO_COLOR} 0 3px, #fff 3px 6px)`, borderRadius: 4 }} />{EGO_FA} (حلقهٔ طلایی)</span>
               </div>
             </div>
           )}

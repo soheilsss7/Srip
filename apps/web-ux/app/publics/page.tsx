@@ -58,10 +58,17 @@ type Coverage = {
   templateFa: string | null; missionTopic: string | null; reviewedAt: string | null;
   reviewIntervalDays: number; generatedAt: string; byCategory: CovRow[]; totals: CovTotals;
 };
+type GapPathSuggestion = {
+  category: string; categoryFa?: string | null;
+  route: Array<{ id: string; label: string }>;
+  hops: number; direct: boolean; bridges?: string[];
+  note?: string; candidates?: string[];
+};
 type GapRow = {
   gapId: string; groupId?: string | null; groupFa?: string | null; categoryId?: string | null;
   categoryFa?: string | null; kind: 'missing' | 'lagging'; severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
   stance?: string | null; stanceFa?: string | null; memberId?: string | null; sourceName?: string | null; action?: string;
+  pathSuggestion?: GapPathSuggestion | null;
 };
 type GapsResp = { orgId: string; generatedAt: string; totals: CovTotals & { missing?: number; lagging?: number }; gaps: GapRow[] };
 type MediaRow = { id: string; name: string; type: string; url?: string | null; audience?: string | null; country?: string | null; note?: string | null; createdAt: string };
@@ -642,6 +649,28 @@ export default function PublicsPage() {
                       <div className="t-muted" style={{ fontSize: 11.5, marginTop: 6 }}>
                         {g.sourceName ? `منبع: ${g.sourceName} · ` : ''}{g.action}
                       </div>
+                      {g.pathSuggestion && (
+                        <div className="gap-path" style={{ marginTop: 8, display: 'grid', gap: 4 }}>
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', fontSize: 11.5 }}>
+                            <span style={{ fontWeight: 800, color: 'var(--srip-accent-text, #2457D6)' }}>مسیر پیشنهادی:</span>
+                            {g.pathSuggestion.route.map((r, i) => (
+                              <span key={r.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                {i > 0 && <span className="t-muted">←</span>}
+                                <span className="chip neutral" style={{ fontSize: 10.5 }}>{r.label}{r.id?.endsWith(':') ? '' : ''}</span>
+                              </span>
+                            ))}
+                            <span className="chip info" style={{ fontSize: 10.5 }}>
+                              {g.pathSuggestion.direct ? 'ورود مستقیم' : `${g.pathSuggestion.hops} پرش`}
+                            </span>
+                          </div>
+                          <div className="t-muted" style={{ fontSize: 10.8 }}>
+                            {g.pathSuggestion.note}
+                            {g.pathSuggestion.candidates && g.pathSuggestion.candidates.length > 0
+                              ? ` کاندیدا: ${g.pathSuggestion.candidates.join('، ')}`
+                              : ''}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                   {!gaps?.gaps?.length && <div className="empty-state-v4" style={{ padding: 18 }}><p className="t-muted">نقشهٔ عمومها بدون گپ است ✨</p></div>}
