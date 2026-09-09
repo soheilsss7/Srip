@@ -17,7 +17,7 @@ import crypto from 'node:crypto';
 
 const PORT = Number(process.env.MOCK_API_PORT || 4000);
 const V1 = '/api/v1';
-const DEMO_MOCK_VERSION = '2026.09.08.28';
+const DEMO_MOCK_VERSION = '2026.09.09.01';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [

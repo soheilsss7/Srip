@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.08.28';
+const DEMO_MOCK_VERSION = '2026.09.09.01';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -4849,12 +4849,12 @@ const PUBLIC_CATEGORY_FA = {"INTERNAL": "داخلی", "INSTITUTIONAL": "نهاد
 const PUBLIC_CATEGORY_ORDER = ["INTERNAL", "INSTITUTIONAL", "ACADEMIC", "ECONOMIC", "MEDIA", "ECOSYSTEM"];
 const G=(id,cat,fa,link,smin,smax,stance,kanal,note='')=>({id,cat,fa,link,stage:[smin,smax],stance,kanal,note});
 const PUBLICS_TEMPLATE_LIST = [
-{ id:"HOLDING", fa:"هلدینگ و سرمایه‌گذاری چندبخشی", focus:["INTERNAL", "INSTITUTIONAL", "ACADEMIC", "ECONOMIC", "MEDIA", "ECOSYSTEM"], note:"نقشهٔ شروع برای هلدینگ‌های چندبخشی؛ پوشش ۱۲ حوزهٔ کاری در هر ۶ دسته", groups:[
+{ id:"HOLDING", fa:"هلدینگ و سرمایه‌گذاری چندبخشی", focus:["INTERNAL", "INSTITUTIONAL", "ACADEMIC", "ECONOMIC", "MEDIA", "ECOSYSTEM"], note:"نقشهٔ شروع برای هلدینگ‌های چندبخشی؛ پوشش حوزه‌های کاری در هر ۶ دسته (قابل تنظیم)", groups:[
     G("h-i1","INTERNAL","هیئت‌مدیره هلدینگ","ENABLING","ACTIVE","ACTIVE","KEY_PLAYER","گفت‌وگوی مستقیم و مستمر","تصمیم‌گیرنده نهایی؛ روایت هسته ابتدا اینجا تثبیت می‌شود"),
-    G("h-i2","INTERNAL","مدیرعامل و مدیران ارشد اجرایی (مالی، فناوری و منابع انسانی)","ENABLING","ACTIVE","ACTIVE","KEY_PLAYER","اولین دریافت‌کنندگان هر پیام کلیدی","سخنگویان طبیعی مرجعیت"),
-    G("h-i3","INTERNAL","مدیران‌عامل ۱۲ حوزهٔ کاری","ENABLING","AWARE","ACTIVE","KEY_PLAYER","برنامهٔ توانمندسازی و روایت مستقل حوزه","بزرگ‌ترین ریسک پراکندگی پیام"),
+    G("h-i2","INTERNAL","مدیرعامل و مدیران ارشد اجرایی (مالی، فناوری و منابع انسانی)","ENABLING","ACTIVE","ACTIVE","KEY_PLAYER","اولین دریافت‌کنندگان هر پیام کلیدی","سخنگویان طبیعی پیام کلیدی سازمان"),
+    G("h-i3","INTERNAL","مدیران‌عامل حوزه‌های کاری","ENABLING","AWARE","ACTIVE","KEY_PLAYER","برنامهٔ توانمندسازی و روایت مستقل حوزه","بزرگ‌ترین ریسک پراکندگی پیام"),
     G("h-i4","INTERNAL","مدیران میانی و روسای واحد هر حوزهٔ کاری","FUNCTIONAL_INPUT","LATENT","AWARE","INFLUENCER","هم‌راستاسازی پیام هسته","مجرای انتقال به صف مقدم"),
-    G("h-i5","INTERNAL","کارکنان عملیاتی ۱۲ حوزهٔ کاری و زیرمجموعه‌ها","FUNCTIONAL_INPUT","LATENT","LATENT","SUPPORTER","روایت‌سازی داخلی و شبکهٔ سفیران","بزرگ‌ترین جمعیت عموم داخلی"),
+    G("h-i5","INTERNAL","کارکنان عملیاتی حوزه‌های کاری و زیرمجموعه‌ها","FUNCTIONAL_INPUT","LATENT","LATENT","SUPPORTER","روایت‌سازی داخلی و شبکهٔ سفیران","بزرگ‌ترین جمعیت عموم داخلی"),
     G("h-i6","INTERNAL","تیم روابط‌عمومی و ارتباطات داخلی هلدینگ","ENABLING","ACTIVE","ACTIVE","KEY_PLAYER","شفافیت کامل استراتژی","هم مجری نقشه است، هم خودش عموم داخلی است"),
     G("h-i7","INTERNAL","بنیان‌گذاران/شرکای مؤسس هر حوزهٔ کاری","ENABLING","ACTIVE","ACTIVE","KEY_PLAYER","نفوذ غیررسمی و حساسیت رسانه‌ای","وزن فراتر از رسمی؛ دیده نمی‌شوند اما حساس‌اند"),
     G("h-i8","INTERNAL","کمیته‌های تخصصی (سرمایه‌گذاری/ریسک/فناوری)","ENABLING","AWARE","ACTIVE","INFLUENCER","جریان مستمر تحولات تخصصی","مجرای پیام‌های تخصصی"),
@@ -4887,7 +4887,7 @@ const PUBLICS_TEMPLATE_LIST = [
     G("h-a3","ACADEMIC","دانشگاه صنعتی امیرکبیر (پردازش زبان فارسی و امنیت)","NORMATIVE","ACTIVE","ACTIVE","KEY_PLAYER","همکاری پردازش زبان فارسی","مرجع تخصصی مدل زبانی فارسی"),
     G("h-a4","ACADEMIC","دانشگاه علم و صنعت ایران","NORMATIVE","AWARE","AWARE","INFLUENCER","پروژهٔ داده و پردازش زبان","پیوند صنعتی قوی"),
     G("h-a5","ACADEMIC","دانشگاه خواجه نصیرالدین طوسی","NORMATIVE","AWARE","AWARE","INFLUENCER","استخدام و کارآموزی","تربیت مستقیم متخصص هوش مصنوعی"),
-    G("h-a6","ACADEMIC","دانشگاه‌های شهید بهشتی/فردوسی مشهد/شیراز","NORMATIVE","LATENT","AWARE","SUPPORTER","رویدادهای منطقه‌ای","پوشش «مرجعیت ملی» نه فقط تهرانی"),
+    G("h-a6","ACADEMIC","دانشگاه‌های شهید بهشتی/فردوسی مشهد/شیراز","NORMATIVE","LATENT","AWARE","SUPPORTER","رویدادهای منطقه‌ای","پوشش ملی نه فقط تهرانی"),
     G("h-a7","ACADEMIC","مرکز نوآوری پردازش زبان طبیعی ","NORMATIVE","ACTIVE","ACTIVE","KEY_PLAYER","همکاری محتوایی و رسانه‌ای","شریک بالقوهٔ مستقیم حوزهٔ محتوا"),
     G("h-a8","ACADEMIC","هسته‌های پژوهشی یادگیری ماشین و پردازش تصویر","NORMATIVE","AWARE","ACTIVE","INFLUENCER","میزبانی محتوای مشترک","تولیدکنندهٔ اصلی محتوای فنی"),
     G("h-a9","ACADEMIC","انجمن کامپیوتر ایران ","NORMATIVE","ACTIVE","ACTIVE","KEY_PLAYER","حضور در رویدادهای تخصصی","نهاد علمی رسمی کشور"),

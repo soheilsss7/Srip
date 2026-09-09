@@ -539,7 +539,7 @@ export default function PublicsPage() {
                     </div>
                     <div className="field full">
                       <label className="field-label">مأموریت سازمان</label>
-                      <input value={selfForm.missionTopic} disabled={!canWrite} placeholder="مثلاً: مرجعیت هوش مصنوعی کشور" onChange={e => { setSelfForm(f => ({ ...f, missionTopic: e.target.value })); setSelfDirty(true); }} />
+                      <input value={selfForm.missionTopic} disabled={!canWrite} placeholder="مثلاً: پیشرو در فناوری‌های نوین کشور" onChange={e => { setSelfForm(f => ({ ...f, missionTopic: e.target.value })); setSelfDirty(true); }} />
                       <span className="field-hint">جملهٔ راهنمای سازمان شما؛ در خلاصهٔ مدیریتی و اولویت‌بندی شکاف‌ها به کار می‌رود.</span>
                     </div>
                     <div className="field">
