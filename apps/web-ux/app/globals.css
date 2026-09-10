@@ -1527,9 +1527,9 @@ textarea{resize:vertical}
 .type-message{background:linear-gradient(135deg,#ef4444,#dc2626)}
 .type-other{background:linear-gradient(135deg,#64748b,#475569)}
 .ti-body{flex:1;min-width:0}
-.ti-head{display:flex;align-items:center;gap:8px;margin-bottom:4px}
-.ti-type{font-size:10px;font-weight:800;color:var(--srip-accent-text);background:color-mix(in srgb,var(--srip-accent) 12%,transparent);border-radius:999px;padding:2px 8px}
-.ti-time{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--text-muted);margin-inline-start:auto}
+.ti-head{display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;row-gap:4px}
+.ti-type{font-size:10px;font-weight:800;color:var(--srip-accent-text);background:color-mix(in srgb,var(--srip-accent) 12%,transparent);border-radius:999px;padding:2px 8px;flex-shrink:0;white-space:nowrap}
+.ti-time{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--text-muted);margin-inline-start:auto;white-space:nowrap;flex-shrink:0}
 .ti-subject{display:block;font-size:13.5px;font-weight:800;color:var(--text-primary);margin:2px 0;text-decoration:none}
 .ti-subject:hover{color:var(--srip-accent-text)}
 .ti-summary{margin:2px 0;font-size:12px;color:var(--text-secondary);line-height:1.6}
@@ -2067,6 +2067,7 @@ p{text-wrap:pretty}
 .cal-nav{display:flex;gap:6px}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
 .cal-dow{font-size:11px;font-weight:800;color:var(--text-muted);text-align:center;padding:4px 0;border-bottom:1px solid var(--card-border)}
+.cal-dow .dow-s{display:none}
 .cal-cell{min-height:96px;background:var(--card-bg-soft);border:1px solid var(--card-border);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:4px;position:relative;transition:border-color .15s}
 .cal-cell:hover{border-color:color-mix(in srgb,var(--srip-accent) 45%,transparent)}
 .cal-cell.blank{background:transparent;border-color:transparent}
@@ -2122,7 +2123,20 @@ p{text-wrap:pretty}
 .success-card{display:flex;align-items:flex-start;gap:8px;background:color-mix(in srgb,var(--srip-success) 10%,transparent);border:1px solid color-mix(in srgb,var(--srip-success) 32%,transparent);color:var(--srip-success);border-radius:var(--radius-md);padding:10px 14px;font-size:12.5px;font-weight:700;line-height:1.8}
 .success-card.with-errors{color:var(--srip-amber)}
 @media(max-width:900px){.cal-layout{grid-template-columns:1fr}.import-setup{grid-template-columns:1fr}}
-@media(max-width:640px){.cal-cell{min-height:64px}.cal-event-time{display:none}}
+@media(max-width:640px){
+  .cal-cell{min-height:56px;padding:4px 3px;gap:3px}
+  .cal-event-time{display:none}
+  .cal-dow{font-size:10px;padding:3px 0}
+  .cal-dow .dow-f{display:none}
+  .cal-dow .dow-s{display:inline}
+  .cal-day{width:20px;height:20px;font-size:11px;border-radius:7px}
+  .cal-cell.has-events .cal-day{color:var(--srip-accent-text)}
+  /* سلول‌ها ~۳۹px هستند؛ عنوان/ساعت جا نمی‌شود → فقط نقطه‌های رنگی (رنگ = نتیجه/سازمان) */
+  .cal-event{background:none;border:none;border-radius:0;padding:2px 0;justify-content:center;gap:0}
+  .cal-event-dot{width:7px;height:7px}
+  .cal-event-title,.cal-more{display:none}
+  .cal-outcome-chip{display:none}
+}
 
 /* --- admin users page (flash + muted rows) --- */
 .flash-banner{display:flex;align-items:center;gap:8px;background:rgba(10,143,92,.09);color:#0a8f5c;border:1px solid rgba(10,143,92,.22);border-radius:12px;padding:9px 14px;font-size:13px;font-weight:700;margin:0 0 14px}

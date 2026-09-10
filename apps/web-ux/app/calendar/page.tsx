@@ -24,6 +24,9 @@ type Meeting = {
 
 const unwrap = (x: any): any[] => (Array.isArray(x) ? x : x?.items ?? x?.rows ?? x?.data ?? []);
 
+/** نمونهٔ کوتاه روز هفته برای نمایشگرهای باریک (ش، ی، د، س، چ، پ، ج) */
+const DOW_SHORT = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
+
 export default function CalendarPage() {
   const now = todayJalali();
   const { scopeId } = useWorkspace();
@@ -146,7 +149,9 @@ export default function CalendarPage() {
             </div>
 
             <div className="cal-grid" role="grid" aria-label={`تقویم ${JALALI_MONTHS[jm - 1]} ${faNum(jy)}`}>
-              {WEEKDAYS_SAT.map(w => <div className="cal-dow" key={w}>{w}</div>)}
+              {WEEKDAYS_SAT.map((w, i) => (
+                <div className="cal-dow" key={w}><span className="dow-f">{w}</span><span className="dow-s">{DOW_SHORT[i]}</span></div>
+              ))}
               {grid.map((cell, i) => {
                 if (!cell) return <div className="cal-cell blank" key={i} />;
                 const list = byKey.get(cell.key) ?? [];

@@ -304,6 +304,29 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
     | { kind: 'pan'; x: number; y: number; pan0: Pos }
     | null
   >(null);
+  /** مقیاس واقعی SVG روی صفحه (عرض کادر ÷ عرض مختصات) — برای LOD و زوم اولیهٔ موبایل. */
+  const [baseScale, setBaseScale] = useState(0);
+  useEffect(() => {
+    const el = svgRef.current;
+    if (!el) return;
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) setBaseScale(Math.min(r.width / W, r.height / H));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  /** نمای فشرده (موبایل): متن گراف در مقیاس fit ناخواناست → زوم اولیهٔ بالاتر + برچسب افراد فقط بعد از بزرگ‌نمایی. */
+  const compact = baseScale > 0 && baseScale < 0.45;
+  const homeZoom = compact ? Math.min(3, Math.max(1, 0.6 / baseScale)) : 1;
+  const screenScale = (baseScale || 1) * zoom;
+  const minorLabels = !compact || screenScale >= 0.7;
+  const userAdjustedZoomRef = useRef(false);
+  useEffect(() => {
+    if (baseScale > 0 && homeZoom > 1 && !userAdjustedZoomRef.current) setZoom(homeZoom);
+  }, [baseScale, homeZoom]);
   const panRef = useRef<Pos>({ x: 0, y: 0 });
   useEffect(() => { panRef.current = pan; }, [pan]);
   const lastTapRef = useRef<{ id: string; t: number } | null>(null);
@@ -346,9 +369,9 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
   const posOf = (id: string): Pos => positions.get(id) ?? { x: 0, y: 0 };
 
   useImperativeHandle(ref, () => ({
-    fit: () => { setZoom(1); setPan({ x: 0, y: 0 }); },
-    reset: () => { setZoom(1); setPan({ x: 0, y: 0 }); },
-    zoomBy: (factor: number) => setZoom((z) => Math.min(3, Math.max(0.3, z * factor))),
+    fit: () => { userAdjustedZoomRef.current = false; setZoom(homeZoom); setPan({ x: 0, y: 0 }); },
+    reset: () => { userAdjustedZoomRef.current = false; setZoom(homeZoom); setPan({ x: 0, y: 0 }); },
+    zoomBy: (factor: number) => { userAdjustedZoomRef.current = true; setZoom((z) => Math.min(3, Math.max(0.3, z * factor))); },
   }));
 
   useEffect(() => {
@@ -356,6 +379,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
+      userAdjustedZoomRef.current = true;
       setZoom((z) => Math.min(3, Math.max(0.3, z * (e.deltaY < 0 ? 1.12 : 0.89))));
     };
     el.addEventListener('wheel', onWheel, { passive: false });
@@ -412,6 +436,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
         const el = svgRef.current;
         const rect = el?.getBoundingClientRect();
         const unit = rect && rect.width ? W / rect.width : 1;
+        userAdjustedZoomRef.current = true;
         setZoom(clampZoom(zoomRef.current * (g.dist / base.dist)));
         setPan((panNow) => ({
           x: panNow.x - (g.cx - base.cx) * unit,
@@ -457,7 +482,8 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
       const near = last && Math.hypot(e.clientX - last.x, e.clientY - last.y) < 28;
       if (last && near && now - last.t < 380) {
         bgTapRef.current = null;
-        setZoom((z) => (z >= 2.4 ? 1 : clampZoom(z * 1.6)));
+        userAdjustedZoomRef.current = true;
+        setZoom((z) => (z >= 2.4 ? homeZoom : clampZoom(z * 1.6)));
       } else bgTapRef.current = { x: e.clientX, y: e.clientY, t: now };
     }
     if (!p || p.kind === 'pan') return;
@@ -855,21 +881,29 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
                 </>
               )}
 
-              {/* label under node */}
-              <text
-                x={p.x}
-                y={p.y + (isOrg ? ORG_SIZE / 2 + 15 : (n.type === 'project' ? PROJECT_R : PERSON_R) + 16.5)}
-                textAnchor="middle"
-                fontSize={isOrg ? 11.6 : 10.4}
-                fontWeight={isOrg ? 700 : 600}
-                fill={selected ? 'var(--srip-accent-text, #2457D6)' : 'var(--text-primary, #3B4252)'}
-                stroke="var(--card-bg, #FFFFFF)"
-                strokeWidth={3.2}
-                paintOrder="stroke"
-                style={{ pointerEvents: 'none', userSelect: 'none' }}
-              >
-                {name.length > (isOrg ? 20 : 16) ? name.slice(0, isOrg ? 19 : 15) + '…' : name}
-              </text>
+              {/* label under node — LOD: در نمای فشردهٔ موبایل pill خوشه نام سازمان را دارد؛
+                  برچسب زیر گرهٔ سازمان فقط بعد از بزرگ‌نمایی، و برچسب افراد/پروژه‌ها فقط در زوم نزدیک */}
+              {(() => {
+                const showLabel = isOrg ? (!compact || minorLabels) : minorLabels;
+                if (!showLabel) return null;
+                const maxChars = isOrg ? (compact ? 14 : 20) : 16;
+                return (
+                  <text
+                    x={p.x}
+                    y={p.y + (isOrg ? ORG_SIZE / 2 + 15 : (n.type === 'project' ? PROJECT_R : PERSON_R) + 16.5)}
+                    textAnchor="middle"
+                    fontSize={isOrg ? 11.6 : 10.4}
+                    fontWeight={isOrg ? 700 : 600}
+                    fill={selected ? 'var(--srip-accent-text, #2457D6)' : 'var(--text-primary, #3B4252)'}
+                    stroke="var(--card-bg, #FFFFFF)"
+                    strokeWidth={3.2}
+                    paintOrder="stroke"
+                    style={{ pointerEvents: 'none', userSelect: 'none' }}
+                  >
+                    {name.length > maxChars ? name.slice(0, maxChars - 1) + '…' : name}
+                  </text>
+                );
+              })()}
             </g>
           );
         })}
