@@ -713,6 +713,26 @@ textarea{resize:vertical}
 }
 .icon-btn:hover{border-color:var(--srip-accent);color:var(--srip-accent-text)}
 .icon-btn .bell-dot{position:absolute;top:7px;inset-inline-end:8px;width:7px;height:7px;border-radius:50%;background:var(--srip-danger);border:1.5px solid var(--card-bg)}
+
+/* ── زنگولهٔ هشدارهای یکپارچه (فاز ۳ · ADR-0007) ── */
+.alert-bell{position:relative;flex:0 0 auto}
+.alert-bell .alert-badge{position:absolute;top:-5px;inset-inline-end:-5px;min-width:17px;height:17px;padding:0 4px;border-radius:999px;background:var(--srip-danger);color:#fff;font-size:9.5px;font-weight:800;line-height:17px;text-align:center;border:1.5px solid var(--card-bg);pointer-events:none}
+.alert-bell:hover .alert-badge{transform:scale(1.06);transition:transform .12s ease}
+
+/* ── نوار هشدار بحرانی پیشخوان (AlertBanner) ── */
+.alert-banner{display:flex;align-items:stretch;gap:12px;padding:12px 14px;border-radius:var(--radius-md,14px);border:1px solid color-mix(in srgb,var(--srip-danger) 38%,transparent);background:color-mix(in srgb,var(--srip-danger) 7%,var(--card-bg));margin:14px 0 4px}
+.alert-banner .ab-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:var(--srip-danger-soft);color:var(--srip-danger);flex:0 0 auto;animation:pulse-soft 2.4s ease-in-out infinite}
+@keyframes pulse-soft{0%,100%{opacity:1}50%{opacity:.55}}
+.alert-banner .ab-body{flex:1;min-width:0}
+.alert-banner .ab-title{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--text-primary)}
+.alert-banner .ab-link{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;color:var(--srip-danger);text-decoration:none;margin-inline-start:auto}
+.alert-banner .ab-link:hover{text-decoration:underline}
+.alert-banner .ab-list{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.alert-banner .ab-list li{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--text-secondary)}
+.alert-banner .ab-item-title{font-weight:700;color:var(--text-primary)}
+.alert-banner .ab-close{align-self:flex-start;background:none;border:none;color:var(--text-muted);cursor:pointer;padding:4px;border-radius:8px;display:grid;place-items:center}
+.alert-banner .ab-close:hover{background:color-mix(in srgb,var(--srip-danger) 10%,transparent);color:var(--srip-danger)}
+@media (max-width:640px){.alert-banner{flex-wrap:wrap}.alert-banner .ab-title{margin-inline-start:0}.alert-banner .ab-link{margin-inline-start:0}}
 .avatar{width:34px;height:34px;border-radius:50%;background:var(--grad-brand);color:#fff;display:grid;place-items:center;font-weight:900;cursor:pointer;border:0;font-size:14px;flex:0 0 auto}
 .user-chip{display:flex;align-items:center;gap:9px;border:1px solid var(--card-border-strong);border-radius:999px;padding:4px 10px 4px 6px;min-height:44px;transition:border-color .12s;background:var(--card-bg)}
 .user-chip:hover{border-color:var(--srip-accent)}

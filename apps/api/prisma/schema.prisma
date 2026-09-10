@@ -376,6 +376,7 @@ model User {
   dataDeletionApprovals DataDeletionApproval[] @relation("DataDeletionApprovedBy")
   dataLifecycleRecords DataLifecycleRecord[] @relation("DataLifecycleActor")
   sessions Session[]
+  userAccess UserAccess?
   loginHistory LoginHistory[]
   passwordResetTokens PasswordResetToken[]
   emailVerificationTokens EmailVerificationToken[]
@@ -2319,4 +2320,105 @@ model CriteriaReviewTask {
   @@unique([subjectType, subjectId, criterionCode])
   @@index([status, dueAt])
   @@index([organizationId])
+}
+
+/* ==========================================================================
+   فاز ۲ پلن یکپارچه‌سازی (ADR-0006): امتیاز مرکب واحد برای همهٔ دامنه‌ها
+   ========================================================================== */
+enum EntityScoreType {
+  RELATIONSHIP
+  PUBLIC_GROUP
+  PUBLIC_MEMBER
+}
+
+model EntityScore {
+  id String @id @default(uuid())
+  entityType EntityScoreType
+  entityId String
+  composite Float
+  factors Json
+  formulaVersion String
+  lastCalculatedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([entityType, entityId])
+  @@index([entityType, composite])
+}
+
+/* ==========================================================================
+   فاز ۳ پلن یکپارچه‌سازی (ADR-0007): هشدار یکپارچه برای همهٔ ماژول‌ها
+   ========================================================================== */
+enum AlertModule {
+  RELATIONSHIP
+  PUBLICS
+  ACTION
+  COMMITMENT
+  MEETING
+  WORKFLOW
+  DATA_QUALITY
+  SECURITY
+  MONITORING
+}
+
+enum AlertSeverity {
+  CRITICAL
+  WARNING
+  INFO
+}
+
+model Alert {
+  id String @id @default(uuid())
+  module AlertModule
+  severity AlertSeverity
+  entityType String
+  entityId String
+  title String
+  reason String
+  actionLabel String?
+  actionUrl String?
+  createdAt DateTime @default(now())
+  resolvedAt DateTime?
+  resolvedBy String?
+
+  @@index([module, severity, resolvedAt])
+  @@index([entityType, entityId])
+}
+
+/* ==========================================================================
+   فاز ۴ پلن یکپارچه‌سازی (ADR-0008): RBAC سه‌بعدی
+   scope × accessLevel × functionalRole (جایگزین تدریجی ۱۰ نقش سلسله‌مراتبی)
+   ========================================================================== */
+enum ScopeType {
+  ALL
+  ORGANIZATION
+}
+
+enum AccessLevel {
+  ADMIN
+  EXECUTIVE
+  STANDARD
+  READ_ONLY
+}
+
+enum FunctionalRole {
+  RELATIONSHIP_MANAGER
+  PROJECT_MANAGER
+  ANALYST
+}
+
+model UserAccess {
+  id String @id @default(uuid())
+  userId String @unique
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scope ScopeType @default(ORGANIZATION)
+  scopeOrgIds String[]
+  accessLevel AccessLevel @default(STANDARD)
+  functionalRole FunctionalRole?
+  permissionOverrides Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([accessLevel])
+  @@index([scope])
 }

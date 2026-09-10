@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from './_lib/api';
 import { fa } from './_lib/fa';
 import { ScopeBadge, useWorkspace, ROLE_LABELS } from './_components/workspace';
+import { AlertBanner } from './_components/alert-banner';
 import { Card, Badge, EmptyState } from '@srip/design-system';
 import { suggestGlobal } from './_lib/connections';
 import {
@@ -270,6 +271,9 @@ export default function Dashboard() {
           <Link className="secondary-action" href="/relationships"><Share2 size={14} /> + رابطه</Link>
         </div>
       </div>
+
+      {/* نوار هشدار بحرانی — فاز ۳ (ADR-0007): بحرانی‌ترین سیگنال‌ها قبل از هر چیز */}
+      <AlertBanner />
 
       {!loading && !error && (lists?.rels?.length ?? 0) === 0 && meetings.length === 0 && actions.length === 0 && (
         <section className="onboarding-strip" aria-label="از کجا شروع کنم؟">

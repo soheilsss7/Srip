@@ -19,6 +19,11 @@ export class HealthService {
     return { status: 'ok', service: 'srip-api', timestamp: new Date().toISOString() };
   }
 
+  /** فاز ۱ پلن یکپارچه‌سازی (ADR-0010): حالت دمو روی API واقعی — صریح، نه ضمنی */
+  get demoMode() {
+    return this.config.get('SRIP_DEMO_MODE') === 'true' || this.config.get('DEMO_MODE') === 'true';
+  }
+
   async status() {
     const dependencies = await this.checkDependencies();
     const ok=Object.values(dependencies).every((x:any)=>x.status==='ok');
@@ -27,6 +32,7 @@ export class HealthService {
       status: ok ? 'ok' : 'degraded',
       service: 'srip-api',
       timestamp: new Date().toISOString(),
+      demoMode: this.demoMode,
       dependencies,
     };
   }

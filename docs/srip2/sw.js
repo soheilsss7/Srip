@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.09.01';
+const DEMO_MOCK_VERSION = '2026.09.10.01';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -1732,6 +1732,11 @@ let ORGS = [
   { id:'org-6', name:'تأمین‌کننده قطعات البرز', type:'SUPPLIER', industry:'قطعات صنعتی', country:'ایران', createdAt:'2025-12-12T08:00:00.000Z' },
   { id:'org-7', name:'صندوق سرمایه‌گذاری امید', type:'INVESTOR', industry:'سرمایه‌گذاری', country:'ایران', createdAt:'2026-01-08T08:00:00.000Z' },
   { id:'org-8', name:'استانداری تهران', type:'GOVERNMENT', industry:'دولتی', country:'ایران', createdAt:'2026-01-20T08:00:00.000Z' },
+  /* دمو غنی‌شده (فاز ۶/عموم‌ها): بازیگران غیربازاری شش دستهٔ عموم‌ها + شبکهٔ روابط */
+  { id:'org-9', name:'دانشگاه صنعتی شریف', type:'GOVERNMENT', industry:'آموزش عالی و پژوهش', country:'ایران', createdAt:'2026-02-10T08:00:00.000Z' },
+  { id:'org-10', name:'اتاق بازرگانی تهران', type:'GOVERNMENT', industry:'اتاق بازرگانی و اکوسیستم کسب‌وکار', country:'ایران', createdAt:'2026-02-18T08:00:00.000Z' },
+  { id:'org-11', name:'سازمان بورس و اوراق بهادار', type:'GOVERNMENT', industry:'تنظیم‌گری بازار سرمایه', country:'ایران', createdAt:'2026-03-05T08:00:00.000Z' },
+  { id:'org-12', name:'صندوق نوآوری و شکوفایی', type:'INVESTOR', industry:'صندوق‌های نوآوری و فناوری', country:'ایران', createdAt:'2026-03-12T08:00:00.000Z' },
 ];
 let PEOPLE = [
   { id:'p-1', firstName:'سارا', lastName:'محمدی', email:'sara@arya-tech.ir', phone:'+98 21 88001122', title:'مدیر فروش', department:'فروش', organizationId:'org-2', status:'ACTIVE', influenceScore:82 },
@@ -1747,6 +1752,13 @@ let PEOPLE = [
   { id:'p-11', firstName:'کیان', lastName:'مرادی', email:'kian@petro-sanat.ir', title:'مدیر مالی', department:'مالی', phone:'+98 21 44556677', organizationId:'org-4', status:'ACTIVE', influenceScore:72 },
   { id:'p-12', firstName:'آیدا', lastName:'شریفی', email:'aida@sadena.ir', title:'مدیر مالی', department:'مالی', phone:'+98 21 88445577', organizationId:'org-5', status:'ACTIVE', influenceScore:69 },
   { id:'p-13', firstName:'بهنام', lastName:'اقبالی', email:'behnam@sadena.ir', title:'مدیر فنی', department:'فنی', phone:'+98 21 88445588', organizationId:'org-5', status:'ACTIVE', influenceScore:64 },
+  /* دمو غنی‌شده: بازیگران عموم‌ها (دانشگاه/اتاق/بورس/صندوق) + تیم آریا */
+  { id:'p-14', firstName:'مهرداد', lastName:'رستگار', email:'rostagar@sharif.edu', title:'استاد گروه مهندسی کامپیوتر', department:'پژوهش', phone:'+98 21 66166xxx'.replace('xxx','000'), organizationId:'org-9', status:'ACTIVE', influenceScore:84 },
+  { id:'p-15', firstName:'شیما', lastName:'آذری', email:'azari@sharif.edu', title:'سرپرست آزمایشگاه پردازش زبان', department:'پژوهش', phone:'+98 21 66166044', organizationId:'org-9', status:'ACTIVE', influenceScore:72 },
+  { id:'p-16', firstName:'بهزاد', lastName:'فرهمند', email:'farahmand@tccim.ir', title:'دبیر کمیتهٔ فناوری اتاق', department:'دفتر فناوری', phone:'+98 21 88780000', organizationId:'org-10', status:'ACTIVE', influenceScore:66 },
+  { id:'p-17', firstName:'لیلا', lastName:'نیک‌پی', email:'nikpay@seo.or.ir', title:'کارشناس ارشد نظارت بر ناشران', department:'نظارت', phone:'+98 21 89780000', organizationId:'org-11', status:'ACTIVE', influenceScore:61 },
+  { id:'p-18', firstName:'آرش', lastName:'کیانی', email:'kiani@innovation.ir', title:'مدیر سرمایه‌گذاری', department:'سرمایه‌گذاری', phone:'+98 21 88002200', organizationId:'org-12', status:'ACTIVE', influenceScore:78 },
+  { id:'p-19', firstName:'نیما', lastName:'همتی', email:'nima@arya-tech.ir', title:'تحلیلگر ارشد داده', department:'فنی', phone:'+98 21 88003300', organizationId:'org-2', status:'ACTIVE', influenceScore:58 },
 ];
 let RELS = [
   { id:'r-1', relationshipType:'STRATEGIC_PARTNERSHIP', status:'ACTIVE', healthScore:78, riskScore:22, strategicScore:86, influenceScore:80, opportunityScore:72, resilienceScore:64, nextActionAt:'2026-09-05T09:00:00.000Z', lastInteractionAt:'2026-08-20T09:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-4', marketKind:'MARKET', isMarketEntry:true, marketSegment:'پتروشیمی و انرژی' },
@@ -1757,27 +1769,43 @@ let RELS = [
   { id:'r-6', relationshipType:'PARENT_SUBSIDIARY', status:'ACTIVE', healthScore:86, riskScore:12, strategicScore:84, influenceScore:70, opportunityScore:48, resilienceScore:82, nextActionAt:'2026-09-12T09:00:00.000Z', lastInteractionAt:'2026-09-02T09:00:00.000Z', sourceOrganizationId:'org-1', targetOrganizationId:'org-2', marketKind:'HYBRID', isMarketEntry:false, marketSegment:'درون‌هلدینگی' },
   // روابط غیربازاری نمونه — نهاد/تنظیم‌گر/رسانه که بازار را شکل می‌دهند بدون مبادله مستقیم
   { id:'r-7', relationshipType:'GOVERNMENT', status:'ACTIVE', healthScore:58, riskScore:42, strategicScore:90, influenceScore:88, opportunityScore:35, resilienceScore:55, nextActionAt:'2026-09-08T09:00:00.000Z', lastInteractionAt:'2026-08-18T09:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-8', marketKind:'NON_MARKET', isMarketEntry:true, marketSegment:'مجوز و تنظیم‌گری دولتی' },
-  { id:'r-8', relationshipType:'PARTNER', status:'ACTIVE', healthScore:63, riskScore:38, strategicScore:76, influenceScore:67, opportunityScore:62, resilienceScore:60, nextActionAt:null, lastInteractionAt:'2026-08-12T09:00:00.000Z', sourceOrganizationId:'org-1', targetOrganizationId:'org-4', marketKind:'MARKET', isMarketEntry:false, marketSegment:'همکاری فناورانه' },
+  { id:'r-8', relationshipType:'PARTNER', status:'ACTIVE', healthScore:63, riskScore:38, strategicScore:76, influenceScore:67, opportunityScore:62, resilienceScore:60, trustScore:64, engagementScore:58, nextActionAt:null, lastInteractionAt:'2026-08-12T09:00:00.000Z', sourceOrganizationId:'org-1', targetOrganizationId:'org-4', marketKind:'MARKET', isMarketEntry:false, marketSegment:'همکاری فناورانه' },
+  /* دمو غنی‌شده: روابط غیربازاری/هیبریدی که ستون‌های عموم‌ها و گراف شبکه را واقعی می‌کنند */
+  { id:'r-9', relationshipType:'PARTNER', status:'ACTIVE', healthScore:68, riskScore:28, strategicScore:82, influenceScore:76, opportunityScore:66, resilienceScore:60, trustScore:70, engagementScore:62, cadenceDays:45, nextActionAt:'2026-09-13T09:00:00.000Z', lastInteractionAt:'2026-08-30T13:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-9', marketKind:'NON_MARKET', isMarketEntry:false, marketSegment:'پژوهش و دانشگاه' },
+  { id:'r-10', relationshipType:'PARTNER', status:'ACTIVE', healthScore:60, riskScore:22, strategicScore:64, influenceScore:70, opportunityScore:55, resilienceScore:66, trustScore:62, engagementScore:58, cadenceDays:60, nextActionAt:null, lastInteractionAt:'2026-08-14T10:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-10', marketKind:'NON_MARKET', isMarketEntry:false, marketSegment:'اتاق بازرگانی و اکوسیستم کسب‌وکار' },
+  { id:'r-11', relationshipType:'GOVERNMENT', status:'ACTIVE', healthScore:52, riskScore:46, strategicScore:74, influenceScore:82, opportunityScore:58, resilienceScore:55, trustScore:54, engagementScore:48, cadenceDays:30, nextActionAt:'2026-09-14T09:00:00.000Z', lastInteractionAt:'2026-08-31T11:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-11', marketKind:'NON_MARKET', isMarketEntry:true, marketSegment:'تنظیم‌گری بازار سرمایه' },
+  { id:'r-12', relationshipType:'INVESTMENT', status:'ACTIVE', healthScore:74, riskScore:26, strategicScore:80, influenceScore:68, opportunityScore:84, resilienceScore:62, trustScore:66, engagementScore:70, cadenceDays:45, nextActionAt:null, lastInteractionAt:'2026-09-04T10:30:00.000Z', sourceOrganizationId:'org-1', targetOrganizationId:'org-12', marketKind:'MARKET', isMarketEntry:false, marketSegment:'تأمین مالی دانش‌بنیان' },
 ];
 /* کیدنس دمو بر اساس نوع رابطه (P0-4) */
 [['r-1',30],['r-2',30],['r-3',45],['r-4',30],['r-5',60],['r-6',30]].forEach(([id,cd])=>{const r=RELS.find(v=>v.id===id); if(r) r.cadenceDays=cd;});
+/* فاز ۲ (ADR-0006): اعتماد و تعامل — دو فاکتور باقی‌ماندهٔ فرمول امتیاز مرکب (additive) */
+[['r-1',74,68],['r-2',58,61],['r-3',66,55],['r-4',42,38],['r-5',80,72],['r-6',88,84],['r-7',52,47],['r-8',64,58]].forEach(([id,tr,en])=>{const r=RELS.find(v=>v.id===id); if(r){ r.trustScore??=tr; r.engagementScore??=en; }});
 let MEETINGS = [
   { id:'m-1', title:'جلسهٔ راهبردی فصل سوم با پترو صنعت', startAt:'2026-09-03T09:30:00.000Z', endAt:'2026-09-03T11:00:00.000Z', objective:'بررسی همکاری راهبردی و برنامه توسعه', agenda:'1) گزارش عملکرد ۲ فصل\n2) برنامه توسعه بازار\n3) زمان‌بندی قرارداد جدید', organizationId:'org-4', relationshipId:'r-1', participants:[{personId:'p-2'},{personId:'p-6'}], actions:[], commitments:[], preMeetingBrief:'تمرکز بر تمدید قرارداد و نرخ جدید.' },
   { id:'m-2', title:'مذاکره با بانک ملّی پارس', startAt:'2026-09-07T10:00:00.000Z', endAt:'2026-09-07T11:30:00.000Z', objective:'افتتاح خط اعتباری', agenda:'ارائه صورت‌های مالی و طرح توجیهی', organizationId:'org-3', relationshipId:'r-2', participants:[{personId:'p-3'}], actions:[], commitments:[], preMeetingBrief:null },
   { id:'m-3', title:'جلسهٔ پیگیری پروژه سدنا', startAt:'2026-08-25T09:00:00.000Z', endAt:'2026-08-25T10:00:00.000Z', objective:'پیشرفت فاز دوم', agenda:'بررسی مایلاستون‌ها', organizationId:'org-5', relationshipId:'r-3', participants:[{personId:'p-4'},{personId:'p-1'}], actions:[{id:'a-x1'}], commitments:[{id:'c-x1'}], outcome:'توافق شد تحویل فاز دوم ۱۰ روز زودتر انجام شود.', preMeetingBrief:null },
   { id:'m-4', title:'بررسی ریسک تأمین‌کننده البرز', startAt:'2026-08-28T08:30:00.000Z', endAt:'2026-08-28T09:15:00.000Z', objective:'مدیریت تاخیر تحویل قطعات', agenda:'تاخیرها و برنامه جبرانی', organizationId:'org-6', relationshipId:'r-4', participants:[{personId:'p-5'}], actions:[], commitments:[], outcome:'تأمین‌کننده متعهد شد تحویل‌ها را ۳ هفته شتاب دهد.', preMeetingBrief:null },
+  /* دمو غنی‌شده: m-5 گذشتهٔ بدون نتیجه (ماژول هشدار جلسه) + m-6 آیندهٔ عموم‌محور */
+  { id:'m-5', title:'کارگاه مشترک پژوهشی با دانشگاه شریف', startAt:'2026-08-30T13:00:00.000Z', endAt:'2026-08-30T15:00:00.000Z', objective:'تعریف پروژهٔ مشترک پردازش زبان فارسی', agenda:'۱) مرور داده‌های مجموعه\n۲) تعریف خروجی‌های پژوهشی\n۳) تقسیم کار', organizationId:'org-9', relationshipId:'r-9', participants:[{personId:'p-14'},{personId:'p-15'},{personId:'p-7'}], actions:[], commitments:[], preMeetingBrief:'موضوع و ذی‌نفعان از قبل هماهنگ شده بود.', notes:'خروجی جلسه هنوز ثبت نشده است.' },
+  { id:'m-6', title:'جلسهٔ کمیتهٔ فناوری اتاق بازرگانی', startAt:'2026-09-17T15:00:00.000Z', endAt:'2026-09-17T17:00:00.000Z', objective:'معرفی آریا فناوری به اعضای کمیتهٔ فناوری', agenda:'معرفی پلتفرم و بحث اولویت‌های دیجیتالی شدن کسب‌وکارها', organizationId:'org-10', relationshipId:'r-10', participants:[{personId:'p-16'},{personId:'p-8'}], actions:[], commitments:[], preMeetingBrief:'فهرست اعضای کمیته از دبیرخانه گرفته شد.' },
 ];
 let ACTIONS = [
   { id:'a-1', title:'پیگیری امضای قرارداد پترو صنعت', status:'OPEN', priority:'HIGH', dueAt:'2026-09-02T09:00:00.000Z', ownerId:'p-1', relationshipId:'r-1' },
   { id:'a-2', title:'ارسال مدارک به بانک پارس', status:'IN_PROGRESS', priority:'CRITICAL', dueAt:'2026-08-30T09:00:00.000Z', ownerId:'p-3', relationshipId:'r-2' },
   { id:'a-3', title:'بررسی جایگزین تأمین‌کننده قطعات', status:'OPEN', priority:'HIGH', dueAt:'2026-09-08T09:00:00.000Z', ownerId:'p-5', relationshipId:'r-4' },
   { id:'a-4', title:'گزارش عملکرد سدنا', status:'DONE', priority:'MEDIUM', dueAt:'2026-08-20T09:00:00.000Z', ownerId:'p-4', relationshipId:'r-3' },
+  /* دمو غنی‌شده: وضعیت‌های هشدارساز ماژول اقدام */
+  { id:'a-5', title:'ارسال گزارش افشای فصلی به سازمان بورس', status:'OPEN', priority:'CRITICAL', dueAt:'2026-09-08T09:00:00.000Z', ownerId:'p-8', relationshipId:'r-11' },
+  { id:'a-6', title:'تهیهٔ پیش‌نویس تفاهم‌نامهٔ پژوهشی با شریف', status:'IN_PROGRESS', priority:'HIGH', dueAt:'2026-09-13T09:00:00.000Z', ownerId:'p-7', relationshipId:'r-9' },
 ];
 let COMMITMENTS = [
   { id:'c-1', description:'تحویل پیش‌فاکتور نهایی به پترو صنعت', dueAt:'2026-09-05T09:00:00.000Z', status:'OPEN', organizationId:'org-4', ownerId:'p-1', direction:'OURS', risk:'MEDIUM', personId:'p-2', relationshipId:'r-1', meetingId:'m-1', reminderAt:'2026-09-04T08:00:00.000Z', notes:'پس از توافق جلسهٔ راهبردی؛ پیش‌فاکتور همراه جدول تخفیف و زمان‌بندی تحویل ارسال شود.', createdAt:'2026-09-03T09:45:00.000Z' },
   { id:'c-2', description:'ارسال صورت‌های مالی حسابرسی‌شده به بانک', dueAt:'2026-08-31T09:00:00.000Z', status:'OPEN', organizationId:'org-3', ownerId:'p-6', direction:'OURS', risk:'HIGH', personId:'p-3', relationshipId:'r-2', reminderAt:'2026-08-30T09:00:00.000Z', notes:'پیش‌نیاز جلسهٔ مذاکرهٔ خط اعتباری؛ امضای مدیر مالی الزامی است.', createdAt:'2026-08-22T10:00:00.000Z' },
   { id:'c-3', description:'برنامه جبرانی تأمین قطعات', dueAt:'2026-09-10T09:00:00.000Z', status:'OPEN', organizationId:'org-6', ownerId:'p-5', direction:'THEIRS', risk:'HIGH', personId:'p-5', relationshipId:'r-4', meetingId:'m-4', projectId:'pr-2', reminderAt:'2026-09-09T09:00:00.000Z', notes:'تأمین‌کننده متعهد شد تحویل‌ها را سه هفته شتاب دهد؛ پیشرفت هر هفته راستی‌آزمایی شود.', createdAt:'2026-08-28T09:20:00.000Z' },
   { id:'c-4', description:'تسویهٔ صورتحساب فاز نخست سدنا', dueAt:'2026-08-28T09:00:00.000Z', status:'FULFILLED', fulfilledAt:'2026-08-26T11:30:00.000Z', organizationId:'org-5', ownerId:'p-8', direction:'OURS', risk:'LOW', personId:'p-4', relationshipId:'r-3', notes:'پرداخت به‌موقع انجام شد؛ رسید در پروندهٔ رابطه ثبت شد.', createdAt:'2026-08-10T09:00:00.000Z' },
+  /* دمو غنی‌شده: وضعیت‌های هشدارساز ماژول تعهد */
+  { id:'c-5', description:'ارسال مستندات فنی پروژهٔ مشترک پژوهشی به شریف', dueAt:'2026-09-05T09:00:00.000Z', status:'OPEN', organizationId:'org-9', ownerId:'p-7', direction:'OURS', risk:'HIGH', personId:'p-14', relationshipId:'r-9', meetingId:'m-5', reminderAt:'2026-09-04T08:00:00.000Z', notes:'پیش‌نیاز امضای تفاهم‌نامه؛ مصوبهٔ کارگاه ۳۰ مرداد.', createdAt:'2026-08-30T15:30:00.000Z' },
+  { id:'c-6', description:'پرداخت حق عضویت سالانهٔ اتاق بازرگانی', dueAt:'2026-09-15T09:00:00.000Z', status:'OPEN', organizationId:'org-10', ownerId:'p-8', direction:'OURS', risk:'LOW', personId:'p-16', relationshipId:'r-10', reminderAt:'2026-09-14T08:00:00.000Z', notes:'عضویت در کمیتهٔ فناوری منوط به تسویهٔ سالانه است.', createdAt:'2026-09-01T09:00:00.000Z' },
 ];
 let PROJECTS = [
   { id:'pr-1', name:'پلتفرم بانکداری شرکتی', status:'ACTIVE', priority:'CRITICAL', organizationId:'org-3', description:'پلتفرم بانکداری شرکتی برای بانک ملّی پارس', objective:'پیاده‌سازی پلتفرم بانکداری شرکتی شامل امضای دیجیتال و اتصال به هستهٔ بانکی', ownerId:'p-6', startAt:'2026-06-01T00:00:00.000Z', targetAt:'2026-12-31T00:00:00.000Z', endAt:null, createdAt:'2026-05-20T08:00:00.000Z' },
@@ -1838,6 +1866,11 @@ let INTERACTIONS = [
   { id:'i-7', type:'CALL', subject:'پیگیری مدارک خط اعتباری بانک پارس', summary:'ارسال طرح توجیهی و صورت‌های مالی حسابرسی‌شده به واحد اعتبارات.', outcome:'کارشناس اعتبارات قول بررسی ۲ هفته‌ای داد.', durationMinutes:10, importance:'MEDIUM', sentiment:0, followUpRequired:true, followUpAt:'2026-09-12T09:00:00.000Z', occurredAt:'2026-09-02T10:20:00.000Z', userId:'u-1', organizationId:'org-3', relationshipId:'r-2', personId:'p-3' },
   { id:'i-8', type:'NOTE', subject:'یادداشت بررسی سبد صندوق امید', summary:'بررسی گزارش فصلی صندوق؛ تصمیم دربارهٔ افزایش همکاری به جلسهٔ بعد موکول شد.', outcome:'پیش‌نویس پیشنهاد همکاری تهیه شود.', durationMinutes:null, importance:'LOW', sentiment:0, followUpRequired:true, followUpAt:'2026-09-20T08:00:00.000Z', occurredAt:'2026-08-30T13:00:00.000Z', userId:'u-1', organizationId:'org-7', relationshipId:'r-5', personId:'p-8' },
   { id:'i-9', type:'MEETING', subject:'جلسهٔ ارزیابی عملکرد تأمین‌کننده البرز', summary:'ارزیابی شاخص‌های کیفیت و زمان تحویل پس از تعهد جبرانی.', outcome:'توافق شد شاخص‌ها ماهانه بازبینی شود.', durationMinutes:45, importance:'MEDIUM', sentiment:0, followUpRequired:false, followUpAt:null, occurredAt:'2026-09-03T08:30:00.000Z', userId:'u-1', organizationId:'org-6', relationshipId:'r-4', personId:'p-5' },
+  /* دمو غنی‌شده: تعامل‌های روابط جدید (شریف/اتاق/بورس/صندوق) */
+  { id:'i-10', type:'MEETING', subject:'کارگاه مشترک پژوهشی با دانشگاه شریف', summary:'تعریف پروژهٔ مشترک پردازش زبان فارسی روی داده‌های مجموعه؛ حضور استاد گروه کامپیوتر و سرپرست آزمایشگاه.', outcome:'موضوع پروژه تفاهم شد؛ پیش‌نویس تفاهم‌نامه تا دو هفته آینده.', durationMinutes:80, importance:'HIGH', sentiment:1, followUpRequired:true, followUpAt:'2026-09-13T09:00:00.000Z', occurredAt:'2026-08-30T13:00:00.000Z', userId:'u-1', organizationId:'org-9', relationshipId:'r-9', personId:'p-14' },
+  { id:'i-11', type:'EMAIL', subject:'دعوت به کمیتهٔ فناوری اتاق بازرگانی', summary:'دعوت رسمی برای عضویت آریا فناوری در کمیتهٔ فناوری اطلاعات اتاق؛ جلسهٔ بعدی مهرماه.', outcome:'عضویت در دست بررسی؛ مدارک ثبت‌نام ارسال شد.', durationMinutes:null, importance:'MEDIUM', sentiment:1, followUpRequired:false, followUpAt:null, occurredAt:'2026-08-14T10:00:00.000Z', userId:'u-1', organizationId:'org-10', relationshipId:'r-10', personId:'p-16' },
+  { id:'i-12', type:'CALL', subject:'استعلام افشای اطلاعات از سازمان بورس', summary:'پرس‌وجو دربارهٔ الزامات افشای اطلاعات فصلی برای ورود آتی به بازار سرمایه.', outcome:'فهرست مستندات لازم ایمیل شد؛ مهلت ارسال پایان شهریور.', durationMinutes:14, importance:'HIGH', sentiment:0, followUpRequired:true, followUpAt:'2026-09-20T09:00:00.000Z', occurredAt:'2026-08-31T11:00:00.000Z', userId:'u-1', organizationId:'org-11', relationshipId:'r-11', personId:'p-17' },
+  { id:'i-13', type:'MEETING', subject:'ارزیابی پروندهٔ دانش‌بنیان با صندوق نوآوری', summary:'بررسی پروندهٔ حمایت از پلتفرم بانکداری شرکتی؛ تمرکز بر نقشهٔ راه فناوری و تیم.', outcome:'پرونده به مرحلهٔ کارشناسی فنی رفت؛ جلسهٔ بعدی مهرماه.', durationMinutes:60, importance:'HIGH', sentiment:1, followUpRequired:true, followUpAt:'2026-10-05T09:00:00.000Z', occurredAt:'2026-09-04T10:30:00.000Z', userId:'u-1', organizationId:'org-12', relationshipId:'r-12', personId:'p-18' },
 ];
 /* غنی‌سازی دمو: رویداد تعامل (هدف/کانال/کیفیت/نتیجه/جهت/قدم بعدی) */
 const EVENT_SEED={
@@ -1850,6 +1883,10 @@ const EVENT_SEED={
   'i-7':{purpose:'TRUST_BUILDING',channel:'PHONE',quality:3,result:'STABLE',direction:'WE',nextStep:'پیگیری بررسی اعتبارات',nextStepAt:'2026-09-12T09:00:00.000Z'},
   'i-8':{purpose:'APPRECIATION',channel:'NOTE',quality:3,result:'STABLE',direction:'WE',nextStep:'تهیه پیش‌نویس پیشنهاد همکاری',nextStepAt:'2026-09-20T08:00:00.000Z'},
   'i-9':{purpose:'PROBLEM_SOLVING',channel:'MEETING',quality:4,result:'ADVANCED',direction:'MUTUAL',nextStep:'بازبینی ماهانه شاخص‌های کیفیت',nextStepAt:null},
+  'i-10':{purpose:'TRUST_BUILDING',channel:'MEETING',quality:4,result:'ADVANCED',direction:'MUTUAL',nextStep:'پیش‌نویس تفاهم‌نامهٔ پژوهشی',nextStepAt:'2026-09-13T09:00:00.000Z'},
+  'i-11':{purpose:'TRUST_BUILDING',channel:'EMAIL',quality:3,result:'STABLE',direction:'WE',nextStep:null,nextStepAt:null},
+  'i-12':{purpose:'DECISION',channel:'PHONE',quality:3,result:'STABLE',direction:'THEM',nextStep:'ارسال مستندات افشای فصلی',nextStepAt:'2026-09-20T09:00:00.000Z'},
+  'i-13':{purpose:'NEGOTIATION',channel:'MEETING',quality:4,result:'ADVANCED',direction:'MUTUAL',nextStep:'جلسهٔ کارشناسی فنی مهرماه',nextStepAt:'2026-10-05T09:00:00.000Z'},
 };
 for(const [k,v] of Object.entries(EVENT_SEED)){const x=INTERACTIONS.find(i=>i.id===k); if(x) Object.assign(x,v);}
 let NOTIFICATIONS = [
@@ -1872,6 +1909,7 @@ let REFERRALS = [
     baselineCriteria:null, postCheckins:{} },
   { id:'ref-5', title:'معرفی مشاور سرمایه‌گذاری به صندوق امید', message:'همکاری مشاورانه برای سبد سرمایه‌گذاری', sourcePersonId:'p-8', targetPersonId:'p-4', sourceOrganizationId:'org-7', targetOrganizationId:'org-5', relationshipId:'r-5', status:'DECLINED', createdById:'u-1', recipientUserId:null, completedAt:'2026-07-20T12:00:00.000Z', notes:'به دلیل تغییر اولویت‌ها رد شد.', createdAt:'2026-07-10T09:40:00.000Z',
     instruction:null, baselineCriteria:null, postCheckins:{} },
+  { id:'ref-7', title:'معرفی استاد شریف به تیم محصول آریا', message:'اتصال تیم پژوهشی دانشگاه به تیم محصول برای پروژهٔ مشترک پردازش زبان', sourcePersonId:'p-14', targetPersonId:'p-7', sourceOrganizationId:'org-9', targetOrganizationId:'org-2', relationshipId:'r-9', status:'ACCEPTED', createdById:'u-1', recipientUserId:null, completedAt:null, notes:null, createdAt:'2026-09-01T09:00:00.000Z', acceptedAt:'2026-09-02T10:00:00.000Z', instruction:{goal:'هم‌راستاسازی تیم پژوهش با نقشهٔ راه محصول در حوزهٔ پردازش زبان فارسی.',allowed:['موضوعات پژوهشی','داده‌های عمومی زبان','تقویم تقریبی همکاری'],forbidden:['انتقال دادهٔ مشتریان','تعهد مالی بدون تأیید مدیرعامل'],boundaries:'فقط هم‌اندیشی فنی؛ سند تفاهم جداگانه و با تأیید دو طرف.',dueDays:30}, baselineCriteria:null, postCheckins:{} },
   { id:'ref-6', title:'معرفی مدیر خرید به سازه گستر', message:'', sourcePersonId:'p-2', targetPersonId:null, sourceOrganizationId:'org-2', targetOrganizationId:'org-8', relationshipId:null, status:'CANCELLED', createdById:'u-1', recipientUserId:null, completedAt:'2026-08-02T10:00:00.000Z', notes:null, createdAt:'2026-07-28T09:10:00.000Z',
     instruction:null, baselineCriteria:null, postCheckins:{} },
 ];
@@ -1935,7 +1973,161 @@ function applyInteractionToRel(rel, x){
   }
 }
 const personById=(id)=>PEOPLE.find(p=>p.id===id);
-const relWithOrgs=(r)=>({...r, cadence:relCadence(r), sourceOrganization:{id:r.sourceOrganizationId,name:orgById(r.sourceOrganizationId)?.name}, targetOrganization:{id:r.targetOrganizationId,name:orgById(r.targetOrganizationId)?.name}});
+/* ── فاز ۲ (ADR-0006): امتیاز مرکب واحد — همان فرمول و وزن‌های apps/api/src/entity-scores ──
+   composite = Σ(value×weight)/Σweights · risk معکوس · فرمول نسخه‌دار (Sprint 2: بستهٔ مشترک domain-rules) */
+const ENTITY_SCORE_FORMULA_VERSION='1.0.0-plan-phase2';
+const SCORE_WEIGHTS={health:.25,risk:.20,strategic:.15,trust:.15,engagement:.10,influence:.05,opportunity:.05,resilience:.05};
+const clampScore=(n)=>Math.max(0,Math.min(100,Number.isFinite(+n)?+n:0));
+function computeEntityScore(factors,weights=SCORE_WEIGHTS){
+  let weighted=0,total=0; const detail={};
+  for(const key of Object.keys(SCORE_WEIGHTS)){
+    const raw=clampScore(factors[key]);
+    const inverted=key==='risk';
+    const value=inverted?100-raw:raw;
+    const weight=Math.max(0,weights[key]??SCORE_WEIGHTS[key]);
+    weighted+=value*weight; total+=weight;
+    detail[key]={value,weight,inverted};
+  }
+  return {composite:Math.round((total>0?weighted/total:0)*10)/10, factors:detail, formulaVersion:ENTITY_SCORE_FORMULA_VERSION};
+}
+function relEntityScore(r){
+  return computeEntityScore({health:r.healthScore??60,risk:r.riskScore??30,strategic:r.strategicScore??50,trust:r.trustScore??55,engagement:r.engagementScore??50,influence:r.influenceScore??50,opportunity:r.opportunityScore??50,resilience:r.resilienceScore??50});
+}
+const relWithOrgs=(r)=>{const es=relEntityScore(r);return {...r, cadence:relCadence(r), compositeScore:es.composite, scoreFactors:es.factors, scoreFormulaVersion:es.formulaVersion, sourceOrganization:{id:r.sourceOrganizationId,name:orgById(r.sourceOrganizationId)?.name}, targetOrganization:{id:r.targetOrganizationId,name:orgById(r.targetOrganizationId)?.name}};};
+
+/* ── فاز ۳ (ADR-0007): هشدار یکپارچه — همان منطق تشخیص پراکندهٔ قبل، خروجی واحد ──
+   نگاشت قفل‌شده در INTEGRATION-PLAN.md؛ هیچ آستانه‌ای تغییر نکرده. */
+function relationshipAlertItems(req){
+  const rels=scopedRels(req).filter(r=>!r.deletedAt);
+  const now=Date.now();
+  const alerts=[];
+  for(const r of rels){
+    const name = `${orgById(r.sourceOrganizationId)?.name ?? r.sourceOrganizationId} ↔ ${orgById(r.targetOrganizationId)?.name ?? r.targetOrganizationId}`;
+    const daysStale = r.lastInteractionAt ? Math.floor((now - new Date(r.lastInteractionAt).getTime())/86400000) : 999;
+    const cad = r.cadenceDays ?? 60;
+    if(r.marketKind==='MARKET'){
+      if((r.healthScore??100) < 45) alerts.push({id:`a-${r.id}-mHealth`, relationshipId:r.id, tone:'danger', kind:'MARKET_HEALTH', title:'رابطهٔ بازاری بحرانی', body:`«${name}» سلامت ${r.healthScore} — در زنجیرهٔ بازار مستقیم اختلال ایجاد می‌کند.`, marketKind:r.marketKind, isMarketEntry:r.isMarketEntry, health:r.healthScore, segment:r.marketSegment});
+      else if((r.riskScore??0) >= 60) alerts.push({id:`a-${r.id}-mRisk`, relationshipId:r.id, tone:'warning', kind:'MARKET_RISK', title:'ریسک بالای رابطهٔ بازاری', body:`«${name}» ریسک ${r.riskScore} و بدون اقدام اصلاحی باز.`, marketKind:r.marketKind, isMarketEntry:r.isMarketEntry, risk:r.riskScore, segment:r.marketSegment});
+      if(r.isMarketEntry && daysStale > cad) alerts.push({id:`a-${r.id}-entryStale`, relationshipId:r.id, tone:'danger', kind:'ENTRY_STALE', title:'نقطهٔ ورود به بازار راکد', body:`«${name}» ورودی بازار «${r.marketSegment||'—'}» است ولی ${daysStale} روز بدون تعامل مانده (هدف هر ${cad} روز).`, daysStale, cadence:cad, marketKind:r.marketKind, isMarketEntry:true, segment:r.marketSegment});
+      if(daysStale > cad+15) alerts.push({id:`a-${r.id}-mStale`, relationshipId:r.id, tone: daysStale>cad+30?'danger':'warning', kind:'MARKET_STALE', title:'رابطهٔ بازاری کهنه', body:`«${name}» ${daysStale} روز بدون تعامل — خطر از دست دادن سهم بازار.`, daysStale, cadence:cad, marketKind:r.marketKind, segment:r.marketSegment});
+    } else if(r.marketKind==='NON_MARKET'){
+      if((r.healthScore??100) < 50) alerts.push({id:`a-${r.id}-nmHealth`, relationshipId:r.id, tone:'warning', kind:'NONMARKET_HEALTH', title:'رابطهٔ غیربازاری ناپایدار', body:`«${name}» (غیربازاری — ${r.marketSegment||'نهاد/تنظیم‌گر'}) سلامت ${r.healthScore}؛ می‌تواند مسیر ورود به بازار را مسدود کند.`, marketKind:r.marketKind, health:r.healthScore, segment:r.marketSegment});
+      if((r.riskScore??0)>=55 && r.isMarketEntry) alerts.push({id:`a-${r.id}-nmBlock`, relationshipId:r.id, tone:'danger', kind:'NONMARKET_BLOCK', title:'انسداد احتمالی ورود به بازار', body:`«${name}» به‌عنوان دروازهٔ ورود «${r.marketSegment||'—'}» پرریسک شده (ریسک ${r.riskScore}). بازبینی حاکمیتی لازم است.`, marketKind:r.marketKind, isMarketEntry:true, risk:r.riskScore, segment:r.marketSegment});
+    }
+    if(r.marketKind==='HYBRID' && (r.healthScore??100) < 50) alerts.push({id:`a-${r.id}-hyb`, relationshipId:r.id, tone:'warning', kind:'HYBRID_RISK', title:'رابطهٔ دوگانه ناپایدار', body:`«${name}» (هیبرید — هم بازار، هم نهاد) نیازمند مراقبت دوگانه است.`, marketKind:r.marketKind, health:r.healthScore});
+    if(daysStale > cad && r.status==='ACTIVE' && !alerts.some(a=>a.relationshipId===r.id && a.kind.includes('STALE'))){
+      alerts.push({id:`a-${r.id}-cad`, relationshipId:r.id, tone: daysStale>cad+20?'danger':'warning', kind:'CADENCE_BREAK', title:'کیدنس شکسته', body:`«${name}» ${daysStale} روز بدون تعامل (هدف ${cad} روز).`, daysStale, cadence:cad, marketKind:r.marketKind, segment:r.marketSegment});
+    }
+  }
+  const segments = [...new Set(rels.filter(r=>r.marketKind==='MARKET').map(r=>r.marketSegment).filter(Boolean))];
+  const entrySegments = new Set(rels.filter(r=>r.isMarketEntry).map(r=>r.marketSegment).filter(Boolean));
+  for(const seg of ['پتروشیمی و انرژی','بانکداری و تأمین مالی','ساخت‌وساز و پروژه‌های عمرانی','فناوری']){
+    if(!entrySegments.has(seg) && !segments.includes(seg)) alerts.push({id:`a-missing-${seg}`, tone:'info', kind:'MISSING_ENTRY', title:'بازار بدون نقطهٔ ورود', body:`برای سگمنت «${seg}» هنوز نقطهٔ ورود بازاری ثبت نشده — فرصت یا ریسک پوشش.`, segment:seg});
+  }
+  const order={danger:0,warning:1,info:2};
+  alerts.sort((a,b)=> (order[a.tone]??9)-(order[b.tone]??9) || String(a.kind).localeCompare(String(b.kind)));
+  return alerts;
+}
+const ALERT_TONE_TO_SEVERITY={danger:'CRITICAL',warning:'WARNING',info:'INFO'};
+const ALERT_MODULE_FA={RELATIONSHIP:'روابط',PUBLICS:'عموم‌ها',ACTION:'اقدامات',COMMITMENT:'تعهدات',MEETING:'جلسات',WORKFLOW:'گردش کار',DATA_QUALITY:'کیفیت داده',SECURITY:'امنیت',MONITORING:'پایش'};
+function unifiedAlert(req,authUser,module,severity,entityType,entityId,title,reason,actionLabel,actionUrl,extra={}){
+  /* شناسهٔ پایدار و URL-safe: hash ترکیبی (djb2) از ماژول+نهاد+عنوان — پایدار بین اجراها برای resolve */
+  const djb2=(str)=>{let x=5381;for(let i=0;i<str.length;i++)x=((x<<5)+x+str.charCodeAt(i))>>>0;return x.toString(36)};
+  return {id:`al-${module.toLowerCase()}-${entityId}-${djb2(module+'|'+entityId+'|'+title+'|'+severity)}`,module,moduleFa:ALERT_MODULE_FA[module],severity,entityType,entityId,title,reason,actionLabel:actionLabel??null,actionUrl:actionUrl??null,createdAt:nowIso(),resolvedAt:null,...extra};
+}
+function collectUnifiedAlerts(req,authUser){
+  const items=[];
+  const can=(perm)=>authUser?.isOwner||(authUser?.permissions??[]).includes(perm);
+  /* RELATIONSHIP — همان منطق /relationships/alerts، نگاشت به شکل واحد */
+  for(const a of relationshipAlertItems(req)){
+    items.push(unifiedAlert(req,authUser,'RELATIONSHIP',ALERT_TONE_TO_SEVERITY[a.tone]??'INFO','RELATIONSHIP',a.relationshipId??a.id,a.title,a.body,a.relationshipId?'مشاهدهٔ رابطه':'بررسی پوشش بازار',a.relationshipId?`/relationships/${a.relationshipId}`:'/relationships',{kind:a.kind,marketKind:a.marketKind??null,segment:a.segment??null}));
+  }
+  /* PUBLICS — شکاف‌های بحرانی/عقب‌مانده + بازبینی سررسیدشده */
+  if(can('publics.read')){
+    seedPublicsStore();
+    const now=Date.now();
+    for(const self of (DB.publicsSelf??[])){
+      if(!inScope(req,self.orgId)) continue;
+      const gaps=pubGaps(self.orgId);
+      /* شکاف «غایب»: فقط بحرانی (بازیگر کلیدی بدون عضو) و حداکثر ۱۰ مورد در هر سازمان —
+         فهرست کامل در /publics/gaps زندگی می‌کند؛ اینجا فقط آنچه اکنون اقدام می‌خواهد. */
+      const missing=gaps.gaps.filter(g=>g.kind==='missing'&&g.severity==='CRITICAL').slice(0,10);
+      for(const g of missing){
+        items.push(unifiedAlert(req,authUser,'PUBLICS','CRITICAL','PUBLIC_GAP',g.gapId,`شکاف عموم‌ها: ${g.groupFa}`,`در دستهٔ «${g.categoryFa}» این بازیگر کلیدی هنوز عضو ندارد. اقدام پیشنهادی: ${g.action}.`,'رفتن به نقشهٔ عموم‌ها','/publics',{categoryId:g.categoryId}));
+      }
+      /* شکاف «عقب‌مانده»: بازیگر کلیدی در مرحلهٔ نابالغ — همه (كم‌تعداد و اکشن‌پذیر) */
+      for(const g of gaps.gaps.filter(x=>x.kind==='lagging')){
+        items.push(unifiedAlert(req,authUser,'PUBLICS','WARNING','PUBLIC_GAP',g.gapId,`بازیگر کلیدی عقب‌مانده: ${g.groupFa}`,`عمومِ کلیدی در مرحلهٔ نابالغ است؛ تعامل مستقیم دوسویه لازم. ${g.sourceName?`ذی‌نفع: ${g.sourceName}.`:''}`,'رفتن به نقشهٔ عموم‌ها','/publics',{categoryId:g.categoryId,memberId:g.memberId??null}));
+      }
+      const due=(DB.publicsMembers??[]).filter(m=>m.orgId===self.orgId&&m.reviewDue&&new Date(m.reviewDue).getTime()<=now);
+      for(const m of due){
+        items.push(unifiedAlert(req,authUser,'PUBLICS','WARNING','PUBLIC_MEMBER',m.id,'بازبینی عموم سررسید شده',`ارزیابی «${pubSourceName(m)}» در گروه ${m.groupId} باید بازبینی شود (سررسید ${String(m.reviewDue).slice(0,10)}).`,'بازبینی عضو','/publics',{groupId:m.groupId}));
+      }
+    }
+  }
+  /* ACTION — عقب‌افتاده → CRITICAL · نزدیک سررسید (≤۷ روز) → WARNING */
+  if(can('action.read')){
+    const now=Date.now();
+    for(const a of scopedActions(req).filter(x=>['OPEN','IN_PROGRESS'].includes(x.status)&&x.dueAt)){
+      const due=new Date(a.dueAt).getTime();
+      if(due<now) items.push(unifiedAlert(req,authUser,'ACTION','CRITICAL','ACTION',a.id,`اقدام عقب‌افتاده: ${a.title}`,`سررسید ${String(a.dueAt).slice(0,10)} گذشته است.`,`رفتن به اقدامات`,'/actions'));
+      else if(due-now<=7*86400000) items.push(unifiedAlert(req,authUser,'ACTION','WARNING','ACTION',a.id,`اقدام نزدیک به سررسید: ${a.title}`,`سررسید ${String(a.dueAt).slice(0,10)} — کمتر از ۷ روز باقی مانده.`,'رفتن به اقدامات','/actions'));
+    }
+  }
+  /* COMMITMENT — عقب‌افتاده → CRITICAL · نزدیک سررسید → WARNING */
+  if(can('commitment.read')){
+    const now=Date.now();
+    for(const c of scopedCommitments(req).filter(x=>['OPEN','OVERDUE'].includes(x.status)&&x.dueAt)){
+      const due=new Date(c.dueAt).getTime();
+      if(due<now) items.push(unifiedAlert(req,authUser,'COMMITMENT','CRITICAL','COMMITMENT',c.id,`تعهد عقب‌افتاده: ${c.description}`,`سررسید ${String(c.dueAt).slice(0,10)} گذشته است؛ ${c.direction==='OURS'?'تعهد ما':'تعهد طرف مقابل'}.`,'رفتن به تعهدات','/commitments'));
+      else if(due-now<=7*86400000) items.push(unifiedAlert(req,authUser,'COMMITMENT','WARNING','COMMITMENT',c.id,`تعهد نزدیک به سررسید: ${c.description}`,`سررسید ${String(c.dueAt).slice(0,10)} — کمتر از ۷ روز باقی مانده.`,'رفتن به تعهدات','/commitments'));
+    }
+  }
+  /* MEETING — جلسهٔ گذشتهٔ بدون نتیجه */
+  if(can('meeting.read')){
+    const now=Date.now();
+    for(const m of scopedMeetings(req).filter(x=>new Date(x.startAt).getTime()<now&&!x.outcome)){
+      items.push(unifiedAlert(req,authUser,'MEETING','INFO','MEETING',m.id,`جلسه بدون نتیجهٔ ثبت‌شده: ${m.title}`,`جلسهٔ ${String(m.startAt).slice(0,10)} برگزار شده اما خروجی‌اش ثبت نشده — خروجی، اقدام و تعهد بعدی را ببندید.`,'ثبت نتیجهٔ جلسه','/meetings'));
+    }
+  }
+  /* WORKFLOW — اجرای شکست‌خورده */
+  if(can('workflow.read')){
+    for(const e of (DB.workflowExecutions??[]).filter(x=>x.status==='FAILED')){
+      const wf=(DB.workflows??[]).find(w=>w.id===e.workflowId);
+      if(wf&&wf.organizationId&&!inScope(req,wf.organizationId)) continue; /* همان قاعدهٔ wfScopeOk */
+      items.push(unifiedAlert(req,authUser,'WORKFLOW','CRITICAL','WORKFLOW_EXECUTION',e.id,`اجرای گردش کار شکست خورد${wf?` (${wf.name})`:''}`,`خطا: ${e.context?.error??'نامشخص'} — اجرا در ${String(e.startedAt??'').slice(0,10)}.`,'بررسی اجراها','/workflows'));
+    }
+  }
+  /* DATA_QUALITY — از آخرین اسکن کیفیت (اگر وجود دارد؛ دادهٔ ساختگی ساخته نمی‌شود) */
+  if(can('data.quality.read')&&Array.isArray(DB.dataQualitySnapshots)){
+    const seen=new Set();
+    for(const snap of [...DB.dataQualitySnapshots].reverse()){
+      if(seen.has(snap.organizationId)) continue; seen.add(snap.organizationId);
+      const issues=(snap.issues??snap.findings??[]);
+      if(Array.isArray(issues)&&issues.length) items.push(unifiedAlert(req,authUser,'DATA_QUALITY','WARNING','DATA_QUALITY',snap.id||`dq-${snap.organizationId}`,`مشکل کیفیت داده در محدودهٔ ${snap.organizationId==='all'||!snap.organizationId?'کل':orgById(snap.organizationId)?.name??snap.organizationId}`,`${issues.length} مورد در آخرین اسکن (${String(snap.generatedAt??snap.createdAt??'').slice(0,10)})؛ نخستین: ${typeof issues[0]==='string'?issues[0]:issues[0]?.title??issues[0]?.message??'—'}.`,'مرکز کیفیت داده','/data-quality'));
+    }
+  }
+  /* SECURITY — رویدادهای امنیتی بحرانی باز */
+  if(can('security.read')){
+    const orgIds=authUser?.isOwner?null:visibleOrgIds(req);
+    for(const ev of (DB.securityEvents??[]).filter(x=>x.severity==='CRITICAL'||x.type==='ACCOUNT_LOCKED')){
+      /* همان قاعدهٔ /security/events: مالک همه؛ مستأجر فقط رویدادهای خودش/سازمانش */
+      if(orgIds!==null&&!(ev.userId===authUser?.id||(ev.organizationId&&orgIds.includes(ev.organizationId)))) continue;
+      items.push(unifiedAlert(req,authUser,'SECURITY','CRITICAL','SECURITY_EVENT',ev.id,`رویداد امنیتی: ${ev.type}`,`${ev.metadata?.reason??'نیازمند بررسی'} از IP ${ev.ipAddress??'—'} در ${String(ev.createdAt).slice(0,10)}.`,'بررسی رویدادها','/security-events'));
+    }
+  }
+  /* MONITORING — از سنجه‌های زندهٔ موتور (CPU/در دسترس بودن/تأخیر) */
+  {
+    const sn=metricsSnapshotNow();
+    if(sn.process?.cpuPercent>80) items.push(unifiedAlert(req,authUser,'MONITORING','CRITICAL','RUNTIME','cpu',`بار پردازش موتور بالا (${Math.round(sn.process.cpuPercent)}٪)`,`زیرساخت دمو تحت فشار است؛ پاسخ‌گویی کند می‌شود.`,'مرکز پایش','/monitoring'));
+    if(sn.availabilityPercent<99) items.push(unifiedAlert(req,authUser,'MONITORING','WARNING','RUNTIME','availability',`در دسترس بودن ${sn.availabilityPercent}٪ (زیر هدف ۹۹٪)`,`افت دسترس‌پذیری در بازهٔ اخیر.`,'مرکز پایش','/monitoring'));
+    if(sn.averageLatencyMs>400) items.push(unifiedAlert(req,authUser,'MONITORING','WARNING','RUNTIME','latency',`تأخیر میانگین ${Math.round(sn.averageLatencyMs)}ms`,`بالای آستانهٔ ۴۰۰ میلی‌ثانیه.`,'مرکز پایش','/monitoring'));
+  }
+  /* فیلتر موارد resolve شده (ذخیرهٔ پایدار) */
+  const resolutions=DB.alertResolutions??{};
+  const sevOrder={CRITICAL:0,WARNING:1,INFO:2};
+  return items.filter(a=>!resolutions[a.id]).sort((a,b)=>(sevOrder[a.severity]??9)-(sevOrder[b.severity]??9)||String(a.module).localeCompare(String(b.module)));
+}
 
 /* دلایل «چرا این رابطه در معرض ریسک است؟» — از امتیازها و سیگنال‌های واقعی همان رابطه
    (بدون دادهٔ جعلی): امتیاز ریسک/سلامت/تاب‌آوری، رکود تعامل، عقب‌افتادگی قدم بعدی،
@@ -2067,6 +2259,17 @@ const SEED_USERS = {
     emailVerifiedAt:'2026-06-01T08:00:00.000Z',
     lastLoginAt:'2026-09-03T10:30:00.000Z',
     createdAt:'2026-01-15T08:00:00.000Z',
+  },
+  'admin@srip.local': {
+    id:'u-3', email:'admin@srip.local', username:'admin', name:'مدیر هلدینگ (ناظر)', password:'123456',
+    memberships:[{id:'mb-3',organizationId:'org-1',organizationName:'هلدینگ آریا',role:'ADMIN',department:'هیئت‌مدیره',dataScope:'ALL',accessScope:'ALL',isPrimary:true}],
+    permissions:['*'],
+    accessibleOrganizationIds:ORGS.map(o=>o.id),
+    isOwner:true,
+    isActive:true,
+    emailVerifiedAt:'2026-06-01T08:00:00.000Z',
+    lastLoginAt:'2026-09-01T09:00:00.000Z',
+    createdAt:'2026-02-01T08:00:00.000Z',
   },
   'client@arya-tech.ir': {
     id:'u-2', email:'client@arya-tech.ir', username:'client', name:'سارا محمدی', password:'123456',
@@ -3574,6 +3777,8 @@ function seedKnowledge() {
     kb('kb-start', '5-minute-first-score', 'در پنج دقیقه به اولین امتیاز معیارها برسید', 'مسیر کوتاه از ورود تا داشتن یک امتیاز قابل اتکا برای نخستین رابطه؛ جایی که باید بروید و هر عدد یعنی چه.', 'GETTING_STARTED', ['شروع', 'امتیاز', 'گام‌به‌گام'], ['STRATEGIC', 'RELIABILITY'], 4, 'تیم محصول',
       '۱) یک سازمان و سپس یک رابطه بسازید (منوی «روابط» → «رابطهٔ جدید»). هنگام ساخت، پرسش‌نامهٔ اختیاری معیارها ظاهر می‌شود؛ آریا فناوری را با پترو صنعت وصل کنید. \n۲) به صفحهٔ همان رابطه بروید. کارت «امتیاز معیارها» عدد، پوشش اطلاعات و اطمینان را نشان می‌دهد. اگر تازه شروع کرده‌اید برچسب «داده کافی نیست» را می‌بینید — این طبیعی است و عمداً عددی نمی‌سازد. \n۳) روی «ثبت ارزیابی» بزنید و تنها پرسش‌هایی را پاسخ دهید که مطمئن هستید. هر پاسخ «ناشناخته» را از بین نمی‌برد؛ فقط آن معیار را روشن می‌کند. \n۴) تعامل‌ها، جلسه‌ها، تعهدها و فرصت‌های همان رابطه به‌صورت خودکار به‌عنوان «رفتار واقعی» وارد مدل می‌شوند و سهم مشاهده‌شده را بالا می‌برند. \n۵) برای رتبه‌بندی، پوشش باید به آستانهٔ تعریف‌شده (پیش‌فرض ۴۰٪) برسد. زیر آن، رکورد صادقانه «قابل مقایسه نیست» می‌ماند.', { views: 312, helpful: 41 }), kb('kb-scoring-model', 'how-scoring-works', 'مدل امتیازدهی دقیقاً چطور کار می‌کند؟', 'وزن خانواده‌ها، قطبیت هر معیار، سقف‌های دروازه و نقش اطمینان — تا بتوانید عدد را بخوانید، نه فقط ببینید.', 'SCORING', ['وزن‌ها', 'دروازه', 'اطمینان'], ['STRATEGIC', 'VALUE', 'CAPABILITY', 'RELIABILITY', 'ACCESS', 'FINANCIAL', 'RISK', 'NETWORK'], 6, 'تیم محصول', 'هر رابطه، سازمان، شخص و فرصت از یک کاتالوگ معیار امتیاز می‌گیرد: هر معیار به یک خانواده تعلق دارد (راهبردی، ارزش، توانمندی، قابلیت اعتماد، دسترسی، مالی، ریسک، شبکه) و وزن ۱ تا ۳ دارد. \nامتیاز هر خانواده، میانگین وزن‌دار معیارهای پاسخ‌داده‌شدهٔ همان خانواده است؛ سپس خانواده‌ها با وزن سازمانی (قابل تغییر در «مدیریت → معیارها») ترکیب می‌شوند. خانوادۀ بدون داده در تقسیم وزن حساب نمی‌شود تا «نبودِ اطلاعات» خودش نمره نشود. \nقطبیت مهم است: معیارهای ریسک (منفی) بالاتر بودن یعنی بدتر؛ معیارهای مثبت (مثبت) بالاتر یعنی بهتر. هر دو به مقیاس ۰ تا ۱۰۰ نگاشت می‌شوند. \nدروازهٔ ریسک (دروازه) از میانگین‌گیری مستثناست: اگر شرطش فعال شود، سقف امتیاز را تحمیل می‌کند — مثلاً «سقف ۴۰». این یعنی یک معیار بحرانی را چند معیار خوب «جبران» نمی‌کنند. \nدر نهایت، امتیاز بدون اطمینان ارائه نمی‌شود: پوشش (چند درصد از وزن مدل داده دارد؟) و اطمینان (کیفیت و تازگی پاسخ‌ها) کنار هر عدد می‌آیند و امتیاز رتبه‌بندی = امتیاز × (۰٫۷ + ۰٫۳ × اطمینان).', { views: 540, helpful: 86 }), kb('kb-manual', 'manual-override', 'تنظیم دستی امتیاز: چه وقت، چرا و تا کجا؟', 'وقتی دانش شما از مدل جلوتر است؛ چطور با ±۲۵ و دلیلِ الزامی این کار را بکنید و مدل را دست‌نخورده نگه دارید.', 'SCORING', ['دستی', 'ممیزی'], ['RISK', 'STRATEGIC'], 3, 'تیم محصول', 'مدل بر شواهد ساخته می‌شود؛ اما گاهی شما چیزی می‌دانید که هنوز در سیستم ثبت نشده — مانند امضای اولیهٔ قرارداد. برای همین در کارت «امتیاز معیارها» دکمهٔ «تنظیم دستی» است. \nجابه‌جایی فقط تا ±۲۵ نقطه مجاز است (عدد بزرگ‌تر یعنی احتمالاً باید دادهٔ اصلی را ثبت کنید نه امتیاز را تکان دهید). دلیل تنظیم الزامی است؛ چون در ممیزی ثبت می‌شود و بعداً باید قابل بازبینی باشد. \nانقضا را انتخاب کنید (۳۰/۹۰/۱۸۰ روز یا دائمی). پس از انقضا، امتیاز خودکار به مدل برمی‌گردد و نشان «دستی» از روی نشان‌ها برداشته می‌شود. \nهر جا «دستی» می‌بینید، یعنی امتیاز موثر = مدل ± جابه‌جایی؛ مبنای مدل هرگز بازنویسی نمی‌شود. نشان «تنظیم دستی منقضی» هم هشدار می‌دهد که جابه‌جایی دیگر اعمال نمی‌شود.', { views: 198, helpful: 33 }), kb('kb-verdict', 'verdict-ladder', 'نردبان حکم: هر برچسب یعنی چه اقدامی؟', 'قابل اتکا، پیش‌نویس، داده کافی نیست، ضعیف و پرچم بحرانی — نقشهٔ اقدام هر وضعیت.', 'SCORING', ['حکم', 'اقدام'], [], 4, 'تیم محصول', 'پرچم بحرانی: یک دروازهٔ ریسک فعال است. تا جمع‌شدن آن، هیچ رتبه‌بندی و مقایسه‌ای انجام نشود؛ اول اقدام کنید. \nداده کافی نیست (پوشش زیر ۲۵٪): تصویر ساخته نشده. عددی که می‌بینید صرفاً پرسش‌های جواب‌داده است؛ مبنای تصمیم نگیرید. \nپیش‌نویس ارزیابی (اطمینان زیر ۴۰٪): شواهد کم یا کهنه است. چند پاسخ مستند می‌تواند امتیاز را به‌شکل معنادار جابه‌جا کند — روی «ثبت ارزیابی» تمرکز کنید. \nقابل اتکا / قوی: شواهد کافی است. اینجا مقایسهٔ رتبه‌ای و تصمیم‌گیری مجاز است. «قوی» یعنی امتیاز ۷۵+ با اطمینان ۶۵+. \nضعیف: شواهد کافی و وضعیت نامطلوب — نیازمند اقدام. به «نقاط ضعف» در همان کارت نگاه کنید: سه معیاری که بیشترین اثر منفی را دارند آنجا فهرست شده‌اند.', { views: 260, helpful: 51 }), kb('kb-coverage', 'coverage-honesty', 'چرا «داده کافی نیست» درست‌تر از یک عدد خوش‌بینانه است؟', 'فلسفهٔ ناشناخته‌ها: پاسخ‌ندادن صفر حساب نمی‌شود؛ و چرا این تصمیم، امتیاز را قابل اعتمادتر می‌کند.', 'SCORING', ['پوشش', 'ناشناخته'], [], 4, 'تیم محصول', 'در این مدل، معیار بی‌پاسخ هرگز صفر فرض نمی‌شود. معیار بی‌پاسخ در «ناشناخته» می‌ماند، وزن‌ش در تقسیم حذف می‌شود و در عوض پوشش و اطمینان پایین می‌آید. \nنتیجه: یک رابطه با پنج پاسخ خوب اما پوشش ۲۰٪ هرگز «قابل اتکا» رتبه نمی‌گیرد؛ برچسب‌اش صادقانه «داده کافی نیست» است. اگر ناشناخته‌ها صفر بودند، هر رکورد نیمه‌پر با عددی نیمه‌واقعی در مقایسه‌های بالایی می‌نشست. \nدروازهٔ رتبه‌بندی (پیش‌فرض ۴۰٪ پوشش) و حداقل اطمینان ۳۵٪ همین را سخت‌گیرانه اجرا می‌کنند. به‌جای بالا بردن عدد، روی «معیارهای بدون داده» کار کنید — کارت امتیاز دقیقاً می‌گوید کدام‌ها بیشترین وزن را دارند. \nاگر ۲۴۰ نویسه دلیل نیاز نیست؛ فقط یک پاسخ کوتاه و دقیق. امتیاز، خلاصهٔ کیفیت دادهٔ شماست.', { views: 174, helpful: 29 }), kb('kb-families', 'families-and-evidence', 'هشت خانوادهٔ معیار و شواهد هر کدام', 'چرا هر خانواده وجود دارد، به چه پژوهشی وصل است و چه رفتاری در سیستم آن را «مشاهده» می‌کند.', 'SCORING', ['خانواده‌ها', 'شواهد'], ['STRATEGIC', 'VALUE', 'CAPABILITY', 'RELIABILITY', 'ACCESS', 'FINANCIAL', 'RISK', 'NETWORK'], 7, 'تیم محصول', 'اهمیت و هم‌راستایی راهبردی: برجستگی شریک، تناسب با استراتژی و قدرت ذی‌نفع (پایه: میتچل 1997). شاهد در سیستم: نوع رابطه، وضعیت، نقش سازمان در پروژه‌های مشترک. \nارزش اقتصادی: ارزش فعلی رابطه و چرخهٔ عمر آن. شاهد: ارزش فرصت‌ها و قراردادهای متصل. \nتوانمندی عملیاتی: کیفیت تحویل، ظرفیت، خدمت پس از فروش. شاهد: نتیجهٔ تعامل‌ها، جلسه‌ها و اقداماتِ خاتمه‌یافته. \nقابلیت اعتماد: ثبات رفتاری و پایبندی به قول‌ها. شاهد: تعهدهای سرموعد یا عقب‌افتاده. \nدسترسی و نفوذ: دسترسی به تصمیم‌گیرنده. شاهد: معرفی‌ها و نقش اشخاص کلیدی. \nمالی و منابع، ریسک و انطباق، شبکه و موقعیت: از وضعیت مالی، پرچم‌های ریسک، مسیرهای شبکه و مرکزیت استفاده می‌شود. هر معیار در کاتالوگ «منبع» دارد و طول عمر پاسخ‌اش (نیمه‌عمر) تعیین می‌کند چه وقت کهنه می‌شود.', { views: 233, helpful: 44 }), kb('kb-workflows', 'workflows-approvals', 'گردش‌کار و تأییدها: چه چیزی لازم است تأیید شود؟', 'اجراهای خودکار، قواعد تأیید و اینکه هر اقدام چه زمانی به «تأیید» گیر می‌کند.', 'PROCESS', ['گردش‌کار', 'تأیید'], [], 5, 'تیم محصول', 'گردش‌کارها، اقدام‌های خودکار روی رویدادها هستند (مثلاً ساخت رابطه یا وعدهٔ قرارداد). وضعیت اجرا را در «گردش‌کار و تأییدها → اجراها» ببینید. \nهر قاعده‌ای که روی «تأیید» بایستد، در صف «تأییدها» می‌آید و تا تصمیم کاربرِ دارای مجوز، اجرا متوقف می‌ماند — این عمدی است تا کارهای حساس بی‌اجازه نگذرند. \nخروجی گزارش‌ها هم همین‌طور است: «دریافت فایل» یک درخواست تأیید ثبت می‌کند و فایل واقعی پس از تأیید در صفحهٔ تأییدها صادر می‌شود. اگر پیام «ابتدا تأیید درخواست» دیدید، سراغ تأییدها بروید. \nاشخاص بدون مجوز، تنها می‌توانند اجراهایی را ببینند که در محدودهٔ سازمانی‌شان است؛ مالک سامانه همه‌چیز را می‌بیند.', { views: 121, helpful: 18 }), kb('kb-security', 'data-security', 'امنیت داده: طبقه‌بندی، تأیید دومرحله‌ای و نشست‌ها', 'مدارک واقعی: طبقه‌بندی اسناد، تأیید دومرحله‌ای، احراز هویت، نشست‌ها و رویدادهای امنیتی.', 'SECURITY', ['تأیید دومرحله‌ای', 'طبقه‌بندی', 'نشست'], [], 5, 'تیم محصول', 'ورود با تأیید دومرحله‌ای محافظت می‌شود؛ دستگاه‌های تأییدشده و کدهای بازیابی در «امنیت → دستگاه‌های من» مدیریت می‌شوند. در دمو، هر کد شش‌رقمی پذیرفته می‌شود. \nاسناد چهار طبقه دارند: داخلی، محرمانه، محدود و عمومی. بارگذاری با اعتبارسنجی نوع فایل/پسوند، قرنطینه و اسکن بدافزار همراه است؛ وضعیت هر فایل کنارش می‌آید. \nنشست‌های فعال خود را در «نشست‌های من» ببینید و از راه دور ببندید. رویدادهای ورود ناموفق، قفل حساب، تلاش بدون مجوز و صادرات در «امنیت → رویدادها» ثبت می‌شوند. \nنکتهٔ مهم: در حالت دمو (سرویس میزبانی استاتیک) همه‌چیز در مرورگر شما اجرا می‌شود و داده‌ها برای همان نشست است؛ هیچ داده‌ای به سرور واقعی نمی‌رود.', { views: 149, helpful: 22 }), kb('kb-intel', 'reading-intelligence', 'خواندن هوشمندی: سیگنال‌ها، فرصت‌ها و پوشش راهبردی', 'چهار بخش صفحهٔ هوشمندی یعنی چه و هر کدام به کدام اقدام ختم می‌شود.', 'ANALYTICS', ['هوشمندی', 'ریسک', 'فرصت'], ['RISK', 'STRATEGIC'], 6, 'تیم محصول', 'سیگنال‌های ریسک از دادهٔ واقعی ساخته می‌شوند: اقدام عقب‌افتاده، تعهد عقب‌افتاده، اقدام مسدود، سلامت پایین و تعامل کهنه. شدت بالا (۶۰+) یعنی فوری؛ بالای ۴۰ متوسط، زیر آن ملایم. تأخیر بیش از دو برابر، شدت را بالا می‌برد. \nتشخیص فرصت دو نوع است: پیگیری (فرصتِ بازِ روی رابطه) و رشد (رابطه‌ای با امتیاز فرصت ۶۰+ ولی بدون فرصت باز) — یعنی به‌جای فهرست پیوندها، به بازار رشد واقعی اشاره می‌کند. \nپوشش راهبردی، روابط استراتژیک (امتیاز راهبردی ۶۰+) را با وضعیت عملیاتی‌شان مقایسه می‌کند: اقدام باز، تعهد باز یا اقدام بعدیِ آینده. شکاف‌ها را با بدون اقدام باز و سلامت پایین می‌بیند. \nستون «معیارها» در همین جدول، امتیاز شاخص هر رابطه را به امتیاز معیارها وصل می‌کند — همان عددی که در صفحهٔ رابطه می‌بینید.', { views: 205, helpful: 37 }), kb('kb-reports', 'reports-and-export', 'گزارش‌ها و خروجی: چه مجوزی لازم است؟', 'نقشهٔ گزارش‌ها، فرمت‌ها، محدودیت متن ساختاریافته برای مدیران و جریان تأیید خروجی.', 'PROCESS', ['گزارش', 'خروجی', 'مجوز'], [], 4, 'تیم محصول', 'گزارش‌ها بر اساس محدودهٔ سازمانی شما ساخته می‌شوند و همان‌جا می‌توانید فایل جدولی/XLSX/گزارش رنگی داشته باشید. \nفرمت متن ساختاریافته مخصوص مدیران سازمانی است؛ فایل جدولی برای بقیهٔ کاربران دارای مجوز خروجی. بدون مجوز خروجی گزارش، دکمهٔ خروجی کار نمی‌کند. \nجریان تأیید: ابتدا «دریافت فایل» (ثبت درخواست)، بعد در «تأییدها» تأیید، سپس دوباره تلاش کنید. هر خروجی در لاگ تحویل و رویدادهای امنیتی ثبت می‌شود. \nدر دمو، خروجی فایل جدولی واقعی تولید می‌شود ولی صفحهٔ گسترده/سند به فایل جدولی برمی‌گردند تا بدون سرور افزوده هم کار کنند.', { views: 96, helpful: 14 }), kb('kb-network', 'network-spof', 'شبکه: مرکزیت، پل‌ها و نقطهٔ شکست واحد', 'چرا یک گره «مرکزیت» بالا یا «نقطهٔ شکست واحد» می‌گیرد و چرا این برای شما مهم است.', 'ANALYTICS', ['شبکه', 'ریسک'], ['NETWORK', 'RISK'], 4, 'تیم محصول', 'مرکزیت شبکه، گره‌هایی را نشان می‌دهد که بیشترین پیوند را دارند — آنها کانون ارتباط شما هستند؛ از دست دادن‌شان گران است. \nپل‌های ارتباطی اشخاصی هستند که دو خوشهٔ متفاوت را به هم می‌رسانند؛ معمولاً مدیرانی که در چند وضعیت نقش دارند. \nنقطهٔ شکست واحد  گره‌ای است که حذف آن شبکه را از هم باز می‌کند. اگر همان گره با پیوندهای پرریسک همراه باشد، بالاترین اولویت اقدام را دارد: حداقل یک مسیر جایگزین بسازید. \nبه یاد داشته باشید که امتیازهای این صفحه با امتیازهای معیاریِ همان گره یکی نیستند؛ اعداد شبکه ساختاری‌اند و اعداد معیار، کیفیت رابطه را می‌سنجند.', { views: 158, helpful: 26 }), kb('kb-ai', 'ai-and-brief', 'بریف اجرایی و دستیار: کجا به عددها اعتماد کنیم؟', 'تفاوت خلاصهٔ خودکار با امتیاز معیارها و مرز اعتماد در خروجی هوش مصنوعی.', 'ANALYTICS', ['هوش مصنوعی', 'بریف'], [], 4, 'تیم محصول', 'دستیار هوشمند و بریف اجرایی، متن را از همان دادهٔ ساخت‌یافته می‌سازند؛ اطلاعات جدید به پایگاه داده اضافه نمی‌کنند. برای همین قبل از اعتماد، سند مرتبط را چک کنید. \nعددهای بریف (میانگین سلامت، ریسک، فرصت) از دادهٔ واقعی و با محدودهٔ سازمانی محاسبه می‌شوند، ولی «تفسیر» متن خودکار است. \nبه‌عنوان قاعدهٔ سرانگشتی: هر جا «امتیاز معیارها» را می‌بینید، همان عدد مقیاس ۰–۱۰۰ با پوشش و اطمینان است؛ هر جا درصد یا شمارش در بریف است، منبع‌اش به دادهٔ خام وصل است. \nاگر متن بریف با امتیاز معیارها نخواند، اول پوشش را چک کنید— معمولاً دلیلش دادهٔ ناقص است نه اشتباه مدل.', { views: 172, helpful: 25 }),
   kb('kb-publics', 'publics-map', 'نقشهٔ عموم‌ها: شش دسته، شناسنامه و شکاف‌ها', 'خوانش هاب عموم‌ها: الگوی سازمان، ماتریس قدرت و علاقه، پوشش دسته‌ها، شکاف بحرانی و مسیر پیشنهادی.', 'ANALYTICS', ['عموم‌ها', 'شکاف', 'شناسنامه'], ['STRATEGIC', 'NETWORK'], 5, 'تیم محصول', '«عموم‌ها» ذی‌نفعان اثرگذار بیرون از روابط قراردادی‌اند؛ نقشهٔ آن‌ها در شش دسته ساخته می‌شود: داخلی، نهادی و حاکمیتی، علمی و دانشگاهی، اقتصادی و سرمایه‌گذاری، رسانه‌ای و عمومی، و اکوسیستم فناوری و صنعت. \nتب «شناسنامهٔ سازمان» نوع شرکت را تعیین می‌کند و الگوی همان نوع، فهرست گروه‌های هدف را می‌سازد؛ «اعضا و ارزیابی» هر عموم را با پیوند (مثلاً فعال‌کننده یا کارکردی-خروجی)، مرحلهٔ بلوغ (نهفته تا فعال)، موضع (ناظر تا بازیگر کلیدی) و قدرت/علاقه ثبت می‌کند و همان دو عدد، جایگاه گره را در ماتریس ۲×۲ می‌دهد. \n«پوشش» به تفکیک دسته نشان می‌دهد چند گروه هدف عضو دارند و کدام دسته خالی است؛ «شکاف‌ها و اقدام» شکاف‌های بحرانی (بازیگر کلیدیِ غایب یا عقب‌مانده) را با اقدام پیشنهادی و مسیر پیشنهادی روی شبکهٔ واقعی روابط نشان می‌دهد. \nگره‌های گراف شبکه با رنگ دستهٔ عموم‌ها و حلقهٔ طلایی «خودِ شرکت» برچسب می‌خورند؛ فیلتر دسته در همان صفحه گراف را تفکیک می‌کند. خلاصهٔ مدیریتی یک‌صفحه‌ای برای هیئت‌مدیره از همین داده ساخته می‌شود و خروجی JSON/CSV/Excel قابل دانلود است. \nمحرک‌های خودکار (PUBLIC_MEMBER_ADDED، PUBLIC_STAGE_CHANGED، PUBLIC_GAP_DETECTED، PUBLIC_REVIEW_DUE، MEDIA_CREATED) گردش‌کار می‌سازند و اقدام و اعلان واقعی ثبت می‌کنند.', { views: 87, helpful: 12 }),
+    kb('kb-alerts', 'unified-alerts', 'هشدارهای یکپارچه: یک زنگوله برای همهٔ ماژول‌ها', 'صفحهٔ هشدارها همهٔ سیگنال‌های روابط، عموم‌ها، اقدام/تعهد، جلسات، گردش کار، کیفیت داده، امنیت و پایش را در یک نگاه فیلترپذیر می‌آورد.', 'PROCESS', ['هشدار', 'هشدار یکپارچه', 'اولویت'], [], 4, 'تیم محصول', 'پیش از این هر ماژول نوار هشدار خودش را داشت؛ حالا همهٔ تشخیص‌ها به شکل واحد (ماژول + شدت + دلیل + اقدام پیشنهادی) در «هوش ← هشدارها» می‌آیند. \\nشدت‌ها سه سطح‌اند: بحرانی (اقدام فوری — مثل تعهد عقب‌افتاده یا اجرای شکست‌خوردهٔ گردش کار)، هشدار (اقدام نزدیک — مثل شکاف بازیگر کلیدی در عموم‌ها یا ریسک رابطه) و اطلاع (بازبینی — مثل جلسهٔ بدون نتیجهٔ ثبت‌شده). \\nهر هشدار «چرا» صادر شده را می‌گوید و دکمهٔ اقدام مستقیم به موجودیت مربوط می‌برد. هشدارهای حل‌شده با ثبت پایدار از فهرست خارج می‌شوند. \\nمنطق تشخیص هیچ ماژولی تغییر نکرده؛ فقط خروجی‌ها یکجا جمع می‌شوند (ADR-0007).', { views: 64, helpful: 11 }),
+    kb('kb-composite', 'entity-composite-score', 'امتیاز مرکب: یک عدد برای مقایسهٔ همهٔ روابط', 'فرمول شفاف و نسخه‌دار که هشت فاکتور رابطه را به یک عدد ۰ تا ۱۰۰ می‌رساند؛ تفکیک کامل در صفحهٔ رابطه.', 'SCORING', ['امتیاز مرکب', 'فرمول', 'وزن‌ها'], ['STRATEGIC', 'RISK', 'RELIABILITY'], 4, 'تیم محصول', 'فهرست روابط فقط «امتیاز مرکب» را نشان می‌دهد؛ در صفحهٔ رابطه تب «تفکیک امتیاز» هشت فاکتور با وزن هرکدام باز می‌شود. \\nفرمول: میانگین وزنیِ فاکتورها — سلامت ۲۵٪، ریسک ۲۰٪ (معکوس؛ ریسک بیشتر = امتیاز کمتر)، راهبردی ۱۵٪، اعتماد ۱۵٪، تعامل ۱۰٪، نفوذ ۵٪، فرصت ۵٪ و تاب‌آوری ۵٪. \\nنسخهٔ فرمول (formulaVersion) کنار امتیاز می‌آید تا تغییر وزن‌ها در طول زمان قابل ردیابی باشد. همان فرمول و همان وزن‌ها در API واقعی (apps/api) و این دمو اجرا می‌شود — یک منبع حقیقت (ADR-0006).', { views: 58, helpful: 13 }),
     kb('kb-strategy', 'strategy-hub', 'تحلیل راهبردی: سناریو، تعادل، شبیه‌سازی', 'هاب تحلیل راهبردی چطور خوانده شود: سناریو، ماتریس عایدی، تعادل نش، شبیه‌سازی تکراری، پیش‌بینی و واکنش.', 'ANALYTICS', ['راهبرد', 'تعادل نش', 'شبیه‌سازی', 'رقبا'], ['STRATEGIC', 'VALUE'], 6, 'تیم محصول', '«تحلیل راهبردی» رقابت و تعامل راهبردی را تحلیل می‌کند. \\nتب «نمای کلی» سناریوها و قالب‌های کلاسیک (معمای زندانی، شکار گوزن، تقابل، هماهنگی، سکهٔ مشابه، بازدارندگی ورود، جنگ قیمت) را نشان می‌دهد؛ «رقبا» طرف‌ها را از سازمان‌های سامانه یا دستی تعریف می‌کند. \\n«اتصال داده» دادهٔ هر پلتفرم دیگر را با قالب JSON/CSV و اعتبارسنجی سطر‌به‌سطر وارد می‌کند؛ «شبیه‌سازی» ماتریس عایدی، بهترین‌پاسخ‌ها، تعادل نش خالص و مختلط (۲×۲)، حذف غلبه، مسیر تعادل درخت ترتیبی و شبیه‌سازی تکراری بذردار را اجرا می‌کند. \\n«پیش‌بینی و واکنش» حرکت بعدی رقیب را از تاریخچه پیش‌بینی و بهترین پاسخ را توصیه می‌کند؛ «خروجی» بریف یک‌صفحه‌ای و دانلود JSON/CSV/Excel می‌دهد. \\nمحرک‌های خودکار (STRATEGY_SCENARIO_CREATED، STRATEGY_SIMULATED، STRATEGY_PREDICTED، STRATEGY_IMPORT_COMPLETED) گردش‌کار می‌سازند و اقدام و اعلان واقعی ثبت می‌کنند.', { views: 41, helpful: 9 }), ]; }  
 /* اسناد واقعی مرکز دانش — در دمو بدون فایل واقعی، اما با چرخهٔ واقعی وضعیت/اسکن/ایندکس */
 function seedDocuments() {
@@ -5201,20 +5406,45 @@ function seedPublicsStore(){
       {id:'m-2',name:'دیجیاتو',type:'TECH_MEDIA',url:'digiato.com',audience:'تخصصی فناوری',country:'ایران',note:'بیش از ۱۰ سال؛ محصول، استارتاپ، سیاست‌گذاری',createdAt:nowIso()},
       {id:'m-3',name:'پیوست',type:'TECH_MEDIA',url:'peivast.com',audience:'تخصصی فاوا',country:'ایران',note:'تحلیل سیاست‌گذاری و رگولاتوری',createdAt:nowIso()},
       {id:'m-4',name:'دنیای اقتصاد',type:'ECONOMIC_MEDIA',url:'donya-e-eqtesad.com',audience:'اقتصادی',country:'ایران',note:'مرجع تحلیل سرمایه‌گذاری',createdAt:nowIso()},
+      {id:'m-5',name:'خبرگزاری ایسنا',type:'NEWS_AGENCY',url:'isna.ir',audience:'عمومی/علمی',country:'ایران',note:'پل دانشگاه و رسانه؛ پوشش اخبار علمی',createdAt:nowIso()},
+      {id:'m-6',name:'خبرگزاری ایرنا',type:'NEWS_AGENCY',url:'irna.ir',audience:'عمومی',country:'ایران',note:'خبرگزاری رسمی کشور؛ کانال بیانیه‌های رسمی',createdAt:nowIso()},
     );
   }
   if(DB.publicsMembers.length===0){
-    const mk=(orgId,groupId,sourceType,sourceId,stage,power,interest,note='')=>({id:`pm-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,orgId,groupId,sourceType,sourceId,linkage:null,stage,power,interest,stance:null,note,assessedAt:nowIso(),reviewDue:new Date(Date.now()+90*86400000).toISOString()});
+    /* دمو غنی‌شده (فاز ۶/ADR-0009): نقشهٔ عموم‌ها با اعضای واقعیِ شش دسته.
+       قواعد دقت: شناسه‌های ثابت (قابل ارجاع در تست) · بازبینی سررسیدشدهٔ عمدی (PM-TC-001) ·
+       بازیگر کلیدیِ عقب‌ماندهٔ عمدی (PM-TC-007) · دستهٔ نهادیِ org-2 عمداً خالی (شکاف بحرانی). */
+    const mk=(id,orgId,groupId,sourceType,sourceId,stage,power,interest,stance,linkage,note,reviewDays=90)=>({id,orgId,groupId,sourceType,sourceId,linkage,stage,power,interest,stance,note,assessedAt:new Date(Date.now()-7*86400000).toISOString(),reviewDue:new Date(Date.now()+reviewDays*86400000).toISOString()});
     const arr=[
-      mk('org-1','h-n1','organization','org-8','AWARE',85,65,'طرف مکاتبه در مجوزهای استانی هلدینگ'),
-      mk('org-1','h-e11','organization','org-3','AWARE',70,75,'بانک عامل تسهیلات و ضمانت‌نامه‌های هلدینگ'),
-      mk('org-1','h-i3','organization','org-2','ACTIVE',70,90,'زیرمجموعهٔ فناور؛ مجری پروژه‌های نرم‌افزاری هلدینگ'),
-      mk('org-1','h-m1','media','m-1','ACTIVE',60,80,'رسانهٔ مرجع پوشش اخبار هلدینگ و زیرمجموعه‌ها'),
-      mk('org-2','tc-i1','person','p-1','ACTIVE',70,90,'مدیر فروش محصول نرم‌افزاری'),
-      mk('org-2','tc-m1','media','m-1','AWARE',60,55,'رسانهٔ مرجع نقد و معرفی محصول'),
+      /* ── هلدینگ آریا (org-1 · الگوی HOLDING · ۱۰۵ گروه) ── */
+      mk('PM-H-001','org-1','h-n1','organization','org-8','AWARE',85,65,'INFLUENCER','ENABLING','طرف مکاتبه در مجوزهای استانی هلدینگ'),
+      mk('PM-H-002','org-1','h-e11','organization','org-3','AWARE',70,75,'INFLUENCER','FUNCTIONAL_INPUT','بانک عامل تسهیلات و ضمانت‌نامه‌های هلدینگ'),
+      mk('PM-H-003','org-1','h-i3','organization','org-2','ACTIVE',70,90,'KEY_PLAYER','ENABLING','زیرمجموعهٔ فناور؛ مجری پروژه‌های نرم‌افزاری هلدینگ'),
+      mk('PM-H-004','org-1','h-m1','media','m-1','ACTIVE',60,80,'KEY_PLAYER','DIFFUSED','رسانهٔ مرجع پوشش اخبار هلدینگ و زیرمجموعه‌ها'),
+      mk('PM-H-005','org-1','h-i1','person','p-6','ACTIVE',95,95,'KEY_PLAYER','ENABLING','عضو دبیرخانهٔ هیئت‌مدیره؛ چشمِ داخل روایت هسته'),
+      mk('PM-H-006','org-1','h-a1','organization','org-9','ACTIVE',80,85,'KEY_PLAYER','NORMATIVE','قطب اصلی استعداد و پژوهش برای همهٔ حوزه‌های هلدینگ'),
+      mk('PM-H-007','org-1','h-a3','person','p-15','AWARE',65,70,'INFLUENCER','NORMATIVE','سرپرست آزمایشگاه پردازش زبان؛ شریک محتوایی بالقوه'),
+      mk('PM-H-008','org-1','h-e1','organization','org-11','AWARE',75,60,'INFLUENCER','ENABLING','تنظیم‌گر بازار سرمایه؛ مسیر آتی عرضه'),
+      mk('PM-H-009','org-1','h-ns6','organization','org-11','AWARE',75,65,'INFLUENCER','ENABLING','تنظیم‌گر اعتباری و مالی برای حوزه‌های هلدینگ'),
+      mk('PM-H-010','org-1','h-e4','organization','org-12','ACTIVE',60,80,'KEY_PLAYER','ENABLING','منبع مالی دانش‌بنیان؛ پروندهٔ پلتفرم بانکداری در کارشناسی'),
+      mk('PM-H-011','org-1','h-e9','organization','org-10','AWARE',55,60,'INFLUENCER','NORMATIVE','بزرگ‌ترین نهاد رسمی بخش خصوصی؛ کانال هم‌صدایی صنعت'),
+      mk('PM-H-012','org-1','h-m2','media','m-2','ACTIVE',60,75,'KEY_PLAYER','DIFFUSED','رسانهٔ پیشگام فناوری؛ پوشش زیرمجموعهٔ فناور'),
+      mk('PM-H-013','org-1','h-m4','media','m-5','AWARE',65,55,'INFLUENCER','DIFFUSED','پل دانشگاه↔رسانه برای اخبار علمی هلدینگ'),
+      mk('PM-H-014','org-1','h-x1','person','p-14','ACTIVE',70,75,'KEY_PLAYER','NORMATIVE','چهرهٔ شناخته‌شدهٔ اکوسیستم فناوری؛ سفیر علمی هلدینگ'),
+      /* ── آریا فناوری (org-2 · الگوی TECHNOLOGY · ۷ گروه) ── */
+      mk('PM-TC-001','org-2','tc-i1','person','p-1','ACTIVE',70,90,'KEY_PLAYER','ENABLING','مدیر فروش محصول نرم‌افزاری',-26), /* بازبینی ۲۶ روز عقب افتاده (ماژول هشدار عموم‌ها) */
+      mk('PM-TC-002','org-2','tc-m1','media','m-1','AWARE',60,55,'INFLUENCER','DIFFUSED','رسانهٔ مرجع نقد و معرفی محصول'),
+      mk('PM-TC-003','org-2','tc-a1','organization','org-9','ACTIVE',80,85,'KEY_PLAYER','NORMATIVE','شریک پژوهشی پروژهٔ پردازش زبان (رابطهٔ r-9)'),
+      mk('PM-TC-004','org-2','tc-a1','person','p-15','LATENT',65,70,'KEY_PLAYER','NORMATIVE','بازیگر کلیدیِ هنوز نهفته — نیازمند تعامل مستقیم (شکاف عقب‌مانده)'),
+      mk('PM-TC-005','org-2','tc-e1','organization','org-12','ACTIVE',60,80,'KEY_PLAYER','ENABLING','منبع تأمین مالی دانش‌بنیان محصول'),
+      mk('PM-TC-006','org-2','tc-c1','organization','org-5','ACTIVE',55,70,'INFLUENCER','FUNCTIONAL_INPUT','مشتری مرجع؛ گواهی زندهٔ بازار محصول'),
+      mk('PM-TC-007','org-2','tc-x1','person','p-14','AWARE',70,65,'INFLUENCER','NORMATIVE','اتصال‌دهندهٔ اکوسیستم فناوری و دانشگاه'),
+      mk('PM-TC-008','org-2','tc-i1','person','p-7','ACTIVE',65,80,'KEY_PLAYER','ENABLING','مدیر محصول؛ روایت فنی محصول از درون'),
+      /* توجه: دستهٔ نهادی org-2 (tc-n1 — تنظیم‌گر حوزهٔ فناوری) عمداً بدون عضو مانده تا شکاف بحرانی
+         (بازیگر کلیدیِ غایب) در دمو دیده شود؛ مسیر پیشنهادی از رابطهٔ r-11 (سازمان بورس) می‌آید. */
     ];
     DB.publicsMembers.push(...arr);
-    // پیشنهاد پیوند/قدرت-علاقه با موتور (بدون بازنویسی ورودی کاربر)
+    // پیشنهاد پیوند/قدرت-علاقه با موتور فقط برای ورودی‌های بدون مقدار (بدون بازنویسی کاربر)
     for(const m of DB.publicsMembers){ const sug=pubSuggester(m); m.linkage=m.linkage??sug.linkage; m.stance=m.stance??sug.stance; }
   }
 }
@@ -6020,7 +6250,7 @@ function aiQuery(req,intent,qRaw){
   return {
     status:'completed_without_external_model',intent,
     evidence,result,
-    model:{provider:'deterministic',externalCall:false},
+    model:{provider:'deterministic-gateway',externalCall:false},
     safety,
   };
 }
@@ -6370,41 +6600,39 @@ async function __handler(req, res) {
     }});
   }
   // هشدارهای هوشمند روابط — بازاری/غیربازاری + نقطه ورود به بازار
+  /* فاز ۳ (ADR-0007): منطق تشخیص به relationshipAlertItems() استخراج شد (تک‌منبع؛
+     آستانه‌ها و kindها عیناً حفظ شده‌اند) — این endpoint برای سازگاری عقب‌رو همان خروجی قبلی را می‌دهد. */
   if(is('/relationships/alerts')&&method==='GET'){
-    const rels=scopedRels(req).filter(r=>!r.deletedAt);
-    const now=Date.now();
-    const alerts=[];
-    for(const r of rels){
-      const name = `${orgById(r.sourceOrganizationId)?.name ?? r.sourceOrganizationId} ↔ ${orgById(r.targetOrganizationId)?.name ?? r.targetOrganizationId}`;
-      const daysStale = r.lastInteractionAt ? Math.floor((now - new Date(r.lastInteractionAt).getTime())/86400000) : 999;
-      const cad = r.cadenceDays ?? 60;
-      // هشدار حوزه بازار
-      if(r.marketKind==='MARKET'){
-        if((r.healthScore??100) < 45) alerts.push({id:`a-${r.id}-mHealth`, relationshipId:r.id, tone:'danger', kind:'MARKET_HEALTH', title:'رابطهٔ بازاری بحرانی', body:`«${name}» سلامت ${r.healthScore} — در زنجیرهٔ بازار مستقیم اختلال ایجاد می‌کند.`, marketKind:r.marketKind, isMarketEntry:r.isMarketEntry, health:r.healthScore, segment:r.marketSegment});
-        else if((r.riskScore??0) >= 60) alerts.push({id:`a-${r.id}-mRisk`, relationshipId:r.id, tone:'warning', kind:'MARKET_RISK', title:'ریسک بالای رابطهٔ بازاری', body:`«${name}» ریسک ${r.riskScore} و بدون اقدام اصلاحی باز.`, marketKind:r.marketKind, isMarketEntry:r.isMarketEntry, risk:r.riskScore, segment:r.marketSegment});
-        if(r.isMarketEntry && daysStale > cad) alerts.push({id:`a-${r.id}-entryStale`, relationshipId:r.id, tone:'danger', kind:'ENTRY_STALE', title:'نقطهٔ ورود به بازار راکد', body:`«${name}» ورودی بازار «${r.marketSegment||'—'}» است ولی ${daysStale} روز بدون تعامل مانده (هدف هر ${cad} روز).`, daysStale, cadence:cad, marketKind:r.marketKind, isMarketEntry:true, segment:r.marketSegment});
-        if(daysStale > cad+15) alerts.push({id:`a-${r.id}-mStale`, relationshipId:r.id, tone: daysStale>cad+30?'danger':'warning', kind:'MARKET_STALE', title:'رابطهٔ بازاری کهنه', body:`«${name}» ${daysStale} روز بدون تعامل — خطر از دست دادن سهم بازار.`, daysStale, cadence:cad, marketKind:r.marketKind, segment:r.marketSegment});
-      } else if(r.marketKind==='NON_MARKET'){
-        if((r.healthScore??100) < 50) alerts.push({id:`a-${r.id}-nmHealth`, relationshipId:r.id, tone:'warning', kind:'NONMARKET_HEALTH', title:'رابطهٔ غیربازاری ناپایدار', body:`«${name}» (غیربازاری — ${r.marketSegment||'نهاد/تنظیم‌گر'}) سلامت ${r.healthScore}؛ می‌تواند مسیر ورود به بازار را مسدود کند.`, marketKind:r.marketKind, health:r.healthScore, segment:r.marketSegment});
-        if((r.riskScore??0)>=55 && r.isMarketEntry) alerts.push({id:`a-${r.id}-nmBlock`, relationshipId:r.id, tone:'danger', kind:'NONMARKET_BLOCK', title:'انسداد احتمالی ورود به بازار', body:`«${name}» به‌عنوان دروازهٔ ورود «${r.marketSegment||'—'}» پرریسک شده (ریسک ${r.riskScore}). بازبینی حاکمیتی لازم است.`, marketKind:r.marketKind, isMarketEntry:true, risk:r.riskScore, segment:r.marketSegment});
-      }
-      if(r.marketKind==='HYBRID' && (r.healthScore??100) < 50) alerts.push({id:`a-${r.id}-hyb`, relationshipId:r.id, tone:'warning', kind:'HYBRID_RISK', title:'رابطهٔ دوگانه ناپایدار', body:`«${name}» (هیبرید — هم بازار، هم نهاد) نیازمند مراقبت دوگانه است.`, marketKind:r.marketKind, health:r.healthScore});
-      // هشدار کیدنس عمومی (هر بازار)
-      if(daysStale > cad && r.status==='ACTIVE' && !alerts.some(a=>a.relationshipId===r.id && a.kind.includes('STALE'))){
-        alerts.push({id:`a-${r.id}-cad`, relationshipId:r.id, tone: daysStale>cad+20?'danger':'warning', kind:'CADENCE_BREAK', title:'کیدنس شکسته', body:`«${name}» ${daysStale} روز بدون تعامل (هدف ${cad} روز).`, daysStale, cadence:cad, marketKind:r.marketKind, segment:r.marketSegment});
-      }
-    }
-    // هشدار فقدان ورودی بازار برای هر سگمنت بازار هدف که هنوز ورودی ندارد
-    const segments = [...new Set(rels.filter(r=>r.marketKind==='MARKET').map(r=>r.marketSegment).filter(Boolean))];
-    const entrySegments = new Set(rels.filter(r=>r.isMarketEntry).map(r=>r.marketSegment).filter(Boolean));
-    for(const seg of ['پتروشیمی و انرژی','بانکداری و تأمین مالی','ساخت‌وساز و پروژه‌های عمرانی','فناوری']){
-      if(!entrySegments.has(seg) && !segments.includes(seg)) alerts.push({id:`a-missing-${seg}`, tone:'info', kind:'MISSING_ENTRY', title:'بازار بدون نقطهٔ ورود', body:`برای سگمنت «${seg}» هنوز نقطهٔ ورود بازاری ثبت نشده — فرصت یا ریسک پوشش.`, segment:seg});
-    }
-    // مرتب‌سازی: بحرانی اول
-    const order={danger:0,warning:1,info:2};
-    alerts.sort((a,b)=> (order[a.tone]??9)-(order[b.tone]??9) || String(a.kind).localeCompare(String(b.kind)));
+    const alerts=relationshipAlertItems(req);
     return json(res,200,{generatedAt:nowIso(), total:alerts.length, items:alerts.slice(0,30), summary:{danger:alerts.filter(a=>a.tone==='danger').length, warning:alerts.filter(a=>a.tone==='warning').length, info:alerts.filter(a=>a.tone==='info').length, market:alerts.filter(a=>a.marketKind==='MARKET').length, nonMarket:alerts.filter(a=>a.marketKind==='NON_MARKET').length, entry:alerts.filter(a=>a.isMarketEntry).length}});
   }
+  /* ── فاز ۳ (ADR-0007): هشدار یکپارچهٔ همهٔ ماژول‌ها — یک منبع، یک شکل، فیلترپذیر ── */
+  if(is('/alerts')&&method==='GET'){
+    const alertsCanView=authUser?.isOwner||(authUser?.permissions??[]).includes('dashboard.read'); /* همان hasPerm، اینجا inline چون const آن پایین‌تر تعریف می‌شود */
+    if(!alertsCanView) return json(res,403,{message:'شما مجوز «مشاهدهٔ داشبورد» (dashboard.read) را ندارید.'});
+    const modF=q.get('module');
+    const sevF=q.get('severity');
+    let items=collectUnifiedAlerts(req,authUser);
+    if(modF&&Object.keys(ALERT_MODULE_FA).includes(modF)) items=items.filter(a=>a.module===modF);
+    if(sevF&&['CRITICAL','WARNING','INFO'].includes(sevF)) items=items.filter(a=>a.severity===sevF);
+    const byModule={}; for(const a of items) byModule[a.module]=(byModule[a.module]??0)+1;
+    return json(res,200,{generatedAt:nowIso(), total:items.length,
+      summary:{CRITICAL:items.filter(a=>a.severity==='CRITICAL').length,WARNING:items.filter(a=>a.severity==='WARNING').length,INFO:items.filter(a=>a.severity==='INFO').length,byModule},
+      modules:Object.keys(ALERT_MODULE_FA).map(m=>({id:m,fa:ALERT_MODULE_FA[m]})),
+      items:items.slice(0,200)});
+  }
+  const alertResolve=match('/alerts/:id/resolve');
+  if(alertResolve&&method==='POST'){
+    const alertsCanView=authUser?.isOwner||(authUser?.permissions??[]).includes('dashboard.read');
+    if(!alertsCanView) return json(res,403,{message:'شما مجوز «مشاهدهٔ داشبورد» (dashboard.read) را ندارید.'});
+    const id=alertResolve[0];
+    const all=collectUnifiedAlerts(req,authUser);
+    if(!all.some(a=>a.id===id)&&!(DB.alertResolutions??{})[id]) return json(res,404,{message:'هشدار یافت نشد.'});
+    DB.alertResolutions=DB.alertResolutions??{};
+    DB.alertResolutions[id]=nowIso();
+    saveDb();
+    audit(req,'UPDATE','alert',id,'OK',{resolved:true});
+    return json(res,200,{id,resolvedAt:DB.alertResolutions[id]});
   }
   const relPulse=match('/relationships/:id/pulse');
   if(relPulse&&method==='GET'){
@@ -6960,26 +7188,54 @@ async function __handler(req, res) {
     if(RECS.length>before) NOTIFICATIONS.unshift({id:`n-${Date.now()}`,title:'پیشنهاد هوشمند جدید',body:`${RECS.length-before} پیشنهاد جدید بر اساس روابط و تعاملات تولید شد.`,type:'RECOMMENDATION',priority:'recommendation',isRead:false,createdAt:nowIso()});
     return json(res,200,{generated:RECS.length-before,recommendations:[],candidateTypes:Object.keys(TYPE_KEYS)});
   }
-  const recAction = path.match(new RegExp(`^${V1}/recommendations/([^/]+)/(تأیید|reject|snooze|execute)$`));
+  /* چرخهٔ عمر پیشنهاد — parity با recommendations.controller.ts واقعی:
+     POST :id/view|accept|approve|reject|snooze|assign|execute + PATCH :id
+     (مسیر فارسی «تأیید» برای سازگاری عقب‌رو نگه داشته شد) */
+  const recAction = path.match(new RegExp(`^${V1}/recommendations/([^/]+)/(approve|accept|تأیید|reject|snooze|execute|assign|view)$`));
   if(recAction && method==='POST'){
     const rec=RECS.find(x=>x.id===recAction[1]);
     if(!rec) return json(res,404,{message:'پیشنهاد یافت نشد'});
+    if(rec.relationshipId&&!relInScope(req,RELS.find(r=>r.id===rec.relationshipId))) return json(res,403,{message:'دسترسی به این پیشنهاد مجاز نیست.'});
     const action=recAction[2];
-    if(action==='تأیید'){ rec.status='APPROVED'; rec.decisionAt=nowIso(); rec.snoozedUntil=null; audit(req,'APPROVE','recommendation',rec.id,'OK'); NOTIFICATIONS.unshift({id:`n-${Date.now()}`,title:'پیشنهاد تأیید شد',body:`«${rec.title}» تأیید شد و آمادهٔ اجراست.`,type:'RECOMMENDATION',priority:'information',isRead:false,createdAt:nowIso()}); return json(res,200,rec); }
-    if(action==='reject'){ rec.status='REJECTED'; rec.decisionAt=nowIso(); audit(req,'REJECT','recommendation',rec.id,'OK'); return json(res,200,rec); }
+    if(action==='approve'||action==='accept'||action==='تأیید'){
+      if(!['PROPOSED','SNOOZED','ASSIGNED'].includes(rec.status)) return json(res,400,{message:'Recommendation is not approvable'});
+      rec.status='APPROVED'; rec.decisionById=authUser.id; rec.decisionAt=nowIso(); rec.snoozedUntil=null;
+      audit(req,'APPROVE','recommendation',rec.id,'OK');
+      NOTIFICATIONS.unshift({id:`n-${Date.now()}`,title:'پیشنهاد تأیید شد',body:`«${rec.title}» تأیید شد و آمادهٔ اجراست.`,type:'RECOMMENDATION',priority:'information',isRead:false,createdAt:nowIso()});
+      return json(res,200,rec);
+    }
+    if(action==='reject'){
+      if(['REJECTED','EXECUTED','ARCHIVED'].includes(rec.status)) return json(res,400,{message:'Recommendation cannot be rejected'});
+      rec.status='REJECTED'; rec.decisionById=authUser.id; rec.decisionAt=nowIso(); audit(req,'REJECT','recommendation',rec.id,'OK'); return json(res,200,rec);
+    }
     if(action==='snooze'){
       const b=await readBody(req);
       if(!b.until||new Date(b.until).getTime()<=Date.now()) return json(res,400,{message:'Snooze time must be in the future'});
       rec.status='SNOOZED'; rec.snoozedUntil=b.until; return json(res,200,rec);
     }
+    if(action==='assign'){
+      const b=await readBody(req);
+      if(!b.assigneeId) return json(res,400,{message:'assigneeId لازم است.'});
+      const u=Object.values(SEED_USERS).find(x=>x.id===b.assigneeId);
+      if(!u||u.isActive===false) return json(res,400,{message:'Assignee is not active'});
+      rec.assignedToId=b.assigneeId; rec.status='ASSIGNED'; return json(res,200,rec);
+    }
+    if(action==='view'){
+      audit(req,'READ','recommendation',rec.id,'OK');
+      return json(res,200,rec);
+    }
     if(action==='execute'){
-      if(rec.status!=='APPROVED') return json(res,400,{message:'Recommendation must be تأییدd before execution'});
-      rec.status='EXECUTED'; rec.decisionAt=nowIso();
+      if(rec.status!=='APPROVED') return json(res,400,{message:'Recommendation must be approved before execution'});
+      if(!rec.relationshipId) return json(res,400,{message:'Executable recommendation requires a relationship'});
+      rec.status='EXECUTED'; rec.decisionById=authUser.id; rec.decisionAt=nowIso();
       const actionId=`a-${Date.now()}`;
-      ACTIONS.push({id:actionId,title:rec.title,status:'OPEN',priority:rec.type==='RISK_MITIGATION'?'HIGH':'MEDIUM',dueAt:new Date(Date.now()+7*86400000).toISOString(),ownerId:'p-1',relationshipId:rec.relationshipId});
+      /* اولویت مثل سرویس واقعی: RISK_MITIGATION→HIGH · EXECUTIVE_ESCALATION→CRITICAL · بقیه MEDIUM */
+      const priority=rec.type==='RISK_MITIGATION'?'HIGH':rec.type==='EXECUTIVE_ESCALATION'?'CRITICAL':'MEDIUM';
+      const actionRow={id:actionId,title:rec.title,status:'OPEN',priority,dueAt:new Date(Date.now()+7*86400000).toISOString(),ownerId:rec.assignedToId??authUser.id,relationshipId:rec.relationshipId,recommendationId:rec.id,createdAt:nowIso()};
+      ACTIONS.push(actionRow); saveDb();
       audit(req,'EXECUTE','recommendation',rec.id,'OK',{actionId});
-      NOTIFICATIONS.unshift({id:`n-${Date.now()}`,title:'اقدام از پیشنهاد ایجاد شد',body:`اقدام «${rec.title}» ایجاد شد (۷ روز مهلت).`,type:'SYSTEM',priority:'important',isRead:false,createdAt:nowIso()});
-      return json(res,200,{recommendation:rec,action:{id:actionId,title:rec.title}});
+      NOTIFICATIONS.unshift({id:`n-${Date.now()}`,title:'اقدام از پیشنهاد ایجاد شد',body:`از پیشنهاد «${rec.title}» اقدام «${actionRow.title}» ساخته شد.`,type:'SYSTEM',priority:'important',isRead:false,createdAt:nowIso()});
+      return json(res,200,{recommendation:rec,action:actionRow});
     }
   }
   const recExplain=match('/recommendations/:id/explain');
@@ -6995,6 +7251,17 @@ async function __handler(req, res) {
     if(!rec) return json(res,404,{message:'پیشنهاد یافت نشد'});
     if(rec.relationshipId&&!relInScope(req,RELS.find(r=>r.id===rec.relationshipId))) return json(res,403,{message:'دسترسی به این پیشنهاد مجاز نیست.'});
     return json(res,200,{...rec,relationship:RELS.find(x=>x.id===rec.relationshipId)?relWithOrgs(RELS.find(x=>x.id===rec.relationshipId)):null});
+  }
+  if(recId&&method==='PATCH'){
+    const rec=RECS.find(x=>x.id===recId[0]);
+    if(!rec) return json(res,404,{message:'پیشنهاد یافت نشد'});
+    if(rec.relationshipId&&!relInScope(req,RELS.find(r=>r.id===rec.relationshipId))) return json(res,403,{message:'دسترسی به این پیشنهاد مجاز نیست.'});
+    const b=await readBody(req);
+    if(b.title!==undefined){ if(!String(b.title).trim()) return json(res,400,{message:'عنوان نمی‌تواند خالی باشد.'}); rec.title=String(b.title).trim(); }
+    if(b.rationale!==undefined) rec.rationale=String(b.rationale);
+    if(b.confidence!==undefined){ const c=Number(b.confidence); if(!Number.isFinite(c)||c<0||c>100) return json(res,400,{message:'اطمینان باید بین ۰ تا ۱۰۰ باشد.'}); rec.confidence=Math.round(c); }
+    audit(req,'UPDATE','recommendation',rec.id,'OK');
+    return json(res,200,rec);
   }
 
   /* ------------------------------- search ------------------------------- */
@@ -7026,11 +7293,11 @@ async function __handler(req, res) {
     const wantPerson=typeFilter==='all'||typeFilter==='person';
     const orgNodes=[]; const personNodes=[];
     const rels=scopedRels(req).slice(0,12).filter(r=>!q.get('status')||r.status===q.get('status'));
-    // org nodes: in-scope orgs + counterparty orgs of visible relationships
-    const relOrgIds=new Set();
-    rels.forEach(r=>{relOrgIds.add(r.sourceOrganizationId);relOrgIds.add(r.targetOrganizationId);});
+    // org nodes: فقط سازمان‌های درون محدودهٔ دسترسی — همتای network.service.ts واقعی.
+    // (گرهٔ «طرف مقابل» ساخته نمی‌شود؛ یال رابطه فقط وقتی پذیرفته می‌شود که هر دو سرش گره باشند.
+    //  برای مستأجر یعنی: سازمان خودش + اشخاصش؛ طرف‌های مقابل در فهرست روابط قابل مشاهده‌اند.)
     ORGS.forEach(o=>{
-      const visible=inScope(req,o.id)||relOrgIds.has(o.id);
+      const visible=inScope(req,o.id);
       if(!visible||!wantOrg) return;
       if(term&&!o.name.toLowerCase().includes(term)) return;
       orgNodes.push({id:`org:${o.id}`,label:o.name,type:'organization',organizationId:o.id});
@@ -9405,7 +9672,9 @@ async function __handler(req, res) {
   }
   const approvalDecision=match('/approvals/:id/:decision');
   if(approvalDecision&&method==='POST'){
-    const decision=approvalDecision[1];
+    /* مسیرهای انگلیسی approve/reject قرارداد API واقعی‌اند؛ معادل فارسی برای سازگاری عقب‌رو می‌ماند */
+    const decisionRaw=approvalDecision[1];
+    const decision=decisionRaw==='approve'?'تأیید':decisionRaw==='رد'?'reject':decisionRaw;
     if(!['تأیید','reject'].includes(decision)) return json(res,400,{message:'تصمیم نامعتبر است.'});
     const b=await readBody(req);
     const a=(DB.approvals??[]).find(x=>x.id===approvalDecision[0]);
