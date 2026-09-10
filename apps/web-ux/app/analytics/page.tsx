@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, apiPost } from '../_lib/api';
 import { Badge, ErrorCard, Loading, PageHeader, StatCard } from '../_components/page-ui';
+import { FunnelVisual } from '../_components/funnel-visual';
 import {
   Activity, BarChart3, Bell, BellRing, Building2, CalendarDays, Compass, FileText,
   FlaskConical, FolderKanban, GitBranch, Handshake ,  Network, RefreshCw,
@@ -367,16 +368,8 @@ export default function Analytics() {
                 </div>
                 <Badge tone="info">نرخ پذیرش: {fmt1.format(funnel.overall?.acceptedPct ?? 0)}٪</Badge>
               </div>
-              <div style={{ display: 'grid', gap: 7, marginBottom: 12 }}>
-                {stageRows.map(([k, v]) => (
-                  <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11 }}>
-                    <span style={{ width: 96, flex: '0 0 auto', color: 'var(--muted,#64748b)' }}>{STAGE_FA[k]}</span>
-                    <span style={{ flex: 1, background: 'color-mix(in srgb, var(--border,#e2e8f0) 55%, transparent)', borderRadius: 8, height: 22, overflow: 'hidden', display: 'block' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', height: 22, width: `${stageMax ? Math.round((v / stageMax) * 100) : 0}%`, borderRadius: 8, background: `linear-gradient(90deg, ${RING_COLOR(Math.round((v / stageMax) * 100))}44, ${RING_COLOR(v > 0 ? 90 : 0)}dd)` }} />
-                    </span>
-                    <b style={{ width: 22, textAlign: 'left' }}>{fmt.format(v)}</b>
-                  </div>
-                ))}
+              <div style={{ marginBottom: 12 }}>
+                <FunnelVisual stages={funnel.stages} conversion={funnel.conversion} compact />
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
                 {Object.entries(funnel.conversion ?? {}).map(([k, v]) => {

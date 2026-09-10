@@ -1,4 +1,5 @@
 'use client';
+import { faFullDate } from '../_lib/jalali';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../_lib/api';
@@ -340,7 +341,7 @@ function dayLabel(day: string): string {
   const yest = new Date(Date.now() - 86400000).toDateString();
   if (day === today) return 'امروز';
   if (day === yest) return 'دیروز';
-  return d.toLocaleDateString('fa-IR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  return faFullDate(d); // ترتیب دستوری درست (Intl fa-IR در برخی ICUها ترتیب را می‌شکند)
 }
 function timeLabel(iso: string): string {
   return new Date(iso).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });

@@ -273,7 +273,7 @@ export default function IntelligencePage() {
                       <span style={{ flex: 1 }} />
                       {a.originalKeyPerson && <span className="chip neutral">مالک: {a.originalKeyPerson.name}</span>}
                       {Array.isArray(a.backupKeyPersons) && a.backupKeyPersons.length > 0 && <span className="chip info">جانشین: {a.backupKeyPersons.map((p: any) => p.name).join('، ')}</span>}
-                      {a.alternatePath && <span className="chip success">{a.alternatePath.hops} پرش · امتیاز {a.alternatePath.score}</span>}
+                      {a.alternatePath && <span className="chip success">{fmtNum(a.alternatePath.hops)} پرش · امتیاز {fmtNum(a.alternatePath.score)}</span>}
                     </div>
                   ))}
                 </div>

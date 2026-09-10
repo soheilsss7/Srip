@@ -1,3 +1,4 @@
+import { faNum } from './jalali';
 import { fa } from './fa';
 /* ==========================================================================
    SRIP Connection-Intelligence engine — fully deterministic, NO LLM.
@@ -99,7 +100,7 @@ export function suggestConnections(
     if (shared.length) {
       score += shared.length * 14;
       via.push(...shared);
-      reasons.push(`${shared.length} ارتباط مشترک`);
+      reasons.push(`${faNum(shared.length)} ارتباط مشترک`);
     }
     if (orbit.has(id) && !mutual.has(id)) {
       score += 20;

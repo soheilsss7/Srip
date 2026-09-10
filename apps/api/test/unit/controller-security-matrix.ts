@@ -203,6 +203,14 @@ export const CONTROLLER_SECURITY_MATRIX: Record<
     requiredGuards: ["AuthGuard", "AuthorizationGuard"],
     requirePermission: true,
   },
+  "entity-scores.controller.ts": {
+    category: "AUTHORIZED",
+    requiredGuards: ["AuthGuard", "AuthorizationGuard"],
+  },
+  "alerts.controller.ts": {
+    category: "AUTHORIZED",
+    requiredGuards: ["AuthGuard", "AuthorizationGuard"],
+  },
   "scoring.controller.ts": {
     category: "AUTHORIZED",
     requiredGuards: ["AuthGuard", "AuthorizationGuard"],

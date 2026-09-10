@@ -108,6 +108,18 @@ export function faNum(value: number | string): string {
   return String(value).replace(/\d/g, (d) => FA_DIGITS[Number(d)]);
 }
 
+/**
+ * تاریخ کامل فارسی با ترتیبِ درست: «پنجشنبه ۱۹ شهریور ۱۴۰۵».
+ * چرا دستی؟ Intlِ برخی نسخه‌های Chrome/ICU برای fa-IR با weekday+year+month+day
+ * ترتیب شکسته می‌سازد («۱۴۰۵ شهریور ۱۹, پنجشنبه»)؛ این‌جا قطعات را جدا می‌گیریم
+ * و خودمان با ترتیب دستوری فارسی می‌چینیم — مستقل از ICU و نسخهٔ مرورگر.
+ */
+export function faFullDate(d: Date = new Date()): string {
+  const j = toJalali(d.getFullYear(), d.getMonth() + 1, d.getDate());
+  const wd = WEEKDAYS_SAT[saturdayFirst(d.getFullYear(), d.getMonth() + 1, d.getDate())];
+  return `${wd} ${faNum(j.jd)} ${JALALI_MONTHS[j.jm - 1]} ${faNum(j.jy)}`;
+}
+
 export function todayJalali(): JalaliDate {
   const n = new Date();
   return toJalali(n.getFullYear(), n.getMonth() + 1, n.getDate());

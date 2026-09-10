@@ -1,4 +1,5 @@
 'use client';
+import { faNum } from '../_lib/jalali';
 import Link from 'next/link';
 import { useEffect,useMemo,useState } from 'react';
 import { api } from '../_lib/api';
@@ -128,7 +129,7 @@ const EV_FA: Record<string,string> = {
 };
 const evText = (k: string, v: any): string => {
   if (k === 'nextActionAt' && v) return new Date(v).toLocaleDateString('fa-IR');
-  return String(v);
+  return faNum(String(v)); // ارقام فارسی در متنِ شواهد
 };
 
  return (
@@ -165,7 +166,7 @@ const evText = (k: string, v: any): string => {
                   <span className="stat-ico ic-purple" style={{width:30,height:30,borderRadius:9}}><Link2 size={15}/></span>
                   {s.name}
                 </b>
-                <span className="confidence-num">{s.score}٪</span>
+                <span className="confidence-num">{faNum(s.score)}٪</span>
               </div>
               {s.sub && <span className="chip neutral" style={{alignSelf:'flex-start'}}>{s.sub}</span>}
               <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
@@ -208,7 +209,7 @@ const evText = (k: string, v: any): string => {
         <option value="ALL">همهٔ انواع</option>
         {TYPE_ORDER.map(t=><option key={t} value={t}>{TYPE_META[t]?.label??t}</option>)}
       </select>
-      <span className="chip info" style={{marginInlineStart:'auto'}}>{filtered.length} پیشنهاد</span>
+      <span className="chip info" style={{marginInlineStart:'auto'}}>{faNum(filtered.length)} پیشنهاد</span>
     </div>
 
     {loading ? (
@@ -253,7 +254,7 @@ const evText = (k: string, v: any): string => {
               <div className="confidence-wrap" title={`اطمینان موتور: ${conf}٪`}>
                 <span className="t-muted" style={{fontSize:10.5,fontWeight:800,whiteSpace:'nowrap'}}>اطمینان</span>
                 <div className="confidence-track"><span className={`confidence-fill${confidenceTone(conf)}`} style={{width:`${conf}%`}}/></div>
-                <span className="confidence-num">{conf}٪</span>
+                <span className="confidence-num">{faNum(conf)}٪</span>
               </div>
 
               {evidenceEntries(r).length>0 && (

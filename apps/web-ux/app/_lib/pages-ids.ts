@@ -2,15 +2,15 @@
 // Ids come from scripts/mock-api.mjs so every dynamic route can be
 // statically pre-rendered (GitHub Pages export, SRIP_PAGES=1).
 export const pageIds: Record<string, string[]> = {
-  organizations: ["org-1","org-2","org-3","org-4","org-5","org-6","org-7","org-8"],
-  people: ["p-1","p-2","p-3","p-4","p-5","p-6","p-7","p-8"],
-  relationships: ["r-1","r-2","r-3","r-4","r-5"],
-  meetings: ["m-1","m-2","m-3","a-x1","c-x1","m-4"],
-  actions: ["a-1","a-2","a-3","a-4"],
-  commitments: ["c-1","c-2","c-3","c-4"],
+  organizations: ["org-1","org-2","org-3","org-4","org-5","org-6","org-7","org-8","org-9","org-10","org-11","org-12"],
+  people: ["p-1","p-2","p-3","p-4","p-5","p-6","p-7","p-8","p-9","p-10","p-11","p-12","p-13","p-14","p-15","p-16","p-17","p-18","p-19"],
+  relationships: ["r-1","r-2","r-3","r-4","r-5","r-6","r-7","r-8","r-9","r-10","r-11","r-12"],
+  meetings: ["m-1","m-2","m-3","a-x1","c-x1","m-4","m-5","m-6"],
+  actions: ["a-1","a-2","a-3","a-4","a-5","a-6"],
+  commitments: ["c-1","c-2","c-3","c-4","c-5","c-6"],
   projects: ["pr-1","pr-2","pr-3"],
   opportunities: ["o-1","o-2","o-3","o-4"],
-  interactions: ["i-1","i-2","i-3"],
+  interactions: ["i-1","i-2","i-3","i-4","i-5","i-6","i-7","i-8","i-9","i-10","i-11","i-12","i-13"],
   notifications: ["n-1","n-2","n-3"],
   recommendations: ["rec-1","rec-2","rec-3","rec-4","rec-5"],
 };

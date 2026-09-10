@@ -267,7 +267,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                 </div>
                 <div className="rel-metric">
                   <span>اعتماد امتیاز</span>
-                  <div className="rel-metric-value"><b>{fmtNum(pulse.trend?.confidence)}٪</b><small>{pulse.trend?.evidence?.sources ?? 0} منبع · {(pulse.trend?.evidence?.sourceTypes ?? []).map((x: any) => fa(x)).join('، ') || 'شاهد محدود'}</small></div>
+                  <div className="rel-metric-value"><b>{fmtNum(pulse.trend?.confidence)}٪</b><small>{fmtNum(pulse.trend?.evidence?.sources ?? 0)} منبع · {(pulse.trend?.evidence?.sourceTypes ?? []).map((x: any) => fa(x)).join('، ') || 'شاهد محدود'}</small></div>
                 </div>
                 <div className="rel-metric">
                   <span>ارزش در معرض ریسک</span>
