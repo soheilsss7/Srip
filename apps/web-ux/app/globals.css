@@ -1193,11 +1193,25 @@ textarea{resize:vertical}
 .feature-track span{display:block;height:100%;background:linear-gradient(90deg,var(--indigo),var(--blue));border-radius:999px}
 
 /* Funnel ---------------------------------------------------------------- */
-.funnel{display:flex;flex-direction:column;gap:8px}
-.funnel-step{display:flex;justify-content:center}
-.funnel-bar{display:flex;justify-content:space-between;align-items:center;gap:8px;background:linear-gradient(135deg,var(--purple-soft),var(--indigo));color:#fff;border-radius:var(--radius-sm);padding:9px 14px;font-size:12px;min-width:60%;transition:width .3s ease;box-shadow:var(--shadow-sm)}
-.funnel-bar span{font-weight:700;color:rgba(255,255,255,.92)}
-.funnel-bar b{font-variant-numeric:tabular-nums;font-weight:800}
+/* ── قیف پیشنهادها v2 — موبایل‌اول؛ هیچ عنصری فشرده نمی‌شود ── */
+.funnel-v2{display:flex;flex-direction:column;gap:4px}
+.fv-step-wrap{display:flex;flex-direction:column;gap:4px}
+.fv-step{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px solid var(--card-border);border-radius:var(--radius-md);background:var(--card-bg-soft)}
+.fv-step-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.fv-idx{display:grid;place-items:center;width:22px;height:22px;border-radius:8px;color:#fff;font-size:10.5px;font-weight:800;flex:0 0 auto}
+.fv-label{font-weight:800;font-size:12.5px;color:var(--text-primary);min-width:0;overflow-wrap:break-word}
+.fv-count{font-size:15px;font-weight:900;color:var(--text-primary);font-variant-numeric:tabular-nums;flex:0 0 auto}
+.fv-pct{margin-inline-start:auto;font-size:10.5px;font-weight:800;color:var(--text-muted);background:var(--card-bg);border:1px solid var(--card-border);border-radius:999px;padding:2px 9px;white-space:nowrap;flex:0 0 auto}
+.fv-track{display:block;width:100%;height:12px;border-radius:999px;background:color-mix(in srgb,var(--card-border) 45%,transparent);overflow:hidden}
+.fv-fill{display:block;height:100%;border-radius:999px;transition:width .35s ease}
+.fv-conv{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:2px 4px 2px 10px;font-size:10.5px;color:var(--text-muted)}
+.fv-conv-arrow{display:grid;place-items:center;color:var(--teal);flex:0 0 auto;transform:scaleX(-1)}
+.fv-conv-text{min-width:0;overflow-wrap:break-word}
+.fv-conv-pct{color:var(--teal);font-variant-numeric:tabular-nums;font-weight:800}
+.fv-conv-drop{color:var(--srip-amber);font-weight:700;white-space:nowrap}
+.funnel-caption{font-size:11px;color:var(--text-muted);text-align:center;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:5px;flex-wrap:wrap}
+/* سازگاری عقب‌رو: قیف قدیمی هنوز در .funnel-conv (چیپ تبدیل) استفاده می‌شود */
+.funnel-step{display:flex;align-items:center;gap:8px}
 .funnel-caption{font-size:11px;color:var(--text-muted);text-align:center;margin-top:4px}
 .empty-inline{padding:22px;text-align:center;color:var(--text-muted);border:1px dashed var(--card-border-strong);border-radius:var(--radius-md);font-size:12px;background:var(--card-bg-soft)}
 
@@ -2569,7 +2583,7 @@ html[data-theme="dark"] .nudge-item{background:rgba(255,255,255,.04)}
 .criteria-card .criteria-headline{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding:12px;border:1px solid var(--card-border);border-radius:var(--radius-md);background:var(--card-bg-soft)}
 .criteria-card.has-risk .criteria-headline{border-color:rgba(251,77,73,.3);background:rgba(251,77,73,.05)}
 .criteria-score{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:96px;padding:6px 10px;border-radius:var(--radius-md);background:var(--card-bg);border:1px solid var(--card-border)}
-.criteria-score strong{font-size:30px;line-height:1;font-variant-numeric:tabular-nums;color:var(--text-primary)}
+.criteria-score strong{font-size:30px;line-height:1.3;font-variant-numeric:tabular-nums;color:var(--text-primary)}
 .criteria-score span{font-size:10.5px;color:var(--text-muted);margin-top:2px}
 .criteria-score em{font-size:10.5px;font-style:normal;color:var(--text-secondary);margin-top:5px;white-space:nowrap}
 .criteria-gauges{display:flex;flex-direction:column;gap:7px;min-width:0}
@@ -2796,7 +2810,7 @@ html,body{overflow-x:clip;max-width:100%}
   .panels-row,.dashboard-grid,.cal-layout,.ai-layout,.action-center-grid,
   .people-page .split-panels,.relationships-page .split-panels{grid-template-columns:1fr}
   .content-side{flex-direction:column}
-  .stats-row,.kpi-grid,.stat-row,.metric-list,.mini-metrics,.dash-grid-mid,.dash-grid-bottom{grid-template-columns:1fr 1fr}
+  .stats-row,.kpi-grid,.stat-row,.metric-list,.mini-metrics{grid-template-columns:1fr 1fr}
   .rel-status-metrics{grid-template-columns:1fr 1fr}
   .table-wrap.table-wrap table{min-width:520px;width:100%}
   .card,.panel,.section-card,.dash-panel{padding:14px}
@@ -2885,6 +2899,7 @@ html,body{overflow-x:clip;max-width:100%}
 .wf-cov-nums span{font-size:10.5px;color:var(--text-muted)}
 .wf-cov-sub{font-size:10.5px;color:var(--text-muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:560px){.wf-cov-grid{grid-template-columns:repeat(2,1fr)}.wf-cov-head .chip{font-size:10px;padding:4px 8px}}
+@media (max-width:760px){.action-center-grid{grid-template-columns:1fr}}
 
 /* ---------- تحلیل راهبردی (strategy) + لحن‌های اعلان ---------- */
 .notice.success{background:rgba(10,143,92,.09);color:#0a8f5c;border-color:rgba(10,143,92,.25)}
@@ -2909,3 +2924,23 @@ table.matrix td.cell-ne{background:rgba(10,143,92,.14);font-weight:800;color:#0a
 .tree-list ul{list-style:none;padding-right:16px;margin-top:6px}
 .tree-list li{margin:6px 0;font-size:12.5px}
 .preview{background:var(--card-bg-soft);border:1px solid var(--card-border);border-radius:11px;padding:10px 12px;font-size:11px;max-height:140px;overflow:auto;white-space:pre-wrap;word-break:break-all;color:var(--text-secondary)}
+
+
+/* ==========================================================================
+   پیل‌ها و برچسب‌های تک‌خطی — ضددوای «هر حرف یک خط» (پاییز ۱۴۰۵)
+   ----------------------------------------------------------------------------
+   ریشهٔ مشکل: آیتم‌های flex با min-width:0 زیر عرض محتوایشان فشرده می‌شدند؛
+   متنِ چندگره‌ایِ JSX آنگاه بند به بند (و در جعبه‌های تنگ، حرف به حرف)
+   می‌شکست. راه‌حل: پیل‌ها flex-shrink:0 می‌گیرند و ردیفِ میزبان wrap می‌شود
+   تا هر پیل سالم به خط بعد برود؛ متن تک‌خطی‌ها nowrap می‌شود تا ellipsis
+   (که در safety-net وعده داده شده بود) واقعاً کار کند.
+   ========================================================================== */
+.chip,.ui-badge,.srip-badge,.status-chip,.badge,.cell-count,.confidence-num,
+.criteria-badge,.src-chip,.health-band,.st-delta,.alert-pill,.funnel-conv,
+.ac-card-head span,.rel-metric-value b,.demo-chip,.scope-badge{flex-shrink:0}
+.holding-row>div,.alert-strip-head,.rec-actions,.wf-card footer,.quick-actions,
+.status-chips,.chip-row,.panel-title,.mobile-tabs .mt-label{flex-wrap:wrap}
+.holding-row>div,.alert-strip-head,.ac-card-head span,.rel-metric-value b{white-space:nowrap}
+.rel-metric-value small{flex-shrink:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+/* عدد/برچسب کوتاه داخل جدول‌های باریک هم نمی‌شکند */
+.table-wrap td .srip-badge,.table-wrap td .chip,.table-wrap td .btn{flex-shrink:0}

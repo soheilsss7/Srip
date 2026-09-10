@@ -5,6 +5,7 @@ import { api } from './_lib/api';
 import { fa } from './_lib/fa';
 import { ScopeBadge, useWorkspace, ROLE_LABELS } from './_components/workspace';
 import { AlertBanner } from './_components/alert-banner';
+import { FunnelVisual } from './_components/funnel-visual';
 import { Card, Badge, EmptyState } from '@srip/design-system';
 import { suggestGlobal } from './_lib/connections';
 import {
@@ -86,43 +87,6 @@ function Score({ value, label }: { value: number | undefined; label: string }) {
     <div className="score-block">
       <div className="score-head"><span>{label}</span><b>{value ?? '—'}</b></div>
       <div className="score-track"><span className={`score-fill ${toneClass(scoreTone(v))}`} style={{ width: `${v}%` }} /></div>    </div>
-  );
-}
-
-function FunnelVisual({ stages, conversion }: { stages?: Record<string, number>; conversion?: Record<string, number> }) {
-  const viewed = stages?.viewed ?? 0;
-  const steps: Array<{ label: string; value: number }> = [
-    { label: 'دیده شده', value: viewed },
-    { label: 'پذیرفته', value: stages?.accepted ?? 0 },
-    { label: 'ایجاد اقدام', value: stages?.actionCreated ?? 0 },
-    { label: 'تکمیل اقدام', value: stages?.actionCompleted ?? 0 },
-    { label: 'نتیجه', value: stages?.outcome ?? 0 },
-  ];
-  const convLabels: Record<string, string> = {
-    viewedToAcceptedPct: 'دیده‌شده ← پذیرفته',
-    acceptedToActionCreatedPct: 'پذیرفته ← ایجاد اقدام',
-    actionCreatedToCompletedPct: 'ایجاد ← تکمیل',
-    actionCompletedToOutcomePct: 'تکمیل ← نتیجه',
-  };
-  if (!viewed) return <div className="empty-inline">فعلاً داده‌ای از قیف پیشنهادها ثبت نشده است.</div>;
-  return (
-    <div className="funnel">
-      {steps.map((s, i) => {
-        const pct = viewed ? Math.round((s.value / viewed) * 100) : 0;
-        const convKey = i === 0 ? null : (Object.keys(convLabels)[i - 1]);
-        const convVal = convKey && conversion ? conversion[convKey] : null;
-        return (
-          <div className="funnel-step" key={s.label}>
-            <div className="funnel-bar" style={{ width: `${Math.max(10, pct)}%` }}>
-              <span>{s.label}</span><b>{fmtNum(s.value)}</b>
-            </div>
-            {convKey && convVal != null && (
-              <span className="funnel-conv" title={convLabels[convKey]}>{fmtNum(convVal)}٪</span>
-            )}
-          </div>
-        );
-      })}
-      <div className="funnel-caption">نسبت‌ها بر پایهٔ «دیده شده» (۱۰۰٪) محاسبه شده‌اند.</div>    </div>
   );
 }
 

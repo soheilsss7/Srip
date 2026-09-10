@@ -58,6 +58,16 @@ async function healStaleWorker(reg: ServiceWorkerRegistration): Promise<void> {
 export default function SwRegister() {
   useEffect(() => {
     if (!PAGES_BASE || typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+    /* ── ترمیم ریشهٔ بدون اسلش (ریشهٔ باگ ۴۰۴ روی هاست استاتیک) ──
+       scope سرویس‌ورکر «/Srip/srip2/» است (با اسلش). ناوبری سمت کلاینت به
+       پیشخوان URL را به «/Srip/srip2» (بدون اسلش) می‌برد که بیرون از scope
+       است؛ آنگاه هیچ APIای از SW پاسخ نمی‌گیرد و سرور استاتیک برای همهٔ
+       /api/v1/* خطای ۴۰۴ می‌دهد. یک‌بار به همان مسیرِ با اسلش می‌رویم تا
+       سند همیشه در scope بماند. */
+    if (window.location.pathname === PAGES_BASE) {
+      window.location.replace(PAGES_BASE + '/' + window.location.search + window.location.hash);
+      return;
+    }
     const KEY = 'srip_sw_reloaded';
     navigator.serviceWorker
       .register(PAGES_BASE + '/sw.js', { scope: PAGES_BASE + '/' })
