@@ -41,10 +41,15 @@ async function waitForText(text, timeout = 20000) {
 try {
   // 1) login
   await page.goto(`${BASE}/login`, { waitUntil: 'networkidle0', timeout: 60000 });
-  await page.evaluate(() => {
-    const b = [...document.querySelectorAll('.auth-demo-row')].find(x => (x.textContent ?? '').includes('مالک'));
-    if (b) b.click();
-  });
+  /* ورود از طریق فرم — دکمه‌های سریع دمو حذف شده‌اند؛ حساب demo با کد MFA (هر ۶ رقم) */
+  await page.waitForSelector('#login-email', { timeout: 30000 });
+  await page.type('#login-email', 'demo');
+  await page.type('#login-pass', '123456');
+  await page.waitForSelector('.auth-form button[type=submit]:not([disabled])', { timeout: 30000 });
+  await page.click('.auth-form button[type=submit]');
+  await page.waitForSelector('#login-otp', { timeout: 15000 });
+  await page.type('#login-otp', '123456');
+  await page.click('.auth-form button[type=submit]');
   await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 60000 }).catch(() => {});
   await new Promise(r => setTimeout(r, 2500));
   ok('login → dashboard', await page.evaluate(() => location.pathname.includes('dashboard')) || await waitForText('پیشخوان'), 'url=' + page.url());
@@ -73,7 +78,7 @@ try {
   await new Promise(r => setTimeout(r, 800));
   ok('matrix', await page.evaluate(() => (document.body.textContent ?? '').includes('ماتریس قدرت')));
   const memberRows0 = await page.evaluate(() => document.querySelectorAll('.table-wrap tbody tr').length);
-  ok('seed members 4', memberRows0 === 4, 'rows=' + memberRows0);
+  ok('seed members 14', memberRows0 === 14, 'rows=' + memberRows0);
 
   // 5) add member
   await clickByText('button', 'افزودن عضو');
@@ -105,7 +110,7 @@ try {
 ok('add member flash', addFlash);
   await new Promise(r => setTimeout(r, 900));
   const memberRows1 = await page.evaluate(() => document.querySelectorAll('.table-wrap tbody tr').length);
-  ok('member count 5', memberRows1 === 5, 'rows=' + memberRows1);
+  ok('member count 15', memberRows1 === 15, 'rows=' + memberRows1);
 
   // 6) assess the newly added member (first row with ارزیابی button = h-n2 added last → check last row)
   await page.evaluate(() => {

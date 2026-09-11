@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.10.01';
+const DEMO_MOCK_VERSION = '2026.09.11.01';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -1737,6 +1737,94 @@ let ORGS = [
   { id:'org-10', name:'اتاق بازرگانی تهران', type:'GOVERNMENT', industry:'اتاق بازرگانی و اکوسیستم کسب‌وکار', country:'ایران', createdAt:'2026-02-18T08:00:00.000Z' },
   { id:'org-11', name:'سازمان بورس و اوراق بهادار', type:'GOVERNMENT', industry:'تنظیم‌گری بازار سرمایه', country:'ایران', createdAt:'2026-03-05T08:00:00.000Z' },
   { id:'org-12', name:'صندوق نوآوری و شکوفایی', type:'INVESTOR', industry:'صندوق‌های نوآوری و فناوری', country:'ایران', createdAt:'2026-03-12T08:00:00.000Z' },
+  /* ─────────────────────────────────────────────────────────────────────
+     داده‌های اولیهٔ واقعی (سند عموم‌ها — docs/عموم‌ها-extracted.md)
+     شرکت x = مالک پلتفرم · هلدینگ پارس = سازمان واقعی با ۱۲ حوزهٔ کاری
+     و همهٔ نهادهای شش دستهٔ عموم (نهادی/علمی/اقتصادی/اکوسیستم).
+     ───────────────────────────────────────────────────────────────────── */
+  { id:'org-x', name:'شرکت x', type:'HOLDING', industry:'مالکیت و توسعهٔ پلتفرم', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-pars', name:'هلدینگ پارس', type:'HOLDING', industry:'هلدینگ چندبخشی — ۱۲ حوزهٔ کاری', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  /* ۱۲ حوزهٔ کاری هلدینگ پارس (زیرمجموعه‌های ساختاری) */
+  { id:'org-pars-01', name:'پارس انرژی', type:'SUBSIDIARY', industry:'انرژی', country:'ایران', parentOrganizationId:'org-pars', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-pars-02', name:'پارس آموزش', type:'SUBSIDIARY', industry:'آموزش', country:'ایران', parentOrganizationId:'org-pars', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-pars-03', name:'پارس خدمات اجتماعی', type:'SUBSIDIARY', industry:'خدمات اجتماعی', country:'ایران', parentOrganizationId:'org-pars', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-pars-04', name:'پارس سلامت', type:'SUBSIDIARY', industry:'سلامت', country:'ایران', parentOrganizationId:'org-pars', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-pars-05', name:'پارس کشاورزی', type:'SUBSIDIARY', industry:'کشاورزی', country:'ایران', parentOrganizationId:'org-pars', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-pars-06', name:'پارس مالی', type:'SUBSIDIARY', industry:'مالی', country:'ایران', parentOrganizationId:'org-pars', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-pars-07', name:'پارس مسکن', type:'SUBSIDIARY', industry:'مسکن', country:'ایران', parentOrganizationId:'org-pars', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-pars-08', name:'پارس صنعت', type:'SUBSIDIARY', industry:'صنعت', country:'ایران', parentOrganizationId:'org-pars', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-pars-09', name:'پارس اعتباری', type:'SUBSIDIARY', industry:'اعتباری', country:'ایران', parentOrganizationId:'org-pars', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-pars-10', name:'پارس طراحی صنعتی', type:'SUBSIDIARY', industry:'طراحی صنعتی', country:'ایران', parentOrganizationId:'org-pars', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-pars-11', name:'پارس لجستیک', type:'SUBSIDIARY', industry:'لجستیک', country:'ایران', parentOrganizationId:'org-pars', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-pars-12', name:'پارس محتوا', type:'SUBSIDIARY', industry:'محتوا', country:'ایران', parentOrganizationId:'org-pars', createdAt:'2026-09-01T08:00:00.000Z' },
+  /* دستهٔ ۲الف — نهادهای حاکمیتی متمرکز بر سیاست‌گذاری هوش مصنوعی */
+  { id:'org-inst-01', name:'شورای ملی راهبری هوش مصنوعی', type:'GOVERNMENT', industry:'سیاست‌گذاری هوش مصنوعی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-inst-02', name:'ستاد توسعه فناوری و کاربردی‌سازی هوش مصنوعی', type:'GOVERNMENT', industry:'اجرا و تنظیم‌گری هوش مصنوعی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-inst-03', name:'معاونت علمی، فناوری و اقتصاد دانش‌بنیان ریاست‌جمهوری', type:'GOVERNMENT', industry:'راهبری علم و فناوری کشور', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-inst-04', name:'صندوق توسعهٔ ملی', type:'GOVERNMENT', industry:'تأمین تسهیلات ارزی و ریالی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-inst-05', name:'کمیسیون‌های تخصصی مجلس شورای اسلامی', type:'GOVERNMENT', industry:'قانون‌گذاری و لایحهٔ هوش مصنوعی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-inst-06', name:'شورای عالی فضای مجازی', type:'GOVERNMENT', industry:'سیاست‌گذاری دیجیتال و داده', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-inst-07', name:'شورای عالی انقلاب فرهنگی', type:'GOVERNMENT', industry:'چارچوب‌های فرهنگی و محتوایی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-inst-08', name:'پژوهشگاه ارتباطات و فناوری اطلاعات', type:'GOVERNMENT', industry:'کارشناسی و تنظیم‌گری فاوا', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-inst-09', name:'سازمان نظام صنفی رایانه‌ای', type:'PARTNER', industry:'صنف فناوری اطلاعات', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-inst-10', name:'معاونت حقوقی ریاست‌جمهوری و پژوهشگاه قوهٔ قضاییه', type:'GOVERNMENT', industry:'حاکمیت حقوقی هوش مصنوعی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  /* دستهٔ ۲ب — تنظیم‌گران بخشیِ ۱۲ حوزهٔ کاری */
+  { id:'org-reg-energy', name:'وزارت نیرو', type:'GOVERNMENT', industry:'تنظیم‌گری انرژی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-reg-oil', name:'وزارت نفت', type:'GOVERNMENT', industry:'تنظیم‌گری نفت و گاز', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-reg-energy-eff', name:'سازمان بهره‌وری انرژی ایران', type:'GOVERNMENT', industry:'بهره‌وری انرژی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-reg-edu', name:'وزارت آموزش و پرورش', type:'GOVERNMENT', industry:'تنظیم‌گری آموزش', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-reg-science', name:'وزارت علوم، تحقیقات و فناوری', type:'GOVERNMENT', industry:'تنظیم‌گری آموزش عالی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-reg-welfare', name:'وزارت تعاون، کار و رفاه اجتماعی', type:'GOVERNMENT', industry:'تنظیم‌گری خدمات اجتماعی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-reg-health', name:'وزارت بهداشت، درمان و آموزش پزشکی', type:'GOVERNMENT', industry:'تنظیم‌گری سلامت', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-reg-fda', name:'سازمان غذا و دارو', type:'GOVERNMENT', industry:'تنظیم‌گری دارو و غذا', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-reg-agri', name:'وزارت جهاد کشاورزی', type:'GOVERNMENT', industry:'تنظیم‌گری کشاورزی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-reg-cbi', name:'بانک مرکزی جمهوری اسلامی ایران', type:'GOVERNMENT', industry:'تنظیم‌گری پولی و بانکی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-reg-roads', name:'وزارت راه و شهرسازی', type:'GOVERNMENT', industry:'تنظیم‌گری مسکن و حمل‌ونقل', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-reg-industry', name:'وزارت صنعت، معدن و تجارت', type:'GOVERNMENT', industry:'تنظیم‌گری صنعت و تجارت', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-reg-standard', name:'سازمان استاندارد ملی ایران', type:'GOVERNMENT', industry:'استاندارد و کیفیت', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-reg-transport', name:'سازمان راهداری و حمل‌ونقل جاده‌ای', type:'GOVERNMENT', industry:'تنظیم‌گری حمل‌ونقل جاده‌ای', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-reg-culture', name:'وزارت فرهنگ و ارشاد اسلامی', type:'GOVERNMENT', industry:'تنظیم‌گری رسانه و محتوا', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  /* دستهٔ ۳ — عموم‌های علمی، دانشگاهی و پژوهشی (دانشگاه شریف = org-9 دمو) */
+  { id:'org-ac-tehran', name:'دانشگاه تهران', type:'GOVERNMENT', industry:'آموزش عالی و پژوهش', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ac-amirkabir', name:'دانشگاه صنعتی امیرکبیر', type:'GOVERNMENT', industry:'آموزش عالی و پژوهش', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ac-iust', name:'دانشگاه علم و صنعت ایران', type:'GOVERNMENT', industry:'آموزش عالی و پژوهش', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ac-kntu', name:'دانشگاه خواجه نصیرالدین طوسی', type:'GOVERNMENT', industry:'آموزش عالی و پژوهش', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ac-sbu', name:'دانشگاه شهید بهشتی', type:'GOVERNMENT', industry:'آموزش عالی و پژوهش', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ac-ferdowsi', name:'دانشگاه فردوسی مشهد', type:'GOVERNMENT', industry:'آموزش عالی و پژوهش', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ac-shiraz', name:'دانشگاه شیراز', type:'GOVERNMENT', industry:'آموزش عالی و پژوهش', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ac-nlpic', name:'مرکز نوآوری پردازش زبان طبیعی (NLPIC)', type:'PARTNER', industry:'پژوهش NLP فارسی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ac-csi', name:'انجمن کامپیوتر ایران (CSI)', type:'PARTNER', industry:'انجمن علمی کامپیوتر', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ac-ai', name:'انجمن ملی هوش مصنوعی ایران', type:'PARTNER', industry:'انجمن علمی هوش مصنوعی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ac-iscisc', name:'انجمن رمز ایران (ISCISC)', type:'PARTNER', industry:'انجمن علمی امنیت و رمزنگاری', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ac-med-tehran', name:'دانشگاه علوم پزشکی تهران', type:'GOVERNMENT', industry:'آموزش عالی علوم پزشکی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ac-tarbiat', name:'دانشگاه تربیت مدرس', type:'GOVERNMENT', industry:'آموزش عالی و پژوهش', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ac-petrol', name:'دانشگاه صنعت نفت', type:'GOVERNMENT', industry:'آموزش عالی نفت و انرژی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ac-allameh', name:'دانشگاه علامه طباطبائی', type:'GOVERNMENT', industry:'آموزش عالی علوم اجتماعی و اقتصاد', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ac-edu-research', name:'پژوهشگاه مطالعات آموزش و پرورش', type:'GOVERNMENT', industry:'پژوهش‌های تربیتی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ac-art', name:'دانشگاه هنر تهران', type:'GOVERNMENT', industry:'آموزش عالی هنر و طراحی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  /* دستهٔ ۴ — عموم‌های اقتصادی و سرمایه‌گذاری (بورس=org-11، صندوق نوآوری=org-12، اتاق تهران=org-10) */
+  { id:'org-eco-tse', name:'بورس اوراق بهادار تهران', type:'GOVERNMENT', industry:'بازار سرمایه', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-eco-ifb', name:'فرابورس ایران', type:'GOVERNMENT', industry:'بازار نوآفرین (SME)', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-eco-cvc-kerman', name:'صندوق پژوهش و فناوری خطرپذیر کرمان‌موتور', type:'INVESTOR', industry:'سرمایه‌گذاری خطرپذیر شرکتی (CVC)', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-eco-vc-pasargad', name:'صندوق نوآوری پاسارگاد', type:'INVESTOR', industry:'سرمایه‌گذاری خطرپذیر', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-eco-chamber-ir', name:'اتاق بازرگانی، صنایع، معادن و کشاورزی ایران', type:'PARTNER', industry:'نهاد صنفی بخش خصوصی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  /* دستهٔ ۶ — عموم‌های اکوسیستم فناوری و صنعت (نظام صنفی رایانه‌ای = org-inst-09) */
+  { id:'org-ecx-pardis', name:'پارک فناوری پردیس', type:'PARTNER', industry:'پارک علم و فناوری', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ecx-innofactory', name:'کارخانه نوآوری (شعبهٔ پردیس)', type:'PARTNER', industry:'کارخانه نوآوری و شتاب‌دهی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ecx-jahesh', name:'مرکز شتاب‌دهی و نوآوری جهش', type:'PARTNER', industry:'شتاب‌دهی و نوآوری', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ecx-utpark', name:'پارک علم و فناوری دانشگاه تهران', type:'PARTNER', industry:'پارک فناوری دانشگاهی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ecx-sharifpark', name:'پارک علم و فناوری شریف', type:'PARTNER', industry:'پارک فناوری دانشگاهی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ecx-avatech', name:'آواتک (Avatech)', type:'PARTNER', industry:'شتاب‌دهندهٔ استارتاپی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ecx-finnova', name:'فینوا (Finnova)', type:'PARTNER', industry:'شتاب‌دهندهٔ فین‌تک', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ecx-maintech', name:'شتاب‌دهندهٔ ماینتک', type:'PARTNER', industry:'شتاب‌دهندهٔ تخصصی معدن', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ecx-sarava', name:'گروه سرمایه‌گذاری سرآوا', type:'INVESTOR', industry:'سرمایه‌گذاری در استارتاپ‌ها', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ecx-digikala', name:'دیجی‌کالا', type:'PARTNER', industry:'تجارت الکترونیک', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ecx-snapp', name:'اسنپ (Snapp)', type:'PARTNER', industry:'حمل‌ونقل هوشمند', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ecx-divar', name:'دیوار', type:'PARTNER', industry:'آگهی‌های طبقه‌بندی‌شده', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ecx-tapsi', name:'تپسی (Tapsi)', type:'PARTNER', industry:'حمل‌ونقل هوشمند', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ecx-arvan', name:'ابرآروان (ArvanCloud)', type:'PARTNER', industry:'ابر و CDN', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ecx-mci', name:'همراه اول', type:'PARTNER', industry:'اپراتور مخابراتی و مرکز داده', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-ecx-ecommerce', name:'انجمن تجارت الکترونیک', type:'PARTNER', industry:'انجمن صنفی کسب‌وکار دیجیتال', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
 ];
 let PEOPLE = [
   { id:'p-1', firstName:'سارا', lastName:'محمدی', email:'sara@arya-tech.ir', phone:'+98 21 88001122', title:'مدیر فروش', department:'فروش', organizationId:'org-2', status:'ACTIVE', influenceScore:82 },
@@ -1775,6 +1863,14 @@ let RELS = [
   { id:'r-10', relationshipType:'PARTNER', status:'ACTIVE', healthScore:60, riskScore:22, strategicScore:64, influenceScore:70, opportunityScore:55, resilienceScore:66, trustScore:62, engagementScore:58, cadenceDays:60, nextActionAt:null, lastInteractionAt:'2026-08-14T10:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-10', marketKind:'NON_MARKET', isMarketEntry:false, marketSegment:'اتاق بازرگانی و اکوسیستم کسب‌وکار' },
   { id:'r-11', relationshipType:'GOVERNMENT', status:'ACTIVE', healthScore:52, riskScore:46, strategicScore:74, influenceScore:82, opportunityScore:58, resilienceScore:55, trustScore:54, engagementScore:48, cadenceDays:30, nextActionAt:'2026-09-14T09:00:00.000Z', lastInteractionAt:'2026-08-31T11:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-11', marketKind:'NON_MARKET', isMarketEntry:true, marketSegment:'تنظیم‌گری بازار سرمایه' },
   { id:'r-12', relationshipType:'INVESTMENT', status:'ACTIVE', healthScore:74, riskScore:26, strategicScore:80, influenceScore:68, opportunityScore:84, resilienceScore:62, trustScore:66, engagementScore:70, cadenceDays:45, nextActionAt:null, lastInteractionAt:'2026-09-04T10:30:00.000Z', sourceOrganizationId:'org-1', targetOrganizationId:'org-12', marketKind:'MARKET', isMarketEntry:false, marketSegment:'تأمین مالی دانش‌بنیان' },
+  /* دادهٔ واقعی (سند عموم‌ها): ساختار هلدینگ پارس — رابطهٔ مادر/زیرمجموعهٔ ۱۲ حوزهٔ کاری */
+  ...Array.from({length:12},(_,i)=>({
+    id:`r-pars-${String(i+1).padStart(2,'0')}`, relationshipType:'PARENT_SUBSIDIARY', status:'ACTIVE',
+    healthScore:88, riskScore:10, strategicScore:85, influenceScore:72, opportunityScore:60, resilienceScore:84,
+    trustScore:90, engagementScore:82, cadenceDays:30, nextActionAt:null, lastInteractionAt:'2026-09-08T09:00:00.000Z',
+    sourceOrganizationId:'org-pars', targetOrganizationId:`org-pars-${String(i+1).padStart(2,'0')}`,
+    marketKind:'HYBRID', isMarketEntry:false, marketSegment:'درون‌هلدینگی — حوزهٔ کاری',
+  })),
 ];
 /* کیدنس دمو بر اساس نوع رابطه (P0-4) */
 [['r-1',30],['r-2',30],['r-3',45],['r-4',30],['r-5',60],['r-6',30]].forEach(([id,cd])=>{const r=RELS.find(v=>v.id===id); if(r) r.cadenceDays=cd;});
@@ -2255,6 +2351,18 @@ const opportunityView=(o)=>{
 
 /* --------------------------- identities & scope --------------------------- */
 const SEED_USERS = {
+  /* حساب واقعی مالک سامانه — شرکت x (بدون MFA؛ ورود مستقیم با نام کاربری aroun) */
+  'aroun@srip.local': {
+    id:'u-aroun', email:'aroun@srip.local', username:'aroun', name:'aroun', password:'12356784',
+    memberships:[{id:'mb-aroun',organizationId:'org-x',organizationName:'شرکت x',role:'SUPER_ADMIN',department:'مالکیت',dataScope:'ALL',accessScope:'ALL',isPrimary:true}],
+    permissions:['*'],
+    accessibleOrganizationIds:ORGS.map(o=>o.id),
+    isOwner:true,
+    isActive:true,
+    emailVerifiedAt:'2026-09-01T08:00:00.000Z',
+    lastLoginAt:'2026-09-10T10:00:00.000Z',
+    createdAt:'2026-09-01T08:00:00.000Z',
+  },
   'demo@srip.local': {
     id:'u-1', email:'demo@srip.local', username:'demo', name:'مدیر ارشد (مالک)', password:'123456',
     memberships:[{id:'mb-1',organizationId:'org-1',organizationName:'هلدینگ آریا',role:'SUPER_ADMIN',department:'استراتژی',dataScope:'ALL',accessScope:'ALL',isPrimary:true}],
@@ -5406,6 +5514,23 @@ function seedPublicsStore(){
   if(!DB.publicsSelf.some(x=>x.orgId==='org-2')){
     DB.publicsSelf.push({orgId:'org-2',companyType:'TECHNOLOGY',templateId:'TECHNOLOGY',structure:{sectors:['فناوری'],subsidiaries:[],ownership:'PRIVATE'},missionTopic:'محصول نرم‌افزاری قابل اتکا برای هلدینگ و بازار',reviewedAt:nowIso(),reviewIntervalDays:90,updatedBy:null});
   }
+  /* ─────────────────────────────────────────────────────────────────────
+     دادهٔ اولیهٔ واقعی — هلدینگ پارس (سند عموم‌ها)
+     خودشناسی: هلدینگ ۱۲ حوزهٔ کاری · هدف: مرجعیت هوش مصنوعی کشور
+     بازبینی: فصلی (۹۰ روز) طبق توصیهٔ روش‌شناختی سند
+     ───────────────────────────────────────────────────────────────────── */
+  if(!DB.publicsSelf.some(x=>x.orgId==='org-pars')){
+    DB.publicsSelf.push({
+      orgId:'org-pars', companyType:'HOLDING', templateId:'HOLDING',
+      structure:{
+        sectors:PUBLIC_SECTORS.slice(), /* ۱۲ حوزه: انرژی…محتوا — دقیقاً سند */
+        subsidiaries:Array.from({length:12},(_,i)=>`org-pars-${String(i+1).padStart(2,'0')}`),
+        ownership:'PRIVATE',
+      },
+      missionTopic:'مرجعیت هوش مصنوعی کشور',
+      reviewedAt:nowIso(), reviewIntervalDays:90, updatedBy:null,
+    });
+  }
   if(DB.mediaStore.length===0){
     DB.mediaStore.push(
       {id:'m-1',name:'زومیت',type:'TECH_MEDIA',url:'zoomit.ir',audience:'تخصصی فناوری',country:'ایران',note:'بخش «اخبار فناوری ایران» با پوشش سیاست‌گذاری هوش مصنوعی',createdAt:nowIso()},
@@ -5414,9 +5539,17 @@ function seedPublicsStore(){
       {id:'m-4',name:'دنیای اقتصاد',type:'ECONOMIC_MEDIA',url:'donya-e-eqtesad.com',audience:'اقتصادی',country:'ایران',note:'مرجع تحلیل سرمایه‌گذاری',createdAt:nowIso()},
       {id:'m-5',name:'خبرگزاری ایسنا',type:'NEWS_AGENCY',url:'isna.ir',audience:'عمومی/علمی',country:'ایران',note:'پل دانشگاه و رسانه؛ پوشش اخبار علمی',createdAt:nowIso()},
       {id:'m-6',name:'خبرگزاری ایرنا',type:'NEWS_AGENCY',url:'irna.ir',audience:'عمومی',country:'ایران',note:'خبرگزاری رسمی کشور؛ کانال بیانیه‌های رسمی',createdAt:nowIso()},
+      /* رسانه‌های واقعی سند عموم‌ها (هلدینگ پارس — دستهٔ ۵) */
+      {id:'m-7',name:'خبرگزاری مهر',type:'NEWS_AGENCY',url:'mehrnews.com',audience:'عمومی',country:'ایران',note:'پوشش فعال سیاست‌گذاری فناوری و گزارش‌های تحلیلی حکمرانی AI',createdAt:nowIso()},
+      {id:'m-8',name:'خبرگزاری فارس',type:'NEWS_AGENCY',url:'farsnews.ir',audience:'عمومی',country:'ایران',note:'پوشش گسترده اقتصادی و فناوری با مخاطب وسیع',createdAt:nowIso()},
+      {id:'m-9',name:'خبرگزاری تسنیم',type:'NEWS_AGENCY',url:'tasnimnews.com',audience:'عمومی',country:'ایران',note:'پوشش اقتصادی و فناوری با مخاطب وسیع',createdAt:nowIso()},
+      {id:'m-10',name:'تجارت‌نیوز',type:'ECONOMIC_MEDIA',url:'tejaratnews.com',audience:'اقتصادی',country:'ایران',note:'پوشش فعال اخبار استارتاپی و دانش‌بنیان',createdAt:nowIso()},
+      {id:'m-11',name:'اقتصادنیوز',type:'ECONOMIC_MEDIA',url:'eghtesadnews.com',audience:'اقتصادی',country:'ایران',note:'پوشش اخبار بازار سرمایه و دانش‌بنیان',createdAt:nowIso()},
+      {id:'m-12',name:'شبکهٔ خبر صدا و سیما',type:'BROADCAST',url:'irib.ir',audience:'عمومی ملی',country:'ایران',note:'پخش تلویزیونی رویدادهای کلان؛ گسترده‌ترین لایهٔ افکار عمومی غیرآنلاین',createdAt:nowIso()},
+      {id:'m-13',name:'برنامه‌های اقتصادی صدا و سیما',type:'BROADCAST',url:'irib.ir',audience:'عمومی سنتی',country:'ایران',note:'بستر معرفی مدیران ارشد به عمومی که رسانه‌های دیجیتال تخصصی را دنبال نمی‌کنند',createdAt:nowIso()},
     );
   }
-  if(DB.publicsMembers.length===0){
+  if(!DB.publicsMembers.some(m=>m.orgId==='org-1'||m.orgId==='org-2')){
     /* دمو غنی‌شده (فاز ۶/ADR-0009): نقشهٔ عموم‌ها با اعضای واقعیِ شش دسته.
        قواعد دقت: شناسه‌های ثابت (قابل ارجاع در تست) · بازبینی سررسیدشدهٔ عمدی (PM-TC-001) ·
        بازیگر کلیدیِ عقب‌ماندهٔ عمدی (PM-TC-007) · دستهٔ نهادیِ org-2 عمداً خالی (شکاف بحرانی). */
@@ -5452,6 +5585,142 @@ function seedPublicsStore(){
     DB.publicsMembers.push(...arr);
     // پیشنهاد پیوند/قدرت-علاقه با موتور فقط برای ورودی‌های بدون مقدار (بدون بازنویسی کاربر)
     for(const m of DB.publicsMembers){ const sug=pubSuggester(m); m.linkage=m.linkage??sug.linkage; m.stance=m.stance??sug.stance; }
+  }
+  /* اعضای عموم‌های هلدینگ پارس — نگاشت مستقیم نهادهای سند به گروه‌های قالب HOLDING.
+     مقادیر سه‌لایه (پیوند/مرحله/قدرت-علاقه) از تحلیل سند؛ اعداد قدرت/علاقه همسو با
+     خانهٔ ماتریس هر گروه. گروه‌های بدون نهادِ نام‌برده در سند (سرمایه‌گذار فرشته،
+     خبرنگاران فردی، اینفلوئنسرها، بانک‌های بدون نام و…) عمداً خالی می‌مانند = شکاف واقعی. */
+  if(!DB.publicsMembers.some(m=>m.orgId==='org-pars')){
+    const P=(id,groupId,sourceType,sourceId,stage,power,interest,stance,linkage,note)=>({id,orgId:'org-pars',groupId,sourceType,sourceId,linkage,stage,power,interest,stance,note,assessedAt:nowIso(),reviewDue:new Date(Date.now()+90*86400000).toISOString()});
+    DB.publicsMembers.push(
+      /* ── دستهٔ ۱: عموم‌های داخلی ── */
+      P('PM-P-001','h-i1','organization','org-pars','ACTIVE',95,95,'KEY_PLAYER','ENABLING','هیئت‌مدیرهٔ هلدینگ پارس — تصمیم‌گیرندگان نهایی استراتژی؛ روایت هسته ابتدا اینجا تثبیت می‌شود'),
+      P('PM-P-002','h-i2','organization','org-pars','ACTIVE',90,92,'KEY_PLAYER','ENABLING','مدیرعامل و تیم C-level هلدینگ — سخنگویان طبیعی مرجعیت هوش مصنوعی؛ اولین دریافت‌کنندگان هر پیام کلیدی'),
+      P('PM-P-003','h-i3','organization','org-pars-01','ACTIVE',72,90,'KEY_PLAYER','ENABLING','مدیرعامل و تیم رهبری حوزهٔ انرژی — صاحب روایت مستقل حوزه'),
+      P('PM-P-004','h-i3','organization','org-pars-02','AWARE',70,88,'KEY_PLAYER','ENABLING','مدیرعامل و تیم رهبری حوزهٔ آموزش — صاحب روایت مستقل حوزه'),
+      P('PM-P-005','h-i3','organization','org-pars-03','AWARE',68,86,'KEY_PLAYER','ENABLING','مدیرعامل و تیم رهبری حوزهٔ خدمات اجتماعی'),
+      P('PM-P-006','h-i3','organization','org-pars-04','ACTIVE',72,90,'KEY_PLAYER','ENABLING','مدیرعامل و تیم رهبری حوزهٔ سلامت'),
+      P('PM-P-007','h-i3','organization','org-pars-05','AWARE',68,86,'KEY_PLAYER','ENABLING','مدیرعامل و تیم رهبری حوزهٔ کشاورزی'),
+      P('PM-P-008','h-i3','organization','org-pars-06','ACTIVE',74,92,'KEY_PLAYER','ENABLING','مدیرعامل و تیم رهبری حوزهٔ مالی'),
+      P('PM-P-009','h-i3','organization','org-pars-07','AWARE',68,86,'KEY_PLAYER','ENABLING','مدیرعامل و تیم رهبری حوزهٔ مسکن'),
+      P('PM-P-010','h-i3','organization','org-pars-08','AWARE',70,88,'KEY_PLAYER','ENABLING','مدیرعامل و تیم رهبری حوزهٔ صنعت'),
+      P('PM-P-011','h-i3','organization','org-pars-09','AWARE',70,88,'KEY_PLAYER','ENABLING','مدیرعامل و تیم رهبری حوزهٔ اعتباری'),
+      P('PM-P-012','h-i3','organization','org-pars-10','AWARE',68,86,'KEY_PLAYER','ENABLING','مدیرعامل و تیم رهبری حوزهٔ طراحی صنعتی'),
+      P('PM-P-013','h-i3','organization','org-pars-11','AWARE',68,86,'KEY_PLAYER','ENABLING','مدیرعامل و تیم رهبری حوزهٔ لجستیک'),
+      P('PM-P-014','h-i3','organization','org-pars-12','ACTIVE',72,90,'KEY_PLAYER','ENABLING','مدیرعامل و تیم رهبری حوزهٔ محتوا — شریک طبیعی هدف مدل زبانی فارسی'),
+      P('PM-P-015','h-i6','organization','org-pars','ACTIVE',85,95,'KEY_PLAYER','ENABLING','تیم روابط‌عمومی و ارتباطات داخلی هلدینگ — هم مجری نقشه‌برداری است، هم خودش عموم داخلی است'),
+      P('PM-P-016','h-i8','organization','org-pars','AWARE',80,70,'INFLUENCER','ENABLING','کمیته‌های سرمایه‌گذاری، ریسک و فناوری هلدینگ — مجرای پیام‌های تخصصی'),
+      /* ── دستهٔ ۲الف: نهادهای سیاست‌گذاری هوش مصنوعی ── */
+      P('PM-P-020','h-n1','organization','org-inst-01','AWARE',95,70,'KEY_PLAYER','ENABLING','بالاترین رکن سیاست‌گذاری هوش مصنوعی؛ حضور پارس در گفت‌وگو با این شورا مستقیماً به ادعای مرجعیت اعتبار می‌دهد'),
+      P('PM-P-021','h-n2','organization','org-inst-02','AWARE',88,72,'KEY_PLAYER','ENABLING','جانشین سازمان ملی هوش مصنوعی؛ کانال اصلی تعامل روزمره — نقش محوری در پیش‌نویس لایحه'),
+      P('PM-P-022','h-n3','organization','org-inst-03','AWARE',90,60,'KEY_PLAYER','ENABLING','مرجع اصلی حمایت از شرکت‌های دانش‌بنیان — سرمایه و اعتبار هم‌زمان'),
+      P('PM-P-023','h-n4','organization','org-inst-04','LATENT',82,50,'INFLUENCER','ENABLING','کانال مالی-اعتباری پروژه‌های هوش مصنوعی — مرتبط با حوزه‌های مالی و اعتباری'),
+      P('PM-P-024','h-n5','organization','org-inst-05','AWARE',92,55,'KEY_PLAYER','ENABLING','قانون‌گذار نهایی — روند تصویب لایحهٔ ۱۱ فصلی چارچوب فعالیت آینده را تعیین می‌کند'),
+      P('PM-P-025','h-n6','organization','org-inst-06','AWARE',88,45,'INFLUENCER','ENABLING','تنظیم‌گر بالادستی حوزهٔ داده و زیرساخت دیجیتال — اثر مستقیم بر مدل‌های زبانی'),
+      P('PM-P-026','h-n7','organization','org-inst-07','AWARE',86,48,'INFLUENCER','ENABLING','مرجع تأیید محتوای مدل زبانی و دانش‌پایهٔ فارسی — حوزهٔ محتوا مستقیماً درگیر است'),
+      P('PM-P-027','h-n8','organization','org-inst-08','AWARE',70,62,'INFLUENCER','ENABLING','شریک راهبری فکری بالقوه؛ کانال معتبر انتشار گزارش‌های مشترک'),
+      P('PM-P-028','h-n9','organization','org-inst-09','AWARE',65,68,'INFLUENCER','NORMATIVE','پل ارتباطی میان پارس و کل صنعت فناوری کشور؛ کانال تأثیر غیرمستقیم بر سیاست‌گذاری'),
+      P('PM-P-029','h-n10','organization','org-inst-10','LATENT',80,42,'INFLUENCER','ENABLING','بُعد حقوقی/قضایی حاکمیت هوش مصنوعی — مسئولیت الگوریتمی و مالکیت داده'),
+      /* ── دستهٔ ۲ب: تنظیم‌گران بخشیِ ۱۲ حوزه ── */
+      P('PM-P-030','h-ns1','organization','org-reg-energy','AWARE',82,50,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ انرژی'),
+      P('PM-P-031','h-ns1','organization','org-reg-oil','AWARE',80,48,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ انرژی'),
+      P('PM-P-032','h-ns1','organization','org-reg-energy-eff','AWARE',62,45,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ انرژی'),
+      P('PM-P-033','h-ns2','organization','org-reg-edu','AWARE',78,48,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ آموزش'),
+      P('PM-P-034','h-ns2','organization','org-reg-science','AWARE',76,50,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ آموزش'),
+      P('PM-P-035','h-ns3','organization','org-reg-welfare','AWARE',72,45,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ خدمات اجتماعی'),
+      P('PM-P-036','h-ns4','organization','org-reg-health','AWARE',80,48,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ سلامت'),
+      P('PM-P-037','h-ns4','organization','org-reg-fda','AWARE',70,44,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ سلامت'),
+      P('PM-P-038','h-ns5','organization','org-reg-agri','AWARE',72,45,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ کشاورزی'),
+      P('PM-P-039','h-ns6','organization','org-reg-cbi','AWARE',88,52,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ مالی'),
+      P('PM-P-040','h-ns6','organization','org-11','AWARE',85,50,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ مالی (سازمان بورس)'),
+      P('PM-P-041','h-ns7','organization','org-reg-roads','AWARE',74,46,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ مسکن'),
+      P('PM-P-042','h-ns8','organization','org-reg-industry','AWARE',78,48,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ صنعت'),
+      P('PM-P-043','h-ns9','organization','org-reg-cbi','AWARE',88,50,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ اعتباری (بانک مرکزی و شورای پول و اعتبار)'),
+      P('PM-P-044','h-ns10','organization','org-reg-industry','AWARE',76,46,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ طراحی صنعتی'),
+      P('PM-P-045','h-ns10','organization','org-reg-standard','AWARE',68,45,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ طراحی صنعتی (استاندارد)'),
+      P('PM-P-046','h-ns11','organization','org-reg-roads','AWARE',72,45,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ لجستیک'),
+      P('PM-P-047','h-ns11','organization','org-reg-transport','AWARE',66,44,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ لجستیک'),
+      P('PM-P-048','h-ns12','organization','org-reg-culture','AWARE',76,48,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ محتوا'),
+      P('PM-P-049','h-ns12','organization','org-inst-07','AWARE',86,50,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ محتوا (شورای عالی انقلاب فرهنگی)'),
+      /* ── دستهٔ ۳: علمی-دانشگاهی ── */
+      P('PM-P-050','h-a1','organization','org-9','ACTIVE',85,80,'KEY_PLAYER','NORMATIVE','دانشگاه صنعتی شریف — برترین قطب کامپیوتر/AI کشور؛ میزبان دائمی CSICC؛ اولویت اول همکاری علمی'),
+      P('PM-P-051','h-a2','organization','org-ac-tehran','ACTIVE',80,75,'KEY_PLAYER','NORMATIVE','بزرگ‌ترین و معتبرترین دانشگاه جامع — دسترسی هم به اساتید ارشد هم جامعهٔ دانشجویی فعال'),
+      P('PM-P-052','h-a3','organization','org-ac-amirkabir','ACTIVE',78,78,'KEY_PLAYER','NORMATIVE','مرجع تخصصی NLP فارسی — میزبان NLPIC و کنفرانس ISCISC؛ شریک طبیعی حوزهٔ محتوا'),
+      P('PM-P-053','h-a4','organization','org-ac-iust','AWARE',65,62,'INFLUENCER','NORMATIVE','قطب پژوهشی با پیوند صنعتی قوی — منبع داده اسمی و NLP فارسی (نمونه: PEYMA)'),
+      P('PM-P-054','h-a5','organization','org-ac-kntu','AWARE',60,60,'INFLUENCER','NORMATIVE','سه گروه سخت‌افزار/نرم‌افزار/هوش مصنوعی — منبع بالقوه استخدام حوزه‌های فنی'),
+      P('PM-P-055','h-a6','organization','org-ac-sbu','AWARE',55,55,'INFLUENCER','NORMATIVE','پوشش جغرافیایی خارج از تهران — روایت مرجعیت ملی، نه صرفاً تهرانی'),
+      P('PM-P-056','h-a6','organization','org-ac-ferdowsi','AWARE',52,55,'INFLUENCER','NORMATIVE','پوشش جغرافیایی مشهد — روایت مرجعیت ملی'),
+      P('PM-P-057','h-a6','organization','org-ac-shiraz','AWARE',52,55,'INFLUENCER','NORMATIVE','پوشش جغرافیایی شیراز — روایت مرجعیت ملی'),
+      P('PM-P-058','h-a7','organization','org-ac-nlpic','AWARE',70,75,'KEY_PLAYER','NORMATIVE','مرکز تخصصی NLP فارسی — شریک بالقوهٔ مستقیم پروژه‌های محتوایی و GEO فارسی'),
+      P('PM-P-059','h-a8','organization','org-ac-tehran','AWARE',55,65,'SUPPORTER','NORMATIVE','هستهٔ پژوهشی یادگیری ماشین و پردازش تصویر دانشگاه تهران — میزبان محتوای مشترک'),
+      P('PM-P-060','h-a9','organization','org-ac-csi','AWARE',60,70,'KEY_PLAYER','NORMATIVE','انجمن کامپیوتر ایران — برگزارکنندهٔ CSICC با محورهای سیستم‌های هوشمند و علم داده'),
+      P('PM-P-061','h-a10','organization','org-ac-ai','AWARE',62,72,'KEY_PLAYER','NORMATIVE','انجمن ملی هوش مصنوعی — نشریه و کمیته‌های تخصصی؛ پوشش صنعت/سلامت/انرژی/کشاورزی/مالی'),
+      P('PM-P-062','h-a11','organization','org-ac-iscisc','AWARE',55,60,'INFLUENCER','NORMATIVE','انجمن رمز ایران — امنیت و رمزنگاری؛ AI، بلاک‌چین و رایانش کوانتومی'),
+      P('PM-P-063','h-a12','organization','org-ac-tehran','ACTIVE',35,75,'SUPPORTER','NORMATIVE','انجمن‌های علمی دانشجویی (نمونهٔ محوری: انجمن علمی علوم کامپیوتر دانشگاه تهران) — کانال کارگاه و استعدادیابی'),
+      /* دانشگاه‌های تخصصی بخشی (ت) */
+      P('PM-P-064','h-as1','organization','org-ac-med-tehran','AWARE',65,58,'INFLUENCER','NORMATIVE','دانشگاه تخصصی بخشی حوزهٔ سلامت'),
+      P('PM-P-065','h-as2','organization','org-ac-tehran','AWARE',58,55,'INFLUENCER','NORMATIVE','پردیس کشاورزی و منابع طبیعی کرج — حوزهٔ کشاورزی'),
+      P('PM-P-066','h-as2','organization','org-ac-tarbiat','AWARE',56,55,'INFLUENCER','NORMATIVE','گروه کشاورزی دانشگاه تربیت مدرس — حوزهٔ کشاورزی'),
+      P('PM-P-067','h-as3','organization','org-ac-petrol','AWARE',60,56,'INFLUENCER','NORMATIVE','دانشگاه صنعت نفت — حوزهٔ انرژی'),
+      P('PM-P-068','h-as3','organization','org-9','AWARE',70,58,'INFLUENCER','NORMATIVE','دانشکدهٔ مهندسی انرژی دانشگاه شریف — حوزهٔ انرژی'),
+      P('PM-P-069','h-as4','organization','org-ac-iust','AWARE',56,52,'INFLUENCER','NORMATIVE','دانشکدهٔ معماری و شهرسازی دانشگاه علم و صنعت — حوزهٔ مسکن'),
+      P('PM-P-070','h-as4','organization','org-ac-tehran','AWARE',58,52,'INFLUENCER','NORMATIVE','دانشکدهٔ معماری دانشگاه تهران — حوزهٔ مسکن'),
+      P('PM-P-071','h-as5','organization','org-ac-tehran','AWARE',60,55,'INFLUENCER','NORMATIVE','دانشکدهٔ مدیریت دانشگاه تهران — حوزهٔ مالی و اعتباری'),
+      P('PM-P-072','h-as5','organization','org-ac-allameh','AWARE',56,55,'INFLUENCER','NORMATIVE','گروه اقتصاد و مالی علامه طباطبائی — حوزهٔ مالی و اعتباری'),
+      P('PM-P-073','h-as6','organization','org-ac-tarbiat','AWARE',54,54,'INFLUENCER','NORMATIVE','گروه علوم تربیتی تربیت مدرس — حوزهٔ آموزش'),
+      P('PM-P-074','h-as6','organization','org-ac-edu-research','AWARE',52,56,'INFLUENCER','NORMATIVE','پژوهشگاه مطالعات آموزش و پرورش — حوزهٔ آموزش'),
+      P('PM-P-075','h-as7','organization','org-9','AWARE',70,56,'INFLUENCER','NORMATIVE','دانشکدهٔ مهندسی صنایع دانشگاه شریف — حوزهٔ صنعت و طراحی صنعتی'),
+      P('PM-P-076','h-as7','organization','org-ac-amirkabir','AWARE',62,55,'INFLUENCER','NORMATIVE','دانشکدهٔ مهندسی صنایع امیرکبیر — حوزهٔ صنعت و طراحی صنعتی'),
+      P('PM-P-077','h-as7','organization','org-ac-art','AWARE',48,58,'SUPPORTER','NORMATIVE','دانشکدهٔ هنرهای کاربردی (طراحی صنعتی) دانشگاه هنر تهران'),
+      P('PM-P-078','h-as8','organization','org-ac-iust','AWARE',56,50,'INFLUENCER','NORMATIVE','دانشکدهٔ مهندسی صنایع و سیستم‌های حمل‌ونقل علم و صنعت — حوزهٔ لجستیک'),
+      P('PM-P-079','h-as9','organization','org-ac-tehran','AWARE',54,52,'INFLUENCER','NORMATIVE','دانشکدهٔ علوم اجتماعی دانشگاه تهران — حوزهٔ خدمات اجتماعی'),
+      P('PM-P-080','h-as9','organization','org-ac-allameh','AWARE',52,52,'INFLUENCER','NORMATIVE','دانشکدهٔ علوم اجتماعی علامه طباطبائی — حوزهٔ خدمات اجتماعی'),
+      P('PM-P-081','h-as10','organization','org-ac-allameh','AWARE',56,58,'INFLUENCER','NORMATIVE','دانشکدهٔ علوم ارتباطات و رسانهٔ علامه طباطبائی — حوزهٔ محتوا'),
+      P('PM-P-082','h-as10','organization','org-ac-nlpic','AWARE',70,62,'INFLUENCER','NORMATIVE','مرکز نوآوری پردازش زبان طبیعی امیرکبیر — حوزهٔ محتوا'),
+      /* ── دستهٔ ۴: اقتصادی و سرمایه‌گذاری ── */
+      P('PM-P-090','h-e1','organization','org-11','AWARE',85,60,'INFLUENCER','ENABLING','تنظیم‌گر اصلی بازار سرمایه — صدور مجوز و نظارت بر عرضهٔ آتی سهام'),
+      P('PM-P-091','h-e2','organization','org-eco-tse','AWARE',70,45,'INFLUENCER','ENABLING','بازار اصلی سهام — مرجع نمادین حضور در بازار سرمایه'),
+      P('PM-P-092','h-e3','organization','org-eco-ifb','AWARE',72,55,'INFLUENCER','ENABLING','بازار نوآفرین با تابلوهای «رشد» و «دانش‌بنیان» — پذیرش ساده‌تر برای شرکت‌های نوآور'),
+      P('PM-P-093','h-e4','organization','org-12','AWARE',75,70,'KEY_PLAYER','ENABLING','نهاد حمایتی تأمین منابع توسعهٔ فناوری و تجاری‌سازی (مادهٔ ۵ قانون حمایت دانش‌بنیان)'),
+      P('PM-P-094','h-e5','organization','org-12','ACTIVE',55,80,'KEY_PLAYER','FUNCTIONAL_INPUT','رویداد «دوشنبه‌های استارتاپی» برگزارشده توسط صندوق نوآوری — حضور VCها و CVCها'),
+      P('PM-P-095','h-e6','organization','org-eco-cvc-kerman','AWARE',60,65,'INFLUENCER','FUNCTIONAL_INPUT','صندوق پژوهش و فناوری خطرپذیر کرمان‌موتور — نمونهٔ واقعی روند CVC صنعتی ایران'),
+      P('PM-P-096','h-e7','organization','org-eco-vc-pasargad','AWARE',58,68,'INFLUENCER','FUNCTIONAL_INPUT','صندوق تخصصی سرمایه‌گذاری خطرپذیر — فعال در مراحل اولیه و رشد'),
+      P('PM-P-097','h-e9','organization','org-eco-chamber-ir','AWARE',65,55,'INFLUENCER','NORMATIVE','بزرگ‌ترین نهاد رسمی بخش خصوصی — پوشش تقریباً همهٔ حوزه‌های ۱۲گانه'),
+      P('PM-P-098','h-e10','organization','org-10','AWARE',50,60,'SUPPORTER','NORMATIVE','اتاق بازرگانی تهران — نمونهٔ الگوی اتاق‌های استانی و تخصصی'),
+      /* ── دستهٔ ۵: رسانه‌ای و عمومی ── */
+      P('PM-P-100','h-m1','media','m-1','ACTIVE',60,80,'KEY_PLAYER','DIFFUSED','زومیت — پرمخاطب‌ترین رسانهٔ فناوری؛ پوشش مستمر سیاست‌گذاری AI و اقتصاد دیجیتال'),
+      P('PM-P-101','h-m2','media','m-2','ACTIVE',58,75,'KEY_PLAYER','DIFFUSED','دیجیاتو — پیشگام رسانه‌های فناوری با بیش از ۱۰ سال سابقه'),
+      P('PM-P-102','h-m3','media','m-3','ACTIVE',55,78,'KEY_PLAYER','DIFFUSED','پیوست — تمرکز ویژه بر تحلیل سیاست‌گذاری و رگولاتوری فاوا'),
+      P('PM-P-103','h-m4','media','m-5','AWARE',65,55,'INFLUENCER','DIFFUSED','ایسنا — پل طبیعی بین عموم دانشگاهی و رسانه‌ای'),
+      P('PM-P-104','h-m5','media','m-7','AWARE',60,52,'INFLUENCER','DIFFUSED','مهر — پوشش فعال سیاست‌گذاری فناوری و گزارش‌های تحلیلی حکمرانی AI'),
+      P('PM-P-105','h-m6','media','m-6','AWARE',68,45,'INFLUENCER','DIFFUSED','ایرنا — خبرگزاری رسمی؛ کانال بیانیه‌های سطح‌بالای هلدینگ'),
+      P('PM-P-106','h-m7','media','m-8','AWARE',62,40,'INFLUENCER','DIFFUSED','فارس — پوشش گسترده اقتصادی و فناوری با مخاطب وسیع'),
+      P('PM-P-107','h-m7','media','m-9','AWARE',60,40,'INFLUENCER','DIFFUSED','تسنیم — پوشش گسترده اقتصادی و فناوری با مخاطب وسیع'),
+      P('PM-P-108','h-m8','media','m-1','AWARE',58,70,'KEY_PLAYER','DIFFUSED','زومیت/دیجیاتو در نقش تجمیع‌کنندهٔ اخبار حکمرانی AI؛ همراه اتحاد رسانه‌ای زومیت–دیجیاتو–پیوست (تفاهم‌نامهٔ اسفند ۱۴۰۳)'),
+      P('PM-P-109','h-m9','media','m-4','AWARE',70,48,'INFLUENCER','DIFFUSED','دنیای اقتصاد — معتبرترین روزنامهٔ تخصصی اقتصادی؛ مرجع تحلیل عموم اقتصادی'),
+      P('PM-P-110','h-m10','media','m-10','AWARE',55,58,'INFLUENCER','DIFFUSED','تجارت‌نیوز — پوشش فعال اخبار استارتاپی و دانش‌بنیان'),
+      P('PM-P-111','h-m10','media','m-11','AWARE',54,58,'INFLUENCER','DIFFUSED','اقتصادنیوز — پوشش اخبار بازار سرمایه و دانش‌بنیان'),
+      P('PM-P-112','h-m12','media','m-12','AWARE',75,35,'INFLUENCER','DIFFUSED','شبکهٔ خبر صدا و سیما — رسیدن به گسترده‌ترین لایهٔ افکار عمومی غیرآنلاین'),
+      P('PM-P-113','h-m13','media','m-13','AWARE',60,40,'INFLUENCER','DIFFUSED','برنامه‌های اقتصادی صدا و سیما — معرفی مدیران ارشد به عموم سنتی'),
+      /* ── دستهٔ ۶: اکوسیستم فناوری و صنعت ── */
+      P('PM-P-120','h-x1','organization','org-ecx-pardis','AWARE',70,72,'KEY_PLAYER','NORMATIVE','پارک فناوری پردیس — میزبان رقابت بذرپاشان و رویدادهای بزرگ اکوسیستمی'),
+      P('PM-P-121','h-x2','organization','org-ecx-innofactory','AWARE',58,60,'INFLUENCER','NORMATIVE','نخستین کارخانهٔ نوآوری کشور — میزبان اولین شتاب‌دهنده‌ها'),
+      P('PM-P-122','h-x3','organization','org-ecx-jahesh','AWARE',55,58,'INFLUENCER','NORMATIVE','برگزارکنندهٔ مشترک رویدادهای شتاب‌دهی با پردیس؛ زیرساخت متاورسی جهش‌پارک'),
+      P('PM-P-123','h-x4','organization','org-ecx-utpark','AWARE',60,65,'KEY_PLAYER','NORMATIVE','پارک علم و فناوری دانشگاه تهران — واسط دانشگاه و صنعت'),
+      P('PM-P-124','h-x4','organization','org-ecx-sharifpark','AWARE',62,65,'KEY_PLAYER','NORMATIVE','پارک علم و فناوری شریف — واسط دانشگاه و صنعت'),
+      P('PM-P-125','h-x5','organization','org-ecx-avatech','AWARE',62,68,'KEY_PLAYER','NORMATIVE','آواتک — از نخستین و شناخته‌شده‌ترین شتاب‌دهنده‌ها (از ۱۳۹۳)؛ وابسته به سرآوا'),
+      P('PM-P-126','h-x6','organization','org-ecx-finnova','AWARE',50,62,'SUPPORTER','NORMATIVE','فینوا — شتاب‌دهندهٔ تخصصی فین‌تک'),
+      P('PM-P-127','h-x7','organization','org-ecx-maintech','AWARE',45,58,'SUPPORTER','NORMATIVE','ماینتک — الگوی شتاب‌دهی عمودی/تخصصی (معدن)'),
+      P('PM-P-128','h-x8','organization','org-ecx-sarava','AWARE',72,65,'KEY_PLAYER','NORMATIVE','گروه سرمایه‌گذاری سرآوا — از فعال‌ترین سرمایه‌گذاران استارتاپی؛ مؤسس آواتک'),
+      P('PM-P-129','h-x10','organization','org-ecx-digikala','AWARE',85,40,'INFLUENCER','NORMATIVE','دیجی‌کالا — بزرگ‌ترین پلتفرم تجارت الکترونیک؛ زیرساخت لجستیکی و داده‌ای بزرگ‌مقیاس'),
+      P('PM-P-130','h-x11','organization','org-ecx-snapp','AWARE',80,42,'INFLUENCER','NORMATIVE','اسنپ — زیرساخت دادهٔ جغرافیایی و هوش مصنوعی مسیریابی'),
+      P('PM-P-131','h-x12','organization','org-ecx-divar','AWARE',72,40,'INFLUENCER','NORMATIVE','دیوار — بزرگ‌ترین پلتفرم آگهی‌های طبقه‌بندی‌شده؛ کاربرد گسترده در مسکن و کالا'),
+      P('PM-P-132','h-x13','organization','org-ecx-tapsi','AWARE',65,40,'INFLUENCER','NORMATIVE','تپسی — پلتفرم حمل‌ونقل هوشمند؛ رقیب مستقیم اسنپ'),
+      P('PM-P-133','h-x14','organization','org-ecx-arvan','AWARE',68,50,'INFLUENCER','NORMATIVE','ابرآروان — از بزرگ‌ترین ارائه‌دهندگان خدمات ابری و CDN داخلی'),
+      P('PM-P-134','h-x15','organization','org-ecx-mci','AWARE',78,38,'INFLUENCER','NORMATIVE','همراه اول — زیرساخت شبکه و محاسبات ابری در مقیاس ملی'),
+      P('PM-P-135','h-x16','organization','org-ecx-ecommerce','AWARE',55,60,'INFLUENCER','NORMATIVE','انجمن تجارت الکترونیک — نهاد صنفی رسمی کسب‌وکارهای دیجیتال (کمیسیون ریتیل‌تک)'),
+      P('PM-P-136','h-x17','organization','org-inst-09','AWARE',65,68,'INFLUENCER','NORMATIVE','سازمان نظام صنفی رایانه‌ای — نهاد صنفی رسمی شرکت‌های فناوری اطلاعات'),
+    );
   }
 }
 /* --------------------- Publics: موتور پیشنهاد، پوشش و گپ --------------------- */
@@ -7298,7 +7567,7 @@ async function __handler(req, res) {
     const wantOrg=typeFilter==='all'||typeFilter==='organization';
     const wantPerson=typeFilter==='all'||typeFilter==='person';
     const orgNodes=[]; const personNodes=[];
-    const rels=scopedRels(req).slice(0,12).filter(r=>!q.get('status')||r.status===q.get('status'));
+    const rels=scopedRels(req).slice(0,40).filter(r=>!q.get('status')||r.status===q.get('status'));
     // org nodes: فقط سازمان‌های درون محدودهٔ دسترسی — همتای network.service.ts واقعی.
     // (گرهٔ «طرف مقابل» ساخته نمی‌شود؛ یال رابطه فقط وقتی پذیرفته می‌شود که هر دو سرش گره باشند.
     //  برای مستأجر یعنی: سازمان خودش + اشخاصش؛ طرف‌های مقابل در فهرست روابط قابل مشاهده‌اند.)
@@ -7314,7 +7583,9 @@ async function __handler(req, res) {
       personNodes.push({id:`person:${p.id}`,label:`${p.firstName} ${p.lastName}`,type:'person',organizationId:p.organizationId});
     });
     /* P3: برچسب دستهٔ عموم‌ها روی گره‌ها + گرهٔ «خودِ شرکت» (ego) */
-    const egoOrg=q.get('organizationId')||(visibleOrgIds(req)[0]??null);
+    const egoOrg=q.get('organizationId')
+      ||(currentUser(req)?.memberships??[]).find(m=>m.isPrimary)?.organizationId
+      ||(visibleOrgIds(req)[0]??null);
     for(const n of [...orgNodes,...personNodes]){
       n.category=pubCatOfOrg(n.organizationId)??null;
       n.ego=n.type==='organization'&&n.organizationId===egoOrg;

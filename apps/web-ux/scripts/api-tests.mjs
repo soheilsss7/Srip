@@ -240,6 +240,50 @@ section('پایداری روی PostgreSQL');
   check('سلامت سرویس → 200', h.status === 200);
 }
 
+/* ===================== 7. REAL INITIAL DATA (سند عموم‌ها) ===================== */
+section('دادهٔ اولیهٔ واقعی — aroun / شرکت x / هلدینگ پارس');
+{
+  // ورود حساب واقعی مالک سامانه (بدون MFA — مستقیم)
+  const ar = await api('/auth/login', { method: 'POST', body: { email: 'aroun', password: '12356784' } });
+  check('ورود aroun (نام کاربری، بدون MFA) → 200', ar.status === 200 && !!ar.body?.accessToken, JSON.stringify(ar.body).slice(0, 80));
+  const arBad = await api('/auth/login', { method: 'POST', body: { email: 'aroun', password: 'wrong-pass' } });
+  check('رمز اشتباه aroun → 401', arBad.status === 401);
+  const t = ar.body?.accessToken;
+  const meAr = await api('/auth/me', { token: t });
+  check('aroun → مالک کل سیستم، سازمان اصلی «شرکت x»', meAr.status === 200 && meAr.body?.isOwner === true
+    && (meAr.body?.memberships ?? []).some(m => m.organizationName === 'شرکت x' && m.role === 'SUPER_ADMIN'));
+  check('aroun → دسترسی به همهٔ سازمان‌ها (دمو + پارس + نهادها)', (meAr.body?.accessibleOrganizationIds ?? []).length >= 80);
+
+  // سازمان‌های واقعی
+  const orgs = await api('/organizations', { token: t });
+  const orgList = Array.isArray(orgs.body) ? orgs.body : (orgs.body?.data ?? []);
+  check('شرکت x (مالک پلتفرم) موجود است', orgList.some(o => o.name === 'شرکت x' && o.type === 'HOLDING'));
+  check('هلدینگ پارس موجود است', orgList.some(o => o.name === 'هلدینگ پارس'));
+  const parsId = (orgList.find(o => o.name === 'هلدینگ پارس') ?? {}).id;
+  check('۱۲ حوزهٔ کاری زیرمجموعهٔ پارس', orgList.filter(o => o.parentOrganizationId === parsId).length === 12);
+  for (const name of ['شورای ملی راهبری هوش مصنوعی', 'دانشگاه تهران', 'فرابورس ایران', 'پارک فناوری پردیس', 'دیجی‌کالا', 'بانک مرکزی جمهوری اسلامی ایران']) {
+    check(`نهاد واقعی سند: ${name}`, orgList.some(o => o.name === name));
+  }
+
+  // خودشناسی و اعضای عموم‌ها
+  const self = await api(`/publics/self/${parsId}`, { token: t });
+  check('خودشناسی پارس: قالب HOLDING + هدف «مرجعیت هوش مصنوعی کشور»', self.status === 200
+    && self.body?.self?.templateId === 'HOLDING' && self.body?.self?.missionTopic === 'مرجعیت هوش مصنوعی کشور');
+  check('خودشناسی پارس: ۱۲ حوزهٔ کاری', (self.body?.self?.structure?.sectors ?? []).length === 12);
+  const members = await api(`/publics/members?orgId=${parsId}`, { token: t });
+  const mList = Array.isArray(members.body) ? members.body : (members.body?.data ?? members.body?.items ?? []);
+  check('اعضای عموم‌های پارس: ۱۰۰+ نهاد واقعی', mList.length >= 100, `count=${mList.length}`);
+  const cov = await api(`/publics/coverage?orgId=${parsId}`, { token: t });
+  const covRows = cov.body?.byCategory ?? [];
+  check('پوشش ۶ دستهٔ عموم محاسبه می‌شود', covRows.length === 6);
+  check('شکاف‌های واقعی دیده می‌شوند (گروه‌های بدون نهاد نام‌برده)', covRows.some(r => (r.gapGroups ?? []).length > 0));
+
+  // گراف شبکه: گره‌های پارس + نهادها
+  const g = await api('/network/graph', { token: t });
+  check('گراف: پارس و همهٔ نهادها گره دارند (۸۰+)', (g.body?.nodes ?? []).length >= 80);
+  check('گراف: یال‌های ساختاری پارس↔۱۲ حوزه', (g.body?.edges ?? []).filter(e => e.kind === 'relationship').length >= 20);
+}
+
 /* ============================ SUMMARY ============================ */
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);

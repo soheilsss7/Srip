@@ -56,10 +56,15 @@ async function selectScenario(name) {
 
 try {
   await page.goto(`${BASE}/login`, { waitUntil: 'networkidle0', timeout: 60000 });
-  await page.evaluate(() => {
-    const b = [...document.querySelectorAll('.auth-demo-row')].find(x => (x.textContent ?? '').includes('مالک'));
-    if (b) b.click();
-  });
+  /* ورود از طریق فرم — دکمه‌های سریع دمو حذف شده‌اند؛ حساب demo با کد MFA (هر ۶ رقم) */
+  await page.waitForSelector('#login-email', { timeout: 30000 });
+  await page.type('#login-email', 'demo');
+  await page.type('#login-pass', '123456');
+  await page.waitForSelector('.auth-form button[type=submit]:not([disabled])', { timeout: 30000 });
+  await page.click('.auth-form button[type=submit]');
+  await page.waitForSelector('#login-otp', { timeout: 15000 });
+  await page.type('#login-otp', '123456');
+  await page.click('.auth-form button[type=submit]');
   await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 60000 }).catch(() => {});
   await new Promise(r => setTimeout(r, 2500));
   ok('login → dashboard', await page.evaluate(() => location.pathname.includes('dashboard')) || await waitForText('پیشخوان'), 'url=' + page.url());

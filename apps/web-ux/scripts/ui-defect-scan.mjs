@@ -12,10 +12,19 @@ const page = await browser.newPage();
 const errs = [];
 page.on('pageerror', e => errs.push('PAGEERROR: ' + String(e).slice(0, 150)));
 page.on('console', m => { if (m.type() === 'error') errs.push('CONSOLE: ' + m.text().slice(0, 150)); });
+/* Next 16 روی خروجی استاتیک، پیش‌واکشی Linkها را به «route.txt?_rsc=…»
+   می‌فرستد که در GitHub Pages ۴۰۴ می‌شود — نویز چارچوب است، نه خطای اپ؛
+   فقط وقتی ۴۰۴ِ خارج از این الگو دیده شود گزارش می‌کنیم. */
+const notFoundUrls = [];
+page.on('response', r => { if (r.status() === 404) notFoundUrls.push(r.url()); });
 
 await page.goto('http://localhost:4100/Srip/srip2/login', { waitUntil: 'networkidle0', timeout: 90000 });
-await page.waitForSelector('.auth-demo-row:not([disabled])', { timeout: 60000 });
-await page.evaluate(() => document.querySelectorAll('.auth-demo-row')[0].click());
+/* ورود واقعی از طریق فرم — حساب مالک سامانه (aroun)؛ دکمه‌های دمو حذف شده‌اند */
+await page.waitForSelector('#login-email', { timeout: 60000 });
+await page.type('#login-email', 'aroun');
+await page.type('#login-pass', '12356784');
+await page.waitForSelector('.auth-form button[type=submit]:not([disabled])', { timeout: 60000 });
+await page.click('.auth-form button[type=submit]');
 await page.waitForFunction(() => !location.pathname.endsWith('/login'), { timeout: 60000 }).catch(() => {});
 await new Promise(r => setTimeout(r, 4000));
 
@@ -42,10 +51,16 @@ for (const p of PAGES) {
       }
     }
     if (badText.length) out.push({ type: 'latin-digits', items: badText.slice(0, 10) });
-    // ۲) NaN / undefined / null در متن
-    const body = (document.body.textContent || '');
+    // ۲) NaN / undefined / null در متن «قابل‌مشاهده» — محتوای script/style
+    //    (شامل توکن‌های استاندارد $undefined در payload رَکت سرور Next) حذف می‌شود.
+    const bodyText = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: n => (n.parentElement && /script|style|template|noscript/i.test(n.parentElement.tagName))
+        ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT,
+    });
+    let visibleText = '';
+    while (bodyText.nextNode()) visibleText += bodyText.currentNode.textContent + ' ';
     for (const bad of ['NaN', 'undefined', 'null،', 'Invalid Date']) {
-      if (body.includes(bad)) out.push({ type: 'bad-string', val: bad });
+      if (visibleText.includes(bad)) out.push({ type: 'bad-string', val: bad });
     }
     // ۳) اجزای با بیرون‌زدگی افقی از والد
     let overflowCount = 0; const overflowSel = [];
@@ -54,6 +69,9 @@ for (const p of PAGES) {
       if (r.width < 2) continue;
       const p = el.parentElement;
       if (!p) continue;
+      /* عناصر fixed (مثل tour-overlay) نسبت به viewport جای‌گذاری می‌شوند،
+         نه والد — مقایسه با مستطیل والد برایشان false positive است. */
+      if (getComputedStyle(el).position === 'fixed') continue;
       const pr = p.getBoundingClientRect();
       if (r.right > pr.right + 3 && r.width > 24) {
         overflowCount++;
@@ -68,5 +86,11 @@ for (const p of PAGES) {
   else for (const f of findings) console.log(' ', JSON.stringify(f).slice(0, 400));
 }
 console.log('\n══ JS errors ══');
-console.log(errs.length ? errs.slice(0, 10).join('\n') : 'none ✓');
+const real404 = notFoundUrls.filter(u => !/\.txt\?_rsc=/.test(u));
+let report = errs;
+if (!real404.length && errs.length) {
+  /* همهٔ ۴۰۴ها پیش‌واکشی .txt?_rsc بودند → خطاهای کنسول ۴۰۴ همان نویز شناخته‌شده‌اند */
+  report = errs.filter(e => !/Failed to load resource/.test(e));
+}
+console.log(report.length ? report.slice(0, 10).join('\n') : 'none ✓');
 await browser.close();
