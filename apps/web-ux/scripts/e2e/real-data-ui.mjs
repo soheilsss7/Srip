@@ -173,6 +173,77 @@ try {
     ok('URL حلقه‌زای قدیمی اکنون بی‌خطر است (بدون رشد srip2)', !/srip2\/srip2/.test(finalUrl4), 'url=' + finalUrl4.replace(BASE, ''));
     await p3.close();
   }
+
+  /* ═══ سناریوی ۴: ایجاد سریع — فرم‌های کامل با انتخابگرهای واقعی ═══ */
+  {
+    const q = await browser.newPage();
+    await q.goto(`${BASE}/login`, { waitUntil: 'networkidle0', timeout: 90000 });
+    await q.waitForSelector('#login-email', { timeout: 30000 });
+    await q.type('#login-email', 'aroun');
+    await q.type('#login-pass', '12356784');
+    await q.click('.auth-form button[type=submit]');
+    await q.waitForFunction(() => !location.pathname.endsWith('/login'), { timeout: 60000 }).catch(() => {});
+    await new Promise(r => setTimeout(r, 2500));
+
+    /* باز کردن مودال ایجاد سریع از هدر */
+    await q.goto(`${BASE}/dashboard`, { waitUntil: 'networkidle0', timeout: 90000 }).catch(() => {});
+    await new Promise(r => setTimeout(r, 2500));
+    await q.evaluate(() => { const b = document.querySelector('button[title="ایجاد سریع"]'); if (b) b.click(); });
+    await q.waitForSelector('.quick-card', { timeout: 15000 });
+    ok('ایجاد سریع: مودال باز می‌شود', true);
+
+    /* فرم سازمان: فیلدهای کامل */
+    const orgForm = await q.evaluate(() => {
+      const labels = [...document.querySelectorAll('.quick-card .field-label')].map(l => (l.textContent ?? '').trim());
+      const typeSel = document.querySelector('.quick-card select');
+      return { labels: labels.slice(0, 6), typeOptions: typeSel ? [...typeSel.options].map(o => o.textContent) : [] };
+    });
+    ok('ایجاد سریع سازمان: فیلدهای کامل (نام/نوع/صنعت/کشور/سازمان مادر)', ['نام سازمان', 'نوع سازمان', 'صنعت', 'کشور', 'سازمان مادر'].every(l => orgForm.labels.some(x => x.includes(l))), JSON.stringify(orgForm.labels));
+    ok('ایجاد سریع سازمان: نوع سازمان با گزینه‌های فارسی', orgForm.typeOptions.some(t => t.includes('هلدینگ')) && orgForm.typeOptions.some(t => t.includes('تأمین‌کننده')));
+
+    /* ثبت سازمان واقعی از طریق فرم */
+    const stamp = String(Date.now()).slice(-5);
+    const orgName = `شرکت سریع‌ساز ${stamp}`;
+    await q.type('.quick-card input[id="qc-name"]', orgName);
+    await q.evaluate(() => { const s = document.querySelector('.quick-card select[id="qc-type"]'); s.value = 'PARTNER'; s.dispatchEvent(new Event('change', { bubbles: true })); });
+    await q.type('.quick-card input[id="qc-industry"]', 'فناوری اطلاعات');
+    await q.evaluate(() => { const b = [...document.querySelectorAll('.quick-card button')].find(x => (x.textContent ?? '').includes('ایجاد سازمان')); if (b) b.click(); });
+    await new Promise(r => setTimeout(r, 3500));
+    const okMsg = await q.evaluate(() => (document.querySelector('.status-message')?.textContent ?? '').trim());
+    ok('ایجاد سریع سازمان: ثبت موفق', okMsg.includes('با موفقیت ایجاد شد') && okMsg.includes(orgName), 'msg=' + okMsg);
+    /* سازمان مادر: گزینه‌ها فقط سازمان‌های واقعی خود کاربر (بدون دمو) */
+    await q.evaluate(() => { const b = [...document.querySelectorAll('.quick-types button')].find(x => (x.textContent ?? '') === 'سازمان'); if (b) b.click(); });
+    await new Promise(r => setTimeout(r, 800));
+    const parentOpts = await q.evaluate(() => [...(document.querySelector('select[id="qc-parentOrganizationId"]')?.options ?? [])].map(o => o.textContent));
+    ok('ایجاد سریع: انتخابگر سازمان مادر پر از سازمان‌های واقعی (پارس + بدون دمو)', parentOpts.some(t => t.includes('هلدینگ پارس')) && !parentOpts.some(t => t.includes('هلدینگ آریا')), 'n=' + parentOpts.length);
+
+    /* فرم جلسه: تاریخ شمسی + رابطهٔ واقعی */
+    await q.evaluate(() => { const b = [...document.querySelectorAll('.quick-types button')].find(x => (x.textContent ?? '') === 'جلسه'); if (b) b.click(); });
+    await new Promise(r => setTimeout(r, 800));
+    const meetForm = await q.evaluate(() => {
+      const relOpts = [...(document.querySelector('select[id="qc-relationshipId"]')?.options ?? [])].map(o => o.textContent);
+      const labels = [...document.querySelectorAll('.quick-card .field-label')].map(l => (l.textContent ?? '').trim());
+      return { relOpts, hasJalali: !!document.querySelector('.quick-card input[placeholder*="تاریخ"]'), labels: labels.slice(0, 12) };
+    });
+    ok('ایجاد سریع جلسه: انتخاب رابطه از روابط واقعی (پارس)', meetForm.relOpts.some(t => t.includes('هلدینگ پارس')), JSON.stringify(meetForm.relOpts.slice(0, 2)));
+    ok('ایجاد سریع جلسه: فیلدهای کامل (هدف/دستور/محل/لینک/شرکت‌کنندگان)', ['هدف جلسه', 'دستور جلسه', 'محل برگزاری', 'لینک جلسه', 'شرکت‌کنندگان'].every(l => meetForm.labels.some(x => x.includes(l))));
+    /* ثبت جلسه با تاریخ شمسی «امروز» */
+    await q.type('.quick-card input[id="qc-title"]', `جلسهٔ سریع ${stamp}`);
+    await q.evaluate(() => { const i = document.querySelector('.quick-card input[placeholder*="تاریخ و ساعت"]'); if (i) i.click(); });
+    await new Promise(r => setTimeout(r, 800));
+    await q.evaluate(() => { const b = [...document.querySelectorAll('.jalali-pop button')].find(x => (x.textContent ?? '').includes('امروز')); if (b) b.click(); });
+    await new Promise(r => setTimeout(r, 600));
+    await q.evaluate(() => { const b = [...document.querySelectorAll('.quick-card button')].find(x => (x.textContent ?? '').includes('ایجاد جلسه')); if (b) b.click(); });
+    await new Promise(r => setTimeout(r, 3500));
+    const meetMsg = await q.evaluate(() => (document.querySelector('.status-message')?.textContent ?? '').trim());
+    ok('ایجاد سریع جلسه: ثبت موفق با تاریخ شمسی', meetMsg.includes('با موفقیت ایجاد شد'), 'msg=' + meetMsg);
+
+    /* جلسهٔ ساخته‌شده واقعاً در فهرست جلسات است (انتظار مقاوم — رفرش اولیهٔ SW) */
+    await q.goto(`${BASE}/meetings`, { waitUntil: 'networkidle0', timeout: 90000 }).catch(() => {});
+    const listOk = await q.waitForFunction((t) => (document.body.textContent ?? '').includes(t), { timeout: 20000 }, `جلسهٔ سریع ${stamp}`).then(() => true).catch(() => false);
+    ok('ایجاد سریع جلسه: در فهرست جلسات ظاهر می‌شود', listOk);
+    await q.close();
+  }
 } catch (e) {
   console.error('E2E error:', e.message);
   fail++;

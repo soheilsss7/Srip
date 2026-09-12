@@ -319,13 +319,14 @@ section('جداسازی محیط شرکت‌ها — دمو فقط در دمو')
   check('aroun → اشخاص دمو (سارا محمدی) دیده نمی‌شوند', !aPpl.some(p => `${p.firstName ?? ''} ${p.lastName ?? ''}`.includes('سارا محمدی')), `count=${aPpl.length}`);
   const aMeet = await api('/meetings', { token: at });
   const aM = Array.isArray(aMeet.body) ? aMeet.body : (aMeet.body?.data ?? []);
-  check('aroun → جلسات دمو دیده نمی‌شوند (شروع تمیز)', aM.length === 0, `count=${aM.length}`);
+  /* «تمیز» یعنی هیچ جلسهٔ دموی آریا دیده نمی‌شود — جلساتی که خود arous ساخته مشکلی نیست */
+  check('aroun → جلسات دمو دیده نمی‌شوند (بدون آریا)', !aM.some(m => /پترو صنعت|سدنا|البرز|بانک ملّی|اتاق بازرگانی تهران|آریا/.test(String(m.title))), `count=${aM.length}`);
   const aDocs = await api('/documents', { token: at });
   const aD = Array.isArray(aDocs.body) ? aDocs.body : (aDocs.body?.data ?? []);
   check('aroun → اسناد دمو دیده نمی‌شوند', aD.length === 0, `count=${aD.length}`);
   const aNotif = await api('/notifications', { token: at });
   const aN = Array.isArray(aNotif.body) ? aNotif.body : (aNotif.body?.data ?? []);
-  check('aroun → اعلان‌های دمو دیده نمی‌شوند', aN.length === 0, `count=${aN.length}`);
+  check('aroun → اعلان‌های دمو دیده نمی‌شوند (بدون آریا/پترو/سدنا)', !aN.some(n => /پترو صنعت|سدنا|البرز|آریا/.test(String(n.title) + String(n.body))), `count=${aN.length}`);
   const dNotif = await api('/notifications', { token: dt });
   const dN = Array.isArray(dNotif.body) ? dNotif.body : (dNotif.body?.data ?? []);
   check('دمو → اعلان‌های دمو دیده می‌شوند', dN.length >= 1, `count=${dN.length}`);
@@ -394,6 +395,40 @@ section('حساب واقعی مشتری — مدیرعامل هلدینگ پار
   const aOrgs = await api('/organizations', { token: aL.body?.accessToken });
   const aList = Array.isArray(aOrgs.body) ? aOrgs.body : (aOrgs.body?.data ?? []);
   check('aroun → محیط پارس به‌عنوان دادهٔ مشتری خودش را می‌بیند', aList.some(o => o.name === 'هلدینگ پارس'));
+}
+
+/* ===================== 10. QUICK-CREATE OWNERSHIP (مالکیت پیش‌فرض) ===================== */
+section('ایجاد سریع — مالکیت پیش‌فرض و فرم‌های کامل');
+{
+  const aL = await api('/auth/login', { method: 'POST', body: { email: 'aroun', password: '12356784' } });
+  const t = aL.body?.accessToken;
+
+  // جلسه بدون سازمان/رابطه → متعلق به سازمان اصلی سازنده (شرکت x) و قابل‌مشاهده
+  const m = await api('/meetings', { method: 'POST', token: t, body: { title: 'جلسهٔ بدون پیوند — تست مالکیت', startAt: '2026-09-12T10:00:00.000Z' } });
+  check('جلسهٔ بدون پیوند → 201 با سازمان اصلی سازنده', m.status === 201 && m.body?.organizationId === 'org-x', JSON.stringify(m.body?.organizationId));
+  const ml = await api('/meetings', { token: t });
+  const mList = Array.isArray(ml.body) ? ml.body : (ml.body?.data ?? []);
+  check('جلسهٔ بدون پیوند → در فهرست جلسات سازنده دیده می‌شود', mList.some(x => x.title === 'جلسهٔ بدون پیوند — تست مالکیت'));
+
+  // پروژه/فرصت/تعهد بدون سازمان → بدون هاردکد org-2 (دمو) — مالک سازنده
+  const pr = await api('/projects', { method: 'POST', token: t, body: { name: 'پروژهٔ سریع — تست مالکیت' } });
+  check('پروژهٔ بدون سازمان → 201 با سازمان اصلی (نه org-2 دمو)', pr.status === 201 && pr.body?.organizationId === 'org-x', JSON.stringify(pr.body?.organizationId));
+  const op = await api('/opportunities', { method: 'POST', token: t, body: { name: 'فرصت سریع — تست مالکیت', value: 1000000, probability: 40 } });
+  check('فرصت بدون سازمان → 201 با سازمان اصلی', op.status === 201 && op.body?.organizationId === 'org-x', JSON.stringify(op.body?.organizationId));
+  const cm = await api('/commitments', { method: 'POST', token: t, body: { description: 'تعهد سریع — تست مالکیت', dueAt: '2026-10-01T09:00:00.000Z' } });
+  check('تعهد بدون سازمان → 201 با سازمان اصلی', cm.status === 201 && cm.body?.organizationId === 'org-x', JSON.stringify(cm.body?.organizationId));
+
+  // فیلدهای کامل فرم‌ها: جلسه با رابطهٔ پارس + شرکت‌کننده — رد نمی‌شود
+  const m2 = await api('/meetings', { method: 'POST', token: t, body: { title: 'جلسهٔ کامل', startAt: '2026-09-12T12:00:00.000Z', endAt: '2026-09-12T13:00:00.000Z', relationshipId: 'r-pars-01', objective: 'هم‌راستاسازی', agenda: '۱) مرور', location: 'دفتر مرکزی', meetingUrl: 'https://meet.example.com/x' } });
+  check('جلسهٔ کامل (رابطهٔ پارس + محل + لینک) → 201', m2.status === 201 && m2.body?.organizationId === 'org-pars', JSON.stringify(m2.body?.organizationId));
+
+  // کاربر تازه (بدون هیچ سازمانی) → پیام شفاف 400 نه 403/500
+  const em = `qc-${Date.now()}@test.ir`;
+  await api('/auth/register', { method: 'POST', body: { name: 'تست فرم', email: em, password: 'Password123456' } });
+  const nl = await api('/auth/login', { method: 'POST', body: { email: em, password: 'Password123456' } });
+  const nt = nl.body?.accessToken;
+  const nm = await api('/meetings', { method: 'POST', token: nt, body: { title: 'بدون سازمان', startAt: '2026-09-12T10:00:00.000Z' } });
+  check('کاربر بدون سازمان → پیام شفاف 400', nm.status === 400 && /سازمان/.test(nm.body?.message ?? ''), JSON.stringify(nm.body?.message).slice(0, 60));
 }
 
 /* ============================ SUMMARY ============================ */

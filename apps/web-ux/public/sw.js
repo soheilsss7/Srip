@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.12.03';
+const DEMO_MOCK_VERSION = '2026.09.12.04';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -2455,6 +2455,10 @@ function visibleNotifications(req){
 }
 function inScope(req,orgId){ return visibleOrgIds(req).includes(orgId); }
 const scopedOrgs=(req)=>ORGS.filter(o=>inScope(req,o.id));
+/* سازمان اصلیِ کاربر (برای مالکیت پیش‌فرضِ آیتم‌های تازه‌ساخته) */
+const primaryOrgId=(u)=>(u?.memberships??[]).find(m=>m.isPrimary)?.organizationId
+  ??(u?.memberships??[])[0]?.organizationId
+  ??(u?.accessibleOrganizationIds??[])[0]??null;
 const scopedPeople=(req)=>PEOPLE.filter(p=>inScope(req,p.organizationId));
 // A relationship belongs to a tenant if at least one endpoint is in its scope
 // (its own relationships with outside organizations remain visible).
@@ -7082,7 +7086,8 @@ async function __handler(req, res) {
     if(!b.title?.trim()||!b.startAt) return json(res,400,{message:'عنوان و زمان شروع لازم است.'});
     const mRel=b.relationshipId?RELS.find(r=>r.id===b.relationshipId):null;
     if(b.relationshipId&&!mRel) return json(res,400,{message:'رابطهٔ انتخابی یافت نشد.'});
-    const mOrg=b.organizationId??(mRel?mRel.sourceOrganizationId:null);
+    const mOrg=b.organizationId??(mRel?mRel.sourceOrganizationId:primaryOrgId(authUser));
+    if(!mOrg) return json(res,400,{message:'سازمان جلسه لازم است (رابطه یا سازمان مرتبط را انتخاب کنید).'});
     if(mOrg&&!inScope(req,mOrg)) return json(res,403,{message:'سازمانِ جلسه خارج از محدودهٔ دسترسی شماست.'});
     if(mRel&&!relInScope(req,mRel)) return json(res,403,{message:'رابطهٔ جلسه خارج از محدودهٔ دسترسی شماست.'});
     const participants=Array.isArray(b.participants)?b.participants.map(p=>typeof p==='string'?{personId:p}:{personId:p?.personId??p?.id}).filter(p=>p.personId):[];
@@ -8060,8 +8065,9 @@ async function __handler(req, res) {
     if(!b.description?.trim()) return json(res,400,{message:'شرح تعهد لازم است.'});
     const rel=b.relationshipId?RELS.find(r=>r.id===b.relationshipId):null;
     if(b.relationshipId&&!rel) return json(res,400,{message:'رابطهٔ انتخابی یافت نشد.'});
-    const orgId=b.organizationId??(rel?rel.targetOrganizationId:'org-2');
-    const orgReach=!orgId||inScope(req,orgId)||(rel&&relInScope(req,rel)&&(orgId===rel.targetOrganizationId||orgId===rel.sourceOrganizationId));
+    const orgId=b.organizationId??(rel?rel.targetOrganizationId:primaryOrgId(authUser));
+    if(!orgId) return json(res,400,{message:'سازمان طرفِ تعهد لازم است.'});
+    const orgReach=inScope(req,orgId)||(rel&&relInScope(req,rel)&&(orgId===rel.targetOrganizationId||orgId===rel.sourceOrganizationId));
     if(!orgReach) return json(res,403,{message:'سازمان طرفِ تعهد در محدودهٔ دسترسی شما نیست.'});
     const c={id:`c-${Date.now()}`,description:b.description,dueAt:b.dueAt??null,reminderAt:b.reminderAt??null,status:b.status??'OPEN',risk:b.risk??'MEDIUM',direction:b.direction==='THEIRS'?'THEIRS':'OURS',notes:b.notes??null,organizationId:orgId,ownerId:b.ownerId??null,personId:b.personId??null,relationshipId:b.relationshipId??null,meetingId:b.meetingId??null,projectId:b.projectId??null,createdAt:nowIso(),fulfilledAt:b.status==='FULFILLED'?nowIso():null};
     COMMITMENTS.push(c);
@@ -8167,8 +8173,9 @@ async function __handler(req, res) {
     if(!b.name?.trim()) return json(res,400,{message:'نام فرصت لازم است.'});
     const rel=b.relationshipId?RELS.find(r=>r.id===b.relationshipId):null;
     if(b.relationshipId&&!rel) return json(res,400,{message:'رابطهٔ انتخابی یافت نشد.'});
-    const orgId=b.organizationId??(rel?rel.targetOrganizationId:'org-2');
-    const orgReach=!orgId||inScope(req,orgId)||(rel&&relInScope(req,rel)&&(orgId===rel.targetOrganizationId||orgId===rel.sourceOrganizationId));
+    const orgId=b.organizationId??(rel?rel.targetOrganizationId:primaryOrgId(authUser));
+    if(!orgId) return json(res,400,{message:'سازمان فرصت لازم است.'});
+    const orgReach=inScope(req,orgId)||(rel&&relInScope(req,rel)&&(orgId===rel.targetOrganizationId||orgId===rel.sourceOrganizationId));
     if(!orgReach) return json(res,403,{message:'سازمانِ فرصت در محدودهٔ دسترسی شما نیست.'});
     const status=b.status??'IDENTIFIED';
     const sourceType=b.sourceType?String(b.sourceType).toUpperCase():'COLD';
@@ -8340,7 +8347,8 @@ async function __handler(req, res) {
   if(projectNew){
     const b=await readBody(req);
     if(!b.name?.trim()) return json(res,400,{message:'نام پروژه لازم است.'});
-    const orgId=b.organizationId??'org-2';
+    const orgId=b.organizationId??primaryOrgId(authUser);
+    if(!orgId) return json(res,400,{message:'سازمان پروژه لازم است.'});
     if(!inScope(req,orgId)) return json(res,403,{message:'سازمان پروژه در محدودهٔ دسترسی شما نیست.'});
     const pr={id:`pr-${Date.now()}`,name:b.name,status:b.status??'PLANNED',priority:b.priority??'MEDIUM',organizationId:orgId,description:b.description??null,objective:b.objective??null,ownerId:b.ownerId??null,startAt:b.startAt??null,targetAt:b.targetAt??null,endAt:null,createdAt:nowIso()};
     PROJECTS.push(pr);
