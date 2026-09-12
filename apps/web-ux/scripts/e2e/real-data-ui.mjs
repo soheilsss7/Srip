@@ -44,6 +44,7 @@ try {
   ok('لیست سازمان‌ها: شرکت x', bodyTxt.includes('شرکت x'));
   ok('لیست سازمان‌ها: هلدینگ پارس', bodyTxt.includes('هلدینگ پارس'));
   ok('لیست سازمان‌ها: پارس انرژی (زیرمجموعه)', bodyTxt.includes('پارس انرژی'));
+  ok('جداسازی مستأجر: دنیای دمو (هلدینگ آریا) دیده نمی‌شود', !bodyTxt.includes('هلدینگ آریا') && !bodyTxt.includes('آریا فناوری'));
 
   // 3) عموم‌ها: انتخاب هلدینگ پارس → نقشهٔ واقعی سند
   await page.goto(`${BASE}/publics`, { waitUntil: 'networkidle0', timeout: 90000 });
@@ -100,6 +101,13 @@ try {
   ok('گراف شبکه: هلدینگ پارس حاضر است', netInfo.hasPars);
   ok('گراف شبکه: زیرمجموعه‌های پارس', netInfo.hasSub);
   ok('گراف شبکه: نهادهای عموم سند', netInfo.hasEntity);
+  /* رنگ‌بندی دسته‌های عموم روی نهادهای سند (pubCatOfOrg از sourceId) */
+  const colored = await page.evaluate(() => {
+    const raw = document.querySelector('[data-categorized-count]')?.textContent ?? '0';
+    const faNum = (v) => Number(String(v).replace(/[^0-9۰-۹]/g, '').replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))));
+    return faNum(raw);
+  });
+  ok('گراف شبکه: نهادها بر اساس دستهٔ عموم رنگ گرفته‌اند (۴۰+)', colored >= 40, 'colored=' + colored);
 } catch (e) {
   console.error('E2E error:', e.message);
   fail++;

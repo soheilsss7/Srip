@@ -252,7 +252,9 @@ section('دادهٔ اولیهٔ واقعی — aroun / شرکت x / هلدین�
   const meAr = await api('/auth/me', { token: t });
   check('aroun → مالک کل سیستم، سازمان اصلی «شرکت x»', meAr.status === 200 && meAr.body?.isOwner === true
     && (meAr.body?.memberships ?? []).some(m => m.organizationName === 'شرکت x' && m.role === 'SUPER_ADMIN'));
-  check('aroun → دسترسی به همهٔ سازمان‌ها (دمو + پارس + نهادها)', (meAr.body?.accessibleOrganizationIds ?? []).length >= 80);
+  const accAr = meAr.body?.accessibleOrganizationIds ?? [];
+  check('aroun → دسترسی به همهٔ سازمان‌های واقعی (شرکت x + پارس + نهادها)', accAr.length >= 70 && accAr.includes('org-pars') && accAr.includes('org-x'), `count=${accAr.length}`);
+  check('aroun → بدون هیچ سازمان دمو (آریا)', !accAr.some(id => ['org-1','org-2','org-3','org-4'].includes(id)));
 
   // سازمان‌های واقعی
   const orgs = await api('/organizations', { token: t });
@@ -280,8 +282,78 @@ section('دادهٔ اولیهٔ واقعی — aroun / شرکت x / هلدین�
 
   // گراف شبکه: گره‌های پارس + نهادها
   const g = await api('/network/graph', { token: t });
-  check('گراف: پارس و همهٔ نهادها گره دارند (۸۰+)', (g.body?.nodes ?? []).length >= 80);
-  check('گراف: یال‌های ساختاری پارس↔۱۲ حوزه', (g.body?.edges ?? []).filter(e => e.kind === 'relationship').length >= 20);
+  check('گراف: پارس و همهٔ نهادها گره دارند (۷۰+)', (g.body?.nodes ?? []).length >= 70);
+  check('گراف: یال‌های ساختاری پارس↔۱۲ حوزه', (g.body?.edges ?? []).filter(e => e.kind === 'relationship').length === 12, `edges=${(g.body?.edges ?? []).filter(e => e.kind === 'relationship').length}`);
+}
+
+/* ===================== 8. TENANT ISOLATION (جداسازی مستأجران) ===================== */
+section('جداسازی محیط شرکت‌ها — دمو فقط در دمو');
+{
+  // توکن دمو (u-1) و توکن aroun
+  const dLogin = await api('/auth/login', { method: 'POST', body: { email: 'demo', password: '123456', otp: '123456' } });
+  const dt = dLogin.body?.accessToken;
+  const aLogin = await api('/auth/login', { method: 'POST', body: { email: 'aroun', password: '12356784' } });
+  const at = aLogin.body?.accessToken;
+
+  // دمو: دنیای آریا را می‌بیند، دادهٔ واقعی را هرگز
+  const dOrgs = await api('/organizations', { token: dt });
+  const dList = Array.isArray(dOrgs.body) ? dOrgs.body : (dOrgs.body?.data ?? []);
+  check('دمو → هلدینگ آریا دیده می‌شود', dList.some(o => o.name === 'هلدینگ آریا'));
+  check('دمو → شرکت x دیده نمی‌شود', !dList.some(o => o.name === 'شرکت x'));
+  check('دمو → هلدینگ پارس دیده نمی‌شود', !dList.some(o => o.name === 'هلدینگ پارس'));
+  check('دمو → نهاد واقعی سند (شورای راهبری) دیده نمی‌شود', !dList.some(o => o.name === 'شورای ملی راهبری هوش مصنوعی'));
+  const dPars = await api('/organizations/org-pars', { token: dt });
+  check('دمو → GET سازمان پارس → 403', dPars.status === 403);
+  const dPub = await api('/publics/members?orgId=org-pars', { token: dt });
+  check('دمو → اعضای عموم‌های پارس → 403', dPub.status === 403);
+
+  // aroun: دادهٔ واقعی را می‌بیند، دنیای دمو را هرگز
+  const aOrgs = await api('/organizations', { token: at });
+  const aList = Array.isArray(aOrgs.body) ? aOrgs.body : (aOrgs.body?.data ?? []);
+  check('aroun → هلدینگ آریا (دمو) دیده نمی‌شود', !aList.some(o => o.name === 'هلدینگ آریا'));
+  check('aroun → شرکت x و هلدینگ پارس دیده می‌شوند', aList.some(o => o.name === 'شرکت x') && aList.some(o => o.name === 'هلدینگ پارس'));
+  const aOrg1 = await api('/organizations/org-1', { token: at });
+  check('aroun → GET سازمان دمو (org-1) → 403', aOrg1.status === 403);
+  const aPeople = await api('/people', { token: at });
+  const aPpl = Array.isArray(aPeople.body) ? aPeople.body : (aPeople.body?.data ?? []);
+  check('aroun → اشخاص دمو (سارا محمدی) دیده نمی‌شوند', !aPpl.some(p => `${p.firstName ?? ''} ${p.lastName ?? ''}`.includes('سارا محمدی')), `count=${aPpl.length}`);
+  const aMeet = await api('/meetings', { token: at });
+  const aM = Array.isArray(aMeet.body) ? aMeet.body : (aMeet.body?.data ?? []);
+  check('aroun → جلسات دمو دیده نمی‌شوند (شروع تمیز)', aM.length === 0, `count=${aM.length}`);
+  const aDocs = await api('/documents', { token: at });
+  const aD = Array.isArray(aDocs.body) ? aDocs.body : (aDocs.body?.data ?? []);
+  check('aroun → اسناد دمو دیده نمی‌شوند', aD.length === 0, `count=${aD.length}`);
+  const aNotif = await api('/notifications', { token: at });
+  const aN = Array.isArray(aNotif.body) ? aNotif.body : (aNotif.body?.data ?? []);
+  check('aroun → اعلان‌های دمو دیده نمی‌شوند', aN.length === 0, `count=${aN.length}`);
+  const dNotif = await api('/notifications', { token: dt });
+  const dN = Array.isArray(dNotif.body) ? dNotif.body : (dNotif.body?.data ?? []);
+  check('دمو → اعلان‌های دمو دیده می‌شوند', dN.length >= 1, `count=${dN.length}`);
+
+  // حساب تازه‌ثبت‌نام: شروع کاملاً خالی
+  const em = `newuser-${Date.now()}@test.ir`;
+  const reg = await api('/auth/register', { method: 'POST', body: { name: 'کاربر واقعی تازه', email: em, password: 'Password123456' } });
+  check('ثبت‌نام حساب واقعی تازه → 201', reg.status === 201);
+  const nl = await api('/auth/login', { method: 'POST', body: { email: em, password: 'Password123456' } });
+  check('ورود حساب تازه → 200', nl.status === 200 && !!nl.body?.accessToken);
+  const nt = nl.body?.accessToken;
+  const nOrgs = await api('/organizations', { token: nt });
+  const nList = Array.isArray(nOrgs.body) ? nOrgs.body : (nOrgs.body?.data ?? []);
+  check('حساب تازه → بدون هیچ سازمانی (شروع از صفر)', nList.length === 0, `count=${nList.length}`);
+  const nPub = await api('/publics/members?orgId=org-pars', { token: nt });
+  check('حساب تازه → دادهٔ پارس هم دیده نمی‌شود → 403', nPub.status === 403);
+  const nDemo = await api('/organizations/org-1', { token: nt });
+  check('حساب تازه → دادهٔ دمو هم دیده نمی‌شود → 403', nDemo.status === 403);
+
+  // سازمان می‌سازد → فقط خودش می‌بیند
+  const cOrg = await api('/organizations', { method: 'POST', token: nt, body: { name: 'شرکت تست مستقل', type: 'COMPANY' } });
+  check('حساب تازه → ایجاد سازمان خودش → 201', cOrg.status === 201);
+  const nOrgs2 = await api('/organizations', { token: nt });
+  const nList2 = Array.isArray(nOrgs2.body) ? nOrgs2.body : (nOrgs2.body?.data ?? []);
+  check('حساب تازه → فقط سازمان خودش را می‌بیند', nList2.length === 1 && nList2[0]?.name === 'شرکت تست مستقل', `count=${nList2.length}`);
+  const aOrgs2 = await api('/organizations', { token: at });
+  const aList2 = Array.isArray(aOrgs2.body) ? aOrgs2.body : (aOrgs2.body?.data ?? []);
+  check('سازمان شخصی کاربر تازه → برای مالک هم به‌عنوان مشتری دیده می‌شود', aList2.some(o => o.name === 'شرکت تست مستقل'));
 }
 
 /* ============================ SUMMARY ============================ */

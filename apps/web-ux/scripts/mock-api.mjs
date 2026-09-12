@@ -19,7 +19,7 @@ const PORT = Number(process.env.MOCK_API_PORT || 4000);
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.12.01';
+const DEMO_MOCK_VERSION = '2026.09.12.02';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -285,9 +285,9 @@ const EVENT_SEED={
 };
 for(const [k,v] of Object.entries(EVENT_SEED)){const x=INTERACTIONS.find(i=>i.id===k); if(x) Object.assign(x,v);}
 let NOTIFICATIONS = [
-  { id:'n-1', title:'موعد اقدام نزدیک است', body:'اقدام «پیگیری امضای قرارداد پترو صنعت» تا ۲ روز دیگر موعد دارد.', type:'REMINDER', priority:'important', isRead:false, createdAt:'2026-08-29T06:00:00.000Z' },
-  { id:'n-2', title:'پیشنهاد هوشمند جدید', body:'پیشنهاد «مدیریت ریسک رابطه با البرز» تولید شد.', type:'RECOMMENDATION', priority:'recommendation', isRead:false, createdAt:'2026-08-29T05:00:00.000Z' },
-  { id:'n-3', title:'نتیجه جلسه ثبت شد', body:'نتیجهٔ جلسهٔ پیگیری پروژه سدنا ثبت شد.', type:'SYSTEM', priority:'information', isRead:true, createdAt:'2026-08-25T12:00:00.000Z' },
+  { id:'n-1', tenant:'demo', title:'موعد اقدام نزدیک است', body:'اقدام «پیگیری امضای قرارداد پترو صنعت» تا ۲ روز دیگر موعد دارد.', type:'REMINDER', priority:'important', isRead:false, createdAt:'2026-08-29T06:00:00.000Z' },
+  { id:'n-2', tenant:'demo', title:'پیشنهاد هوشمند جدید', body:'پیشنهاد «مدیریت ریسک رابطه با البرز» تولید شد.', type:'RECOMMENDATION', priority:'recommendation', isRead:false, createdAt:'2026-08-29T05:00:00.000Z' },
+  { id:'n-3', tenant:'demo', title:'نتیجه جلسه ثبت شد', body:'نتیجهٔ جلسهٔ پیگیری پروژه سدنا ثبت شد.', type:'SYSTEM', priority:'information', isRead:true, createdAt:'2026-08-25T12:00:00.000Z' },
 ];
 
 let REFERRALS = [
@@ -649,13 +649,25 @@ const opportunityView=(o)=>{
 };
 
 /* --------------------------- identities & scope --------------------------- */
+/* ─────────── مستأجران (Multi-tenant): هر شرکت محیط اختصاصی خودش ───────────
+   «دادهٔ دمو فقط در دمو»: دنیای آریا (org-1…org-12) و حساب‌های دموی آن
+   (u-1، u-2، u-3) کاملاً از دادهٔ واقعی (شرکت x + هلدینگ پارس و نهادهای سند
+   عموم‌ها) و حساب‌های واقعی جدا هستند. حساب تازه‌ثبت‌نام نیز بدون هیچ داده‌ای
+   شروع می‌کند و محیط اختصاصی خودش را می‌سازد. */
+const DEMO_ORG_IDS = new Set(['org-1','org-2','org-3','org-4','org-5','org-6','org-7','org-8','org-9','org-10','org-11','org-12']);
+const DEMO_USER_IDS = new Set(['u-1','u-2','u-3']);
+/* فقط seed اولیه (بدون سازمان‌های runtime) — مبنا برچسب‌گذاری مستأجر */
+const REAL_ORG_IDS = new Set(ORGS.map(o=>o.id).filter(id=>!DEMO_ORG_IDS.has(id)));
+const orgTenant=(o)=>{ if(!o) return null; if(o.tenant) return o.tenant; return DEMO_ORG_IDS.has(o.id)?'demo':(REAL_ORG_IDS.has(o.id)?'real':'personal'); };
+
 const SEED_USERS = {
   /* حساب واقعی مالک سامانه — شرکت x (بدون MFA؛ ورود مستقیم با نام کاربری aroun) */
   'aroun@srip.local': {
     id:'u-aroun', email:'aroun@srip.local', username:'aroun', name:'aroun', password:'12356784',
     memberships:[{id:'mb-aroun',organizationId:'org-x',organizationName:'شرکت x',role:'SUPER_ADMIN',department:'مالکیت',dataScope:'ALL',accessScope:'ALL',isPrimary:true}],
     permissions:['*'],
-    accessibleOrganizationIds:ORGS.map(o=>o.id),
+    /* مالک واقعی: فقط دادهٔ واقعی (شرکت x + پارس و نهادها) — هرگز دنیای دمو */
+    accessibleOrganizationIds:ORGS.map(o=>o.id).filter(id=>!DEMO_ORG_IDS.has(id)),
     isOwner:true,
     isActive:true,
     emailVerifiedAt:'2026-09-01T08:00:00.000Z',
@@ -666,7 +678,8 @@ const SEED_USERS = {
     id:'u-1', email:'demo@srip.local', username:'demo', name:'مدیر ارشد (مالک)', password:'123456',
     memberships:[{id:'mb-1',organizationId:'org-1',organizationName:'هلدینگ آریا',role:'SUPER_ADMIN',department:'استراتژی',dataScope:'ALL',accessScope:'ALL',isPrimary:true}],
     permissions:['*'],
-    accessibleOrganizationIds:ORGS.map(o=>o.id),
+    /* حساب دمو: فقط دنیای دمو (آریا) — هرگز دادهٔ واقعی مشتری‌ها */
+    accessibleOrganizationIds:ORGS.map(o=>o.id).filter(id=>DEMO_ORG_IDS.has(id)),
     isOwner:true,
     isActive:true,
     emailVerifiedAt:'2026-06-01T08:00:00.000Z',
@@ -677,7 +690,8 @@ const SEED_USERS = {
     id:'u-3', email:'admin@srip.local', username:'admin', name:'مدیر هلدینگ (ناظر)', password:'123456',
     memberships:[{id:'mb-3',organizationId:'org-1',organizationName:'هلدینگ آریا',role:'ADMIN',department:'هیئت‌مدیره',dataScope:'ALL',accessScope:'ALL',isPrimary:true}],
     permissions:['*'],
-    accessibleOrganizationIds:ORGS.map(o=>o.id),
+    /* حساب دمو: فقط دنیای دمو (آریا) */
+    accessibleOrganizationIds:ORGS.map(o=>o.id).filter(id=>DEMO_ORG_IDS.has(id)),
     isOwner:true,
     isActive:true,
     emailVerifiedAt:'2026-06-01T08:00:00.000Z',
@@ -703,7 +717,26 @@ const USER_ALIASES = Object.fromEntries(
 function visibleOrgIds(req){
   const u=currentUser(req);
   if(!u) return [];
-  return u.isOwner ? ORGS.map(o=>o.id) : u.accessibleOrganizationIds;
+  /* حساب دمو: فقط دنیای دمو (آریا) — دادهٔ واقعی مشتری‌ها هرگز */
+  if(DEMO_USER_IDS.has(u.id)){
+    const base=u.isOwner?ORGS.map(o=>o.id):(u.accessibleOrganizationIds??[]);
+    return base.filter(id=>orgTenant(orgById(id))==='demo');
+  }
+  /* مالک واقعی (aroun): همهٔ دادهٔ واقعی (شرکت x + مشتری‌ها) — دنیای دمو هرگز */
+  if(u.isOwner) return ORGS.filter(o=>orgTenant(o)!=='demo').map(o=>o.id);
+  /* سایر حساب‌ها (ثبت‌نام‌شده): فقط سازمان‌های خودشان — شروع بدون داده */
+  return (u.accessibleOrganizationIds??[]).filter(id=>{const o=orgById(id);return !!o&&orgTenant(o)!=='demo';});
+}
+/* اعلان‌های قابل‌مشاهدهٔ این مستأجر (همان قاعدهٔ داده) */
+function visibleNotifications(req){
+  const u=currentUser(req);
+  const tn=u?(DEMO_USER_IDS.has(u.id)?'demo':(u.isOwner?'real':null)):null;
+  return NOTIFICATIONS.filter(n=>{
+    const t=n.tenant??'demo';
+    if(t==='demo') return tn==='demo';
+    if(t==='real') return tn==='real';
+    return !!n.userId&&n.userId===(u?.id??null); /* personal: فقط سازنده */
+  });
 }
 function inScope(req,orgId){ return visibleOrgIds(req).includes(orgId); }
 const scopedOrgs=(req)=>ORGS.filter(o=>inScope(req,o.id));
@@ -2201,8 +2234,8 @@ function seedKnowledge() {
 function seedDocuments() {
   const at = (d) => new Date(Date.now() - d * 86400000).toISOString();
   return [
-    { id: 'doc-1', name: 'راهنمای امتیازدهی معیارها.pdf', mimeType: 'application/pdf', sizeBytes: 1284500, classification: 'INTERNAL', uploadedBy: 'demo@srip.local', organizationId: null, scanStatus: 'CLEAN', uploadStatus: 'READY', indexStatus: 'INDEXED', createdAt: at(9), updatedAt: at(9) },
-    { id: 'doc-2', name: 'فرم معرفی شریک راهبردی.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', sizeBytes: 348000, classification: 'CONFIDENTIAL', uploadedBy: 'demo@srip.local', organizationId: null, scanStatus: 'CLEAN', uploadStatus: 'READY', indexStatus: 'PENDING', createdAt: at(6), updatedAt: at(6) },
+    { id: 'doc-1', name: 'راهنمای امتیازدهی معیارها.pdf', mimeType: 'application/pdf', sizeBytes: 1284500, classification: 'INTERNAL', uploadedBy: 'demo@srip.local', organizationId: 'org-1', scanStatus: 'CLEAN', uploadStatus: 'READY', indexStatus: 'INDEXED', createdAt: at(9), updatedAt: at(9) },
+    { id: 'doc-2', name: 'فرم معرفی شریک راهبردی.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', sizeBytes: 348000, classification: 'CONFIDENTIAL', uploadedBy: 'demo@srip.local', organizationId: 'org-1', scanStatus: 'CLEAN', uploadStatus: 'READY', indexStatus: 'PENDING', createdAt: at(6), updatedAt: at(6) },
     { id: 'doc-3', name: 'الگوی ارزیابی تأمین‌کننده.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', sizeBytes: 892000, classification: 'RESTRICTED', uploadedBy: 'client@arya-tech.ir', organizationId: 'org-3', scanStatus: 'CLEAN', uploadStatus: 'READY', indexStatus: 'INDEXED', createdAt: at(4), updatedAt: at(4) },
     { id: 'doc-4', name: 'پیش‌نویس قرارداد چارچوب همکاری.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', sizeBytes: 612000, classification: 'CONFIDENTIAL', uploadedBy: 'demo@srip.local', organizationId: 'org-3', scanStatus: 'QUARANTINED', uploadStatus: 'PENDING', indexStatus: 'PENDING', createdAt: at(1), updatedAt: at(1) },
   ];
@@ -4164,7 +4197,11 @@ const PUBLIC_ORG_CATEGORY = {
   'org-5': 'ECONOMIC', 'org-6': 'ECOSYSTEM', 'org-7': 'ECONOMIC', 'org-8': 'INSTITUTIONAL',
 };
 function pubCatOfOrg(orgId){
-  const m=(DB.publicsMembers??[]).find(x=>x.orgId===orgId&&x.sourceType==='organization');
+  const ms=DB.publicsMembers??[];
+  /* اول عضوی که خودِ سازمان درباره‌اش نوشته (orgId)، بعد نهادی که در نقشهٔ
+     عموم‌ها «طرف مقابل» است (sourceId) — تا نهادهای سند هم رنگ دسته بگیرند */
+  const m=ms.find(x=>x.orgId===orgId&&x.sourceType==='organization')
+        ??ms.find(x=>x.sourceId===orgId&&x.sourceType==='organization');
   if(m){ const g=pubGroupFromAny(m.groupId); return g?.cat??null; }
   return PUBLIC_ORG_CATEGORY[orgId]??null;
 }
@@ -5051,7 +5088,9 @@ const server=http.createServer(async(req,res)=>{
     const intake = normalizeCriteriaAnswers(b.criteriaAnswers ?? b.assessment);
     const intakeScope = criteriaScopeError('ORGANIZATION', intake);
     if (intakeScope) return json(res,400,{message:intakeScope});
-    const o={id:`org-${Date.now()}`,name:b.name,type:b.type??'OTHER',industry:b.industry??null,country:b.country??null,parentOrganizationId:b.parentOrganizationId??null,createdAt:nowIso()};
+    /* سازمان تازه به مستأجرِ سازنده تعلق می‌گیرد: دمو→demo، مالک→real، بقیه→personal */
+    const o={id:`org-${Date.now()}`,name:b.name,type:b.type??'OTHER',industry:b.industry??null,country:b.country??null,parentOrganizationId:b.parentOrganizationId??null,
+      tenant:authUser?(DEMO_USER_IDS.has(authUser.id)?'demo':(authUser.isOwner?'real':'personal')):'personal',createdAt:nowIso()};
     ORGS.push(o);
     // دمو: سازندهٔ سازمان آن را در محدودهٔ دید خود می‌گیرد تا ارزیابی اولیه بلافاصله ممکن باشد
     if (authUser && !authUser.isOwner && Array.isArray(authUser.accessibleOrganizationIds) && !authUser.accessibleOrganizationIds.includes(o.id)) authUser.accessibleOrganizationIds.push(o.id);
@@ -5070,6 +5109,7 @@ const server=http.createServer(async(req,res)=>{
   const orgTimeline=match('/organizations/:id/timeline');
   if(orgTimeline&&method==='GET'){
     const oid=orgTimeline[0];
+    if(!inScope(req,oid)) return json(res,403,{message:'دسترسی به این سازمان مجاز نیست.'});
     const relOf=(id)=>RELS.find(r=>r.id===id);
     const involves=(rel)=>rel&&(rel.sourceOrganizationId===oid||rel.targetOrganizationId===oid);
     const evts=[];
@@ -5577,8 +5617,8 @@ const server=http.createServer(async(req,res)=>{
   }
 
   /* ----------------------------- notifications ----------------------------- */
-  if(is('/notifications')&&method==='GET') return json(res,200,NOTIFICATIONS);
-  if(is('/notifications/unread-count')&&method==='GET') return json(res,200,{count:NOTIFICATIONS.filter(n=>!n.isRead).length});
+  if(is('/notifications')&&method==='GET') return json(res,200,visibleNotifications(req));
+  if(is('/notifications/unread-count')&&method==='GET') return json(res,200,{count:visibleNotifications(req).filter(n=>!n.isRead).length});
   if(is('/notifications/preferences')&&method==='GET') return json(res,200,{inAppEnabled:true,emailEnabled:true,pushEnabled:false,digestEnabled:false,criticalOnly:false,dailyDigest:false,weeklyDigest:false});
   if(is('/notifications/preferences')&&method==='PATCH'){ await readBody(req); return json(res,200,{ok:true}); }
   const notifRead=match('/notifications/:id/read');
@@ -5651,7 +5691,7 @@ const server=http.createServer(async(req,res)=>{
     const workflowExecutions=wfScoped.length?wfScoped.filter(w=>anScoped({organizationId:w.organizationId},false)).length:wfRows.length;
     return json(res,200,{
       generatedAt:nowIso(),windowDays:30,cached:false,
-      counts:{organizations:scopedOrgs(req).length,people:scopedPeople(req).length,relationships:scopedRels(req).length,meetings:scopedMeetings(req).length,actions:scopedActions(req).length,commitments:scopedCommitments(req).length,projects:scopedProjects(req).length,opportunities:scopedOpps(req).length,notifications:NOTIFICATIONS.length,unreadNotifications:NOTIFICATIONS.filter(n=>!n.isRead).length,workflowExecutions},
+      counts:{organizations:scopedOrgs(req).length,people:scopedPeople(req).length,relationships:scopedRels(req).length,meetings:scopedMeetings(req).length,actions:scopedActions(req).length,commitments:scopedCommitments(req).length,projects:scopedProjects(req).length,opportunities:scopedOpps(req).length,notifications:visibleNotifications(req).length,unreadNotifications:visibleNotifications(req).filter(n=>!n.isRead).length,workflowExecutions},
       engagement:{activeUsers30d,featureUsage,recommendationAcceptance:typeCnt('RECOMMENDATION_ACCEPTED'),recommendationAcceptanceRate:0,successfulConnections:typeCnt('SUCCESSFUL_CONNECTION'),relationshipUpdates:typeCnt('RELATIONSHIP_UPDATED')},
     });
   }
@@ -6095,11 +6135,13 @@ const server=http.createServer(async(req,res)=>{
   if(is('/documents')&&method==='GET'){
     const organizationId=q.get('organizationId')??'';
     let list=(DB.documents??seedDocuments()).map((d)=>({...d}));
+    /* اسناد هم مثل بقیهٔ داده درون محدودهٔ مستأجر می‌مانند */
+    list=list.filter((d)=>d.organizationId?inScope(req,d.organizationId):false);
     if(organizationId) list=list.filter((d)=>d.organizationId===organizationId);
     return json(res,200,list);
   }
   if(is('/documents/status')&&method==='GET'){
-    const list=DB.documents??seedDocuments();
+    const list=(DB.documents??seedDocuments()).filter((d)=>d.organizationId?inScope(req,d.organizationId):false);
     return json(res,200,{module:'اسناد',status:'READY',total:list.length,indexed:list.filter((d)=>d.indexStatus==='INDEXED').length,pending:list.filter((d)=>d.scanStatus==='QUARANTINED'||d.uploadStatus==='PENDING').length,capabilities:['اعتبارسنجی نوع فایل/پسوند','قرنطینه','اسکن بدافزار','تکه‌تکه‌کردن و پاکسازی','دانلود امضاشده'],capabilitiesCount:5});
   }
 
@@ -8041,7 +8083,7 @@ const server=http.createServer(async(req,res)=>{
         } else if(a.type==='CREATE_NOTIFICATION'){
           const mapType=(x)=>({INFO:'SYSTEM',REMINDER:'REMINDER',RECOMMENDATION:'RECOMMENDATION'}[x]??x??'SYSTEM');
           const mapPrio=(x)=>(String(x??'MEDIUM').toUpperCase()==='HIGH'||String(x??'').toUpperCase()==='CRITICAL')?'important':'information';
-          const row={id:`n-${Date.now()}`,userId:a.userId??authUser.id,title:a.title??'اعلان گردش کار',body:a.body??`گردش کار «${wf.name}» روی ${exec.entityType} ${exec.entityId}`,type:mapType(a.notificationType??'INFO'),priority:mapPrio(a.priority),isRead:false,read:false,createdAt:nowIso(),workflowExecutionId:exec.id,entityType:exec.entityType,entityId:exec.entityId};
+          const row={id:`n-${Date.now()}`,userId:a.userId??authUser.id,tenant:DEMO_USER_IDS.has(authUser?.id)?'demo':(authUser?.isOwner?'real':'personal'),title:a.title??'اعلان گردش کار',body:a.body??`گردش کار «${wf.name}» روی ${exec.entityType} ${exec.entityId}`,type:mapType(a.notificationType??'INFO'),priority:mapPrio(a.priority),isRead:false,read:false,createdAt:nowIso(),workflowExecutionId:exec.id,entityType:exec.entityType,entityId:exec.entityId};
           NOTIFICATIONS.push(row); audit(req,'CREATE','Notification',row.id,'OK',{meta:{title:row.title,workflow:wf.id}});
           log.push(`✓ گام ${i+1}: اعلان «${row.title}» صادر شد (${row.id})`);
         } else {

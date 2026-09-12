@@ -246,7 +246,7 @@ ok('add member flash', addFlash);
   ok('graph 3+ categories populated', chips.filter(c => c.count > 0).length >= 3, 'populated=' + chips.filter(c => c.count > 0).length);
   const countRendered = async () => faNum(await textOf('.net-graph-head .counts b'));
   const before = await countRendered();
-  await page.evaluate(() => { const b = document.querySelector('button[data-cat="INTERNAL"]'); if (b) b.click(); });
+  await page.evaluate(() => { const b = [...document.querySelectorAll('button[data-cat]')].find(x => x.getAttribute('data-cat') && Number(x.getAttribute('data-count') ?? 0) > 0); if (b) b.click(); });
   await new Promise(r => setTimeout(r, 900));
   const after = await countRendered();
   ok('graph filter', after > 0 && after < before, `before=${before} after=${after}`);
