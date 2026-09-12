@@ -3,9 +3,6 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<meta http-equiv="refresh" content="0; url=./srip2/index.html"/>
-<meta name="robots" content="noindex, follow"/>
-<link rel="canonical" href="./srip2/index.html"/>
 <title>در حال انتقال… | هوش روابط راهبردی</title>
 <style>
   :root{color-scheme:light dark}
@@ -21,14 +18,35 @@
     background:#182036;border:1px solid #2B3554;color:#E7ECF7;
     font-size:13px;font-weight:800;text-decoration:none}
 </style>
-</head>
 <body>
 <div class="box">
   <div class="mark" aria-hidden="true">S</div>
   <h1>در حال انتقال به نسخۀ جاری سامانه…</h1>
   <p>اگر صفحه خودش باز نشد، روی پیوند زیر بزنید.</p>
-  <a href="./srip2/index.html">رفتن به سامانه</a>
+  <a href="/Srip/srip2/" id="go">رفتن به سامانه</a>
 </div>
-<script>location.replace("./srip2/index.html");</script>
+<script>
+/* ۴۰۴ ریشهٔ سایت — GitHub Pages این فایل را برای «هر» مسیر ناموجود سرو می‌کند؛
+   پس هدف ریدایرکت باید همیشه مطلق باشد (URL نسبی در مسیرهای عمیق مثل
+   /Srip/srip2/relationships/… حلقهٔ بی‌نهایت /srip2/srip2/… می‌ساخت).
+   منطق: مسیرهای جزئیاتِ داخل اپ → همان موجودیت در /view؛ بقیه → خانهٔ اپ. */
+(function () {
+  var BASE = '/Srip/srip2';
+  var TYPES = { organizations:1, people:1, relationships:1, meetings:1, actions:1,
+                commitments:1, projects:1, opportunities:1, interactions:1, recommendations:1 };
+  var path = location.pathname;
+  var rest = path.indexOf(BASE + '/') === 0 ? path.slice(BASE.length) : null;
+  var m = rest && rest.match(/^\/([a-z]+)\/([^\/]+)\/?$/i);
+  var target;
+  if (m && TYPES[m[1].toLowerCase()]) {
+    target = BASE + '/view?type=' + m[1].toLowerCase() + '&id=' + encodeURIComponent(m[2]);
+  } else {
+    target = BASE + '/';
+  }
+  var a = document.getElementById('go');
+  if (a) a.setAttribute('href', target);
+  location.replace(target);
+})();
+</script>
 </body>
 </html>

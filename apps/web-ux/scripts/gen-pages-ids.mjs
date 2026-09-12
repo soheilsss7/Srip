@@ -32,6 +32,12 @@ for (const [key, anchor] of ARRAYS) {
   const end = src.indexOf('];', start);
   const block = src.slice(start, end < 0 ? start + 4000 : end);
   const ids = [...block.matchAll(/id:\s*'([^']+)'/g)].map((m) => m[1]);
+  /* روابط ساختاری که با template literal ساخته می‌شوند (id:`r-pars-${…}`) در
+     regex بالا نمی‌آیند — الگو را می‌بینیم و ۱۲ id صریح می‌سازیم تا صفحهٔ
+     استاتیکشان هم prebuild شود (کلیک روی رابطهٔ پارس بدون ۴۰۴ باز شود). */
+  if (key === 'relationships' && /id:\s*`r-pars-\$\{/.test(block)) {
+    for (let i = 1; i <= 12; i++) ids.push(`r-pars-${String(i).padStart(2, '0')}`);
+  }
   out[key] = [...new Set(ids)];
 }
 

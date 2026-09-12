@@ -134,6 +134,45 @@ try {
     return !!inp;
   }));
   await page2.close();
+
+  /* ═══ سناریوی ۳ (فقط بیلد استاتیک): ۴۰۴ ریشهٔ سایت نباید حلقهٔ ریدایرکت بسازد ═══
+     باگ تاریخی: 404.html ریشه ریدایرکت «نسبی» ./srip2/index.html داشت؛ GitHub Pages
+     آن را برای هر ۴۰۴ سرو می‌کند → در /relationships/r-pars-01 حلقهٔ بی‌نهایت
+     /srip2/srip2/…/index.html می‌ساخت. اکنون: مسیر جزئیات → /view هوشمند. */
+  if (process.env.UI_BASE) {
+    /* تب جدید با نشست خودش (مثل کاربر واقعی که لاگین است) */
+    const p3 = await browser.newPage();
+    await p3.goto(`${BASE}/login`, { waitUntil: 'networkidle0', timeout: 90000 });
+    await p3.waitForSelector('#login-email', { timeout: 30000 });
+    await p3.type('#login-email', 'aroun');
+    await p3.type('#login-pass', '12356784');
+    await p3.click('.auth-form button[type=submit]');
+    await p3.waitForFunction(() => !location.pathname.endsWith('/login'), { timeout: 60000 }).catch(() => {});
+    await new Promise(r => setTimeout(r, 2500));
+
+    /* الف) رابطهٔ پارس حالا صفحهٔ استاتیک خودش را دارد (بدون ۴۰۴) */
+    await p3.goto(`${BASE}/relationships/r-pars-01`, { waitUntil: 'networkidle0', timeout: 90000 }).catch(() => {});
+    await new Promise(r => setTimeout(r, 3500));
+    const directTxt = await p3.evaluate(() => document.body.textContent ?? '');
+    ok('رابطهٔ پارس: صفحهٔ استاتیک مستقیم باز می‌شود', p3.url().includes('/relationships/r-pars-01'), 'url=' + p3.url().replace(BASE, ''));
+    ok('رابطهٔ پارس: محتوای هلدینگ پارس رندر می‌شود', directTxt.includes('هلدینگ پارس') || directTxt.includes('پارس انرژی'));
+
+    /* ب) موجودیتِ بدون صفحهٔ استاتیک → ۴۰۴ ریشهٔ هوشمند → /view (نه حلقهٔ /srip2/srip2/…) */
+    const navs = [];
+    p3.on('framenavigated', f => { if (f === p3.mainFrame()) navs.push(f.url()); });
+    await p3.goto(`${BASE}/relationships/r-pars-99`, { waitUntil: 'networkidle0', timeout: 90000 }).catch(() => {});
+    await new Promise(r => setTimeout(r, 6000));
+    const finalUrl3 = p3.url();
+    ok('۴۰۴ هوشمند: مسیر ناموجود → /view (نه حلقه)', finalUrl3.includes('/view?type=relationships&id=r-pars-99'), 'url=' + finalUrl3.replace(BASE, ''));
+    ok('۴۰۴ هوشمند: بدون رشد srip2 در URL', !/srip2\/srip2/.test(finalUrl3), 'navs=' + navs.map(u => u.replace(BASE, '')).join(' ⟶ '));
+
+    /* ج) URL آلودهٔ حلقه‌زای قبلی هم باید بی‌خطر شود */
+    await p3.goto(`${BASE}/relationships/srip2/index.html`, { waitUntil: 'networkidle0', timeout: 90000 }).catch(() => {});
+    await new Promise(r => setTimeout(r, 6000));
+    const finalUrl4 = p3.url();
+    ok('URL حلقه‌زای قدیمی اکنون بی‌خطر است (بدون رشد srip2)', !/srip2\/srip2/.test(finalUrl4), 'url=' + finalUrl4.replace(BASE, ''));
+    await p3.close();
+  }
 } catch (e) {
   console.error('E2E error:', e.message);
   fail++;
