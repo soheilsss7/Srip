@@ -55,6 +55,28 @@ async function healStaleWorker(reg: ServiceWorkerRegistration): Promise<void> {
   } catch { /* عدم دسترسی به /health یعنی احتمالاً SW ندارد؛ رها کن */ }
 }
 
+/**
+ * صفحه‌ای که هیچ سرویس‌کارگری آن را کنترل نمی‌کند (نصب تازه، یا رفرشِ سخت
+ * Ctrl+Shift+R که صفحه را عمداً بی‌کنترل می‌گذارد) هیچ APIای جواب نمی‌گیرد و
+ * ورود با پیام «سرویس در حال راه‌اندازی» شکست می‌خورد. یک ناوبری عادی صفحه
+ * را دوباره کنترل‌شده می‌کند؛ پس در چنین حالتی یک reload می‌زنیم.
+ * قدیماً این کار «فقط یک‌بار در هر تب» بود و رفرش سختِ بعدی صفحه را برای همیشه
+ * بی‌کنترل رها می‌کرد؛ حالا نرخ‌محدود است (حداکثر ۲ بار در ۶۰ ثانیه) تا هم
+ * همهٔ حالت‌ها ترمیم شوند و هم حلقهٔ بی‌نهایت ممکن نشود.
+ */
+function recontrolOrphanedPage(): void {
+  if (navigator.serviceWorker.controller) return;
+  const KEY = 'srip_sw_recontrol_at';
+  let attempts: number[] = [];
+  try { attempts = JSON.parse(sessionStorage.getItem(KEY) ?? '[]') ?? []; } catch { attempts = []; }
+  const now = Date.now();
+  attempts = attempts.filter((t: number) => now - t < 60_000);
+  if (attempts.length >= 2) return;
+  attempts.push(now);
+  try { sessionStorage.setItem(KEY, JSON.stringify(attempts)); } catch { /* حالت خصوصی */ }
+  window.location.reload();
+}
+
 export default function SwRegister() {
   useEffect(() => {
     if (!PAGES_BASE || typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
@@ -68,20 +90,17 @@ export default function SwRegister() {
       window.location.replace(PAGES_BASE + '/' + window.location.search + window.location.hash);
       return;
     }
-    const KEY = 'srip_sw_reloaded';
     navigator.serviceWorker
       .register(PAGES_BASE + '/sw.js', { scope: PAGES_BASE + '/' })
       .then(() => navigator.serviceWorker.ready)
       .then((reg) => {
-        // First load: SW activates + claims, then reload so this page is
-        // controlled too (otherwise the first batch of API calls misses).
-        if (!navigator.serviceWorker.controller && !sessionStorage.getItem(KEY)) {
-          sessionStorage.setItem(KEY, '1');
-          window.location.reload();
-          return;
+        // First load / hard-refresh: SW activates + claims, then reload so this
+        // page is controlled too (otherwise the first batch of API calls misses).
+        recontrolOrphanedPage();
+        if (navigator.serviceWorker.controller) {
+          // Stale-worker self-heal (works for everyone with an outdated SW).
+          void healStaleWorker(reg);
         }
-        // Stale-worker self-heal (works for everyone with an outdated SW).
-        void healStaleWorker(reg);
       })
       .catch(() => { /* mock SW not present (dev) */ });
   }, []);

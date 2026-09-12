@@ -51,7 +51,11 @@ const gateCriticalCSS = [
 ].join('');
 export default function RootLayout({children}:{children:React.ReactNode}){
   return (
-    <html lang="fa" dir="rtl">
+    <html lang="fa" dir="rtl" suppressHydrationWarning>
+      {/* suppressHydrationWarning: بوت‌استرپ پوسته (PreferenceBootstrap) صفت
+          data-theme را روی <html> می‌گذارد و ممکن است هم‌زمان با هیدراسیونِ
+          React اجرا شود؛ بدون این صفت React خطای #418 می‌دهد (الگوی استاندارد
+          next-themes). رفتار بصری تغییری نمی‌کند. */}
       <head><style dangerouslySetInnerHTML={{__html: gateCriticalCSS}} /></head>
       <body><PreferenceBootstrap/><SwRegister/><SkipLink/><ShellClient><div id="main-content">{children}</div></ShellClient></body>
     </html>

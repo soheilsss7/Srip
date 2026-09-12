@@ -56,3 +56,25 @@ export function waitForSwController(timeoutMs = 4000): Promise<void> {
     navigator.serviceWorker.addEventListener('controllerchange', done);
   });
 }
+
+/**
+ * وضعیت «واقعی» کنترل‌شدن صفحه توسط سرویس‌کارگر — برخلاف useMockApiReady که
+ * بعد از چند ثانیه به‌سمت true «می‌بخشد»، این هوک فقط با controllerchange
+ * یا رسیدن کنترلر true می‌شود. صفحهٔ ورود نباید اجازهٔ submit بدهد وقتی
+ * هنوز هیچ APIای پاسخ نمی‌گیرد (صفحهٔ بی‌کنترل = ۴۰۴ همیشگی روی هاست استاتیک).
+ */
+export function useSwControlled(): boolean {
+  /* مقدار اولیه باید با prerender یکی باشد (navigator در SSR نیست) — وگرنه
+     mismatch هیدراسیون (React #418) رخ می‌دهد؛ مقدار واقعی در effect ست می‌شود. */
+  const [controlled, setControlled] = useState(() => !MOCK_PAGES);
+  useEffect(() => {
+    if (!MOCK_PAGES || !('serviceWorker' in navigator)) { setControlled(true); return; }
+    const upd = () => setControlled(swControllerReady());
+    upd();
+    navigator.serviceWorker.addEventListener('controllerchange', upd);
+    const t = setInterval(upd, 1000); /* شمارش معکوس فوری برای حالت‌های مرزی */
+    const stop = setTimeout(() => clearInterval(t), 15000);
+    return () => { navigator.serviceWorker.removeEventListener('controllerchange', upd); clearInterval(t); clearTimeout(stop); };
+  }, []);
+  return controlled;
+}

@@ -4,7 +4,7 @@ import {FormEvent,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {apiPost,setSession} from '../_lib/api';
 import {AuthShell} from '../_components/auth-shell';
-import {MOCK_PAGES,useMockApiReady} from '../_lib/mock-ready';
+import {MOCK_PAGES,useMockApiReady,useSwControlled} from '../_lib/mock-ready';
 import {Sparkles,Lock,User,ShieldCheck,AlertCircle} from 'lucide-react';
 
 
@@ -12,8 +12,10 @@ export default function Login(){
  const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[otp,setOtp]=useState('');
  const [mfa,setMfa]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const mockReady=useMockApiReady();
+ const swControlled=useSwControlled();
  const router=useRouter();
- const canSubmit=mockReady&&!busy;
+ const waitingSw=MOCK_PAGES&&!swControlled;
+ const canSubmit=mockReady&&!waitingSw&&!busy;
  const demoError=(m:string)=>MOCK_PAGES&&/404|Failed to fetch|خطای سرور/.test(m)?'سرویس در حال راه‌اندازی است؛ یک لحظه صبر کنید و دوباره تلاش کنید.':m;
 
  async function finish(d:any){
@@ -22,7 +24,7 @@ export default function Login(){
  }
  async function submit(e:FormEvent){
   e.preventDefault();
-  if(!mockReady){ setError('سامانه هنوز آماده نشده است؛ لحظه‌ای صبر کنید.'); return; }
+  if(waitingSw){ setError('سامانه در حال آماده‌سازی اتصال است؛ چند لحظه صبر کنید.'); return; }
   setBusy(true); setError('');
   const ident=email.trim().toLowerCase();
   try{
@@ -84,6 +86,7 @@ export default function Login(){
           {busy?'در حال احراز هویت…':'ورود امن'}
         </button>
         {!mockReady&&<span className="auth-sec-note" role="status">در حال آماده‌سازی محیط… (کمتر از یک لحظه)</span>}
+        {waitingSw&&<span className="auth-sec-note" role="status">در حال برقراری اتصال به سامانه… اگر بیش از چند ثانیه طول کشید، صفحه را یک‌بار به‌صورت عادی رفرش کنید.</span>}
       </div>
       <p className="auth-note">
         <ShieldCheck size={12} style={{verticalAlign:'-2px'}}/> دسترسی‌ها بر اساس نقش و محدودهٔ سازمانی شما تعیین می‌شود.

@@ -168,7 +168,11 @@ export default function Dashboard() {
   const featureUsage = eng.featureUsage ?? [];
   const hasCapital = Object.keys(capital).length > 0;
   const hasSri = Object.keys(sri).length > 0;
-  const todayLabel = faFullDate(); // ترتیب دستوری درست: «پنجشنبه ۱۹ شهریور ۱۴۰۵» (Intl در برخی ICUها ترتیب را می‌شکند)
+  /* تاریخ «امروز» پس از هیدراسیون ست می‌شود — اگر در رندر اولیه محاسبه شود،
+     تاریخِ لحظهٔ بیلد در HTML استاتیک می‌ماند و روز بعد با تاریخ کلاینت
+     می‌خواند و mismatch هیدراسیون (React #418) می‌دهد. */
+  const [todayLabel, setTodayLabel] = useState('');
+  useEffect(() => { setTodayLabel(faFullDate()); }, []); // ترتیب دستوری درست: «پنجشنبه ۱۹ شهریور ۱۴۰۵» (Intl در برخی ICUها ترتیب را می‌شکند)
   const totalExecutions = workflows?.executions?.reduce((a, e) => a + e.count, 0) ?? 0;
   const wfFailed = (workflows?.executions ?? []).find((e) => ['FAILED', 'ERROR'].includes(e.status ?? ''))?.count ?? 0;
 
