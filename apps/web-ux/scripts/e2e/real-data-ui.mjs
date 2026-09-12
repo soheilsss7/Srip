@@ -108,6 +108,32 @@ try {
     return faNum(raw);
   });
   ok('گراف شبکه: نهادها بر اساس دستهٔ عموم رنگ گرفته‌اند (۴۰+)', colored >= 40, 'colored=' + colored);
+  /* ═══ سناریوی ۲: حساب واقعی مشتری — مدیرعامل هلدینگ پارس (فقط محیط پارس) ═══ */
+  const page2 = await browser.newPage(); /* تب جدید = نشست جدا */
+  await page2.goto(`${BASE}/login`, { waitUntil: 'networkidle0', timeout: 90000 });
+  await page2.waitForSelector('#login-email', { timeout: 30000 });
+  await page2.type('#login-email', 'pars');
+  await page2.type('#login-pass', 'pars1234');
+  await page2.waitForSelector('.auth-form button[type=submit]:not([disabled])', { timeout: 30000 });
+  await page2.click('.auth-form button[type=submit]');
+  await page2.waitForFunction(() => !location.pathname.endsWith('/login'), { timeout: 60000 }).catch(() => {});
+  await new Promise(r => setTimeout(r, 2500));
+  ok('ورود pars (مشتری) → پیشخوان', await page2.evaluate(() => !location.pathname.endsWith('/login') && !!sessionStorage.getItem('srip_access_token')), 'url=' + page2.url());
+
+  await page2.goto(`${BASE}/organizations`, { waitUntil: 'networkidle0', timeout: 90000 });
+  await new Promise(r => setTimeout(r, 2500));
+  const pTxt = await page2.evaluate(() => document.body.textContent ?? '');
+  ok('مشتری پارس: هلدینگ پارس + نهادهای سند', pTxt.includes('هلدینگ پارس') && pTxt.includes('پارس انرژی') && pTxt.includes('شورای ملی راهبری'));
+  ok('مشتری پارس: شرکت x دیده نمی‌شود', !pTxt.includes('شرکت x'));
+  ok('مشتری پارس: دنیای دمو (آریا) دیده نمی‌شود', !pTxt.includes('هلدینگ آریا') && !pTxt.includes('آریا فناوری'));
+
+  await page2.goto(`${BASE}/publics`, { waitUntil: 'networkidle0', timeout: 90000 });
+  await new Promise(r => setTimeout(r, 3000));
+  ok('مشتری پارس: نقشهٔ عموم‌های خودش (هدف «مرجعیت هوش مصنوعی کشور»)', await page2.evaluate(() => {
+    const inp = [...document.querySelectorAll('input')].find(i => (i.value ?? '').includes('مرجعیت هوش مصنوعی کشور'));
+    return !!inp;
+  }));
+  await page2.close();
 } catch (e) {
   console.error('E2E error:', e.message);
   fail++;

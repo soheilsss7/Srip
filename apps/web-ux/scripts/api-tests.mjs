@@ -356,6 +356,46 @@ section('جداسازی محیط شرکت‌ها — دمو فقط در دمو')
   check('سازمان شخصی کاربر تازه → برای مالک هم به‌عنوان مشتری دیده می‌شود', aList2.some(o => o.name === 'شرکت تست مستقل'));
 }
 
+/* ===================== 9. CUSTOMER ACCOUNT (مشتری پارس) ===================== */
+section('حساب واقعی مشتری — مدیرعامل هلدینگ پارس (pars)');
+{
+  const pl = await api('/auth/login', { method: 'POST', body: { email: 'pars', password: 'pars1234' } });
+  check('ورود pars (نام کاربری، بدون MFA) → 200', pl.status === 200 && !!pl.body?.accessToken);
+  const pt = pl.body?.accessToken;
+  const plBad = await api('/auth/login', { method: 'POST', body: { email: 'pars', password: 'wrong' } });
+  check('رمز اشتباه pars → 401', plBad.status === 401);
+
+  const me = await api('/auth/me', { token: pt });
+  check('pars → NOT owner؛ عضویت اصلی «هلدینگ پارس»', me.status === 200 && me.body?.isOwner === false
+    && (me.body?.memberships ?? []).some(m => m.organizationName === 'هلدینگ پارس' && m.isPrimary === true));
+
+  const orgs = await api('/organizations', { token: pt });
+  const list = Array.isArray(orgs.body) ? orgs.body : (orgs.body?.data ?? []);
+  check('pars → هلدینگ پارس + ۱۲ حوزه دیده می‌شوند', list.some(o => o.name === 'هلدینگ پارس') && list.filter(o => o.parentOrganizationId === 'org-pars').length === 12, `count=${list.length}`);
+  check('pars → نهادهای سند عموم‌ها دیده می‌شوند', list.some(o => o.name === 'شورای ملی راهبری هوش مصنوعی') && list.some(o => o.name === 'دیجی‌کالا'));
+  check('pars → شرکت x (مالک پلتفرم) دیده نمی‌شود', !list.some(o => o.name === 'شرکت x'));
+  check('pars → دنیای دمو (آریا) دیده نمی‌شود', !list.some(o => o.name === 'هلدینگ آریا'));
+  const xOrg = await api('/organizations/org-x', { token: pt });
+  check('pars → GET شرکت x → 403', xOrg.status === 403);
+  const demoOrg = await api('/organizations/org-1', { token: pt });
+  check('pars → GET سازمان دمو → 403', demoOrg.status === 403);
+
+  const members = await api('/publics/members?orgId=org-pars', { token: pt });
+  const mList = Array.isArray(members.body) ? members.body : (members.body?.data ?? members.body?.items ?? []);
+  check('pars → نقشهٔ عموم‌های خودش: ۱۰۰+ عضو واقعی', members.status === 200 && mList.length >= 100, `count=${mList.length}`);
+  const demoPub = await api('/publics/members?orgId=org-1', { token: pt });
+  check('pars → نقشهٔ عموم‌های دمو → 403', demoPub.status === 403);
+
+  const g = await api('/network/graph', { token: pt });
+  const labels = (g.body?.nodes ?? []).map(n => n.label ?? '').join('|');
+  check('pars → گراف: هلدینگ پارس + زیرمجموعه‌ها، بدون آریا/شرکت x', labels.includes('هلدینگ پارس') && labels.includes('پارس انرژی') && !labels.includes('هلدینگ آریا') && !labels.includes('شرکت x'), `nodes=${(g.body?.nodes ?? []).length}`);
+
+  const aL = await api('/auth/login', { method: 'POST', body: { email: 'aroun', password: '12356784' } });
+  const aOrgs = await api('/organizations', { token: aL.body?.accessToken });
+  const aList = Array.isArray(aOrgs.body) ? aOrgs.body : (aOrgs.body?.data ?? []);
+  check('aroun → محیط پارس به‌عنوان دادهٔ مشتری خودش را می‌بیند', aList.some(o => o.name === 'هلدینگ پارس'));
+}
+
 /* ============================ SUMMARY ============================ */
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);

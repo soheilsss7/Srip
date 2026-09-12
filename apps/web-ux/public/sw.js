@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.12.02';
+const DEMO_MOCK_VERSION = '2026.09.12.03';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -2374,6 +2374,20 @@ const SEED_USERS = {
     emailVerifiedAt:'2026-09-01T08:00:00.000Z',
     lastLoginAt:'2026-09-10T10:00:00.000Z',
     createdAt:'2026-09-01T08:00:00.000Z',
+  },
+  /* حساب واقعی مشتری سامانه: مدیرعامل هلدینگ پارس — فقط محیط پارس
+     (هلدینگ + ۱۲ حوزه + نهادهای سند عموم‌ها)؛ نه شرکت x می‌بیند نه دنیای دمو.
+     ورود: pars / pars1234 (بدون MFA) */
+  'pars@srip.local': {
+    id:'u-pars', email:'pars@srip.local', username:'pars', name:'مدیرعامل هلدینگ پارس', password:'pars1234',
+    memberships:[{id:'mb-pars',organizationId:'org-pars',organizationName:'هلدینگ پارس',role:'SUPER_ADMIN',department:'هیئت‌مدیره',dataScope:'ALL',accessScope:'ALL',isPrimary:true}],
+    permissions:['*'],
+    accessibleOrganizationIds:ORGS.map(o=>o.id).filter(id=>!DEMO_ORG_IDS.has(id)&&id!=='org-x'),
+    isOwner:false,
+    isActive:true,
+    emailVerifiedAt:'2026-09-05T08:00:00.000Z',
+    lastLoginAt:'2026-09-11T09:00:00.000Z',
+    createdAt:'2026-09-05T08:00:00.000Z',
   },
   'demo@srip.local': {
     id:'u-1', email:'demo@srip.local', username:'demo', name:'مدیر ارشد (مالک)', password:'123456',
@@ -9346,7 +9360,8 @@ async function __handler(req, res) {
       return json(res,200,fn());
     }
   }
-  const hasPerm=(perm)=>authUser?.isOwner||(authUser?.permissions??[]).includes(perm);
+  /* «*» = مجوز کامل (همان تعریف نقش SUPER_ADMIN در کاتالوگ نقش‌ها) */
+  const hasPerm=(perm)=>authUser?.isOwner||(authUser?.permissions??[]).includes('*')||(authUser?.permissions??[]).includes(perm);
   if(is('/privacy/consents')&&method==='GET'){
     if(!hasPerm('privacy.read')) return json(res,403,{message:'شما مجوز «مشاهده حریم خصوصی» (privacy.read) را ندارید.'});
     const rows=(DB.consentRecords??[]).filter(c=>c.userId===authUser.id).sort((a,b)=>String(b.createdAt??'').localeCompare(String(a.createdAt??'')));
