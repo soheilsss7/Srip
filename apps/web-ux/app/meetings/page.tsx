@@ -236,7 +236,7 @@ export default function MeetingsPage(){
           <div className="form-grid">
             <div className="field full">
               <label className="field-label" htmlFor="m-title">عنوان جلسه <span className="req">*</span></label>
-              <input id="m-title" required value={form.title} onChange={setF('title')} placeholder="مثلاً: جلسهٔ راهبردی با پترو صنعت"/>
+              <input id="m-title" required value={form.title} onChange={setF('title')} placeholder="مثلاً: جلسهٔ راهبردی با شریک کلیدی"/>
             </div>
             <div className="field">
               <label className="field-label" htmlFor="m-start">شروع <span className="req">*</span></label>

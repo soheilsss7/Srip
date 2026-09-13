@@ -637,7 +637,7 @@ export default function StrategyPage() {
                 <>
                   <SectionCard title="طرف‌ها" icon={<Users2 size={14} />} description="نام طرف‌ها + نگاشت به سازمان سامانه (با پیشنهاد راهبرد از روی نوع سازمان)">
                     <div className="form-grid">
-                      <div className="field full"><label className="field-label">نام سناریو</label><input value={edName} onChange={e => setEdName(e.target.value)} placeholder="مثلاً: جنگ قیمت با پترو صنعت" /></div>
+                      <div className="field full"><label className="field-label">نام سناریو</label><input value={edName} onChange={e => setEdName(e.target.value)} placeholder="مثلاً: جنگ قیمت با رقیب اصلی" /></div>
                       <div className="field"><label className="field-label">طرف خودی</label><input value={edSelf} onChange={e => setEdSelf(e.target.value)} /></div>
                       <div className="field"><label className="field-label">سازمان خودی (اختیاری)</label>
                         <select value={edSelfOrg} onChange={e => applyOrgStrats('self', e.target.value)}>

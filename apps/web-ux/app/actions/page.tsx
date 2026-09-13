@@ -288,7 +288,7 @@ export default function ActionsPage() {
           <div className="form-grid">
             <div className="field full">
               <label className="field-label" htmlFor="a-title">عنوان اقدام <span className="req">*</span></label>
-              <input id="a-title" required value={form.title} onChange={setF('title')} placeholder="مثلاً: پیگیری امضای قرارداد پترو صنعت" />
+              <input id="a-title" required value={form.title} onChange={setF('title')} placeholder="مثلاً: پیگیری امضای قرارداد همکار کلیدی" />
             </div>
             <div className="field full">
               <label className="field-label" htmlFor="a-desc">توضیح (اختیاری)</label>

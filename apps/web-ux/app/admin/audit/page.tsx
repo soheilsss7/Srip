@@ -214,8 +214,8 @@ export default function AdminAuditPage() {
             </select>
             <select aria-label="فیلتر بازیگر" value={actorFilter} onChange={e => setActorFilter(e.target.value)} className="toolbar-select">
               <option value="">همهٔ بازیگران</option>
-              <option value="self">demo@srip.local (مالک)</option>
-              {actors.filter(a => a !== 'demo@srip.local').map(a => <option key={a} value={a}>{a}</option>)}
+              <option value="self">{(me?.email ?? 'حساب من') + ' (من)'}</option>
+              {actors.filter(a => a !== me?.email).map(a => <option key={a} value={a}>{a}</option>)}
             </select>
             <select aria-label="فیلتر نتیجه" value={outcomeFilter} onChange={e => setOutcomeFilter(e.target.value)} className="toolbar-select">
               <option value="">همهٔ نتایج</option>

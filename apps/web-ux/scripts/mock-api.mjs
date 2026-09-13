@@ -19,7 +19,7 @@ const PORT = Number(process.env.MOCK_API_PORT || 4000);
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.12.05';
+const DEMO_MOCK_VERSION = '2026.09.12.07';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -111,6 +111,8 @@ let ORGS = [
   { id:'org-eco-chamber-ir', name:'اتاق بازرگانی، صنایع، معادن و کشاورزی ایران', type:'PARTNER', industry:'نهاد صنفی بخش خصوصی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
   { id:'org-eco-seo', name:'سازمان بورس و اوراق بهادار', type:'GOVERNMENT', industry:'تنظیم‌گری بازار سرمایه', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
   { id:'org-eco-inif', name:'صندوق نوآوری و شکوفایی', type:'GOVERNMENT', industry:'نهاد حمایتی دانش‌بنیان (مادهٔ ۵)', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  /* VC10 سند عموم‌ها: اتاق‌های استانی و تخصصی مرتبط با هر حوزهٔ کاری */
+  { id:'org-eco-chambers-local', name:'اتاق‌های بازرگانی استانی و تخصصی', type:'PARTNER', industry:'نهادهای صنفی منطقه‌ای مرتبط با هر حوزهٔ کاری', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
   /* دستهٔ ۶ — عموم‌های اکوسیستم فناوری و صنعت (نظام صنفی رایانه‌ای = org-inst-09) */
   { id:'org-ecx-pardis', name:'پارک فناوری پردیس', type:'PARTNER', industry:'پارک علم و فناوری', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
   { id:'org-ecx-innofactory', name:'کارخانه نوآوری (شعبهٔ پردیس)', type:'PARTNER', industry:'کارخانه نوآوری و شتاب‌دهی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
@@ -1789,7 +1791,14 @@ function netAnalytics(req,kind){
 
 const scopedMeetings=(req)=>MEETINGS.filter(m=>inScope(req,m.organizationId)||(m.relationshipId&&relInScope(req,RELS.find(r=>r.id===m.relationshipId))));
 const scopedInteractions=(req)=>INTERACTIONS.filter(x=>!x.deletedAt&&(inScope(req,x.organizationId)||(x.relationshipId&&relInScope(req,RELS.find(r=>r.id===x.relationshipId)))));
-const scopedActions=(req)=>ACTIONS.filter(a=>{const r=RELS.find(x=>x.id===a.relationshipId);return !r||inScope(req,r.sourceOrganizationId);});
+const scopedActions=(req)=>ACTIONS.filter(a=>{
+  const r=RELS.find(x=>x.id===a.relationshipId);
+  if(r) return relInScope(req,r);
+  if(a.organizationId) return inScope(req,a.organizationId);
+  /* بدون رابطه و سازمان: فقط برای سازندهٔ خودش (هرگز دنیای دیگران) */
+  const u=currentUser(req);
+  return !!(u&&a.createdBy&&a.createdBy===u.id);
+});
 const scopedCommitments=(req)=>COMMITMENTS.filter(c=>inScope(req,c.organizationId)||(c.relationshipId&&relInScope(req,RELS.find(r=>r.id===c.relationshipId))));
 const scopedProjects=(req)=>PROJECTS.filter(p=>{
   if(inScope(req,p.organizationId)) return true;
@@ -3032,6 +3041,17 @@ function approvalEntityLabel(a){
   if(t==='DataLifecycle'){ const et=a.after?.entityType??null; if(et==='Organization') return orgById(a.entityId)?.name??a.entityId; if(et==='Person'){const p=personById(a.entityId); return p?`${p.firstName} ${p.lastName}`:a.entityId;} }
   return null;
 }
+/* تأییدها مستأجرآگاه: سازمان → scope؛ وگرنه نهاد/سازمان‌های after → scope؛ وگرنه فقط خودِ درخواست‌کننده */
+function approvalInScope(req,a){
+  if(a.organizationId) return inScope(req,a.organizationId);
+  if(a.entityType==='Relationship'&&a.entityId){ const r=(DB.rels??[]).find(x=>x.id===a.entityId); if(r) return relInScope(req,r); }
+  if(a.entityType==='Organization'&&a.entityId) return inScope(req,a.entityId);
+  const d=a.after??{};
+  if(d.sourceOrganizationId) return inScope(req,d.sourceOrganizationId);
+  if(d.targetOrganizationId) return inScope(req,d.targetOrganizationId);
+  const u=currentUser(req);
+  return !!(u&&a.requestedById&&a.requestedById===u.id);
+}
 function approvalView(a){
   const rb=userById(a.requestedById); const db_=userById(a.decidedById);
   return {...a,entityLabel:approvalEntityLabel(a),requestedByName:rb?.name??null,requestedByEmail:rb?.email??null,decidedByName:db_?.name??null,decidedByEmail:db_?.email??null,organizationName:orgById(a.organizationId)?.name??null,decidedReason:a.decidedReason??null};
@@ -4081,7 +4101,7 @@ function seedPublicsStore(){
       P('PM-P-095','h-e6','organization','org-eco-cvc-kerman','AWARE',60,65,'INFLUENCER','FUNCTIONAL_INPUT','صندوق پژوهش و فناوری خطرپذیر کرمان‌موتور — نمونهٔ واقعی روند CVC صنعتی ایران'),
       P('PM-P-096','h-e7','organization','org-eco-vc-pasargad','AWARE',58,68,'INFLUENCER','FUNCTIONAL_INPUT','صندوق تخصصی سرمایه‌گذاری خطرپذیر — فعال در مراحل اولیه و رشد'),
       P('PM-P-097','h-e9','organization','org-eco-chamber-ir','AWARE',65,55,'INFLUENCER','NORMATIVE','بزرگ‌ترین نهاد رسمی بخش خصوصی — پوشش تقریباً همهٔ حوزه‌های ۱۲گانه'),
-      P('PM-P-098','h-e10','organization','org-eco-chamber-ir','AWARE',50,60,'SUPPORTER','NORMATIVE','اتاق بازرگانی تهران — نمونهٔ الگوی اتاق‌های استانی و تخصصی'),
+      P('PM-P-098','h-e10','organization','org-eco-chambers-local','AWARE',50,60,'SUPPORTER','NORMATIVE','اتاق‌های استانی و تخصصی مرتبط با هر حوزهٔ کاری — نظیر اتاق صنعت ساختمان و کشاورزی استانی'),
       /* ── دستهٔ ۵: رسانه‌ای و عمومی ── */
       P('PM-P-100','h-m1','media','m-1','ACTIVE',60,80,'KEY_PLAYER','DIFFUSED','زومیت — پرمخاطب‌ترین رسانهٔ فناوری؛ پوشش مستمر سیاست‌گذاری AI و اقتصاد دیجیتال'),
       P('PM-P-101','h-m2','media','m-2','ACTIVE',58,75,'KEY_PLAYER','DIFFUSED','دیجیاتو — پیشگام رسانه‌های فناوری با بیش از ۱۰ سال سابقه'),
@@ -5535,7 +5555,7 @@ const server=http.createServer(async(req,res)=>{
     if(b.relationshipId&&!actRel) return json(res,400,{message:'رابطهٔ انتخابی یافت نشد.'});
     if(actRel&&!relInScope(req,actRel)) return json(res,403,{message:'رابطهٔ اقدام خارج از محدودهٔ دسترسی شماست.'});
     if(b.organizationId&&!inScope(req,b.organizationId)) return json(res,403,{message:'سازمانِ اقدام خارج از محدودهٔ دسترسی شماست.'});
-    const a={id:`a-${Date.now()}`,title:b.title,status:b.status??'OPEN',priority:b.priority??'MEDIUM',dueAt:b.dueAt??null,description:b.description??null,reminderAt:b.reminderAt??null,meetingId:b.meetingId??null,outcome:b.outcome??null,ownerId:b.ownerId??null,relationshipId:b.relationshipId??null,organizationId:b.organizationId??null};
+    const a={id:`a-${Date.now()}`,title:b.title,status:b.status??'OPEN',priority:b.priority??'MEDIUM',dueAt:b.dueAt??null,description:b.description??null,reminderAt:b.reminderAt??null,meetingId:b.meetingId??null,outcome:b.outcome??null,ownerId:b.ownerId??null,relationshipId:b.relationshipId??null,organizationId:b.organizationId??null,createdBy:authUser?.id??null};
     ACTIONS.push(a); audit(req,'CREATE','action',a.id,'OK',{title:a.title});
     await autoRunWorkflows('Action', a.id, 'ACTION_CREATED', { action: { id: a.id, title: a.title, status: a.status, priority: a.priority, relationshipId: a.relationshipId, organizationId: a.organizationId } });
     return json(res,201,actionView(a));
@@ -6644,7 +6664,12 @@ const server=http.createServer(async(req,res)=>{
 
   /* ---- actions detail ---- */
   const actionId=match('/actions/:id');
-  const actionInScope=(a)=>a&&(!a.relationshipId||relInScope(req,RELS.find(r=>r.id===a.relationshipId)));
+  const actionInScope=(a)=>{
+    if(!a) return false;
+    if(a.relationshipId){ const r=RELS.find(r=>r.id===a.relationshipId); if(r) return relInScope(req,r); }
+    if(a.organizationId) return inScope(req,a.organizationId);
+    return !!a.createdBy&&a.createdBy===authUser?.id;
+  };
   const actionGuard=(id)=>{ const a=ACTIONS.find(x=>x.id===id); if(!a) return {code:404,msg:'اقدام یافت نشد'}; if(!actionInScope(a)) return {code:403,msg:'دسترسی به این اقدام مجاز نیست.'}; return {a}; };
   if(actionId&&method==='GET'){
     const g=actionGuard(actionId[0]); if(g.code) return json(res,g.code,{message:g.msg});
@@ -7012,9 +7037,24 @@ const server=http.createServer(async(req,res)=>{
   }
 
   /* ---- admin / system ---- */
+  /* ردهٔ مستأجرِ رویداد ممیزی: بر پایهٔ بازیگر (ایمیل) — دنیای دمو فقط برای دمو */
+  const auditTenantOf=(e)=>{
+    const u=Object.values(USERS).find(x=>x.email===e.actorEmail);
+    if(u) return DEMO_USER_IDS.has(u.id)?'demo':'real';
+    /* ناشناس: اگر نهاد به دنیای دمو اشاره کند (ایمیل یا شناسهٔ seed دمو) → دمو */
+    const eid=String(e.entityId??'');
+    if(eid){
+      const eu=Object.values(USERS).find(x=>x.email===eid);
+      if(eu) return DEMO_USER_IDS.has(eu.id)?'demo':'real';
+      if(/^(?:org-(?:1[0-2]?|[2-9])|p-1?\d|r-1[0-2]?|u-[123]|mb-[123]|a-[1-6]|ap-[1-7]|m-\d|c-\d|pr-\d|o-\d|i-\d|doc-\d|mtg-[1-4])$/.test(eid)) return 'demo';
+    }
+    return 'real';
+  };
+  const tenantOfReq=DEMO_USER_IDS.has(authUser?.id)?'demo':'real';
   if(is('/admin/overview')){
     if(!authUser?.isOwner) return json(res,403,{message:'این بخش فقط برای مالک است.'});
-    return json(res,200,{users:Object.keys(USERS).length,organizations:ORGS.length,relationships:RELS.length,meetings:MEETINGS.length,actions:ACTIONS.length,auditEvents:DB.audit.length,flags:{invitesEnabled:true,featureFlagsActive:2}});
+    /* شمارش‌ها فقط روی دادهٔ همان مستأجر — نه دنیای دمو */
+    return json(res,200,{users:Object.values(USERS).filter(u=>auditTenantOf({actorEmail:u.email})===tenantOfReq).length,organizations:visibleOrgIds(req).length,relationships:scopedRels(req).length,meetings:scopedMeetings(req).length,actions:scopedActions(req).length,auditEvents:DB.audit.filter(e=>auditTenantOf(e)===tenantOfReq).length,flags:{invitesEnabled:true,featureFlagsActive:2}});
   }
   if(is('/admin/audit-log')){
     if(!authUser?.isOwner) return json(res,403,{message:'این بخش فقط برای مالک است.'});
@@ -7024,6 +7064,7 @@ const server=http.createServer(async(req,res)=>{
     const actor=(q.get('actor')||'').trim().toLowerCase();
     const search=(q.get('search')||'').trim().toLowerCase();
     const events=DB.audit.filter(e=>{
+      if(auditTenantOf(e)!==tenantOfReq) return false;
       if(entity&&!String(e.entity??'').toLowerCase().includes(entity)) return false;
       if(outcome&&!(outcome==='FAIL'?e.outcome!=='OK':e.outcome===outcome)) return false;
       if(actor&&!String(e.actorEmail??'').toLowerCase().includes(actor)) return false;
@@ -7034,7 +7075,8 @@ const server=http.createServer(async(req,res)=>{
   }
   if(is('/admin/audit')){
     if(!authUser?.isOwner) return json(res,403,{message:'این بخش فقط برای مالک است.'});
-    return json(res,200,{events:DB.audit.slice(0,Math.min(200,Number(q.get('limit')||100)||100)),total:DB.audit.length});
+    const tenantAudit=DB.audit.filter(e=>auditTenantOf(e)===tenantOfReq);
+    return json(res,200,{events:tenantAudit.slice(0,Math.min(200,Number(q.get('limit')||100)||100)),total:tenantAudit.length});
   }
   if(is('/admin/permissions')) return json(res,200,PERMISSIONS.map(p=>{
     const holders=(DB?.roles??[]).filter(r=>(r.permissions??[]).includes(p.key)).map(r=>({role:{key:r.key,name:r.name}}));
@@ -7072,7 +7114,10 @@ const server=http.createServer(async(req,res)=>{
   /* ---- admin: users & access (RBAC) — parity with real admin/authorization modules ---- */
   if(is('/admin/users')&&method==='GET'){
     if(!authUser?.isOwner) return json(res,403,{message:'این بخش فقط برای مالک است.'});
-    let list=Object.values(USERS).map(adminUserView);
+    /* کاربران دنیای دمو فقط برای خود دمو — محیط واقعی فقط کاربران واقعی */
+    const demoReq=DEMO_USER_IDS.has(authUser.id);
+    const isDemoUser=(u)=>DEMO_USER_IDS.has(u.id)||((u.memberships??[]).length>0&&(u.memberships??[]).every(m=>orgTenant(orgById(m.organizationId))==='demo'));
+    let list=Object.values(USERS).filter(u=>demoReq?isDemoUser(u):!isDemoUser(u)).map(adminUserView);
     const orgId=q.get('organizationId')||undefined;
     if(orgId) list=list.filter(u=>u.memberships.some(m=>m.organizationId===orgId));
     const search=(q.get('search')||'').trim().toLowerCase();
@@ -7130,9 +7175,12 @@ const server=http.createServer(async(req,res)=>{
     if(!authUser?.isOwner) return json(res,403,{message:'این بخش فقط برای مالک است.'});
     const orgId=q.get('organizationId')||null;
     const page=Math.max(1,Number(q.get('page')||1)||1), limit=Math.min(200,Math.max(1,Number(q.get('limit')||100)||100));
+    const demoReq=DEMO_USER_IDS.has(authUser.id); /* عضویت‌های دنیای دمو فقط برای خود دمو */
     const rows=[];
     for(const u of Object.values(USERS)) for(const m of u.memberships??[]){
       if(orgId&&m.organizationId!==orgId) continue;
+      const mt=orgTenant(orgById(m.organizationId));
+      if(demoReq?mt!=='demo':mt==='demo') continue;
       rows.push({id:m.id,userId:u.id,organizationId:m.organizationId,organizationName:orgById(m.organizationId)?.name??null,role:m.role,department:m.department??null,dataScope:m.dataScope??'INTERNAL',accessScope:m.accessScope??'ORGANIZATION',isPrimary:!!m.isPrimary,user:{id:u.id,email:u.email,name:u.name,isActive:u.isActive!==false}});
     }
     rows.sort((a,b)=>String(a.organizationName??'').localeCompare(String(b.organizationName??''),'fa'));
@@ -7420,13 +7468,15 @@ const server=http.createServer(async(req,res)=>{
     return json(res,200,{deleted:true,value});
   }
 
+  /* یکپارچه‌سازی‌های دنیای دمو فقط برای خود دمو */
+  const intTenantOk=(i)=>{ const t=orgTenant(orgById(i.organizationId)); return DEMO_USER_IDS.has(authUser?.id)?t==='demo':t!=='demo'; };
   if(is('/admin/integrations')&&method==='GET'){
     if(!authUser?.isOwner) return json(res,403,{message:'این بخش فقط برای مالک است.'});
-    return json(res,200,(DB.integrations??[]).map(intView).sort((a,b)=>String(b.createdAt??'').localeCompare(String(a.createdAt??''))));
+    return json(res,200,(DB.integrations??[]).filter(intTenantOk).map(intView).sort((a,b)=>String(b.createdAt??'').localeCompare(String(a.createdAt??''))));
   }
   if(is('/integrations')&&method==='GET'){
     if(!authUser?.isOwner) return json(res,403,{message:'این بخش فقط برای مالک است.'});
-    return json(res,200,(DB.integrations??[]).map(intView));
+    return json(res,200,(DB.integrations??[]).filter(intTenantOk).map(intView));
   }
   if(is('/integrations/authorize')&&method==='POST'){
     if(!authUser?.isOwner) return json(res,403,{message:'این بخش فقط برای مالک است.'});
@@ -7434,7 +7484,7 @@ const server=http.createServer(async(req,res)=>{
     const provider=String(b.provider||'').toUpperCase(); const kind=String(b.kind||'').toUpperCase();
     if(!INT_PROVIDERS.includes(provider)) return json(res,400,{message:`ارائه‌دهندهٔ «${b.provider}» نامعتبر است (گوگل/مایکروسافت).`});
     if(!INT_KINDS.includes(kind)) return json(res,400,{message:`نوع یکپارچه‌سازی «${b.kind}» نامعتبر است.`});
-    const row={id:`int-${Date.now()}`,userId:authUser.id,organizationId:b.organizationId??'org-1',provider,kind,status:'PENDING',accountLabel:typeof b.accountLabel==='string'&&b.accountLabel.trim()?String(b.accountLabel).trim():null,scopes:null,expiresAt:null,lastSyncAt:null,lastError:null,createdAt:nowIso(),deletedAt:null};
+    const row={id:`int-${Date.now()}`,userId:authUser.id,organizationId:(b.organizationId&&inScope(req,b.organizationId))?b.organizationId:((authUser.memberships??[]).find(m=>m.isPrimary)?.organizationId??(authUser.memberships??[])[0]?.organizationId??null),provider,kind,status:'PENDING',accountLabel:typeof b.accountLabel==='string'&&b.accountLabel.trim()?String(b.accountLabel).trim():null,scopes:null,expiresAt:null,lastSyncAt:null,lastError:null,createdAt:nowIso(),deletedAt:null};
     DB.integrations.push(row);
     audit(req,'CREATE','Integration',row.id,'OK',{meta:{provider,kind,reason:'Admin authorized integration'}});
     return json(res,201,intView(row));
@@ -8104,8 +8154,10 @@ const server=http.createServer(async(req,res)=>{
           saveDb(); return exec;
         }
         const links=wfResolveLinks(exec.entityType,exec.entityId,exec.context,a,wf.organizationId??wfEntityOrgId(exec.entityType,exec.entityId));
+        /* اقدام گردش کار متعلق به محرک آن است: سازمان اصلیِ کاربرِ محرک + createdBy (مستأجرآگاه) */
+        const actorOrg=(((currentUser(req)??{}).memberships??[]).find(m=>m.isPrimary)??((currentUser(req)??{}).memberships??[])[0]??{}).organizationId??null;
         if(a.type==='CREATE_ACTION'){
-          const row={id:`a-${Date.now()}`,title:a.title??'اقدام گردش کار',status:a.status??'OPEN',priority:a.priority??'MEDIUM',dueAt:a.dueAt??null,description:a.description??null,reminderAt:null,meetingId:links.meetingId??null,outcome:null,ownerId:a.ownerId??null,relationshipId:links.relationshipId??null,organizationId:links.organizationId,projectId:links.projectId??null,personId:links.personId??null};
+          const row={id:`a-${Date.now()}`,title:a.title??'اقدام گردش کار',status:a.status??'OPEN',priority:a.priority??'MEDIUM',dueAt:a.dueAt??null,description:a.description??null,reminderAt:null,meetingId:links.meetingId??null,outcome:null,ownerId:a.ownerId??null,relationshipId:links.relationshipId??null,organizationId:links.organizationId??actorOrg,projectId:links.projectId??null,personId:links.personId??null,createdBy:authUser?.id??null};
           ACTIONS.push(row); audit(req,'CREATE','action',row.id,'OK',{meta:{title:row.title,reason:`workflow:${wf.id}`,execution:exec.id}});
           log.push(`✓ گام ${i+1}: اقدام «${row.title}» ساخته شد (${row.id})`);
         } else if(a.type==='CREATE_COMMITMENT'){
@@ -8321,7 +8373,7 @@ const server=http.createServer(async(req,res)=>{
   }
   if(is('/approvals')&&method==='GET'){
     const st=String(new URL(req.url,'http://x').searchParams.get('status')||'PENDING');
-    const rows=(DB.approvals??[]).filter(a=>a.status===st);
+    const rows=(DB.approvals??[]).filter(a=>a.status===st&&approvalInScope(req,a));
     return json(res,200,rows.sort((a,b)=>String(a.createdAt??'').localeCompare(String(b.createdAt??''))).map(approvalView));
   }
   if(is('/approvals')&&method==='POST'){

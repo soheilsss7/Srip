@@ -53,7 +53,7 @@ type Snapshot = {
     bounded: boolean; maxReturnedIds: number;
   };
 };
-type Me = { permissions?: string[] };
+type Me = { permissions?: string[]; memberships?: Array<{ organizationId?: string; organizationName?: string; isPrimary?: boolean }> };
 type Candidate = { id: string; score: number; reasons: string[]; entityType: string };
 type Named = { id: string; name: string };
 
@@ -184,8 +184,12 @@ export default function QualityDashboard({ mode = 'hub' }: { mode?: 'hub' | 'ops
     } catch (x) { setError((x as Error).message); }
     finally { setDetecting(false); }
   }
-  const demoOrg = () => { setDetType('ORGANIZATION'); setFOrg('org-3'); setFName('بانک ملی پارس'); setFWeb(''); setFPhone(''); setFReg(''); setFCountry('ایران'); };
-  const demoPerson = () => { setDetType('PERSON'); setFOrg('org-2'); setFFirst('سارا'); setFLast('محمدی'); setFEmail('sara@arya-tech.ir'); setFPhone(''); };
+  /* نمونه‌های پیش‌ثبت مستأجرآگاه: از سازمان خودِ کاربر، نه دنیای دمو */
+  const myMembership = (me?.memberships ?? []).find(m => m.isPrimary) ?? (me?.memberships ?? [])[0];
+  const myOrgId = myMembership?.organizationId ?? '';
+  const myOrgName = myMembership?.organizationName ?? '';
+  const demoOrg = () => { setDetType('ORGANIZATION'); setFOrg(myOrgId); setFName(myOrgName); setFWeb(''); setFPhone(''); setFReg(''); setFCountry('ایران'); };
+  const demoPerson = () => { setDetType('PERSON'); setFOrg(myOrgId); setFFirst('مریم'); setFLast('رضایی'); setFEmail(''); setFPhone(''); };
 
   const isOps = mode === 'ops';
   const checksList = m ? [
@@ -324,8 +328,8 @@ export default function QualityDashboard({ mode = 'hub' }: { mode?: 'hub' | 'ops
             {!canImport ? <p className="t-muted" style={{ fontSize: 11 }}>حساب شما مجوز واردکردن داده را ندارد؛ ابزار پیش‌ثبت برای نقش‌های دارای مجوز فعال است.</p> : (
               <>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-                  <button className="btn btn-ghost" style={{ minHeight: 0, padding: '6px 10px', fontSize: 10.5 }} onClick={demoOrg}>نمونه: «بانک ملی پارس»</button>
-                  <button className="btn btn-ghost" style={{ minHeight: 0, padding: '6px 10px', fontSize: 10.5 }} onClick={demoPerson}>نمونه: «سارا محمدی»</button>
+                  <button className="btn btn-ghost" style={{ minHeight: 0, padding: '6px 10px', fontSize: 10.5 }} onClick={demoOrg}>نمونه: «{myOrgName || 'سازمان شما'}»</button>
+                  <button className="btn btn-ghost" style={{ minHeight: 0, padding: '6px 10px', fontSize: 10.5 }} onClick={demoPerson}>نمونه: «مریم رضایی»</button>
                 </div>
                 <form className="entity-form" onSubmit={detect} style={{ gap: 8 }}>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'end' }}>

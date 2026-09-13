@@ -28,7 +28,7 @@ export default function Register(){
       <form className="auth-form" onSubmit={submit} noValidate>
         <div className="field">
           <label className="field-label" htmlFor="reg-name">نام و نام خانوادگی <span className="req">*</span></label>
-          <input id="reg-name" value={f.name} onChange={x=>setF({...f,name:x.target.value})} placeholder="مثلاً: سارا محمدی" required/>
+          <input id="reg-name" value={f.name} onChange={x=>setF({...f,name:x.target.value})} placeholder="مثلاً: مریم رضایی" required/>
         </div>
         <div className="field">
           <label className="field-label" htmlFor="reg-email">ایمیل سازمانی <span className="req">*</span></label>
