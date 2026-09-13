@@ -507,7 +507,7 @@ export default function ReferralsPage() {
           <div className="form-grid">
             <label className="field full">
               <span className="field-label">عنوان معرفی <i className="req">*</i></span>
-              <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="مثال: معرفی مدیر فروش به پترو صنعت" required />
+              <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="مثال: معرفی مدیر فروش به سازمان همکار" required />
             </label>
             <label className="field">
               <span className="field-label">مبدأ <i className="req">*</i></span>

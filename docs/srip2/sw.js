@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.12.04';
+const DEMO_MOCK_VERSION = '2026.09.12.05';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -1802,12 +1802,16 @@ let ORGS = [
   { id:'org-ac-allameh', name:'دانشگاه علامه طباطبائی', type:'GOVERNMENT', industry:'آموزش عالی علوم اجتماعی و اقتصاد', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
   { id:'org-ac-edu-research', name:'پژوهشگاه مطالعات آموزش و پرورش', type:'GOVERNMENT', industry:'پژوهش‌های تربیتی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
   { id:'org-ac-art', name:'دانشگاه هنر تهران', type:'GOVERNMENT', industry:'آموزش عالی هنر و طراحی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  /* نهادهای واقعی سند عموم‌ها — پیش‌تر به‌اشتباه به سازمان‌های هم‌نام دمو ارجاع می‌شدند */
+  { id:'org-ac-sharif', name:'دانشگاه صنعتی شریف', type:'GOVERNMENT', industry:'آموزش عالی و پژوهش — برترین قطب کامپیوتر/AI', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
   /* دستهٔ ۴ — عموم‌های اقتصادی و سرمایه‌گذاری (بورس=org-11، صندوق نوآوری=org-12، اتاق تهران=org-10) */
   { id:'org-eco-tse', name:'بورس اوراق بهادار تهران', type:'GOVERNMENT', industry:'بازار سرمایه', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
   { id:'org-eco-ifb', name:'فرابورس ایران', type:'GOVERNMENT', industry:'بازار نوآفرین (SME)', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
   { id:'org-eco-cvc-kerman', name:'صندوق پژوهش و فناوری خطرپذیر کرمان‌موتور', type:'INVESTOR', industry:'سرمایه‌گذاری خطرپذیر شرکتی (CVC)', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
   { id:'org-eco-vc-pasargad', name:'صندوق نوآوری پاسارگاد', type:'INVESTOR', industry:'سرمایه‌گذاری خطرپذیر', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
   { id:'org-eco-chamber-ir', name:'اتاق بازرگانی، صنایع، معادن و کشاورزی ایران', type:'PARTNER', industry:'نهاد صنفی بخش خصوصی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-eco-seo', name:'سازمان بورس و اوراق بهادار', type:'GOVERNMENT', industry:'تنظیم‌گری بازار سرمایه', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
+  { id:'org-eco-inif', name:'صندوق نوآوری و شکوفایی', type:'GOVERNMENT', industry:'نهاد حمایتی دانش‌بنیان (مادهٔ ۵)', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
   /* دستهٔ ۶ — عموم‌های اکوسیستم فناوری و صنعت (نظام صنفی رایانه‌ای = org-inst-09) */
   { id:'org-ecx-pardis', name:'پارک فناوری پردیس', type:'PARTNER', industry:'پارک علم و فناوری', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
   { id:'org-ecx-innofactory', name:'کارخانه نوآوری (شعبهٔ پردیس)', type:'PARTNER', industry:'کارخانه نوآوری و شتاب‌دهی', country:'ایران', createdAt:'2026-09-01T08:00:00.000Z' },
@@ -2429,6 +2433,9 @@ const SEED_USERS = {
 const USER_ALIASES = Object.fromEntries(
   Object.values(SEED_USERS).filter(u=>u.username).map(u=>[u.username.toLowerCase(), u.email])
 );
+/* «مالک» رکورد سازمان: فقط در دنیای دمو نمایش داده می‌شود (کاربر دمو)؛
+   در دادهٔ واقعی/شخصی مالکِ نمایشی نداریم → UI ردیف را مخفی می‌کند */
+const ownerOfOrg=(o)=>orgTenant(o)==='demo'?{name:'کاربر دمو'}:null;
 function visibleOrgIds(req){
   const u=currentUser(req);
   if(!u) return [];
@@ -2764,7 +2771,11 @@ function careerWarmPaths(req,ev){
   return out;
 }
 function careerEventsView(req){
-  const evts=(DB.careerEvents??[]).map(e=>{
+  /* رویدادهای شغلی هم درون محدودهٔ مستأجر می‌مانند (دمو فقط در دمو) */
+  const evts=(DB.careerEvents??[]).filter(e=>{
+    const p=personById(e.personId);
+    return p?inScope(req,p.organizationId):false;
+  }).map(e=>{
     const p=personById(e.personId);
     return {...e,person:p?{id:p.id,name:`${p.firstName} ${p.lastName}`,title:p.title,organizationId:p.organizationId,organization:orgById(p.organizationId)?{id:p.organizationId,name:orgById(p.organizationId).name}:null,champion:p.champion??null}:null};
   });
@@ -2879,6 +2890,7 @@ function nbaView(req){
   });
   /* ۵) اقدامات معوق برنامهٔ ۹۰ روزه (P1-3) */
   Object.values(DB.accountPlans??{}).forEach((plan)=>{
+    if(!plan?.relationshipId||!relInScope(req,RELS.find(r=>r.id===plan.relationshipId))) return; /* مستأجرآگاه */
     (plan?.items??[]).filter(i=>!['DONE','CANCELLED','COMPLETED'].includes(i.status)&&isLateAt(i.dueAt,now)).slice(0,1).forEach(i=>{
       add({key:`ap-${i.id}`,id:`nba-ap-${i.id}`,kind:'PLAN',refId:i.id,relationshipId:plan.relationshipId,relationshipName:relName(plan.relationshipId),
         title:`برنامهٔ ۹۰ روزه: ${i.title}`,text:`اقدام برنامهٔ حساب موعدش گذشته است — وضعیت را به‌روز کنید`,
@@ -5683,7 +5695,7 @@ function seedPublicsStore(){
       P('PM-P-037','h-ns4','organization','org-reg-fda','AWARE',70,44,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ سلامت'),
       P('PM-P-038','h-ns5','organization','org-reg-agri','AWARE',72,45,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ کشاورزی'),
       P('PM-P-039','h-ns6','organization','org-reg-cbi','AWARE',88,52,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ مالی'),
-      P('PM-P-040','h-ns6','organization','org-11','AWARE',85,50,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ مالی (سازمان بورس)'),
+      P('PM-P-040','h-ns6','organization','org-eco-seo','AWARE',85,50,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ مالی (سازمان بورس)'),
       P('PM-P-041','h-ns7','organization','org-reg-roads','AWARE',74,46,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ مسکن'),
       P('PM-P-042','h-ns8','organization','org-reg-industry','AWARE',78,48,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ صنعت'),
       P('PM-P-043','h-ns9','organization','org-reg-cbi','AWARE',88,50,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ اعتباری (بانک مرکزی و شورای پول و اعتبار)'),
@@ -5694,7 +5706,7 @@ function seedPublicsStore(){
       P('PM-P-048','h-ns12','organization','org-reg-culture','AWARE',76,48,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ محتوا'),
       P('PM-P-049','h-ns12','organization','org-inst-07','AWARE',86,50,'INFLUENCER','ENABLING','تنظیم‌گر بخشی حوزهٔ محتوا (شورای عالی انقلاب فرهنگی)'),
       /* ── دستهٔ ۳: علمی-دانشگاهی ── */
-      P('PM-P-050','h-a1','organization','org-9','ACTIVE',85,80,'KEY_PLAYER','NORMATIVE','دانشگاه صنعتی شریف — برترین قطب کامپیوتر/AI کشور؛ میزبان دائمی CSICC؛ اولویت اول همکاری علمی'),
+      P('PM-P-050','h-a1','organization','org-ac-sharif','ACTIVE',85,80,'KEY_PLAYER','NORMATIVE','دانشگاه صنعتی شریف — برترین قطب کامپیوتر/AI کشور؛ میزبان دائمی CSICC؛ اولویت اول همکاری علمی'),
       P('PM-P-051','h-a2','organization','org-ac-tehran','ACTIVE',80,75,'KEY_PLAYER','NORMATIVE','بزرگ‌ترین و معتبرترین دانشگاه جامع — دسترسی هم به اساتید ارشد هم جامعهٔ دانشجویی فعال'),
       P('PM-P-052','h-a3','organization','org-ac-amirkabir','ACTIVE',78,78,'KEY_PLAYER','NORMATIVE','مرجع تخصصی NLP فارسی — میزبان NLPIC و کنفرانس ISCISC؛ شریک طبیعی حوزهٔ محتوا'),
       P('PM-P-053','h-a4','organization','org-ac-iust','AWARE',65,62,'INFLUENCER','NORMATIVE','قطب پژوهشی با پیوند صنعتی قوی — منبع داده اسمی و NLP فارسی (نمونه: PEYMA)'),
@@ -5713,14 +5725,14 @@ function seedPublicsStore(){
       P('PM-P-065','h-as2','organization','org-ac-tehran','AWARE',58,55,'INFLUENCER','NORMATIVE','پردیس کشاورزی و منابع طبیعی کرج — حوزهٔ کشاورزی'),
       P('PM-P-066','h-as2','organization','org-ac-tarbiat','AWARE',56,55,'INFLUENCER','NORMATIVE','گروه کشاورزی دانشگاه تربیت مدرس — حوزهٔ کشاورزی'),
       P('PM-P-067','h-as3','organization','org-ac-petrol','AWARE',60,56,'INFLUENCER','NORMATIVE','دانشگاه صنعت نفت — حوزهٔ انرژی'),
-      P('PM-P-068','h-as3','organization','org-9','AWARE',70,58,'INFLUENCER','NORMATIVE','دانشکدهٔ مهندسی انرژی دانشگاه شریف — حوزهٔ انرژی'),
+      P('PM-P-068','h-as3','organization','org-ac-sharif','AWARE',70,58,'INFLUENCER','NORMATIVE','دانشکدهٔ مهندسی انرژی دانشگاه شریف — حوزهٔ انرژی'),
       P('PM-P-069','h-as4','organization','org-ac-iust','AWARE',56,52,'INFLUENCER','NORMATIVE','دانشکدهٔ معماری و شهرسازی دانشگاه علم و صنعت — حوزهٔ مسکن'),
       P('PM-P-070','h-as4','organization','org-ac-tehran','AWARE',58,52,'INFLUENCER','NORMATIVE','دانشکدهٔ معماری دانشگاه تهران — حوزهٔ مسکن'),
       P('PM-P-071','h-as5','organization','org-ac-tehran','AWARE',60,55,'INFLUENCER','NORMATIVE','دانشکدهٔ مدیریت دانشگاه تهران — حوزهٔ مالی و اعتباری'),
       P('PM-P-072','h-as5','organization','org-ac-allameh','AWARE',56,55,'INFLUENCER','NORMATIVE','گروه اقتصاد و مالی علامه طباطبائی — حوزهٔ مالی و اعتباری'),
       P('PM-P-073','h-as6','organization','org-ac-tarbiat','AWARE',54,54,'INFLUENCER','NORMATIVE','گروه علوم تربیتی تربیت مدرس — حوزهٔ آموزش'),
       P('PM-P-074','h-as6','organization','org-ac-edu-research','AWARE',52,56,'INFLUENCER','NORMATIVE','پژوهشگاه مطالعات آموزش و پرورش — حوزهٔ آموزش'),
-      P('PM-P-075','h-as7','organization','org-9','AWARE',70,56,'INFLUENCER','NORMATIVE','دانشکدهٔ مهندسی صنایع دانشگاه شریف — حوزهٔ صنعت و طراحی صنعتی'),
+      P('PM-P-075','h-as7','organization','org-ac-sharif','AWARE',70,56,'INFLUENCER','NORMATIVE','دانشکدهٔ مهندسی صنایع دانشگاه شریف — حوزهٔ صنعت و طراحی صنعتی'),
       P('PM-P-076','h-as7','organization','org-ac-amirkabir','AWARE',62,55,'INFLUENCER','NORMATIVE','دانشکدهٔ مهندسی صنایع امیرکبیر — حوزهٔ صنعت و طراحی صنعتی'),
       P('PM-P-077','h-as7','organization','org-ac-art','AWARE',48,58,'SUPPORTER','NORMATIVE','دانشکدهٔ هنرهای کاربردی (طراحی صنعتی) دانشگاه هنر تهران'),
       P('PM-P-078','h-as8','organization','org-ac-iust','AWARE',56,50,'INFLUENCER','NORMATIVE','دانشکدهٔ مهندسی صنایع و سیستم‌های حمل‌ونقل علم و صنعت — حوزهٔ لجستیک'),
@@ -5729,15 +5741,15 @@ function seedPublicsStore(){
       P('PM-P-081','h-as10','organization','org-ac-allameh','AWARE',56,58,'INFLUENCER','NORMATIVE','دانشکدهٔ علوم ارتباطات و رسانهٔ علامه طباطبائی — حوزهٔ محتوا'),
       P('PM-P-082','h-as10','organization','org-ac-nlpic','AWARE',70,62,'INFLUENCER','NORMATIVE','مرکز نوآوری پردازش زبان طبیعی امیرکبیر — حوزهٔ محتوا'),
       /* ── دستهٔ ۴: اقتصادی و سرمایه‌گذاری ── */
-      P('PM-P-090','h-e1','organization','org-11','AWARE',85,60,'INFLUENCER','ENABLING','تنظیم‌گر اصلی بازار سرمایه — صدور مجوز و نظارت بر عرضهٔ آتی سهام'),
+      P('PM-P-090','h-e1','organization','org-eco-seo','AWARE',85,60,'INFLUENCER','ENABLING','تنظیم‌گر اصلی بازار سرمایه — صدور مجوز و نظارت بر عرضهٔ آتی سهام'),
       P('PM-P-091','h-e2','organization','org-eco-tse','AWARE',70,45,'INFLUENCER','ENABLING','بازار اصلی سهام — مرجع نمادین حضور در بازار سرمایه'),
       P('PM-P-092','h-e3','organization','org-eco-ifb','AWARE',72,55,'INFLUENCER','ENABLING','بازار نوآفرین با تابلوهای «رشد» و «دانش‌بنیان» — پذیرش ساده‌تر برای شرکت‌های نوآور'),
-      P('PM-P-093','h-e4','organization','org-12','AWARE',75,70,'KEY_PLAYER','ENABLING','نهاد حمایتی تأمین منابع توسعهٔ فناوری و تجاری‌سازی (مادهٔ ۵ قانون حمایت دانش‌بنیان)'),
-      P('PM-P-094','h-e5','organization','org-12','ACTIVE',55,80,'KEY_PLAYER','FUNCTIONAL_INPUT','رویداد «دوشنبه‌های استارتاپی» برگزارشده توسط صندوق نوآوری — حضور VCها و CVCها'),
+      P('PM-P-093','h-e4','organization','org-eco-inif','AWARE',75,70,'KEY_PLAYER','ENABLING','نهاد حمایتی تأمین منابع توسعهٔ فناوری و تجاری‌سازی (مادهٔ ۵ قانون حمایت دانش‌بنیان)'),
+      P('PM-P-094','h-e5','organization','org-eco-inif','ACTIVE',55,80,'KEY_PLAYER','FUNCTIONAL_INPUT','رویداد «دوشنبه‌های استارتاپی» برگزارشده توسط صندوق نوآوری — حضور VCها و CVCها'),
       P('PM-P-095','h-e6','organization','org-eco-cvc-kerman','AWARE',60,65,'INFLUENCER','FUNCTIONAL_INPUT','صندوق پژوهش و فناوری خطرپذیر کرمان‌موتور — نمونهٔ واقعی روند CVC صنعتی ایران'),
       P('PM-P-096','h-e7','organization','org-eco-vc-pasargad','AWARE',58,68,'INFLUENCER','FUNCTIONAL_INPUT','صندوق تخصصی سرمایه‌گذاری خطرپذیر — فعال در مراحل اولیه و رشد'),
       P('PM-P-097','h-e9','organization','org-eco-chamber-ir','AWARE',65,55,'INFLUENCER','NORMATIVE','بزرگ‌ترین نهاد رسمی بخش خصوصی — پوشش تقریباً همهٔ حوزه‌های ۱۲گانه'),
-      P('PM-P-098','h-e10','organization','org-10','AWARE',50,60,'SUPPORTER','NORMATIVE','اتاق بازرگانی تهران — نمونهٔ الگوی اتاق‌های استانی و تخصصی'),
+      P('PM-P-098','h-e10','organization','org-eco-chamber-ir','AWARE',50,60,'SUPPORTER','NORMATIVE','اتاق بازرگانی تهران — نمونهٔ الگوی اتاق‌های استانی و تخصصی'),
       /* ── دستهٔ ۵: رسانه‌ای و عمومی ── */
       P('PM-P-100','h-m1','media','m-1','ACTIVE',60,80,'KEY_PLAYER','DIFFUSED','زومیت — پرمخاطب‌ترین رسانهٔ فناوری؛ پوشش مستمر سیاست‌گذاری AI و اقتصاد دیجیتال'),
       P('PM-P-101','h-m2','media','m-2','ACTIVE',58,75,'KEY_PLAYER','DIFFUSED','دیجیاتو — پیشگام رسانه‌های فناوری با بیش از ۱۰ سال سابقه'),
@@ -6764,7 +6776,7 @@ async function __handler(req, res) {
   }
 
   /* --------------------------- organizations --------------------------- */
-  if(is('/organizations') && method==='GET') return json(res,200,attachCriteria('ORGANIZATION',scopedOrgs(req).map(o=>({...o,owner:{name:'کاربر دمو'},_count:orgCounts(o)}))));
+  if(is('/organizations') && method==='GET') return json(res,200,attachCriteria('ORGANIZATION',scopedOrgs(req).map(o=>({...o,owner:ownerOfOrg(o),_count:orgCounts(o)}))));
   if(is('/organizations') && method==='POST'){
     const b=await readBody(req);
     if(!b.name||b.name.trim().length<2) return json(res,400,{message:'نام سازمان حداقل ۲ نویسه باید باشد.'});
@@ -6780,14 +6792,14 @@ async function __handler(req, res) {
     if (intake.length) saveStoredAnswers('ORGANIZATION', o.id, intake);
     audit(req,'CREATE','organization',o.id,'OK',{name:o.name,criteriaAnswers:intake.length});
     await autoRunWorkflows('Organization',o.id,'ORGANIZATION_CREATED',{organization:{id:o.id,name:o.name,type:o.type,industry:o.industry,country:o.country}});
-    return json(res,201,attachCriteria('ORGANIZATION',[{...o,owner:{name:'کاربر دمو'},_count:orgCounts(o)}])[0]);
+    return json(res,201,attachCriteria('ORGANIZATION',[{...o,owner:ownerOfOrg(o),_count:orgCounts(o)}])[0]);
   }
   const orgId=match('/organizations/:id');
   if(orgId&&method==='GET'){
     const o=ORGS.find(x=>x.id===orgId[0]);
     if(!o) return json(res,404,{message:'سازمان یافت نشد'});
     if(!inScope(req,o.id)) return json(res,403,{message:'دسترسی به این سازمان مجاز نیست.'});
-    return json(res,200,attachCriteria('ORGANIZATION',[{...o,owner:{name:'کاربر دمو'},_count:orgCounts(o)}])[0]);
+    return json(res,200,attachCriteria('ORGANIZATION',[{...o,owner:ownerOfOrg(o),_count:orgCounts(o)}])[0]);
   }
   const orgTimeline=match('/organizations/:id/timeline');
   if(orgTimeline&&method==='GET'){
@@ -7321,7 +7333,8 @@ async function __handler(req, res) {
   const canAn=(perm)=>authUser?.isOwner||(authUser?.permissions??[]).includes(perm);
   const AN_READ_MSG='شما مجوز «تحلیل و هوشمندی» (analytics.read) را ندارید.';
   const AN_WRITE_MSG='شما مجوز «ثبت رویداد سنجش» (analytics.write) را ندارید.';
-  const anScoped=(e,nullable)=>authUser?.isOwner?true:((e.organizationId==null||e.organizationId===undefined)?nullable:visibleOrgIds(req).includes(e.organizationId));
+  /* مستأجرآگاه: حتی مالک فقط رویدادهای محدودهٔ خودش را می‌بیند (دمو فقط در دمو) */
+  const anScoped=(e,nullable)=>(e.organizationId==null||e.organizationId===undefined)?nullable:visibleOrgIds(req).includes(e.organizationId);
   const anEvents=(from,to,nullable)=> (DB.analyticsEvents??[]).filter(e=>anScoped(e,nullable)&&(!from||new Date(e.createdAt)>=from)&&(!to||new Date(e.createdAt)<to));
   const anPct=(num,den)=>den===0?0:Number(((num/den)*100).toFixed(2));
 

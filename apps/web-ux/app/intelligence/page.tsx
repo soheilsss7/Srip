@@ -92,7 +92,7 @@ function EyeIcon() {
 }
 
 export default function IntelligencePage() {
-  const { can } = useWorkspace();
+  const { can, me } = useWorkspace();
   const [data, setData] = useState<Intel | null>(null);
   const [nba, setNba] = useState<any>(null);
   const [leverage, setLeverage] = useState<any>(null);
@@ -475,7 +475,7 @@ export default function IntelligencePage() {
                 </div>
               )}
               <p className="t-muted" style={{ fontSize: 10.5, marginTop: 8 }}>
-                <ArrowUpRight size={11} style={{ verticalAlign: '-1px' }} /> تحلیل روی گراف روابطِ همین محدوده انجام می‌شود؛ «آریا فناوری» به‌عنوان گرهٔ مرکزی، هر بار حذفش بیشترین قطعه‌قطعه‌شدن را ایجاد می‌کند.
+                <ArrowUpRight size={11} style={{ verticalAlign: '-1px' }} /> تحلیل روی گراف روابطِ همین محدوده انجام می‌شود؛ «{(me?.memberships ?? []).find(m => m.isPrimary)?.organizationName ?? 'سازمان شما'}» به‌عنوان گرهٔ مرکزی، هر بار حذفش بیشترین قطعه‌قطعه‌شدن را ایجاد می‌کند.
               </p>
             </section>
           )}
