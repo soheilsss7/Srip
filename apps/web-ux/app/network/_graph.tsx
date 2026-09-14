@@ -29,6 +29,8 @@ import {
   nodeCategoryColor,
   EGO_COLOR,
   EGO_FA,
+  PUBLIC_CATEGORY_ORDER,
+  PUBLIC_CATEGORY_META,
 } from './_nodes';
 
 export interface NetworkGraphHandle {
@@ -53,6 +55,8 @@ export interface NetworkGraphProps {
   onRendered?: (counts: { nodes: number; edges: number }) => void;
   onNodeOpen?: (href: string) => void;
   onPathEnd?: (node: GNode, end: 'from' | 'to') => void;
+  /** چیدمان: nested (پیش‌فرض — شبکهٔ فعال + سینی‌های دستهٔ تو در تو) | classic (شبکهٔ کامل) */
+  variant?: 'nested' | 'classic';
 }
 
 type Pos = { x: number; y: number };
@@ -179,6 +183,87 @@ function layout(clusters: Cluster[], all: GNode[]): Map<string, Pos> {
   return pos;
 }
 
+/* ----------------- چیدمان تو در تو (نمای دسته‌ای) -----------------
+   شبکهٔ فعال (سازمان‌های دارای پیوند + خودِ شرکت) در شبکه‌ای منظم با «اگو» در خانهٔ مرکزی؛
+   سازمان‌های بدون رابطه در «سینی‌های دسته» پایین بوم می‌نشینند (تو در تو).
+   چیدمان سلولی = هیچ هم‌پوشانی بین خوشه‌ها (برخلاف بیضی که حباب‌های بزرگ تداخل می‌کردند). */
+const DOCK_H = 176;
+function layoutNested(clusters: Cluster[], all: GNode[], edges: Array<{ source: string; target: string }>): Map<string, Pos> {
+  const pos = new Map<string, Pos>();
+  const total = clusters.length;
+  if (!total) return pos;
+  const areaH = H - DOCK_H - 6;
+  /* شبکهٔ ۳ردیفه با «اگو» در خانهٔ مرکزی (ستون فرد)؛ تا ۳ خوشه تک‌ردیفه */
+  const singleRow = total <= 3;
+  const rows = singleRow ? 1 : 3;
+  const cols = singleRow ? total : Math.min(11, 2 * Math.ceil((total + 1) / 6) + 1);
+  const stepX = Math.min(444, (W * 0.97) / cols);
+  const stepY = areaH / rows;
+  const cy0 = stepY / 2 + 6;
+  const midRow = singleRow ? 0 : 1;
+  const midCol = Math.floor(cols / 2);
+  /* درجهٔ سازمان = تعداد یال‌ها → خوشه‌های پررابطه نزدیک‌تر به اگو بنشینند */
+  const deg = new Map<string, number>();
+  for (const e of edges) {
+    deg.set(e.source, (deg.get(e.source) ?? 0) + 1);
+    deg.set(e.target, (deg.get(e.target) ?? 0) + 1);
+  }
+  const egoIdx = clusters.findIndex((c) => c.root.ego);
+  const others = clusters
+    .map((_, i) => i)
+    .filter((i) => i !== egoIdx)
+    .sort((a, b) => (deg.get(clusters[b].root.id) ?? 0) - (deg.get(clusters[a].root.id) ?? 0));
+  /* صندلی‌ها به ترتیب نزدیکی (چبیشف) به خانهٔ اگو: اول ردیف وسط، بعد بالا/پایین */
+  const seats: Array<{ r: number; c: number; key: number }> = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (r === midRow && c === midCol) continue;
+      const dy = Math.abs(r - midRow);
+      const dx = Math.abs(c - midCol);
+      /* صندلی‌های دقیقاً بالا/پایین اگو آخر پر می‌شوند تا حلقهٔ اعضای اگو جا داشته باشد */
+      const key = dx === 0 && dy > 0 ? 9000 : Math.max(dx, dy) * 100 + dy * 10 + dx;
+      seats.push({ r, c, key });
+    }
+  }
+  seats.sort((a, b) => a.key - b.key);
+  const seatPos = (r: number, c: number): Pos => ({ x: W / 2 + (c - midCol) * stepX, y: cy0 + r * stepY });
+  if (egoIdx >= 0) pos.set(clusters[egoIdx].root.id, seatPos(midRow, midCol));
+  others.slice(0, seats.length).forEach((ci, k) => {
+    const st = seats[k];
+    pos.set(clusters[ci].root.id, seatPos(st.r, st.c));
+  });
+  /* اعضا فقط برای خوشهٔ اگو — حلقهٔ دوگانهٔ پهن (بیضیِ کم‌عمق) تا پیل بالا و ردیف پایین آزاد بمانند.
+     شمار اعضای بقیهٔ سازمان‌ها در پیل خوشه می‌آید؛ جزئیات کامل در نمای کلاسیک و صفحهٔ سازمان. */
+  for (const c of clusters) {
+    const p = pos.get(c.root.id);
+    if (!p) continue;
+    const m = c.members.length;
+    if (!m || !c.root.ego) continue;
+    const ring = (count: number, start: number, rx: number, ry: number, phase: number) => {
+      for (let j = 0; j < count; j++) {
+        const ang = phase + (j * Math.PI * 2) / count;
+        const member = c.members[start + j];
+        if (!member) return;
+        pos.set(member.id, { x: p.x + Math.cos(ang) * rx, y: p.y + Math.sin(ang) * ry });
+      }
+    };
+    /* حلقهٔ واحدِ پهن (بیضی کم‌عمق): عمق محدود تا پیل بالا و ردیف پایین آزاد بمانند؛
+       شعاع افقی بزرگ تا برچسب اعضا به گرهٔ اگو نچسبد */
+    /* فاز نصف‌گام: هیچ عضوی دقیقاً بالا (زیر نشان «خودِ شرکت») یا پایین گره نمی‌نشیند */
+    const phase = -Math.PI / 2 + Math.PI / m;
+    if (singleRow) {
+      ring(m, 0, Math.min(160, 80 + m * 4), 110, phase);
+    } else {
+      const rx = m <= 8 ? 84 : m <= 14 ? 100 : 112;
+      const ry = m <= 8 ? 52 : m <= 14 ? 62 : 70;
+      ring(m, 0, rx, ry, phase);
+    }
+  }
+  /* هیچ موقعیت fallback تعریف نمی‌شود: عضوهای بدون صندلی اصلاً رندر نمی‌شوند
+     (nestedRenderIds) و حباب‌ها فقط از موقعیت‌های واقعی ساخته می‌شوند. */
+  return pos;
+}
+
 /* ------------------------- helpers ------------------------- */
 function initialOf(name: string): string {
   return (name ?? '').trim().charAt(0) || '•';
@@ -272,6 +357,30 @@ function scoreColor(score: number): string {
   return '#DC2626';
 }
 
+/** چیپ سازمان در سینی/پنل دسته — کلیک = انتخاب، دابل‌کلیک = باز کردن صفحهٔ سازمان */
+function TrayChip(props: { node: GNode; x: number; y: number; w: number; h: number; color: string; fontPx?: number; onSelect?: (n: GNode) => void; onOpen?: (n: GNode) => void }) {
+  const { node, x, y, w, h, color, fontPx = 8.8, onSelect, onOpen } = props;
+  const name = nodeDisplayName(node);
+  return (
+    <g
+      style={{ cursor: 'pointer' }}
+      onPointerDown={(e) => { e.stopPropagation(); }}
+      onClick={(e) => { e.stopPropagation(); onSelect?.(node); }}
+      onDoubleClick={(e) => { e.stopPropagation(); onOpen?.(node); }}
+    >
+      <rect x={x} y={y} width={w} height={h} rx={h / 2}
+        fill="var(--card-bg, #FFFFFF)" stroke={color} strokeWidth={1.1} />
+      {/* RTL: نقطهٔ دسته سمت راست، متن در میانهٔ فضای باقی‌مانده (لنگر middle مستقل از جهت) */}
+      <circle cx={x + w - h / 2} cy={y + h / 2} r={2.6} fill={color} />
+      <text x={x + (w - h) / 2} y={y + h / 2 + fontPx * 0.36} textAnchor="middle"
+        fontSize={fontPx} fontWeight={700} fill="var(--text-primary, #333)"
+        style={{ pointerEvents: 'none', userSelect: 'none' }}>
+        {fitText(name, w - h - 10, 700, fontPx)}
+      </text>
+    </g>
+  );
+}
+
 const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function NetworkGraph(
   {
     graph,
@@ -289,6 +398,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
     onRendered,
     onNodeOpen,
     onPathEnd,
+    variant = 'nested',
   },
   ref,
 ) {
@@ -346,13 +456,141 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
     return { dist: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 };
   };
 
-  const clusters = useMemo(() => buildClusters(graph.nodes), [graph]);
+  /* ─── تقسیم تو در تو: شبکهٔ فعال (دارای پیوند/اگو) در برابر سازمان‌های ساکت ─── */
+  const nested = variant !== 'classic';
+  const activeIds = useMemo(() => {
+    const s = new Set<string>();
+    for (const e of graph.edges) { s.add(e.source); s.add(e.target); }
+    for (const n of graph.nodes) if (n.ego) s.add(n.id);
+    return s;
+  }, [graph]);
+  const activeNodes = useMemo(() => {
+    if (!nested) return graph.nodes;
+    const orgActive = new Set(
+      graph.nodes
+        .filter((n) => n.type === 'organization' && (n.ego || activeIds.has(n.id)))
+        .map((n) => n.organizationId ?? bareId(n.id)),
+    );
+    return graph.nodes.filter((n) => {
+      if (n.type === 'organization') return n.ego || activeIds.has(n.id);
+      if (activeIds.has(n.id)) return true;
+      const oid = n.organizationId;
+      return !!oid && orgActive.has(oid);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [graph, nested, activeIds]);
+
+  const clusters = useMemo(() => buildClusters(activeNodes), [activeNodes]);
+  /* نمای دسته‌ای (نمای کلان): فقط گره‌های سازمان + اعضای خوشهٔ خودِ شرکت رندر می‌شوند؛
+     شمار اعضای بقیهٔ سازمان‌ها در پیل خوشه نمایش داده می‌شود */
+  const nestedRenderIds = useMemo(() => {
+    const s = new Set<string>();
+    if (!nested) return s;
+    for (const c of clusters) {
+      s.add(c.root.id);
+      if (c.root.ego) c.members.forEach((m) => s.add(m.id));
+    }
+    return s;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clusters, nested]);
   const { positions, links } = useMemo(() => {
-    const pos = layout(clusters, graph.nodes);
+    const pos = nested ? layoutNested(clusters, activeNodes, graph.edges) : layout(clusters, graph.nodes);
     const safe = graph.edges.filter((e) => pos.has(e.source) && pos.has(e.target));
     return { positions: pos, links: safe };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [graph, clusters]);
+  }, [graph, clusters, nested, activeNodes]);
+
+  /* ─── سینی‌های دستهٔ عموم‌ها: سازمان‌های بدون رابطه، گروه‌بندی‌شده و تو در تو ─── */
+  const TRAY_OTHER_FA = 'بدون دستهٔ عموم';
+  const TRAY_OTHER_COLOR = '#64748B';
+  /* برچسب کوتاه برای هدر سینی — نام کامل در پنل باز‌شده می‌آید */
+  const TRAY_SHORT_FA: Record<string, string> = {
+    INTERNAL: 'داخلی', INSTITUTIONAL: 'نهادی و حاکمیتی', ACADEMIC: 'دانشگاهی و پژوهشی',
+    ECONOMIC: 'اقتصادی و سرمایه', MEDIA: 'رسانه‌ای', ECOSYSTEM: 'اکوسیستم فناوری', OTHER: TRAY_OTHER_FA,
+  };
+  const trays = useMemo(() => {
+    if (!nested) return [] as Array<{ key: string; fa: string; color: string; members: GNode[] }>;
+    const activeOrgIds = new Set(
+      activeNodes.filter((n) => n.type === 'organization').map((n) => n.organizationId ?? bareId(n.id)),
+    );
+    const map = new Map<string, GNode[]>();
+    for (const n of graph.nodes) {
+      if (n.type !== 'organization') continue;
+      if (activeOrgIds.has(n.organizationId ?? bareId(n.id))) continue;
+      const cat = n.category && PUBLIC_CATEGORY_META[n.category] ? n.category : 'OTHER';
+      if (!map.has(cat)) map.set(cat, []);
+      map.get(cat)!.push(n);
+    }
+    const order = [
+      ...PUBLIC_CATEGORY_ORDER.filter((c) => map.has(c)),
+      ...(map.has('OTHER') ? ['OTHER'] : []),
+    ];
+    return order.map((k) => ({
+      key: k,
+      fa: k === 'OTHER' ? TRAY_OTHER_FA : PUBLIC_CATEGORY_META[k].fa,
+      color: k === 'OTHER' ? TRAY_OTHER_COLOR : PUBLIC_CATEGORY_META[k].color,
+      members: map.get(k)!,
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [graph, nested, activeNodes]);
+
+  const [expandedTray, setExpandedTray] = useState<string | null>(null);
+  useEffect(() => { setExpandedTray(null); }, [variant, graph]);
+
+  /* هندسهٔ سینی‌ها + جای چیپ‌ها (برای کارت شناورِ گرهٔ انتخاب‌شده از سینی) */
+  const trayGeo = useMemo(() => {
+    const n = trays.length;
+    if (!n) return { cards: [] as Array<{ tray: (typeof trays)[number]; x: number; y: number; w: number; h: number }>, chipPos: new Map<string, Pos>() };
+    const gap = 12;
+    const cardW = Math.min(238, (W - 36 - gap * (n - 1)) / n);
+    const cardH = DOCK_H - 24;
+    const totalW = n * cardW + (n - 1) * gap;
+    const x0 = (W - totalW) / 2;
+    const y0 = H - DOCK_H + 12;
+    const chipPos = new Map<string, Pos>();
+    const cards = trays.map((t, i) => {
+      const x = x0 + i * (cardW + gap);
+      const chipW = (cardW - 26) / 2;
+      t.members.slice(0, 8).forEach((m, j) => {
+        const col = j % 2;
+        const row = Math.floor(j / 2);
+        chipPos.set(m.id, { x: x + 14 + col * (chipW + 6) + chipW / 2, y: y0 + 36 + row * 23 + 9.5 });
+      });
+      return { tray: t, x, y: y0, w: cardW, h: cardH };
+    });
+    return { cards, chipPos };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trays]);
+
+  /* پنل بازشدهٔ دسته: شبکهٔ کاملِ اعضای آن دسته، مرتب در شبکه‌ای از چیپ‌ها */
+  const panelGeo = useMemo(() => {
+    const t = trays.find((x) => x.key === expandedTray);
+    if (!t) return null;
+    const w = Math.min(1210, W - 90);
+    const h = H - DOCK_H - 84;
+    const x = (W - w) / 2;
+    const y = 40;
+    const cols = 5;
+    const chipW = (w - 48) / cols - 8;
+    const chipH = 24;
+    const rows = Math.max(1, Math.floor((h - 66) / 30));
+    const capacity = cols * rows;
+    const chipPos = new Map<string, Pos>();
+    t.members.slice(0, capacity).forEach((m, j) => {
+      const col = j % cols;
+      const row = Math.floor(j / cols);
+      chipPos.set(m.id, { x: x + 24 + col * (chipW + 10) + chipW / 2, y: y + 52 + row * 30 + chipH / 2 });
+    });
+    return { tray: t, x, y, w, h, cols, chipW, chipH, capacity, chipPos };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expandedTray, trays]);
+
+  const chipPosAll = useMemo(() => {
+    const m = new Map<string, Pos>();
+    trayGeo.chipPos.forEach((v, k) => m.set(k, v));
+    panelGeo?.chipPos.forEach((v, k) => m.set(k, v));
+    return m;
+  }, [trayGeo, panelGeo]);
 
   const nodeStats = useMemo(() => computeNodeStats(graph.nodes, links), [graph.nodes, links]);
   const idToNode = useMemo(() => new Map(graph.nodes.map((n) => [n.id, n])), [graph.nodes]);
@@ -365,8 +603,8 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
     onRenderedRef.current?.({ nodes: renderedNodeCount, edges: renderedEdgeCount });
   }, [renderedNodeCount, renderedEdgeCount]);
 
-  /** موقعیت هر گره = موقعیت قطعی چیدمان (گره‌ها قابل جابه‌جا کردن نیستند). */
-  const posOf = (id: string): Pos => positions.get(id) ?? { x: 0, y: 0 };
+  /** موقعیت هر گره = چیدمان قطعی؛ گره‌های سینی = جای چیپ آن‌ها. */
+  const posOf = (id: string): Pos => positions.get(id) ?? chipPosAll.get(id) ?? { x: 0, y: 0 };
 
   useImperativeHandle(ref, () => ({
     fit: () => { userAdjustedZoomRef.current = false; setZoom(homeZoom); setPan({ x: 0, y: 0 }); },
@@ -538,7 +776,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
     clusters.forEach((c, idx) => {
       const tint = CLUSTER_TINTS[idx % CLUSTER_TINTS.length];
       const pts: Array<{ x: number; y: number; n: GNode }> = [];
-      const push = (n: GNode) => { const p = posOf(n.id); if (p) pts.push({ ...p, n }); };
+      const push = (n: GNode) => { const p = positions.get(n.id); if (p) pts.push({ ...p, n }); };
       push(c.root);
       c.members.forEach(push);
       if (!pts.length) return;
@@ -552,9 +790,14 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
       const top = topMost - 64;
       const bottom = bottomMost + 36;
       const w = Math.max(258, maxX - minX + 48);
-      const h = Math.max(190, bottom - top);
+      let h = Math.max(190, bottom - top);
       const x = minX + (maxX - minX) / 2 - w / 2;
-      const y = top;
+      let y = top;
+      /* نمای دسته‌ای: حباب داخل ناحیهٔ شبکه بماند (پیل کلیپ نشود / به سینی‌ها نرسد) */
+      if (nested) {
+        y = Math.max(2, y);
+        h = Math.min(h, H - DOCK_H - 4 - y);
+      }
       out.push({
         key: c.root.id,
         tint,
@@ -593,7 +836,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
       preserveAspectRatio="xMidYMid meet"
       style={{ display: 'block', touchAction: 'none', cursor: panning ? 'grabbing' : 'default' }}
       role="img"
-      aria-label="گراف شبکه روابط — خوشه‌های سازمانی"
+      aria-label="گراف شبکه روابط — شبکهٔ فعال + سینی دسته‌های عموم"
       onPointerDown={onSvgPointerDown}
       onPointerMove={onSvgPointerMove}
       onPointerUp={onSvgPointerUp}
@@ -635,6 +878,9 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
         stroke="var(--card-border, #E6EAF2)" strokeWidth={1.2} opacity={0.7} pointerEvents="none" />
 
       <g transform={`translate(${W / 2 * (1 - zoom)} ${H / 2 * (1 - zoom)}) scale(${zoom})`} style={{ transformOrigin: '0 0' }}>
+        {/* ==== شبکهٔ فعال (در نمای دسته‌ای، هنگام باز بودن پنل دسته کمرنگ می‌شود) ==== */}
+        <g opacity={expandedTray ? 0.13 : 1} pointerEvents={expandedTray ? 'none' : undefined}
+          style={{ transition: 'opacity .18s ease' }}>
         {/* ============ cluster bubbles ============ */}
         {bubbles.map((b) => {
           const st = nodeStats.get(b.root.id);
@@ -645,7 +891,9 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
               <rect x={b.x} y={b.y} width={b.w} height={6} rx={3} fill={b.tint.stroke} opacity={0.28} />
               {/* label pill — عرض از اندازهٔ واقعی متن محاسبه می‌شود و متن داخل کادر کلاپ می‌شود */}
               {(() => {
-                const labelText = nodeDisplayName(b.root).length > 26 ? nodeDisplayName(b.root).slice(0, 25) + '…' : nodeDisplayName(b.root);
+                const memberCount = b.ids.size - 1;
+                const nameText = nodeDisplayName(b.root).length > 26 ? nodeDisplayName(b.root).slice(0, 25) + '…' : nodeDisplayName(b.root);
+                const labelText = memberCount > 0 ? `${nameText} · ${new Intl.NumberFormat('fa-IR').format(memberCount)}` : nameText;
                 const pillW = Math.max(108, Math.ceil(textWidth(labelText, 800, 11)) + 40 + (dotColor ? 14 : 0));
                 const pillX = b.labelX - pillW / 2;
                 return (
@@ -666,7 +914,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
                 clipPath={`url(#pill-clip-${safeId(b.key)})`}
                 style={{ pointerEvents: 'none', userSelect: 'none' }}
               >
-                {nodeDisplayName(b.root).length > 26 ? nodeDisplayName(b.root).slice(0, 25) + '…' : nodeDisplayName(b.root)}
+                {(() => { const mc = b.ids.size - 1; const nt = nodeDisplayName(b.root).length > 26 ? nodeDisplayName(b.root).slice(0, 25) + '…' : nodeDisplayName(b.root); return mc > 0 ? `${nt} · ${new Intl.NumberFormat('fa-IR').format(mc)}` : nt; })()}
               </text>
             </g>
           );
@@ -737,7 +985,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
         })}
 
         {/* ============ nodes ============ */}
-        {graph.nodes.map((n) => {
+        {(nested ? activeNodes.filter((n) => nestedRenderIds.has(n.id)) : activeNodes).map((n) => {
           const p = posOf(n.id);
           const alpha = nodeAlpha(n.id);
           const acc = nodeAccent(n.id);
@@ -907,6 +1155,119 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
             </g>
           );
         })}
+        </g>{/* پایان شبکهٔ فعال */}
+
+        {/* ============ سینی‌های دستهٔ عموم‌ها (نمای تو در تو) ============ */}
+        {nested && !expandedTray && trayGeo.cards.length > 0 && (
+          <g data-tray-dock="true">
+            {trayGeo.cards.map((c) => {
+              const t = c.tray;
+              const preview = t.members.slice(0, 8);
+              const more = t.members.length - preview.length;
+              const chipW = (c.w - 26) / 2;
+              return (
+                <g key={t.key} data-tray={t.key}>
+                  <rect x={c.x} y={c.y} width={c.w} height={c.h} rx={15}
+                    fill="var(--card-bg, #FFFFFF)" stroke={t.color} strokeWidth={1.2} opacity={0.97}
+                    style={{ filter: 'url(#node-shadow)' }} />
+                  <rect x={c.x} y={c.y} width={c.w} height={30} rx={15} fill={t.color} opacity={0.09} />
+                  {/* RTL: برچسب دسته سمت راست (لنگر start در RTL = لبهٔ راست) */}
+                  <circle cx={c.x + c.w - 13} cy={c.y + 15} r={4.2} fill={t.color} />
+                  <text x={c.x + c.w - 24} y={c.y + 18.5} fontSize={10} fontWeight={800}
+                    fill="var(--text-primary, #2A3040)" style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                    {fitText(TRAY_SHORT_FA[t.key] ?? t.fa, c.w - 152, 800, 10)}
+                  </text>
+                  {/* شمارندهٔ اعضا — سمت چپ */}
+                  <rect x={c.x + 6} y={c.y + 5} width={44} height={20} rx={10} fill={t.color} opacity={0.13} />
+                  <text x={c.x + 28} y={c.y + 18.5} textAnchor="middle" fontSize={9.4} fontWeight={800}
+                    fill={t.color} style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                    {new Intl.NumberFormat('fa-IR').format(t.members.length)}
+                  </text>
+                  {/* دکمهٔ باز کردن دسته */}
+                  <g style={{ cursor: 'pointer' }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => { e.stopPropagation(); setExpandedTray(t.key); }}>
+                    <rect x={c.x + 54} y={c.y + 5} width={56} height={20} rx={10} fill={t.color} opacity={0.14} />
+                    <text x={c.x + 82} y={c.y + 18.5} textAnchor="middle" fontSize={8.6} fontWeight={800}
+                      fill={t.color} style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                      باز کردن
+                    </text>
+                  </g>
+                  {preview.map((m, j) => {
+                    const col = j % 2;
+                    const row = Math.floor(j / 2);
+                    return (
+                      <TrayChip key={m.id} node={m} x={c.x + 13 + col * (chipW + 6)} y={c.y + 36 + row * 23}
+                        w={chipW} h={19} color={t.color} fontPx={8.4}
+                        onSelect={(n) => onNodeSelect?.(n)}
+                        onOpen={(n) => onNodeOpen?.(`/organizations/${n.organizationId ?? bareId(n.id)}`)} />
+                    );
+                  })}
+                  {more > 0 && (
+                    <text x={c.x + c.w / 2} y={c.y + c.h - 7} textAnchor="middle" fontSize={8.4} fontWeight={700}
+                      fill="var(--text-muted, #7A8699)" style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                      و {new Intl.NumberFormat('fa-IR').format(more)} سازمان دیگر — «باز کردن»
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+          </g>
+        )}
+
+        {/* ============ پنل دستهٔ باز‌شده — همهٔ اعضا، شبکه‌ای و مرتب ============ */}
+        {nested && panelGeo && (() => {
+          const pg = panelGeo;
+          const t = pg.tray;
+          const shown = t.members.slice(0, pg.capacity);
+          const rest = t.members.length - shown.length;
+          return (
+            <g data-tray-panel={t.key}>
+              <rect x={0} y={0} width={W} height={H} fill="#F6F8FC" opacity={0.55}
+                style={{ cursor: 'default' }}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); setExpandedTray(null); }} />
+              <rect x={pg.x} y={pg.y} width={pg.w} height={pg.h} rx={18}
+                fill="var(--card-bg, #FFFFFF)" stroke={t.color} strokeWidth={1.4}
+                style={{ filter: 'url(#node-shadow)' }} />
+              <rect x={pg.x} y={pg.y} width={pg.w} height={38} rx={18} fill={t.color} opacity={0.09} />
+              {/* RTL: عنوان دسته سمت راست (لنگر start = لبهٔ راست در RTL) */}
+              <circle cx={pg.x + pg.w - 19} cy={pg.y + 19} r={5} fill={t.color} />
+              <text x={pg.x + pg.w - 31} y={pg.y + 23.5} fontSize={13} fontWeight={800}
+                fill="var(--text-primary, #2A3040)" style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                {fitText(t.fa, pg.w - 300, 800, 13)}
+              </text>
+              <text x={pg.x + pg.w - 43 - textWidth(fitText(t.fa, pg.w - 300, 800, 13), 800, 13) - 10} y={pg.y + 23.5} fontSize={10.5} fontWeight={700}
+                fill="var(--text-muted, #7A8699)" style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                {new Intl.NumberFormat('fa-IR').format(t.members.length)} سازمان — کلیک = انتخاب · دابل‌کلیک = صفحهٔ سازمان
+              </text>
+              {/* بستن پنل — سمت چپ */}
+              <g style={{ cursor: 'pointer' }}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); setExpandedTray(null); }}>
+                <rect x={pg.x + 12} y={pg.y + 8} width={30} height={22} rx={11} fill="#3B4252" opacity={0.08} />
+                <text x={pg.x + 27} y={pg.y + 23.5} textAnchor="middle" fontSize={12} fontWeight={800}
+                  fill="var(--text-secondary, #556070)" style={{ pointerEvents: 'none', userSelect: 'none' }}>✕</text>
+              </g>
+              {shown.map((m, j) => {
+                const col = j % pg.cols;
+                const row = Math.floor(j / pg.cols);
+                return (
+                  <TrayChip key={m.id} node={m} x={pg.x + 24 + col * (pg.chipW + 10)} y={pg.y + 52 + row * 30}
+                    w={pg.chipW} h={pg.chipH} color={t.color} fontPx={9.4}
+                    onSelect={(n) => onNodeSelect?.(n)}
+                    onOpen={(n) => onNodeOpen?.(`/organizations/${n.organizationId ?? bareId(n.id)}`)} />
+                );
+              })}
+              {rest > 0 && (
+                <text x={pg.x + pg.w / 2} y={pg.y + pg.h - 14} textAnchor="middle" fontSize={9.6} fontWeight={700}
+                  fill="var(--text-muted, #7A8699)" style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                  نمایش {new Intl.NumberFormat('fa-IR').format(shown.length)} از {new Intl.NumberFormat('fa-IR').format(t.members.length)} — برای یافتن سریع، از جستجوی نوار بالا استفاده کنید
+                </text>
+              )}
+            </g>
+          );
+        })()}
 
         {/* ============ floating info card (hover/selection) ============ */}
         {cardNode && !pathActive && (() => {

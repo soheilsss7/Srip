@@ -123,19 +123,21 @@ ok('add member flash', addFlash);
   ok('assess modal', await page.evaluate(() => (document.querySelector('.modal-card')?.textContent ?? '').includes('ارزیابی')));
   await page.evaluate(() => {
     const card = document.querySelector('.modal-card');
-    const stage = [...card.querySelectorAll('select')].find(s => [...s.options].some(o => o.value === 'ACTIVE'));
-    if (stage) { stage.value = 'ACTIVE'; stage.dispatchEvent(new Event('change', { bubbles: true })); }
-    const range = card.querySelector('input[type="range"]');
-    if (range) {
-      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    /* ارزیابی به «بازیگر کلیدیِ در مرحلهٔ آگاه» = شکاف عقب‌ماندگی واقعی →
+       محرک PUBLIC_GAP_DETECTED باید فعال شود و اقدام/اعلان خودکار بسازد */
+    const stage = [...card.querySelectorAll('select')].find(s => [...s.options].some(o => o.value === 'AWARE'));
+    if (stage) { stage.value = 'AWARE'; stage.dispatchEvent(new Event('change', { bubbles: true })); }
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    [...card.querySelectorAll('input[type="range"]')].forEach((range) => {
       setter.call(range, '80'); range.dispatchEvent(new Event('input', { bubbles: true }));
-    }
+    });
     const btn = [...card.querySelectorAll('button')].find(b => b.textContent.includes('ثبت ارزیابی'));
     if (btn) btn.click();
   });
   ok('assess flash', await waitForText('ارزیابی «') && await waitForText('بازبینی'));
 
-  // 7) coverage tab
+  // 7) coverage tab — پس از ثبت ارزیابی، رندر جدول اعضا تمام شود بعد کلیک تب (پایداری در بار بالا)
+  await new Promise(r => setTimeout(r, 900));
   await page.evaluate(() => { const b = [...document.querySelectorAll('button[role="tab"]')].find(x => (x.textContent ?? '').includes('پوشش')); if (b) b.click(); });
   const covOk = await page.waitForFunction(() => {
     const t = [...document.querySelectorAll('button[role="tab"]')].find(x => (x.textContent ?? '').includes('پوشش'));

@@ -67,18 +67,32 @@ const AUDIT_FN = () => {
   const cleanLeaves = leafTexts.filter(el => !inOverlay(el));
   const textRectsOf = (el) => {
     const out = [], range = document.createRange();
+    /* فقط بخش مرئی متن — متن کلیپ‌شده (overflow:hidden مانند ellipsis) هم‌پوشانی بصری ندارد */
+    const box = el.getBoundingClientRect();
     for (const n of el.childNodes) {
       if (n.nodeType !== 3 || !n.textContent.trim()) continue;
       range.selectNodeContents(n);
-      for (const r of range.getClientRects()) if (r.width > 0 && r.height > 0) out.push(r);
+      for (const r of range.getClientRects()) {
+        if (r.width <= 0 || r.height <= 0) continue;
+        const left = Math.max(r.left, box.left), right = Math.min(r.right, box.right);
+        const top = Math.max(r.top, box.top), bottom = Math.min(r.bottom, box.bottom);
+        if (right - left > 0.5 && bottom - top > 0.5) out.push({ left, right, top, bottom, width: right - left, height: bottom - top });
+      }
     }
     return out;
   };
   const seen = new Set();
+  /* فقط عناصر واقعاً مرئی در ویوپورت — سایدبارِ بسته (translateX بیرون کادر) و محتوای پن‌شدهٔ گراف مقایسه نشوند */
+  const inViewport = (el) => {
+    const r = el.getBoundingClientRect();
+    return r.left < innerWidth - 1 && r.right > 1 && r.top < innerHeight - 1 && r.bottom > 1;
+  };
   for (const a of cleanLeaves) {
+    if (!inViewport(a)) continue;
     for (const b of cleanLeaves) {
       if (a === b) continue;
       if (a.contains(b) || b.contains(a)) continue;
+      if (!inViewport(b)) continue;
       let ox = 0, oy = 0;
       outer: for (const ra of textRectsOf(a)) {
         for (const rb of textRectsOf(b)) {
@@ -127,13 +141,20 @@ const browser = await puppeteer.launch({
 try {
   const page = await browser.newPage();
   await page.goto(`${BASE}/login`, { waitUntil: 'networkidle0', timeout: 90000 });
-  // صبر تا دکمهٔ دمو فعال شود (mockReady بعد از ثبت SW روشن می‌شود؛ بار اول reload هم می‌شود)
-  await page.waitForSelector('.auth-demo-row:not([disabled])', { timeout: 90000 });
-  await new Promise(r => setTimeout(r, 400));
-  await page.evaluate(() => {
-    const b = [...document.querySelectorAll('.auth-demo-row')][0];
-    if (b) b.click();
+  /* دکمه‌های ورود دمو حذف شده‌اند → ورود مستقیم با API موک (demo + OTP) و نشست‌سازی */
+  await page.evaluate(async () => {
+    const API = location.pathname.replace(/(login\/?)?$/, '') + 'api/v1';
+    const r = await fetch(`${API}/auth/login`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ username: 'demo', password: '123456', otp: '123456' }),
+    });
+    const d = await r.json();
+    if (d.accessToken) {
+      sessionStorage.setItem('srip_access_token', d.accessToken);
+      if (d.refreshToken) sessionStorage.setItem('srip_refresh_token', d.refreshToken);
+    }
   });
+  await page.goto(`${BASE}/`, { waitUntil: 'networkidle0', timeout: 90000 }).catch(() => {});
   await page.waitForFunction(() => !location.pathname.endsWith('/login'), { timeout: 60000 }).catch(() => {});
   await new Promise(r => setTimeout(r, 3000));
   console.error('after login url:', page.url());

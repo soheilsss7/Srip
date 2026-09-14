@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.12.07';
+const DEMO_MOCK_VERSION = '2026.09.13.01';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -2217,7 +2217,7 @@ function collectUnifiedAlerts(req,authUser){
   }
   /* SECURITY — رویدادهای امنیتی بحرانی باز */
   if(can('security.read')){
-    const orgIds=authUser?.isOwner?null:visibleOrgIds(req);
+    const orgIds=visibleOrgIds(req); /* مستأجرآگاه: دنیای دمو فقط برای دمو */
     for(const ev of (DB.securityEvents??[]).filter(x=>x.severity==='CRITICAL'||x.type==='ACCOUNT_LOCKED')){
       /* همان قاعدهٔ /security/events: مالک همه؛ مستأجر فقط رویدادهای خودش/سازمانش */
       if(orgIds!==null&&!(ev.userId===authUser?.id||(ev.organizationId&&orgIds.includes(ev.organizationId)))) continue;
@@ -7350,7 +7350,7 @@ async function __handler(req, res) {
   /* ------------------------------ analytics ------------------------------ */
   /* موتور واقعی Analytics (پاریتی AnalyticsService): scope سازمانی، پنجرهٔ ۳۰روزه،
      شمارش از رویدادهای ذخیره‌شده، ثبت رویداد/نتیجه با مجوز analytics.write */
-  const canAn=(perm)=>authUser?.isOwner||(authUser?.permissions??[]).includes(perm);
+  const canAn=(perm)=>{const ps=authUser?.permissions??[];return !!authUser?.isOwner||ps.includes(perm)||ps.includes('*');};
   const AN_READ_MSG='شما مجوز «تحلیل و هوشمندی» (analytics.read) را ندارید.';
   const AN_WRITE_MSG='شما مجوز «ثبت رویداد سنجش» (analytics.write) را ندارید.';
   /* مستأجرآگاه: حتی مالک فقط رویدادهای محدودهٔ خودش را می‌بیند (دمو فقط در دمو) */
@@ -7415,11 +7415,13 @@ async function __handler(req, res) {
   if(is('/analytics/network')&&method==='GET'){
     if(!canAn('analytics.read')) return json(res,403,{message:AN_READ_MSG});
     const qOrg=q.get('organizationId')??null;
-    let global=authUser?.isOwner??false;
-    let orgIds=global?null:visibleOrgIds(req);
+    /* مستأجرآگاه: محیط کاربر (مالک واقعی → کل محیط واقعی؛ مالک دمو → دنیای دمو).
+       «همه‌چیز برای مالک» قدیمی باعث می‌شد دادهٔ دمو در تحلیل مالک واقعی بیاید. */
+    let orgIds=visibleOrgIds(req);
+    let global=false;
     if(qOrg){
-      if(orgIds&&!orgIds.includes(qOrg)) return json(res,403,{message:'دسترسی به سازمان موردنظر (organizationId) را ندارید.'});
-      orgIds=[qOrg]; global=false;
+      if(!orgIds.includes(qOrg)) return json(res,403,{message:'دسترسی به سازمان موردنظر (organizationId) را ندارید.'});
+      orgIds=[qOrg];
     }
     const orgSet=new Set(orgIds??[]);
     const rels=orgIds?RELS.filter(r=>!r.deletedAt&&(orgSet.has(r.sourceOrganizationId)||orgSet.has(r.targetOrganizationId))):RELS.filter(r=>!r.deletedAt);
@@ -7436,7 +7438,7 @@ async function __handler(req, res) {
     const covered=new Set();
     for(const r of rels){ if(r.sourceOrganizationId) covered.add(r.sourceOrganizationId); if(r.targetOrganizationId) covered.add(r.targetOrganizationId); }
     const organizationsCovered=covered.size;
-    const coverage=global?0:Math.min(100,Math.round(organizationsCovered/Math.max(1,(orgIds??[]).length)*100));
+    const coverage=Math.min(100,Math.round(organizationsCovered/Math.max(1,orgIds.length)*100));
     const diversity=rels.length?Math.min(100,Math.round(organizationsCovered/rels.length*100)):0;
     const riskAdjusted=100-risk;
     const components={relationshipQuality:quality,influence,strategicValue,opportunityPotential,resilience,coverage,diversity,engagement,riskAdjusted};
@@ -9606,21 +9608,21 @@ async function __handler(req, res) {
   if(is('/security/events')&&method==='GET'){
     if(!(authUser?.permissions??[]).includes('security.read')&&!authUser?.isOwner) return json(res,403,{message:'شما مجوز «مشاهده امنیت» (security.read) را ندارید.'});
     const take=Math.min(Number(q.get('take'))||200,500);
-    const orgIds=authUser?.isOwner?null:visibleOrgIds(req);
-    const rows=(DB.securityEvents??[]).filter(x=>orgIds===null?true:(x.userId===authUser.id||(x.organizationId&&orgIds.includes(x.organizationId))));
+    const orgIds=visibleOrgIds(req); /* مستأجرآگاه: دنیای دمو فقط برای دمو */
+    const rows=(DB.securityEvents??[]).filter(x=>x.userId===authUser.id||(x.organizationId&&orgIds.includes(x.organizationId)));
     return json(res,200,rows.slice(0,take).map(securityEventView));
   }
   if(is('/security/exports')&&method==='GET'){
     if(!(authUser?.permissions??[]).includes('audit.read')&&!authUser?.isOwner) return json(res,403,{message:'شما مجوز «مشاهده ممیزی» (audit.read) را ندارید.'});
     const take=Math.min(Number(q.get('take'))||200,500);
-    const orgIds=authUser?.isOwner?null:visibleOrgIds(req);
-    const rows=(DB.exportLog??[]).filter(x=>orgIds===null?true:(x.userId===authUser.id||(x.organizationId&&orgIds.includes(x.organizationId))));
+    const orgIds=visibleOrgIds(req); /* مستأجرآگاه */
+    const rows=(DB.exportLog??[]).filter(x=>x.userId===authUser.id||(x.organizationId&&orgIds.includes(x.organizationId)));
     return json(res,200,rows.slice(0,take).map(exportView));
   }
   if(is('/enterprise/exports')&&method==='GET'){
     if(!authUser?.isOwner&&!(authUser?.permissions??[]).includes('enterprise.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت سازمانی» (enterprise.read) را ندارید.'});
     const qOrg=q.get('organizationId')??null;
-    const orgIds=authUser?.isOwner?(qOrg?[qOrg]:null):(qOrg&&visibleOrgIds(req).includes(qOrg)?[qOrg]:visibleOrgIds(req));
+    const orgIds=qOrg&&visibleOrgIds(req).includes(qOrg)?[qOrg]:visibleOrgIds(req); /* مستأجرآگاه */
     const rows=(DB.exportLog??[]).filter(x=>orgIds===null?true:x.organizationId==null||orgIds.includes(x.organizationId));
     return json(res,200,rows.slice(0,100).map(exportView).sort((a,b)=>String(b.createdAt??'').localeCompare(String(a.createdAt??''))));
   }
@@ -10193,7 +10195,7 @@ async function __handler(req, res) {
     const oid=body?.organizationId?String(body.organizationId):null;
     if(!oid) return json(res,400,{message:'organizationId برای تشخیص تکراری لازم است.'});
     const gate=dqدروازه(oid); if(gate) return json(res,403,{message:gate});
-    const orgScope=authUser?.isOwner?null:visibleOrgIds(req);
+    const orgScope=visibleOrgIds(req); /* مستأجرآگاه: کاندید تکراری از دنیای دمو نیاید */
     return json(res,200,dqDetectCandidates(entityType,body?.data??{},oid,orgScope));
   }
   if(match('/data/import/:id/تأیید')&&method==='POST') return json(res,200,{ok:true});

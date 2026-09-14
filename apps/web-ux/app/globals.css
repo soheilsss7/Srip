@@ -1278,8 +1278,10 @@ textarea{resize:vertical}
 .ac-dot.w{background:var(--srip-amber)}
 .ac-dot.s{background:var(--srip-success)}
 .ac-dot.n{background:var(--srip-accent)}
-.ac-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
-.ac-date{margin-inline-start:auto;font-size:10.5px;color:var(--text-muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.ac-name{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.ac-date{flex:0 0 auto;margin-inline-start:auto;font-size:10.5px;color:var(--text-muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+/* موبایل باریک: عنوان کامل با کوتاه‌شدن، تاریخ همیشه در همان خط — بدون هم‌پوشانی */
+@media(max-width:420px){.ac-item{gap:6px;font-size:11.5px}.ac-date{font-size:9.8px}}
 .ac-none{display:flex;align-items:center;gap:8px;color:var(--srip-success);font-size:12px;padding:8px 9px}
 .ac-none svg{flex:0 0 auto}
 

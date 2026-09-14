@@ -269,6 +269,7 @@ export default function Page() {
   const [hoverEdge, setHoverEdge] = useState<string | null>(null);
   const [renderCounts, setRenderCounts] = useState({ nodes: 0, edges: 0 });
   const [showLegend, setShowLegend] = useState(true);
+  const [variant, setVariant] = useState<'nested' | 'classic'>('nested'); /* چیدمان گراف: دسته‌ای تو در تو | کلاسیک */
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [graphFs, setGraphFs] = useState(false);
   // تمام‌صفحهٔ گراف: Esc می‌بندد و اسکرول پشت آن قفل می‌شود
@@ -1019,6 +1020,9 @@ export default function Page() {
               </div>
             </div>
             <div className="net-graph-toolbar">
+              <span className="net-pinch-hint" title="چیدمان گراف: دسته‌ای تو در تو (شبکهٔ فعال + سینی دسته‌ها) یا کلاسیک (همهٔ سازمان‌ها)"><Layers size={12}/> چیدمان:</span>
+              <button className={`net-btn ${variant === 'nested' ? 'primary' : ''}`} onClick={() => { setVariant('nested'); log('چیدمان دسته‌ای'); }} title="شبکهٔ فعال در مرکز + سازمان‌های بدون رابطه در سینی‌های دسته">دسته‌ای</button>
+              <button className={`net-btn ${variant === 'classic' ? 'primary' : ''}`} onClick={() => { setVariant('classic'); log('چیدمان کلاسیک'); }} title="همهٔ سازمان‌ها به‌صورت خوشه‌ای کامل">کلاسیک</button>
               <button className="net-btn" onClick={() => graphHandle.current?.fit()} disabled={!graph} title="متناسب با نما"><Maximize size={12}/> متناسب</button>
               <button className="net-btn" onClick={() => graphHandle.current?.reset()} disabled={!graph} title="بازنشانی">بازنشانی</button>
               <button className="net-btn" onClick={() => graphHandle.current?.zoomBy(1.35)} disabled={!graph} title="بزرگ‌نمایی" aria-label="بزرگ‌نمایی">+</button>
@@ -1161,6 +1165,7 @@ export default function Page() {
               <NetworkGraph
                 ref={graphHandle}
                 graph={graphProp}
+                variant={variant}
                 selectedNodeId={selected?.id ?? null}
                 selectedEdgeId={selectedEdgeId}
                 focusNodeId={focus || null}
@@ -1197,6 +1202,14 @@ export default function Page() {
           {/* Legend */}
           {showLegend && (
             <div className="net-legend">
+              {variant === 'nested' ? (
+                <div>
+                  <strong>چیدمان دسته‌ای (تو در تو)</strong>{' '}
+                  <span className="lg">مرکز: شبکهٔ فعال (سازمان‌های دارای رابطه + خودِ شرکت)</span>
+                  <span className="lg">پایین: سینی دسته‌های عموم — سازمان‌های بدون رابطهٔ ثبت‌شده، گروه‌بندی‌شده بر اساس سند</span>
+                  <span className="lg">«باز کردن» = فهرست کامل آن دسته · کلیک روی سازمان = انتخاب · دابل‌کلیک = صفحهٔ سازمان</span>
+                </div>
+              ) : null}
               <div>
                 <strong>گره‌ها</strong>{' '}
                 <span className="lg"><span className="sw" style={{ background: 'linear-gradient(135deg,#6C8FF7,#3B5BDB)', borderRadius: 4 }} />سازمان</span>
@@ -1582,6 +1595,8 @@ export default function Page() {
                   </div>
                 </div>
                 <div className="net-graph-toolbar">
+                  <button className={`net-btn ${variant === 'nested' ? 'primary' : ''}`} onClick={() => { setVariant('nested'); log('چیدمان دسته‌ای'); }}>دسته‌ای</button>
+                  <button className={`net-btn ${variant === 'classic' ? 'primary' : ''}`} onClick={() => { setVariant('classic'); log('چیدمان کلاسیک'); }}>کلاسیک</button>
                   <button className="net-btn" onClick={() => graphHandle.current?.fit()} title="متناسب با نما"><Maximize size={12}/> متناسب</button>
                   <button className="net-btn" onClick={() => graphHandle.current?.reset()} title="بازنشانی">بازنشانی</button>
                   <button className="net-btn" onClick={() => graphHandle.current?.zoomBy(1.35)} title="بزرگ‌نمایی" aria-label="بزرگ‌نمایی">+</button>
@@ -1597,6 +1612,7 @@ export default function Page() {
 <NetworkGraph
                                   ref={graphHandle}
                                   graph={graphProp}
+                                  variant={variant}
                                   selectedNodeId={selected?.id ?? null}
                                   selectedEdgeId={selectedEdgeId}
                                   focusNodeId={focus || null}
