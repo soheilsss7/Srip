@@ -99,6 +99,12 @@ async function refreshAccessToken():Promise<string|null>{
   return refreshPromise;
 }
 export async function api<T=unknown>(path:string,init:ApiOptions={}):Promise<T>{
+  /* پس از خروج (نشست پاک‌شده): هیچ درخواستی به شبکه نرود —
+     فقط endpointهای عمومی (ورود/ثبت‌نام/سلامت) بدون توکن مجازند.
+     این نگهبان نویز ۴۰۱ در لحظهٔ خروج را حذف می‌کند. */
+  if(!path.startsWith('/auth/')&&!path.startsWith('/health')&&!getAccessToken()&&!getRefreshToken()){
+    throw new ApiError('نشست شما منقضی شده است.',401,undefined);
+  }
   let response=await raw(path,init,getAccessToken()??undefined);
   if(response.status===401&&!path.startsWith('/auth/')){
     const next=await refreshAccessToken();if(next)response=await raw(path,init,next);

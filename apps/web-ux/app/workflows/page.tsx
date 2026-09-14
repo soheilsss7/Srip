@@ -335,8 +335,11 @@ export default function WorkflowsPage({ initialTab = 'workflows' }: { initialTab
         await api(`/workflows/${w.id}/delete`, { method: 'DELETE', body: JSON.stringify(payload) });
         setFlash(`گردش کار «${w.name}» غیرفعال شد.`);
       } else {
+        /* فعال‌سازی = حذف ردیف غیرفعال + بازآفرینی فعال (توافق DELETE/POST موک) —
+           بدون حذف، ردیف تکراری ساخته می‌شد */
         const { id, createdAt, updatedAt, actionCount, steps, triggerType, organizationName, ...rest } = w as any;
-        await api('/workflows', { method: 'POST', body: JSON.stringify({ ...rest, isActive: true }) });
+        await api(`/workflows/${w.id}/delete`, { method: 'DELETE', body: JSON.stringify({ definition: w.definition ?? {} }) });
+        await api('/workflows', { method: 'POST', body: JSON.stringify({ ...rest, definition: w.definition ?? {}, isActive: true }) });
         setFlash(`گردش کار «${w.name}» دوباره فعال شد.`);
       }
       await load();
@@ -347,7 +350,8 @@ export default function WorkflowsPage({ initialTab = 'workflows' }: { initialTab
     if (!confirm(`گردش کار «${w.name}» حذف شود؟`)) return;
     setBusy('d' + w.id); setError('');
     try {
-      await api(`/workflows/${w.id}/delete`, { method: 'DELETE', body: JSON.stringify({ ...w, definition: w.definition ?? {}, isActive: false }) });
+      /* بدنهٔ بدون id/name = حذف قطعی در توافق موک (بدنهٔ کامل با id = تغییر isActive) */
+      await api(`/workflows/${w.id}/delete`, { method: 'DELETE', body: JSON.stringify({ definition: w.definition ?? {}, isActive: false }) });
       setFlash(`گردش کار «${w.name}» حذف شد.`);
       await load();
     } catch (x) { setError((x as Error).message); }

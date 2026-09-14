@@ -19,7 +19,7 @@ const PORT = Number(process.env.MOCK_API_PORT || 4000);
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.14.01';
+const DEMO_MOCK_VERSION = '2026.09.14.04';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -450,7 +450,7 @@ function unifiedAlert(req,authUser,module,severity,entityType,entityId,title,rea
 }
 function collectUnifiedAlerts(req,authUser){
   const items=[];
-  const can=(perm)=>authUser?.isOwner||(authUser?.permissions??[]).includes(perm);
+  const can=(perm)=>authUser?.isOwner||(authUser?.permissions??[]).includes('*')||(authUser?.permissions??[]).includes(perm);
   /* RELATIONSHIP — همان منطق /relationships/alerts، نگاشت به شکل واحد */
   for(const a of relationshipAlertItems(req)){
     items.push(unifiedAlert(req,authUser,'RELATIONSHIP',ALERT_TONE_TO_SEVERITY[a.tone]??'INFO','RELATIONSHIP',a.relationshipId??a.id,a.title,a.body,a.relationshipId?'مشاهدهٔ رابطه':'بررسی پوشش بازار',a.relationshipId?`/relationships/${a.relationshipId}`:'/relationships',{kind:a.kind,marketKind:a.marketKind??null,segment:a.segment??null}));
@@ -5314,7 +5314,7 @@ const server=http.createServer(async(req,res)=>{
   }
   /* ── فاز ۳ (ADR-0007): هشدار یکپارچهٔ همهٔ ماژول‌ها — یک منبع، یک شکل، فیلترپذیر ── */
   if(is('/alerts')&&method==='GET'){
-    const alertsCanView=authUser?.isOwner||(authUser?.permissions??[]).includes('dashboard.read'); /* همان hasPerm، اینجا inline چون const آن پایین‌تر تعریف می‌شود */
+    const alertsCanView=authUser?.isOwner||(authUser?.permissions??[]).includes('*')||(authUser?.permissions??[]).includes('dashboard.read'); /* همان hasPerm، اینجا inline چون const آن پایین‌تر تعریف می‌شود */
     if(!alertsCanView) return json(res,403,{message:'شما مجوز «مشاهدهٔ داشبورد» (dashboard.read) را ندارید.'});
     const modF=q.get('module');
     const sevF=q.get('severity');
@@ -5329,7 +5329,7 @@ const server=http.createServer(async(req,res)=>{
   }
   const alertResolve=match('/alerts/:id/resolve');
   if(alertResolve&&method==='POST'){
-    const alertsCanView=authUser?.isOwner||(authUser?.permissions??[]).includes('dashboard.read');
+    const alertsCanView=authUser?.isOwner||(authUser?.permissions??[]).includes('*')||(authUser?.permissions??[]).includes('dashboard.read');
     if(!alertsCanView) return json(res,403,{message:'شما مجوز «مشاهدهٔ داشبورد» (dashboard.read) را ندارید.'});
     const id=alertResolve[0];
     const all=collectUnifiedAlerts(req,authUser);
@@ -5636,7 +5636,7 @@ const server=http.createServer(async(req,res)=>{
     const x=INTERACTIONS.find(i=>i.id===interactionId[0]&&!i.deletedAt);
     if(!x) return json(res,404,{message:'تعامل یافت نشد.'});
     if(!interactionWritableScope(x)) return json(res,403,{message:'تعامل خارج از محدودهٔ دسترسی شماست.'});
-    if(!(authUser?.permissions??[]).includes('interaction.write')&&!authUser?.isOwner) return json(res,403,{message:'شما مجوز «ثبت تعامل» (interaction.write) را ندارید.'});
+    if(!(authUser?.permissions??[]).includes('interaction.write')&&!(authUser?.permissions??[]).includes('*')&&!authUser?.isOwner) return json(res,403,{message:'شما مجوز «ثبت تعامل» (interaction.write) را ندارید.'});
     const b=await readBody(req);
     const allowed=['subject','summary','outcome','durationMinutes','importance','sentiment','followUpRequired','followUpAt','type','occurredAt','purpose','channel','quality','result','direction','nextStep','nextStepAt'];
     const before={...x};
@@ -5666,7 +5666,7 @@ const server=http.createServer(async(req,res)=>{
     const x=INTERACTIONS.find(i=>i.id===interactionId[0]&&!i.deletedAt);
     if(!x) return json(res,404,{message:'تعامل یافت نشد.'});
     if(!interactionWritableScope(x)) return json(res,403,{message:'تعامل خارج از محدودهٔ دسترسی شماست.'});
-    if(!(authUser?.permissions??[]).includes('interaction.write')&&!authUser?.isOwner) return json(res,403,{message:'شما مجوز «ثبت تعامل» (interaction.write) را ندارید.'});
+    if(!(authUser?.permissions??[]).includes('interaction.write')&&!(authUser?.permissions??[]).includes('*')&&!authUser?.isOwner) return json(res,403,{message:'شما مجوز «ثبت تعامل» (interaction.write) را ندارید.'});
     x.deletedAt=nowIso(); x.deletedById=authUser.id;
     audit(req,'DELETE','Interaction',x.id,'OK',{meta:{subject:x.subject,permanent:false,reason:'archive'}});
     saveDb();
@@ -6522,7 +6522,7 @@ const server=http.createServer(async(req,res)=>{
     if(b.relationshipId){ const r=RELS.find(x=>x.id===b.relationshipId); if(!r) return json(res,404,{message:'رابطه یافت نشد.'}); if(!relInScope(req,r)) return json(res,403,{message:'رابطه خارج از محدودهٔ دسترسی شماست.'}); }
     if(b.organizationId&&!inScope(req,b.organizationId)) return json(res,403,{message:'سازمان خارج از محدوده است.'});
     if(b.personId){ const p=personById(b.personId); if(!p) return json(res,404,{message:'شخص یافت نشد.'}); if(!inScope(req,p.organizationId)) return json(res,403,{message:'شخص خارج از محدوده است.'}); }
-    if(!(authUser?.permissions??[]).includes('interaction.write')&&!authUser?.isOwner) return json(res,403,{message:'شما مجوز «ثبت تعامل» (interaction.write) را ندارید.'});
+    if(!(authUser?.permissions??[]).includes('interaction.write')&&!(authUser?.permissions??[]).includes('*')&&!authUser?.isOwner) return json(res,403,{message:'شما مجوز «ثبت تعامل» (interaction.write) را ندارید.'});
     const rel=b.relationshipId?RELS.find(x=>x.id===b.relationshipId):null;
     const orgId=b.organizationId??(rel?rel.sourceOrganizationId:null)??(b.personId?personById(b.personId)?.organizationId??null:null)??null;
     const purpose=b.purpose?String(b.purpose).toUpperCase():null;
@@ -7095,13 +7095,13 @@ const server=http.createServer(async(req,res)=>{
     {key:'CALL',name:'تماس'},{key:'VISIT',name:'بازدید'},{key:'MEETING',name:'جلسه'},{key:'EMAIL',name:'ایمیل'},{key:'LUNCH',name:'ناهار کاری'},{key:'EVENT',name:'رویداد'},
   ]);
   if(is('/enterprise/feature-flags')&&method==='GET'){
-    if(!authUser?.isOwner&&!(authUser?.permissions??[]).includes('feature_flag.read')) return json(res,403,{message:'شما مجوز «مشاهده پرچم‌های ویژگی» (feature_flag.read) را ندارید.'});
+    if(!authUser?.isOwner&&!(authUser?.permissions??[]).includes('*')&&!(authUser?.permissions??[]).includes('feature_flag.read')) return json(res,403,{message:'شما مجوز «مشاهده پرچم‌های ویژگی» (feature_flag.read) را ندارید.'});
     const qOrg=q.get('organizationId')??null;
     const rows=(DB.featureFlags??[]).filter(f=>qOrg?(!f.organizationId||f.organizationId===qOrg):true);
     return json(res,200,rows.map(ffView).sort((a,b)=>a.key.localeCompare(b.key)));
   }
   if(is('/enterprise/feature-flags')&&method==='POST'){
-    if(!authUser?.isOwner&&!(authUser?.permissions??[]).includes('feature_flag.write')) return json(res,403,{message:'شما مجوز «مدیریت پرچم‌های ویژگی» (feature_flag.write) را ندارید.'});
+    if(!authUser?.isOwner&&!(authUser?.permissions??[]).includes('*')&&!(authUser?.permissions??[]).includes('feature_flag.write')) return json(res,403,{message:'شما مجوز «مدیریت پرچم‌های ویژگی» (feature_flag.write) را ندارید.'});
     const b=await readBody(req);
     const key=String(b.key||'').trim();
     if(!key||!/^[a-z][a-z0-9_]{1,63}$/.test(key)) return json(res,400,{message:'کلید پرچم باید لاتین کوچک و ۲ تا ۶۴ کاراکتر باشد.'});
@@ -7393,8 +7393,8 @@ const server=http.createServer(async(req,res)=>{
     return json(res,i>=0?200:201,nrView(row));
   }
   
-  const privacyManageOk=()=>!!(authUser?.isOwner||(authUser?.permissions??[]).includes('privacy.manage'));
-  const privacyReadOk=()=>!!(authUser?.isOwner||(authUser?.permissions??[]).includes('privacy.read'));
+  const privacyManageOk=()=>!!(authUser?.isOwner||(authUser?.permissions??[]).includes('*')||(authUser?.permissions??[]).includes('privacy.manage'));
+  const privacyReadOk=()=>!!(authUser?.isOwner||(authUser?.permissions??[]).includes('*')||(authUser?.permissions??[]).includes('privacy.read'));
   if(is('/privacy/retention/preview')&&method==='GET'){
     if(!privacyManageOk()) return json(res,403,{message:'شما مجوز «مدیریت نگهداری» (privacy.manage) را ندارید.'});
     return json(res,200,retentionPreviewRows());
@@ -7426,7 +7426,7 @@ const server=http.createServer(async(req,res)=>{
     return json(res,200,{policies});
   }
   if(is('/privacy/audit')&&method==='GET'){
-    if(!authUser?.isOwner&&!(authUser?.permissions??[]).includes('privacy.audit')) return json(res,403,{message:'شما مجوز «ممیزی حریم خصوصی» (privacy.audit) را ندارید.'});
+    if(!authUser?.isOwner&&!(authUser?.permissions??[]).includes('*')&&!(authUser?.permissions??[]).includes('privacy.audit')) return json(res,403,{message:'شما مجوز «ممیزی حریم خصوصی» (privacy.audit) را ندارید.'});
     const rows=(DB.audit??[]).filter(a=>['PrivacyRequest','PrivacyData','UserPrivacyData'].includes(a.entity)).slice(0,500);
     return json(res,200,{rows});
   }
@@ -8046,7 +8046,7 @@ const server=http.createServer(async(req,res)=>{
      Actions: CREATE_NOTIFICATION / CREATE_ACTION / CREATE_COMMITMENT /
               CREATE_OPPORTUNITY / REQUEST_APPROVAL / WAIT
   ------------------------------------------------------------------ */
-  function wfPerm(p){ return authUser?.isOwner || (authUser?.permissions??[]).includes(p); }
+  function wfPerm(p){ return authUser?.isOwner || (authUser?.permissions??[]).includes('*') || (authUser?.permissions??[]).includes(p); }
   function wfScopeOk(wf){ return !wf.organizationId || inScope(req,wf.organizationId); }
   function wfEntityOrgId(type,id){
     const t=String(type??'').toLowerCase();
@@ -8288,6 +8288,26 @@ const server=http.createServer(async(req,res)=>{
     DB.workflows.push(row); saveDb();
     audit(req,'CREATE','Workflow',row.id,'OK',{meta:{name:row.name,entityType:row.entityType,actions:row.definition.actions.length}});
     return json(res,201,wfView(row));
+  }
+  /* حذف/غیرفعال‌سازی گردش کار — DELETE /workflows/:id/delete
+     (توافق UI: بدنهٔ کاملِ ردیف با id = تغییر isActive؛ بدنهٔ بدون id = حذف قطعی —
+      ویرایش در دمو با «حذف و بازآفرینی» اعمال می‌شود) */
+  const wfDeleteRoute=match('/workflows/:id/delete');
+  if(wfDeleteRoute&&method==='DELETE'){
+    if(!wfPerm('workflow.write')) return json(res,403,{message:'شما مجوز «ایجاد گردش کار» (workflow.write) را ندارید.'});
+    const wf=(DB.workflows??[]).find(x=>x.id===wfDeleteRoute[0]);
+    if(!wf) return json(res,404,{message:'گردش کار یافت نشد.'});
+    if(!wfScopeOk(wf)) return json(res,403,{message:'گردش کار خارج از محدودهٔ دسترسی شماست.'});
+    const b=await readBody(req);
+    if(b&&typeof b==='object'&&!Array.isArray(b)&&String(b.name??'').trim()&&(b.id||b.createdAt||b.updatedAt)){
+      wf.isActive=b.isActive!==false; wf.updatedAt=nowIso();
+      audit(req,'UPDATE','Workflow',wf.id,'OK',{meta:{isActive:wf.isActive}});
+    } else {
+      DB.workflows=(DB.workflows??[]).filter(x=>x.id!==wf.id);
+      audit(req,'DELETE','Workflow',wf.id,'OK',{meta:{name:wf.name}});
+    }
+    saveDb();
+    return json(res,200,{ok:true});
   }
   const wfExecRoute=match('/workflows/:id/execute');
   if(wfExecRoute&&method==='POST'){
@@ -8690,7 +8710,7 @@ const server=http.createServer(async(req,res)=>{
     if(!canExport) return json(res,403,{message:'شما مجوز «خروجی گزارش» (مجوز خروجی گزارش) را ندارید؛ با مالک سامانه تماس بگیرید.'});
     if(format==='json'&&!authUser?.isOwner) return json(res,403,{message:'فرمت متن ساختاریافته ویژهٔ مدیران سازمانی (enterprise.admin) است.'});
     const approval=assertExportApproval(req,kind);
-    if(!approval) return json(res,403,{message:'خروجی گزارش فقط پس از تأیید درخواست آن صادر می‌شود؛ ابتدا «دریافت فایل» را بزنید تا درخواست تأیید ثبت شود، سپس پس از تأیید در صفحهٔ «تأییدها» دوباره تلاش کنید.'});
+    if(!approval) return json(res,403,{message:'خروجی گزارش فقط پس از تأیید درخواست آن صادر می‌شود؛ درخواست تأیید ثبت شد — پس از تأیید در صفحهٔ «تأییدها» دوباره دکمهٔ خروجی را بزنید تا فایل دانلود شود.'});
     const payload=reportPayload(kind,sc.ids);
     const rows=reportRows(payload);
     if(format==='json'){
@@ -9444,8 +9464,9 @@ const server=http.createServer(async(req,res)=>{
     const rows=(DB.publicsMembers??[]).filter(m=>m.orgId===orgId).map(pubMemberView);
     const srcFa={organization:'سازمان',person:'شخص',relationship:'رابطه',media:'رسانه'};
     const fmt=q.get('format')==='csv'?'csv':q.get('format')==='xls'?'xls':'json';
+    /* سرستون‌ها بالای هر دو شاخه (csv و xls) — قبلاً فقط در csv تعریف می‌شد و xls خطای ۵۰۰ می‌داد */
+    const head=['شناسه','گروه','دسته','پیوند','مرحله','موضع','قدرت','علاقه','نوع منبع','منبع','یادداشت','ارزیابی‌شده در','سررسید بازبینی'];
     if(fmt==='csv'){
-      const head=['شناسه','گروه','دسته','پیوند','مرحله','موضع','قدرت','علاقه','نوع منبع','منبع','یادداشت','ارزیابی‌شده در','سررسید بازبینی'];
       const esc=(v)=>`"${String(v??'').replace(/"/g,'""')}"`;
       const csv=[head.join(','),...rows.map(r=>[r.id,r.groupFa,r.categoryFa,r.linkageFa,r.stageFa,r.stanceFa,r.power,r.interest,(srcFa[r.sourceType]??r.sourceType),r.sourceName,r.note,r.assessedAt,r.reviewDue].map(esc).join(','))].join('\n');
       res.writeHead(200,{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':`attachment; filename="publics-${orgId}.csv"`});

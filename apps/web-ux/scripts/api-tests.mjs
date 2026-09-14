@@ -283,7 +283,9 @@ section('دادهٔ اولیهٔ واقعی — aroun / شرکت x / هلدین�
   // گراف شبکه: گره‌های پارس + نهادها
   const g = await api('/network/graph', { token: t });
   check('گراف: پارس و همهٔ نهادها گره دارند (۷۰+)', (g.body?.nodes ?? []).length >= 70);
-  check('گراف: یال‌های ساختاری پارس↔۱۲ حوزه', (g.body?.edges ?? []).filter(e => e.kind === 'relationship').length === 12, `edges=${(g.body?.edges ?? []).filter(e => e.kind === 'relationship').length}`);
+  /* ۱۲ یال ساختاری پارس↔حوزه‌ها + ۱ یال مشتری شرکت x↔پارس (۱۴۰۳/۰۹ اضافه شد) */
+  const parsEdges = (g.body?.edges ?? []).filter(e => e.kind === 'relationship' && (e.source === 'org:org-pars' || e.target === 'org:org-pars'));
+  check('گراف: یال‌های ساختاری پارس↔۱۲ حوزه + مشتری x', parsEdges.length === 13, `parsEdges=${parsEdges.length}`);
 }
 
 /* ===================== 8. TENANT ISOLATION (جداسازی مستأجران) ===================== */
