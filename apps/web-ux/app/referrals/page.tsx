@@ -132,6 +132,40 @@ export default function ReferralsPage() {
   const [editInstr, setEditInstr] = useState<RefRow | null>(null);
   const [editForm, setEditForm] = useState({ goal: '', allowed: '', forbidden: '', boundaries: '', dueDays: '30' });
   const [editError, setEditError] = useState('');
+  /* مسترپلن فاز ۱/۹ — مسیر گرم + حاکمیت واسطه (Affinity/Boomerang) + قیف تبدیل */
+  const [warm, setWarm] = useState<any>(null);
+  const [warmTarget, setWarmTarget] = useState('');
+  const [warmBusy, setWarmBusy] = useState(false);
+  const [conversion, setConversion] = useState<any>(null);
+  const [introEdit, setIntroEdit] = useState<{ personId: string; name: string; active: boolean; maxRequestsPerMonth: number; preferredChannel: string; note: string } | null>(null);
+  const [introBusy, setIntroBusy] = useState(false);
+
+  const loadConversion = useCallback(async () => {
+    try { setConversion(await api<any>('/core-domain/referrals/conversion')); } catch { setConversion(null); }
+  }, []);
+
+  const findWarmPath = useCallback(async (to: string) => {
+    if (!to) return;
+    setWarmBusy(true); setError('');
+    try { setWarm(await api<any>(`/network/warm-path?to=${encodeURIComponent(to)}`)); }
+    catch (e) { setError((e as Error).message); }
+    finally { setWarmBusy(false); }
+  }, []);
+
+  const saveIntro = async () => {
+    if (!introEdit) return;
+    setIntroBusy(true);
+    try {
+      await api(`/people/${introEdit.personId}/intro-settings`, {
+        method: 'PUT',
+        body: JSON.stringify({ active: introEdit.active, maxRequestsPerMonth: introEdit.maxRequestsPerMonth, preferredChannel: introEdit.preferredChannel, note: introEdit.note }),
+      });
+      setFlash(`تنظیمات واسطه‌گری «${introEdit.name}» ذخیره شد.`);
+      setIntroEdit(null);
+      if (warmTarget) await findWarmPath(warmTarget);
+    } catch (e) { setError((e as Error).message); }
+    finally { setIntroBusy(false); }
+  };
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
@@ -151,7 +185,7 @@ export default function ReferralsPage() {
     } catch (e) { setError((e as Error).message); }
     finally { setLoading(false); }
   }, []);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); loadConversion(); }, [load, loadConversion]);
 
   /* پر کردن خودکار فرم از «پذیرش و پیگیری معرفی» در شبکهٔ ارتباطات */
   useEffect(() => {
@@ -372,6 +406,136 @@ export default function ReferralsPage() {
             <StatCard icon={<ShieldAlert size={18} />} label="ممیزی زرد" value={fmtNum(stats.warn)} iconClass="ic-gold" sub="با هشدار" />
             <StatCard icon={<ShieldX size={18} />} label="ممیزی قرمز" value={fmtNum(stats.block)} iconClass="ic-red" sub="پذیرش مسدود" />
           </div>
+
+          {/* ─── مسترپلن فاز ۱/۹: مسیر گرم + حاکمیت واسطه + قیف تبدیل (Affinity/Boomerang) ─── */}
+          <section className="panel" aria-label="مسیر معرفی گرم و واسطه‌ها">
+            <div className="panel-title">
+              <div>
+                <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Target size={16} /> مسیر معرفی گرم و واسطه‌ها</h2>
+                <p>قوی‌ترین مسیر چندپرشی تا سازمان هدف با امتیاز هر پرش (سلامت + تازگی + ریسک)؛ واسطه‌ها سقف و کانال خودشان را تعیین می‌کنند — «هیچ واسطه‌ای در معرض سی درخواست نیست».</p>
+              </div>
+              {conversion && (
+                <Badge tone={conversion.conversion?.meetingRate != null && conversion.conversion.meetingRate >= 50 ? 'success' : 'info'}>
+                  مسیر گرم → جلسه: {conversion.conversion?.meetingRate != null ? `${fmtNum(conversion.conversion.meetingRate)}٪` : '—'}
+                </Badge>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 10 }}>
+              <label className="field" style={{ margin: 0, flex: '1 1 240px' }}>
+                <span className="field-label">سازمان هدف</span>
+                <select value={warmTarget} onChange={e => setWarmTarget(e.target.value)}>
+                  <option value="">انتخاب کنید…</option>
+                  {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                </select>
+              </label>
+              <button className="btn btn-primary" style={{ minHeight: 0, padding: '8px 14px' }} disabled={!warmTarget || warmBusy}
+                onClick={() => findWarmPath(warmTarget)}>
+                {warmBusy ? 'در حال جست‌وجو…' : 'یافتن مسیر گرم'}
+              </button>
+              {conversion && (
+                <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <span className="chip neutral">معرفی: {fmtNum(conversion.total)}</span>
+                  <span className="chip neutral">پذیرش: {fmtNum(conversion.accepted)} ({conversion.conversion?.acceptRate != null ? `${fmtNum(conversion.conversion.acceptRate)}٪` : '—'})</span>
+                  <span className="chip neutral">انجام: {fmtNum(conversion.completed)}</span>
+                </span>
+              )}
+            </div>
+            {warm && (
+              <>
+                {warm.paths?.length ? (
+                  <div className="list">
+                    {warm.paths.map((p: any, idx: number) => (
+                      <div className="listRow" key={idx} style={{ alignItems: 'flex-start' }}>
+                        <Badge tone={idx === 0 ? 'success' : 'neutral'}>{idx === 0 ? 'بهترین' : `${fmtNum(p.hopCount)} پرش`}</Badge>
+                        <span style={{ flex: 1, minWidth: 0 }}>
+                          <strong style={{ fontSize: 12.5 }}>
+                            {p.hops.map((h: any, i: number) => (
+                              <span key={i}>{i > 0 && ' ← '}{h.fromOrgName}{i === p.hops.length - 1 ? ` ← ${h.toOrgName}` : ''}</span>
+                            ))}
+                          </strong>
+                          <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+                            <span className="chip info">امتیاز مسیر: {fmtNum(p.totalScore)}</span>
+                            <span className="chip neutral">گلوگاه: {fmtNum(p.bottleneckScore)}</span>
+                            {p.hops.map((h: any, i: number) => (
+                              <span key={i} className="chip neutral" title={`سلامت ${fmtNum(h.healthScore)}${h.daysSinceInteraction != null ? ` · آخرین تعامل ${fmtNum(h.daysSinceInteraction)} روز پیش` : ''}`}>
+                                {h.fromOrgName}↔{h.toOrgName}: {fmtNum(h.score)}
+                              </span>
+                            ))}
+                          </span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="criteria-saved">مسیری تا این سازمان در شبکهٔ روابط شما نیست — ابتدا یک رابطهٔ میانی بسازید یا از جلسات مشترک شروع کنید.</p>
+                )}
+                {warm.intermediaryPeople?.length > 0 && (
+                  <div style={{ marginTop: 10 }}>
+                    <h4 style={{ fontSize: 12.5, margin: '0 0 6px' }}>واسطه‌های پیشنهادی (اشخاص پرنفوذ در مسیر)</h4>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                      {warm.intermediaryPeople.map((ip: any) => (
+                        <div key={ip.personId} className="kpi-card" style={{ margin: 0, flex: '1 1 230px' }}>
+                          <small>{ip.name} — {ip.orgName}</small>
+                          <strong style={{ fontSize: 13 }}>{ip.title ?? '—'}</strong>
+                          <span style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 4 }}>
+                            {ip.champion && <span className="chip success">حامی</span>}
+                            {ip.influenceScore != null && <span className="chip neutral">نفوذ {fmtNum(ip.influenceScore)}</span>}
+                            <span className={`chip ${ip.introSettings?.active === false ? 'danger' : 'neutral'}`}>
+                              {ip.introSettings ? (ip.introSettings.active ? `سقف: ${fmtNum(ip.introSettings.maxRequestsPerMonth)} درخواست/ماه` : 'درخواست نمی‌پذیرد') : 'بدون سقف تعیین‌شده'}
+                            </span>
+                          </span>
+                          <button className="btn btn-ghost btn-sm" style={{ marginTop: 6 }} title={`تنظیم واسطه‌گری ${ip.name}`}
+                            onClick={() => setIntroEdit({
+                              personId: ip.personId, name: ip.name,
+                              active: ip.introSettings?.active !== false,
+                              maxRequestsPerMonth: ip.introSettings?.maxRequestsPerMonth ?? 2,
+                              preferredChannel: ip.introSettings?.preferredChannel ?? 'EMAIL',
+                              note: ip.introSettings?.note ?? '',
+                            })}>
+                            تنظیم واسطه‌گری
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+            {introEdit && (
+              <div className="notice" role="dialog" aria-label="تنظیم واسطه‌گری" style={{ marginTop: 10, border: '1px solid var(--border,#e2e8f0)' }}>
+                <b>حاکمیت واسطه‌گری — {introEdit.name}</b>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginTop: 8 }}>
+                  <label className="field" style={{ margin: 0 }}>
+                    <span className="field-label">وضعیت</span>
+                    <select value={introEdit.active ? '1' : '0'} onChange={e => setIntroEdit(introEdit ? { ...introEdit, active: e.target.value === "1" } : null)}>
+                      <option value="1">درخواست معرفی می‌پذیرد</option>
+                      <option value="0">فعلاً درخواست نمی‌پذیرد</option>
+                    </select>
+                  </label>
+                  <label className="field" style={{ margin: 0 }}>
+                    <span className="field-label">سقف درخواست در ماه</span>
+                    <input type="number" min={0} max={20} value={introEdit.maxRequestsPerMonth}
+                      onChange={e => setIntroEdit(introEdit ? { ...introEdit, maxRequestsPerMonth: Number(e.target.value) } : null)} />
+                  </label>
+                  <label className="field" style={{ margin: 0 }}>
+                    <span className="field-label">کانال ترجیحی</span>
+                    <select value={introEdit.preferredChannel} onChange={e => setIntroEdit(introEdit ? { ...introEdit, preferredChannel: e.target.value } : null)}>
+                      <option value="EMAIL">ایمیل</option>
+                      <option value="MEETING">جلسه</option>
+                      <option value="CALL">تماس</option>
+                      <option value="MESSAGE">پیام</option>
+                    </select>
+                  </label>
+                  <label className="field" style={{ margin: 0, flex: '1 1 200px' }}>
+                    <span className="field-label">یادداشت</span>
+                    <input value={introEdit.note} onChange={e => setIntroEdit(introEdit ? { ...introEdit, note: e.target.value } : null)} placeholder="مثلاً: فقط با هماهنگی دفتر مدیرعامل" />
+                  </label>
+                  <button className="btn btn-primary" style={{ minHeight: 0, padding: '8px 14px' }} disabled={introBusy} onClick={saveIntro}>ذخیره</button>
+                  <button className="btn btn-ghost" style={{ minHeight: 0, padding: '8px 14px' }} onClick={() => setIntroEdit(null)}>انصراف</button>
+                </div>
+              </div>
+            )}
+          </section>
 
           <Toolbar search={q} onSearch={setQ} searchPlaceholder="جستجوی عنوان، مبدأ، مقصد، دستورالعمل یا گیرنده…">
             <select aria-label="فیلتر وضعیت" value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="toolbar-select">

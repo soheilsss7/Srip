@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.14.04';
+const DEMO_MOCK_VERSION = '2026.09.15.01';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -3061,6 +3061,288 @@ function meetingIntel(m){
     decisions,detectedActions:actionSents,openActions:openActs.map(a=>({id:a.id,title:a.title,status:a.status,dueAt:a.dueAt})),
     humanLabel:m.intelTone??null,ruleBased:true};
 }
+/* ══════════════════════════════════════════════════════════════════════════
+   مسترپلن فاز ۱ — موتورهای مشترک (بریف جلسه، تمرکز رابطه، بنچمارک،
+   مسیر گرم، گزارش دوره‌ای، پذیرش، alumni)
+   الگوهای گرفته‌شده از تحقیق رقبا: Introhive (بریف/تمرکز)، Prolifiq (ماتریس)،
+   ARPEDIO (امتیاز مقایسه‌ای)، Squivr (علت‌یابی تغییر)، DemandFarm (هیت‌مپ)،
+   4Degrees (گزارش دوره‌ای)، Affinity/Boomerang (مسیر گرم + حاکمیت واسطه).
+   ══════════════════════════════════════════════════════════════════════════ */
+const PHASE1_WINDOW_DAYS=180;
+const STANCE_CAUSE_FA={'INTERACTION':'تعامل مستقیم ما','THIRD_PARTY':'تأثیر شخص سوم','POLICY':'تغییر سیاست/تنظیم‌گری','MARKET':'تحول بازار','COMPETITOR':'اقدام رقیب','INTERNAL':'تحول درون سازمان آنها','MEDIA':'پوشش رسانه‌ای','OTHER':'سایر'};
+
+/* تمرکز رابطه: سهم هر شخص از تعاملات یک رابطه در پنجرهٔ زمانی (Introhive: «کلید حساب در دست یک نفر») */
+function interactionConcentration(relId,days=PHASE1_WINDOW_DAYS){
+  const cutoff=Date.now()-days*86400000;
+  const list=INTERACTIONS.filter(x=>!x.deletedAt&&x.relationshipId===relId&&new Date(x.occurredAt??0).getTime()>=cutoff);
+  const by=new Map();
+  for(const x of list){ const k=x.personId??'_none'; by.set(k,(by.get(k)??0)+1); }
+  const total=list.length;
+  const byPerson=[...by.entries()].map(([pid,count])=>{
+    const p=pid==='_none'?null:personById(pid);
+    return {personId:pid==='_none'?null:pid,name:p?`${p.firstName??''} ${p.lastName??''}`.trim():'ثبت‌نشده',title:p?.title??null,organizationId:p?.organizationId??null,count,share:total?Math.round(count/total*100):0};
+  }).sort((a,b)=>b.count-a.count);
+  return {total,windowDays:days,byPerson,top:byPerson[0]??null,second:byPerson[1]??null,topShare:byPerson[0]?.share??0};
+}
+function relConcentrationRows(req,threshold=70){
+  const out=[];
+  for(const r of scopedRels(req)){
+    const c=interactionConcentration(r.id);
+    if(c.total<3||c.topShare<threshold) continue;
+    const secondContact=INTERACTIONS.some(x=>!x.deletedAt&&x.relationshipId===r.id&&x.personId&&x.personId!==c.top.personId);
+    out.push({relationshipId:r.id,
+      relationshipName:`${orgById(r.sourceOrganizationId)?.name??'—'} ↔ ${orgById(r.targetOrganizationId)?.name??'—'}`,
+      healthScore:r.healthScore,riskScore:r.riskScore,strategicScore:r.strategicScore,
+      totalInteractions:c.total,windowDays:c.windowDays,topShare:c.topShare,
+      dominantPerson:c.top,secondContactExists:secondContact,
+      severity:(c.topShare>=85&&!secondContact)?'HIGH':(c.topShare>=80||!secondContact)?'MEDIUM':'LOW',
+      recommendation:secondContact?'ایجاد نقطهٔ تماس دوم در همان سازمان (پوشش چندنخی)':'نقطهٔ تماس دوم وجود ندارد؛ در نخستین فرصت معرفی همکار دوم انجام شود'});
+  }
+  return out.sort((a,b)=>b.topShare-a.topShare);
+}
+
+/* بنچمارک درون‌پرتفویی سلامت + توصیهٔ اقدام قاعده‌دار (ARPEDIO) */
+function benchmarkView(req){
+  const rels=scopedRels(req);
+  const byClass=new Map();
+  for(const r of rels){ const k=relClass(r); if(!byClass.has(k)) byClass.set(k,[]); byClass.get(k).push(r); }
+  const median=(arr)=>{ if(!arr.length) return null; const s=[...arr].sort((a,b)=>a-b); const m=Math.floor(s.length/2); return s.length%2?s[m]:Math.round((s[m-1]+s[m])/2); };
+  const rows=[];
+  for(const r of rels){
+    const cls=relClass(r);
+    const peers=(byClass.get(cls)??[]).filter(x=>x.id!==r.id).map(x=>x.healthScore??0);
+    const med=median(peers);
+    const gap=med==null?0:(r.healthScore??0)-med;
+    const pct=peers.length?Math.round(peers.filter(v=>v<=(r.healthScore??0)).length/peers.length*100):null;
+    const recs=[];
+    const cad=relCadence(r);
+    if(cad.status==='CRITICAL') recs.push({key:'CADENCE',text:`کیدنس تعامل قطع شده (${cad.daysSinceLastInteraction} روز؛ هدف ${cad.cadenceDays}) — جلسهٔ احیا پیشنهاد می‌شود`});
+    else if(cad.status==='WARN') recs.push({key:'CADENCE',text:`کیدنس عقب افتاده (${cad.daysSinceLastInteraction} روز؛ هدف ${cad.cadenceDays}) — زمان‌بندی تعامل بعدی را قطعی کنید`});
+    if(med!=null&&gap<=-10) recs.push({key:'BELOW_MEDIAN',text:`سلامت ${Math.abs(gap)} واحد زیر میانهٔ دستهٔ «${REL_CLASS_LABELS[cls]}» — بازبینی برنامهٔ رابطه`});
+    const conc=interactionConcentration(r.id);
+    if(conc.total>=3&&conc.topShare>=70) recs.push({key:'CONCENTRATION',text:`${conc.topShare}٪ تعاملات فقط از طریق «${conc.top?.name??'—'}» — نقطهٔ تماس دوم بسازید`});
+    if((r.resilienceScore??0)<50) recs.push({key:'RESILIENCE',text:'تاب‌آوری زیر ۵۰ — وابستگی‌های تک‌منبعی را متنوع کنید'});
+    if(!recs.length) recs.push({key:'ON_PAR',text:'هم‌تراز میانهٔ دسته — تداوم کیدنس فعلی کافی است'});
+    rows.push({relationshipId:r.id,
+      relationshipName:`${orgById(r.sourceOrganizationId)?.name??'—'} ↔ ${orgById(r.targetOrganizationId)?.name??'—'}`,
+      classKey:cls,classLabel:REL_CLASS_LABELS[cls],
+      healthScore:r.healthScore??null,peerMedian:med,gap,percentile:pct,
+      cadence:{status:cad.status,daysSinceLastInteraction:cad.daysSinceLastInteraction,targetDays:cad.cadenceDays},
+      recommendations:recs});
+  }
+  rows.sort((a,b)=>a.gap-b.gap);
+  const below=rows.filter(x=>x.gap<0).length;
+  return {generatedAt:nowIso(),
+    classes:[...byClass.entries()].map(([k,v])=>({key:k,label:REL_CLASS_LABELS[k],count:v.length,medianHealth:median(v.map(x=>x.healthScore??0))})),
+    rows,summary:{relationships:rels.length,belowMedian:below,onOrAboveMedian:rels.length-below,worstGap:rows[0]?.gap??0}};
+}
+
+/* بریف پیش از جلسه (Introhive: پروفایل حاضران + آخرین تعاملات + امتیازها + توصیه) */
+function meetingBriefView(m){
+  const rel=m.relationshipId?RELS.find(r=>r.id===m.relationshipId):null;
+  const org=orgById(m.organizationId)??(rel?orgById(rel.targetOrganizationId):null);
+  const parts=(m.participants??[]).map(pp=>personById(pp.personId)).filter(Boolean);
+  const participants=parts.map(p=>{
+    const their=INTERACTIONS.filter(x=>!x.deletedAt&&x.personId===p.id).sort((a,b)=>String(b.occurredAt??'').localeCompare(String(a.occurredAt??'')));
+    const last=their[0]??null;
+    const openComs=COMMITMENTS.filter(c=>!c.deletedAt&&c.ownerId===p.id&&['OPEN','OVERDUE'].includes(c.status??'OPEN'));
+    return {id:p.id,name:`${p.firstName??''} ${p.lastName??''}`.trim(),title:p.title??null,
+      organizationId:p.organizationId,organization:orgById(p.organizationId)?.name??null,
+      influenceScore:p.influenceScore??null,champion:!!p.champion?.flag,
+      interactionsWithUs:their.length,lastInteractionAt:last?.occurredAt??null,lastSubject:last?.subject??null,
+      openCommitments:openComs.length};
+  });
+  const relInteractions=rel?INTERACTIONS.filter(x=>!x.deletedAt&&x.relationshipId===rel.id).sort((a,b)=>String(b.occurredAt??'').localeCompare(String(a.occurredAt??''))).slice(0,5):[];
+  const openActions=rel?ACTIONS.filter(a=>!a.deletedAt&&a.relationshipId===rel.id&&!['DONE','COMPLETED','CANCELLED'].includes(a.status??'')).slice(0,5):[];
+  const openCommitments=rel?COMMITMENTS.filter(c=>!c.deletedAt&&c.relationshipId===rel.id&&['OPEN','OVERDUE'].includes(c.status??'OPEN')).slice(0,5):[];
+  const cad=rel?relCadence(rel):null;
+  const conc=rel?interactionConcentration(rel.id):null;
+  let publicsCriticalGaps=[];
+  try{
+    const selfOrg=rel?rel.sourceOrganizationId:m.organizationId;
+    if(selfOrg) publicsCriticalGaps=pubGaps(selfOrg).gaps.filter(g=>g.severity==='CRITICAL').slice(0,3);
+  }catch{ publicsCriticalGaps=[]; }
+  const recommendations=[];
+  if(cad&&cad.status==='CRITICAL') recommendations.push('کیدنس رابطه شکسته است — جلسه را با مرور شفاف وضعیت آغاز کنید و برنامهٔ جبرانی بدهید');
+  if(cad&&cad.status==='WARN') recommendations.push('کیدنس عقب افتاده — در جلسه روی زمان‌بندی تعامل بعدی توافق قطعی بگیرید');
+  if(conc&&conc.total>=3&&conc.topShare>=70) recommendations.push(`رابطه متکی به «${conc.top?.name??'—'}» است (${conc.topShare}٪ تعاملات) — معرفی همکار دوم را هدف جلسه کنید`);
+  if(participants.some(p=>p.champion)) recommendations.push('حامی (champion) در این جلسه حاضر است — از او برای یک تعهد مشخص دعوت کنید');
+  if(openCommitments.length) recommendations.push(`${openCommitments.length} تعهد باز از جلسات پیشین — ابتدا وضعیت آن‌ها را پیگیری کنید`);
+  if(publicsCriticalGaps.length) recommendations.push('شکاف بحرانی عمومی مرتبط با این سازمان وجود دارد — در صورت تناسب، روی صفحه بگذارید');
+  if(!recommendations.length) recommendations.push('وضعیت رابطه متعادل است — روی نقشهٔ راه مشترک و قدم بعدی مشخص تمرکز کنید');
+  return {generatedAt:nowIso(),meetingId:m.id,title:m.title,startAt:m.startAt,objective:m.objective??null,agenda:m.agenda??null,
+    organization:org?{id:org.id,name:org.name,type:org.type}:null,
+    relationship:rel?{id:rel.id,name:`${orgById(rel.sourceOrganizationId)?.name??'—'} ↔ ${orgById(rel.targetOrganizationId)?.name??'—'}`,status:rel.status,
+      healthScore:rel.healthScore,riskScore:rel.riskScore,strategicScore:rel.strategicScore,resilienceScore:rel.resilienceScore,
+      lastInteractionAt:rel.lastInteractionAt??null,nextActionAt:rel.nextActionAt??null}:null,
+    cadence:cad,concentration:(conc&&conc.total>=3)?{topShare:conc.topShare,topName:conc.top?.name??null,total:conc.total}:null,
+    participants,lastInteractions:relInteractions.map(x=>({id:x.id,type:x.type,subject:x.subject,occurredAt:x.occurredAt})),
+    openActions:openActions.map(a=>({id:a.id,title:a.title,status:a.status,dueAt:a.dueAt??null})),
+    openCommitments:openCommitments.map(c=>({id:c.id,description:c.description,dueAt:c.dueAt??null,status:c.status??'OPEN'})),
+    publicsCriticalGaps,recommendations};
+}
+
+/* مسیر گرم چندپرشی + امتیاز هر پرش (Affinity: قوی‌ترین مسیر؛ Boomerang: حاکمیت واسطه) */
+function warmPathsTo(req,fromOrgId,toOrgId,maxHops=3){
+  const rels=scopedRels(req);
+  const byKey=new Map();
+  const adj=new Map();
+  const keyOf=(a,b)=>[a,b].sort().join('|');
+  for(const r of rels){
+    byKey.set(keyOf(r.sourceOrganizationId,r.targetOrganizationId),r);
+    if(!adj.has(r.sourceOrganizationId)) adj.set(r.sourceOrganizationId,[]);
+    if(!adj.has(r.targetOrganizationId)) adj.set(r.targetOrganizationId,[]);
+    adj.get(r.sourceOrganizationId).push(r.targetOrganizationId);
+    adj.get(r.targetOrganizationId).push(r.sourceOrganizationId);
+  }
+  const edgeScore=(r)=>{
+    const days=r.lastInteractionAt?Math.max(0,Math.floor((Date.now()-new Date(r.lastInteractionAt).getTime())/86400000)):365;
+    const freshness=Math.max(0,100-Math.min(100,Math.round(days/3)));
+    return Math.max(1,Math.min(100,Math.round(0.5*(r.healthScore??50)+0.3*freshness+0.2*(100-(r.riskScore??30)))));
+  };
+  const paths=[];
+  const seen=new Set([fromOrgId]);
+  const walk=(u,chain)=>{
+    if(paths.length>=8) return;
+    if(u===toOrgId){ if(chain.length>1) paths.push([...chain]); return; }
+    if(chain.length>maxHops) return;
+    for(const nx of (adj.get(u)??[])){
+      if(seen.has(nx)) continue;
+      seen.add(nx); chain.push(nx);
+      walk(nx,chain);
+      chain.pop(); seen.delete(nx);
+    }
+  };
+  walk(fromOrgId,[fromOrgId]);
+  const nameOf=(oid)=>orgById(oid)?.name??oid;
+  const pathView=(chain)=>{
+    const hops=[];
+    for(let i=0;i<chain.length-1;i++){
+      const r=byKey.get(keyOf(chain[i],chain[i+1]));
+      if(!r) return null;
+      const days=r.lastInteractionAt?Math.max(0,Math.floor((Date.now()-new Date(r.lastInteractionAt).getTime())/86400000)):null;
+      hops.push({fromOrgId:chain[i],fromOrgName:nameOf(chain[i]),toOrgId:chain[i+1],toOrgName:nameOf(chain[i+1]),
+        relationshipId:r.id,score:edgeScore(r),healthScore:r.healthScore,daysSinceInteraction:days});
+    }
+    if(!hops.length) return null;
+    const scores=hops.map(h=>h.score);
+    return {hops,hopCount:hops.length,totalScore:Math.round(scores.reduce((a,b)=>a+b,0)/scores.length),
+      bottleneckScore:Math.min(...scores),intermediaries:chain.slice(1,-1).map(oid=>({orgId:oid,name:nameOf(oid)}))};
+  };
+  const views=paths.map(pathView).filter(Boolean);
+  views.sort((a,b)=>(a.hopCount-b.hopCount)||(b.totalScore-a.totalScore));
+  /* واسطه‌های پیشنهادی: اشخاص پرنفوذ/حامی در سازمان‌های میانی */
+  const midOrgs=[...new Set(views.flatMap(v=>v.intermediaries.map(i=>i.orgId)))].slice(0,4);
+  const intermediaryPeople=midOrgs.flatMap(oid=>
+    PEOPLE.filter(p=>!p.deletedAt&&p.organizationId===oid&&((p.influenceScore??0)>=60||p.champion?.flag))
+      .sort((a,b)=>(b.influenceScore??0)-(a.influenceScore??0)).slice(0,2)
+      .map(p=>({personId:p.id,name:`${p.firstName??''} ${p.lastName??''}`.trim(),title:p.title??null,orgId:oid,orgName:nameOf(oid),
+        influenceScore:p.influenceScore??null,champion:!!p.champion?.flag,
+        introSettings:DB.introSettings?.[p.id]??null}))
+  );
+  return {from:{orgId:fromOrgId,name:nameOf(fromOrgId)},to:{orgId:toOrgId,name:nameOf(toOrgId)},
+    maxHops,paths:views.slice(0,5),intermediaryPeople,
+    summary:{pathCount:views.length,best:views[0]??null,
+      bestLabel:views[0]?`${nameOf(fromOrgId)} ← ${views[0].intermediaries.map(i=>i.name).join(' ← ')} ← ${nameOf(toOrgId)}`:'مسیری در شبکهٔ شما یافت نشد'}};
+}
+
+/* گزارش دوره‌ای خودکار (4Degrees: گزارش جلسهٔ دوره‌ای؛ DemandFarm: QBR) */
+function periodicReportView(req,period,orgId){
+  const days=period==='monthly'?30:7;
+  const from=new Date(Date.now()-days*86400000);
+  const now=Date.now();
+  const rels=scopedRels(req);
+  const relName=(r)=>`${orgById(r.sourceOrganizationId)?.name??'—'} ↔ ${orgById(r.targetOrganizationId)?.name??'—'}`;
+  const cooling=rels.map(r=>({r,c:relCadence(r)}))
+    .filter(x=>x.c.status==='CRITICAL'||x.c.status==='WARN')
+    .sort((a,b)=>(b.c.daysSinceLastInteraction??0)-(a.c.daysSinceLastInteraction??0))
+    .slice(0,6)
+    .map(x=>({relationshipId:x.r.id,relationshipName:relName(x.r),status:x.c.status,
+      daysSinceLastInteraction:x.c.daysSinceLastInteraction,targetDays:x.c.cadenceDays,healthScore:x.r.healthScore}));
+  const overdueCommitments=scopedCommitments(req)
+    .filter(c=>['OPEN','OVERDUE'].includes(c.status??'OPEN')&&c.dueAt&&new Date(c.dueAt).getTime()<now)
+    .slice(0,6).map(c=>({id:c.id,description:c.description,dueAt:c.dueAt,status:c.status??'OPEN'}));
+  const overdueActions=scopedActions(req)
+    .filter(a=>['OPEN','IN_PROGRESS'].includes(a.status??'OPEN')&&a.dueAt&&new Date(a.dueAt).getTime()<now)
+    .slice(0,6).map(a=>({id:a.id,title:a.title,dueAt:a.dueAt??null,status:a.status??'OPEN'}));
+  let criticalGaps=[];
+  try{ criticalGaps=orgId?pubGaps(orgId).gaps.filter(g=>g.severity==='CRITICAL').slice(0,4):[]; }catch{ criticalGaps=[]; }
+  const relIds=new Set(rels.map(r=>r.id));
+  const movements=(DB.scoreSnapshots??[])
+    .filter(s=>relIds.has(s.relationshipId)&&s.daysAgo<=days)
+    .sort((a,b)=>a.daysAgo-b.daysAgo)
+    .slice(0,8)
+    .map(s=>({relationshipId:s.relationshipId,relationshipName:relName(RELS.find(r=>r.id===s.relationshipId)??{}),asOf:s.asOf,health:s.health,strategic:s.strategic}));
+  const concentrations=relConcentrationRows(req).slice(0,4)
+    .map(x=>({relationshipId:x.relationshipId,relationshipName:x.relationshipName,topShare:x.topShare,dominantPerson:x.dominantPerson?.name??null,secondContactExists:x.secondContactExists}));
+  const growthTargets=rels.filter(r=>(r.opportunityScore??0)>=60).slice(0,4)
+    .map(r=>({relationshipId:r.id,relationshipName:relName(r),opportunityScore:r.opportunityScore}));
+  const counts={cooling:cooling.length,overdueCommitments:overdueCommitments.length,overdueActions:overdueActions.length,criticalGaps:criticalGaps.length,concentrations:concentrations.length,growthTargets:growthTargets.length};
+  const briefText=[
+    `گزارش ${period==='monthly'?'ماهانه':'هفتگی'} روابط — ${orgById(orgId)?.name??'سازمان شما'}`,
+    `روابط سردشونده: ${counts.cooling} مورد${cooling[0]?` (بحرانی‌ترین: ${cooling[0].relationshipName} — ${cooling[0].daysSinceLastInteraction} روز بدون تعامل)`:''}`,
+    `تعهدات عقب‌افتاده: ${counts.overdueCommitments} · اقدامات عقب‌افتاده: ${counts.overdueActions}`,
+    `شکاف‌های بحرانی عموم‌ها: ${counts.criticalGaps} · تمرکزهای تک‌نفره: ${counts.concentrations}`,
+    `اهداف رشد پیشنهادی: ${growthTargets.map(g=>g.relationshipName).join('، ')||'—'}`,
+  ].join('\n');
+  return {period,periodFa:period==='monthly'?'ماهانه':'هفتگی',generatedAt:nowIso(),
+    rangeFrom:from.toISOString(),rangeTo:new Date(now).toISOString(),
+    sections:{coolingRelationships:cooling,overdueCommitments,overdueActions,criticalGaps,scoreMovements:movements,concentrations,growthTargets},
+    counts,briefText};
+}
+
+/* سنجه‌های پذیرش و ارزش — فقط از دادهٔ واقعی همان مستأجر (قید دائمی محصول) */
+function adoptionView(req){
+  const rels=scopedRels(req);
+  const withInteractions=rels.filter(r=>r.lastInteractionAt||INTERACTIONS.some(x=>!x.deletedAt&&x.relationshipId===r.id)).length;
+  const multiThreaded=rels.filter(r=>{
+    const c=interactionConcentration(r.id);
+    if(c.total===0) return true; /* بدون دادهٔ تمرکز = قضاوت نمی‌کنیم */
+    return c.topShare<70||!!c.second;
+  }).length;
+  const meetings=scopedMeetings(req);
+  const withOutcome=meetings.filter(m=>m.outcome).length;
+  const orgsMapped=(DB.publicsSelf??[]).filter(s=>inScope(req,s.orgId)).length;
+  const edgesAccepted=(DB.edgeSuggestionAccepts??[]).length;
+  const wfExec=(DB.workflowExecutions??[]).length;
+  const pct=(a,b)=>b?Math.round(a/b*100):null;
+  const counters=DB.phase1Counters??{briefsGenerated:0,quickLogs:0,matrixDrags:0,warmPathRequests:0,roleChanges:0,periodicReports:0};
+  return {generatedAt:nowIso(),
+    metrics:[
+      {key:'relationships_with_interaction',label:'روابط با تعامل ثبت‌شده',value:withInteractions,total:rels.length,pct:pct(withInteractions,rels.length),sub:'از کل روابط در محدوده'},
+      {key:'multi_threaded',label:'روابط چندنخی (بدون تمرکز ۷۰٪+)',value:multiThreaded,total:rels.length,pct:pct(multiThreaded,rels.length),sub:'سنجهٔ پوشش چندنخی — مرجع: ادعای ۵۶٪ Outreach'},
+      {key:'meetings_with_outcome',label:'جلسات با نتیجهٔ ثبت‌شده',value:withOutcome,total:meetings.length,pct:pct(withOutcome,meetings.length),sub:'چرخهٔ بسته‌شدن جلسات'},
+      {key:'orgs_with_publics_map',label:'سازمان‌های دارای نقشهٔ عمومی',value:orgsMapped,total:null,pct:null,sub:'نقشهٔ عمومی فعال در محدودهٔ شما'},
+      {key:'edge_suggestions_accepted',label:'پیشنهادهای یال تأییدشده',value:edgesAccepted,total:null,pct:null,sub:'پذیرش هوش شبکه'},
+      {key:'workflow_executions',label:'اجرای گردش‌کار',value:wfExec,total:null,pct:null,sub:'خودکارسازی فعال'},
+    ],
+    counters,
+    timeToValue:{briefsGenerated:counters.briefsGenerated,quickLogs:counters.quickLogs,
+      note:'شمارنده‌ها از لحظهٔ فعال‌سازی فاز ۱ جمع می‌شوند؛ دادهٔ دمو در حساب واقعی شمرده نمی‌شود.'}};
+}
+
+/* شبکهٔ همکاران سابق (alumni) — Introhive Pathways / UserGems */
+function alumniView(req){
+  const ourOrgs=new Set();
+  for(const r of scopedRels(req)) ourOrgs.add(r.sourceOrganizationId);
+  const rows=(DB.careerEvents??[]).filter(e=>{
+    const from=e.from?.organizationId;
+    return from&&ourOrgs.has(from)&&e.to?.organizationId&&e.to.organizationId!==from;
+  }).map(e=>{
+    const p=personById(e.personId);
+    if(!p) return null;
+    const rel=scopedRels(req).find(r=>r.sourceOrganizationId===e.to.organizationId||r.targetOrganizationId===e.to.organizationId);
+    return {eventId:e.id,personId:e.personId,name:`${p.firstName??''} ${p.lastName??''}`.trim(),
+      fromOrgId:e.from.organizationId,fromOrgName:orgById(e.from.organizationId)?.name??e.from.organizationId,wasTitle:e.from.title??null,
+      toOrgId:e.to.organizationId,toOrgName:orgById(e.to.organizationId)?.name??e.to.organizationId,nowTitle:p.title??e.to.title??null,
+      at:e.at,type:e.type,champion:!!p.champion?.flag,influenceScore:p.influenceScore??null,
+      introSettings:DB.introSettings?.[e.personId]??null,
+      warmRoute:rel?{relationshipId:rel.id,label:`رابطهٔ مستقیم با ${orgById(e.to.organizationId)?.name??''}`}:null,
+      note:e.note??null};
+  }).filter(Boolean).sort((a,b)=>String(b.at??'').localeCompare(String(a.at??'')));
+  return {generatedAt:nowIso(),ourOrgs:[...ourOrgs].map(o=>({id:o,name:orgById(o)?.name??o})),items:rows,
+    summary:{alumniCount:rows.length,withDirectRoute:rows.filter(x=>x.warmRoute).length}};
+}
 /* --------------------------------------------------------------------------
    P2-4 ریسک متمرکز و اهرم: درآمد در معرض ریسک، وابستگی تک‌رابطه/تک‌شخص، اقدام جایگزین
    -------------------------------------------------------------------------- */
@@ -4051,6 +4333,40 @@ function seedCareerEvents(){
     {id:'ce-4',personId:'p-7',type:'HIRED',at:'2026-07-01T09:00:00.000Z',from:null,to:{organizationId:'org-2',title:'مدیر محصول'},source:'ACTIVE_USER',alert:false,note:'عضو جدید تیم داخلی؛ برای ارزیابی‌های فنی مشتریان در دسترس است.'},
   ];
 }
+/* افزوده‌های seed مسترپلن فاز ۱ — idempotent */
+function seedPhase1Extras(){
+  if(!DB.introSettings||typeof DB.introSettings!=='object'||Array.isArray(DB.introSettings)){
+    DB.introSettings={
+      'p-6':{active:true,maxRequestsPerMonth:2,preferredChannel:'MEETING',note:'واسطهٔ اصلی هلدینگ آریا؛ معرفی‌ها فقط با هماهنگی دفتر مدیرعامل.'},
+      'p-1':{active:true,maxRequestsPerMonth:3,preferredChannel:'MEETING',note:'معرفی‌های فروش را ترجیحاً در جلسهٔ حضوری انجام می‌دهد.'},
+      'p-16':{active:false,maxRequestsPerMonth:1,preferredChannel:'EMAIL',note:'فعلاً درخواست معرفی نمی‌پذیرد (دوران استقرار در اتاق بازرگانی).'},
+    };
+  }
+  if(!DB.phase1Counters) DB.phase1Counters={briefsGenerated:0,quickLogs:0,matrixDrags:0,warmPathRequests:0,roleChanges:0,periodicReports:0};
+  if(Array.isArray(DB.careerEvents)&&!DB.careerEvents.some(e=>e.id==='ce-5')){
+    DB.careerEvents.push({id:'ce-5',personId:'p-16',type:'LEFT',at:'2026-06-15T09:00:00.000Z',
+      from:{organizationId:'org-2',title:'کارشناس توسعهٔ کسب‌وکار'},
+      to:{organizationId:'org-10',title:'دبیر کمیتهٔ فناوری اتاق بازرگانی'},
+      source:'NETWORK_SIGNAL',alert:false,
+      note:'همکار سابق آریا فناوری؛ حالا دبیر کمیتهٔ فناوری اتاق است — مسیر گرم ایده‌آل برای معرفی به اعضای کمیته (جلسهٔ ۲۷ شهریور).'});
+  }
+  /* تاریخچهٔ موضع + علت (الگوی Squivr/ArcSight) برای اعضای نمونهٔ سند پارس و دمو آریا */
+  const stamp=(id,rows)=>{
+    const m=(DB.publicsMembers??[]).find(x=>x.id===id);
+    if(m&&!Array.isArray(m.stanceHistory)) m.stanceHistory=rows;
+  };
+  stamp('PM-P-003',[
+    {at:'2026-06-10T08:00:00.000Z',fromStance:'INFLUENCER',toStance:'KEY_PLAYER',cause:'INTERACTION',causeNote:'کارگاه مشترک حوزهٔ انرژی؛ تیم رهبری از نقش uç هوش مصنوعی استقبال کرد',by:'seed'},
+    {at:'2026-08-02T08:00:00.000Z',fromStance:'KEY_PLAYER',toStance:'KEY_PLAYER',cause:'POLICY',causeNote:'ابلاغ اولویت بهره‌وری انرژی؛ موضع کلیدی ماند اما انتظارات سخت‌گیرانه‌تر شد',by:'seed'},
+  ]);
+  stamp('PM-P-014',[
+    {at:'2026-07-05T08:00:00.000Z',fromStance:'SUPPORTER',toStance:'KEY_PLAYER',cause:'MARKET',causeNote:'تقاضای محتوای فارسی برای مدل‌های زبانی؛ حوزهٔ محتوا به مرکز توجه رسید',by:'seed'},
+  ]);
+  const aryaFirst=(DB.publicsMembers??[]).find(x=>x.orgId!=='org-pars');
+  if(aryaFirst&&!Array.isArray(aryaFirst.stanceHistory)){
+    aryaFirst.stanceHistory=[{at:'2026-07-20T08:00:00.000Z',fromStance:'OBSERVER',toStance:'SUPPORTER',cause:'INTERACTION',causeNote:'جلسهٔ معرفی پلتفرم؛ پذیرش اولیهٔ مثبت',by:'seed'}];
+  }
+}
 /* برچسب حامی + منبع شناسایی + قدرت حامیی (P1-5) */
 const CHAMPION_TAG_SEED={
   'p-3':{flag:true,source:'WON_DEAL',power:84},
@@ -4138,6 +4454,7 @@ function loadDb() {
   seedSettingsStore();
   seedSessionsStore();
   seedAnalyticsStore();
+  seedPhase1Extras();
   saveDb();
 }
 let USERS = null;
@@ -4163,7 +4480,7 @@ function resetDbInPlace(){
   seedRetention(); seedMasterData(); seedIntegrations(); seedReferralStore();
   seedApprovals(); seedWorkflowStore(); seedPublicsStore(); seedStrategyStore(); seedSecurityEvents();
   seedPrivacyStore(); seedEnterpriseStore(); seedSettingsStore(); seedSessionsStore();
-  seedAnalyticsStore(); saveDb();
+  seedAnalyticsStore(); seedPhase1Extras(); saveDb();
 }
 
 function currentUser(req) {
@@ -5247,7 +5564,9 @@ function dqDetectCandidates(entityType,data,oid,orgScope){
 /* گردش‌کارهای پیش‌فرض: هر نهاد اصلی سیستم یک محرک خودکار دارد تا موتور اتوماسیون
    «همهٔ سامانه» را پوشش دهد — رابطه، جلسه، اقدام، تعهد، تعامل، فرصت، معرفی، پروژه، شخص، سازمان. */
 const WFLOW_ENTITY_FA = { Relationship:'رابطه', Organization:'سازمان', Person:'شخص', Meeting:'جلسه', Commitment:'تعهد', Action:'اقدام', Opportunity:'فرصت', Project:'پروژه', Referral:'معرفی', Interaction:'تعامل', PublicMember:'عضو عموم', Publics:'عموم‌ها', Media:'رسانه' };
-const WFLOW_TRIGGER_FA = { MANUAL:'دستی', RELATIONSHIP_CREATED:'ایجاد رابطه', RELATIONSHIP_UPDATED:'به‌روزرسانی رابطه', MEETING_CREATED:'ایجاد جلسه', MEETING_COMPLETED:'ثبت نتیجهٔ جلسه', ACTION_CREATED:'ایجاد اقدام', ACTION_UPDATED:'به‌روزرسانی اقدام', ACTION_COMPLETED:'انجام اقدام', COMMITMENT_CREATED:'ایجاد تعهد', COMMITMENT_UPDATED:'به‌روزرسانی تعهد', COMMITMENT_FULFILLED:'انجام تعهد', INTERACTION_CREATED:'ثبت تعامل', OPPORTUNITY_CREATED:'ایجاد فرصت', OPPORTUNITY_UPDATED:'به‌روزرسانی فرصت', OPPORTUNITY_WON:'پیروزی فرصت', OPPORTUNITY_LOST:'از دست رفتن فرصت', PROJECT_CREATED:'ایجاد پروژه', PROJECT_UPDATED:'به‌روزرسانی پروژه', REFERRAL_CREATED:'ایجاد معرفی', REFERRAL_UPDATED:'به‌روزرسانی معرفی', REFERRAL_ACCEPTED:'پذیرش معرفی', REFERRAL_COMPLETED:'انجام معرفی', REFERRAL_DECLINED:'رد معرفی', PERSON_CREATED:'ایجاد شخص', PERSON_UPDATED:'به‌روزرسانی شخص', ORGANIZATION_CREATED:'ایجاد سازمان', ORGANIZATION_UPDATED:'به‌روزرسانی سازمان', PUBLIC_MEMBER_ADDED:'افزودن عضو عموم', PUBLIC_STAGE_CHANGED:'تغییر مرحلهٔ عموم', PUBLIC_GAP_DETECTED:'کشف گپ عموم', PUBLIC_REVIEW_DUE:'سررسید بازبینی عموم', MEDIA_CREATED:'ثبت رسانه', STRATEGY_SCENARIO_CREATED:'ایجاد سناریوی راهبردی', STRATEGY_SIMULATED:'اجرای شبیه‌سازی راهبردی', STRATEGY_PREDICTED:'پیش‌بینی و توصیهٔ واکنشی', STRATEGY_IMPORT_COMPLETED:'ورود دادهٔ راهبردی' };
+const WFLOW_TRIGGER_FA = { MANUAL:'دستی', RELATIONSHIP_CREATED:'ایجاد رابطه', RELATIONSHIP_UPDATED:'به‌روزرسانی رابطه', MEETING_CREATED:'ایجاد جلسه', MEETING_COMPLETED:'ثبت نتیجهٔ جلسه', ACTION_CREATED:'ایجاد اقدام', ACTION_UPDATED:'به‌روزرسانی اقدام', ACTION_COMPLETED:'انجام اقدام', COMMITMENT_CREATED:'ایجاد تعهد', COMMITMENT_UPDATED:'به‌روزرسانی تعهد', COMMITMENT_FULFILLED:'انجام تعهد', INTERACTION_CREATED:'ثبت تعامل', OPPORTUNITY_CREATED:'ایجاد فرصت', OPPORTUNITY_UPDATED:'به‌روزرسانی فرصت', OPPORTUNITY_WON:'پیروزی فرصت', OPPORTUNITY_LOST:'از دست رفتن فرصت', PROJECT_CREATED:'ایجاد پروژه', PROJECT_UPDATED:'به‌روزرسانی پروژه', REFERRAL_CREATED:'ایجاد معرفی', REFERRAL_UPDATED:'به‌روزرسانی معرفی', REFERRAL_ACCEPTED:'پذیرش معرفی', REFERRAL_COMPLETED:'انجام معرفی', REFERRAL_DECLINED:'رد معرفی', PERSON_CREATED:'ایجاد شخص', PERSON_UPDATED:'به‌روزرسانی شخص', ORGANIZATION_CREATED:'ایجاد سازمان', ORGANIZATION_UPDATED:'به‌روزرسانی سازمان', PUBLIC_MEMBER_ADDED:'افزودن عضو عموم', PUBLIC_STAGE_CHANGED:'تغییر مرحلهٔ عموم', PUBLIC_GAP_DETECTED:'کشف گپ عموم', PUBLIC_REVIEW_DUE:'سررسید بازبینی عموم', MEDIA_CREATED:'ثبت رسانه', STRATEGY_SCENARIO_CREATED:'ایجاد سناریوی راهبردی', STRATEGY_SIMULATED:'اجرای شبیه‌سازی راهبردی', STRATEGY_PREDICTED:'پیش‌بینی و توصیهٔ واکنشی', STRATEGY_IMPORT_COMPLETED:'ورود دادهٔ راهبردی',
+  /* مسترپلن فاز ۱ */
+  RELATIONSHIP_CONCENTRATION:'تمرکز رابطه در یک نفر', PERSON_ROLE_CHANGED:'تغییر نقش/سازمان شخص', PERIODIC_REPORT_GENERATED:'تولید گزارش دوره‌ای', WARM_PATH_REQUESTED:'درخواست مسیر گرم' };
 
 /* ====================== Publics (عموم‌ها) — کاتالوگ و قالب‌ها ====================== */
 const PUBLIC_LINKAGE_FA = {"ENABLING": "فعال‌کننده", "FUNCTIONAL_INPUT": "کارکردی-ورودی", "FUNCTIONAL_OUTPUT": "کارکردی-خروجی", "NORMATIVE": "هنجاری", "DIFFUSED": "پراکنده"};
@@ -5886,7 +6205,8 @@ function pubMemberView(m){
     sourceLabel:m.sourceType==='organization'?'سازمان':m.sourceType==='person'?'شخص':m.sourceType==='relationship'?'رابطه':'رسانه',
     groupFa:g.fa??null,categoryId:g.cat??null,categoryFa:g.cat?PUBLIC_CATEGORY_FA[g.cat]:null,
     linkageFa:PUBLIC_LINKAGE_FA[m.linkage]??null,stageFa:PUBLIC_STAGE_FA[m.stage]??null,stanceFa:PUBLIC_STANCE_FA[m.stance]??null,
-    kanal:g.kanal??null,signals:sug.signals,suggested:{linkage:sug.linkage,stage:sug.stage,power:sug.power,interest:sug.interest,stance:sug.stance}};
+    kanal:g.kanal??null,signals:sug.signals,suggested:{linkage:sug.linkage,stage:sug.stage,power:sug.power,interest:sug.interest,stance:sug.stance},
+    stanceHistory:Array.isArray(m.stanceHistory)?m.stanceHistory:[]};
 }
 function pubCoverage(orgId){
   const self=pubByOrg(orgId);
@@ -6849,6 +7169,49 @@ async function __handler(req, res) {
     if(orgParam) list=list.filter(p=>p.organizationId===orgParam);
     return json(res,200,attachCriteria('PERSON',list.map(p=>({...p,organization:orgById(p.organizationId)?{id:p.organizationId,name:orgById(p.organizationId).name}:null}))));
   }
+  /* ─── مسترپلن فاز ۱/۱۰: alumni + ثبت تغییر نقش (UserGems/Introhive Pathways) ─── */
+  if(is('/people/alumni')&&method==='GET'){
+    return json(res,200,alumniView(req));
+  }
+  const personRoleChange=match('/people/:id/role-change');
+  if(personRoleChange&&method==='POST'){
+    const p=PEOPLE.find(x=>x.id===personRoleChange[0]);
+    if(!p) return json(res,404,{message:'شخص یافت نشد'});
+    if(!inScope(req,p.organizationId)) return json(res,403,{message:'دسترسی به این شخص مجاز نیست.'});
+    const b=await readBody(req);
+    const type=String(b.type??'').toUpperCase();
+    const ROLE_CHANGE_TYPES=['PROMOTED','TITLE_CHANGED','LEFT','HIRED'];
+    if(!ROLE_CHANGE_TYPES.includes(type)) return json(res,400,{message:'نوع تغییر باید PROMOTED، TITLE_CHANGED، LEFT یا HIRED باشد.'});
+    const toOrgId=b.toOrganizationId?String(b.toOrganizationId):p.organizationId;
+    if(toOrgId!==p.organizationId&&!inScope(req,toOrgId)) return json(res,403,{message:'سازمان مقصد خارج از محدودهٔ دسترسی شماست.'});
+    const toTitle=String(b.toTitle??p.title??'').trim()||null;
+    if(!toTitle&&type!=='LEFT') return json(res,400,{message:'عنوان جدید لازم است.'});
+    const from={organizationId:p.organizationId,title:p.title??null};
+    const ev={id:`ce-${Date.now()}`,personId:p.id,type,at:nowIso(),from,
+      to:{organizationId:toOrgId,title:toTitle},source:'ACTIVE_USER',alert:b.alert!==false,
+      note:String(b.note??'').slice(0,400)||null};
+    DB.careerEvents=DB.careerEvents??[];
+    DB.careerEvents.unshift(ev);
+    if(toTitle) p.title=toTitle;
+    if(toOrgId!==p.organizationId){
+      p.organizationId=toOrgId;
+      PERSON_ORGS.push({personId:p.id,organizationId:toOrgId,roleTitle:toTitle,department:null,isPrimary:false,status:'ACTIVE'});
+    }
+    let action=null;
+    if(ev.alert){
+      const rel=RELS.find(r=>relInScope(req,r)&&(r.sourceOrganizationId===toOrgId||r.targetOrganizationId===toOrgId));
+      action={id:`a-${Date.now()}`,title:`تماس با ${`${p.firstName??''} ${p.lastName??''}`.trim()} پس از ${type==='PROMOTED'?'ارتقا':type==='LEFT'?'جابه‌جایی':type==='HIRED'?'شروع همکاری':'تغییر عنوان'} — تازه‌سازی رابطه`,
+        status:'OPEN',priority:'MEDIUM',dueAt:new Date(Date.now()+7*86400000).toISOString(),ownerId:null,relationshipId:rel?.id??null};
+      ACTIONS.unshift(action);
+      NOTIFICATIONS.unshift({id:`n-${Date.now()}`,title:'تغییر نقش ثبت شد',body:`${`${p.firstName??''} ${p.lastName??''}`.trim()}: ${orgById(from.organizationId)?.name??'—'} → ${orgById(toOrgId)?.name??'—'}${toTitle?` (${toTitle})`:''} — اقدام پیگیری ساخته شد.`,type:'SYSTEM',priority:'warning',isRead:false,createdAt:nowIso()});
+    }
+    DB.phase1Counters=DB.phase1Counters??{briefsGenerated:0,quickLogs:0,matrixDrags:0,warmPathRequests:0,roleChanges:0,periodicReports:0};
+    DB.phase1Counters.roleChanges++;
+    saveDb();
+    audit(req,'ROLE_CHANGE','person',p.id,'OK',{meta:{type,from,to:ev.to,actionId:action?.id??null}});
+    await autoRunWorkflows('Person',p.id,'PERSON_ROLE_CHANGED',{person:{id:p.id,name:`${p.firstName??''} ${p.lastName??''}`.trim(),title:p.title,organizationId:p.organizationId},careerEvent:{id:ev.id,type,from,to:ev.to},actionId:action?.id??null});
+    return json(res,201,{careerEvent:ev,action:action?actionView(action):null,person:{id:p.id,title:p.title,organizationId:p.organizationId}});
+  }
   const personId=match('/people/:id');
   if(personId&&method==='GET'){
     const p=PEOPLE.find(x=>x.id===personId[0]);
@@ -7493,6 +7856,11 @@ async function __handler(req, res) {
     if(!canAn('analytics.read')) return json(res,403,{message:AN_READ_MSG});
     return json(res,200,careerEventsView(req));
   }
+  /* مسترپلن فاز ۱/۸: سنجه‌های پذیرش و ارزش */
+  if(is('/analytics/adoption')&&method==='GET'){
+    if(!canAn('analytics.read')) return json(res,403,{message:AN_READ_MSG});
+    return json(res,200,adoptionView(req));
+  }
   if(is('/analytics/workflows')&&method==='GET'){
     if(!canAn('analytics.read')) return json(res,403,{message:AN_READ_MSG});
     const wfRows=DB.workflowExecutions??[];
@@ -7732,6 +8100,42 @@ async function __handler(req, res) {
     if(!fromId||!toId) return json(res,400,{message:'مبدأ و مقصد مسیر الزامی است.'});
     return json(res,200,netPathOrg(req,fromId,toId,mode,{maxHops:Number(q.get('maxHops'))||3}));
   }
+  /* ─── مسترپلن فاز ۱/۹: مسیر معرفی گرم + حاکمیت واسطه (Affinity/Boomerang) ─── */
+  if(is('/network/warm-path')&&method==='GET'){
+    const toId=q.get('to')??'';
+    const fromId=q.get('from')??primaryOrgId(authUser)??visibleOrgIds(req)[0]??'';
+    const maxHops=Math.max(1,Math.min(4,Number(q.get('maxHops'))||3));
+    if(!fromId||!toId) return json(res,400,{message:'مقصد مسیر الزامی است و مبدأ باید قابل تشخیص باشد.'});
+    if(!inScope(req,fromId)&&!inScope(req,toId)) return json(res,403,{message:'مسیر خارج از محدودهٔ دسترسی شماست.'});
+    DB.phase1Counters=DB.phase1Counters??{briefsGenerated:0,quickLogs:0,matrixDrags:0,warmPathRequests:0,roleChanges:0,periodicReports:0};
+    DB.phase1Counters.warmPathRequests++;
+    const out=warmPathsTo(req,fromId,toId,maxHops);
+    await autoRunWorkflows('Network',toId,'WARM_PATH_REQUESTED',{warmPath:{from:out.from,to:out.to,pathCount:out.summary.pathCount,best:out.summary.bestLabel}},`warm-path:${fromId}:${toId}:${new Date().toISOString().slice(0,10)}`);
+    saveDb();
+    return json(res,200,out);
+  }
+  const introSettingsRoute=match('/people/:id/intro-settings');
+  if(introSettingsRoute&&(method==='GET'||method==='PUT')){
+    const p=PEOPLE.find(x=>x.id===introSettingsRoute[0]);
+    if(!p) return json(res,404,{message:'شخص یافت نشد'});
+    if(!inScope(req,p.organizationId)) return json(res,403,{message:'دسترسی به این شخص مجاز نیست.'});
+    if(method==='GET'){
+      return json(res,200,{personId:p.id,name:`${p.firstName??''} ${p.lastName??''}`.trim(),...(DB.introSettings?.[p.id]??{active:true,maxRequestsPerMonth:2,preferredChannel:'EMAIL',note:null})});
+    }
+    const b=await readBody(req);
+    const prev=DB.introSettings?.[p.id]??{active:true,maxRequestsPerMonth:2,preferredChannel:'EMAIL',note:null};
+    const active=b.active!==undefined?!!b.active:prev.active;
+    const maxReq=b.maxRequestsPerMonth!=null?Number(b.maxRequestsPerMonth):prev.maxRequestsPerMonth;
+    if(!Number.isFinite(maxReq)||maxReq<0||maxReq>20) return json(res,400,{message:'سقف درخواست در ماه باید عددی بین ۰ تا ۲۰ باشد.'});
+    const chan=String(b.preferredChannel??prev.preferredChannel??'EMAIL').toUpperCase();
+    if(!['EMAIL','MEETING','CALL','MESSAGE'].includes(chan)) return json(res,400,{message:'کانال ترجیحی نامعتبر است (EMAIL/MEETING/CALL/MESSAGE).'});
+    const row={active,maxRequestsPerMonth:Math.round(maxReq),preferredChannel:chan,note:String(b.note??prev.note??'').slice(0,240)||null};
+    DB.introSettings=DB.introSettings??{};
+    DB.introSettings[p.id]=row;
+    saveDb();
+    audit(req,'UPDATE','IntroSettings',p.id,'OK',{meta:row});
+    return json(res,200,{personId:p.id,name:`${p.firstName??''} ${p.lastName??''}`.trim(),...row});
+  }
   /* گراف ۴ ستون (P1-6) */
   if(is('/network/columns')&&method==='GET') return json(res,200,networkColumns(req));
   /* P2-2: SNA پیشرفته + پذیرش پیشنهاد پیوند */
@@ -7903,6 +8307,9 @@ async function __handler(req, res) {
       const cad=relCadence(r);
       if(cad.status==='CRITICAL') evidence.push({type:'CADENCE_BREACH',refId:r.id,title:`کیدنس شکسته: آخرین تعامل ${cad.daysSinceLastInteraction} روز پیش (هدف ${cad.cadenceDays})`,at:r.lastInteractionAt});
       else if(cad.status==='WARN') evidence.push({type:'CADENCE_BREACH',refId:r.id,title:`کیدنس عقب افتاده: آخرین تعامل ${cad.daysSinceLastInteraction} روز پیش (هدف ${cad.cadenceDays})`,at:r.lastInteractionAt});
+      /* مسترپلن فاز ۱/۲: تمرکز رابطه در یک نفر (Introhive) */
+      const concEv=interactionConcentration(r.id);
+      if(concEv.total>=3&&concEv.topShare>=70) evidence.push({type:'CONCENTRATION',refId:r.id,title:`تمرکز رابطه: ${concEv.topShare}٪ تعاملات از طریق «${concEv.top?.name??'—'}»`,at:null});
       if(!evidence.length) continue;
       const overdue=evidence.filter(x=>x.type==='COMMITMENT_OVERDUE'||x.type==='ACTION_OVERDUE').length;
       let severity=r.riskScore>=60?'HIGH':r.riskScore>=40?'MEDIUM':'LOW';
@@ -8030,6 +8437,13 @@ async function __handler(req, res) {
   if(is('/intelligence/opportunity-detection')) return json(res,200,intelEngine(req).opportunities);
   if(is('/intelligence/strategic-coverage')) return json(res,200,intelEngine(req).coverage);
   if(is('/intelligence/network')) return json(res,200,intelEngine(req).network);
+  /* ─── مسترپلن فاز ۱/۲+۵: تمرکز رابطه + بنچمارک سلامت ─── */
+  if(is('/intelligence/concentration')){
+    const items=relConcentrationRows(req);
+    return json(res,200,{generatedAt:nowIso(),threshold:70,windowDays:PHASE1_WINDOW_DAYS,items,
+      summary:{concentrated:items.length,highSeverity:items.filter(x=>x.severity==='HIGH').length}});
+  }
+  if(is('/intelligence/benchmark')) return json(res,200,benchmarkView(req));
   /* P2-1: صف قدم بعدی (NBA) + اجرا/رد */
   if(is('/intelligence/nba')&&method==='GET') return json(res,200,nbaView(req));
   {
@@ -8175,6 +8589,56 @@ async function __handler(req, res) {
   }
 
   /* ---- interactions CRUD ---- */
+  /* ─── مسترپلن فاز ۱/۱: بریف پیش از جلسه + ثبت یک‌کلیکی پس از جلسه (Introhive) ─── */
+  const meetingBriefRoute=match('/meetings/:id/brief');
+  if(meetingBriefRoute&&method==='GET'){
+    const g=meetingGuard(meetingBriefRoute[0]); if(g.code) return json(res,g.code,{message:g.msg});
+    DB.phase1Counters=DB.phase1Counters??{briefsGenerated:0,quickLogs:0,matrixDrags:0,warmPathRequests:0,roleChanges:0,periodicReports:0};
+    DB.phase1Counters.briefsGenerated++;
+    saveDb();
+    audit(req,'BRIEF_VIEW','meeting',g.m.id,'OK');
+    return json(res,200,meetingBriefView(g.m));
+  }
+  const meetingQuickLog=match('/meetings/:id/quick-log');
+  if(meetingQuickLog&&method==='POST'){
+    const g=meetingGuard(meetingQuickLog[0]); if(g.code) return json(res,g.code,{message:g.msg});
+    const m=g.m;
+    const b=await readBody(req);
+    if(!String(b.subject??'').trim()) return json(res,400,{message:'موضوع تعامل لازم است.'});
+    const type=String(b.type??'MEETING').toUpperCase();
+    if(!['CALL','EMAIL','MEETING','NOTE','MESSAGE','OTHER'].includes(type)) return json(res,400,{message:`نوع «${b.type}» نامعتبر است (CALL/EMAIL/MEETING/NOTE/MESSAGE/OTHER).`});
+    const rel=m.relationshipId?RELS.find(r=>r.id===m.relationshipId):null;
+    const orgId=m.organizationId??(rel?rel.sourceOrganizationId:null);
+    if(!orgId&&!rel&&!b.personId) return json(res,400,{message:'جلسه به سازمان/رابطه‌ای متصل نیست؛ شخص مرتبط را مشخص کنید.'});
+    const personId=b.personId??((m.participants??[]).map(x=>x.personId).find(pid=>{const p=personById(pid);return p&&(!orgId||p.organizationId!==primaryOrgId(authUser));})??null)??null;
+    const x={id:`i-${Date.now()}`,type,subject:String(b.subject).trim(),summary:b.summary??'',outcome:null,durationMinutes:b.durationMinutes?Number(b.durationMinutes):null,
+      importance:'MEDIUM',followUpRequired:!!b.followUpRequired,followUpAt:null,sentiment:b.sentiment!=null?Number(b.sentiment):null,
+      purpose:null,channel:null,quality:null,result:null,direction:null,nextStep:b.nextStep?String(b.nextStep).trim():null,nextStepAt:null,
+      occurredAt:b.occurredAt??nowIso(),userId:authUser.id,organizationId:orgId,relationshipId:m.relationshipId??null,personId,meetingId:m.id};
+    INTERACTIONS.unshift(x);
+    applyInteractionToRel(rel,x);
+    let action=null;
+    if(String(b.actionTitle??'').trim()){
+      action={id:`a-${Date.now()}`,title:String(b.actionTitle).trim(),status:'OPEN',priority:'MEDIUM',dueAt:b.actionDueAt??null,meetingId:m.id,ownerId:b.ownerId??null,relationshipId:m.relationshipId??null};
+      ACTIONS.unshift(action);
+      await autoRunWorkflows('Action',action.id,'ACTION_CREATED',{action:{id:action.id,title:action.title,status:action.status,priority:action.priority,relationshipId:action.relationshipId,organizationId:orgId}});
+    }
+    let commitment=null;
+    if(String(b.commitmentDescription??'').trim()){
+      commitment={id:`c-${Date.now()}`,description:String(b.commitmentDescription).trim(),dueAt:b.commitmentDueAt??null,status:'OPEN',organizationId:orgId,ownerId:b.ownerId??null,relationshipId:m.relationshipId??null,meetingId:m.id};
+      COMMITMENTS.unshift(commitment);
+      await autoRunWorkflows('Commitment',commitment.id,'COMMITMENT_CREATED',{commitment:{id:commitment.id,description:commitment.description,dueAt:commitment.dueAt,organizationId:orgId}});
+    }
+    m.actions=[...(m.actions??[]),...(action?[{id:action.id}]:[])];
+    m.commitments=[...(m.commitments??[]),...(commitment?[{id:commitment.id}]:[])];
+    DB.phase1Counters=DB.phase1Counters??{briefsGenerated:0,quickLogs:0,matrixDrags:0,warmPathRequests:0,roleChanges:0,periodicReports:0};
+    DB.phase1Counters.quickLogs++;
+    saveDb();
+    audit(req,'QUICK_LOG','meeting',m.id,'OK',{meta:{interactionId:x.id,actionId:action?.id??null,commitmentId:commitment?.id??null}});
+    await autoRunWorkflows('Interaction',x.id,'INTERACTION_CREATED',{interaction:{id:x.id,subject:x.subject,type:x.type,importance:'MEDIUM',organizationId:orgId,relationshipId:x.relationshipId,personId:x.personId,followUpRequired:false}});
+    return json(res,201,{interaction:interactionCardView(x),action:action?actionView(action):null,commitment:commitment?commitmentView(commitment):null,
+      summary:{interactionCreated:true,actionCreated:!!action,commitmentCreated:!!commitment}});
+  }
   if(is('/interactions')&&method==='POST'){
     const b=await readBody(req);
     if(!String(b.subject??'').trim()) return json(res,400,{message:'موضوع تعامل لازم است.'});
@@ -9257,6 +9721,19 @@ async function __handler(req, res) {
     await autoRunWorkflows('Referral',r.id,'REFERRAL_CREATED',{referral:{id:r.id,title:r.title,status:r.status,sourcePersonId:r.sourcePersonId??null,targetPersonId:r.targetPersonId??null,sourceOrganizationId:r.sourceOrganizationId??null,targetOrganizationId:r.targetOrganizationId??null,relationshipId:r.relationshipId??null}});
     if(auditRes.gate==='BLOCKED') NOTIFICATIONS.unshift({id:`n-ref-${Date.now()}`,userId:authUser.id,type:'ALERT',title:'معرفی به ممیزی خورد',body:`«${r.title}»: ${auditRes.checks.filter((x)=>x.level==='BLOCK').map((x)=>x.label).join('، ')} — ابتدا شرایط را اصلاح کنید.`,channel:'IN_APP',priority:'HIGH',createdAt:nowIso(),readAt:null,data:{referralId:r.id}});
     return json(res,201,{...r,createdBy:userById(r.createdById)?{id:r.createdById,name:userById(r.createdById).name}:null,recipientUser:userById(r.recipientUserId)?{id:r.recipientUserId,name:userById(r.recipientUserId).name}:null,instruction:ins,audit:auditRes,acceptedSuggestion});
+  }
+  /* مسترپلن فاز ۱/۹: قیف تبدیل مسیر گرم → معرفی → جلسه */
+  if(is('/core-domain/referrals/conversion')&&method==='GET'){
+    const refs=(DB.referrals??[]).filter(r=>authUser?.isOwner||inScope(req,r.sourceOrganizationId)||inScope(req,r.targetOrganizationId));
+    const total=refs.length;
+    const accepted=refs.filter(r=>r.status!=='PENDING'&&r.status!=='DECLINED'&&r.status!=='CANCELLED').length;
+    const completed=refs.filter(r=>r.status==='COMPLETED').length;
+    const meetingsBooked=refs.filter(r=>r.status==='COMPLETED'||r.postCheckins?.OUTCOME).length;
+    const byStatus={};
+    refs.forEach(r=>{byStatus[r.status]=(byStatus[r.status]??0)+1;});
+    return json(res,200,{generatedAt:nowIso(),total,accepted,completed,meetingsBooked,byStatus,
+      conversion:{acceptRate:total?Math.round(accepted/total*100):null,completeRate:accepted?Math.round(completed/accepted*100):null,meetingRate:accepted?Math.round(meetingsBooked/accepted*100):null},
+      note:'نرخ «مسیر گرم → جلسه» = سهم معرفی‌های منجر به جلسه/نتیجه از معرفی‌های پذیرفته‌شده.'});
   }
   const refPatch=match('/core-domain/referrals/:id');
   if(refPatch&&method==='PATCH'){
@@ -10355,6 +10832,17 @@ async function __handler(req, res) {
     recordSecurity(req,'EXPORT_CREATED','INFO',{exportType:format.toUpperCase(),recordCount:rows.length,report:kind,approvalId:approvalId??null},'Report',kind,authUser.id,organizationId);
     return logRow;
   }
+  /* ─── مسترپلن فاز ۱/۷: گزارش دوره‌ای خودکار (4Degrees/DemandFarm) ─── */
+  if(is('/reports/periodic')&&method==='GET'){
+    const period=q.get('period')==='monthly'?'monthly':'weekly';
+    const orgId=q.get('organizationId')||visibleOrgIds(req)[0]||null;
+    const out=periodicReportView(req,period,orgId);
+    DB.phase1Counters=DB.phase1Counters??{briefsGenerated:0,quickLogs:0,matrixDrags:0,warmPathRequests:0,roleChanges:0,periodicReports:0};
+    DB.phase1Counters.periodicReports++;
+    saveDb();
+    await autoRunWorkflows('Report',`periodic-${period}`,'PERIODIC_REPORT_GENERATED',{report:{period,counts:out.counts,orgId}},`periodic:${period}:${new Date().toISOString().slice(0,13)}`);
+    return json(res,200,out);
+  }
   const reportKey=match('/reports/:key');
   if(reportKey&&method==='GET'){
     const kind=reportKey[0];
@@ -10797,6 +11285,14 @@ async function __handler(req, res) {
     if(!m) return json(res,404,{message:'عضو عموم یافت نشد.'});
     if(!inScope(req,m.orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
     const b=await readBody(req);
+    /* مسترپلن فاز ۱/۴: اگر موضع قرار است عوض شود و فراخوان علت می‌خواهد (ماتریس)، علت معتبر الزامی است */
+    const prospectiveStance=(b.power!==undefined||b.interest!==undefined||b.stage!==undefined)
+      ?pubStanceOf(b.power!==undefined?Number(b.power):m.power,b.interest!==undefined?Number(b.interest):m.interest)
+      :(b.stance!==undefined?b.stance:m.stance);
+    const causeKey=String(b.cause??'').toUpperCase();
+    if(prospectiveStance!==m.stance&&b.requireCause&&!STANCE_CAUSE_FA[causeKey]){
+      return json(res,400,{message:'علت تغییر موضع الزامی است: '+Object.keys(STANCE_CAUSE_FA).join(' / ')+'.'});
+    }
     const before={stage:m.stage,stance:m.stance,linkage:m.linkage,power:m.power,interest:m.interest};
     if(b.stage!==undefined){ if(!PUBLIC_STAGE_FA[b.stage]) return json(res,400,{message:'مرحله معتبر نیست.'}); m.stage=b.stage; }
     if(b.linkage!==undefined){ if(!PUBLIC_LINKAGE_FA[b.linkage]) return json(res,400,{message:'نوع پیوند معتبر نیست.'}); m.linkage=b.linkage; }
@@ -10805,6 +11301,18 @@ async function __handler(req, res) {
     if(b.interest!==undefined){ const v=Number(b.interest); if(!Number.isFinite(v)||v<0||v>100) return json(res,400,{message:'علاقه باید عددی بین ۰ تا ۱۰۰ باشد.'}); m.interest=v; }
     if(b.note!==undefined) m.note=String(b.note).slice(0,240);
     if(b.power!==undefined||b.interest!==undefined||b.stage!==undefined) m.stance=pubStanceOf(m.power,m.interest);
+    /* تاریخچهٔ موضع + علت (الگوی Squivr/ArcSight: «چه چیزی واکنش درگیرد») */
+    if(m.stance!==before.stance){
+      m.stanceHistory=Array.isArray(m.stanceHistory)?m.stanceHistory:[];
+      m.stanceHistory.push({at:nowIso(),fromStance:before.stance,toStance:m.stance,
+        cause:STANCE_CAUSE_FA[causeKey]?causeKey:'OTHER',
+        causeNote:b.causeNote?String(b.causeNote).slice(0,240):null,
+        source:b.source==='matrix'?'MATRIX':'EDIT',by:authUser?.id??null});
+    }
+    if(b.source==='matrix'){
+      DB.phase1Counters=DB.phase1Counters??{briefsGenerated:0,quickLogs:0,matrixDrags:0,warmPathRequests:0,roleChanges:0,periodicReports:0};
+      DB.phase1Counters.matrixDrags++;
+    }
     if(b.assess!==false){ m.assessedAt=nowIso(); m.reviewDue=new Date(Date.now()+(Number(b.reviewIntervalDays)||90)*86400000).toISOString(); }
     const ctx={publicMember:pubMemberView(m),orgId:m.orgId,groupId:m.groupId,before,after:{stage:m.stage,stance:m.stance,linkage:m.linkage},sourceType:m.sourceType,sourceId:m.sourceId};
     if(m.stage!==before.stage) await autoRunWorkflows('PublicMember',m.id,'PUBLIC_STAGE_CHANGED',ctx,`pm-stage:${m.id}:${before.stage}>${m.stage}`);

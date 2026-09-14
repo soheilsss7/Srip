@@ -75,6 +75,7 @@ function EvidenceLine({ ev }: { ev: Evidence }) {
     ACTION_BLOCKED: { icon: <ShieldAlert size={12} />, label: 'اقدام مسدود', href: ev.refId ? `/actions/${ev.refId}` : undefined },
     COMMITMENT_OVERDUE: { icon: <Clock3 size={12} />, label: 'تعهد عقب‌افتاده', href: ev.refId ? `/commitments/${ev.refId}` : undefined },
     RELATIONSHIP_WATCH: { icon: <EyeIcon />, label: 'وضعیت رابطه' },
+    CONCENTRATION: { icon: <User size={12} />, label: 'تمرکز رابطه' },
     LOW_HEALTH: { icon: <HeartPulse size={12} />, label: 'سلامت پایین' },
     STALE_INTERACTION: { icon: <Clock3 size={12} />, label: 'تعامل کهنه' },
   };
@@ -96,6 +97,8 @@ export default function IntelligencePage() {
   const [data, setData] = useState<Intel | null>(null);
   const [nba, setNba] = useState<any>(null);
   const [leverage, setLeverage] = useState<any>(null);
+  const [conc, setConc] = useState<any>(null);
+  const [bench, setBench] = useState<any>(null);
   const [nbaBusy, setNbaBusy] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -106,12 +109,14 @@ export default function IntelligencePage() {
     if (!can('analytics.read')) { setLoading(false); return; }
     setLoading(true); setError('');
     try {
-      const [d, nb, lv] = await Promise.all([
+      const [d, nb, lv, cc, bm] = await Promise.all([
         api<Intel>('/intelligence/overview'),
         api<any>('/intelligence/nba').catch(() => null),
         api<any>('/intelligence/risk-leverage').catch(() => null),
+        api<any>('/intelligence/concentration').catch(() => null),
+        api<any>('/intelligence/benchmark').catch(() => null),
       ]);
-      setData(d); setNba(nb); setLeverage(lv);
+      setData(d); setNba(nb); setLeverage(lv); setConc(cc); setBench(bm);
     }
     catch (e) { setError((e as Error).message); }
     finally { setLoading(false); }
@@ -275,6 +280,90 @@ export default function IntelligencePage() {
                       {Array.isArray(a.backupKeyPersons) && a.backupKeyPersons.length > 0 && <span className="chip info">جانشین: {a.backupKeyPersons.map((p: any) => p.name).join('، ')}</span>}
                       {a.alternatePath && <span className="chip success">{fmtNum(a.alternatePath.hops)} پرش · امتیاز {fmtNum(a.alternatePath.score)}</span>}
                     </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* مسترپلن فاز ۱/۲: تمرکز رابطه در یک نفر (Introhive — «کلید حساب در دست یک نفر») */}
+          {conc && (
+            <section className="panel" aria-label="تمرکز رابطه در یک نفر">
+              <div className="panel-title">
+                <div>
+                  <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><User size={16} /> تمرکز رابطه در یک نفر</h2>
+                  <p>سهم هر شخص از تعاملات {fmtNum(conc.windowDays)} روز اخیر هر رابطه — آستانه {fmtNum(conc.threshold)}٪؛ پادزهر: نقطهٔ تماس دوم (پوشش چندنخی)</p>
+                </div>
+                <Badge tone={conc.items?.length ? 'warning' : 'success'}>{fmtNum(conc.items?.length ?? 0)} رابطهٔ متمرکز</Badge>
+              </div>
+              {!conc.items?.length ? (
+                <p className="empty-state"><CheckCircle2 size={18} /> هیچ رابطه‌ای تک‌نفره نیست — پوشش چندنخی برقرار است.</p>
+              ) : (
+                <div className="list">
+                  {conc.items.map((x: any) => (
+                    <div className="listRow" key={x.relationshipId} style={{ alignItems: 'flex-start' }}>
+                      <Badge tone={x.severity === 'HIGH' ? 'danger' : x.severity === 'MEDIUM' ? 'warning' : 'info'}>
+                        {x.severity === 'HIGH' ? 'ریسک بالا' : x.severity === 'MEDIUM' ? 'متوسط' : 'ملایم'}
+                      </Badge>
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <strong style={{ fontSize: 13 }}>
+                          <Link className="t-primary" href={`/relationships/${x.relationshipId}`}>{x.relationshipName}</Link>
+                        </strong>
+                        <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+                          <span className="chip neutral">{fmtNum(x.topShare)}٪ تعاملات از طریق {x.dominantPerson?.name ?? '—'}</span>
+                          <span className="chip neutral">{fmtNum(x.totalInteractions)} تعامل در {fmtNum(x.windowDays)} روز</span>
+                          <span className={`chip ${x.secondContactExists ? 'success' : 'danger'}`}>
+                            {x.secondContactExists ? 'نقطهٔ تماس دوم هست' : 'نقطهٔ تماس دوم نیست'}
+                          </span>
+                          <span className="chip neutral">سلامت {fmtNum(x.healthScore)}</span>
+                        </span>
+                        <small style={{ display: 'block', marginTop: 4 }}>توصیه: {x.recommendation}</small>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* مسترپلن فاز ۱/۵: بنچمارک سلامت + توصیهٔ اقدام (ARPEDIO) */}
+          {bench && (
+            <section className="panel" aria-label="بنچمارک درون‌پرتفویی سلامت">
+              <div className="panel-title">
+                <div>
+                  <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><TrendingUp size={16} /> بنچمارک درون‌پرتفویی سلامت</h2>
+                  <p>مقایسهٔ هر رابطه با میانهٔ دستهٔ خودش (راهبردی/هستهٔ درآمد/رشد/ریسک/روتین) + توصیهٔ اقدام قاعده‌دار</p>
+                </div>
+                <Badge tone={bench.summary?.belowMedian > 0 ? 'warning' : 'success'}>
+                  {fmtNum(bench.summary?.belowMedian ?? 0)} زیر میانه از {fmtNum(bench.summary?.relationships ?? 0)}
+                </Badge>
+              </div>
+              <div className="table-wrap" style={{ marginTop: 8 }}>
+                <table>
+                  <thead>
+                    <tr><th>رابطه</th><th>دسته</th><th>سلامت</th><th>میانهٔ دسته</th><th>فاصله</th><th>صدک</th><th>توصیهٔ اول</th></tr>
+                  </thead>
+                  <tbody>
+                    {(bench.rows ?? []).slice(0, 10).map((r: any) => (
+                      <tr key={r.relationshipId}>
+                        <td><Link className="t-primary" href={`/relationships/${r.relationshipId}`}>{r.relationshipName}</Link></td>
+                        <td>{r.classLabel}</td>
+                        <td>{fmtNum(r.healthScore)}</td>
+                        <td>{r.peerMedian == null ? '—' : fmtNum(r.peerMedian)}</td>
+                        <td style={{ color: r.gap < -5 ? 'var(--red,#dc2626)' : undefined, fontWeight: r.gap < -10 ? 800 : undefined }}>
+                          {r.peerMedian == null ? '—' : `${r.gap > 0 ? '+' : ''}${fmtNum(r.gap)}`}
+                        </td>
+                        <td>{r.percentile == null ? '—' : `${fmtNum(r.percentile)}٪`}</td>
+                        <td style={{ fontSize: 12 }}>{r.recommendations?.[0]?.text ?? '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {(bench.classes ?? []).length > 0 && (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
+                  {bench.classes.map((c: any) => (
+                    <span key={c.key} className="chip neutral">{c.label}: {fmtNum(c.count)} رابطه · میانهٔ سلامت {c.medianHealth == null ? '—' : fmtNum(c.medianHealth)}</span>
                   ))}
                 </div>
               )}

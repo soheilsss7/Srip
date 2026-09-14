@@ -159,6 +159,10 @@ export default function Reports() {
   const [exporting, setExporting] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  /* مسترپلن فاز ۱/۷ — گزارش دوره‌ای خودکار (الگوی 4Degrees/DemandFarm) */
+  const [period, setPeriod] = useState<'weekly' | 'monthly'>('weekly');
+  const [periodic, setPeriodic] = useState<any>(null);
+  const [periodicBusy, setPeriodicBusy] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const meta = KINDS_MAP.get(kind) ?? KINDS[0];
@@ -177,6 +181,17 @@ export default function Reports() {
     finally { setLoading(false); }
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+
+  const loadPeriodic = async (p: 'weekly' | 'monthly', oid?: string) => {
+    setPeriodicBusy(true);
+    try {
+      const qs = new URLSearchParams({ period: p });
+      if (oid ?? orgId) qs.set('organizationId', String(oid ?? orgId));
+      setPeriodic(await api<any>(`/reports/periodic?${qs.toString()}`));
+    } catch (x) { setError((x as Error).message); }
+    finally { setPeriodicBusy(false); }
+  };
+  useEffect(() => { loadPeriodic('weekly'); /* eslint-disable-next-line */ }, []);
 
   async function exportFile(format: string) {
     setExporting(format); setError(''); setNotice('');
@@ -316,6 +331,83 @@ export default function Reports() {
         <div style={{ flex: '0 0 auto', paddingBottom: 2 }}>
           <Badge tone="info">{meta.fa} · {scopeLabel}</Badge>
         </div>
+      </section>
+
+      {/* ─── مسترپلن فاز ۱/۷: گزارش دوره‌ای خودکار — الگوی «گزارش جلسهٔ دوشنبه» 4Degrees ─── */}
+      <section className="panel" aria-label="گزارش دوره‌ای خودکار">
+        <div className="panel-title">
+          <div>
+            <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Clock3 size={16} /> گزارش دوره‌ای خودکار</h2>
+            <p>گزارش هفتگی/ماهانهٔ آمادهٔ ارائه: روابط سردشونده، تعهدات و اقدامات عقب‌افتاده، شکاف‌های بحرانی عمومی، تمرکزهای تک‌نفره و اهداف رشد — همه از دادهٔ زندهٔ همین محدوده.</p>
+          </div>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div className="segmented" role="tablist">
+              <button role="tab" aria-selected={period === 'weekly'} className={period === 'weekly' ? 'active' : ''}
+                onClick={() => { setPeriod('weekly'); loadPeriodic('weekly'); }}>هفتگی</button>
+              <button role="tab" aria-selected={period === 'monthly'} className={period === 'monthly' ? 'active' : ''}
+                onClick={() => { setPeriod('monthly'); loadPeriodic('monthly'); }}>ماهانه</button>
+            </div>
+            <button className="btn btn-secondary btn-sm" disabled={periodicBusy} onClick={() => loadPeriodic(period)}>
+              <RefreshCw size={13} /> بازتولید
+            </button>
+          </div>
+        </div>
+        {periodic ? (
+          <>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '8px 0' }}>
+              <Badge tone={periodic.counts?.cooling ? 'warning' : 'success'}>روابط سردشونده: {fmtN(periodic.counts?.cooling ?? 0)}</Badge>
+              <Badge tone={periodic.counts?.overdueCommitments ? 'danger' : 'success'}>تعهدات عقب‌افتاده: {fmtN(periodic.counts?.overdueCommitments ?? 0)}</Badge>
+              <Badge tone={periodic.counts?.overdueActions ? 'danger' : 'success'}>اقدامات عقب‌افتاده: {fmtN(periodic.counts?.overdueActions ?? 0)}</Badge>
+              <Badge tone={periodic.counts?.criticalGaps ? 'warning' : 'success'}>شکاف بحرانی عمومی: {fmtN(periodic.counts?.criticalGaps ?? 0)}</Badge>
+              <Badge tone={periodic.counts?.concentrations ? 'warning' : 'success'}>تمرکز تک‌نفره: {fmtN(periodic.counts?.concentrations ?? 0)}</Badge>
+              <Badge tone="info">اهداف رشد: {fmtN(periodic.counts?.growthTargets ?? 0)}</Badge>
+            </div>
+            <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))' }}>
+              <div>
+                <h4 style={{ fontSize: 12.5, margin: '4px 0 6px', display: 'flex', gap: 5, alignItems: 'center' }}><HeartPulse size={13} /> روابط سردشونده</h4>
+                {periodic.sections?.coolingRelationships?.length ? (
+                  <ul style={{ margin: 0, paddingInlineStart: 16, display: 'grid', gap: 4 }}>
+                    {periodic.sections.coolingRelationships.map((r: any) => (
+                      <li key={r.relationshipId} style={{ fontSize: 12 }}>
+                        {r.relationshipName} — <span className="t-muted">{fmtN(r.daysSinceLastInteraction)} روز بدون تعامل (هدف {fmtN(r.targetDays)})</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : <p className="criteria-saved">کیدنس همهٔ روابط برقرار است.</p>}
+                <h4 style={{ fontSize: 12.5, margin: '10px 0 6px', display: 'flex', gap: 5, alignItems: 'center' }}><ListChecks size={13} /> عقب‌افتاده‌ها</h4>
+                {(periodic.sections?.overdueCommitments?.length || periodic.sections?.overdueActions?.length) ? (
+                  <ul style={{ margin: 0, paddingInlineStart: 16, display: 'grid', gap: 4 }}>
+                    {periodic.sections.overdueCommitments.map((c: any) => <li key={c.id} style={{ fontSize: 12 }}>تعهد: {c.description} — <span className="t-muted">{fmtDT(c.dueAt)}</span></li>)}
+                    {periodic.sections.overdueActions.map((a: any) => <li key={a.id} style={{ fontSize: 12 }}>اقدام: {a.title} — <span className="t-muted">{fmtDT(a.dueAt)}</span></li>)}
+                  </ul>
+                ) : <p className="criteria-saved">تعهد یا اقدام عقب‌افتاده‌ای نیست.</p>}
+              </div>
+              <div>
+                <h4 style={{ fontSize: 12.5, margin: '4px 0 6px', display: 'flex', gap: 5, alignItems: 'center' }}><AlertTriangle size={13} /> شکاف‌های بحرانی و تمرکزها</h4>
+                {(periodic.sections?.criticalGaps?.length || periodic.sections?.concentrations?.length) ? (
+                  <ul style={{ margin: 0, paddingInlineStart: 16, display: 'grid', gap: 4 }}>
+                    {periodic.sections.criticalGaps.map((g: any, i: number) => <li key={i} style={{ fontSize: 12 }}>گپ: {g.title ?? g.groupFa ?? g.gapId}</li>)}
+                    {periodic.sections.concentrations.map((c: any) => <li key={c.relationshipId} style={{ fontSize: 12 }}>تمرکز: {c.relationshipName} — {fmtN(c.topShare)}٪ روی {c.dominantPerson ?? '—'}</li>)}
+                  </ul>
+                ) : <p className="criteria-saved">شکاف بحرانی یا تمرکز تک‌نفره‌ای نیست.</p>}
+                <h4 style={{ fontSize: 12.5, margin: '10px 0 6px', display: 'flex', gap: 5, alignItems: 'center' }}><Target size={13} /> اهداف رشد پیشنهادی</h4>
+                {periodic.sections?.growthTargets?.length ? (
+                  <ul style={{ margin: 0, paddingInlineStart: 16, display: 'grid', gap: 4 }}>
+                    {periodic.sections.growthTargets.map((g: any) => <li key={g.relationshipId} style={{ fontSize: 12 }}>{g.relationshipName} — امتیاز فرصت {fmtN(g.opportunityScore)}</li>)}
+                  </ul>
+                ) : <p className="criteria-saved">رابطهٔ پرپتانسیل بدون فرصت بازی نیست.</p>}
+              </div>
+            </div>
+            <div style={{ marginTop: 10, background: 'var(--srip-accent-softer, rgba(15,23,42,.04))', borderRadius: 10, padding: '10px 12px', whiteSpace: 'pre-line', fontSize: 12.5, lineHeight: 1.9 }}>
+              {periodic.briefText}
+            </div>
+            <p className="t-muted" style={{ fontSize: 11, margin: '8px 0 0' }}>
+              هر بازتولید، رویداد «تولید گزارش دوره‌ای» را در موتور گردش‌کار ثبت می‌کند تا ارسال خودکار آن قابل فعال‌سازی باشد.
+            </p>
+          </>
+        ) : (
+          <div className="skeleton skeleton-card" style={{ height: 120 }} />
+        )}
       </section>
 
       <p className="muted" style={{ marginTop: 2 }}>{meta.desc}</p>

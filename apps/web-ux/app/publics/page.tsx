@@ -7,7 +7,7 @@ import {
   Building2, Users2, Radar, AlertTriangle, Download, FileJson, FileSpreadsheet, Fingerprint,
   Plus, RefreshCw, Trash2, SlidersHorizontal, Megaphone, Newspaper, Target, Eye, Heart,
   CheckCircle2, ChevronLeft, Layers, Landmark, GraduationCap, Briefcase, Newspaper as News2, Cpu,
-  Copy, Sparkles, UserPlus, Pencil, RotateCcw, Power,
+  Copy, Sparkles, UserPlus, Pencil, RotateCcw, Power, Grid3x3, History, TrendingDown,
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
@@ -52,6 +52,11 @@ type MemberView = {
   sourceLabel?: string; groupFa?: string | null; categoryId?: string | null; categoryFa?: string | null;
   linkageFa?: string | null; stageFa?: string | null; stanceFa?: string | null; kanal?: string | null;
   signals?: number; suggested?: { linkage: string; stage: string; power: number; interest: number; stance: string };
+  stanceHistory?: StanceHistoryEntry[];
+};
+type StanceHistoryEntry = {
+  at: string; fromStance: string; toStance: string; cause: string;
+  causeNote?: string | null; source?: string | null; by?: string | null;
 };
 type CovRow = {
   categoryId: string; fa: string; expected: number; covered: number; members: number;
@@ -116,6 +121,310 @@ const fmtDT = (iso?: string | null) => {
 };
 const clamp = (v: number) => Math.max(0, Math.min(100, v));
 
+/* ═══════════════════════════════════════════════════════════════════════
+   مسترپلن فاز ۱/۳+۴ — ماتریس نفوذ×حمایت (الگوی Prolifiq: درگ‌اند‌دراپ)
+   + تاریخچهٔ موضع با علت‌یابی (الگوی Squivr/ArcSight)
+   ═══════════════════════════════════════════════════════════════════════ */
+const STANCE_RANK: Record<string, number> = { OBSERVER: 0, SUPPORTER: 1, INFLUENCER: 2, KEY_PLAYER: 3 };
+const STANCE_DOT_COLOR: Record<string, string> = {
+  KEY_PLAYER: '#dc2626', INFLUENCER: '#d97706', SUPPORTER: '#16a34a', OBSERVER: '#94a3b8',
+};
+const STANCE_CAUSES: Array<[string, string]> = [
+  ['INTERACTION', 'تعامل مستقیم ما'], ['THIRD_PARTY', 'تأثیر شخص سوم'], ['POLICY', 'تغییر سیاست/تنظیم‌گری'],
+  ['MARKET', 'تحول بازار'], ['COMPETITOR', 'اقدام رقیب'], ['INTERNAL', 'تحول درون سازمان آنها'],
+  ['MEDIA', 'پوشش رسانه‌ای'], ['OTHER', 'سایر'],
+];
+const stanceOfPI = (p: number, i: number) => (p >= 60 && i >= 60) ? 'KEY_PLAYER' : p >= 60 ? 'INFLUENCER' : i >= 60 ? 'SUPPORTER' : 'OBSERVER';
+const causeLabel = (c: string) => STANCE_CAUSES.find(x => x[0] === c)?.[1] ?? c;
+const isDecliningMember = (m: MemberView) => {
+  const h = m.stanceHistory ?? [];
+  if (!h.length) return false;
+  const last = h[h.length - 1];
+  return (STANCE_RANK[last.toStance] ?? 0) < (STANCE_RANK[last.fromStance] ?? 0);
+};
+
+function MatrixTab({ members, canWrite, onSave, onNotify }: {
+  members: MemberView[];
+  canWrite: boolean;
+  onSave: (m: MemberView, power: number, interest: number, cause?: string, causeNote?: string) => Promise<boolean>;
+  onNotify: (msg: string) => void;
+}) {
+  const [cat, setCat] = useState('');
+  const [declining, setDeclining] = useState(false);
+  const [selId, setSelId] = useState('');
+  const [pos, setPos] = useState<Record<string, { p: number; i: number }>>({});
+  const [dragId, setDragId] = useState('');
+  const [pending, setPending] = useState<{ m: MemberView; p: number; i: number } | null>(null);
+  const [cause, setCause] = useState('INTERACTION');
+  const [causeNote, setCauseNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const boxRef = useRef<HTMLDivElement | null>(null);
+
+  const cats = [...new Set(members.map(m => m.categoryId).filter(Boolean))] as string[];
+  const catFa = (c: string) => members.find(m => m.categoryId === c)?.categoryFa ?? c;
+  const shown = members.filter(m => (!cat || m.categoryId === cat) && (!declining || isDecliningMember(m)));
+  const getPI = (m: MemberView) => pos[m.id] ?? { p: m.power ?? 50, i: m.interest ?? 50 };
+  const sel = members.find(m => m.id === selId) ?? null;
+
+  const apply = async (m: MemberView, p: number, i: number, c?: string, note?: string) => {
+    setBusy(true);
+    const ok = await onSave(m, Math.round(p), Math.round(i), c, note);
+    setBusy(false);
+    return ok;
+  };
+  const finalize = (m: MemberView, p: number, i: number) => {
+    if (!canWrite) { onNotify('برای جابه‌جایی نقطه‌ها مجوز «مدیریت عموم‌ها» لازم است.'); return; }
+    if (stanceOfPI(p, i) !== m.stance) { setPending({ m, p, i }); setCause('INTERACTION'); setCauseNote(''); }
+    else void apply(m, p, i);
+  };
+  const ptToPI = (clientX: number, clientY: number) => {
+    const box = boxRef.current?.getBoundingClientRect();
+    if (!box) return null;
+    return { i: clamp(Math.round((clientX - box.left) / box.width * 100)), p: clamp(Math.round((1 - (clientY - box.top) / box.height) * 100)) };
+  };
+
+  return (
+    <div className="stack" style={{ gap: 14 }}>
+      <SectionCard
+        title="ماتریس نفوذ × حمایت"
+        icon={<Target size={15} />}
+        description="جابه‌جایی نقطه‌ها با درگ (یا اسلایدر در جزئیات) — موضع از جایگاه نقطه به‌صورت خودکار محاسبه می‌شود؛ تغییر مووضع بدون ثبت «علت» پذیرفته نمی‌شود."
+        actions={
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+            <select aria-label="فیلتر دسته" value={cat} onChange={e => setCat(e.target.value)}>
+              <option value="">همهٔ دسته‌ها</option>
+              {cats.map(c => <option key={c} value={c}>{catFa(c)}</option>)}
+            </select>
+            <button className={`chip ${declining ? 'danger' : 'neutral'}`} style={{ border: 'none', cursor: 'pointer' }}
+              onClick={() => setDeclining(v => !v)} title="فقط اعضایی که آخرین تغییر موضعشان نزولی بوده">
+              <TrendingDown size={12} /> روند نزولی
+            </button>
+          </div>
+        }
+      >
+        <div style={{ display: 'grid', gap: 10 }}>
+          <div
+            ref={boxRef}
+            role="application"
+            aria-label="ماتریس نفوذ و حمایت — محور افقی: حمایت (علاقه)؛ محور عمودی: نفوذ (قدرت)"
+            style={{
+              position: 'relative', height: 320, border: '1px solid var(--border,#e2e8f0)', borderRadius: 12,
+              background:
+                'linear-gradient(to left, transparent 49.7%, var(--border,#e2e8f0) 49.7%, var(--border,#e2e8f0) 50.3%, transparent 50.3%),' +
+                'linear-gradient(to top, transparent 49.7%, var(--border,#e2e8f0) 49.7%, var(--border,#e2e8f0) 50.3%, transparent 50.3%),' +
+                'linear-gradient(to top, color-mix(in srgb, var(--red,#dc2626) 7%, transparent), color-mix(in srgb, var(--red,#dc2626) 2%, transparent))',
+              touchAction: 'none', userSelect: 'none',
+            }}
+            onPointerMove={e => {
+              if (!dragId) return;
+              const pi = ptToPI(e.clientX, e.clientY);
+              if (pi) setPos(pp => ({ ...pp, [dragId]: pi }));
+            }}
+            onPointerUp={e => {
+              if (!dragId) return;
+              const m = members.find(x => x.id === dragId);
+              const pi = ptToPI(e.clientX, e.clientY) ?? getPI(m ?? ({ id: dragId } as MemberView));
+              setDragId('');
+              if (m) finalize(m, pi.p, pi.i);
+            }}
+            onPointerLeave={() => setDragId('')}
+          >
+            <span style={{ position: 'absolute', top: 6, insetInlineEnd: 8, fontSize: 10.5, fontWeight: 800, color: 'var(--red,#dc2626)' }}>حامیِ پرنفوذ</span>
+            <span style={{ position: 'absolute', top: 6, insetInlineStart: 8, fontSize: 10.5, fontWeight: 800, color: 'var(--muted,#64748b)' }}>پرانفوذِ کم‌حمایت</span>
+            <span style={{ position: 'absolute', bottom: 6, insetInlineEnd: 8, fontSize: 10.5, fontWeight: 800, color: 'var(--green,#16a34a)' }}>حامیِ کم‌نفوذ</span>
+            <span style={{ position: 'absolute', bottom: 6, insetInlineStart: 8, fontSize: 10.5, fontWeight: 800, color: 'var(--muted,#64748b)' }}>ناظر</span>
+            <span style={{ position: 'absolute', bottom: -22, insetInlineEnd: '50%', transform: 'translateX(50%)', fontSize: 10, color: 'var(--muted,#64748b)' }}>حمایت (علاقه) ←</span>
+            <span style={{ position: 'absolute', top: '50%', insetInlineStart: -6, transform: 'translateY(-50%) rotate(90deg)', fontSize: 10, color: 'var(--muted,#64748b)', transformOrigin: 'center' }}>نفوذ (قدرت)</span>
+            {shown.map(m => {
+              const pi = getPI(m);
+              const isSel = m.id === selId;
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  aria-label={`${m.sourceName ?? m.id} — نفوذ ${fmtNum(pi.p)}، حمایت ${fmtNum(pi.i)}، موضع ${m.stanceFa ?? m.stance}`}
+                  title={`${m.sourceName ?? m.id} — نفوذ ${fmtNum(pi.p)} / حمایت ${fmtNum(pi.i)} (${m.stanceFa ?? m.stance})`}
+                  onPointerDown={e => {
+                    e.preventDefault();
+                    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+                    setSelId(m.id);
+                    setDragId(m.id);
+                  }}
+                  onClick={() => setSelId(m.id)}
+                  style={{
+                    position: 'absolute', left: `${pi.i}%`, bottom: `${pi.p}%`,
+                    width: isSel ? 18 : 13, height: isSel ? 18 : 13, borderRadius: '50%',
+                    transform: 'translate(-50%, 50%)', border: isSel ? '3px solid #0f172a' : '2px solid rgba(255,255,255,.85)',
+                    background: STANCE_DOT_COLOR[m.stance] ?? '#94a3b8', cursor: canWrite ? 'grab' : 'pointer',
+                    padding: 0, boxShadow: isSel ? '0 0 0 4px rgba(15,23,42,.15)' : undefined, transition: dragId === m.id ? 'none' : 'left .15s, bottom .15s',
+                  }}
+                />
+              );
+            })}
+          </div>
+          <div className="chip-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+            {Object.entries(STANCE_DOT_COLOR).map(([k, c]) => (
+              <span key={k} className="chip neutral"><span style={{ width: 9, height: 9, borderRadius: '50%', background: c, display: 'inline-block' }} /> {STANCE_TONE[k] ? (members.find(m => m.stance === k)?.stanceFa ?? k) : k}</span>
+            ))}
+            <span className="chip neutral">{fmtNum(shown.length)} عضو روی ماتریس</span>
+          </div>
+
+          {pending && (
+            <div className="notice" role="dialog" aria-label="ثبت علت تغییر موضع" style={{ border: '1px solid var(--gold,#f59e0b)', background: 'color-mix(in srgb, var(--gold,#f59e0b) 8%, transparent)' }}>
+              <b>علت تغییر موضع «{pending.m.sourceName ?? pending.m.id}» را ثبت کنید</b>
+              <p style={{ fontSize: 12, margin: '6px 0' }}>
+                {pending.m.stanceFa ?? pending.m.stance} → {fmtNum(pending.p)}٪ نفوذ / {fmtNum(pending.i)}٪ حمایت (موضع جدید)
+              </p>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                <div className="field" style={{ margin: 0 }}>
+                  <label className="field-label" htmlFor="mx-cause">علت</label>
+                  <select id="mx-cause" value={cause} onChange={e => setCause(e.target.value)}>
+                    {STANCE_CAUSES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  </select>
+                </div>
+                <div className="field" style={{ margin: 0, flex: '1 1 220px' }}>
+                  <label className="field-label" htmlFor="mx-cause-note">یادداشت علت</label>
+                  <input id="mx-cause-note" value={causeNote} onChange={e => setCauseNote(e.target.value)} placeholder="چه اتفاقی این تغییر را درگیرد؟" />
+                </div>
+                <button className="btn btn-primary" disabled={busy} onClick={async () => {
+                  const ok = await apply(pending.m, pending.p, pending.i, cause, causeNote.trim() || undefined);
+                  if (ok) setPending(null);
+                }}><CheckCircle2 size={14} /> ثبت موضع جدید</button>
+                <button className="btn btn-ghost" onClick={() => setPending(null)}>انصراف</button>
+              </div>
+            </div>
+          )}
+
+          {sel && (
+            <div className="panel" style={{ margin: 0 }}>
+              <div className="panel-title">
+                <div>
+                  <h3 style={{ fontSize: 14 }}>{sel.sourceName ?? sel.id}</h3>
+                  <p style={{ fontSize: 12 }}>{sel.groupFa ?? '—'} {sel.categoryFa ? `· ${sel.categoryFa}` : ''} · ارزیابی: {fmtDT(sel.assessedAt)}</p>
+                </div>
+                <Badge tone={STANCE_TONE[sel.stance] ?? 'neutral'}>{sel.stanceFa ?? sel.stance}</Badge>
+              </div>
+              {canWrite && (
+                <div style={{ display: 'grid', gap: 8, margin: '10px 0' }}>
+                  <label style={{ fontSize: 12, display: 'grid', gap: 4 }}>
+                    نفوذ (قدرت): <b>{fmtNum(getPI(sel).p)}</b>
+                    <input type="range" min={0} max={100} value={getPI(sel).p} aria-label="نفوذ"
+                      onChange={e => setPos(pp => ({ ...pp, [sel.id]: { ...getPI(sel), p: Number(e.target.value) } }))} />
+                  </label>
+                  <label style={{ fontSize: 12, display: 'grid', gap: 4 }}>
+                    حمایت (علاقه): <b>{fmtNum(getPI(sel).i)}</b>
+                    <input type="range" min={0} max={100} value={getPI(sel).i} aria-label="حمایت"
+                      onChange={e => setPos(pp => ({ ...pp, [sel.id]: { ...getPI(sel), i: Number(e.target.value) } }))} />
+                  </label>
+                  <div>
+                    <button className="btn btn-secondary btn-sm" disabled={busy}
+                      onClick={() => finalize(sel, getPI(sel).p, getPI(sel).i)}>
+                      <SlidersHorizontal size={13} /> ذخیرهٔ جایگاه
+                    </button>
+                  </div>
+                </div>
+              )}
+              <div>
+                <h4 style={{ fontSize: 12.5, display: 'flex', gap: 5, alignItems: 'center', margin: '8px 0 6px' }}><History size={13} /> خط زمان موضع و علل</h4>
+                {!(sel.stanceHistory ?? []).length ? (
+                  <p className="criteria-saved">تغییری ثبت نشده است — با اولین جابه‌جایی، علت آن در همین خط زمان ثبت می‌شود.</p>
+                ) : (
+                  <ul className="list" style={{ margin: 0 }}>
+                    {[...(sel.stanceHistory ?? [])].reverse().map((h, idx) => {
+                      const down = (STANCE_RANK[h.toStance] ?? 0) < (STANCE_RANK[h.fromStance] ?? 0);
+                      return (
+                        <li className="listRow" key={idx} style={{ alignItems: 'flex-start' }}>
+                          <span className={`chip ${down ? 'danger' : 'success'}`}>
+                            <TrendingDown size={11} style={{ transform: down ? undefined : 'rotate(180deg)' }} />
+                            {down ? 'نزول' : 'صعود'}
+                          </span>
+                          <span style={{ flex: 1, minWidth: 0, fontSize: 12.5 }}>
+                            <b>{fmtDT(h.at)}</b> — {h.fromStance} به {h.toStance}
+                            <span className="chip neutral" style={{ marginInlineStart: 6 }}>علت: {causeLabel(h.cause)}</span>
+                            {h.source === 'MATRIX' && <span className="chip neutral" style={{ marginInlineStart: 6 }}>ماتریس</span>}
+                            {h.causeNote ? <small style={{ display: 'block', marginTop: 3 }}>{h.causeNote}</small> : null}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </SectionCard>
+    </div>
+  );
+}
+
+/* ═══ مسترپلن فاز ۱/۶ — هیت‌مپ پوشش (الگوی Account Heatmap در DemandFarm) ═══ */
+function HeatmapTab({ members, categories }: { members: MemberView[]; categories: { id: string; fa?: string | null }[] }) {
+  const sources = useMemo(() => {
+    const map = new Map<string, { key: string; name: string; label: string }>();
+    members.forEach(m => {
+      const key = `${m.sourceType}:${m.sourceId}`;
+      if (!map.has(key)) map.set(key, { key, name: m.sourceName ?? m.sourceId, label: SOURCE_LABELS[m.sourceType] ?? m.sourceType });
+    });
+    return [...map.values()];
+  }, [members]);
+  const cats = categories.length ? categories : [...new Set(members.map(m => m.categoryId).filter(Boolean))].map(c => ({ id: c as string, fa: members.find(m => m.categoryId === c)?.categoryFa ?? c }));
+  const cellOf = (srcKey: string, cat: string) => members.filter(m => `${m.sourceType}:${m.sourceId}` === srcKey && m.categoryId === cat);
+  const bestOf = (rows: MemberView[]) => rows.slice().sort((a, b) => (STANCE_RANK[b.stance] ?? 0) - (STANCE_RANK[a.stance] ?? 0))[0];
+
+  return (
+    <SectionCard
+      title="هیت‌مپ پوشش عمومی"
+      icon={<Grid3x3 size={15} />}
+      description="سازمان‌ها/منابع × شش دستهٔ عموم — رنگ هر خانه، بهترین موضع ثبت‌شده است؛ خانهٔ خالی یعنی گپ پوشش."
+    >
+      <div className="table-wrap">
+        <table style={{ minWidth: 640 }}>
+          <thead>
+            <tr>
+              <th style={{ position: 'sticky', insetInlineStart: 0, background: 'var(--panel,#fff)' }}>منبع</th>
+              {cats.map(c => <th key={c.id} style={{ fontSize: 11 }}>{c.fa ?? c.id}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {sources.map(s => (
+              <tr key={s.key}>
+                <td style={{ position: 'sticky', insetInlineStart: 0, background: 'var(--panel,#fff)', fontSize: 12, whiteSpace: 'nowrap' }}>
+                  <b>{s.name}</b> <span className="t-muted" style={{ fontSize: 10 }}>({s.label})</span>
+                </td>
+                {cats.map(c => {
+                  const rows = cellOf(s.key, c.id);
+                  const best = rows.length ? bestOf(rows) : null;
+                  return (
+                    <td key={c.id} style={{ padding: 4, textAlign: 'center' }}>
+                      {best ? (
+                        <span className="chip" style={{
+                          background: STANCE_DOT_COLOR[best.stance] ?? '#94a3b8', color: '#fff', fontSize: 10.5,
+                          border: 'none', padding: '4px 8px', borderRadius: 8,
+                        }} title={`${rows.length} عضو — بهترین موضع: ${best.stanceFa ?? best.stance}${rows.length > 1 ? ` (+${fmtNum(rows.length - 1)} دیگر)` : ''}`}>
+                          {best.stanceFa ?? best.stance}
+                        </span>
+                      ) : (
+                        <span className="t-muted" style={{ fontSize: 10.5 }} title="بدون پوشش در این دسته — گپ">گپ</span>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="chip-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+        {Object.entries(STANCE_DOT_COLOR).map(([k, c]) => (
+          <span key={k} className="chip neutral"><span style={{ width: 9, height: 9, borderRadius: '50%', background: c, display: 'inline-block' }} /> {members.find(m => m.stance === k)?.stanceFa ?? k}</span>
+        ))}
+        <span className="chip neutral">{fmtNum(sources.length)} منبع × {fmtNum(cats.length)} دسته</span>
+      </div>
+    </SectionCard>
+  );
+}
+
 export default function PublicsPage() {
   const { me, scopeId, can } = useWorkspace();
   const isOwner = !!me?.permissions?.includes('*');
@@ -127,7 +436,7 @@ export default function PublicsPage() {
   useEffect(() => { if (orgId !== scopeId && scopeId !== 'all') setOrgId(scopeId); }, [scopeId, orgId]);
   useEffect(() => { if (!orgId && primaryOrg) setOrgId(primaryOrg); }, [orgId, primaryOrg]);
 
-  const [tab, setTab] = useState<'self' | 'groups' | 'members' | 'coverage' | 'gaps' | 'export'>('self');
+  const [tab, setTab] = useState<'self' | 'groups' | 'members' | 'matrix' | 'heatmap' | 'coverage' | 'gaps' | 'export'>('self');
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [selfRow, setSelfRow] = useState<SelfRow | null>(null);
   const [members, setMembers] = useState<MemberView[]>([]);
@@ -432,10 +741,28 @@ export default function PublicsPage() {
     } catch (e) { notify(`خطا: ${(e as Error).message}`); } finally { setBusy(''); }
   };
 
+  /* مسترپلن فاز ۱/۳: ذخیرهٔ جایگاه ماتریس (نیازمند علت هنگام تغییر موضع) */
+  const saveMatrix = async (m: MemberView, power: number, interest: number, cause?: string, causeNote?: string) => {
+    try {
+      await api(`/publics/members/${m.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ power, interest, requireCause: true, source: 'matrix', ...(cause ? { cause, causeNote } : {}) }),
+      });
+      notify(`جایگاه «${m.sourceName ?? m.id}» به‌روزرسانی شد${cause ? ' — علت تغییر در خط زمان ثبت شد' : ''}.`);
+      await refresh(orgId);
+      return true;
+    } catch (e) {
+      notify(`خطا: ${(e as Error).message}`);
+      return false;
+    }
+  };
+
   const TABS: Array<{ key: typeof tab; label: string; icon?: React.ReactNode }> = [
     { key: 'self', label: 'شناسنامهٔ سازمان', icon: <Fingerprint size={14} /> },
     { key: 'groups', label: 'گروه‌ها', icon: <Layers size={14} /> },
     { key: 'members', label: 'اعضا و ارزیابی', icon: <Users2 size={14} /> },
+    { key: 'matrix', label: 'ماتریس نفوذ×حمایت', icon: <Target size={14} /> },
+    { key: 'heatmap', label: 'هیت‌مپ پوشش', icon: <Grid3x3 size={14} /> },
     { key: 'coverage', label: 'پوشش', icon: <Radar size={14} /> },
     { key: 'gaps', label: 'شکاف‌ها و اقدام', icon: <AlertTriangle size={14} /> },
     { key: 'export', label: 'خروجی و رسانه', icon: <Download size={14} /> },

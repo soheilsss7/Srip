@@ -6,7 +6,7 @@ import { FunnelVisual } from '../_components/funnel-visual';
 import {
   Activity, BarChart3, Bell, BellRing, Building2, CalendarDays, Compass, FileText,
   FlaskConical, FolderKanban, GitBranch, Handshake ,  Network, RefreshCw,
-  Send, Sparkles, Target, ThumbsUp, Users, Zap,
+  Send, Sparkles, Target, ThumbsUp, Users, Zap, UserRoundCheck, HeartPulse,
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
@@ -107,6 +107,13 @@ export default function Analytics() {
   const [funnel, setFunnel] = useState<Funnel | null>(null);
   const [calib, setCalib] = useState<Calibration | null>(null);
   const [career, setCareer] = useState<CareerEvents | null>(null);
+  /* مسترپلن فاز ۱/۸+۱۰ — سنجه‌های پذیرش + تغییر نقش + alumni */
+  const [adoption, setAdoption] = useState<any>(null);
+  const [alumni, setAlumni] = useState<any>(null);
+  const [peopleOpts, setPeopleOpts] = useState<any[]>([]);
+  const [rc, setRc] = useState({ personId: '', type: 'PROMOTED', toTitle: '', toOrganizationId: '', note: '' });
+  const [rcBusy, setRcBusy] = useState(false);
+  const [rcMsg, setRcMsg] = useState('');
   const [halfLifeBusy, setHalfLifeBusy] = useState('');
   const [me, setMe] = useState<Me | null>(null);
   const [loading, setLoading] = useState(true);
@@ -122,14 +129,19 @@ export default function Analytics() {
     if (!silent) setLoading(true);
     setRefreshing(true); setError('');
     try {
-      const [s, n, w, f, c, ce, m] = await Promise.all([
+      const [s, n, w, f, c, ce, m, ad, al, pl] = await Promise.all([
         api<Summary>('/analytics/summary'), api<Network>('/analytics/network'), api<{ generatedAt?: string; executions: { status: string; count: number }[] }>('/analytics/workflows'),
         api<Funnel>('/analytics/recommendations/funnel'),
         api<Calibration>('/analytics/calibration').catch(() => null),
         api<CareerEvents>('/analytics/career-events').catch(() => null),
         api<Me>('/auth/me').catch(() => null),
+        api<any>('/analytics/adoption').catch(() => null),
+        api<any>('/people/alumni').catch(() => null),
+        api<any>('/people').catch(() => null),
       ]);
       setData(s); setNet(n); setWf(w); setFunnel(f); setCalib(c); setCareer(ce); setMe(m);
+      setAdoption(ad); setAlumni(al);
+      setPeopleOpts(Array.isArray(pl) ? pl : (pl?.items ?? []));
     } catch (x) { setError((x as Error).message); }
     finally { setLoading(false); setRefreshing(false); }
   }, []);
@@ -477,6 +489,127 @@ export default function Analytics() {
               </div>
             </section>
           )}
+
+          {/* ─── مسترپلن فاز ۱/۸: سنجه‌های پذیرش و ارزش — فقط از دادهٔ واقعی همین مستأجر ─── */}
+          {adoption && (
+            <section className="panel" aria-label="سلامت پذیرش">
+              <div className="panel-title">
+                <div>
+                  <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><HeartPulse size={16} /> سلامت پذیرش و ارزش</h2>
+                  <p>پوشش چندنخی، بستن چرخهٔ جلسات و پذیرش هوش شبکه — مبنای «از نشان‌دادن به اندازه‌گرفتن»؛ دادهٔ دمو در حساب واقعی شمرده نمی‌شود.</p>
+                </div>
+              </div>
+              <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))' }}>
+                {(adoption.metrics ?? []).map((mm: any) => (
+                  <div className="kpi-card" key={mm.key} style={{ margin: 0 }}>
+                    <small>{mm.label}</small>
+                    <strong style={{ fontSize: 17 }}>
+                      {fmt.format(mm.value ?? 0)}{mm.total ? <span className="t-muted" style={{ fontSize: 11, fontWeight: 400 }}> از {fmt.format(mm.total)}</span> : null}
+                    </strong>
+                    {mm.pct != null && (
+                      <div style={{ height: 5, borderRadius: 4, background: 'rgba(148,163,184,.25)', marginTop: 6, overflow: 'hidden' }} aria-hidden>
+                        <div style={{ width: `${mm.pct}%`, height: '100%', background: mm.pct >= 70 ? '#16a34a' : mm.pct >= 40 ? '#f59e0b' : '#dc2626' }} />
+                      </div>
+                    )}
+                    <span className="t-muted" style={{ fontSize: 10 }}>{mm.pct != null ? `${fmt.format(mm.pct)}٪ · ` : ''}{mm.sub}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
+                <span className="chip neutral">بریف جلسه: {fmt.format(adoption.counters?.briefsGenerated ?? 0)}</span>
+                <span className="chip neutral">ثبت سریع پس از جلسه: {fmt.format(adoption.counters?.quickLogs ?? 0)}</span>
+                <span className="chip neutral">جابه‌جایی ماتریس: {fmt.format(adoption.counters?.matrixDrags ?? 0)}</span>
+                <span className="chip neutral">درخواست مسیر گرم: {fmt.format(adoption.counters?.warmPathRequests ?? 0)}</span>
+                <span className="chip neutral">گزارش دوره‌ای: {fmt.format(adoption.counters?.periodicReports ?? 0)}</span>
+              </div>
+            </section>
+          )}
+
+          {/* ─── مسترپلن فاز ۱/۱۰: ثبت تغییر نقش + شبکهٔ همکاران سابق (UserGems/Introhive) ─── */}
+          <section className="panel" aria-label="تغییر نقش و همکاران سابق">
+            <div className="panel-title">
+              <div>
+                <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><UserRoundCheck size={16} /> تغییر نقش و همکاران سابق</h2>
+                <p>ثبت ارتقا/جابه‌جایی/عنوان جدید → هشدار + اقدام پیگیری خودکار (محرک «تغییر نقش شخص»)؛ همکاران سابق، منبع مسیر گرم‌اند.</p>
+              </div>
+              {alumni && <Badge tone="info">{fmt.format(alumni.summary?.alumniCount ?? 0)} همکار سابق</Badge>}
+            </div>
+            {canWrite && (
+              <form className="entity-form" style={{ gap: 8, marginBottom: 12 }} onSubmit={async e => {
+                e.preventDefault();
+                if (!rc.personId) { setRcMsg('شخص را انتخاب کنید.'); return; }
+                setRcBusy(true); setRcMsg('');
+                try {
+                  const out = await api<any>(`/people/${rc.personId}/role-change`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                      type: rc.type,
+                      toTitle: rc.toTitle.trim() || undefined,
+                      toOrganizationId: rc.toOrganizationId || undefined,
+                      note: rc.note.trim() || undefined,
+                    }),
+                  });
+                  setRcMsg(`ثبت شد${out.action ? ' — اقدام پیگیری «تماس پس از تغییر» ساخته شد' : ''}. رویداد در پنل «حامی‌ها و رویدادهای شغلی» بالا می‌آید.`);
+                  setRc({ personId: '', type: 'PROMOTED', toTitle: '', toOrganizationId: '', note: '' });
+                  await load(true);
+                } catch (x) { setRcMsg(`خطا: ${(x as Error).message}`); }
+                finally { setRcBusy(false); }
+              }}>
+                <div className="field">
+                  <label className="field-label" htmlFor="rc-person">شخص</label>
+                  <select id="rc-person" value={rc.personId} onChange={e => setRc(f => ({ ...f, personId: e.target.value }))}>
+                    <option value="">انتخاب کنید…</option>
+                    {peopleOpts.map((p: any) => (
+                      <option key={p.id} value={p.id}>{`${p.firstName ?? ''} ${p.lastName ?? ''}`.trim()}{p.organization?.name ? ` — ${p.organization.name}` : ''}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field">
+                  <label className="field-label" htmlFor="rc-type">نوع تغییر</label>
+                  <select id="rc-type" value={rc.type} onChange={e => setRc(f => ({ ...f, type: e.target.value }))}>
+                    <option value="PROMOTED">ارتقا</option>
+                    <option value="TITLE_CHANGED">تغییر عنوان</option>
+                    <option value="LEFT">جابه‌جایی به سازمان دیگر</option>
+                    <option value="HIRED">شروع همکاری</option>
+                  </select>
+                </div>
+                <div className="field">
+                  <label className="field-label" htmlFor="rc-title">عنوان جدید</label>
+                  <input id="rc-title" value={rc.toTitle} onChange={e => setRc(f => ({ ...f, toTitle: e.target.value }))} placeholder="مثلاً: معاون تجاری" />
+                </div>
+                <div className="field">
+                  <label className="field-label" htmlFor="rc-org">سازمان جدید (در صورت جابه‌جایی)</label>
+                  <select id="rc-org" value={rc.toOrganizationId} onChange={e => setRc(f => ({ ...f, toOrganizationId: e.target.value }))}>
+                    <option value="">بدون تغییر</option>
+                    {peopleOpts.filter((p: any) => p.organization?.id).map((p: any, i: number) => (
+                      <option key={`${p.organization.id}-${i}`} value={p.organization.id}>{p.organization.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <button className="btn btn-primary" style={{ alignSelf: 'flex-end', padding: '9px 16px', minHeight: 0 }} disabled={rcBusy}>
+                  {rcBusy ? 'در حال ثبت…' : 'ثبت تغییر نقش'}
+                </button>
+              </form>
+            )}
+            {rcMsg && <div className="notice" role="status" style={{ fontSize: 12 }}>{rcMsg}</div>}
+            {alumni && alumni.items?.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                {alumni.items.map((a: any) => (
+                  <div key={a.eventId} className="kpi-card" style={{ margin: 0, flex: '1 1 250px', borderColor: 'color-mix(in srgb, var(--indigo,#4f46e5) 30%, transparent)' }}>
+                    <small>{a.name} — از {a.fromOrgName} به {a.toOrgName}</small>
+                    <strong style={{ fontSize: 14 }}>{a.nowTitle ?? a.toOrgName}</strong>
+                    <span className="t-muted" style={{ fontSize: 10, display: 'block', marginTop: 2 }}>
+                      {fmtDate(a.at)}{a.champion ? ' · حامی' : ''}{a.warmRoute ? ` · ${a.warmRoute.label}` : ' · بدون رابطهٔ مستقیم — از جلسات مشترک شروع کنید'}
+                    </span>
+                    {a.note && <span className="t-muted" style={{ fontSize: 10, display: 'block', marginTop: 3 }}>{a.note}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+            {alumni && !alumni.items?.length && (
+              <p className="criteria-saved">همکار سابقی از سازمان‌های شما به بیرون نرفته است — با اولین جابه‌جایی، اینجا به‌عنوان منبع معرفی گرم ظاهر می‌شود.</p>
+            )}
+          </section>
 
           {canWrite && (
             <section className="panel" style={{ borderColor: 'color-mix(in srgb, var(--green,#16a34a) 30%, transparent)' }}>
