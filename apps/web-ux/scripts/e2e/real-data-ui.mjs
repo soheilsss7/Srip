@@ -93,14 +93,24 @@ try {
     const all = labels.join(' | ');
     return {
       hasPars: all.includes('هلدینگ پارس'),
-      hasSub: all.includes('پارس') && (all.includes('پارس انرژی') || all.includes('پارس مالی')),
-      hasEntity: all.includes('شورای ملی') || all.includes('دانشگاه تهران') || all.includes('دیجی‌کالا'),
+      hasEgoX: all.includes('شرکت x'),
+      redCount: svg ? svg.querySelectorAll('[data-redline]').length : 0,
+      sectorChips: svg ? svg.querySelectorAll('[data-sector]').length : 0,
       textCount: labels.filter(t => t.trim().length > 2).length,
     };
   });
   ok('گراف شبکه: هلدینگ پارس حاضر است', netInfo.hasPars);
-  ok('گراف شبکه: زیرمجموعه‌های پارس', netInfo.hasSub);
-  ok('گراف شبکه: نهادهای عموم سند', netInfo.hasEntity);
+  ok('گراف شبکه: خودِ شرکت (شرکت x) در مرکز', netInfo.hasEgoX);
+  ok('گراف شبکه: عموم‌های سند به‌صورت خط قرمز', netInfo.redCount >= 60, 'red=' + netInfo.redCount);
+  ok('گراف شبکه: چیپ دسته‌های عموم', netInfo.sectorChips >= 4, 'chips=' + netInfo.sectorChips);
+  /* نهادهای عموم سند: نامشان در پنل دستهٔ «نهادی» */
+  await page.evaluate(() => {
+    const g = document.querySelector('[data-sector="INSTITUTIONAL"]');
+    g?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  });
+  await new Promise(r => setTimeout(r, 900));
+  const panelTxt = await page.evaluate(() => document.querySelector('[data-tray-panel]')?.textContent ?? '');
+  ok('گراف شبکه: نهادهای عموم سند (پنل دسته)', panelTxt.includes('شورای ملی') || panelTxt.includes('وزارت') || panelTxt.includes('معاونت'), panelTxt.slice(0, 50));
   /* رنگ‌بندی دسته‌های عموم روی نهادهای سند (pubCatOfOrg از sourceId) */
   const colored = await page.evaluate(() => {
     const raw = document.querySelector('[data-categorized-count]')?.textContent ?? '0';

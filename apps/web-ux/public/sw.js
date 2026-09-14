@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.13.01';
+const DEMO_MOCK_VERSION = '2026.09.14.01';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -1869,6 +1869,12 @@ let RELS = [
   { id:'r-10', relationshipType:'PARTNER', status:'ACTIVE', healthScore:60, riskScore:22, strategicScore:64, influenceScore:70, opportunityScore:55, resilienceScore:66, trustScore:62, engagementScore:58, cadenceDays:60, nextActionAt:null, lastInteractionAt:'2026-08-14T10:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-10', marketKind:'NON_MARKET', isMarketEntry:false, marketSegment:'اتاق بازرگانی و اکوسیستم کسب‌وکار' },
   { id:'r-11', relationshipType:'GOVERNMENT', status:'ACTIVE', healthScore:52, riskScore:46, strategicScore:74, influenceScore:82, opportunityScore:58, resilienceScore:55, trustScore:54, engagementScore:48, cadenceDays:30, nextActionAt:'2026-09-14T09:00:00.000Z', lastInteractionAt:'2026-08-31T11:00:00.000Z', sourceOrganizationId:'org-2', targetOrganizationId:'org-11', marketKind:'NON_MARKET', isMarketEntry:true, marketSegment:'تنظیم‌گری بازار سرمایه' },
   { id:'r-12', relationshipType:'INVESTMENT', status:'ACTIVE', healthScore:74, riskScore:26, strategicScore:80, influenceScore:68, opportunityScore:84, resilienceScore:62, trustScore:66, engagementScore:70, cadenceDays:45, nextActionAt:null, lastInteractionAt:'2026-09-04T10:30:00.000Z', sourceOrganizationId:'org-1', targetOrganizationId:'org-12', marketKind:'MARKET', isMarketEntry:false, marketSegment:'تأمین مالی دانش‌بنیان' },
+  /* مشتری راهبردی پلتفرم: شرکت x ← هلدینگ پارس (پارس کاربر واقعی سامانه است) */
+  { id:'r-x-pars', relationshipType:'CUSTOMER', status:'ACTIVE',
+    healthScore:86, riskScore:8, strategicScore:92, influenceScore:80, opportunityScore:78, resilienceScore:88,
+    trustScore:90, engagementScore:84, cadenceDays:30, nextActionAt:null, lastInteractionAt:'2026-09-10T09:00:00.000Z',
+    sourceOrganizationId:'org-x', targetOrganizationId:'org-pars',
+    marketKind:'MARKET', isMarketEntry:true, marketSegment:'پلتفرم هوش روابط راهبردی — استقرار سازمانی' },
   /* دادهٔ واقعی (سند عموم‌ها): ساختار هلدینگ پارس — رابطهٔ مادر/زیرمجموعهٔ ۱۲ حوزهٔ کاری */
   ...Array.from({length:12},(_,i)=>({
     id:`r-pars-${String(i+1).padStart(2,'0')}`, relationshipType:'PARENT_SUBSIDIARY', status:'ACTIVE',
@@ -7669,7 +7675,8 @@ async function __handler(req, res) {
       const visible=inScope(req,o.id);
       if(!visible||!wantOrg) return;
       if(term&&!o.name.toLowerCase().includes(term)) return;
-      orgNodes.push({id:`org:${o.id}`,label:o.name,type:'organization',organizationId:o.id});
+      /* parentOrganizationId برای نمای مرحله‌ای گراف (زیرمجموعه‌ها یک‌سو، روابط سوی دیگر) */
+      orgNodes.push({id:`org:${o.id}`,label:o.name,type:'organization',organizationId:o.id,parentOrganizationId:o.parentOrganizationId??null});
     });
     scopedPeople(req).forEach(p=>{
       if(!wantPerson) return;

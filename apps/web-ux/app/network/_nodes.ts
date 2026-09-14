@@ -11,6 +11,8 @@ export interface GNode {
   organizationId?: string;
   /** P3: دستهٔ عموم‌ها (INTERNAL/INSTITUTIONAL/ACADEMIC/ECONOMIC/MEDIA/ECOSYSTEM) */
   category?: string | null;
+  /** سازمان والد (برای نمای مرحله‌ای: زیرمجموعه‌ها یک‌سو، روابط سوی دیگر) */
+  parentOrganizationId?: string | null;
   /** P3: گرهٔ «خودِ شرکت» (ego) */
   ego?: boolean;
 }
