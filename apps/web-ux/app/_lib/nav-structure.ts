@@ -45,6 +45,8 @@ export const NAV_ZONES: readonly NavZone[] = [
     ['/publics', 'عموم‌ها', 'publics.read'],
     ['/interactions', 'تعاملات', 'interaction.read'],
     ['/referrals', 'معرفی‌ها', 'relationship.read'],
+    ['/gis', 'نقشهٔ ذینفعان', 'organization.read'],
+    ['/portal', 'پورتال عمومی', 'publics.read'],
   ]],
   ['کار و اجرا', 'جلسه‌ها، قول‌ها و پروژه‌ها', [ /* ۷ آیتم — مرز قانون Miller؛ آیتم هشتم = شکستن به دو Workspace */
     ['/meetings', 'جلسات', 'meeting.read'],
@@ -61,12 +63,14 @@ export const NAV_ZONES: readonly NavZone[] = [
     ['/board', 'هیئت‌مدیره', 'analytics.read'],
     ['/ai', 'دستیار هوشمند', 'ai.query'],
     ['/strategy', 'تحلیل راهبردی', 'strategy.read'],
+    ['/mcp', 'سرور MCP', 'analytics.read'],
   ]],
   ['اتوماسیون و هماهنگی', 'گردش کار، اسناد و داده', [
     ['/workflows', 'گردش کار و تأییدها', 'workflow.read'],
     ['/documents', 'مرکز دانش', 'document.read'],
     ['/data-management', 'داده و کیفیت', 'data.quality.read'],
     ['/data-exchange', 'تبادل داده', 'report.read'],
+    ['/imports', 'ورود ایمیل/تقویم', 'interaction.write'],
     ['/settings', 'تنظیمات من', 'user.read'],
     ['/sessions', 'نشست‌های من', 'session.read'],
   ]],
@@ -137,6 +141,7 @@ export const NAV_PERMISSION_MAP: Record<string, string> = {
   '/requirements': 'project.read', '/approvals': 'approval.read', '/data-exchange': 'report.read',
   '/settings': 'user.read', '/sessions': 'session.read', '/data-management': 'data.quality.read',
   '/workflows': 'workflow.read', '/publics': 'publics.read', '/strategy': 'strategy.read',
+  '/gis': 'organization.read', '/portal': 'publics.read', '/mcp': 'analytics.read', '/imports': 'interaction.write',
 };
 
 /** نگاشت مسیرهای مرکز سیستم → مجوز (عمق دسترسی مدیریتی، جداست از سایدبار) */

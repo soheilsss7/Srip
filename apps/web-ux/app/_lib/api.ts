@@ -142,6 +142,14 @@ export const apiPatch=<T=unknown>(path:string,body:unknown,opts:ApiOptions={})=>
 export const apiDelete=<T=unknown>(path:string,opts:ApiOptions={})=>api<T>(path,{...opts,method:'DELETE'});
 export function unwrapList<T=unknown>(value:any):T[]{ if(Array.isArray(value))return value as T[]; if(value&&value.items!==undefined&&Array.isArray(value.items))return value.items as T[]; if(value&&value.rows!==undefined&&Array.isArray(value.rows))return value.rows as T[]; if(value&&value.data!==undefined&&Array.isArray(value.data))return value.data as T[]; return []; }
 export function docsOrigin(){return API.replace(/\/api\/v1\/?$/,'');}
+/** فراخوانی عمومی (بدون نشست) — فقط برای مسیرهای بی‌احرازِ پورتال عمومی/نظرسنجی.
+ *  هرگز به /login ریدایرکت نمی‌کند؛ خطا را همان‌جا برمی‌گرداند تا فرم عمومی کار کند. */
+export async function apiPublic<T=unknown>(path:string,init:ApiOptions={}):Promise<T>{
+  const response=await raw(path,init,getAccessToken()??undefined);
+  const body:any=await readBody(response);
+  if(!response.ok)throw new ApiError(messageOf(body,response.status),response.status,body?.error??body);
+  return body as T;
+}
 /** base path-aware app root ('' in dev, '/Srip' on GitHub Pages) */
 export function appBase(){return docsOrigin();}
 export async function apiDocsJson(){const r=await fetch(`${docsOrigin()}/docs-json`,{cache:'no-store'});if(!r.ok)throw new ApiError(`دریافت قرارداد رابط ناموفق بود (بازگشت ${r.status})`,r.status);return r.json();}

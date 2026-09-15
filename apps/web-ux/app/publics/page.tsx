@@ -8,6 +8,7 @@ import {
   Plus, RefreshCw, Trash2, SlidersHorizontal, Megaphone, Newspaper, Target, Eye, Heart,
   CheckCircle2, ChevronLeft, Layers, Landmark, GraduationCap, Briefcase, Newspaper as News2, Cpu,
   Copy, Sparkles, UserPlus, Pencil, RotateCcw, Power, Grid3x3, History, TrendingDown,
+  Radio, ClipboardList, Search,
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
@@ -436,7 +437,7 @@ export default function PublicsPage() {
   useEffect(() => { if (orgId !== scopeId && scopeId !== 'all') setOrgId(scopeId); }, [scopeId, orgId]);
   useEffect(() => { if (!orgId && primaryOrg) setOrgId(primaryOrg); }, [orgId, primaryOrg]);
 
-  const [tab, setTab] = useState<'self' | 'groups' | 'members' | 'matrix' | 'heatmap' | 'coverage' | 'gaps' | 'export'>('self');
+  const [tab, setTab] = useState<'self' | 'groups' | 'members' | 'matrix' | 'heatmap' | 'coverage' | 'gaps' | 'media' | 'export'>('self');
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [selfRow, setSelfRow] = useState<SelfRow | null>(null);
   const [members, setMembers] = useState<MemberView[]>([]);
@@ -461,6 +462,13 @@ export default function PublicsPage() {
   const [gCat, setGCat] = useState('');
   const [gSrc, setGSrc] = useState('');
   const [gQ, setGQ] = useState('');
+
+  /* مسترپلن فاز ۲/۱۴+۱۶: پوشش رسانه‌ای + نظرسنجی ذینفعان */
+  const [mediaCovOrg, setMediaCovOrg] = useState('');
+  const [mediaCov, setMediaCov] = useState<any>(null);
+  const [mediaBusy, setMediaBusy] = useState(false);
+  const [surveys, setSurveys] = useState<any[]>([]);
+  const [surveyLink, setSurveyLink] = useState<{ name: string; url: string } | null>(null);
 
   /* add-member */
   const [addOpen, setAddOpen] = useState(false);
@@ -757,6 +765,63 @@ export default function PublicsPage() {
     }
   };
 
+  /* ── مسترپلن فاز ۲/۱۴: پوشش رسانه‌ای (رصد منابع منتخب — RSS فهرست رسانه‌ها) ── */
+  const loadMediaCov = useCallback(async (target?: string) => {
+    const oid = target ?? mediaCovOrg ?? orgId;
+    if (!oid) return;
+    setMediaCovOrg(oid);
+    setMediaBusy(true);
+    try { setMediaCov(await api<any>(`/media/coverage?organizationId=${encodeURIComponent(oid)}`)); }
+    catch (e) { setError(String((e as Error).message)); setMediaCov(null); }
+    finally { setMediaBusy(false); }
+  }, [mediaCovOrg, orgId]);
+
+  const scanMedia = async () => {
+    setMediaBusy(true); setFlash('');
+    try {
+      const out = await api<any>('/media/scan', { method: 'POST', body: '{}' });
+      setFlash(out?.message ?? 'پویش انجام شد.');
+      await loadMediaCov();
+    } catch (e) { setError(String((e as Error).message)); }
+    finally { setMediaBusy(false); }
+  };
+
+  const reviewMention = async (id: string, tone: string) => {
+    setMediaBusy(true);
+    try {
+      await api(`/media/mentions/${id}/review`, { method: 'POST', body: JSON.stringify({ tone }) });
+      await loadMediaCov();
+    } catch (e) { setError(String((e as Error).message)); }
+    finally { setMediaBusy(false); }
+  };
+
+  /* ── مسترپلن فاز ۲/۱۶: نظرسنجی ذینفعان (لینک عمومی + اثر بر امتیاز) ── */
+  const loadSurveys = useCallback(async () => {
+    try {
+      const out = await api<any>('/surveys');
+      setSurveys(Array.isArray(out) ? out : (out?.items ?? []));
+    } catch { setSurveys([]); }
+  }, []);
+
+  const createSurvey = async (m: MemberView) => {
+    setBusy(`svy-${m.id}`); setFlash('');
+    try {
+      const out = await api<{ url: string; message: string }>('/surveys', { method: 'POST', body: JSON.stringify({ memberId: m.id }) });
+      const publicUrl = `${typeof window !== 'undefined' ? window.location.origin + window.location.pathname.replace(/\/publics\/?$/, '') : ''}/p?survey=` + out.url.split('/').pop();
+      setSurveyLink({ name: m.sourceName ?? m.id, url: publicUrl });
+      try { await navigator.clipboard?.writeText(publicUrl); } catch {}
+      setFlash(out.message + ' — لینک در حافظه کپی شد.');
+      await loadSurveys();
+    } catch (e) { setError(String((e as Error).message)); }
+    finally { setBusy(''); }
+  };
+
+  /* بارگذاری خودکار در ورود به تب پوشش رسانه‌ای */
+  useEffect(() => {
+    if (tab === 'media') { loadMediaCov(); loadSurveys(); }
+    /* eslint-disable-next-line */
+  }, [tab]);
+
   const TABS: Array<{ key: typeof tab; label: string; icon?: React.ReactNode }> = [
     { key: 'self', label: 'شناسنامهٔ سازمان', icon: <Fingerprint size={14} /> },
     { key: 'groups', label: 'گروه‌ها', icon: <Layers size={14} /> },
@@ -765,6 +830,7 @@ export default function PublicsPage() {
     { key: 'heatmap', label: 'هیت‌مپ پوشش', icon: <Grid3x3 size={14} /> },
     { key: 'coverage', label: 'پوشش', icon: <Radar size={14} /> },
     { key: 'gaps', label: 'شکاف‌ها و اقدام', icon: <AlertTriangle size={14} /> },
+    { key: 'media', label: 'پوشش رسانه‌ای', icon: <Radio size={14} /> },
     { key: 'export', label: 'خروجی و رسانه', icon: <Download size={14} /> },
   ];
 
@@ -989,6 +1055,7 @@ export default function PublicsPage() {
                             <td>
                               <div style={{ display: 'flex', gap: 4 }}>
                                 <button className="btn icon-only" title="ارزیابی و به‌روزرسانی" onClick={() => openAssess(m)}><SlidersHorizontal size={13} /></button>
+                                <button className="btn icon-only" title="ارسال نظرسنجی (لینک عمومی)" disabled={busy === `svy-${m.id}`} onClick={() => createSurvey(m)}><ClipboardList size={13} /></button>
                                 <button className="btn icon-only danger" title="حذف" disabled={busy === `del-${m.id}`} onClick={() => removeMember(m)}><Trash2 size={13} /></button>
                               </div>
                             </td>
@@ -1183,6 +1250,108 @@ export default function PublicsPage() {
           )}
 
           {/* ---------------- خروجی و رسانه ---------------- */}
+          {/* ---------------- مسترپلن فاز ۲/۱۴: پوشش رسانه‌ای ---------------- */}
+          {tab === 'media' && (
+            <div className="stack" style={{ gap: 14 }}>
+              <SectionCard
+                title="پوشش رسانه‌ای سازمان"
+                icon={<Radio size={15} />}
+                description="ذکرهای شناسایی‌شدهٔ سازمان در منابع منتخب (RSS رسانه‌های فهرست‌شده) با لحن قاعده‌دار — این «رصد منابع منتخب» است، نه پایش جامع."
+                actions={canWrite && <button className="btn btn-primary" disabled={mediaBusy} onClick={scanMedia}><Radio size={14} /> پویش منابع</button>}
+              >
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                  <select aria-label="سازمان هدف پوشش" value={mediaCovOrg || orgId} onChange={e => loadMediaCov(e.target.value)} style={{ minWidth: 220 }}>
+                    {orgOptions.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                  </select>
+                  <button className="btn btn-secondary" disabled={mediaBusy} onClick={() => loadMediaCov()}><RefreshCw size={13} /> به‌روزرسانی</button>
+                </div>
+                {mediaCov ? (
+                  <>
+                    <div className="stat-grid">
+                      <StatCard icon={<Newspaper size={16} />} iconClass="ic-blue" label="ذکرهای شناسایی‌شده" value={fmtNum(mediaCov.totalDetected)} sub={`${fmtNum(mediaCov.pendingScan ?? 0)} در انتظار پویش بعدی`} />
+                      <StatCard icon={<TrendingDown size={16} />} iconClass={mediaCov.tone?.toneScore >= 0 ? 'ic-teal' : 'ic-red'} label="امتیاز لحن" value={fmtNum(mediaCov.tone?.toneScore)} sub={`مثبت ${fmtNum(mediaCov.tone?.positive)} · منفی ${fmtNum(mediaCov.tone?.negative)} · خنثی ${fmtNum(mediaCov.tone?.neutral)}`} />
+                      <StatCard icon={<Radio size={16} />} iconClass="ic-indigo" label="منابع" value={fmtNum(Object.keys(mediaCov.sources ?? {}).length)} sub={Object.entries(mediaCov.sources ?? {}).slice(0, 2).map(([k, v]) => `${k} (${fmtNum(v)})`).join(' · ')} />
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', height: 80, marginTop: 10 }} aria-label="روند ماهانهٔ لحن">
+                      {(mediaCov.trend ?? []).map((t: any) => {
+                        const max = Math.max(1, ...(mediaCov.trend ?? []).map((x: any) => x.total));
+                        return (
+                          <div key={t.ym} style={{ flex: 1, textAlign: 'center' }} title={`${t.ym} — کل ${t.total} · مثبت ${t.positive} · منفی ${t.negative}`}>
+                            <div style={{ display: 'flex', gap: 2, justifyContent: 'center', alignItems: 'flex-end', height: 52 }}>
+                              <span style={{ width: 8, height: Math.max(3, (t.positive / max) * 48), background: '#16a34a', borderRadius: 3 }} />
+                              <span style={{ width: 8, height: Math.max(3, (t.neutral / max) * 48), background: '#94a3b8', borderRadius: 3 }} />
+                              <span style={{ width: 8, height: Math.max(3, (t.negative / max) * 48), background: '#dc2626', borderRadius: 3 }} />
+                            </div>
+                            <small className="t-muted" style={{ fontSize: 10 }}>{t.ym.slice(5)}</small>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {(mediaCov.mentions ?? []).length ? (
+                      <div className="list" style={{ marginTop: 10 }}>
+                        {mediaCov.mentions.map((x: any) => (
+                          <div className="listRow" key={x.id} style={{ alignItems: 'flex-start' }}>
+                            <Badge tone={x.tone === 'POSITIVE' ? 'success' : x.tone === 'NEGATIVE' ? 'danger' : 'neutral'}>
+                              {x.tone === 'POSITIVE' ? 'مثبت' : x.tone === 'NEGATIVE' ? 'منفی' : 'خنثی'}
+                            </Badge>
+                            <span style={{ flex: 1, minWidth: 0 }}>
+                              <strong style={{ fontSize: 12 }}>{x.title}</strong>
+                              <span className="t-muted" style={{ display: 'block', fontSize: 10.5, marginTop: 2 }}>{x.mediaName} · {fmtDT(x.publishedAt)}{x.reviewedAt ? ' · بازبینی‌شده' : ` · قاعده: ${x.toneHits?.positive?.length ?? 0} مثبت/${x.toneHits?.negative?.length ?? 0} منفی`}</span>
+                            </span>
+                            {canWrite && !x.reviewedAt && (
+                              <span style={{ display: 'flex', gap: 4 }}>
+                                <button className="btn btn-ghost btn-sm" title="تأیید لحن مثبت" disabled={mediaBusy} onClick={() => reviewMention(x.id, 'POSITIVE')}>✔</button>
+                                <button className="btn btn-ghost btn-sm" title="اصلاح به خنثی" disabled={mediaBusy} onClick={() => reviewMention(x.id, 'NEUTRAL')}>≠</button>
+                                <button className="btn btn-ghost btn-sm" title="اصلاح به منفی" disabled={mediaBusy} onClick={() => reviewMention(x.id, 'NEGATIVE')}>✖</button>
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="criteria-saved" style={{ marginTop: 10 }}>هنوز ذکری شناسایی نشده — «پویش منابع» را بزنید یا سازمان دیگری انتخاب کنید.</p>
+                    )}
+                    <p className="t-muted" style={{ fontSize: 11, marginTop: 8 }}>{mediaCov.honestyNote}</p>
+                  </>
+                ) : (
+                  <p className="muted" style={{ fontSize: 12.5 }}>سازمانی را انتخاب کنید تا کارت پوشش رسانه‌ای آن ساخته شود.</p>
+                )}
+              </SectionCard>
+
+              <SectionCard
+                title="نظرسنجی‌های ذینفعان"
+                icon={<ClipboardList size={15} />}
+                description="لینک عمومی نظرسنجی برای هر عضو (همان زیرساخت پورتال) — پاسخ‌ها با برچسب منبع «نظرسنجی» در موضع و سلامت ثبت می‌شوند."
+              >
+                <button className="btn btn-secondary btn-sm" onClick={loadSurveys}><RefreshCw size={13} /> به‌روزرسانی فهرست</button>
+                {surveys.length ? (
+                  <div className="list" style={{ marginTop: 10 }}>
+                    {surveys.map((sv: any) => (
+                      <div className="listRow" key={sv.id}>
+                        <Badge tone={sv.status === 'RESPONDED' ? 'success' : 'warning'}>{sv.status === 'RESPONDED' ? 'پاسخ داده شد' : 'در انتظار پاسخ'}</Badge>
+                        <span style={{ flex: 1 }}>
+                          <strong style={{ fontSize: 12.5 }}>{sv.targetName}</strong>
+                          <span className="t-muted" style={{ display: 'block', fontSize: 10.5 }}>
+                            {fmtDT(sv.createdAt)}{sv.satisfaction != null ? ` · رضایت ${fmtNum(sv.satisfaction)}/۵` : ''}{sv.perception ? ` · ادراک: ${sv.perception === 'SUPPORTER' ? 'حامی' : sv.perception === 'NEUTRAL' ? 'بی‌طرف' : 'مخالف'}` : ''}
+                            {sv.effect?.healthDelta ? ` · اثر سلامت: ${sv.effect.healthDelta > 0 ? '+' : ''}${fmtNum(sv.effect.healthDelta)}` : ''}
+                          </span>
+                        </span>
+                        {sv.status !== 'RESPONDED' && (
+                          <button className="btn btn-ghost btn-sm" title="کپی لینک عمومی"
+                            onClick={() => { const u = `${window.location.origin}${window.location.pathname.replace(/\/publics\/?$/, '')}/p?survey=${sv.token}`; try { navigator.clipboard?.writeText(u)?.catch?.(() => {}); } catch {} setFlash(`لینک نظرسنجی: ${u}`); }}>
+                            <Copy size={12} /> لینک
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="criteria-saved" style={{ marginTop: 10 }}>نظرسنجی‌ای نساخته‌اید — از تب «اعضا و ارزیابی» با دکمهٔ کلیپ‌بورد برای هر عضو یک نظرسنجی بسازید.</p>
+                )}
+              </SectionCard>
+            </div>
+          )}
+
           {tab === 'export' && (
             <div className="grid-2" style={{ gap: 14 }}>
               <SectionCard title="خروجی نقشهٔ عموم‌ها" icon={<Download size={15} />} description="کل نقشه با ارزیابی‌ها؛ برای گزارش هیئت‌مدیره یا تحلیل بیرونی">

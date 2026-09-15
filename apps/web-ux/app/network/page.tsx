@@ -27,6 +27,7 @@ import {
   EGO_FA,
 } from './_nodes';
 import NetworkGraph, { NetworkGraphHandle } from './_graph';
+import PresentationMode from '../_components/presentation-mode';
 
 const COLUMN_LABELS: Record<string, string> = {
   TEAM: 'تیم ما', CUSTOMER: 'مشتری', BOARD_ADVISORS: 'هیئت و مشاوران', PARTNERS: 'شرکا',
@@ -196,8 +197,10 @@ function renderAnalysis(
 const TAB_LABELS: Record<string, string> = { all: 'همه', organization: 'شرکت‌ها', person: 'اشخاص', project: 'پروژه‌ها' };
 
 export default function Page() {
-  const { scopeId } = useWorkspace();
+  const { scopeId, can } = useWorkspace();
   const router = useRouter();
+  /* مسترپلن فاز ۲/۱۷: اجازهٔ ساخت/حذف صحنهٔ ارائه */
+  const canWriteNetwork = can('publics.write');
   const [graph, setGraph] = useState<GGraph | null>(null);
   const [q, setQ] = useState('');
   const [type, setType] = useState('all');
@@ -1031,6 +1034,7 @@ export default function Page() {
               <button className="net-btn" onClick={() => setShowLegend(!showLegend)} title="نمایش/عدم نمایش راهنما">راهنما</button>
               {focus ? <button className="net-btn" onClick={clearFocus} title="بازگشت به نمای کلی">پاک‌کردن تمرکز</button> : null}
               <button className="net-btn primary" onClick={() => setGraphFs(true)} disabled={!graph} title="نمایش تمام‌صفحهٔ گراف"><Maximize2 size={13}/> تمام صفحه</button>
+              <PresentationMode graph={graph} currentFocus={focus} currentVariant={variant} canWrite={canWriteNetwork} />
             </div>
           </div>
 

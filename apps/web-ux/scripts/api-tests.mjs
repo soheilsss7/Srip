@@ -433,6 +433,110 @@ section('ایجاد سریع — مالکیت پیش‌فرض و فرم‌های
   check('کاربر بدون سازمان → پیام شفاف 400', nm.status === 400 && /سازمان/.test(nm.body?.message ?? ''), JSON.stringify(nm.body?.message).slice(0, 60));
 }
 
+/* ================== ۱۸. مسترپلن فاز ۲ — موتورهای تمایز ================== */
+section('فاز ۲ — ورود ایمیل/تقویم، GIS، پورتال، رسانه، MCP، نظرسنجی، ارائه');
+{
+  const pl = await login('pars@srip.local', 'pars1234');
+  const pt = pl.body?.accessToken;
+  check('ورود pars → توکن', !!pt);
+
+  /* ── ۱۱: ورود ساختاریافتهٔ ایمیل/تقویم ── */
+  const imp = await api('/imports', { method: 'POST', token: pt, body: { kind: 'email-csv', content: 'From,To,Date,Subject\r\n"rostagar@sharif.edu","kian@petro-sanat.ir","2026-09-10T10:00:00Z","پیگیری آزمایشگاه"\r\n"nobody@unknown.org","naz@arya-tech.ir","2026-09-11T11:00:00Z","معرفی"\r\n' } });
+  check('ورود CSV → 201 با نگاشت', imp.status === 201 && imp.body?.stats?.personMapped >= 1, JSON.stringify(imp.body?.stats));
+  check('حاکمیت: بدنهٔ پیام ذخیره نمی‌شود', imp.body?.governance?.bodyStored === false);
+  const iid = imp.body?.id;
+  const r1 = await api(`/imports/${iid}/rows/ir-1`, { method: 'POST', token: pt, body: { decision: 'ACCEPT' } });
+  check('تأیید انسانی رکورد → ACCEPT', r1.status === 200 && r1.body?.status === 'ACCEPT');
+  const r2 = await api(`/imports/${iid}/rows/ir-2`, { method: 'POST', token: pt, body: { decision: 'EDIT', patch: { organizationId: 'org-pars' } } });
+  check('اصلاح دستی نگاشت → EDITED', r2.status === 200 && r2.body?.matchedOrganizationIds?.[0] === 'org-pars');
+  const rj = await api(`/imports/${iid}/rows/ir-1`, { method: 'POST', token: pt, body: { decision: 'REJECT' } });
+  check('رد رکورد → REJECT', rj.status === 200 && rj.body?.status === 'REJECT');
+  const r2b = await api(`/imports/${iid}/rows/ir-2`, { method: 'POST', token: pt, body: { decision: 'ACCEPT' } });
+  check('پذیرش رکورد اصلاح‌شده', r2b.status === 200 && r2b.body?.status === 'ACCEPT');
+  const com = await api(`/imports/${iid}/commit`, { method: 'POST', token: pt, body: {} });
+  check('ثبت نهایی → فقط رکورد پذیرفته‌شده', com.status === 200 && com.body?.created?.length === 1, JSON.stringify(com.body?.created?.length));
+  check('بدنهٔ پیام در خروجی هم نیست', com.body?.governance?.bodyStored === false && !('content' in (com.body ?? {})));
+  const ics = await api('/imports', { method: 'POST', token: pt, body: { kind: 'calendar-ics', content: 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nDTSTART:20260901T090000Z\r\nDTEND:20260901T100000Z\r\nSUMMARY:جلسهٔ پارس\r\nORGANIZER:mailto:rostagar@sharif.edu\r\nATTENDEE:mailto:kian@petro-sanat.ir\r\nEND:VEVENT\r\nEND:VCALENDAR' } });
+  check('ورود ICS → 201 جلسه', ics.status === 201 && ics.body?.stats?.total === 1 && ics.body?.stats?.personMapped === 1, JSON.stringify(ics.body?.stats));
+  const bad = await api('/imports', { method: 'POST', token: pt, body: { kind: 'email-csv', content: 'a,b,c\r\n1,2,3' } });
+  check('CSV بی‌هدر معتبر → 400', bad.status === 400);
+
+  /* ── ۱۲: GIS ── */
+  const gis = await api('/gis/stakeholders', { token: pt });
+  const provs = (gis.body?.provinces ?? []).filter(p => p.orgCount > 0);
+  check('GIS → نقاط + استان‌ها', gis.status === 200 && gis.body?.total > 30 && provs.length >= 3, `total=${gis.body?.total} provs=${provs.length}`);
+
+  /* ── ۱۳: پورتال عمومی + شکایت ── */
+  const pinfo = await api('/portal/pars/info');
+  check('اطلاعات پورتال بدون احراز هویت', pinfo.status === 200 && pinfo.body?.organizationName === 'هلدینگ پارس');
+  const psub = await api('/portal/pars/submit', { method: 'POST', body: { type: 'COMPLAINT', name: 'تست اتوماسیون', message: 'پیام آزمایشی برای چرخهٔ شکایت پورتال عمومی.' } });
+  check('ثبت شکایت عمومی → 201 با SLA', psub.status === 201 && psub.body?.slaDays === 5);
+  const psid = psub.body?.id;
+  const pq = await api('/portal/submissions', { token: pt });
+  check('صف بررسی شامل شکایت', pq.status === 200 && (pq.body?.items ?? []).some(x => x.id === psid));
+  const pmet = await api('/portal/metrics', { token: pt });
+  check('سنجه‌های SLA و روند', pmet.status === 200 && Array.isArray(pmet.body?.trend) && pmet.body.trend.length === 6 && 'avgResolutionHours' in pmet.body);
+  const pasn = await api(`/portal/submissions/${psid}/assign`, { method: 'POST', token: pt, body: { ownerUserId: 'u-pars' } });
+  check('تعیین مسئول → در حال بررسی', pasn.status === 200 && pasn.body?.status === 'IN_PROGRESS');
+  const pres = await api(`/portal/submissions/${psid}/resolve`, { method: 'POST', token: pt, body: { resolutionNote: 'بررسی و پیگیری شد.' } });
+  check('رسیدگی → RESOLVED', pres.status === 200 && pres.body?.status === 'RESOLVED');
+  const pconv = await api(`/portal/submissions/${psid}/convert`, { method: 'POST', token: pt, body: {} });
+  check('تبدیل به ذینفع + تعامل', pconv.status === 200 && !!pconv.body?.personId && !!pconv.body?.interactionId);
+
+  /* ── ۱۴: پایش رسانهٔ سبک ── */
+  const scan = await api('/media/scan', { method: 'POST', token: pt, body: {} });
+  check('پویش RSS منابع منتخب', scan.status === 200 && scan.body?.scanned === 5 && scan.body?.interactionsCreated >= 1, JSON.stringify(scan.body?.scanned));
+  const cov = await api('/media/coverage?organizationId=org-ac-sharif', { token: pt });
+  check('کارت پوشش + روند ۶ ماهه', cov.status === 200 && cov.body?.totalDetected >= 1 && cov.body?.trend?.length === 6);
+  check('صداقت: برچسب «رصد منابع منتخب»', typeof cov.body?.honestyNote === 'string' && cov.body.honestyNote.includes('منتخب'));
+  const firstMention = (cov.body?.mentions ?? [])[0];
+  const rev = await api(`/media/mentions/${firstMention?.id}/review`, { method: 'POST', token: pt, body: { tone: 'POSITIVE', note: 'بازبینی انسانی' } });
+  check('بازبینی لحن انسانی', rev.status === 200 && rev.body?.reviewTone === 'POSITIVE');
+  const covX = await api('/media/coverage?organizationId=org-x', { token: pt });
+  check('سازمان خارج از محدوده → 403', covX.status === 403);
+
+  /* ── ۱۵: سرور MCP ── */
+  const mcpInfo = await api('/mcp', { token: pt });
+  check('MCP: مانیفست فقط-خواندنی', mcpInfo.status === 200 && mcpInfo.body?.readOnly === true && mcpInfo.body?.tools?.length === 6);
+  const tl = await api('/mcp', { method: 'POST', token: pt, body: { jsonrpc: '2.0', id: 1, method: 'tools/list' } });
+  check('MCP: tools/list', tl.status === 200 && tl.body?.result?.tools?.length === 6);
+  const sg = await api('/mcp', { method: 'POST', token: pt, body: { jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'search_graph', arguments: { query: 'شریف' } } } });
+  check('MCP: search_graph', sg.status === 200 && (sg.body?.result?.structuredContent?.organizations ?? []).some(o => o.id === 'org-ac-sharif'));
+  check('MCP: هر پاسخ با تاریخ داده', !!sg.body?.result?.structuredContent?._meta?.dataDate);
+  const badTool = await api('/mcp', { method: 'POST', token: pt, body: { jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'nope', arguments: {} } } });
+  check('MCP: ابزار ناموجود → خطای استاندارد', badTool.body?.error?.code === -32602);
+
+  /* ── ۱۶: نظرسنجی ذینفعان ── */
+  const sv = await api('/surveys', { method: 'POST', token: pt, body: { memberId: 'PM-P-125' } });
+  check('ایجاد نظرسنجی → لینک عمومی', sv.status === 201 && !!sv.body?.token && !!sv.body?.url);
+  const svTok = sv.body?.token;
+  const svPub = await api(`/portal/surveys/${svTok}`);
+  check('دریافت نظرسنجی بدون احراز هویت', svPub.status === 200 && svPub.body?.questions?.length >= 3);
+  const svBad = await api(`/portal/surveys/${svTok}/respond`, { method: 'POST', body: { answers: { satisfaction: 9, perception: 'SUPPORTER' } } });
+  check('اعتبارسنجی پاسخ → 400', svBad.status === 400);
+  const svOk = await api(`/portal/surveys/${svTok}/respond`, { method: 'POST', body: { answers: { satisfaction: 4, perception: 'NEUTRAL', priority: 'انرژی', comment: 'خوب بود' } } });
+  check('پاسخ عمومی → اثر با برچسب منبع', svOk.status === 201 && svOk.body?.effect?.stanceRecorded === true);
+  const svDup = await api(`/portal/surveys/${svTok}/respond`, { method: 'POST', body: { answers: { satisfaction: 2, perception: 'OPPOSER' } } });
+  check('پاسخ تکراری → 409', svDup.status === 409);
+
+  /* ── ۱۷: حالت ارائهٔ گراف ── */
+  const pr = await api('/network/presentation', { token: pt });
+  check('روایت بذر ۸ صحنه‌ای', pr.status === 200 && pr.body?.total === 8 && pr.body?.scenes?.[0]?.title?.startsWith('اکوسیستم'));
+  const ns = await api('/network/presentation/scenes', { method: 'POST', token: pt, body: { title: 'صحنهٔ تست فاز ۲', note: 'n', filters: { category: 'MEDIA', view: 'ecosystem' } } });
+  check('ساخت صحنه در انتهای روایت', ns.status === 201 && ns.body?.order >= 9);
+  const up = await api(`/network/presentation/scenes/${ns.body?.id}`, { method: 'PATCH', token: pt, body: { order: 2 } });
+  check('جابه‌جایی ترتیب صحنه', up.status === 200 && up.body?.order === 2);
+  const dl = await api(`/network/presentation/scenes/${ns.body?.id}`, { method: 'DELETE', token: pt });
+  check('حذف صحنه', dl.status === 200 && dl.body?.deleted === ns.body?.id);
+
+  /* ── محرک‌های فاز ۲ در آمار گردش‌کار ── */
+  const wf = await api('/workflows/coverage', { token: pt });
+  check('محرک‌های فاز ۲ ثبت شده‌اند', wf.status === 200);
+  const stats = await api('/workflows', { token: pt });
+  const wfList = Array.isArray(stats.body) ? stats.body : stats.body?.items ?? [];
+  check('گردش‌کارهای بذر فاز ۲ (wf-24..27)', ['wf-24', 'wf-25', 'wf-26', 'wf-27'].every(id => wfList.some(w => w.id === id)), JSON.stringify(wfList.length));
+}
+
 /* ============================ SUMMARY ============================ */
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);

@@ -19,7 +19,7 @@ const PORT = Number(process.env.MOCK_API_PORT || 4000);
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.15.01';
+const DEMO_MOCK_VERSION = '2026.09.15.02';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -2704,6 +2704,212 @@ const kbSummary = (a, uid) => ({
 });
 
 let DB = null;
+/* ═══════════════════════════════════════════════════════════════════════════
+   مسترپلن فاز ۲ — موتورهای تمایز (آیتم‌های ۱۱ تا ۱۷)
+   ۱۱ ورود ساختاریافتهٔ ایمیل/تقویم (فایل‌محور، فقط متادیتا، تأیید انسانی)
+   ۱۲ GIS نقشهٔ جغرافیایی ذینفعان · ۱۳ پورتال عمومی + سازوکار شکایت (SLA)
+   ۱۴ پایش رسانهٔ سبک (RSS منابع منتخب، لحن قاعده‌دار با بازبینی انسانی)
+   ۱۵ سرور MCP فقط-خواندنی · ۱۶ نظرسنجی ذینفعان · ۱۷ حالت ارائهٔ گراف
+   همهٔ خروجی‌ها قاعده‌مبنا و قطعی‌اند (بدون LLM) و فقط از دادهٔ واقعی مستأجر.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── آیتم ۱۲: جغرافیای استان‌ها (مراکز استان — نمای GIS آفلاین) ── */
+const PHASE2_PROVINCES = {
+  TEH:{fa:'تهران',city:'تهران',lat:35.70,lng:51.42}, ALB:{fa:'البرز',city:'کرج',lat:35.84,lng:50.94},
+  KHR:{fa:'خراسان رضوی',city:'مشهد',lat:36.30,lng:59.60}, FARS:{fa:'فارس',city:'شیراز',lat:29.59,lng:52.58},
+  ESF:{fa:'اصفهان',city:'اصفهان',lat:32.65,lng:51.68}, AZE:{fa:'آذربایجان شرقی',city:'تبریز',lat:38.08,lng:46.29},
+  KHZ:{fa:'خوزستان',city:'اهواز',lat:31.32,lng:48.67}, KER:{fa:'کرمان',city:'کرمان',lat:30.29,lng:57.08},
+  GIL:{fa:'گیلان',city:'رشت',lat:37.28,lng:49.58}, QOM:{fa:'قم',city:'قم',lat:34.64,lng:50.88},
+  YZD:{fa:'یزد',city:'یزد',lat:31.90,lng:54.37}, BSH:{fa:'بوشهر',city:'بوشهر',lat:28.97,lng:50.84},
+};
+/* نگاشت سازمان‌های واقعی به جغرافیای واقعی (بقیه: پیش‌فرض تهران) */
+const ORG_GEO = {
+  'org-4':{province:'BSH',city:'عسلویه'}, 'org-6':{province:'ALB',city:'کرج'},
+  'org-ac-ferdowsi':{province:'KHR',city:'مشهد'}, 'org-ac-shiraz':{province:'FARS',city:'شیراز'},
+  'org-eco-cvc-kerman':{province:'KER',city:'کرمان'}, 'org-ecx-pardis':{province:'TEH',city:'پردیس'},
+};
+const orgGeoOf=(orgId)=>{ const g=ORG_GEO[orgId]; const p=PHASE2_PROVINCES[g?.province??'TEH']; return {provinceId:g?.province??'TEH',provinceFa:p.fa,city:g?.city??p.city,lat:p.lat,lng:p.lng,pinned:!!g}; };
+
+/* ── آیتم ۱۴: پایش رسانهٔ سبک — قاعدهٔ لحن و بذر خبر قطعی ── */
+const MEDIA_POS_WORDS=['همکاری','موافقت','تمدید','افتتاح','رشد','سرمایه‌گذاری','جایزه','توسعه','توافق','افزایش','پیشرفت','استقبال','تقدیر','پیشرو'];
+const MEDIA_NEG_WORDS=['اختلاف','دعوی','جریمه','توقف','تخلف','بحران','کاهش','انتقاد','شکایت','هشدار','تعویق','تزلزل','ناکارآمد','دلسرد'];
+const MEDIA_TONE_FA={POSITIVE:'مثبت',NEGATIVE:'منفی',NEUTRAL:'خنثی'};
+function mediaToneOf(text){
+  const t=String(text??'');
+  const pos=MEDIA_POS_WORDS.filter(w=>t.includes(w));
+  const neg=MEDIA_NEG_WORDS.filter(w=>t.includes(w));
+  const score=pos.length-neg.length;
+  return {tone:score>0?'POSITIVE':score<0?'NEGATIVE':'NEUTRAL',score,posHits:pos,negHits:neg};
+}
+/* بذر خبری: منابع = رسانه‌های فهرست‌شدهٔ عموم‌ها؛ محتوا دربارهٔ نهادهای واقعیِ ردیابی‌شده
+   (نه دادهٔ جعلی دربارهٔ مستأجر واقعی). روزشمار از امروز به عقب — قطعی. */
+const PHASE2_NEWS_SEED=[
+  {id:'nw-1',mediaId:'m-5',daysAgo:2,title:'دانشگاه صنعتی شریف و صنعت همکاری مشترک برای توسعهٔ آزمایشگاه هوش مصنوعی امضا کردند',summary:'توافق مشترک با استقبال سرمایه‌گذاران همراه شد و مسیر توسعهٔ آزمایشگاه تمدید شد.'},
+  {id:'nw-2',mediaId:'m-7',daysAgo:5,title:'شورای ملی راهبری هوش مصنوعی: پیشرفت چارچوب حکمرانی و همکاری با دانشگاه‌ها',summary:'گزارش شورا از پیشرفت چارچوب و توافق‌های تازه با پژوهشگاه‌ها خبر داد.'},
+  {id:'nw-3',mediaId:'m-2',daysAgo:9,title:'ابرآروان خدمات ابری خود را گسترش داد؛ رشد استفادهٔ سازمان‌ها',summary:'شرکت ابری گزارش رشد داد و از توسعهٔ دیتاسنترهای تازه خبر داد.'},
+  {id:'nw-4',mediaId:'m-4',daysAgo:13,title:'اختلاف سهامداران یک هلدینگ فناوری به دعوی حقوقی کشید',summary:'انتقاد فعالان بازار از شفافیت اطلاعات و احتمال تعویق عرضه مطرح شده است.'},
+  {id:'nw-5',mediaId:'m-11',daysAgo:17,title:'صندوق نوآوری و شکوفایی: افزایش سهمیهٔ سرمایه‌گذاری در استارتاپ‌های دانش‌بنیان',summary:'صندوق از افزایش سرمایه‌گذاری و استقبال پروژه‌ها اعلام کرد.'},
+  {id:'nw-6',mediaId:'m-6',daysAgo:21,title:'وزارت نیرو بر توقف پروژه‌های پر مصرف بدون مجوز تأکید کرد',summary:'هشدار تنظیم‌گری دربارهٔ تخلف برخی پروژه‌های انرژی و جریمهٔ تأخیری منتشر شد.'},
+  {id:'nw-7',mediaId:'m-1',daysAgo:26,title:'اسنپ و شهرداری تهران به توافق رسیدند؛ توسعهٔ خدمات شهری',summary:'توافق تازه مسیر توسعهٔ خدمات و افزایش رضایت کاربران را هدف گرفته است.'},
+  {id:'nw-8',mediaId:'m-10',daysAgo:31,title:'دیجی‌کالا گزارش پیشرفت لجستیک و افتتاح مرکز توزیع تازه منتشر کرد',summary:'گزارش سالانه از رشد لجستیک و افتتاح مراکز جدید و تقدیر از کارکنان خبر داد.'},
+  {id:'nw-9',mediaId:'m-8',daysAgo:37,title:'سازمان بورس: شفاف‌سازی دربارهٔ کاهش ارزش معاملات برخی نمادها',summary:'بورس از کاهش ارزش برخی نمادها خبر داد و به انتقاد بازار پاسخ داد.'},
+  {id:'nw-10',mediaId:'m-5',daysAgo:44,title:'دانشگاه فردوسی مشهد میزبان رویداد ملی سرمایه‌گذاری فناوری شد',summary:'رویداد با حضور صندوق‌ها و استقبال شرکت‌های دانش‌بنیان برگزار شد.'},
+  {id:'nw-11',mediaId:'m-3',daysAgo:49,title:'بانک مرکزی: چارچوب تازهٔ اعتبارسنجی نهادهای پرداخت',summary:'بانک مرکزی چارچوب تازه منتشر کرد؛ تخلف نهادهای بدون مجوز تعیین تکلیف می‌شود.'},
+  {id:'nw-12',mediaId:'m-9',daysAgo:55,title:'پارک فناوری پردیس؛ رشد شرکت‌های مستقر و توسعهٔ فاز تازه',summary:'مدیریت پارک از رشد شرکت‌ها و توافق همکاری با صنعت خبر داد.'},
+  {id:'nw-13',mediaId:'m-2',daysAgo:62,title:'همراه اول و استارتاپ‌ها؛ همکاری برای توسعهٔ خدمات دیجیتال',summary:'توافق همکاری برای توسعهٔ خدمات و افزایش پوشش اعلام شد.'},
+  {id:'nw-14',mediaId:'m-4',daysAgo:70,title:'وزارت علوم بودجهٔ پژوهشی دانشگاه‌ها را افزایش داد',summary:'افزایش بودجهٔ پژوهشی و تقدیر از پروژه‌های برتر اعلام شد.'},
+  {id:'nw-15',mediaId:'m-7',daysAgo:78,title:'مرکز نوآوری پردازش زبان طبیعی؛ جایزهٔ ملی فناوریِ پیشرو',summary:'مرکز NLPIC جایزه گرفت؛ داوران از پیشرفت مدل‌های زبانی تقدیر کردند.'},
+  {id:'nw-16',mediaId:'m-11',daysAgo:85,title:'فرابورس ایران؛ عرضهٔ شرک‌های دانش‌بنیان با استقبال مواجه شد',summary:'عرضهٔ تازه با استقبال سرمایه‌گذاران و رشد معاملات همراه بود.'},
+  {id:'nw-17',mediaId:'m-6',daysAgo:93,title:'توقف فعالیت یک استارتاپ لجستیک به دلیل تخلف مالیاتی',summary:'گزارش‌ها از توقف فعالیت و احتمال جریمه و دعوی حقوقی حکایت دارد.'},
+  {id:'nw-18',mediaId:'m-1',daysAgo:101,title:'کارخانه نوآوری پردیس میزبان نمایشگاه دستاوردها شد',summary:'رویداد با افتتاح بخش تازه و استقبال بازدیدکنندگان برگزار شد.'},
+  {id:'nw-19',mediaId:'m-10',daysAgo:110,title:'اتاق بازرگانی تهران: انتقاد از تعویق مجوزهای صادراتی',summary:'اتاق از تعویق مجوزها انتقاد کرد و خواستار کاهش فرایندها شد.'},
+  {id:'nw-20',mediaId:'m-5',daysAgo:120,title:'دانشگاه تهران؛ همکاری با صنعت برای توسعهٔ فناوری‌های نوین',summary:'توافق همکاری دانشگاه و صنعت با هدف توسعهٔ فناوری امضا شد.'},
+  {id:'nw-21',mediaId:'m-8',daysAgo:130,title:'صندوق پژوهش و فناوری خطرپذیر کرمان‌موتور؛ سرمایه‌گذاری تازه در استارتاپ‌های منطقه',summary:'صندوق از سرمایه‌گذاری تازه و رشد اکوسیستم منطقه خبر داد.'},
+  {id:'nw-22',mediaId:'m-3',daysAgo:140,title:'وزارت بهداشت: هشدار دربارهٔ کاهش کیفیت برخی خدمات درمانی',summary:'وزارت با انتشار هشدار از کاهش کیفیت و انتقاد عملکرد برخی مراکز گفت.'},
+  {id:'nw-23',mediaId:'m-9',daysAgo:150,title:'معاونت علمی؛ تمدید حمایت از شرکت‌های دانش‌بنیان تا سال آینده',summary:'تمدید بستهٔ حمایت با استقبال انجمن‌ها همراه بود.'},
+  {id:'nw-24',mediaId:'m-2',daysAgo:160,title:'آواتک؛ پایان دورهٔ شتاب‌دهی با استقبال سرمایه‌گذاران',summary:'رویداد دمو دی با رشد استارتاپ‌ها و توافق‌های تازه همراه بود.'},
+];
+/* ذکر نام = تطبیق قطعی نام سازمان/شخص در عنوان یا خلاصهٔ خبر */
+function mediaMatchOf(item){
+  const text=`${item.title} ${item.summary}`;
+  const orgIds=(ORGS??[]).filter(o=>o&&o.name&&o.name.length>4&&text.includes(o.name)).map(o=>o.id);
+  const personIds=(PEOPLE??[]).filter(p=>text.includes(`${p.firstName} ${p.lastName}`)).map(p=>p.id);
+  return {orgIds,personIds};
+}
+
+/* ── آیتم ۱۱: تجزیه‌گر قطعی ICS تقویم و CSV ایمیل (فقط متادیتا) ── */
+const PHASE2_DOMAIN_MAP={'arya-holding.ir':'org-1','arya-tech.ir':'org-2','bankpars.ir':'org-3','petro-sanat.ir':'org-4','sadena.ir':'org-5','alborz-parts.ir':'org-6','sharif.edu':'org-9','tccim.ir':'org-10','seo.or.ir':'org-11','innovation.ir':'org-12','x-co.ir':'org-x','pars.ir':'org-pars'};
+const unfoldIcsLines=(raw)=>{ const out=[]; for(const line of String(raw??'').replace(/\r\n/g,'\n').split('\n')){ if(/^\s/.test(line)&&out.length) out[out.length-1]+=line.slice(1); else out.push(line); } return out; };
+const icsDt=(v)=>{ const m=String(v??'').match(/(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2}))?/); if(!m) return null; const [,Y,M,D,h,mi,s]=m; try{ return new Date(Date.UTC(+Y,+M-1,+D,+(h??9),+(mi??0),+(s??0))).toISOString(); }catch{ return null; } };
+function parseIcsContent(raw){
+  const lines=unfoldIcsLines(raw); const events=[]; let cur=null;
+  for(const ln of lines){
+    const t=ln.trim();
+    if(t==='BEGIN:VEVENT'){ cur={}; continue; }
+    if(t==='END:VEVENT'){ if(cur){ events.push(cur); } cur=null; continue; }
+    if(!cur) continue;
+    const ci=t.indexOf(':'); if(ci<0) continue;
+    const key=t.slice(0,ci).toUpperCase(); const val=t.slice(ci+1).trim();
+    if(key.startsWith('DTSTART')) cur.startAt=icsDt(val);
+    else if(key.startsWith('DTEND')) cur.endAt=icsDt(val);
+    else if(key.startsWith('SUMMARY')) cur.subject=val;
+    else if(key.startsWith('ORGANIZER')&&/mailto:/i.test(val)) cur.organizer=(val.match(/mailto:([^\s;]+)/i)?.[1]??'').toLowerCase();
+    else if(key.startsWith('ATTENDEE')&&/mailto:/i.test(val)){ (cur.attendees=cur.attendees??[]).push((val.match(/mailto:([^\s;]+)/i)?.[1]??'').toLowerCase()); }
+  }
+  return events.filter(e=>e.startAt&&e.subject);
+}
+function parseEmailCsvContent(raw){
+  const text=String(raw??'').replace(/^\ufeff/,'').replace(/\r\n/g,'\n');
+  const rows=[]; let field='',row=[],inQ=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(inQ){ if(ch==='"'){ if(text[i+1]==='"'){field+='"';i++;} else inQ=false; } else field+=ch; }
+    else if(ch==='"') inQ=true;
+    else if(ch===','){ row.push(field); field=''; }
+    else if(ch==='\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+    else field+=ch;
+  }
+  if(field||row.length){ row.push(field); rows.push(row); }
+  if(!rows.length) return [];
+  const head=rows[0].map(h=>String(h).trim().toLowerCase());
+  const idx=(...names)=>{ for(const n of names){ const i=head.indexOf(n); if(i>=0) return i; } return -1; };
+  const iFrom=idx('from','sender','از'), iTo=idx('to','recipient','به'), iDate=idx('date','تاریخ'), iSubj=idx('subject','موضوع','title');
+  if(iFrom<0||iDate<0) return null; /* هدر ناشناخته */
+  const out=[];
+  for(const r of rows.slice(1)){
+    if(!r||!r.length||r.every(c=>!String(c).trim())) continue;
+    const dateStr=String(r[iDate]??'').trim();
+    const at=new Date(dateStr); if(Number.isNaN(at.getTime())) continue;
+    const tos=String(r[iTo]??'').split(/[;,]/).map(x=>x.trim()).filter(Boolean);
+    const toEmails=tos.map(x=>(x.match(/([^\s<;,]+@[^\s>,;]+)/)?.[1]??'').toLowerCase()).filter(Boolean);
+    out.push({at:at.toISOString(),from:(String(r[iFrom]??'').match(/([^\s<;,]+@[^\s>,;]+)/)?.[1]??'').toLowerCase()||null,to:toEmails,subject:iSubj>=0?String(r[iSubj]??'').trim():''});
+  }
+  return out;
+}
+const domainOfEmail=(em)=>String(em??'').split('@')[1]?.toLowerCase()??'';
+function importMapRow(kind,row,scopeIds){
+  const emails=kind==='calendar-ics'
+    ? [...(row.attendees??[]),...(row.organizer?[row.organizer]:[])]
+    : [...(row.from?[row.from]:[]),...(row.to??[])];
+  const peopleByEmail={}; for(const p of (PEOPLE??[])){ if(p?.email) peopleByEmail[String(p.email).toLowerCase()]=p.id; }
+  const personIds=[...new Set(emails.map(em=>peopleByEmail[em]).filter(Boolean))];
+  const orgIds=[...new Set(emails.map(em=>PHASE2_DOMAIN_MAP[domainOfEmail(em)]).filter(Boolean))];
+  const tenantDomains=scopeIds.map(id=>Object.entries(PHASE2_DOMAIN_MAP).filter(([,v])=>v===id).map(([k])=>k)).flat();
+  const fromDom=kind==='calendar-ics'?domainOfEmail(row.organizer??''):domainOfEmail(row.from??'');
+  const direction=tenantDomains.includes(fromDom)?'OUTBOUND':'INBOUND';
+  const rel=orgIds.length>=2?((RELS??[]).find(r=>scopeIds.includes(r.sourceOrganizationId)&&orgIds.includes(r.targetOrganizationId))??(RELS??[]).find(r=>scopeIds.includes(r.targetOrganizationId)&&orgIds.includes(r.sourceOrganizationId))??null):null;
+  const confidence=personIds.length?0.9:(orgIds.length?0.75:0.3);
+  const matchedEmails=new Set([...personIds.map(pid=>{const p=(PEOPLE??[]).find(x=>x.id===pid);return p?.email?String(p.email).toLowerCase():null;}),...emails.filter(em=>PHASE2_DOMAIN_MAP[domainOfEmail(em)])].filter(Boolean));
+  return {kind:kind==='calendar-ics'?'MEETING':'EMAIL',at:row.at,subject:row.subject||'(بدون موضوع)',direction,
+    matchedPersonIds:personIds,matchedOrganizationIds:orgIds,relationshipId:rel?.id??null,confidence,
+    unmatchedEmails:[...new Set(emails)].filter(em=>!matchedEmails.has(em))};
+}
+
+/* ── آیتم ۱۳/۱۶: پورتال عمومی + نظرسنجی — قالب‌ها و SLA ── */
+const PORTAL_SLUGS={'pars':'org-pars','x':'org-x','arya':'org-1'};
+const PORTAL_SLUG_FA={'pars':'هلدینگ پارس','x':'شرکت x','arya':'هلدینگ آریا'};
+const PORTAL_SUBMISSION_FA={FEEDBACK:'بازخورد',COMPLAINT:'شکایت',REQUEST:'درخواست'};
+const PORTAL_SLA_DAYS={COMPLAINT:5,REQUEST:7,FEEDBACK:10};
+const PORTAL_STATUS_FA={NEW:'تازه',IN_PROGRESS:'در حال بررسی',RESOLVED:'رسیدگی‌شده',CLOSED:'بسته‌شده'};
+const PHASE2_RATE=new Map(); /* ip → [{at,route}] — نرخ‌محدودِ مسیرهای عمومی (حافظهٔ فرّا) */
+function phase2RateOk(ip,route,max=5,windowMs=3600_000){
+  const key=`${ip}|${route}`; const now=Date.now();
+  const arr=(PHASE2_RATE.get(key)??[]).filter(x=>now-x.at<windowMs);
+  if(arr.length>=max){ PHASE2_RATE.set(key,arr); return false; }
+  arr.push({at:now}); PHASE2_RATE.set(key,arr); return true;
+}
+const PHASE2_SURVEY_QUESTIONS=[
+  {id:'satisfaction',kind:'SCALE_1_5',fa:'رضایت کلی شما از رابطه و همکاری با ما چقدر است؟ (۱ = بسیار کم، ۵ = بسیار زیاد)',required:true},
+  {id:'perception',kind:'CHOICE',fa:'برداشت شما، جایگاه ما را در اولویت‌های سازمان خودتان چه می‌دانید؟',required:true,
+    options:[{id:'SUPPORTER',fa:'حامی و همراه'},{id:'NEUTRAL',fa:'بی‌طرف'},{id:'OPPOSER',fa:'مخالف یا منتقد'}]},
+  {id:'priority',kind:'CHOICE',fa:'مهم‌ترین اولویت فعلی سازمان شما کدام است؟',required:false,
+    options:['انرژی','آموزش','خدمات اجتماعی','سلامت','کشاورزی','مالی','مسکن','صنعت','اعتباری','طراحی صنعتی','لجستیک','محتوا'].map(x=>({id:x,fa:x}))},
+  {id:'comment',kind:'TEXT',fa:'اگر نکته‌ای هست که ما باید بدانیم، بنویسید.',required:false},
+];
+
+function seedPhase2Store(){
+  /* ذکرهای رسانه‌ای: بذر قطعی؛ اسکن RSS آن‌ها را مرحله‌ای آشکار می‌کند (پویش منابع منتخب) */
+  if(!Array.isArray(DB.mediaMentions)) DB.mediaMentions=[];
+  if(!DB.mediaMentions.length){
+    for(const n of PHASE2_NEWS_SEED){
+      const m=mediaMatchOf(n); const tone=mediaToneOf(`${n.title} ${n.summary}`);
+      DB.mediaMentions.push({id:n.id,mediaId:n.mediaId,title:n.title,summary:n.summary,
+        publishedAt:new Date(Date.now()-n.daysAgo*86400000).toISOString(),
+        matchedOrganizationIds:m.orgIds,matchedPersonIds:m.personIds,
+        tone:tone.tone,toneHits:{positive:tone.posHits,negative:tone.negHits},
+        detected:false,reviewedAt:null,reviewedBy:null,reviewTone:null,reviewNote:null});
+    }
+  }
+  if(!Array.isArray(DB.portalSubmissions)) DB.portalSubmissions=[];
+  if(!Array.isArray(DB.surveys)) DB.surveys=[];
+  if(!Array.isArray(DB.imports)) DB.imports=[];
+  if(!Array.isArray(DB.graphScenes)) DB.graphScenes=[];
+  if(!DB.mediaScanCursor) DB.mediaScanCursor=0;
+  /* بذر صف پورتال (چرخهٔ دمو: شکایت با SLA در آستانهٔ نقض + یک حل‌شده برای روند) */
+  if(!DB.portalSubmissions.length){
+    DB.portalSubmissions.push(
+      {id:'ps-1',tenantOrgId:'org-pars',type:'COMPLAINT',name:'شهروند الف',contact:'a@example.ir',message:'دسترسی خدمات سلامت پارس در روستاهای اطراف به‌موقع پاسخگو نیست و پیگیری شکایت قبلی تعویق افتاد.',status:'IN_PROGRESS',ownerUserId:'u-pars',createdAt:new Date(Date.now()-4*86400000).toISOString(),slaDueAt:new Date(Date.now()+(PORTAL_SLA_DAYS.COMPLAINT-4)*86400000).toISOString(),resolvedAt:null,resolutionNote:null,convertedPersonId:null},
+      {id:'ps-2',tenantOrgId:'org-pars',type:'FEEDBACK',name:null,contact:null,message:'درخواست همکاری برای دورهٔ آموزش مهارت‌های دیجیتال در حوزهٔ آموزش.',status:'NEW',ownerUserId:null,createdAt:new Date(Date.now()-1*86400000).toISOString(),slaDueAt:new Date(Date.now()+(PORTAL_SLA_DAYS.FEEDBACK-1)*86400000).toISOString(),resolvedAt:null,resolutionNote:null,convertedPersonId:null},
+      {id:'ps-3',tenantOrgId:'org-1',type:'REQUEST',name:'شرکت نمونه',contact:'info@example.ir',message:'درخواست جلسه برای معرفی پلتفرم مدیریت روابط راهبردی.',status:'RESOLVED',ownerUserId:'u-1',createdAt:new Date(Date.now()-9*86400000).toISOString(),slaDueAt:new Date(Date.now()+(PORTAL_SLA_DAYS.REQUEST-9)*86400000).toISOString(),resolvedAt:new Date(Date.now()-2*86400000).toISOString(),resolutionNote:'جلسهٔ معرفی برگزار و به تعامل ثبت‌شده تبدیل شد.',convertedPersonId:null},
+    );
+  }
+  /* بذر روایت ۸ صحنه‌ای هیئت‌مدیره برای هلدینگ پارس (دادهٔ واقعی سند عموم‌ها) */
+  if(!DB.graphScenes.length){
+    const t=new Date(Date.now()-2*86400000).toISOString();
+    const mk=(id,order,title,note,focus,filters)=>({id,orgId:'org-pars',order,title,note,focus,filters,createdAt:t,updatedAt:t});
+    DB.graphScenes.push(
+      mk('gs-1',1,'اکوسیستم کامل ذینفعان پارس','نمای ده‌هزارپایی: همهٔ ۱۲ حوزهٔ کاری و شش دستهٔ عموم در یک نگاه — پراکندگی روابط و گپ‌ها.',null,{category:'ALL',stance:null,minPower:0,view:'ecosystem'}),
+      mk('gs-2',2,'هستهٔ هلدینگ و زیرمجموعه‌ها','دریل‌داون: پارس در مرکز، ۱۲ حوزهٔ کاری و اتصال‌های درونی دریل هلدینگ.','org-pars',{category:'ALL',stance:null,minPower:0,view:'neighbors'}),
+      mk('gs-3',3,'دستهٔ نهادی و حاکمیتی','تنظیم‌گران و نهادهای راهبری — تمرکز بر شورای هوش مصنوعی و وزارتخانه‌های مرتبط.',null,{category:'INSTITUTIONAL',stance:null,minPower:60,view:'ecosystem'}),
+      mk('gs-4',4,'تنظیم‌گری حوزهٔ انرژی','وزارت نیرو و بهره‌وری انرژی — بازیگر کلیدی مسیر مجوزهای پارس انرژی.','org-reg-energy',{category:'INSTITUTIONAL',stance:null,minPower:0,view:'neighbors'}),
+      mk('gs-5',5,'بدنهٔ علمی و پژوهشی','دانشگاه‌ها و انجمن‌ها — خط لولهٔ استعداد و پژوهش دوازده حوزه.',null,{category:'ACADEMIC',stance:null,minPower:0,view:'ecosystem'}),
+      mk('gs-6',6,'شبکهٔ اقتصادی و سرمایه','بورس، صندوق‌ها و اتاق‌ها — مسیر تأمین مالی و اعتباری.',null,{category:'ECONOMIC',stance:null,minPower:0,view:'ecosystem'}),
+      mk('gs-7',7,'اکوسیستم فناوری و صنعت','پارک‌ها، شتاب‌دهنده‌ها و شرکت‌های فناور — حلقهٔ نوآوری.',null,{category:'ECOSYSTEM',stance:null,minPower:0,view:'ecosystem'}),
+      mk('gs-8',8,'رسانه‌ها و روایت عمومی','دستهٔ رسانه‌ای؛ پوشش خبری و کانال‌های اطلاع‌رسانی — جمع‌بندی مسیر روایت.',null,{category:'MEDIA',stance:null,minPower:0,view:'ecosystem'}),
+    );
+  }
+}
+
 function loadDb() {
   if (process.argv.includes('--reset')) { try { fs.rmSync(DB_FILE, { force: true }); } catch {} }
   try {
@@ -2787,6 +2993,7 @@ function loadDb() {
   seedSessionsStore();
   seedAnalyticsStore();
   seedPhase1Extras();
+  seedPhase2Store();
   saveDb();
 }
 let USERS = null;
@@ -2810,7 +3017,7 @@ function resetDbInPlace(){
   seedRoleStore(); seedTagStore(); seedCustomFields(); seedScoringRules();
   seedNotificationRules(); seedAuditDemo(); seedFeatureFlags(); seedExportLog();
   seedRetention(); seedMasterData(); seedIntegrations(); seedReferralStore();
-  seedApprovals(); seedWorkflowStore(); seedPublicsStore(); seedStrategyStore(); seedSecurityEvents();
+  seedApprovals(); seedWorkflowStore(); seedPublicsStore(); seedStrategyStore(); seedSecurityEvents(); seedPhase2Store();
   seedPrivacyStore(); seedEnterpriseStore(); seedSettingsStore(); seedSessionsStore();
   seedAnalyticsStore(); seedPhase1Extras(); saveDb();
 }
@@ -3895,10 +4102,12 @@ function dqDetectCandidates(entityType,data,oid,orgScope){
 
 /* گردش‌کارهای پیش‌فرض: هر نهاد اصلی سیستم یک محرک خودکار دارد تا موتور اتوماسیون
    «همهٔ سامانه» را پوشش دهد — رابطه، جلسه، اقدام، تعهد، تعامل، فرصت، معرفی، پروژه، شخص، سازمان. */
-const WFLOW_ENTITY_FA = { Relationship:'رابطه', Organization:'سازمان', Person:'شخص', Meeting:'جلسه', Commitment:'تعهد', Action:'اقدام', Opportunity:'فرصت', Project:'پروژه', Referral:'معرفی', Interaction:'تعامل', PublicMember:'عضو عموم', Publics:'عموم‌ها', Media:'رسانه' };
+const WFLOW_ENTITY_FA = { Relationship:'رابطه', Organization:'سازمان', Person:'شخص', Meeting:'جلسه', Commitment:'تعهد', Action:'اقدام', Opportunity:'فرصت', Project:'پروژه', Referral:'معرفی', Interaction:'تعامل', PublicMember:'عضو عموم', Publics:'عموم‌ها', Media:'رسانه', PublicSubmission:'فرستادهٔ پورتال عمومی', Survey:'نظرسنجی ذینفعان', Import:'ورود ایمیل/تقویم' };
 const WFLOW_TRIGGER_FA = { MANUAL:'دستی', RELATIONSHIP_CREATED:'ایجاد رابطه', RELATIONSHIP_UPDATED:'به‌روزرسانی رابطه', MEETING_CREATED:'ایجاد جلسه', MEETING_COMPLETED:'ثبت نتیجهٔ جلسه', ACTION_CREATED:'ایجاد اقدام', ACTION_UPDATED:'به‌روزرسانی اقدام', ACTION_COMPLETED:'انجام اقدام', COMMITMENT_CREATED:'ایجاد تعهد', COMMITMENT_UPDATED:'به‌روزرسانی تعهد', COMMITMENT_FULFILLED:'انجام تعهد', INTERACTION_CREATED:'ثبت تعامل', OPPORTUNITY_CREATED:'ایجاد فرصت', OPPORTUNITY_UPDATED:'به‌روزرسانی فرصت', OPPORTUNITY_WON:'پیروزی فرصت', OPPORTUNITY_LOST:'از دست رفتن فرصت', PROJECT_CREATED:'ایجاد پروژه', PROJECT_UPDATED:'به‌روزرسانی پروژه', REFERRAL_CREATED:'ایجاد معرفی', REFERRAL_UPDATED:'به‌روزرسانی معرفی', REFERRAL_ACCEPTED:'پذیرش معرفی', REFERRAL_COMPLETED:'انجام معرفی', REFERRAL_DECLINED:'رد معرفی', PERSON_CREATED:'ایجاد شخص', PERSON_UPDATED:'به‌روزرسانی شخص', ORGANIZATION_CREATED:'ایجاد سازمان', ORGANIZATION_UPDATED:'به‌روزرسانی سازمان', PUBLIC_MEMBER_ADDED:'افزودن عضو عموم', PUBLIC_STAGE_CHANGED:'تغییر مرحلهٔ عموم', PUBLIC_GAP_DETECTED:'کشف گپ عموم', PUBLIC_REVIEW_DUE:'سررسید بازبینی عموم', MEDIA_CREATED:'ثبت رسانه', STRATEGY_SCENARIO_CREATED:'ایجاد سناریوی راهبردی', STRATEGY_SIMULATED:'اجرای شبیه‌سازی راهبردی', STRATEGY_PREDICTED:'پیش‌بینی و توصیهٔ واکنشی', STRATEGY_IMPORT_COMPLETED:'ورود دادهٔ راهبردی',
   /* مسترپلن فاز ۱ */
-  RELATIONSHIP_CONCENTRATION:'تمرکز رابطه در یک نفر', PERSON_ROLE_CHANGED:'تغییر نقش/سازمان شخص', PERIODIC_REPORT_GENERATED:'تولید گزارش دوره‌ای', WARM_PATH_REQUESTED:'درخواست مسیر گرم' };
+  RELATIONSHIP_CONCENTRATION:'تمرکز رابطه در یک نفر', PERSON_ROLE_CHANGED:'تغییر نقش/سازمان شخص', PERIODIC_REPORT_GENERATED:'تولید گزارش دوره‌ای', WARM_PATH_REQUESTED:'درخواست مسیر گرم',
+  /* مسترپلن فاز ۲ */
+  PUBLIC_SUBMISSION_RECEIVED:'ثبت فرم پورتال عمومی', MEDIA_MENTION:'ذکر رسانه‌ای سازمان', SURVEY_RESPONSE_RECEIVED:'دریافت پاسخ نظرسنجی', IMPORT_COMPLETED:'تکمیل ورود ایمیل/تقویم' };
 
 /* ====================== Publics (عموم‌ها) — کاتالوگ و قالب‌ها ====================== */
 const PUBLIC_LINKAGE_FA = {"ENABLING": "فعال‌کننده", "FUNCTIONAL_INPUT": "کارکردی-ورودی", "FUNCTIONAL_OUTPUT": "کارکردی-خروجی", "NORMATIVE": "هنجاری", "DIFFUSED": "پراکنده"};
@@ -4189,6 +4398,27 @@ const seedWorkflowDefs = () => {
        {type:'CREATE_ACTION',title:'راستی‌آزمایی دادهٔ واردشده از پلتفرم خارجی',priority:'MEDIUM'},
        {type:'CREATE_NOTIFICATION',title:'ورود دادهٔ راهبردی انجام شد',body:'دادهٔ پلتفرم خارجی وارد و سناریو ساخته شد؛ راستی‌آزمایی عایدی‌ها لازم است.',channel:'IN_APP',priority:'MEDIUM'},
      ]},createdAt:t(0,1),updatedAt:t(0,1)},
+    /* ── مسترپلن فاز ۲: گردش‌کارهای پیش‌فرض موتورهای تمایز ── */
+    {id:'wf-24',name:'شکایت پورتال → SLA و مسئول رسیدگی',entityType:'PublicSubmission',organizationId:null,isActive:true,
+     definition:{trigger:{type:'PUBLIC_SUBMISSION_RECEIVED'},conditions:[{path:'submission.type',equals:'COMPLAINT'}],actions:[
+       {type:'CREATE_ACTION',title:'رسیدگی شکایت پورتال در مهلت SLA (۵ روز)',priority:'HIGH'},
+       {type:'CREATE_NOTIFICATION',title:'شکایت تازه در پورتال عمومی',body:'شکایتی از مسیر پورتال عمومی ثبت شد؛ مهلت پاسخ پنج روز کاری است.',channel:'IN_APP',priority:'HIGH'},
+     ]},createdAt:t(0,1),updatedAt:t(0,1)},
+    {id:'wf-25',name:'ذکر رسانه‌ای → بازبینی لحن',entityType:'Media',organizationId:null,isActive:true,
+     definition:{trigger:{type:'MEDIA_MENTION'},conditions:[],actions:[
+       {type:'CREATE_ACTION',title:'بازبینی لحن و درج پاسخ در ذکر رسانه‌ای تازه',priority:'MEDIUM'},
+       {type:'CREATE_NOTIFICATION',title:'ذکر رسانه‌ای شناسایی شد',body:'سازمان شما در منبع رسانه‌ای منتخب ذکر شد؛ کارت پوشش رسانه‌ای به‌روز شد.',channel:'IN_APP',priority:'MEDIUM'},
+     ]},createdAt:t(0,1),updatedAt:t(0,1)},
+    {id:'wf-26',name:'پاسخ نظرسنجی → بازبینی موضع',entityType:'Survey',organizationId:null,isActive:true,
+     definition:{trigger:{type:'SURVEY_RESPONSE_RECEIVED'},conditions:[],actions:[
+       {type:'CREATE_ACTION',title:'بازبینی موضع و امتیاز سلامت پس از پاسخ نظرسنجی',priority:'MEDIUM'},
+       {type:'CREATE_NOTIFICATION',title:'پاسخ نظرسنجی ذینفع دریافت شد',body:'پاسخ تازه وارد شد و با برچسب منبع «نظرسنجی» در امتیازها ثبت گردید.',channel:'IN_APP',priority:'LOW'},
+     ]},createdAt:t(0,1),updatedAt:t(0,1)},
+    {id:'wf-27',name:'پایان ورود ایمیل/تقویم → بازبینی کیفیت نگاشت',entityType:'Import',organizationId:null,isActive:true,
+     definition:{trigger:{type:'IMPORT_COMPLETED'},conditions:[],actions:[
+       {type:'CREATE_ACTION',title:'بازبینی کیفیت نگاشت و یال‌های پیشنهادی ورود تازه',priority:'LOW'},
+       {type:'CREATE_NOTIFICATION',title:'ورود ایمیل/تقویم تکمیل شد',body:'تعامل‌های تأییدشده ثبت شدند؛ بدنهٔ پیام‌ها طبق حاکمیت داده ذخیره نشده است.',channel:'IN_APP',priority:'LOW'},
+     ]},createdAt:t(0,1),updatedAt:t(0,1)},
   ];
 };
 function seedWorkflowStore(){
@@ -4197,12 +4427,12 @@ function seedWorkflowStore(){
   if(!Array.isArray(DB.workflowApprovals)) DB.workflowApprovals=[];
   /* ارتقای نسخهٔ بذر: گردش‌کارهای تازه به فهرست موجود هم اضافه می‌شوند (بدون حذف دستی) */
   const seedVer=Number(DB.workflowSeedVersion||0);
-  if(seedVer<3){
+  if(seedVer<4){
     const defs=seedWorkflowDefs();
     for(const w of defs){
       if(!DB.workflows.some(x=>x.id===w.id)) DB.workflows.push(w);
     }
-    DB.workflowSeedVersion=3;
+    DB.workflowSeedVersion=4;
   }
 }
 /* ------------------------- Publics (عموم‌ها) — داده و موتور ------------------------- */
@@ -5355,7 +5585,12 @@ const server=http.createServer(async(req,res)=>{
     '/health','/health/liveness','/health/live','/health/readiness','/health/ready',
     '/metrics','/observability/metrics'];
   const authUser=currentUser(req);
-  if(!authUser && !PUBLIC_PATHS.some(p=>path===`${V1}${p}`)) return json(res,401,{code:'UNAUTHENTICATED',message:'احراز هویت لازم است — ابتدا وارد شوید.'});
+  /* مسترپلن فاز ۲/۱۳+۱۶: مسیرهای عمومی پورتال و نظرسنجی (بدون حساب، با نرخ‌محدود) */
+  const PUBLIC_PATH_RES=[
+    new RegExp(`^${V1}/portal/(?!surveys(?:/|$))[a-z0-9-]+/(info|submit)$`),
+    new RegExp(`^${V1}/portal/surveys/[a-z0-9-]+(/respond)?$`),
+  ];
+  if(!authUser && !PUBLIC_PATHS.some(p=>path===`${V1}${p}`) && !PUBLIC_PATH_RES.some(re=>re.test(path))) return json(res,401,{code:'UNAUTHENTICATED',message:'احراز هویت لازم است — ابتدا وارد شوید.'});
   const scopeOrgIds=visibleOrgIds(req);
 
   const is=(p)=>path===`${V1}${p}`;
@@ -6495,7 +6730,7 @@ const server=http.createServer(async(req,res)=>{
   if(is('/network/bridges')&&method==='GET') return json(res,200,netAnalytics(req,'bridges'));
   if(is('/network/bottlenecks')&&method==='GET') return json(res,200,netAnalytics(req,'bottlenecks'));
   if(is('/network/single-points-of-failure')&&method==='GET') return json(res,200,netAnalytics(req,'single-points-of-failure'));
-  if(match('/network/:endpoint')&&method==='GET') return json(res,200,{count:0,items:[]});
+  if(match('/network/:endpoint')&&method==='GET'&&path!==`${V1}/network/presentation`) return json(res,200,{count:0,items:[]});
 
   /* ----------------------------- مرکز دانش ----------------------------- */
   if(is('/knowledge')&&method==='GET'){
@@ -10009,6 +10244,567 @@ const server=http.createServer(async(req,res)=>{
     saveDb(); audit(req,'CREATE','Media',row.id,'OK',{meta:{name:row.name,type:row.type}});
     return json(res,201,row);
   }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     مسترپلن فاز ۲ — مسیرهای موتورهای تمایز (۱۱ تا ۱۷) · قطعی و قاعده‌مبنا
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  /* ── آیتم ۱۱: ورود ساختاریافتهٔ ایمیل/تقویم (فایل‌محور، فقط متادیتا، تأیید انسانی) ── */
+  if(is('/imports/sample')&&method==='GET'){
+    const kind=q.get('type')==='calendar-ics'?'calendar-ics':'email-csv';
+    const count=Math.max(1,Math.min(1000,Number(q.get('count'))||25));
+    const seedEmails=(PEOPLE??[]).filter(p=>p?.email).map(p=>String(p.email).toLowerCase());
+    const unknownEmail='nobody@example.org';
+    const rows=[];
+    for(let i=0;i<count;i++){
+      const at=new Date(Date.now()-(i%60)*86400000-(i%3)*3600000);
+      const a=seedEmails[i%seedEmails.length];
+      const b=seedEmails[(i*7+3)%seedEmails.length];
+      const c=seedEmails[(i*13+5)%seedEmails.length];
+      if(kind==='calendar-ics'){
+        rows.push(['BEGIN:VEVENT',
+          `DTSTART:${at.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'')}`,
+          `DTEND:${new Date(at.getTime()+3600000).toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'')}`,
+          `SUMMARY:جلسهٔ هم‌راستاسازی ${i+1}`,
+          `ORGANIZER;CN= organizing:mailto:${a}`,
+          `ATTENDEE;CN=A:mailto:${b}`,
+          `ATTENDEE;CN=B:mailto:${i%9===0?unknownEmail:c}`,
+          'END:VEVENT'].join('\r\n'));
+      }else{
+        rows.push([`"${a}"`,`"${i%9===0?unknownEmail:b}; ${c}"`,`"${at.toISOString()}"`,`"پیگیری همکاری ${i+1}"`].join(','));
+      }
+    }
+    const content=kind==='calendar-ics'
+      ? 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//SRIP Sample//FA\r\n'+rows.join('\r\n')+'\r\nEND:VCALENDAR'
+      : 'From,To,Date,Subject\r\n'+rows.join('\r\n');
+    return json(res,200,{kind,count,content,governance:{bodyStored:false,fieldsCaptured:['تاریخ','موضوع','طرف‌ها','جهت']},
+      note:'نمونهٔ تولیدشده برای آزمون نگاشت — بدنهٔ پیام هرگز ذخیره یا منتقل نمی‌شود.'});
+  }
+  if(is('/imports')&&method==='GET'){
+    const rows=(DB.imports??[]).filter(x=>visibleOrgIds(req).includes(x.organizationId)||x.userId===authUser.id)
+      .sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)))
+      .map(x=>({id:x.id,kind:x.kind,createdAt:x.createdAt,status:x.status,stats:x.stats,governance:x.governance}));
+    return json(res,200,{items:rows,total:rows.length});
+  }
+  if(is('/imports')&&method==='POST'){
+    const b=await readBody(req);
+    const kind=b.kind==='calendar-ics'?'calendar-ics':(b.kind==='email-csv'?'email-csv':null);
+    if(!kind) return json(res,400,{message:'نوع فایل باید calendar-ics یا email-csv باشد.'});
+    const content=String(b.content??'');
+    if(!content.trim()) return json(res,400,{message:'محتوای فایل خالی است.'});
+    if(content.length>2_000_000) return json(res,400,{message:'فایل بزرگ‌تر از حد مجاز (۲ مگابایت) است — آن را بازه‌بندی کنید.'});
+    const parsed=kind==='calendar-ics'?parseIcsContent(content):parseEmailCsvContent(content);
+    if(parsed===null) return json(res,400,{message:'هدر CSV ناشناخته است — ستون‌های From/To/Date/Subject لازم است (خروجی Takeout/Outlook).'});
+    if(!parsed.length) return json(res,400,{message:'هیچ رکورد معتبری در فایل یافت نشد.'});
+    if(parsed.length>5000) return json(res,400,{message:'حداکثر ۵۰۰۰ رکورد در هر نوبت.'});
+    const scopeIds=visibleOrgIds(req);
+    const rows=parsed.map((r,i)=>({rid:`ir-${i+1}`,status:'PENDING',...importMapRow(kind,r,scopeIds)}));
+    const batch={id:`imp-${Date.now()}`,kind,createdAt:nowIso(),userId:authUser.id,organizationId:primaryOrgId(authUser)??scopeIds[0]??null,
+      status:'OPEN',rows,stats:{total:rows.length,mapped:rows.filter(r=>r.matchedPersonIds.length||r.matchedOrganizationIds.length).length,
+        personMapped:rows.filter(r=>r.matchedPersonIds.length).length,unmatched:rows.filter(r=>r.unmatchedEmails.length).length,
+        avgConfidence:rows.length?Number((rows.reduce((a,r)=>a+r.confidence,0)/rows.length).toFixed(2)):0},
+      governance:{bodyStored:false,fieldsCaptured:['تاریخ','موضوع','طرف‌ها','جهت'],source:'file-import',humanConfirmation:'required'}};
+    DB.imports.unshift(batch);
+    saveDb(); audit(req,'CREATE','Import',batch.id,'OK',{meta:{kind,records:rows.length}});
+    return json(res,201,{id:batch.id,kind:batch.kind,stats:batch.stats,governance:batch.governance,
+      message:`${faN(rows.length)} رکورد تجزیه شد (${faN(batch.stats.mapped)} نگاشت‌شده). صف تأیید انسانی آماده است — بدنهٔ پیام ذخیره نشد.`});
+  }
+  const impRoute=match('/imports/:id');
+  if(impRoute&&method==='GET'){
+    const batch=(DB.imports??[]).find(x=>x.id===impRoute[0]);
+    if(!batch) return json(res,404,{message:'دستهٔ ورود یافت نشد.'});
+    if(!(visibleOrgIds(req).includes(batch.organizationId)||batch.userId===authUser.id)) return json(res,403,{message:'این دستهٔ ورود در محدودهٔ شما نیست.'});
+    return json(res,200,batch);
+  }
+  const impRowRoute=match('/imports/:id/rows/:rid');
+  if(impRowRoute&&method==='POST'){
+    const batch=(DB.imports??[]).find(x=>x.id===impRowRoute[0]);
+    if(!batch) return json(res,404,{message:'دستهٔ ورود یافت نشد.'});
+    if(!(visibleOrgIds(req).includes(batch.organizationId)||batch.userId===authUser.id)) return json(res,403,{message:'این دستهٔ ورود در محدودهٔ شما نیست.'});
+    const row=batch.rows.find(r=>r.rid===impRowRoute[1]);
+    if(!row) return json(res,404,{message:'رکورد یافت نشد.'});
+    const b=await readBody(req);
+    const decision=String(b.decision??'').toUpperCase();
+    if(!['ACCEPT','EDIT','REJECT','PENDING'].includes(decision)) return json(res,400,{message:'تصمیم باید ACCEPT/EDIT/REJECT/PENDING باشد.'});
+    if(decision==='EDIT'){
+      const p=b.patch??{};
+      if(p.subject!=null) row.subject=String(p.subject).slice(0,200);
+      if(p.organizationId!=null){ if(p.organizationId&&!inScope(req,p.organizationId)) return json(res,403,{message:'سازمان انتخابی خارج از محدوده است.'}); row.matchedOrganizationIds=p.organizationId?[String(p.organizationId)]:[]; }
+      if(p.personId!=null){ if(p.personId&&!personById(p.personId)) return json(res,404,{message:'شخص یافت نشد.'}); row.matchedPersonIds=p.personId?[String(p.personId)]:[]; }
+      if(p.relationshipId!=null){ const r=p.relationshipId?(RELS.find(x=>x.id===p.relationshipId)):null; if(p.relationshipId&&!r) return json(res,404,{message:'رابطه یافت نشد.'}); row.relationshipId=r?.id??null; }
+      row.editedAt=nowIso();
+    }
+    row.status=decision==='EDIT'?'EDITED':decision;
+    saveDb(); audit(req,'UPDATE','Import',batch.id,'OK',{meta:{row:row.rid,decision}});
+    return json(res,200,row);
+  }
+  const impCommit=match('/imports/:id/commit');
+  if(impCommit&&method==='POST'){
+    const batch=(DB.imports??[]).find(x=>x.id===impCommit[0]);
+    if(!batch) return json(res,404,{message:'دستهٔ ورود یافت نشد.'});
+    if(!(visibleOrgIds(req).includes(batch.organizationId)||batch.userId===authUser.id)) return json(res,403,{message:'این دستهٔ ورود در محدودهٔ شما نیست.'});
+    const scopeIds=visibleOrgIds(req);
+    const toCreate=batch.rows.filter(r=>r.status==='ACCEPT'||r.status==='EDITED');
+    const created=[]; const proposedEdges=[];
+    for(const r of toCreate){
+      const orgId=r.matchedOrganizationIds.find(id=>scopeIds.includes(id))??(primaryOrgId(authUser)??scopeIds[0]??null);
+      if(!orgId) continue;
+      const rel=r.relationshipId?RELS.find(x=>x.id===r.relationshipId):null;
+      const x={id:`i-${Date.now()}-${created.length}`,type:r.kind,subject:r.subject,summary:'',outcome:null,durationMinutes:null,
+        importance:'MEDIUM',followUpRequired:false,followUpAt:null,sentiment:null,purpose:null,channel:null,quality:null,result:null,
+        direction:r.direction,nextStep:null,nextStepAt:null,occurredAt:r.at,userId:authUser.id,organizationId:orgId,
+        relationshipId:rel?.id??null,personId:r.matchedPersonIds.length===1?r.matchedPersonIds[0]:null,source:'import'};
+      INTERACTIONS.unshift(x);
+      if(rel) applyInteractionToRel(rel,x);
+      created.push({rid:r.rid,interactionId:x.id});
+      /* یال پیشنهادی: دو سازمان در دامنه بدون رابطهٔ ثبت‌شده → موتور پیشنهاد یال */
+      const others=r.matchedOrganizationIds.filter(id=>id!==orgId&&scopeIds.includes(id));
+      for(const other of others){
+        const hasRel=RELS.some(rr=>(rr.sourceOrganizationId===orgId&&rr.targetOrganizationId===other)||(rr.sourceOrganizationId===other&&rr.targetOrganizationId===orgId));
+        if(!hasRel) proposedEdges.push({fromOrg:orgId,fromOrgName:orgById(orgId)?.name??orgId,toOrg:other,toOrgName:orgById(other)?.name??other,
+          reason:`تعامل ${r.kind==='MEETING'?'جلسه':'ایمیل'} واردشده در ${r.at.slice(0,10)} — رابطهٔ ثبت‌شده‌ای وجود ندارد`,suggestedAction:'CREATE_RELATIONSHIP'});
+      }
+    }
+    batch.status='COMMITTED'; batch.committedAt=nowIso(); batch.commitResult={created:created.length,proposedEdges:proposedEdges.length};
+    batch.rows=batch.rows.map(r=>created.some(c=>c.rid===r.rid)?{...r,status:'COMMITTED',interactionId:created.find(c=>c.rid===r.rid).interactionId}:r);
+    saveDb(); audit(req,'COMMIT','Import',batch.id,'OK',{meta:{created:created.length,proposedEdges:proposedEdges.length}});
+    await autoRunWorkflows('Import',batch.id,'IMPORT_COMPLETED',{import:{id:batch.id,kind:batch.kind,created:created.length,proposedEdges:proposedEdges.length}},`import-commit:${batch.id}`);
+    return json(res,200,{created:created,proposedEdges,
+      governance:{bodyStored:false,note:'فقط متادیتای تأییدشده ثبت شد؛ بدنهٔ پیام هرگز ذخیره نشده است.'}});
+  }
+
+  /* ── آیتم ۱۲: GIS — نقشهٔ جغرافیایی ذینفعان (کاشی آفلاین، لایه‌بندی، خروجی تصویر سمت کاربر) ── */
+  if(is('/gis/stakeholders')&&method==='GET'){
+    const ids=visibleOrgIds(req);
+    const tenantPrimary=primaryOrgId(authUser)??ids[0]??null;
+    const members=(DB.publicsMembers??[]).filter(m=>ids.includes(m.orgId));
+    const points=[];
+    for(const o of (ORGS??[])){
+      if(!ids.includes(o.id)) continue;
+      const geo=orgGeoOf(o.id);
+      const rels=RELS.filter(r=>r.sourceOrganizationId===o.id||r.targetOrganizationId===o.id);
+      const m=members.find(x=>x.sourceType==='organization'&&x.sourceId===o.id);
+      const group=m?pubGroup(pubTplById((DB.publicsSelf??[]).find(s=>s.orgId===m.orgId)?.templateId??'HOLDING')?.id,m.groupId):null;
+      const mentions=(DB.mediaMentions??[]).filter(x=>x.detected&&(x.matchedOrganizationIds??[]).includes(o.id)).length;
+      const health=rels.length?Math.round(rels.reduce((a,r)=>a+(r.healthScore??0),0)/rels.length):null;
+      points.push({organizationId:o.id,name:o.name,type:o.type,parentOrganizationId:o.parentOrganizationId??null,
+        provinceId:geo.provinceId,provinceFa:geo.provinceFa,city:geo.city,lat:geo.lat,lng:geo.lng,
+        isTenantNode:o.id===tenantPrimary||o.parentOrganizationId===tenantPrimary,
+        publicsCategory:group?.cat??(o.parentOrganizationId?'INTERNAL':null),
+        stance:m?.stance??null,power:m?.power??null,interest:m?.interest??null,
+        relationshipCount:rels.length,avgHealthScore:health,mediaMentionCount:mentions});
+    }
+    const provinces=Object.entries(PHASE2_PROVINCES).map(([pid,p])=>({id:pid,fa:p.fa,city:p.city,lat:p.lat,lng:p.lng,
+      orgCount:points.filter(x=>x.provinceId===pid).length,avgHealth: (()=>{const h=points.filter(x=>x.provinceId===pid&&x.avgHealthScore!=null);return h.length?Math.round(h.reduce((a,x)=>a+x.avgHealthScore,0)/h.length):null;})()}));
+    return json(res,200,{generatedAt:nowIso(),total:points.length,points,provinces,
+      layers:{category:['INTERNAL','INSTITUTIONAL','ACADEMIC','ECONOMIC','MEDIA','ECOSYSTEM'],stance:['KEY_PLAYER','INFLUENCER','SUPPORTER','OBSERVER']},
+      note:'نقشهٔ GIS با کاشی آفلاین PWA سرو می‌شود — بدون وابستگی اینترنتی؛ خروجی تصویر برای گزارش هیئت‌مدیره سمت کاربر ساخته می‌شود.'});
+  }
+
+  /* ── آیتم ۱۳: پورتال عمومی + سازوکار شکایت — مسیرهای عمومی (بدون حساب، نرخ‌محدود) ── */
+  const portalInfo=match('/portal/:slug/info');
+  if(portalInfo&&method==='GET'){
+    const slug=String(portalInfo[0]).toLowerCase();
+    const orgId=PORTAL_SLUGS[slug];
+    if(!orgId) return json(res,404,{message:'نشانی پورتال معتبر نیست.'});
+    const org=orgById(orgId);
+    return json(res,200,{slug,organizationId:orgId,organizationName:org?.name??orgId,
+      kinds:Object.entries(PORTAL_SUBMISSION_FA).map(([k,fa])=>({id:k,fa,slaDays:PORTAL_SLA_DAYS[k]})),
+      privacyNote:'پیام شما فقط برای تیم روابط عمومی سازمان ثبت می‌شود؛ بدون حساب کاربری و با نرخ محدود.'});
+  }
+  const portalSubmit=match('/portal/:slug/submit');
+  if(portalSubmit&&method==='POST'){
+    const slug=String(portalSubmit[0]).toLowerCase();
+    const orgId=PORTAL_SLUGS[slug];
+    if(!orgId) return json(res,404,{message:'نشانی پورتال معتبر نیست.'});
+    const ip=String(req.headers['x-forwarded-for']??req.socket?.remoteAddress??'anon');
+    if(!phase2RateOk(ip,`portal:${slug}`,5,3600_000)) return json(res,429,{message:'تعداد پیام‌ها از حد مجاز (۵ در ساعت) گذشته است — کمی بعد دوباره تلاش کنید.'});
+    const b=await readBody(req);
+    const type=String(b.type??'').toUpperCase();
+    if(!PORTAL_SUBMISSION_FA[type]) return json(res,400,{message:'نوع پیام باید بازخورد/شکایت/درخواست باشد.'});
+    const message=String(b.message??'').trim();
+    if(message.length<10||message.length>2000) return json(res,400,{message:'متن پیام باید بین ۱۰ تا ۲۰۰۰ نویسه باشد.'});
+    const row={id:`ps-${Date.now()}`,tenantOrgId:orgId,type,name:String(b.name??'').trim()||null,contact:String(b.contact??'').trim()||null,
+      message,status:'NEW',ownerUserId:null,createdAt:nowIso(),
+      slaDueAt:new Date(Date.now()+PORTAL_SLA_DAYS[type]*86400000).toISOString(),resolvedAt:null,resolutionNote:null,convertedPersonId:null};
+    DB.portalSubmissions.unshift(row);
+    saveDb();
+    await autoRunWorkflows('PublicSubmission',row.id,'PUBLIC_SUBMISSION_RECEIVED',{submission:{id:row.id,type,tenantOrgId:orgId,slaDueAt:row.slaDueAt}},`portal-submit:${row.id}`);
+    const faDays=new Intl.NumberFormat('fa-IR').format(PORTAL_SLA_DAYS[type]);
+    return json(res,201,{id:row.id,slaDueAt:row.slaDueAt,slaDays:PORTAL_SLA_DAYS[type],
+      message:`پیام شما ثبت شد. مهلت پاسخ تا ${faDays} روز کاری است.`});
+  }
+  if(is('/portal/submissions')&&method==='GET'){
+    if(!hasPerm('publics.read')) return json(res,403,{message:'شما مجوز «مشاهده عموم‌ها» (publics.read) را ندارید.'});
+    const ids=visibleOrgIds(req); const now=Date.now();
+    const rows=(DB.portalSubmissions??[]).filter(x=>ids.includes(x.tenantOrgId))
+      .sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)))
+      .map(x=>({...x,typeFa:PORTAL_SUBMISSION_FA[x.type],statusFa:PORTAL_STATUS_FA[x.status],
+        slaBreached:x.status!=='CLOSED'&&x.status!=='RESOLVED'&&new Date(x.slaDueAt).getTime()<now,
+        hoursToSla:x.status==='NEW'||x.status==='IN_PROGRESS'?Math.round((new Date(x.slaDueAt).getTime()-now)/3600000):null,
+        resolutionHours:x.resolvedAt?Math.round((new Date(x.resolvedAt).getTime()-new Date(x.createdAt).getTime())/3600000):null}));
+    return json(res,200,{items:rows,total:rows.length,
+      sla:{complaintDays:PORTAL_SLA_DAYS.COMPLAINT,requestDays:PORTAL_SLA_DAYS.REQUEST,feedbackDays:PORTAL_SLA_DAYS.FEEDBACK}});
+  }
+  if(is('/portal/metrics')&&method==='GET'){
+    if(!hasPerm('publics.read')) return json(res,403,{message:'شما مجوز «مشاهده عموم‌ها» (publics.read) را ندارید.'});
+    const ids=visibleOrgIds(req);
+    const rows=(DB.portalSubmissions??[]).filter(x=>ids.includes(x.tenantOrgId));
+    const now=Date.now();
+    const resolved=rows.filter(x=>x.resolvedAt);
+    const months=[]; for(let i=5;i>=0;i--){ const d=new Date(); d.setMonth(d.getMonth()-i,1); const ym=d.toISOString().slice(0,7);
+      months.push({ym,complaints:rows.filter(x=>x.type==='COMPLAINT'&&x.createdAt.slice(0,7)===ym).length,
+        feedback:rows.filter(x=>x.type==='FEEDBACK'&&x.createdAt.slice(0,7)===ym).length,
+        requests:rows.filter(x=>x.type==='REQUEST'&&x.createdAt.slice(0,7)===ym).length}); }
+    return json(res,200,{total:rows.length,
+      byType:Object.fromEntries(Object.keys(PORTAL_SUBMISSION_FA).map(k=>[k,rows.filter(x=>x.type===k).length])),
+      byStatus:Object.fromEntries(Object.keys(PORTAL_STATUS_FA).map(k=>[k,rows.filter(x=>x.status===k).length])),
+      slaBreached:rows.filter(x=>!['RESOLVED','CLOSED'].includes(x.status)&&new Date(x.slaDueAt).getTime()<now).length,
+      avgResolutionHours:resolved.length?Math.round(resolved.reduce((a,x)=>a+(new Date(x.resolvedAt).getTime()-new Date(x.createdAt).getTime()),0)/resolved.length/3600000):null,
+      trend:months,generatedAt:nowIso()});
+  }
+  const portalAction=match('/portal/submissions/:id/:action');
+  if(portalAction&&method==='POST'){
+    const action=portalAction[1];
+    if(!['assign','resolve','close','reopen','convert'].includes(action)) return json(res,400,{message:'عملیات نامعتبر است.'});
+    if(!hasPerm('publics.write')) return json(res,403,{message:'شما مجوز «مدیریت عموم‌ها» (publics.write) را ندارید.'});
+    const row=(DB.portalSubmissions??[]).find(x=>x.id===portalAction[0]);
+    if(!row) return json(res,404,{message:'پیام یافت نشد.'});
+    if(!visibleOrgIds(req).includes(row.tenantOrgId)) return json(res,403,{message:'این پیام در محدودهٔ شما نیست.'});
+    const b=await readBody(req);
+    if(action==='assign'){
+      const owner=String(b.ownerUserId??authUser.id);
+      row.ownerUserId=owner; if(row.status==='NEW') row.status='IN_PROGRESS';
+    }else if(action==='resolve'){
+      const note=String(b.resolutionNote??'').trim();
+      if(note.length<5) return json(res,400,{message:'یادداشت رسیدگی (حداقل ۵ نویسه) الزامی است.'});
+      row.status='RESOLVED'; row.resolvedAt=nowIso(); row.resolutionNote=note;
+    }else if(action==='close'){
+      row.status='CLOSED'; if(!row.resolvedAt){ row.resolvedAt=nowIso(); }
+    }else if(action==='reopen'){
+      row.status='IN_PROGRESS'; row.resolvedAt=null;
+    }else if(action==='convert'){
+      const orgId=String(b.organizationId??row.tenantOrgId);
+      if(!inScope(req,orgId)) return json(res,403,{message:'سازمان هدف خارج از محدوده است.'});
+      const name=String(b.personName??row.name??'ذینفع پورتال').trim();
+      const person={id:`p-${Date.now()}`,firstName:name.split(' ')[0]??name,lastName:name.split(' ').slice(1).join(' ')||'—',
+        title:'ذینفع از مسیر پورتال عمومی',email:null,phone:String(b.contact??row.contact??'').replace(/^null$/,'')||null,
+        organizationId:orgId,status:'ACTIVE',createdAt:nowIso(),source:'portal'};
+      PEOPLE.push(person);
+      const x={id:`i-${Date.now()}`,type:'NOTE',subject:`پیام پورتال (${PORTAL_SUBMISSION_FA[row.type]}): ${row.message.slice(0,80)}`,
+        summary:row.message.slice(0,300),outcome:null,durationMinutes:null,importance:row.type==='COMPLAINT'?'HIGH':'MEDIUM',
+        followUpRequired:false,followUpAt:null,sentiment:null,purpose:null,channel:null,quality:null,result:null,direction:'INBOUND',
+        nextStep:null,nextStepAt:null,occurredAt:nowIso(),userId:authUser.id,organizationId:orgId,relationshipId:null,personId:person.id,source:'portal'};
+      INTERACTIONS.unshift(x);
+      row.convertedPersonId=person.id;
+      saveDb(); audit(req,'CONVERT','PublicSubmission',row.id,'OK',{meta:{personId:person.id}});
+      return json(res,200,{personId:person.id,interactionId:x.id,message:'ذینفع و تعامل نخست از پیام پورتال ساخته شد.'});
+    }
+    saveDb(); audit(req,action.toUpperCase(),'PublicSubmission',row.id,'OK',{});
+    return json(res,200,{...row,typeFa:PORTAL_SUBMISSION_FA[row.type],statusFa:PORTAL_STATUS_FA[row.status]});
+  }
+
+  /* ── آیتم ۱۶: نظرسنجی ذینفعان — ایجاد/فهرست (احراز هویت) و پاسخ عمومی با توکن ── */
+  if(is('/surveys')&&method==='GET'){
+    const ids=visibleOrgIds(req);
+    const rows=(DB.surveys??[]).filter(x=>ids.includes(x.tenantOrgId)).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)))
+      .map(x=>({id:x.id,token:x.token,status:x.status,createdAt:x.createdAt,tenantOrgId:x.tenantOrgId,memberId:x.memberId??null,personId:x.personId??null,
+        targetName:x.targetName,expiresAt:x.expiresAt,respondedAt:x.response?.at??null,satisfaction:x.response?.answers?.satisfaction??null,perception:x.response?.answers?.perception??null,
+        effect:x.effect??null,url:`/portal/surveys/${x.token}`}));
+    return json(res,200,{items:rows,total:rows.length});
+  }
+  if(is('/surveys')&&method==='POST'){
+    if(!hasPerm('publics.write')) return json(res,403,{message:'شما مجوز «مدیریت عموم‌ها» (publics.write) را ندارید.'});
+    const b=await readBody(req);
+    const tenantOrgId=primaryOrgId(authUser)??visibleOrgIds(req)[0]??null;
+    if(!tenantOrgId) return json(res,400,{message:'سازمان اصلی شما قابل تشخیص نیست.'});
+    let targetName=null,memberId=null,personId=null;
+    if(b.memberId){
+      const m=(DB.publicsMembers??[]).find(x=>x.id===b.memberId);
+      if(!m) return json(res,404,{message:'عضو عموم یافت نشد.'});
+      if(!visibleOrgIds(req).includes(m.orgId)) return json(res,403,{message:'عضو عموم خارج از محدودهٔ شماست.'});
+      memberId=m.id;
+      targetName=m.sourceType==='person'?(personById(m.sourceId)?`${personById(m.sourceId).firstName} ${personById(m.sourceId).lastName}`:m.sourceId):(orgById(m.sourceId)?.name??m.sourceId);
+    }else if(b.personId){
+      const p=personById(b.personId);
+      if(!p) return json(res,404,{message:'شخص یافت نشد.'});
+      if(!inScope(req,p.organizationId)) return json(res,403,{message:'شخص خارج از محدودهٔ شماست.'});
+      personId=p.id; targetName=`${p.firstName??''} ${p.lastName??''}`.trim();
+    }else return json(res,400,{message:'memberId (عضو عموم) یا personId الزامی است.'});
+    const row={id:`sv-${Date.now()}`,token:`svy-${crypto.randomUUID().slice(0,12)}`,status:'SENT',createdAt:nowIso(),
+      tenantOrgId,memberId,personId,targetName,questions:PHASE2_SURVEY_QUESTIONS,
+      expiresAt:new Date(Date.now()+14*86400000).toISOString(),response:null,effect:null};
+    DB.surveys.unshift(row);
+    saveDb(); audit(req,'CREATE','Survey',row.id,'OK',{meta:{targetName}});
+    return json(res,201,{id:row.id,token:row.token,url:`/portal/surveys/${row.token}`,expiresAt:row.expiresAt,
+      message:`لینک نظرسنجی برای «${targetName}» ساخته شد (۱۴ روز اعتبار).`});
+  }
+  const surveyDetail=match('/surveys/:id');
+  if(surveyDetail&&method==='GET'){
+    const row=(DB.surveys??[]).find(x=>x.id===surveyDetail[0]||x.token===surveyDetail[0]);
+    if(!row) return json(res,404,{message:'نظرسنجی یافت نشد.'});
+    if(!visibleOrgIds(req).includes(row.tenantOrgId)) return json(res,403,{message:'این نظرسنجی در محدودهٔ شما نیست.'});
+    return json(res,200,row);
+  }
+  const surveyPublicGet=match('/portal/surveys/:token');
+  if(surveyPublicGet&&method==='GET'){
+    const row=(DB.surveys??[]).find(x=>x.token===surveyPublicGet[0]);
+    if(!row) return json(res,404,{message:'نظرسنجی یافت نشد یا منقضی شده است.'});
+    const org=orgById(row.tenantOrgId);
+    return json(res,200,{token:row.token,organizationName:org?.name??'',targetLabel:'ذینفع گرامی',
+      questions:row.questions.map(q=>({id:q.id,kind:q.kind,fa:q.fa,required:q.required,options:q.options??null})),
+      status:row.status,expiresAt:row.expiresAt,
+      privacyNote:'پاسخ شما فقط به‌صورت جمعی و با برچسب منبع «نظرسنجی» در امتیازها ثبت می‌شود.'});
+  }
+  const surveyRespond=match('/portal/surveys/:token/respond');
+  if(surveyRespond&&method==='POST'){
+    const row=(DB.surveys??[]).find(x=>x.token===surveyRespond[0]);
+    if(!row) return json(res,404,{message:'نظرسنجی یافت نشد.'});
+    if(row.response) return json(res,409,{message:'برای این نظرسنجی قبلاً پاسخ ثبت شده است.'});
+    if(new Date(row.expiresAt).getTime()<Date.now()) return json(res,410,{message:'مهلت پاسخ به این نظرسنجی گذشته است.'});
+    const ip=String(req.headers['x-forwarded-for']??req.socket?.remoteAddress??'anon');
+    if(!phase2RateOk(ip,`survey:${row.token}`,3,3600_000)) return json(res,429,{message:'تعداد پاسخ‌های ثبت‌شده از حد مجاز گذشته است.'});
+    const b=await readBody(req); const a=b.answers??{};
+    const satisfaction=Number(a.satisfaction);
+    if(!Number.isInteger(satisfaction)||satisfaction<1||satisfaction>5) return json(res,400,{message:'پاسخ رضایت باید عددی بین ۱ تا ۵ باشد.'});
+    const perception=String(a.perception??'').toUpperCase();
+    if(!['SUPPORTER','NEUTRAL','OPPOSER'].includes(perception)) return json(res,400,{message:'ادراک موضع باید حامی/بی‌طرف/مخالف باشد.'});
+    const priority=a.priority?String(a.priority).slice(0,40):null;
+    const comment=a.comment?String(a.comment).slice(0,1000):null;
+    row.response={at:nowIso(),answers:{satisfaction,perception,priority,comment}};
+    row.status='RESPONDED';
+    /* اثر ثبت‌شده با برچسب منبع: تاریخچهٔ موضع عضو + تعدیل سلامت رابطهٔ مرتبط */
+    let effect={stanceRecorded:false,healthDelta:0,relationshipId:null};
+    if(row.memberId){
+      const m=(DB.publicsMembers??[]).find(x=>x.id===row.memberId);
+      if(m){
+        m.surveyLatest={surveyId:row.id,at:nowIso(),satisfaction,perception};
+        m.stanceHistory=Array.isArray(m.stanceHistory)?m.stanceHistory:[];
+        m.stanceHistory.push({at:nowIso(),fromStance:m.stance,toStance:m.stance,cause:'SURVEY',
+          causeNote:`ادراک ذینفع از نظرسنجی: ${perception==='SUPPORTER'?'حامی':perception==='NEUTRAL'?'بی‌طرف':'مخالف'} — رضایت ${satisfaction} از ۵`,
+          by:'survey'});
+        effect.stanceRecorded=true;
+        const mOrg=m.sourceType==='organization'?m.sourceId:null;
+        if(mOrg){
+          const rel=RELS.find(r=>(r.sourceOrganizationId===row.tenantOrgId&&r.targetOrganizationId===mOrg)||(r.sourceOrganizationId===mOrg&&r.targetOrganizationId===row.tenantOrgId));
+          if(rel){
+            const delta=(satisfaction-3)*3;
+            const before=rel.healthScore??50;
+            rel.healthScore=Math.max(0,Math.min(100,before+delta));
+            effect={...effect,relationshipId:rel.id,healthDelta:rel.healthScore-before,before,after:rel.healthScore};
+          }
+        }
+      }
+    }
+    row.effect=effect;
+    saveDb();
+    await autoRunWorkflows('Survey',row.id,'SURVEY_RESPONSE_RECEIVED',{survey:{id:row.id,targetName:row.targetName},response:{satisfaction,perception}},`survey-respond:${row.id}`);
+    return json(res,201,{status:'RESPONDED',effect,
+      message:'پاسخ شما ثبت و با برچسب منبع «نظرسنجی» در امتیازها به کار گرفته شد. سپاس از همراهی شما.'});
+  }
+
+  /* ── آیتم ۱۴: پایش رسانهٔ سبک — پوشش، پویش منابع منتخب، بازبینی لحن ── */
+  if(is('/media/coverage')&&method==='GET'){
+    const orgId=q.get('organizationId')??'';
+    if(!orgId) return json(res,400,{message:'organizationId الزامی است.'});
+    if(!inScope(req,orgId)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
+    const org=orgById(orgId);
+    const all=(DB.mediaMentions??[]).filter(x=>(x.matchedOrganizationIds??[]).includes(orgId));
+    const detected=all.filter(x=>x.detected);
+    const months=[]; for(let i=5;i>=0;i--){ const d=new Date(); d.setMonth(d.getMonth()-i,1); const ym=d.toISOString().slice(0,7);
+      const mm=detected.filter(x=>x.publishedAt.slice(0,7)===ym);
+      months.push({ym,total:mm.length,positive:mm.filter(x=>x.tone==='POSITIVE').length,negative:mm.filter(x=>x.tone==='NEGATIVE').length,neutral:mm.filter(x=>x.tone==='NEUTRAL').length}); }
+    const pos=detected.filter(x=>x.tone==='POSITIVE').length, neg=detected.filter(x=>x.tone==='NEGATIVE').length;
+    const toneScore=detected.length?Math.round(100*(pos-neg)/detected.length):0;
+    const sources={}; for(const x of detected){ const m=(DB.mediaStore??[]).find(s=>s.id===x.mediaId); const k=m?.name??x.mediaId; sources[k]=(sources[k]??0)+1; }
+    return json(res,200,{organizationId:orgId,organizationName:org?.name??orgId,generatedAt:nowIso(),
+      totalDetected:detected.length,pendingScan:all.length-detected.length,
+      tone:{positive:pos,negative:neg,neutral:detected.length-pos-neg,toneScore,
+        rule:'قاعدهٔ واژه‌نگاری قطعی (واژه‌های مثبت منهای منفی) — با بازبینی انسانی قابل اصلاح'},
+      trend:months,sources,
+      mentions:detected.sort((a,b)=>String(b.publishedAt).localeCompare(String(a.publishedAt))).slice(0,30).map(x=>({
+        id:x.id,mediaName:(DB.mediaStore??[]).find(s=>s.id===x.mediaId)?.name??x.mediaId,title:x.title,summary:x.summary,
+        publishedAt:x.publishedAt,tone:x.reviewTone??x.tone,ruleTone:x.tone,reviewedAt:x.reviewedAt??null,
+        toneHits:x.toneHits,matchedPersonIds:x.matchedPersonIds??[]})),
+      honestyNote:'این «رصد منابع منتخب» است (RSS رسانه‌های فهرست‌شدهٔ عموم‌ها)، نه پایش جامع رسانه‌ای.'});
+  }
+  if(is('/media/feed')&&method==='GET'){
+    const ids=visibleOrgIds(req);
+    const rows=(DB.mediaMentions??[]).filter(x=>x.detected&&(x.matchedOrganizationIds??[]).some(id=>ids.includes(id)))
+      .sort((a,b)=>String(b.publishedAt).localeCompare(String(a.publishedAt)))
+      .map(x=>({id:x.id,mediaName:(DB.mediaStore??[]).find(s=>s.id===x.mediaId)?.name??x.mediaId,title:x.title,publishedAt:x.publishedAt,
+        tone:x.reviewTone??x.tone,matchedOrganizationIds:x.matchedOrganizationIds}));
+    return json(res,200,{items:rows,total:rows.length});
+  }
+  if(is('/media/scan')&&method==='POST'){
+    if(!hasPerm('publics.write')) return json(res,403,{message:'شما مجوز «مدیریت عموم‌ها» (publics.write) را ندارید.'});
+    const ids=visibleOrgIds(req);
+    const undetected=(DB.mediaMentions??[]).filter(x=>!x.detected).sort((a,b)=>String(b.publishedAt).localeCompare(String(a.publishedAt)));
+    const batch=undetected.slice(0,5);
+    if(!batch.length) return json(res,200,{scanned:0,newMentions:0,message:'همهٔ منابع منتخب تا این لحظه پویش شده‌اند — ذکر تازه‌ای یافت نشد.'});
+    const created=[]; const interactions=[];
+    for(const x of batch){
+      x.detected=true; x.detectedAt=nowIso(); created.push(x.id);
+      for(const orgId of (x.matchedOrganizationIds??[])){
+        if(!ids.includes(orgId)) continue;
+        const ix={id:`i-${Date.now()}-${interactions.length}`,type:'NOTE',subject:`ذکر رسانه‌ای: ${x.title.slice(0,90)}`,
+          summary:x.summary.slice(0,300),outcome:null,durationMinutes:null,importance:'LOW',followUpRequired:false,followUpAt:null,
+          sentiment:x.tone==='POSITIVE'?1:x.tone==='NEGATIVE'?-1:0,purpose:null,channel:null,quality:null,result:null,direction:'INBOUND',
+          nextStep:null,nextStepAt:null,occurredAt:x.publishedAt,userId:authUser.id,organizationId:orgId,relationshipId:null,personId:null,source:'media-monitor'};
+        INTERACTIONS.unshift(ix); interactions.push(ix.id);
+        await autoRunWorkflows('Media',x.id,'MEDIA_MENTION',{mention:{id:x.id,title:x.title,tone:x.tone,mediaId:x.mediaId,publishedAt:x.publishedAt},organization:{id:orgId,name:orgById(orgId)?.name??orgId}},`media-mention:${x.id}:${orgId}`);
+      }
+    }
+    DB.mediaScanCursor=(DB.mediaScanCursor??0)+batch.length;
+    saveDb(); audit(req,'SCAN','Media','rss-scan','OK',{meta:{found:batch.length,interactions:interactions.length}});
+    return json(res,200,{scanned:batch.length,newMentions:created,interactionsCreated:interactions.length,
+      remaining:undetected.length-batch.length,
+      message:`پویش منابع منتخب: ${faN(batch.length)} ذکر تازه شناسایی شد (${faN(interactions.length)} ورودی امتیاز تعامل ساخته شد).`});
+  }
+  const mediaReview=match('/media/mentions/:id/review');
+  if(mediaReview&&method==='POST'){
+    if(!hasPerm('publics.write')) return json(res,403,{message:'شما مجوز «مدیریت عموم‌ها» (publics.write) را ندارید.'});
+    const x=(DB.mediaMentions??[]).find(y=>y.id===mediaReview[0]);
+    if(!x) return json(res,404,{message:'ذکر رسانه‌ای یافت نشد.'});
+    if(!(x.matchedOrganizationIds??[]).some(id=>visibleOrgIds(req).includes(id))) return json(res,403,{message:'این ذکر به سازمان‌های شما مرتبط نیست.'});
+    const b=await readBody(req);
+    const tone=String(b.tone??'').toUpperCase();
+    if(!['POSITIVE','NEGATIVE','NEUTRAL'].includes(tone)) return json(res,400,{message:'لحن باید مثبت/منفی/خنثی باشد.'});
+    x.reviewTone=tone; x.reviewNote=b.note?String(b.note).slice(0,500):null; x.reviewedAt=nowIso(); x.reviewedBy=authUser.id;
+    saveDb(); audit(req,'REVIEW','Media',x.id,'OK',{meta:{tone}});
+    return json(res,200,{...x,mediaName:(DB.mediaStore??[]).find(s=>s.id===x.mediaId)?.name??x.mediaId});
+  }
+
+  /* ── آیتم ۱۵: سرور MCP فقط-خواندنی (JSON-RPC 2.0 روی HTTP — سازگار با کلاینت استاندارد) ── */
+  const MCP_TOOLS=[
+    {name:'search_graph',description:'جست‌وجوی سازمان‌ها و اشخاص در گراف روابط محدودهٔ شما (فقط دادهٔ واقعی همین مستأجر).',
+     inputSchema:{type:'object',properties:{query:{type:'string',description:'بخشی از نام سازمان یا شخص'}},required:['query']}},
+    {name:'stakeholder_profile',description:'پروفایل خلاصهٔ یک سازمان: نوع، روابط، میانگین سلامت.',
+     inputSchema:{type:'object',properties:{organizationId:{type:'string'}},required:['organizationId']}},
+    {name:'relationship_score',description:'امتیاز سلامت/راهبردی/ریسک رابطهٔ میان دو سازمان.',
+     inputSchema:{type:'object',properties:{fromOrganizationId:{type:'string'},toOrganizationId:{type:'string'}},required:['fromOrganizationId','toOrganizationId']}},
+    {name:'suggested_path',description:'بهترین مسیر معرفی گرم میان دو سازمان با امتیاز هر پرش.',
+     inputSchema:{type:'object',properties:{from:{type:'string'},to:{type:'string'},maxHops:{type:'number'}},required:['from','to']}},
+    {name:'public_gaps',description:'شکاف‌های پوشش عمومی یک سازمان (دسته‌های بدون بازیگر کلیدی).',
+     inputSchema:{type:'object',properties:{organizationId:{type:'string'}},required:['organizationId']}},
+    {name:'media_mentions',description:'ذکرهای رسانه‌ای شناسایی‌شدهٔ یک سازمان با لحن قاعده‌مند.',
+     inputSchema:{type:'object',properties:{organizationId:{type:'string'}},required:['organizationId']}},
+  ];
+  if(is('/mcp')&&method==='GET'){
+    return json(res,200,{protocol:'MCP (Model Context Protocol)',transport:'streamable-http',jsonrpc:'2.0',readOnly:true,
+      serverInfo:{name:'srip-mcp',version:'1.0.0'},
+      methods:['initialize','tools/list','tools/call'],
+      tools:MCP_TOOLS,
+      usage:'POST /mcp با بدنهٔ JSON-RPC 2.0. هر پاسخ شامل شناسهٔ منبع و تاریخ داده است؛ پاسخ‌ها فقط از دادهٔ واقعی مستأجر ساخته می‌شوند (بدون توهم).'});
+  }
+  if(is('/mcp')&&method==='POST'){
+    const b=await readBody(req);
+    const id=b.id??null;
+    const rpc=(result)=>json(res,200,{jsonrpc:'2.0',id,result});
+    const rpcErr=(code,message)=>json(res,200,{jsonrpc:'2.0',id,error:{code,message}});
+    if(b.jsonrpc!=='2.0'||!b.method) return rpcErr(-32600,'درخواست JSON-RPC 2.0 نامعتبر است.');
+    if(b.method==='initialize') return rpc({protocolVersion:'2025-06-18',capabilities:{tools:{}},serverInfo:{name:'srip-mcp',version:'1.0.0'}});
+    if(b.method==='tools/list') return rpc({tools:MCP_TOOLS});
+    if(b.method!=='tools/call') return rpcErr(-32601,`روش «${b.method}» پشتیبانی نمی‌شود.`);
+    const tname=String(b.params?.name??'');
+    const args=b.params?.arguments??{};
+    const ids=visibleOrgIds(req);
+    const meta={readOnly:true,dataDate:nowIso(),tenantOrganizationId:primaryOrgId(authUser)??ids[0]??null,disclaimer:'پاسخ‌ها فقط از دادهٔ واقعی همین مستأجر ساخته می‌شوند.'};
+    const wrap=(data,sourceIds)=>({content:[{type:'text',text:JSON.stringify(data,null,1)}],structuredContent:{...data,_meta:{...meta,sourceIds}}});
+    if(tname==='search_graph'){
+      const query=String(args.query??'').trim();
+      if(!query) return rpcErr(-32602,'پارامتر query الزامی است.');
+      const orgs=ORGS.filter(o=>ids.includes(o.id)&&o.name.includes(query)).slice(0,10).map(o=>({id:o.id,name:o.name,type:o.type}));
+      const people=PEOPLE.filter(p=>ids.includes(p.organizationId)&&`${p.firstName??''} ${p.lastName??''}`.includes(query)).slice(0,10).map(p=>({id:p.id,name:`${p.firstName??''} ${p.lastName??''}`.trim(),title:p.title,organizationId:p.organizationId}));
+      return rpc(wrap({query,organizations:orgs,people},orgs.map(o=>o.id).concat(people.map(p=>p.id))));
+    }
+    if(tname==='stakeholder_profile'){
+      const o=orgById(String(args.organizationId??''));
+      if(!o||!ids.includes(o.id)) return rpcErr(-32602,'سازمان یافت نشد یا خارج از محدوده است.');
+      const rels=RELS.filter(r=>r.sourceOrganizationId===o.id||r.targetOrganizationId===o.id);
+      const health=rels.length?Math.round(rels.reduce((a,r)=>a+(r.healthScore??0),0)/rels.length):null;
+      return rpc(wrap({organization:{id:o.id,name:o.name,type:o.type,industry:o.industry},relationshipCount:rels.length,avgHealthScore:health,
+        relationships:rels.slice(0,10).map(r=>({id:r.id,with:r.sourceOrganizationId===o.id?r.targetOrganizationId:r.sourceOrganizationId,healthScore:r.healthScore,strategicScore:r.strategicScore,riskScore:r.riskScore,lastInteractionAt:r.lastInteractionAt??null}))},[o.id,...rels.slice(0,10).map(r=>r.id)]));
+    }
+    if(tname==='relationship_score'){
+      const f=String(args.fromOrganizationId??''),t=String(args.toOrganizationId??'');
+      const r=RELS.find(x=>(x.sourceOrganizationId===f&&x.targetOrganizationId===t)||(x.sourceOrganizationId===t&&x.targetOrganizationId===f));
+      if(!r) return rpcErr(-32602,'رابطه‌ای میان این دو سازمان ثبت نشده است.');
+      return rpc(wrap({relationshipId:r.id,from:f,to:t,healthScore:r.healthScore,strategicScore:r.strategicScore,riskScore:r.riskScore,
+        status:r.status,lastInteractionAt:r.lastInteractionAt??null,asOf:nowIso()},[r.id]));
+    }
+    if(tname==='suggested_path'){
+      const from=String(args.from??''),to=String(args.to??'');
+      if(!from||!to) return rpcErr(-32602,'پارامترهای from و to الزامی‌اند.');
+      const out=netPathOrg(req,from,to,'best',{maxHops:Math.max(1,Math.min(4,Number(args.maxHops)||3))});
+      return rpc(wrap({from,to,found:out.found,hops:out.hops,score:out.score,scoreLabel:out.scoreLabel,nodes:out.nodes,edges:out.edges},[from,to]));
+    }
+    if(tname==='public_gaps'){
+      const oId=String(args.organizationId??'');
+      if(!ids.includes(oId)) return rpcErr(-32602,'سازمان یافت نشد یا خارج از محدوده است.');
+      const g=pubGaps(oId);
+      return rpc(wrap({organizationId:oId,totalGaps:g.totals.gaps,criticalGaps:g.totals.criticalGaps,
+        gaps:g.gaps.slice(0,10).map(x=>({gapId:x.gapId,groupFa:x.groupFa,categoryFa:x.categoryFa,severity:x.severity,action:x.action}))},[oId]));
+    }
+    if(tname==='media_mentions'){
+      const oId=String(args.organizationId??'');
+      if(!ids.includes(oId)) return rpcErr(-32602,'سازمان یافت نشد یا خارج از محدوده است.');
+      const rows=(DB.mediaMentions??[]).filter(x=>x.detected&&(x.matchedOrganizationIds??[]).includes(oId)).slice(0,10);
+      return rpc(wrap({organizationId:oId,total:rows.length,mentions:rows.map(x=>({id:x.id,title:x.title,mediaId:x.mediaId,publishedAt:x.publishedAt,tone:x.reviewTone??x.tone}))},[oId,...rows.map(x=>x.id)]));
+    }
+    return rpcErr(-32602,`ابزار «${tname}» وجود ندارد.`);
+  }
+
+  /* ── آیتم ۱۷: حالت ارائه/روایت گراف — صحنه‌های قابل‌پخش ── */
+  if(is('/network/presentation')&&method==='GET'){
+    const orgId=q.get("organizationId")||primaryOrgId(authUser)||visibleOrgIds(req)[0]||null;
+    const rows=(DB.graphScenes??[]).filter(x=>x.orgId===orgId).sort((a,b)=>(a.order??0)-(b.order??0));
+    return json(res,200,{organizationId:orgId,scenes:rows,total:rows.length});
+  }
+  if(is('/network/presentation/scenes')&&method==='POST'){
+    const b=await readBody(req);
+    const title=String(b.title??'').trim();
+    if(!title) return json(res,400,{message:'عنوان صحنه الزامی است.'});
+    const orgId=primaryOrgId(authUser)??visibleOrgIds(req)[0]??null;
+    const order=((DB.graphScenes??[]).filter(x=>x.orgId===orgId).reduce((a,x)=>Math.max(a,x.order??0),0))+1;
+    const row={id:`gs-${Date.now()}`,orgId,order,title,note:String(b.note??'').slice(0,500)||null,
+      focus:b.focus&&b.focus.orgId?{orgId:String(b.focus.orgId)}:null,
+      filters:{category:['ALL','INTERNAL','INSTITUTIONAL','ACADEMIC','ECONOMIC','MEDIA','ECOSYSTEM'].includes(b.filters?.category)?b.filters.category:'ALL',
+        stance:['KEY_PLAYER','INFLUENCER','SUPPORTER','OBSERVER',null].includes(b.filters?.stance)?(b.filters?.stance??null):null,
+        minPower:Number.isFinite(Number(b.filters?.minPower))?Math.max(0,Math.min(100,Number(b.filters.minPower))):0,
+        view:['ecosystem','neighbors'].includes(b.filters?.view)?b.filters.view:'ecosystem'},
+      createdAt:nowIso(),updatedAt:nowIso()};
+    DB.graphScenes.push(row);
+    saveDb(); audit(req,'CREATE','GraphScene',row.id,'OK',{meta:{title}});
+    return json(res,201,row);
+  }
+  const sceneRoute=match('/network/presentation/scenes/:id');
+  if(sceneRoute&&(method==='PATCH'||method==='DELETE')){
+    const row=(DB.graphScenes??[]).find(x=>x.id===sceneRoute[0]);
+    if(!row) return json(res,404,{message:'صحنه یافت نشد.'});
+    if(!visibleOrgIds(req).includes(row.orgId)) return json(res,403,{message:'این صحنه در محدودهٔ شما نیست.'});
+    if(method==='DELETE'){
+      DB.graphScenes=DB.graphScenes.filter(x=>x.id!==row.id);
+      saveDb(); audit(req,'DELETE','GraphScene',row.id,'OK',{});
+      return json(res,200,{deleted:row.id});
+    }
+    const b=await readBody(req);
+    if(b.title!=null){ const t=String(b.title).trim(); if(!t) return json(res,400,{message:'عنوان صحنه نمی‌تواند خالی باشد.'}); row.title=t; }
+    if(b.note!=null) row.note=String(b.note).slice(0,500)||null;
+    if(b.focus!==undefined) row.focus=b.focus&&b.focus.orgId?{orgId:String(b.focus.orgId)}:null;
+    if(b.filters!=null){ row.filters={...row.filters,...b.filters}; }
+    if(b.order!=null){
+      const target=Math.max(1,Number(b.order)||1);
+      const siblings=(DB.graphScenes??[]).filter(x=>x.orgId===row.orgId&&x.id!==row.id).sort((a,b2)=>(a.order??0)-(b2.order??0));
+      siblings.splice(Math.min(siblings.length,target-1),0,row);
+      siblings.forEach((x,i)=>{x.order=i+1;});
+    }
+    row.updatedAt=nowIso();
+    saveDb(); audit(req,'UPDATE','GraphScene',row.id,'OK',{});
+    return json(res,200,row);
+  }
+
+
 
   json(res,404,{message:`مسیر ${method} ${path} در Mock API وجود ندارد.`});
   } catch(e){ try { if(!res.headersSent) json(res,500,{message:'خطای داخلی سرور: '+String(e?.message??e)}); else res.end(); } catch {} }

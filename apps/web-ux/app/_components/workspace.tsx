@@ -205,7 +205,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       .catch(() => {});
   }, [isOwner]);
 
-  const authPage = ['/login','/mfa','/forgot-password','/password-reset','/register'].some(p => pathname === p || pathname.startsWith(p + '/'));
+  /* '/p' = پورتال عمومی بی‌احراز (مسترپلن فاز ۲/۱۳) — فرم شکایت/درخواست و پاسخ نظرسنجی بدون ورود */
+  const authPage = ['/login','/mfa','/forgot-password','/password-reset','/register','/p'].some(p => pathname === p || pathname.startsWith(p + '/'));
   // Session gate: an anonymous visitor must NEVER see (even for one frame) the
   // platform.  The veil below is part of the first server-rendered paint, so it
   // covers the shell until the identity probe settles — then it is removed for
