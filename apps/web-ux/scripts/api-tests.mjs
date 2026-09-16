@@ -21,10 +21,10 @@ const check = (name, cond, extra = '') => {
   else { fail++; failures.push(name); console.log(`  ❌ ${name} ${extra}`); }
 };
 
-async function api(path, { method = 'GET', token, body, raw } = {}) {
+async function api(path, { method = 'GET', token, body, raw, headers = {} } = {}) {
   const r = await fetch(BASE + path, {
     method,
-    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...headers },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   if (raw) return r;
@@ -535,6 +535,208 @@ section('فاز ۲ — ورود ایمیل/تقویم، GIS، پورتال، ر�
   const stats = await api('/workflows', { token: pt });
   const wfList = Array.isArray(stats.body) ? stats.body : stats.body?.items ?? [];
   check('گردش‌کارهای بذر فاز ۲ (wf-24..27)', ['wf-24', 'wf-25', 'wf-26', 'wf-27'].every(id => wfList.some(w => w.id === id)), JSON.stringify(wfList.length));
+}
+
+
+/* ================== ۱۹. مسترپلن فاز ۳ — اکوسیستم داده و کانال ================== */
+section('فاز ۳ — غنی‌سازی منابع رسمی، API عمومی + وب‌هوک، QBR، Web Push، دستیار گراف');
+{
+  const { default: http } = await import('node:http');
+  const { createHmac } = await import('node:crypto');
+  const pl = await login('pars@srip.local', 'pars1234');
+  const pt = pl.body?.accessToken;
+  check('ورود pars → توکن', !!pt);
+  const al = await login('aroun@srip.local', '12356784');
+  const at = al.body?.accessToken;
+  const dl = await login(OWNER.email, OWNER.password);
+  const dt = dl.body?.accessToken;
+
+  /* ── ۱۸: غنی‌سازی از منابع رسمی بیرونی ── */
+  const srcs = await api('/enrichment/sources', { token: pt });
+  check('سه منبع رسمی فعال', srcs.status === 200 && srcs.body?.total === 3 && srcs.body?.sources?.every(s => s.coverageFa && s.cadenceFa));
+  const scan1 = await api('/enrichment/scan', { method: 'POST', token: pt, body: {} });
+  check('پویش مرحله‌ای → پیشنهاد تازه', scan1.status === 200 && scan1.body?.created >= 8, JSON.stringify(scan1.body?.perSource));
+  const sug = await api('/enrichment/suggestions?status=PENDING', { token: pt });
+  check('صف پیشنهاد با منبع و سطح اطمینان', sug.status === 200 && sug.body?.items?.length >= 5 && sug.body.items[0].sourceNameFa && sug.body.items[0].confidenceFa);
+  const target = sug.body.items[0];
+  const acc = await api(`/enrichment/suggestions/${target.id}/accept`, { method: 'POST', token: pt });
+  check('پذیرش انسانی → اعمال با شفافیت', acc.status === 200 && acc.body?.status === 'ACCEPTED');
+  const overlay = await api(`/enrichment/organizations/${target.orgId}`, { token: pt });
+  check('پوشش غنی‌شده با منبع + اطمینان + تاریخ', overlay.status === 200 && overlay.body?.fields?.some(f => f.field === target.field && f.sourceNameFa && f.appliedAt));
+  const reAcc = await api(`/enrichment/suggestions/${target.id}/accept`, { method: 'POST', token: pt });
+  check('پذیرش تکراری → 409', reAcc.status === 409);
+  const rej = await api(`/enrichment/suggestions/${sug.body.items[1].id}/reject`, { method: 'POST', token: pt });
+  check('رد پیشنهاد → 200', rej.status === 200 && rej.body?.status === 'REJECTED');
+  const met = await api('/enrichment/metrics', { token: pt });
+  check('نرخ پذیرش اندازه‌گیری‌شده', met.status === 200 && met.body?.accepted === 1 && met.body?.rejected === 1 && met.body?.acceptanceRate === 50, JSON.stringify(met.body));
+  /* جداسازی مستأجر: دمو پیشنهاد پارس را نمی‌بیند و نمی‌پذیرد */
+  const demoSug = await api('/enrichment/suggestions', { token: dt });
+  check('جداسازی: پیشنهادهای دمو جدا از پارس', demoSug.status === 200 && !demoSug.body?.items?.some(s => s.id === target.id));
+  const crossAcc = await api(`/enrichment/suggestions/${target.id}/accept`, { method: 'POST', token: dt });
+  check('پذیرش خارج از محدوده → 403', crossAcc.status === 403);
+  const scanDemo = await api('/enrichment/scan', { method: 'POST', token: dt, body: {} });
+  check('پویش دمو → استخر مستقل (کشوری per-tenant)', scanDemo.status === 200 && scanDemo.body?.created >= 1, JSON.stringify(scanDemo.body?.created));
+
+  /* ── ۱۹: کلید API عمومی ── */
+  const kc = await api('/developer/keys', { method: 'POST', token: pt, body: { name: 'کلید آزمون خودکار', scopes: ['graph:read'] } });
+  check('ساخت کلید → 201 (نمایش یک‌باره)', kc.status === 201 && String(kc.body?.key ?? '').startsWith('srip_ak_'));
+  const KEY = kc.body?.key;
+  const klist = await api('/developer/keys', { token: pt });
+  check('فهرست کلیدها → ماسک‌شده (بدون مقدار کامل)', klist.status === 200 && klist.body?.items?.some(k => k.masked && !String(k.masked).includes(KEY.slice(16, -4))));
+  const who = await api('/public/whoami', { method: 'GET', headers: { 'X-API-Key': KEY } });
+  check('whoami با کلید → مستأجر درست', who.status === 200 && who.body?.tenantOrganizationId === 'org-pars');
+  const orgs = await api('/public/organizations?q=پارس', { method: 'GET', headers: { 'X-API-Key': KEY } });
+  check('سازمان‌ها با دامنهٔ خانواده (۱۳)', orgs.status === 200 && orgs.body?.total === 13, JSON.stringify(orgs.body?.total));
+  const org1 = await api('/public/organizations/org-pars-01', { method: 'GET', headers: { 'X-API-Key': KEY } });
+  check('جزئیات سازمان → 200', org1.status === 200 && org1.body?.name === 'پارس انرژی');
+  const rels = await api('/public/relationships?organizationId=org-pars', { method: 'GET', headers: { 'X-API-Key': KEY } });
+  check('روابط سازمان → ۱۳ رابطه', rels.status === 200 && rels.body?.total === 13);
+  const score = await api('/public/relationships/score?from=org-pars&to=org-pars-01', { method: 'GET', headers: { 'X-API-Key': KEY } });
+  check('امتیاز رابطهٔ دوتایی → عدد سلامت', score.status === 200 && typeof score.body?.healthScore === 'number' && score.body?._meta?.sourceIds?.length >= 1);
+  const insBad = await api('/public/insights/gaps?organizationId=org-pars', { method: 'GET', headers: { 'X-API-Key': KEY } });
+  check('دامنهٔ ناکافی برای insights → 403', insBad.status === 403 && insBad.body?.code === 'INSUFFICIENT_SCOPE');
+  const kc2 = await api('/developer/keys', { method: 'POST', token: pt, body: { name: 'کلید تحلیل', scopes: ['graph:read', 'insights:read'] } });
+  const KEY2 = kc2.body?.key;
+  const insOk = await api('/public/insights/gaps?organizationId=org-pars', { method: 'GET', headers: { 'X-API-Key': KEY2 } });
+  check('دامنهٔ insights:read → شکاف‌ها', insOk.status === 200 && typeof insOk.body?.totalGaps === 'number');
+  const noKey = await api('/public/organizations');
+  check('بدون کلید → 401', noKey.status === 401);
+  const badKey = await api('/public/organizations', { method: 'GET', headers: { 'X-API-Key': 'srip_ak_wrong' } });
+  check('کلید نامعتبر → 401', badKey.status === 401);
+  /* نرخ‌محدود: ۶۰ در ساعت برای هر کلید */
+  let limited = null;
+  for (let i = 0; i < 61 && !limited; i++) {
+    const r = await api('/public/whoami', { method: 'GET', headers: { 'X-API-Key': KEY2 }, raw: true });
+    if (r.status === 429) limited = r;
+  }
+  check('نرخ‌محدود ۶۰/ساعت → 429', !!limited);
+  const rk = await api(`/developer/keys/${kc.body.id}/revoke`, { method: 'POST', token: pt });
+  check('لغو کلید → 200', rk.status === 200 && rk.body?.revokedAt);
+  const whoRevoked = await api('/public/whoami', { method: 'GET', headers: { 'X-API-Key': KEY } });
+  check('کلید لغوشده → 401', whoRevoked.status === 401);
+  const usage = await api('/developer/usage', { token: pt });
+  check('آمار مصرف کلیدها + سند مسیرها', usage.status === 200 && usage.body?.items?.length >= 2 && usage.body?.publicEndpoints?.length === 7);
+
+  /* ── ۱۹: وب‌هوک با امضای HMAC ── */
+  const hooks = [];
+  const listener = http.createServer((req, res) => {
+    let body = '';
+    req.on('data', c => body += c);
+    req.on('end', () => { hooks.push({ headers: req.headers, body }); res.writeHead(200); res.end('ok'); });
+  });
+  await new Promise(r => listener.listen(4999, '127.0.0.1', r));
+  const wc = await api('/developer/webhooks', { method: 'POST', token: pt, body: { url: 'http://127.0.0.1:4999/hook', events: ['RELATIONSHIP_SCORE_CHANGED', 'PUBLIC_SUBMISSION_RECEIVED'] } });
+  check('ساخت وب‌هوک → 201 با رمز امضا', wc.status === 201 && String(wc.body?.secret ?? '').startsWith('srip_whsec_'));
+  const SECRET = wc.body?.secret;
+  /* تغییر امتیاز رابطه → پخش وب‌هوک */
+  const relBefore = await api('/public/relationships/score?from=org-pars&to=org-pars-02', { method: 'GET', headers: { 'X-API-Key': KEY2 } });
+  const hp = await api('/relationships/r-pars-02', { method: 'PATCH', token: pt, body: { healthScore: Math.max(1, (relBefore.body?.healthScore ?? 88) - 3) } });
+  check('تغییر امتیاز رابطه → 200', hp.status === 200);
+  await new Promise(r => setTimeout(r, 300));
+  const wh = hooks.find(h => JSON.parse(h.body).event === 'RELATIONSHIP_SCORE_CHANGED');
+  check('وب‌هوک «تغییر امتیاز» دریافت شد', !!wh);
+  if (wh) {
+    const sig = String(wh.headers['x-srip-signature'] ?? '').replace(/^sha256=/, '');
+    const expect = createHmac('sha256', SECRET).update(wh.body).digest('hex');
+    check('امضای HMAC-SHA256 معتبر', sig === expect);
+    const payload = JSON.parse(wh.body);
+    check('بدنهٔ رویداد با مقدار قبلی/جدید', payload.data?.relationship?.previousHealth != null && payload.data?.relationship?.newHealth != null);
+  }
+  const deliv = await api('/developer/webhook-deliveries', { token: pt });
+  check('تاریخچهٔ تحویل → DELIVERED', deliv.status === 200 && deliv.body?.items?.some(d => d.status === 'DELIVERED' && d.signature?.startsWith('sha256=')));
+  const whList = await api('/developer/webhooks', { token: pt });
+  check('فهرست وب‌هوک‌ها + رویدادهای موجود', whList.status === 200 && whList.body?.availableEvents?.length === 4);
+
+  /* ── ۲۰: QBR خودکار ── */
+  const qbrA = await api('/qbr', { token: at });
+  check('QBR: هر دو حساب واقعی (aroun)', qbrA.status === 200 && qbrA.body?.total === 2 && qbrA.body.items.some(i => i.organizationId === 'org-pars') && qbrA.body.items.some(i => i.organizationId === 'org-x'), JSON.stringify(qbrA.body?.items?.map(i => i.organizationId)));
+  const qbrP = await api('/qbr/org-pars', { token: pt });
+  check('بریف QBR pars → تیتر + دورهٔ ۹۰ روزه + قابل چاپ', qbrP.status === 200 && !!qbrP.body?.headline && qbrP.body?.period?.days === 90 && qbrP.body?.printable === true);
+  const k = qbrP.body?.kpis ?? {};
+  check('KPIهای بریف (۷ محور)', ['health', 'interactions', 'commitments', 'gaps', 'media', 'surveys', 'portal'].every(x => x in k));
+  const qbrList2 = await api('/qbr', { token: pt });
+  check('QBR pars → فقط حساب خودش', qbrList2.body?.total === 1 && qbrList2.body.items[0].organizationId === 'org-pars');
+  const qbrX = await api('/qbr/org-x', { token: at });
+  check('QBR org-x → شکاف null با پیام صادقانه', qbrX.status === 200 && qbrX.body?.kpis?.gaps?.total === null && !!qbrX.body?.kpis?.gaps?.note);
+  const wfCov = await api('/workflows/coverage', { token: pt });
+  check('محرک‌های فاز ۳ در پوشش گردش کار', wfCov.status === 200);
+
+  /* ── ۲۱: Web Push + رضایت اعلان ── */
+  const subBad = await api('/notifications/push/subscribe', { method: 'POST', token: pt, body: { endpoint: 'https://mock.push.srip.local/x', consent: 'PENDING' } });
+  check('اشتراک بدون رضایت صریح → 400', subBad.status === 400);
+  const sub = await api('/notifications/push/subscribe', { method: 'POST', token: pt, body: { endpoint: 'https://mock.push.srip.local/sub/auto-1', consent: 'GRANTED', topics: ['PORTAL', 'MEDIA'], keys: { p256dh: 'k1', auth: 'k2' } } });
+  check('اشتراک با رضایت → 201', sub.status === 201 && sub.body?.consent === 'GRANTED');
+  const subList = await api('/notifications/push/subscriptions', { token: pt });
+  check('فهرست اشتراک‌ها → فعال', subList.status === 200 && subList.body?.items?.some(s => s.active));
+  const dispNo = await api('/notifications/push/dispatch', { method: 'POST', token: dt, body: { title: 'x', organizationId: 'org-pars' } });
+  check('ارسال بدون مجوز → 403 (demo به پارس)', dispNo.status === 403, JSON.stringify(dispNo.status));
+  const disp = await api('/notifications/push/dispatch', { method: 'POST', token: pt, body: { title: 'اعلان آزمون فاز ۳', body: 'تست' } });
+  check('ارسال اعلان → صف شد', disp.status === 200 && disp.body?.sent >= 1);
+  const pend = await api('/notifications/push/pending', { token: pt });
+  check('صف تحویل → پیام با موضوع', pend.status === 200 && pend.body?.items?.length >= 1 && pend.body?.items[0]?.title === 'اعلان آزمون فاز ۳' && pend.body?.transport?.includes('polling'));
+  const ack = await api(`/notifications/push/pending/${pend.body.items[0].id}/ack`, { method: 'POST', token: pt });
+  check('رسید تحویل (ack) → 200', ack.status === 200 && ack.body?.deliveredAt);
+  /* پوش خودکار روی پیام پورتال */
+  await api('/portal/pars/submit', { method: 'POST', body: { type: 'FEEDBACK', message: 'تست پوش خودکار فاز سه — درخواست همکاری پژوهشی.' } });
+  const pend2 = await api('/notifications/push/pending', { token: pt });
+  check('ثبت پورتال → پوش خودکار', pend2.body?.items?.some(x => x.title === 'پیام تازه در پورتال عمومی'));
+  /* لغو رضایت */
+  const revokeSub = await api(`/notifications/push/subscriptions/${sub.body.id}/revoke`, { method: 'POST', token: pt });
+  check('لغو رضایت اعلان → 200', revokeSub.status === 200 && revokeSub.body?.consent === 'REVOKED');
+  await api('/notifications/push/dispatch', { method: 'POST', token: pt, body: { title: 'بعد از لغو', body: 'نباید برسد' } });
+  const pend3 = await api('/notifications/push/pending', { token: pt });
+  check('پس از لغو رضایت → پیام جدید نیست', !pend3.body?.items?.some(x => x.title === 'بعد از لغو'));
+  const ack404 = await api('/notifications/push/pending/none/ack', { method: 'POST', token: pt });
+  check('رسید ناشناخته → 404', ack404.status === 404);
+
+  /* ── ۲۲: دستیار پرسش‌وپاسخ طبیعی روی گراف ── */
+  const ask = async (q, token = pt) => (await api('/assistant/ask', { method: 'POST', token, body: { question: q } })).body;
+  const sugg = await api('/assistant/suggestions', { token: pt });
+  check('۲۰ پرسش پرتکرار پیشنهادی', sugg.status === 200 && sugg.body?.total === 20);
+  /* پوشش رسانه‌ای برای پرسش رسانه: ابتدا پویش */
+  await api('/media/scan', { method: 'POST', token: pt, body: {} });
+  const cases = [
+    ['سلامت این حساب چقدر است؟', pt, 'account_health', (a) => a.answer.includes('هلدینگ پارس')],
+    ['وضعیت کلی هلدینگ پارس چطور است؟', pt, 'account_health', (a) => a.answer.includes('میانگین')],
+    ['امتیاز رابطهٔ هلدینگ پارس و پارس انرژی چقدر است؟', pt, 'score', (a) => a.references.some(r => r.type === 'RELATIONSHIP')],
+    ['رابطهٔ هلدینگ پارس با شرکت x چطور است؟', at, 'score', (a) => a.answer.includes('سلامت')],
+    ['مسیر معرفی از شرکت x به پارس انرژی چیست؟', at, 'path', (a) => a.answer.includes('شرکت x ← هلدینگ پارس ← پارس انرژی')],
+    ['شکاف‌های پوشش عمومی هلدینگ پارس کدام‌اند؟', pt, 'gaps', (a) => a.answer.includes('شکاف')],
+    ['با چه کسانی گپ پوشش عمومی داریم؟', pt, 'gaps', (a) => !!a.answer],
+    ['پوشش رسانه‌ای دانشگاه صنعتی شریف چطور است؟', pt, 'media', (a) => a.answer.includes('دانشگاه صنعتی شریف')],
+    ['آخرین اخبار دربارهٔ دانشگاه صنعتی شریف چه بود؟', pt, 'media', (a) => !!a.answer],
+    ['پروفایل پارک فناوری پردیس را نشان بده', pt, 'profile', (a) => a.answer.includes('پارک فناوری پردیس')],
+    ['دانشگاه فردوسی مشهد را در شبکه پیدا کن', pt, 'search', (a) => a.answer.includes('دانشگاه فردوسی')],
+    ['تعهدات معوق کدام‌اند؟', dt, 'commitments_overdue', (a) => a.answer.includes('تعهد معوق')],
+    ['تعهدات باز هلدینگ پارس کدام‌اند؟', pt, 'commitments_open', (a) => !!a.answer],
+    ['تعهدات شرکت x کدام‌اند؟', at, 'commitments_open', (a) => !!a.answer],
+    ['افراد هلدینگ پارس چه کسانی‌اند؟', pt, 'people', (a) => !!a.answer],
+    ['در سه ماه گذشته چند تعامل داشتیم؟', pt, 'interactions', (a) => a.answer.includes('۹۰ روز')],
+    ['میانگین سلامت روابط پارس آموزش چقدر است؟', pt, 'account_health', (a) => a.answer.includes('پارس آموزش')],
+    ['سلامت رابطهٔ پارس مالی و هلدینگ پارس چقدر است؟', pt, 'score', (a) => a.references.some(r => r.type === 'RELATIONSHIP')],
+    ['بهترین مسیر از شرکت x به پارس آموزش چیست؟', at, 'path', (a) => a.answer.includes('پارس آموزش')],
+    ['چه چیزهایی می‌توانی پاسخ بدهی؟', pt, 'help', (a) => a.answer.includes('دامنهٔ من')],
+  ];
+  let askOk = 0;
+  for (const [q, token, intent, verify] of cases) {
+    const a = await ask(q, token);
+    const ok = a?.intent === intent && (!verify || verify(a));
+    if (ok) askOk++;
+    else check(`دستیار: «${q}»`, false, `→ ${a?.intent}: ${String(a?.answer).slice(0, 80)}`);
+  }
+  check(`۲۰ پرسش پرتکرار با پاسخ صحیح و ارجاع (${askOk}/۲۰)`, askOk === 20);
+  const allRefs = await Promise.all(cases.slice(0, 10).map(([q, token]) => ask(q, token)));
+  check('هر پاسخ داده‌محور دارای ارجاع به رکورد منبع', allRefs.every(a => (a.references?.length ?? 0) >= 1 || a.intent === 'help'));
+  const ood1 = await ask('قیمت بیت‌کوین چقدر است؟');
+  check('خارج از دامنه → «نمی‌دانم» صادقانه (۱)', ood1?.outOfScope === true && ood1.answer.startsWith('نمی‌دانم'));
+  const ood2 = await ask('هوای فردای تهران چطور است؟');
+  check('خارج از دامنه → «نمی‌دانم» صادقانه (۲)', ood2?.outOfScope === true && ood2.answer.startsWith('نمی‌دانم'));
+  const cross = await ask('امتیاز رابطهٔ هلدینگ آریا و بانک ملّی پارس چقدر است؟', pt);
+  check('جداسازی مستأجر: پرسش از دنیای دمو → بدون افشای داده', cross?.references?.every(r => r.type !== 'RELATIONSHIP' || !String(r.id).startsWith('r-')) && !cross.answer.includes('آریا فناوری'));
+  const askMeta = await ask('امتیاز رابطهٔ هلدینگ پارس و پارس انرژی چقدر است؟');
+  check('هر پاسخ با _meta (تاریخ داده + موتور)', askMeta?._meta?.engine === 'deterministic-rules' && !!askMeta._meta?.dataDate);
+
+  listener.close();
 }
 
 /* ============================ SUMMARY ============================ */

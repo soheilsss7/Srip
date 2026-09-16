@@ -469,3 +469,61 @@ html,body{overflow-x:clip;max-width:100%}
   .pres-overlay{padding:10px;}
   .pres-controls{position:sticky;bottom:0;background:#fff;padding-top:8px;border-top:1px solid #e2e8f0;}
 }
+
+/* ═══════════════ مسترپلن فاز ۳ — استایل‌های اکوسیستم داده و کانال ═══════════════ */
+/* آیتم ۱۸ غنی‌سازی · ۱۹ API/وب‌هوک · ۲۰ QBR · ۲۱ پوش/آفلاین · ۲۲ دستیار گراف */
+.p3-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;}
+.p3-src{background:var(--srip-panel,#fff);border:1px solid var(--srip-border,#e2e8f0);border-radius:12px;padding:12px;}
+.p3-list{display:grid;gap:8px;}
+.p3-row{display:flex;gap:10px;align-items:center;justify-content:space-between;background:var(--srip-panel,#fff);
+  border:1px solid var(--srip-border,#e2e8f0);border-radius:12px;padding:10px 12px;flex-wrap:wrap;}
+.p3-chip{display:inline-flex;align-items:center;gap:4px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:999px;
+  padding:2px 9px;font-size:11px;color:#334155;white-space:nowrap;}
+.p3-value{font-size:13.5px;font-weight:600;color:#0f172a;}
+.p3-once{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;background:#ecfdf5;border:1px solid #a7f3d0;
+  border-radius:10px;padding:8px 12px;font-size:12.5px;}
+.p3-once code{direction:ltr;font-size:11px;word-break:break-all;background:#fff;border:1px solid #d1fae5;border-radius:6px;padding:2px 6px;}
+
+/* ── ۲۰: برگ QBR (قابل چاپ) ── */
+.qbr-sheet{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:16px;display:grid;gap:12px;}
+.qbr-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;}
+.qbr-headline{margin:0;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;padding:10px 12px;font-size:13px;font-weight:600;}
+.qbr-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;}
+.qbr-kpi{border:1px solid #e2e8f0;border-radius:10px;padding:10px;display:grid;gap:3px;justify-items:start;}
+.qbr-kpi>span{font-size:11px;color:#64748b;}
+.qbr-kpi>strong{font-size:17px;color:#0f172a;}
+.qbr-kpi>small{font-size:10.5px;color:#94a3b8;}
+.qbr-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:10px;align-items:start;}
+.qbr-foot{border-top:1px solid #eef2f7;padding-top:8px;}
+@media print{
+  .no-print,.no-print *,header.app-header,aside,.flash{display:none !important;}
+  .qbr-sheet{border:none;padding:0;}
+  .qbr-kpis{grid-template-columns:repeat(4,1fr);}
+  body{background:#fff;}
+  main{padding:0 !important;}
+}
+
+/* ── ۲۲: چت دستیار ── */
+.as-chat{max-height:440px;overflow-y:auto;display:grid;gap:12px;padding:4px 2px;}
+.as-empty{display:grid;gap:8px;justify-items:center;color:#64748b;font-size:12.5px;padding:22px 8px;text-align:center;
+  border:1px dashed #cbd5e1;border-radius:12px;background:#f8fafc;}
+.as-turn{display:grid;gap:6px;}
+.as-q{display:flex;gap:6px;align-items:center;justify-self:end;max-width:85%;background:#eef2ff;border-radius:12px 12px 2px 12px;
+  padding:7px 12px;font-size:13px;}
+.as-a{display:grid;gap:6px;max-width:92%;background:#fff;border:1px solid #e2e8f0;border-radius:12px 12px 12px 2px;padding:10px 12px;font-size:13px;}
+.as-a.as-oos{background:#fffbeb;border-color:#fde68a;}
+.as-typing{justify-self:start;color:#64748b;font-size:12px;display:flex;gap:6px;align-items:center;}
+.as-meta{display:flex;gap:5px;flex-wrap:wrap;align-items:center;}
+.as-date{font-size:10.5px;color:#94a3b8;display:inline-flex;gap:3px;align-items:center;}
+.as-input{flex:1 1 auto;min-width:0;}
+@media(max-width:640px){
+  .as-q{max-width:95%;}
+  .as-a{max-width:100%;}
+  .qbr-kpis{grid-template-columns:repeat(2,1fr);}
+}
+.as-input{border:1px solid var(--srip-border,#cbd5e1);border-radius:10px;padding:9px 12px;font-size:13px;background:#fff;color:inherit;}
+.as-input:focus{outline:2px solid #c7d2fe;border-color:#818cf8;}
+.p3-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+.p3-table th{text-align:right;font-size:11px;color:#64748b;padding:7px 9px;border-bottom:1px solid #e2e8f0;white-space:nowrap;}
+.p3-table td{padding:8px 9px;border-bottom:1px solid #f1f5f9;vertical-align:top;}
+.p3-table tr:last-child td{border-bottom:none;}

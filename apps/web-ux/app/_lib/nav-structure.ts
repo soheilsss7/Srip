@@ -34,10 +34,12 @@ export function itemVisible(item: NavItem, can: (p: string) => boolean, isAdmin 
 export const NAV_ZONES: readonly NavZone[] = [
   ['خانه', 'کار امروز من', [
     ['/', 'پیشخوان', 'dashboard.read'],
+    ['/push', 'اعلان‌ها و آفلاین', 'dashboard.read'],
   ]],
   ['مخاطب‌ها', 'سازمان‌ها و افراد کلیدی', [
     ['/organizations', 'سازمان‌ها', 'organization.read'],
     ['/people', 'اشخاص', 'person.read'],
+    ['/enrichment', 'غنی‌سازی منابع رسمی', 'organization.read'],
   ]],
   ['روابط', 'وضعیت پیوندها و شبکه', [
     ['/relationships', 'روابط', 'relationship.read'],
@@ -63,7 +65,9 @@ export const NAV_ZONES: readonly NavZone[] = [
     ['/board', 'هیئت‌مدیره', 'analytics.read'],
     ['/ai', 'دستیار هوشمند', 'ai.query'],
     ['/strategy', 'تحلیل راهبردی', 'strategy.read'],
+    ['/assistant', 'دستیار پرسش‌وپاسخ', 'ai.query'],
     ['/mcp', 'سرور MCP', 'analytics.read'],
+    ['/qbr', 'بریف فصلی (QBR)', 'analytics.read'],
   ]],
   ['اتوماسیون و هماهنگی', 'گردش کار، اسناد و داده', [
     ['/workflows', 'گردش کار و تأییدها', 'workflow.read'],
@@ -71,6 +75,7 @@ export const NAV_ZONES: readonly NavZone[] = [
     ['/data-management', 'داده و کیفیت', 'data.quality.read'],
     ['/data-exchange', 'تبادل داده', 'report.read'],
     ['/imports', 'ورود ایمیل/تقویم', 'interaction.write'],
+    ['/developers', 'API و وب‌هوک', 'integration.read'],
     ['/settings', 'تنظیمات من', 'user.read'],
     ['/sessions', 'نشست‌های من', 'session.read'],
   ]],
@@ -142,6 +147,8 @@ export const NAV_PERMISSION_MAP: Record<string, string> = {
   '/settings': 'user.read', '/sessions': 'session.read', '/data-management': 'data.quality.read',
   '/workflows': 'workflow.read', '/publics': 'publics.read', '/strategy': 'strategy.read',
   '/gis': 'organization.read', '/portal': 'publics.read', '/mcp': 'analytics.read', '/imports': 'interaction.write',
+  '/enrichment': 'organization.read', '/developers': 'integration.read', '/qbr': 'analytics.read',
+  '/push': 'dashboard.read', '/assistant': 'ai.query',
 };
 
 /** نگاشت مسیرهای مرکز سیستم → مجوز (عمق دسترسی مدیریتی، جداست از سایدبار) */
