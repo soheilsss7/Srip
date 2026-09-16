@@ -586,7 +586,7 @@ section('فاز ۳ — غنی‌سازی منابع رسمی، API عمومی + 
   const who = await api('/public/whoami', { method: 'GET', headers: { 'X-API-Key': KEY } });
   check('whoami با کلید → مستأجر درست', who.status === 200 && who.body?.tenantOrganizationId === 'org-pars');
   const orgs = await api('/public/organizations?q=پارس', { method: 'GET', headers: { 'X-API-Key': KEY } });
-  check('سازمان‌ها با دامنهٔ خانواده (۱۳)', orgs.status === 200 && orgs.body?.total === 13, JSON.stringify(orgs.body?.total));
+  check('سازمان‌ها با دامنهٔ مستأجر (۱۳)', orgs.status === 200 && orgs.body?.total === 13, JSON.stringify(orgs.body?.total));
   const org1 = await api('/public/organizations/org-pars-01', { method: 'GET', headers: { 'X-API-Key': KEY } });
   check('جزئیات سازمان → 200', org1.status === 200 && org1.body?.name === 'پارس انرژی');
   const rels = await api('/public/relationships?organizationId=org-pars', { method: 'GET', headers: { 'X-API-Key': KEY } });
@@ -735,6 +735,34 @@ section('فاز ۳ — غنی‌سازی منابع رسمی، API عمومی + 
   check('جداسازی مستأجر: پرسش از دنیای دمو → بدون افشای داده', cross?.references?.every(r => r.type !== 'RELATIONSHIP' || !String(r.id).startsWith('r-')) && !cross.answer.includes('آریا فناوری'));
   const askMeta = await ask('امتیاز رابطهٔ هلدینگ پارس و پارس انرژی چقدر است؟');
   check('هر پاسخ با _meta (تاریخ داده + موتور)', askMeta?._meta?.engine === 'deterministic-rules' && !!askMeta._meta?.dataDate);
+
+  /* ── یکپارچگی فاز ۳ با پلتفرم: غنی‌سازی در پروفایل/MCP/API عمومی، پوش در اعلان‌ها، گردشکار سازمان‌محور ── */
+  const od = await api(`/organizations/${target.orgId}`, { token: pt });
+  check('غنی‌سازی → پروفایل سازمان (GET /organizations/:id)', od.status === 200 && od.body?.enrichment?.fields?.some(f => f.field === target.field && f.sourceNameFa), JSON.stringify(od.body?.enrichment?.total));
+  const kc3 = await api('/developer/keys', { method: 'POST', token: pt, body: { name: 'کلید یکپارچگی', scopes: ['graph:read'] } });
+  const pod = await api(`/public/organizations/${target.orgId}`, { headers: { 'X-API-Key': kc3.body?.key } });
+  check('غنی‌سازی → API عمومی شریک‌ها', pod.status === 200 && (pod.body?.enrichment?.total ?? 0) >= 1, JSON.stringify(pod.status));
+  const mcpProf = await api('/mcp', { method: 'POST', token: pt, body: { jsonrpc: '2.0', id: 99, method: 'tools/call', params: { name: 'stakeholder_profile', arguments: { organizationId: target.orgId } } } });
+  check('غنی‌سازی → ابزار MCP stakeholder_profile', (mcpProf.body?.result?.structuredContent?.enrichedFields?.length ?? 0) >= 1);
+  const profAsk = await ask(`پروفایل ${target.orgName} را نشان بده`);
+  check('غنی‌سازی → پاسخ دستیار با منبع', String(profAsk.answer).includes(target.proposedValue) && String(profAsk.answer).includes('غنی‌شده'), String(profAsk.answer).slice(0, 80));
+
+  /* شکایت ناشناس در پورتال شرکت x → گردشکار کامل + اعلان/اقدام سازمان‌محور برای مالک واقعی */
+  const cx = await api('/portal/x/submit', { method: 'POST', body: { type: 'COMPLAINT', message: 'تست یکپارچگی: شکایت ناشناس برای چرخهٔ کامل گردش کار و اعلان سازمان‌محور.' } });
+  check('شکایت ناشناس پورتال x → 201 (بدون کرش محرک)', cx.status === 201, JSON.stringify(cx.body?.message));
+  const anots = await api('/notifications', { token: at });
+  const wfNotif = (anots.body ?? []).find(n => String(n.title).includes('پورتال') && n.organizationId === 'org-x');
+  check('گردشکار شکایت → اعلان سازمان‌محور دیده‌شده توسط aroun', !!wfNotif && wfNotif.tenant === 'real', JSON.stringify(wfNotif?.organizationId));
+  const xacts = await api('/actions?organizationId=org-x', { token: at });
+  const xitems = Array.isArray(xacts.body) ? xacts.body : xacts.body?.items ?? [];
+  check('اقدام SLA → در سازمان درست (نه یتیم)', xitems.some(a => String(a.title).includes('SLA') && a.organizationId === 'org-x'));
+
+  /* پوش → اعلان درون‌برنامه‌ای سازمان‌محور + خوانده‌شدن با رسید تحویل */
+  const dNotifs = await api('/notifications', { token: pt });
+  const pushNotif = (dNotifs.body ?? []).find(n => n.title === 'اعلان آزمون فاز ۳' && n.channel === 'PUSH');
+  check('پوش → اعلان درون‌برنامه‌ای سازمان‌محور + خوانده‌شده با ack', !!pushNotif && pushNotif.organizationId === 'org-pars' && pushNotif.isRead === true, JSON.stringify(pushNotif).slice(0, 90));
+  const fbNotif = (dNotifs.body ?? []).find(n => n.title === 'پیام تازه در پورتال عمومی' && n.organizationId === 'org-pars');
+  check('پوش پورتال (بازخورد) → اعلان درون‌برنامه‌ای pars', !!fbNotif);
 
   listener.close();
 }

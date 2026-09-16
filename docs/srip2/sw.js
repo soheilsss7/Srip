@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.15.03';
+const DEMO_MOCK_VERSION = '2026.09.16.04';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -2462,6 +2462,8 @@ function visibleNotifications(req){
   const u=currentUser(req);
   const tn=u?(DEMO_USER_IDS.has(u.id)?'demo':(u.isOwner?'real':null)):null;
   return NOTIFICATIONS.filter(n=>{
+    /* اعلان سازمان‌محور: برای هر کاربری که آن سازمان را می‌بیند (چندمستأجرِ دقیق) */
+    if(n.organizationId) return inScope(req,n.organizationId);
     const t=n.tenant??'demo';
     if(t==='demo') return tn==='demo';
     if(t==='real') return tn==='real';
@@ -4834,17 +4836,27 @@ function qbrBriefFor(req,orgId){
 }
 
 /* ── آیتم ۲۱: Web Push — ثبت اشتراک با رضایت + صف تحویل (انتقال دمو: polling) ── */
-function pushNotify(orgId,title,body,topic){
+function pushNotify(orgId,title,body,topic,opts={}){
   if(!Array.isArray(DB.pushSubscriptions)) return 0;
   const subs=DB.pushSubscriptions.filter(s=>s.active!==false&&s.consent==='GRANTED'&&s.organizationId===orgId);
+  /* یکپارچگی با سیستم اعلان: هر پیام پوش، هم اعلان درون‌برنامه‌ای می‌سازد (سازمان‌محور)
+     و هم صف تحویل؛ مگر اینکه رویداد از راه گردش کار اعلان خودش را ساخته باشد (inApp:false). */
+  let notifRow=null;
+  if(opts.inApp!==false&&orgId&&orgById(orgId)){
+    notifRow={id:`n-${Date.now()}-${String(Math.random()).slice(2,6)}`,userId:null,organizationId:orgId,
+      tenant:orgTenant(orgById(orgId))??'personal',title:String(title??'').slice(0,120),body:String(body??'').slice(0,400),
+      type:'SYSTEM',priority:'information',isRead:false,read:false,channel:'PUSH',createdAt:nowIso()};
+    NOTIFICATIONS.unshift(notifRow);
+  }
   let n=0;
   for(const s of subs){
     DB.pushPending.push({id:phase3RandId('pp'),subscriptionId:s.id,userId:s.userId,organizationId:orgId,
       title:String(title??'').slice(0,120),body:String(body??'').slice(0,400),topic:topic??'GENERAL',
+      notificationId:notifRow?.id??null,
       createdAt:nowIso(),deliveredAt:null});
     n++;
   }
-  if(n) saveDb();
+  if(n||notifRow) saveDb();
   return n;
 }
 
@@ -4881,7 +4893,8 @@ function mcpCallTool(req,authUser,name,args){
     if(!o||!ids.includes(o.id)) return {ok:false,code:-32602,message:'سازمان یافت نشد یا خارج از محدوده است.'};
     const rels=RELS.filter(r=>r.sourceOrganizationId===o.id||r.targetOrganizationId===o.id);
     const health=rels.length?Math.round(rels.reduce((a,r)=>a+(r.healthScore??0),0)/rels.length):null;
-    return {ok:true,data:{organization:{id:o.id,name:o.name,type:o.type,industry:o.industry},relationshipCount:rels.length,avgHealthScore:health,
+    const enrichedFields=Object.entries((DB.enrichmentApplied??{})[o.id]??{}).map(([field,v])=>({field,fieldFa:PHASE3_ENRICHMENT_FIELD_FA[field]??field,value:v.value,sourceNameFa:v.sourceNameFa,confidence:v.confidence,appliedAt:v.appliedAt}));
+    return {ok:true,data:{organization:{id:o.id,name:o.name,type:o.type,industry:o.industry},relationshipCount:rels.length,avgHealthScore:health,enrichedFields,
       relationships:rels.slice(0,10).map(r=>({id:r.id,with:r.sourceOrganizationId===o.id?r.targetOrganizationId:r.sourceOrganizationId,healthScore:r.healthScore,strategicScore:r.strategicScore,riskScore:r.riskScore,lastInteractionAt:r.lastInteractionAt??null}))},
       sourceIds:[o.id,...rels.slice(0,10).map(r=>r.id)],meta};
   }
@@ -5039,9 +5052,10 @@ function assistantAsk(req,authUser,questionRaw){
     if(!target) return {...base,intent:'profile',intentFa:'پروفایل',needsClarification:true,outOfScope:false,answer:'پروفایل کدام سازمان یا شخص؟ نام را در پرسش بیاورید.',references:[],detail:{}};
     const out=mcpCallTool(req,authUser,'stakeholder_profile',{organizationId:target.id});
     const d=out.data;
+    const enrich=(d.enrichedFields??[]).map(x=>({field:x.fieldFa??x.field,value:x.value,sourceNameFa:x.sourceNameFa}));
     return {...base,intent:'profile',intentFa:'پروفایل',outOfScope:false,needsClarification:null,
-      answer:`«${target.name}» (${d.organization.type==='HOLDING'?'هلدینگ':d.organization.type==='GOVERNMENT'?'دولتی/عمومی':'سازمان'} — ${d.organization.industry??''}): ${faN(d.relationshipCount)} رابطه${d.avgHealthScore!=null?` با میانگین سلامت ${faN(d.avgHealthScore)}`:''}.`,
-      detail:d,references:[{type:'ORGANIZATION',id:target.id,label:target.name},...(d.relationships??[]).slice(0,3).map(r=>({type:'RELATIONSHIP',id:r.id,label:'رابطه'}))]};
+      answer:`«${target.name}» (${d.organization.type==='HOLDING'?'هلدینگ':d.organization.type==='GOVERNMENT'?'دولتی/عمومی':'سازمان'} — ${d.organization.industry??''}): ${faN(d.relationshipCount)} رابطه${d.avgHealthScore!=null?` با میانگین سلامت ${faN(d.avgHealthScore)}`:''}.${enrich.length?` دادهٔ غنی‌شده از منابع رسمی: ${enrich.slice(0,3).map(x=>`${x.field} ${x.value} (${x.sourceNameFa})`).join('، ')}.`:''}`,
+      detail:d,references:[{type:'ORGANIZATION',id:target.id,label:target.name},...enrich.map(x=>({type:'ENRICHMENT',id:target.id,label:`${x.field} — ${x.sourceNameFa}`})),...(d.relationships??[]).slice(0,3).map(r=>({type:'RELATIONSHIP',id:r.id,label:'رابطه'}))]};
   }
   /* جست‌وجو */
   if(has(/پیدا کن|جستوجو|جست‌وجو|سرچ|بگرد/)){
@@ -7901,7 +7915,8 @@ async function __handler(req, res) {
     const o=ORGS.find(x=>x.id===orgId[0]);
     if(!o) return json(res,404,{message:'سازمان یافت نشد'});
     if(!inScope(req,o.id)) return json(res,403,{message:'دسترسی به این سازمان مجاز نیست.'});
-    return json(res,200,attachCriteria('ORGANIZATION',[{...o,owner:ownerOfOrg(o),_count:orgCounts(o)}])[0]);
+    const enrichFields=Object.entries((DB.enrichmentApplied??{})[o.id]??{}).map(([field,v])=>({field,fieldFa:PHASE3_ENRICHMENT_FIELD_FA[field]??field,confidenceFa:PHASE3_CONFIDENCE_FA[v.confidence]??v.confidence,...v}));
+    return json(res,200,attachCriteria('ORGANIZATION',[{...o,owner:ownerOfOrg(o),_count:orgCounts(o),enrichment:{fields:enrichFields,total:enrichFields.length}}])[0]);
   }
   const orgTimeline=match('/organizations/:id/timeline');
   if(orgTimeline&&method==='GET'){
@@ -11017,6 +11032,13 @@ async function __handler(req, res) {
       if(src&&!links.organizationId) links.organizationId=src.targetOrganizationId??src.sourceOrganizationId;
     }
     if(t==='publics'&&!links.organizationId) links.organizationId=id??null;
+    /* مسترپلن فاز ۲/۳: نگاشت محرک‌های موتورهای تمایز و اکوسیستم به سازمانِ رویداد */
+    if(t==='publicsubmission'){ const ps=(DB.portalSubmissions??[]).find(x=>x.id===id); if(!links.organizationId) links.organizationId=ps?.tenantOrgId??c.submission?.tenantOrgId??null; }
+    if(t==='survey'){ const sv=(DB.surveys??[]).find(x=>x.id===id); if(!links.organizationId) links.organizationId=sv?.tenantOrgId??c.survey?.tenantOrgId??null; }
+    if(t==='media'){ if(!links.organizationId) links.organizationId=c.organization?.id??c.mention?.organizationId??fallbackOrgId??null; }
+    if(t==='import'){ const im=(DB.imports??[]).find(x=>x.id===id); if(!links.organizationId) links.organizationId=im?.organizationId??null; }
+    if(t==='enrichment'){ if(!links.organizationId) links.organizationId=c.enrichment?.organizationId??null; }
+    if(t==='qbr'){ if(!links.organizationId) links.organizationId=c.qbr?.organizationId??id; }
     return links;
   }
   function wfView(w){
@@ -11059,7 +11081,7 @@ async function __handler(req, res) {
           saveDb(); return exec;
         }
         if(a.type==='REQUEST_APPROVAL'){
-          const wa={id:`wa-${Date.now()}`,workflowExecutionId:exec.id,status:'PENDING',requestedById:authUser.id,payload:a.payload??{note:'تصویب گردش کار'},decisionReason:null,decidedById:null,decidedAt:null,createdAt:nowIso()};
+          const wa={id:`wa-${Date.now()}`,workflowExecutionId:exec.id,status:'PENDING',requestedById:authUser?.id??null,payload:a.payload??{note:'تصویب گردش کار'},decisionReason:null,decidedById:null,decidedAt:null,createdAt:nowIso()};
           DB.workflowApprovals.push(wa);
           exec.status='WAITING'; exec.resumeAt=null; exec.currentActionIndex=i+1;
           exec.context={...(exec.context??{}),pendingApprovalId:wa.id};
@@ -11085,7 +11107,10 @@ async function __handler(req, res) {
         } else if(a.type==='CREATE_NOTIFICATION'){
           const mapType=(x)=>({INFO:'SYSTEM',REMINDER:'REMINDER',RECOMMENDATION:'RECOMMENDATION'}[x]??x??'SYSTEM');
           const mapPrio=(x)=>(String(x??'MEDIUM').toUpperCase()==='HIGH'||String(x??'').toUpperCase()==='CRITICAL')?'important':'information';
-          const row={id:`n-${Date.now()}`,userId:a.userId??authUser.id,tenant:DEMO_USER_IDS.has(authUser?.id)?'demo':(authUser?.isOwner?'real':'personal'),title:a.title??'اعلان گردش کار',body:a.body??`گردش کار «${wf.name}» روی ${exec.entityType} ${exec.entityId}`,type:mapType(a.notificationType??'INFO'),priority:mapPrio(a.priority),isRead:false,read:false,createdAt:nowIso(),workflowExecutionId:exec.id,entityType:exec.entityType,entityId:exec.entityId};
+          /* اعلان سازمان‌محور: رویدادهای مستأجر برای همهٔ کاربرانِ همان سازمان قابل‌مشاهده‌اند؛
+             محرک ناشناس (پورتال عمومی) هم دیگر خطا نمی‌دهد. */
+          const notifTenant=links.organizationId?(orgTenant(orgById(links.organizationId))??'personal'):(DEMO_USER_IDS.has(authUser?.id)?'demo':(authUser?.isOwner?'real':'personal'));
+          const row={id:`n-${Date.now()}-${String(Math.random()).slice(2,6)}`,userId:a.userId??authUser?.id??null,organizationId:links.organizationId??null,tenant:notifTenant,title:a.title??'اعلان گردش کار',body:a.body??`گردش کار «${wf.name}» روی ${exec.entityType} ${exec.entityId}`,type:mapType(a.notificationType??'INFO'),priority:mapPrio(a.priority),isRead:false,read:false,createdAt:nowIso(),workflowExecutionId:exec.id,entityType:exec.entityType,entityId:exec.entityId};
           NOTIFICATIONS.push(row); audit(req,'CREATE','Notification',row.id,'OK',{meta:{title:row.title,workflow:wf.id}});
           log.push(`✓ گام ${i+1}: اعلان «${row.title}» صادر شد (${row.id})`);
         } else {
@@ -12625,7 +12650,7 @@ async function __handler(req, res) {
     await autoRunWorkflows('PublicSubmission',row.id,'PUBLIC_SUBMISSION_RECEIVED',{submission:{id:row.id,type,tenantOrgId:orgId,slaDueAt:row.slaDueAt}},`portal-submit:${row.id}`);
     /* مسترپلن فاز ۳/۱۹+۲۱: وب‌هوک و پوش برای پیام پورتال */
     await dispatchWebhooks(orgId,'PUBLIC_SUBMISSION_RECEIVED',{submission:{id:row.id,type,tenantOrgId:orgId,slaDueAt:row.slaDueAt}});
-    pushNotify(orgId,'پیام تازه در پورتال عمومی',`${PORTAL_SUBMISSION_FA[type]} تازه در پورتال ثبت شد.`,'PORTAL');
+    pushNotify(orgId,'پیام تازه در پورتال عمومی',`${PORTAL_SUBMISSION_FA[type]} تازه در پورتال ثبت شد.`,'PORTAL',{inApp:type!=='COMPLAINT'});
     const faDays=new Intl.NumberFormat('fa-IR').format(PORTAL_SLA_DAYS[type]);
     return json(res,201,{id:row.id,slaDueAt:row.slaDueAt,slaDays:PORTAL_SLA_DAYS[type],
       message:`پیام شما ثبت شد. مهلت پاسخ تا ${faDays} روز کاری است.`});
@@ -12851,7 +12876,7 @@ async function __handler(req, res) {
         await autoRunWorkflows('Media',x.id,'MEDIA_MENTION',{mention:{id:x.id,title:x.title,tone:x.tone,mediaId:x.mediaId,publishedAt:x.publishedAt},organization:{id:orgId,name:orgById(orgId)?.name??orgId}},`media-mention:${x.id}:${orgId}`);
         /* مسترپلن فاز ۳/۱۹+۲۱: وب‌هوک و پوش برای ذکر تازه */
         await dispatchWebhooks(orgId,'MEDIA_MENTION_DETECTED',{mention:{id:x.id,title:x.title,tone:x.tone,mediaId:x.mediaId,publishedAt:x.publishedAt},organization:{id:orgId,name:orgById(orgId)?.name??orgId}});
-        pushNotify(orgId,'ذکر رسانه‌ای تازه شناسایی شد',x.title.slice(0,140),'MEDIA');
+        pushNotify(orgId,'ذکر رسانه‌ای تازه شناسایی شد',x.title.slice(0,140),'MEDIA',{inApp:false});
       }
     }
     DB.mediaScanCursor=(DB.mediaScanCursor??0)+batch.length;
@@ -13155,7 +13180,8 @@ async function __handler(req, res) {
   }
 
   /* ── آیتم ۱۹: API عمومی شریک‌ها (کلید API یا نشست؛ نرخ‌محدود ۶۰/ساعت) ── */
-  const pubScope=apiKeyRow?phase3FamilyOf(apiKeyRow.organizationId):(authUser?visibleOrgIds(req):null);
+  /* دامنهٔ کلید API = همان دنیای دادهٔ مستأجر (هم‌قاعده با MCP و دستیار — یکپارچه) */
+  const pubScope=apiKeyRow?(orgById(apiKeyRow.organizationId)?ORGS.filter(o=>orgTenant(o)===orgTenant(orgById(apiKeyRow.organizationId))).map(o=>o.id):[]):(authUser?visibleOrgIds(req):null);
   const pubGate=(scopes)=>{
     if(apiKeyRow){
       if(!phase2RateOk(`key:${apiKeyRow.id}`,'public-api',PHASE3_API_RATE_LIMIT.max,PHASE3_API_RATE_LIMIT.windowMs)){
@@ -13190,8 +13216,10 @@ async function __handler(req, res) {
     const o=orgById(pubOrg[0]);
     if(!o) return json(res,404,{code:'NOT_FOUND',message:'سازمان یافت نشد.'});
     const rels=RELS.filter(r=>r.sourceOrganizationId===o.id||r.targetOrganizationId===o.id);
+    const enrichFields=Object.entries((DB.enrichmentApplied??{})[o.id]??{}).map(([field,v])=>({field,fieldFa:PHASE3_ENRICHMENT_FIELD_FA[field]??field,value:v.value,sourceId:v.sourceId,sourceNameFa:v.sourceNameFa,confidence:v.confidence,appliedAt:v.appliedAt}));
     return json(res,200,{id:o.id,name:o.name,type:o.type,industry:o.industry,country:o.country,
-      relationshipCount:rels.length,_meta:{dataDate:nowIso(),sourceIds:[o.id]}});
+      relationshipCount:rels.length,enrichment:{fields:enrichFields,total:enrichFields.length},
+      _meta:{dataDate:nowIso(),sourceIds:[o.id]}});
   }
   if(is('/public/relationships')&&method==='GET'){
     const gate=pubGate(['graph:read']); if(gate) return json(res,gate.status,gate.body);
@@ -13308,8 +13336,9 @@ async function __handler(req, res) {
     if(!row) return json(res,404,{message:'پیام یافت نشد.'});
     if(row.userId!==authUser.id) return json(res,403,{message:'این پیام متعلق به شما نیست.'});
     row.deliveredAt=nowIso();
+    if(row.notificationId){ const nn=NOTIFICATIONS.find(x=>x.id===row.notificationId); if(nn){ nn.isRead=true; nn.read=true; } }
     saveDb();
-    return json(res,200,{id:row.id,deliveredAt:row.deliveredAt});
+    return json(res,200,{id:row.id,deliveredAt:row.deliveredAt,notificationMarkedRead:!!row.notificationId});
   }
 
   /* ── آیتم ۲۲: دستیار پرسش‌وپاسخ طبیعی روی گراف ── */

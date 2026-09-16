@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, apiGet } from '../_lib/api';
 import { fa } from '../_lib/fa';
-import { PageHeader } from '../_components/page-ui';
+import { PageHeader, Segmented } from '../_components/page-ui';
 import {
   Sparkles, Search, CalendarCheck, FileText, ListChecks, ShieldCheck, AlertTriangle, Target,
   Lightbulb, Briefcase, Send, History, Cpu, Zap, Database, Clock, Wand2, CheckCircle2, Info,
@@ -83,6 +83,8 @@ const evLen=(ev:any,k:string)=>Array.isArray(ev?.[k])?ev[k].length:0;
 type HistoryItem = { intent: string; query: string; ts: number; ok: boolean };
 
 const HISTORY_KEY = 'srip_ai_history_v1';
+/* فاز ۳/۲۲: برچسب انواع ارجاع دستیار زبان طبیعی */
+const REF_FA: Record<string, string> = { ORGANIZATION: 'سازمان', RELATIONSHIP: 'رابطه', PERSON: 'شخص', COMMITMENT: 'تعهد', INTERACTION: 'تعامل', MENTION: 'ذکر رسانه‌ای', GAP: 'شکاف', ENRICHMENT: 'غنی‌سازی' };
 
 export default function AI(){
   const [intent,setIntent]=useState('SMART_SEARCH');
@@ -96,12 +98,20 @@ export default function AI(){
   const [providerHealth,setProviderHealth]=useState<any>(null);
   const [showMeta,setShowMeta]=useState(false);
   const resultRef=useRef<HTMLDivElement>(null);
+  /* فاز ۳/۲۲: پرسش‌وپاسخ آزاد به زبان طبیعی — همان لایهٔ MCP برای انسان */
+  const [mode,setMode]=useState<'FREE'|'STRUCT'>('FREE');
+  const [freeQ,setFreeQ]=useState('');
+  const [chat,setChat]=useState<Array<{q:string;a:any}>>([]);
+  const [freeBusy,setFreeBusy]=useState(false);
+  const [faq,setFaq]=useState<string[]>([]);
+  const chatRef=useRef<HTMLDivElement|null>(null);
 
   useEffect(()=>{
     try{ setHistory(JSON.parse(localStorage.getItem(HISTORY_KEY)??'[]')); }catch{}
     apiGet('/ai/status').then(setStatus).catch(()=>{});
     apiGet('/ai/usage').then(setUsage).catch(()=>{});
     apiGet('/ai/provider-health').then(setProviderHealth).catch(()=>{});
+    apiGet<{items:string[]}>('/assistant/suggestions').then(r=>setFaq(r.items??[])).catch(()=>{});
   },[]);
 
   const meta = INTENT_BY_ID[intent];
@@ -128,6 +138,20 @@ export default function AI(){
     const text=query.trim();
     if(!text || busy) return;
     execute(text, true);
+  }
+
+  /** فاز ۳/۲۲ — پرسش آزاد: موتور قطعی روی گراف با ارجاع به رکورد منبع */
+  function askFree(preset?:string){
+    const text=(preset??freeQ).trim();
+    if(!text || freeBusy) return;
+    setFreeBusy(true); setError(''); setFreeQ(''); setResult(null);
+    api<any>('/assistant/ask',{method:'POST',body:JSON.stringify({question:text})})
+      .then(a=>{
+        setChat(prev=>[...prev,{q:text,a}]);
+        setTimeout(()=>{ try{ chatRef.current?.scrollTo({top:chatRef.current.scrollHeight,behavior:'smooth'}); }catch{} },60);
+      })
+      .catch(x=>setError((x as Error).message))
+      .finally(()=>setFreeBusy(false));
   }
 
   function runQuick(text:string){
@@ -159,7 +183,7 @@ export default function AI(){
       <PageHeader
         eyebrow="دستیار هوش مصنوعی"
         title="دستیار هوشمند روابط"
-        description="پرس‌وجو با ۹ قابلیت آماده — موتور قطعی (قاعده‌بنیان) پاسخ می‌دهد؛ بدون نیاز به مدل خارجی، با رعایت کامل محدودهٔ دسترسی."
+        description="پرسش‌وپاسخ آزاد به زبان طبیعی روی گراف روابط + ۹ قابلیت آماده — موتور قطعی (قاعده‌بنیان) پاسخ می‌دهد؛ بدون مدل خارجی، با ارجاع به رکورد منبع و «نمی‌دانم» صادقانه برای خارج از دامنه."
         actions={
           <>
             <span className="chip success"><CheckCircle2 size={12}/> موتور: {status?.provider==='deterministic'?'قطعی داخلی':(status?.provider??'قطعی داخلی')}</span>
@@ -219,6 +243,66 @@ export default function AI(){
 
         {/* ============ Main: composer + results ============ */}
         <div className="ai-main">
+          <div style={{marginBottom:12}}>
+            <Segmented
+              options={[{value:'FREE',label:'پرسش آزاد (زبان طبیعی)'},{value:'STRUCT',label:'قابلیت‌های آماده'}]}
+              value={mode} onChange={(v)=>setMode(v)} />
+          </div>
+          {mode==='FREE' ? (
+            <div className="ai-composer">
+              <div className="composer-head">
+                <h2><Sparkles size={16}/> پرسش‌وپاسخ آزاد روی گراف</h2>
+                <span className="chip success"><CheckCircle2 size={12}/> موتور قطعی + ارجاع به منبع</span>
+              </div>
+              <div className="as-chat" ref={chatRef} style={{maxHeight:380}} aria-live="polite">
+                {chat.length===0 && (
+                  <div className="as-empty">
+                    <p style={{margin:0}}>مثلاً بپرسید: «سلامت این حساب چقدر است؟» یا «مسیر معرفی از شرکت x به پارس انرژی چیست؟» یا «تعهدات معوق کدام‌اند؟»</p>
+                  </div>
+                )}
+                {chat.map((m,i)=>(
+                  <div key={i} className="as-turn">
+                    <div className="as-q"><Users size={14} style={{flexShrink:0}}/><span>{m.q}</span></div>
+                    <div className={`as-a ${m.a?.outOfScope?'as-oos':''}`}>
+                      <p style={{margin:0,whiteSpace:'pre-wrap'}}>{m.a?.answer}</p>
+                      <div className="as-meta">
+                        {m.a?.intentFa && <span className="chip">{m.a.intentFa}</span>}
+                        {(m.a?.references??[]).slice(0,5).map((r:any,j:number)=>(
+                          <span key={j} className="p3-chip" title={`${REF_FA[r.type]??r.type}: ${r.id}`}>{REF_FA[r.type]??r.type} — {String(r.label).slice(0,30)}</span>
+                        ))}
+                        {m.a?._meta?.dataDate && <span className="as-date">داده تا {new Date(m.a._meta.dataDate).toLocaleDateString('fa-IR')}</span>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {freeBusy && <div className="as-a as-typing"><Sparkles size={14}/><span>در حال بررسی گراف…</span></div>}
+              </div>
+              <div className="ai-quick-chips" aria-label="پرسش‌های پرتکرار">
+                {faq.slice(0,10).map(q=>(
+                  <button key={q} className="ai-quick-chip" onClick={()=>askFree(q)} disabled={freeBusy}>{q}</button>
+                ))}
+              </div>
+              <div className="ai-input-row">
+                <input
+                  className="as-input"
+                  value={freeQ}
+                  onChange={e=>setFreeQ(e.target.value)}
+                  onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); askFree(); } }}
+                  placeholder="پرسش خود را به زبان طبیعی بنویسید…"
+                  aria-label="پرسش آزاد دستیار"
+                  maxLength={500}
+                  disabled={freeBusy}
+                />
+                <button className="ai-send-btn" onClick={()=>askFree()} disabled={freeBusy||!freeQ.trim()}>
+                  <Send size={19}/>
+                  <span>{freeBusy?'در حال…':'بپرس'}</span>
+                </button>
+              </div>
+              <div className="ai-hint">
+                <Info size={12}/> پاسخ‌ها فقط از دادهٔ واقعی همین مستأجر و با ارجاع به رکورد منبع ساخته می‌شوند؛ برای خارج از دامنه صادقانه «نمی‌دانم» گفته می‌شود.
+              </div>
+            </div>
+          ) : (
           <div className="ai-composer">
             <div className="composer-head">
               <h2><Sparkles size={16}/> {meta.label}</h2>
@@ -249,6 +333,7 @@ export default function AI(){
               <Info size={12}/> این قابلیت به‌صورت قطعی (بدون هوش مصنوعی خارجی) کار می‌کند؛ پاسخ‌ها از داده‌های مجاز شما ساخته می‌شوند. برای ارسال: کنترل + اینتر
             </div>
           </div>
+          )}
 
           {error && <div className="error-card" role="alert">{error}</div>}
 

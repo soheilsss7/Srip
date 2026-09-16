@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { api, apiGet } from '../_lib/api';
 import { useWorkspace } from '../_components/workspace';
@@ -125,7 +126,7 @@ export default function EnrichmentPage() {
                     <div style={{ minWidth: 0, flex: '1 1 240px' }}>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                         <Building2 size={14} style={{ flexShrink: 0 }} />
-                        <strong style={{ fontSize: 12.5 }}>{s.orgName}</strong>
+                        <Link href={`/organizations/${s.orgId}`} style={{ fontSize: 12.5, fontWeight: 700 }}>{s.orgName}</Link>
                         <span className="p3-chip">{s.fieldFa}</span>
                         <Badge tone={CONF_TONE[s.confidence] ?? 'neutral'}>اطمینان {s.confidenceFa}</Badge>
                         {s.status !== 'PENDING' && <Badge tone={s.status === 'ACCEPTED' ? 'success' : 'danger'}>{s.status === 'ACCEPTED' ? 'پذیرفته‌شده' : 'ردشده'}</Badge>}

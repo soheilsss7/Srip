@@ -21,7 +21,7 @@ const PAGES_ALL = [
   '/calendar', '/workflows', '/notifications', '/settings', '/approvals', '/documents',
   '/requirements', '/reports', '/admin', '/workspace',
   '/imports', '/gis', '/mcp', '/portal', '/p',
-  '/enrichment', '/developers', '/qbr', '/push', '/assistant',
+  '/ai', '/enrichment', '/developers', '/qbr', '/push',
 ];
 const PAGES_CORE = ['/', '/organizations', '/network', '/publics', '/relationships', '/actions', '/workflows', '/board'];
 const TENANTS = [

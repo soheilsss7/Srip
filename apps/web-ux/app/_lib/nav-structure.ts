@@ -65,7 +65,6 @@ export const NAV_ZONES: readonly NavZone[] = [
     ['/board', 'هیئت‌مدیره', 'analytics.read'],
     ['/ai', 'دستیار هوشمند', 'ai.query'],
     ['/strategy', 'تحلیل راهبردی', 'strategy.read'],
-    ['/assistant', 'دستیار پرسش‌وپاسخ', 'ai.query'],
     ['/mcp', 'سرور MCP', 'analytics.read'],
     ['/qbr', 'بریف فصلی (QBR)', 'analytics.read'],
   ]],
@@ -148,7 +147,7 @@ export const NAV_PERMISSION_MAP: Record<string, string> = {
   '/workflows': 'workflow.read', '/publics': 'publics.read', '/strategy': 'strategy.read',
   '/gis': 'organization.read', '/portal': 'publics.read', '/mcp': 'analytics.read', '/imports': 'interaction.write',
   '/enrichment': 'organization.read', '/developers': 'integration.read', '/qbr': 'analytics.read',
-  '/push': 'dashboard.read', '/assistant': 'ai.query',
+  '/push': 'dashboard.read',
 };
 
 /** نگاشت مسیرهای مرکز سیستم → مجوز (عمق دسترسی مدیریتی، جداست از سایدبار) */

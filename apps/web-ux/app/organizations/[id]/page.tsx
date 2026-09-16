@@ -133,6 +133,8 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
   if (!o && !error) return <main className="feature-page"><PageHeader eyebrow="سازمان" title="سازمان" description="" actions={<></>} /><Loading /></main>;
 
   const counts = o?._count ?? {};
+  /* فاز ۳/۱۸: فیلدهای غنی‌شده از منابع رسمی (با منبع + سطح اطمینان + تأیید انسانی) */
+  const enrich: any[] = (o as any)?.enrichment?.fields ?? [];
   const infoRows: Array<[string, string]> = [];
   if (o?.type) infoRows.push(['نوع', fa(o.type)]);
   if (o?.industry) infoRows.push(['صنعت', o.industry]);
@@ -289,6 +291,28 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                 ))}
                 {infoRows.length === 0 && <p className="empty-state">داده‌ای ثبت نشده است.</p>}
               </div>
+
+              {enrich.length > 0 && (
+                <>
+                  <div className="panel-title" style={{ marginTop: 20 }}>
+                    <div><h2>غنی‌شده از منابع رسمی</h2><p>هر مقدار با منبع، سطح اطمینان و تاریخ تأیید انسانی</p></div>
+                    <Link className="btn btn-ghost btn-sm" href="/enrichment">مدیریت غنی‌سازی ←</Link>
+                  </div>
+                  <div className="list">
+                    {enrich.map((f: any) => (
+                      <div className="listRow" key={f.field} style={{ textDecoration: 'none' }}>
+                        <span className="avatar"><Building2 size={16} /></span>
+                        <span style={{ flex: 1 }}>
+                          <strong>{f.fieldFa ?? f.field}: {f.value}</strong>
+                          <small>{f.evidence}</small>
+                        </span>
+                        <Badge tone={f.confidence === 'HIGH' ? 'success' : f.confidence === 'MEDIUM' ? 'info' : 'warning'}>{f.confidenceFa ?? f.confidence}</Badge>
+                        <small>{f.sourceNameFa}</small>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
 
               <div className="panel-title" style={{ marginTop: 20 }}><div><h2>اعضای سازمان</h2><Badge>{fmtNum(members.length)}</Badge></div></div>
               {members.length ? (

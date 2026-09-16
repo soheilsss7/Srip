@@ -5,8 +5,7 @@ import { api } from '../_lib/api';
 import { Badge, ErrorCard, Loading, PageHeader } from '../_components/page-ui';
 import {
   Activity, ArrowDownRight, ArrowUpRight, Banknote, Gauge, Landmark, RefreshCw,
-  ShieldAlert, TrendingUp,
-} from 'lucide-react';
+  ShieldAlert, TrendingUp, FileText } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
 /*  هیئت‌مدیره (P3-4) — بازده سرمایهٔ رابطه، سرمایهٔ رابطه، سلامت پرتفوی، ریسک تک‌نقطه  */
@@ -43,6 +42,7 @@ export default function Board() {
         description="سرمایهٔ رابطه، بازده سرمایه، سلامت پرتفوی و ریسک تک‌نقطه — محاسبهٔ قطعی از دادهٔ همین محدودهٔ دسترسی"
         actions={
           <div className="toolbar">
+            <Link className="btn btn-ghost" href="/qbr"><FileText size={14} /> بریف فصلی (QBR)</Link>
             <Link className="btn btn-ghost" href="/intelligence"><Activity size={14} /> هوشمندی</Link>
             <Link className="btn btn-ghost" href="/analytics"><TrendingUp size={14} /> تحلیل محصول</Link>
             <button className="btn btn-secondary" onClick={() => load(true)} disabled={refreshing}>
