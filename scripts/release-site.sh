@@ -16,6 +16,11 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BRANCH="${SRIP_DEPLOY_BRANCH:-deploy/plesk}"
 OUT="$(mktemp -d)"
 trap 'rm -rf "$OUT" "$GIT_INDEX_FILE"' EXIT
+# هویت گیت برای commit-tree در محیط‌های بدون config (مثل GitHub Actions)
+export GIT_AUTHOR_NAME="${GIT_AUTHOR_NAME:-srip-release}"
+export GIT_AUTHOR_EMAIL="${GIT_AUTHOR_EMAIL:-release@srip.local}"
+export GIT_COMMITTER_NAME="${GIT_COMMITTER_NAME:-$GIT_AUTHOR_NAME}"
+export GIT_COMMITTER_EMAIL="${GIT_COMMITTER_EMAIL:-$GIT_AUTHOR_EMAIL}"
 
 SRIP_BASE_PATH=/ SRIP_OUT_DIR="$OUT" bash "$ROOT/scripts/release-ux.sh"
 
