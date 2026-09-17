@@ -14,7 +14,7 @@ import {
   Activity, HeartPulse, TrendingUp, Gauge, Bell, Workflow, Sparkles, Crown,
   AlertTriangle, Clock, ChevronLeft, CircleCheck, Flame, ListTodo, Store, Landmark, Layers, DoorOpen, Siren, Globe,
 } from 'lucide-react';
-import { localeTag, t } from './_lib/i18n';
+import { localeTag, lt, t } from './_lib/i18n';
 
 /* ---------------------------------- types --------------------------------- */
 type Summary = {

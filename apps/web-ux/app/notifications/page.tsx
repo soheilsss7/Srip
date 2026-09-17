@@ -3,7 +3,7 @@ import {useEffect,useState,useCallback} from 'react';
 import {api,unwrapList} from '../_lib/api';
 import {ErrorCard,Loading,PageHeader,SectionCard,StatCard} from '../_components/page-ui';
 import {Bell, BellRing, Mail, Smartphone, CheckCheck, RefreshCw, Inbox, Zap, CalendarClock, CheckCircle2} from 'lucide-react';
-import { localeTag, t } from '../_lib/i18n';
+import { localeTag, lt, t } from '../_lib/i18n';
 
 const PREF_FIELDS=['inAppEnabled','emailEnabled','pushEnabled','digestEnabled','criticalOnly','dailyDigest','weeklyDigest'] as const;
 const PREF_LABELS:Record<string,{label:string;desc:string}> = {

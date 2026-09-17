@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { Building2, Users, Share2, Sparkles, ShieldCheck, BarChart3, Zap } from 'lucide-react';
-import { t } from '../_lib/i18n';
+import { lt, t } from '../_lib/i18n';
 import { LocaleToggle } from './locale-context';
 
 const FEATURES = lt([

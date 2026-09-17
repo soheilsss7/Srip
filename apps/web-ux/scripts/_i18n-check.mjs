@@ -93,9 +93,10 @@ function scenario(name, { before, steps }) {
   const { out, errs } = scenario('Switch to EN via toggle + reload', {
     steps: `
       await page.goto(${JSON.stringify(BASE + '/login')}, { waitUntil: 'networkidle2' });
-      await page.click('.locale-btn');
-      await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {});
-      await new Promise(r => setTimeout(r, 1200));
+      /* کلیک از طریق evaluate — مقاوم در برابر reload هم‌زمان */
+      await page.evaluate(() => { const b = document.querySelector('.locale-btn'); if (b) b.click(); });
+      await page.waitForFunction(() => document.documentElement.dir === 'ltr', { timeout: 20000 }).catch(() => {});
+      await new Promise(r => setTimeout(r, 1500));
       const dir = await page.evaluate(() => document.documentElement.dir);
       const lang = await page.evaluate(() => document.documentElement.lang);
       console.log('DIR=' + dir + ' LANG=' + lang);
@@ -138,24 +139,27 @@ function scenario(name, { before, steps }) {
 {
   const { out, errs } = scenario('EN in-app (demo login)', {
     steps: `
-      await page.goto(${JSON.stringify(BASE + '/login')}, { waitUntil: 'domcontentloaded' });
+      /* ورود pars از طریق API (الگوی اثبات‌شدهٔ _integration-check) + زبان EN */
+      await page.goto(${JSON.stringify(BASE + '/login')}, { waitUntil: 'networkidle2' });
       await page.evaluate(() => { try { localStorage.setItem('srip_locale', 'en'); } catch (e) {} });
-      /* ورود دمو */
-      await page.waitForSelector('input[name="username"], input[type="text"]', { timeout: 10000 });
-      const userInput = (await page.$('input[name="username"]')) || (await page.\$('input[type="text"]'));
-      await userInput.type('demo');
-      const passInput = await page.\$('input[type="password"]');
-      await passInput.type('123456');
-      await page.click('button[type="submit"]');
-      await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 20000 }).catch(() => {});
-      await new Promise(r => setTimeout(r, 1500));
-      /* OTP ممکن است لازم شود */
-      const otp = await page.\$('input[name="code"], input[inputmode="numeric"]');
-      if (otp) { await otp.type('123456'); await page.keyboard.press('Enter'); await new Promise(r => setTimeout(r, 2000)); }
-      const url = await page.url();
-      console.log('URL=' + url);
+      /* سرویس‌ورکر خودش /api را سرو می‌کند — تا ready و کنترل صفحه صبر کن */
+      await page.evaluate(async () => {
+        await navigator.serviceWorker.ready;
+        for (let i = 0; i < 20 && !navigator.serviceWorker.controller; i++) {
+          await new Promise(r => setTimeout(r, 300));
+        }
+      });
+      await page.evaluate(async () => {
+        const r = await fetch(${JSON.stringify(BASE + '/api/v1/auth/login')}, {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ username: 'pars', password: 'pars1234' }),
+        });
+        const d = await r.json();
+        if (d.accessToken) sessionStorage.setItem('srip_access_token', d.accessToken);
+      });
       await page.goto(${JSON.stringify(BASE + '/referrals')}, { waitUntil: 'networkidle2' });
-      await new Promise(r => setTimeout(r, 1200));
+      await new Promise(r => setTimeout(r, 1500));
+      console.log('URL=' + await page.url());
       const body = await page.evaluate(() => document.body.innerText.slice(0, 3000));
       console.log('REFERRALS_EN=' + (body.includes('Introductions (with audit)')));
       console.log('REFERRALS_FA_LEFTOVER=' + (body.includes('کل معرفی') || body.includes('بازخوانی')));

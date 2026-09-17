@@ -2,7 +2,7 @@
 import {useEffect,useState} from 'react';
 import {api} from '../_lib/api';
 import { JalaliDateField } from './jalali-date-field';
-import { t } from '../_lib/i18n';
+import { lt, t } from '../_lib/i18n';
 
 /* ============================================================================
    ایجاد سریع — فرم‌های کامل و دقیق، هم‌تراز با قرارداد API
@@ -202,7 +202,7 @@ const entities: Entity[] = lt([
       ]},
     ],
   },
-];
+]);
 
 type Ref = { orgs: { id: string; name: string }[]; people: { id: string; firstName: string; lastName: string }[]; rels: { id: string; sourceOrganization?: { name?: string } | null; targetOrganization?: { name?: string } | null }[] };
 

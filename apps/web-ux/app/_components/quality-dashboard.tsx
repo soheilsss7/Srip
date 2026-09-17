@@ -11,7 +11,7 @@ import {
   CopyX, Fingerprint, Gauge, MailX,
   RefreshCw, ScanSearch, Search, ShieldCheck, UserX, Users, Wallet, Zap,
 } from 'lucide-react';
-import { localeTag, t } from '../_lib/i18n';
+import { localeTag, lt, t } from '../_lib/i18n';
 
 /* ------------------------------------------------------------------ */
 /*  داشبورد کیفیت داده — هم‌مسیر با /data-quality و /data-management/  */

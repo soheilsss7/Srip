@@ -12,7 +12,7 @@ import {
   Share2, Building2, Search, Plus, ShieldAlert, Target, ChevronLeft,
   ArrowDownWideNarrow, AlertTriangle, CalendarClock, TrendingUp, Gauge, Store, Globe, Landmark, DoorOpen, Siren, Filter, Briefcase, Layers,
 } from 'lucide-react';
-import { localeTag, t } from '../_lib/i18n';
+import { localeTag, lt, t } from '../_lib/i18n';
 
 type Org = { id: string; name: string; type: string };
 type Rel = {

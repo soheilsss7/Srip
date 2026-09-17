@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../_lib/api';
 import { AlertTriangle, BellRing, CalendarClock, Link2, RefreshCw, SlidersHorizontal } from 'lucide-react';
-import { t } from '../_lib/i18n';
+import { lt, t } from '../_lib/i18n';
 
 export type NudgeType = {
   kind: string;

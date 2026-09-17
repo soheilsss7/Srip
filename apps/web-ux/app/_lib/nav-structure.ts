@@ -14,7 +14,7 @@
    ۶) NAV_PERMISSION_MAP: نگاشت متمرکز هر مسیر به مجوزِ دیدنش.
    ========================================================================== */
 
-import { t } from './i18n';
+import { lt, t } from './i18n';
 export type NavItem = readonly [href: string, label: string, permission: string];
 export type NavZone = readonly [title: string, subtitle: string, items: readonly NavItem[]];
 export type AdminSection = readonly [title: string, items: readonly NavItem[]];

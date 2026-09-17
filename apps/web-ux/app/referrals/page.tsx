@@ -13,7 +13,7 @@ import {
   Clock3, CalendarCheck2, ChevronLeft, ShieldCheck, ShieldAlert, ShieldX,
   ClipboardList, Target, ListChecks, Rows3, RotateCcw, BellRing,
 } from 'lucide-react';
-import { localeTag, t } from '../_lib/i18n';
+import { localeTag, lt, t } from '../_lib/i18n';
 
 /* ------------------------------------------------------------------ */
 /*  معرفی‌ها — مسیرهای معرفی با دستورالعمل و ممیزی (معرفیِ امن)        */
@@ -100,7 +100,7 @@ function AuditList({ audit, emptyLabel, onCheckin }: { audit?: Audit | null; emp
 }
 
 export default function ReferralsPage() {
-  const { me } = useWorkspace();
+  const { me, loading: meLoading } = useWorkspace();
 
   const [rows, setRows] = useState<RefRow[]>([]);
   const [orgs, setOrgs] = useState<MiniOrg[]>([]);
@@ -171,11 +171,16 @@ export default function ReferralsPage() {
   const load = useCallback(async () => {
     setLoading(true); setError('');
     try {
+      /* فاز ۴: سرور /admin/users را فقط به مالک (isOwner) می‌دهد — همان قاعده
+         این‌جا اعمال می‌شود تا برای کاربر عادی 403 (و خطای کنسول) تولید نشود */
+      const usersCall = me?.isOwner
+        ? api<MiniUser[]>('/admin/users').catch(() => [] as MiniUser[])
+        : Promise.resolve([] as MiniUser[]);
       const [refs, o, p, u, rr] = await Promise.all([
         api<RefRow[]>('/core-domain/referrals'),
         api<MiniOrg[]>('/organizations'),
         api<MiniPerson[]>('/people'),
-        api<MiniUser[]>('/admin/users'),
+        usersCall,
         api<any[]>('/relationships'),
       ]);
       setRows(unwrap(refs) as RefRow[]);
@@ -185,8 +190,9 @@ export default function ReferralsPage() {
       setRels(unwrap(rr) as any[]);
     } catch (e) { setError((e as Error).message); }
     finally { setLoading(false); }
-  }, []);
-  useEffect(() => { load(); loadConversion(); }, [load, loadConversion]);
+  }, [me]);
+  /* بارگذاری داده پس از آماده‌شدن هویت — تا can('admin.users') درست ارزیابی شود */
+  useEffect(() => { if (!meLoading) { load(); loadConversion(); } }, [meLoading, load, loadConversion]);
 
   /* پر کردن خودکار فرم از «پذیرش و پیگیری معرفی» در شبکهٔ ارتباطات */
   useEffect(() => {

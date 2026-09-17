@@ -4,7 +4,7 @@ import { apiGet } from '../_lib/api';
 import { useWorkspace } from '../_components/workspace';
 import { Badge, ErrorCard, Loading, PageHeader, SectionCard, Segmented } from '../_components/page-ui';
 import { AlertTriangle, CalendarRange, ClipboardList, FileText, Printer, TrendingDown, TrendingUp } from 'lucide-react';
-import { localeTag, t } from '../_lib/i18n';
+import { localeTag, lt, t } from '../_lib/i18n';
 
 /* ═══════════════════════════════════════════════════════════════════════════
    QBR خودکار هر حساب/هلدینگ (مسترپلن فاز ۳/۲۰) — الگوی DemandFarm

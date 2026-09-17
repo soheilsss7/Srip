@@ -5,7 +5,7 @@ import { api, unwrapList } from '../_lib/api';
 import { ErrorCard, Modal, PageHeader, Skeleton, StatCard, StatusBadge, Toolbar } from '../_components/page-ui';
 import { CriteriaBadge, CriteriaIntake, intakePayload, type AnswerMap, type Summary as CriteriaSummary } from '../_components/criteria';
 import { Building2, Users, Share2, FolderKanban, Target, Plus, Layers, SearchX, RefreshCw, HeartPulse, AlertTriangle, ArrowDownWideNarrow, ArrowUpWideNarrow } from 'lucide-react';
-import { localeTag, t } from '../_lib/i18n';
+import { localeTag, lt, t } from '../_lib/i18n';
 
 type Criteria = CriteriaSummary | null;
 type Org = { criteria?:Criteria; id:string; name:string; type:string; industry?:string|null; country?:string|null; parentOrganizationId?:string|null; owner?:{name:string}|null; _count:{people:number;sourceRelationships:number;targetRelationships:number;projects:number;opportunities:number} };

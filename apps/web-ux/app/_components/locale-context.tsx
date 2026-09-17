@@ -10,8 +10,27 @@
    • TranslationCoverageNote: در حالت انگلیسی، روی مسیرهای خارج از پوشش ترجمه
      یک یادداشت صادقانه نشان می‌دهد.
    ========================================================================== */
-import { useEffect, useState } from 'react';
-import { getLocale, setLocale, isEn, isTranslatedRoute, t } from '../_lib/i18n';
+import React, { useEffect, useState } from 'react';
+import { getLocale, setLocale, readStoredLocale, isEn, isTranslatedRoute, t } from '../_lib/i18n';
+
+/* دروازهٔ زبان (فاز ۴/۲۳): هیدراسیون همیشه با فارسی انجام می‌شود (تطابق کامل با
+   HTML استاتیک). پس از mount، اگر زبان ذخیره‌شده انگلیسی باشد، locale عوض و
+   کل درخت زیرین با key تازه از نو سوار می‌شود. چرا key؟ چون Next صفحه را داخل
+   مرز Suspense هیدرات می‌کند و افکتِ این دروازه می‌تواند «قبل از» هیدراسیونِ
+   آن مرز اجرا شود؛ remount با key، هیدراسیونِ معلقِ مرز را باطل می‌کند و رندر
+   تازهٔ کلاینت‌ساید بدون مقایسهٔ hydration انجام می‌شود — بدون خطای #418. */
+export function LocaleGate({ children }: { children: React.ReactNode }) {
+  const [gateV, setGateV] = useState(0);
+  useEffect(() => {
+    if (readStoredLocale() === 'en') {
+      setLocale('en');
+      document.documentElement.lang = 'en';
+      document.documentElement.dir = 'ltr';
+      setGateV(1);
+    }
+  }, []);
+  return <React.Fragment key={gateV}>{children}</React.Fragment>;
+}
 
 export function LocaleBootstrap() {
   useEffect(() => {

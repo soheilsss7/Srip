@@ -9,7 +9,7 @@ import {
   AlertTriangle, BadgeCheck, Building2, CheckCircle2, Copy, Fingerprint, KeyRound, Link2, Lock, Mail,
   Monitor, RefreshCw, Save, ScrollText, ShieldCheck, Smartphone, Timer, UserRound, X,
 } from 'lucide-react';
-import { t, getLocale, setLocale } from '../_lib/i18n';
+import { getLocale, lt, setLocale, t } from '../_lib/i18n';
 
 /* ------------------------------------------------------------------ */
 /*  تنظیمات کاربر — پروفایل از GET /auth/me واقعی + MFA واقعی           */

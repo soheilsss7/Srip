@@ -6,7 +6,7 @@ import { fa } from '../../_lib/fa';
 import { Badge, ErrorCard, Loading, PageHeader } from '../../_components/page-ui';
 import { CalendarDays, HeartPulse, RefreshCw, Archive, RotateCcw, AlertTriangle, ChevronLeft, TrendingUp, Gauge, FileClock, MessageCircle, Users, Store, Landmark, Layers, DoorOpen, Briefcase, Siren, Globe } from 'lucide-react';
 import { CriteriaScoreCard } from '../../_components/criteria';
-import { localeTag, t } from '../../_lib/i18n';
+import { localeTag, lt, t } from '../../_lib/i18n';
 
 const arr = (x: any): any[] => Array.isArray(x) ? x : Array.isArray(x?.items) ? x.items : Array.isArray(x?.data) ? x.data : Array.isArray(x?.rows) ? x.rows : [];
 const fmtNum = (v: any): string => (v == null ? '—' : new Intl.NumberFormat(localeTag()).format(v));

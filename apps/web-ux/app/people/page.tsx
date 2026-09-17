@@ -11,7 +11,7 @@ import {
   Users, Building2, Search, Plus, Crown, Handshake, ChevronLeft, Star,
   ArrowDownWideNarrow, CalendarDays, Zap, AlertTriangle,
 } from 'lucide-react';
-import { localeTag, t } from '../_lib/i18n';
+import { localeTag, lt, t } from '../_lib/i18n';
 
 type Person = {
   criteria?: CriteriaSummary | null;

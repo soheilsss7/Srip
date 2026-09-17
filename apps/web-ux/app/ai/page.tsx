@@ -9,7 +9,7 @@ import {
   Lightbulb, Briefcase, Send, History, Cpu, Zap, Database, Clock, Wand2, CheckCircle2, Info,
   Users, ArrowLeft, Link2,
 } from 'lucide-react';
-import { localeTag, t } from '../_lib/i18n';
+import { localeTag, lt, t } from '../_lib/i18n';
 
 /* ---------------------------------------------------------------------------
    Deterministic intelligence model — works fully without any LLM.

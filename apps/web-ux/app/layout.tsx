@@ -4,7 +4,7 @@ import './ui-v3.css';
 import ShellClient from './_components/shell-client';
 import {SkipLink} from './_components/route-state';
 import {PreferenceBootstrap} from './_components/preferences';
-import {LocaleBootstrap} from './_components/locale-context';
+import {LocaleBootstrap, LocaleGate} from './_components/locale-context';
 import SwRegister from './_components/sw-register';
 
 // در نسخۀ استاتیک (GitHub Pages) اپ زیر /Srip/srip2 سرو می‌شود؛ URLهای متادیتا
@@ -58,7 +58,7 @@ export default function RootLayout({children}:{children:React.ReactNode}){
           React اجرا شود؛ بدون این صفت React خطای #418 می‌دهد (الگوی استاندارد
           next-themes). رفتار بصری تغییری نمی‌کند. */}
       <head><style dangerouslySetInnerHTML={{__html: gateCriticalCSS}} /><script dangerouslySetInnerHTML={{__html: "try{if(localStorage.getItem('srip_locale')==='en'){document.documentElement.lang='en';document.documentElement.dir='ltr';}}catch(e){}"}} /></head>
-      <body><PreferenceBootstrap/><LocaleBootstrap/><SwRegister/><SkipLink/><ShellClient><div id="main-content">{children}</div></ShellClient></body>
+      <body><PreferenceBootstrap/><LocaleBootstrap/><SwRegister/><SkipLink/><LocaleGate><ShellClient><div id="main-content">{children}</div></ShellClient></LocaleGate></body>
     </html>
   );
 }

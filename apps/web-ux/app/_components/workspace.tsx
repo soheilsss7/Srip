@@ -16,11 +16,11 @@ import {
   Shield, Plug, Workflow, LineChart, Gauge, Activity, Table2, Flag, FileDown, KeyRound,
   DatabaseBackup, Archive, ScrollText, HeartPulse, ChevronDown, ChevronUp, Landmark, Radar
 } from 'lucide-react';
-import { t } from '../_lib/i18n';
+import { lt, t } from '../_lib/i18n';
 
 type Role = 'SUPER_ADMIN'|'HOLDING_ADMIN'|'HOLDING_EXECUTIVE'|'SUBSIDIARY_ADMIN'|'SUBSIDIARY_EXECUTIVE'|'RELATIONSHIP_MANAGER'|'PROJECT_MANAGER'|'ANALYST'|'STANDARD_USER'|'READ_ONLY';
 type Membership = { id: string; organizationId: string; organizationName: string; role: Role; department?: string|null; dataScope: string; accessScope: string; isPrimary: boolean };
-type Me = { id: string; email: string; name: string; memberships: Membership[]; permissions: string[]; accessibleOrganizationIds: string[] };
+type Me = { id: string; email: string; name: string; isOwner?: boolean; memberships: Membership[]; permissions: string[]; accessibleOrganizationIds: string[] };
 
 type WorkspaceContextValue = { me: Me|null; loading: boolean; error: string; scopeId: string; setScopeId: (id: string)=>void; role: Role; can: (permission: string)=>boolean; isAdmin: boolean };
 const WorkspaceContext = createContext<WorkspaceContextValue|null>(null);

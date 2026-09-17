@@ -1,6 +1,6 @@
 'use client';
 import { Filter, TrendingDown } from 'lucide-react';
-import { localeTag, t } from '../_lib/i18n';
+import { localeTag, lt, t } from '../_lib/i18n';
 
 /* ============================================================================
    FunnelVisual — قیف پیشنهادهای هوشمند (تک‌منبع برای داشبورد و تحلیل محصول)

@@ -4,7 +4,7 @@ import {useCallback,useEffect,useState} from 'react';
 import {api,ApiError} from '../_lib/api';
 import {Badge,DataTable,Empty,ErrorCard,Loading,PageHeader} from './page-ui';
 import {RefreshCw, ChevronLeft, Clock, CheckCircle2, XCircle} from 'lucide-react';
-import { localeTag, t } from '../_lib/i18n';
+import { localeTag, lt, t } from '../_lib/i18n';
 
 const arr=(x:any)=>Array.isArray(x)?x:Array.isArray(x?.items)?x.items:Array.isArray(x?.data)?x.data:Array.isArray(x?.rows)?x.rows:[];
 const value=(x:any)=>x==null?'—':typeof x==='object'?(x.name??x.title??x.label??x.id??JSON.stringify(x)):String(x);

@@ -32,7 +32,7 @@ import {
   PUBLIC_CATEGORY_ORDER,
   PUBLIC_CATEGORY_META,
 } from './_nodes';
-import { localeTag, t } from '../_lib/i18n';
+import { localeTag, lt, t } from '../_lib/i18n';
 
 export interface NetworkGraphHandle {
   fit: () => void;

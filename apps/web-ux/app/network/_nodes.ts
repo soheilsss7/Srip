@@ -1,7 +1,7 @@
 // Shared visual encoding + shape drawing for the network graph (Web).
 // Single source of truth for node/edge colors, shapes, risk and weight styling.
 
-import { t } from '../_lib/i18n';
+import { lt, t } from '../_lib/i18n';
 export type GNodeType = 'organization' | 'person' | 'project';
 export type GEdgeKind = 'membership' | 'project' | 'relationship' | 'person_relationship';
 

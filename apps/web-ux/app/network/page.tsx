@@ -28,7 +28,7 @@ import {
 } from './_nodes';
 import NetworkGraph, { NetworkGraphHandle } from './_graph';
 import PresentationMode from '../_components/presentation-mode';
-import { localeTag, t } from '../_lib/i18n';
+import { localeTag, lt, t } from '../_lib/i18n';
 
 const COLUMN_LABELS: Record<string, string> = lt({
   TEAM: t('تیم ما'), CUSTOMER: t('مشتری'), BOARD_ADVISORS: t('هیئت و مشاوران'), PARTNERS: t('شرکا'),

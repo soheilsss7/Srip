@@ -13,7 +13,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../_lib/api';
 import { useWorkspace } from './workspace';
 import { AlertTriangle, BadgeCheck, BellRing, Gauge, HelpCircle, Info, PenLine, RefreshCw, Save, ShieldAlert, SlidersHorizontal, Trash2 } from 'lucide-react';
-import { localeTag, t } from '../_lib/i18n';
+import { localeTag, lt, t } from '../_lib/i18n';
 
 export type Anchor = { level: number; label: string; score: number };
 export type Question = {
