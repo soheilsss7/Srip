@@ -10,7 +10,9 @@ import { useEffect, useState } from 'react';
    SW to control the page before enabling "login" actions, otherwise first-time
    users see an error + forced reload race.
    --------------------------------------------------------------------------- */
-export const MOCK_PAGES = !!process.env.NEXT_PUBLIC_API_URL?.startsWith('/Srip');
+/* پرچم «بیلد استاتیک با API داخل SW»: NEXT_PUBLIC_MOCK_VERSION فقط release-ux ست می‌کند —
+   مستقل از پیشوند مسیر (GitHub Pages: /Srip/srip2 · ساب‌دامین: ریشه) */
+export const MOCK_PAGES = !!process.env.NEXT_PUBLIC_MOCK_VERSION;
 export const MOCK_SW_SCOPE = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/api\/v1\/?$/, '');
 
 export function swControllerReady(): boolean {

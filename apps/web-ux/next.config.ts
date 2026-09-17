@@ -24,7 +24,7 @@ const apiProxyTarget = process.env.API_PROXY_TARGET ?? 'http://localhost:4000';
 // Static export is served from a path: GitHub Pages uses /Srip/srip2, a custom
 // host can use any folder (e.g. /srip). SRIP_BASE_PATH makes it configurable;
 // it must match the folder the build is uploaded to.
-const basePath = isPages ? (process.env.SRIP_BASE_PATH || '/Srip/srip2') : '';
+const basePath = isPages ? (process.env.SRIP_BASE_PATH === '/' ? '' : (process.env.SRIP_BASE_PATH || '/Srip/srip2')) : '';
 
 const config:NextConfig={
   poweredByHeader:false,

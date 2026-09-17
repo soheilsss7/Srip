@@ -5,6 +5,8 @@ import { useEffect } from 'react';
 // a Service Worker (public/sw.js) answers /Srip/api/v1/* with the embedded
 // deterministic mock API. In dev this component does nothing.
 const PAGES_BASE = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/api\/v1\/?$/, '');
+/* فقط در بیلد استاتیک (release-ux این نسخه را تزریق می‌کند)؛ در ریشهٔ دامنه PAGES_BASE='' است */
+const IS_STATIC_EXPORT = !!process.env.NEXT_PUBLIC_MOCK_VERSION;
 const EXPECTED_MOCK_VERSION = process.env.NEXT_PUBLIC_MOCK_VERSION ?? '';
 
 /** ثابتِ نسخهٔ Mock API — در هر نسخه از make-demo-sw.mjs تزریق می‌شود. */
@@ -79,7 +81,7 @@ function recontrolOrphanedPage(): void {
 
 export default function SwRegister() {
   useEffect(() => {
-    if (!PAGES_BASE || typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+    if (!IS_STATIC_EXPORT || typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
     /* ── ترمیم ریشهٔ بدون اسلش (ریشهٔ باگ ۴۰۴ روی هاست استاتیک) ──
        scope سرویس‌ورکر «/Srip/srip2/» است (با اسلش). ناوبری سمت کلاینت به
        پیشخوان URL را به «/Srip/srip2» (بدون اسلش) می‌برد که بیرون از scope

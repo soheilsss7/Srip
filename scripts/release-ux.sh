@@ -24,4 +24,8 @@ SRIP_PAGES=1 SRIP_BASE_PATH="$SRIP_BASE_PATH" NEXT_PUBLIC_API_URL="${SRIP_BASE_P
 rm -rf "$SRIP_OUT_DIR"
 mkdir -p "$SRIP_OUT_DIR"
 cp -a "$ROOT/apps/web-ux/out/." "$SRIP_OUT_DIR/"
+# فونت در CSS ریشه‌نسبی است (برای dev و استقرار در ریشهٔ دامنه)؛ برای استقرار
+# زیر مسیر (مثل /Srip/srip2 یا /srip) URL فونت به همان پایه بازنویسی می‌شود.
+DEPLOY_BASE="${SRIP_BASE_PATH%/}/"
+find "$SRIP_OUT_DIR" -name '*.css' -type f -exec sed -i "s|url('/fonts/|url('${DEPLOY_BASE}fonts/|g" {} +
 echo "[release-ux] $SRIP_OUT_DIR به‌روزرسانی شد (basePath=$SRIP_BASE_PATH) — نسخهٔ اصلی docs دست‌نخورده ماند"
