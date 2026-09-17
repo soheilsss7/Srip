@@ -22,6 +22,15 @@ cat > "$OUT/.htaccess" <<'EOT'
 Options -Indexes
 DirectoryIndex index.html
 AddType application/manifest+json .webmanifest
+AddType application/javascript .js
+AddType text/css .css
+AddType text/html .html
+# سرویس‌کارگر باید همیشه تازه سرو شود تا به‌روزرسانی‌ها فوری اعمال شوند
+<FilesMatch "sw\.js$">
+  <IfModule mod_headers.c>
+    Header set Cache-Control "no-cache"
+  </IfModule>
+</FilesMatch>
 <IfModule mod_rewrite.c>
 RewriteEngine On
 RewriteBase /
