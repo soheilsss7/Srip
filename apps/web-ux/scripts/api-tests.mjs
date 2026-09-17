@@ -767,6 +767,52 @@ section('فاز ۳ — غنی‌سازی منابع رسمی، API عمومی + 
   listener.close();
 }
 
+/* ================== ۲۰. مسترپلن فاز ۴/۲۴ — عامل معرفی خودکار (Boomerang) ================== */
+section('فاز ۴ — عامل معرفی خودکار: مسیر گرم، واسطهٔ مجاز، پیش‌نویس، رضایت صریح');
+{
+  const dl = await login(OWNER.email, OWNER.password);
+  const dt = dl.body?.accessToken;
+  check('ورود demo → توکن', !!dt);
+
+  /* برنامه‌ریزی عامل برای مقصد ۲-پرشی (org-6 از org-1 با واسطه در آریا فناوری) */
+  const plan = await api('/core-domain/referrals/agent/plan', { method: 'POST', token: dt, body: { targetOrganizationId: 'org-6', goal: 'جلسهٔ آزمون API عامل' } });
+  check('برنامه‌ریزی → مسیر گرم + واسطهٔ مجاز', plan.status === 200 && plan.body?.mode === 'INTERMEDIARY' && !!plan.body?.intermediary?.personId && plan.body?.draft?.message?.length > 40,
+    JSON.stringify({ mode: plan.body?.mode, iv: plan.body?.intermediary?.name }));
+  check('پیش‌نویس شامل قواعد دستورالعمل (مجاز/ممنوع)', plan.body?.draft?.instruction?.allowed?.length >= 1 && plan.body?.draft?.instruction?.forbidden?.length >= 1);
+  check('قاعدهٔ رضایت صریح در پاسخ', String(plan.body?.consentRule || '').includes('RESPONDED_YES'));
+
+  /* مسیر مستقیم → حالت DIRECT بدون واسطه */
+  const direct = await api('/core-domain/referrals/agent/plan', { method: 'POST', token: dt, body: { targetOrganizationId: 'org-4' } });
+  check('مسیر مستقیم → حالت DIRECT + پیش‌نویس مستقیم', direct.status === 200 && direct.body?.mode === 'DIRECT' && !direct.body?.intermediary && !!direct.body?.draft?.message);
+
+  /* مقصد بدون مسیر → پیام صادقانه */
+  const nop = await api('/core-domain/referrals/agent/plan', { method: 'POST', token: dt, body: { targetOrganizationId: 'org-99' } });
+  check('مقصد ناموجود → 404', nop.status === 404);
+
+  /* اجرا: واسطه → فقط درخواست رضایت (REQUESTED) + لاگ عامل */
+  const iv = plan.body.intermediary;
+  const launch = await api('/core-domain/referrals/agent/launch', {
+    method: 'POST', token: dt,
+    body: { targetOrganizationId: 'org-6', intermediaryPersonId: iv.personId, draft: plan.body.draft },
+  });
+  check('اجرا → 201 + PENDING + REQUESTED (بدون ارسال خودکار)', launch.status === 201 && launch.body?.status === 'PENDING' && launch.body?.requestStatus === 'REQUESTED' && launch.body?.agent?.consentRequired === true);
+  check('اجرا → sourcePersonId همان واسطه', launch.body?.sourcePersonId === iv.personId);
+  const runs = await api('/core-domain/referrals/agent/runs', { token: dt });
+  check('لاگ اجرای عامل (PLAN/LAUNCH)', runs.status === 200 && runs.body?.items?.some(x => x.kind === 'LAUNCH' && x.referralId === launch.body.id));
+
+  /* سقف: بستن کامل سقفِ واسطهٔ انتخابی → اجرا با همان شخص 409 */
+  const st0 = await api(`/people/${iv.personId}/intro-settings`, { token: dt });
+  await api(`/people/${iv.personId}/intro-settings`, { method: 'PUT', token: dt, body: { maxRequestsPerMonth: 0 } });
+  const capLaunch = await api('/core-domain/referrals/agent/launch', {
+    method: 'POST', token: dt,
+    body: { targetOrganizationId: 'org-6', intermediaryPersonId: iv.personId, draft: plan.body.draft },
+  });
+  check('سقف بسته → اجرای عامل با همان واسطه 409', capLaunch.status === 409);
+  const capPlan = await api('/core-domain/referrals/agent/plan', { method: 'POST', token: dt, body: { targetOrganizationId: 'org-6' } });
+  check('سقف بسته → واسطهٔ سقف‌پر در برنامه انتخاب نمی‌شود', capPlan.status === 200 && (capPlan.body?.intermediary == null || capPlan.body.intermediary.personId !== iv.personId));
+  await api(`/people/${iv.personId}/intro-settings`, { method: 'PUT', token: dt, body: { maxRequestsPerMonth: st0.body?.maxRequestsPerMonth ?? 2 } });
+}
+
 /* ============================ SUMMARY ============================ */
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);

@@ -7242,6 +7242,148 @@ const server=http.createServer(async(req,res)=>{
     audit(req,'UPDATE','IntroSettings',p.id,'OK',{meta:row});
     return json(res,200,{personId:p.id,name:`${p.firstName??''} ${p.lastName??''}`.trim(),...row});
   }
+  /* ─── مسترپلن فاز ۴/۲۴: عامل معرفی خودکار (الگوی Boomerang/عامل Rudy) ───
+     عامل سه‌گامِ Boomerang را قطعی و شفاف اجرا می‌کند:
+       ۱) یافتن مسیر گرم (همان موتور /network/warm-path — سلامت + تازگی + ریسک)
+       ۲) انتخاب واسطهٔ «مجاز» — فقط با intro-settings فعال و سقف ماهانهٔ باز؛
+          بدون رضایت صریح واسطه هیچ چیزی ارسال نمی‌شود (requestStatus=REQUESTED)
+       ۳) پیش‌نویس متن معرفی به لحن واسطه — موتور قالب‌محورِ قطعی، بدون LLM؛
+          فقط از دادهٔ واقعی رابطه + دستورالعمل (هدف/مجاز/ممنوع/مرز/مهلت) */
+  const agentMonth=()=>new Date().toISOString().slice(0,7);
+  const agentUsedThisMonth=(personId)=>(DB.referrals??[]).filter(r=>r.sourcePersonId===personId&&String(r.createdAt??'').slice(0,7)===agentMonth()).length;
+  const agentIntermediaryView=(p)=>{
+    const st=DB.introSettings?.[p.personId]??{active:true,maxRequestsPerMonth:2,preferredChannel:'EMAIL',note:null};
+    const used=agentUsedThisMonth(p.personId);
+    const remaining=Math.max(0,(st.maxRequestsPerMonth??0)-used);
+    const eligible=st.active!==false&&remaining>0;
+    const reason=!eligible?(st.active===false?'INTRO_INACTIVE':'CAP_REACHED'):'OK';
+    return {personId:p.personId,name:p.name,title:p.title??null,orgId:p.orgId,orgName:p.orgName,
+      influenceScore:p.influenceScore??null,champion:!!p.champion,
+      introSettings:st,usedThisMonth:used,remaining,eligible,reason,
+      preferredChannel:st.preferredChannel??'EMAIL'};
+  };
+  const agentDraft=(req,intermediary,fromOrg,toOrg,goal)=>{
+    /* پیش‌نویس به لحن واسطه — فقط از دادهٔ واقعی؛ هر ادعایی ساخته نمی‌شود */
+    const requester=authUser?.name??'همکارم';
+    const titles=intermediary.title?`، ${intermediary.title}`:'';
+    const allowed=['معرفی دو طرف','تعیین یک جلسهٔ مقدماتی'];
+    const forbidden=['قیمت و شرایط قرارداد','تعهدی فراتر از جلسه'];
+    const boundaries='حداکثر دو جلسهٔ مقدماتی؛ نتیجه حداکثر تا ۳۰ روز ثبت می‌شود.';
+    const g=String(goal||'').trim()||`جلسهٔ آشنایی و بررسی امکان همکاری ${fromOrg.name} و ${toOrg.name}`;
+    const message=`سلام،\nمن ${intermediary.name}${titles} از ${intermediary.orgName} هستم.\nدوستم ${requester} در ${fromOrg.name} درخواست کرد شما را به تیم ${toOrg.name} معرفی کنم؛ موضوع: ${g}.\nاین معرفی فقط دربارهٔ ${allowed.join(' و ')} است و دربارهٔ ${forbidden.join(' و ')} صحبتی نمی‌شود.\nاگر موافق باشید، یک جلسهٔ ۲۰ دقیقه‌ای مقدماتی هماهنگ می‌کنم؛ نتیجه تا ۳۰ روز مشخص می‌شود.\n${boundaries}`;
+    return {title:`معرفی ${fromOrg.name} به ${toOrg.name} با واسطه‌گری ${intermediary.name}`,
+      message,instruction:{goal:g,allowed,forbidden,boundaries,dueDays:30}};
+  };
+  const agentDirectDraft=(req,fromOrg,toOrg,goal)=>{
+    /* مسیر مستقیم: پیش‌نویس به لحن خودِ درخواست‌دهنده — بدون واسطه، بدون نیاز به رضایت ثالث */
+    const requester=authUser?.name??'کاربر';
+    const g=String(goal||'').trim()||`جلسهٔ آشنایی و بررسی امکان همکاری ${fromOrg.name} و ${toOrg.name}`;
+    const message=`سلام،\nمن ${requester} از ${fromOrg.name} هستم.\nخواستم خودم را به تیم ${toOrg.name} معرفی کنم؛ موضوع: ${g}.\nاگر موافق باشید، یک جلسهٔ ۲۰ دقیقه‌ای مقدماتی هماهنگ می‌کنیم؛ نتیجه تا ۳۰ روز مشخص می‌شود.`;
+    return {title:`معرفی مستقیم ${fromOrg.name} به ${toOrg.name}`,
+      message,instruction:{goal:g,allowed:['معرفی دو طرف','تعیین یک جلسهٔ مقدماتی'],forbidden:['قیمت و شرایط قرارداد'],boundaries:'حداکثر دو جلسهٔ مقدماتی؛ نتیجه حداکثر تا ۳۰ روز ثبت می‌شود.',dueDays:30}};
+  };
+  if(is('/core-domain/referrals/agent/plan')&&method==='POST'){
+    const b=await readBody(req);
+    const toId=String(b.targetOrganizationId??'');
+    const toOrg=orgById(toId);
+    if(!toOrg) return json(res,404,{message:'سازمان مقصد یافت نشد.'});
+    const fromId=primaryOrgId(authUser)??visibleOrgIds(req)[0]??null;
+    const fromOrg=orgById(fromId);
+    if(!fromOrg) return json(res,400,{message:'سازمان مبدأ شما قابل تشخیص نیست.'});
+    if(!inScope(req,fromId)&&!inScope(req,toId)) return json(res,403,{message:'مسیر خارج از محدودهٔ دسترسی شماست.'});
+    const out=warmPathsTo(req,fromId,toId,3);
+    /* عامل خودش کاندیدهای واسطه را از سازمان‌های میانیِ مسیرهای گرم می‌سازد
+       (فراتر از فهرست پرنفوذهای warm-path: هر شخصِ سازمان میانی، مرتب بر نفوذ) */
+    const midOrgs=[...new Set((out.paths??[]).flatMap(v=>(v.intermediaries??[]).map(i=>i.orgId)))].slice(0,5);
+    const seenP=new Set();
+    const rawCands=(out.intermediaryPeople??[]).concat(midOrgs.flatMap(oid=>
+      PEOPLE.filter(p2=>!p2.deletedAt&&p2.organizationId===oid)
+        .sort((a,b2)=>((b2.influenceScore??0)-(a.influenceScore??0))||((b2.champion?.flag?1:0)-(a.champion?.flag?1:0)))
+        .slice(0,3)
+        .map(p2=>({personId:p2.id,name:`${p2.firstName??''} ${p2.lastName??''}`.trim(),title:p2.title??null,orgId:oid,orgName:orgById(oid)?.name??'',influenceScore:p2.influenceScore??null,champion:!!p2.champion?.flag}))
+    )).filter(c=>{ if(!c.personId||seenP.has(c.personId)) return false; seenP.add(c.personId); return true; });
+    const cands=rawCands.map(agentIntermediaryView)
+      .sort((a,b2)=>(b2.eligible?1:0)-(a.eligible?1:0)||((b2.influenceScore??0)-(a.influenceScore??0))||((b2.champion?1:0)-(a.champion?1:0)));
+    const bestPath=out.summary?.best??null;
+    const hasDirect=!!bestPath&&bestPath.hopCount===1;
+    /* منطق Boomerang: مسیر مستقیمِ قوی → معرفی مستقیم (بدون واسطه)؛
+       فقط وقتی واسطه لازم است، واسطهٔ «مجاز» انتخاب می‌شود */
+    const mode=hasDirect?'DIRECT':((out.summary?.pathCount??0)>0?(cands.find(c=>c.eligible)?'INTERMEDIARY':'NO_ELIGIBLE_INTERMEDIARY'):'NO_PATH');
+    const chosen=mode==='INTERMEDIARY'?cands.find(c=>c.eligible):null;
+    const draft=mode==='DIRECT'?agentDirectDraft(req,fromOrg,toOrg,b.goal):(mode==='INTERMEDIARY'?agentDraft(req,chosen,fromOrg,toOrg,b.goal):null);
+    DB.agentRuns=DB.agentRuns??[];
+    DB.agentRuns.unshift({id:`ag-${Date.now()}`,at:nowIso(),userId:authUser.id,kind:'PLAN',
+      fromOrgId:fromId,toOrgId:toId,intermediaryPersonId:chosen?.personId??null,
+      pathCount:out.summary?.pathCount??0,eligibleCount:cands.filter(c=>c.eligible).length});
+    DB.agentRuns=DB.agentRuns.slice(0,50);
+    saveDb();
+    return json(res,200,{engine:'deterministic-template · بدون LLM — الگوی Boomerang (Rudy)',
+      from:{orgId:fromId,name:fromOrg.name},to:{orgId:toId,name:toOrg.name},
+      paths:out.paths??[],bestPath,mode,
+      reason:mode==='NO_PATH'?'در شبکهٔ شما تا ۳ گام مسیری به این سازمان نیست.':(mode==='NO_ELIGIBLE_INTERMEDIARY'?'مسیر گرم هست ولی هیچ واسطهٔ مجازی (تنظیم فعال + سقف ماهانهٔ باز) در سازمان‌های میانی نیست.':null),
+      intermediary:chosen,alternatives:(mode==='DIRECT'?[]:cands.filter(c=>c!==chosen).slice(0,4)),draft,
+      consentRule:mode==='DIRECT'?'مسیر مستقیم است؛ معرفی به لحن خودتان بدون نیاز به رضایت واسطه.':'هیچ پیامی بدون پذیرش صریح واسطه (requestStatus=RESPONDED_YES) ارسال نمی‌شود.',
+      summary:{pathCount:out.summary?.pathCount??0,eligibleCount:cands.filter(c=>c.eligible).length,
+        chosenLabel:chosen?`${chosen.name} (${chosen.orgName})`:null}});
+  }
+  if(is('/core-domain/referrals/agent/launch')&&method==='POST'){
+    const b=await readBody(req);
+    const toId=String(b.targetOrganizationId??'');
+    const toOrg=orgById(toId);
+    if(!toOrg) return json(res,404,{message:'سازمان مقصد یافت نشد.'});
+    const fromId=primaryOrgId(authUser)??visibleOrgIds(req)[0]??null;
+    const fromOrg=orgById(fromId);
+    if(!fromOrg) return json(res,400,{message:'سازمان مبدأ شما قابل تشخیص نیست.'});
+    const pid=String(b.intermediaryPersonId??'').trim();
+    const person=pid?PEOPLE.find(p=>p.id===pid&&!p.deletedAt):null;
+    if(pid&&!person) return json(res,404,{message:'واسطه یافت نشد.'});
+    let iv=null;
+    if(person){
+      if(!inScope(req,person.organizationId)) return json(res,403,{message:'واسطه خارج از محدودهٔ دسترسی شماست.'});
+      iv=agentIntermediaryView({personId:person.id,name:`${person.firstName??''} ${person.lastName??''}`.trim(),title:person.title??null,orgId:person.organizationId,orgName:orgById(person.organizationId)?.name??'',influenceScore:person.influenceScore??null,champion:person.champion?.flag});
+      if(!iv.eligible) return json(res,409,{message:iv.reason==='INTRO_INACTIVE'?'تنظیم واسطه‌گری این شخص غیرفعال است؛ ابتدا از بخش واسطه‌ها فعالش کنید.':'سقف درخواست ماهانهٔ این واسطه پر است (۰ باقی‌مانده).',intermediary:iv});
+    }
+    const d=(b.draft&&typeof b.draft==='object')?b.draft:null;
+    if(!d||!String(d.title||'').trim()||!String(d.message||'').trim()) return json(res,400,{message:'عنوان و متن پیش‌نویس معرفی الزامی است.'});
+    const ins=(d.instruction&&typeof d.instruction==='object')?{
+      goal:String(d.instruction.goal??'').trim(),
+      allowed:(Array.isArray(d.instruction.allowed)?d.instruction.allowed:[]).map(String).slice(0,6),
+      forbidden:(Array.isArray(d.instruction.forbidden)?d.instruction.forbidden:[]).map(String).slice(0,6),
+      boundaries:String(d.instruction.boundaries??'').trim(),
+      dueDays:Math.max(3,Math.min(365,Number(d.instruction.dueDays)||30))}:null;
+    /* حالت واسطه: عامل فقط «درخواست رضایت واسطه» می‌سازد — نه ارسال، نه پذیرش.
+       حالت مستقیم: بدون واسطه، بدون رضایت ثالث. */
+    const r={id:`ref-${Date.now()}`,title:String(d.title).trim(),message:String(d.message),
+      sourcePersonId:person?person.id:null,targetPersonId:null,sourceOrganizationId:fromId,targetOrganizationId:toId,
+      relationshipId:null,status:'PENDING',createdById:authUser.id,recipientUserId:null,completedAt:null,notes:null,
+      createdAt:nowIso(),acceptedAt:null,instruction:ins,baselineCriteria:null,postCheckins:{},
+      requestStatus:person?'REQUESTED':null,requestedAt:person?nowIso():null,outcome:null,outcomeNote:null,opportunityId:null,
+      agent:{launchedBy:authUser.id,at:nowIso(),engine:'deterministic-template',consentRequired:!!person,mode:person?'INTERMEDIARY':'DIRECT'}};
+    DB.referrals.unshift(r);
+    DB.agentRuns=DB.agentRuns??[];
+    DB.agentRuns.unshift({id:`ag-${Date.now()}`,at:nowIso(),userId:authUser.id,kind:'LAUNCH',
+      fromOrgId:fromId,toOrgId:toId,intermediaryPersonId:person?person.id:null,referralId:r.id,pathCount:null,eligibleCount:null});
+    DB.agentRuns=DB.agentRuns.slice(0,50);
+    saveDb();
+    const auditRes=referralAudit(r);
+    audit(req,'CREATE','Referral',r.id,'OK',{meta:{title:r.title,agent:true,gate:auditRes.gate,intermediary:person?person.id:null,mode:person?'INTERMEDIARY':'DIRECT'}});
+    await autoRunWorkflows('Referral',r.id,'REFERRAL_CREATED',{referral:{id:r.id,title:r.title,sourcePersonId:person?person.id:null,sourceOrganizationId:fromId,targetOrganizationId:toId,agent:true}});
+    if(person) NOTIFICATIONS.unshift({id:`n-ag-${Date.now()}`,userId:authUser.id,type:'INFO',title:'عامل معرفی: درخواست رضایت واسطه ارسال شد',
+      body:`برای معرفی «${r.title}» درخواست رضایت به ${iv.name} (${iv.orgName}) ارسال شد — تا پاسخ او هیچ پیامی نزد مقصد نمی‌رود.`,
+      channel:'IN_APP',priority:'MEDIUM',createdAt:nowIso(),readAt:null,data:{referralId:r.id}});
+    else NOTIFICATIONS.unshift({id:`n-ag-${Date.now()}`,userId:authUser.id,type:'INFO',title:'عامل معرفی: معرفی مستقیم ثبت شد',
+      body:`پیش‌نویس مستقیم «${r.title}» به‌عنوان معرفی ثبت شد؛ روند پذیرش/پیگیری از فهرست معرفی‌ها ادامه می‌یابد.`,
+      channel:'IN_APP',priority:'MEDIUM',createdAt:nowIso(),readAt:null,data:{referralId:r.id}});
+    return json(res,201,{...r,intermediary:iv,audit:auditRes,
+      message:person?'درخواست رضایت واسطه ثبت شد؛ معرفی فقط پس از پذیرش صریح او فعال می‌شود.':'معرفی مستقیم ثبت شد؛ روند پذیرش و پیگیری از فهرست معرفی‌ها فعال شد.'});
+  }
+  if(is('/core-domain/referrals/agent/runs')&&method==='GET'){
+    const ids=visibleOrgIds(req);
+    const rows=(DB.agentRuns??[]).filter(x=>ids.includes(x.fromOrgId)||ids.includes(x.toOrgId)).slice(0,20)
+      .map(x=>({...x,fromOrgName:orgById(x.fromOrgId)?.name??x.fromOrgId,toOrgName:orgById(x.toOrgId)?.name??x.toOrgId,
+        intermediaryName:(()=>{const p2=personById(x.intermediaryPersonId);return p2?`${p2.firstName??''} ${p2.lastName??''}`.trim():null;})()}));
+    return json(res,200,{items:rows,total:rows.length});
+  }
   /* گراف ۴ ستون (P1-6) */
   if(is('/network/columns')&&method==='GET') return json(res,200,networkColumns(req));
   /* P2-2: SNA پیشرفته + پذیرش پیشنهاد پیوند */

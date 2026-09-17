@@ -734,4 +734,13 @@ export const EN_DICT_A: Record<string, string> = {
   'حذف اقدام': 'Delete action',
   'حذف این مورد انجام شود؟': 'Delete this item?',
   'حذف برای همیشه': 'Delete permanently',
+  'حذف تنظیم دستی': 'Remove manual override',
+  'حذف جستجوی ذخیره‌شده «': 'Delete saved search "',
+  'حذف صحنه': 'Delete scene',
+  'حذف صحنهٔ': 'Delete scene',
+  'حریم خصوصی': 'Privacy',
+  'حساب شما ایمیل ندارد.': 'Your account has no email.',
+  'حساب شما مجوز واردکردن داده را ندارد؛ ابزار پیش‌ثبت برای نقش‌های دارای مجوز فعال است.': 'Your account lacks the data-import permission; the pre-commit tool is enabled for permitted roles only.',
+  'حساب طبق سیاست‌های سرور ایجاد می‌شود و پس از تأیید، فعال خواهد شد.': 'Accounts are created per server policy and activated after approval.',
+  'حساب کاربری': 'Account',
 };

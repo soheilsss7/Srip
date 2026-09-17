@@ -11,7 +11,7 @@ import {
   RefreshCw, Search, Plus, X, CheckCircle2, UserPlus, ArrowLeft, Handshake,
   ThumbsUp, Ban, XCircle, Building2, UserRound, Mail, StickyNote, Send,
   Clock3, CalendarCheck2, ChevronLeft, ShieldCheck, ShieldAlert, ShieldX,
-  ClipboardList, Target, ListChecks, Rows3, RotateCcw, BellRing,
+  ClipboardList, Target, ListChecks, Rows3, RotateCcw, BellRing, Bot,
 } from 'lucide-react';
 import { localeTag, lt, t } from '../_lib/i18n';
 
@@ -141,6 +141,23 @@ export default function ReferralsPage() {
   const [introEdit, setIntroEdit] = useState<{ personId: string; name: string; active: boolean; maxRequestsPerMonth: number; preferredChannel: string; note: string } | null>(null);
   const [introBusy, setIntroBusy] = useState(false);
 
+  /* ─── مسترپلن فاز ۴/۲۴: عامل معرفی خودکار (الگوی Boomerang/عامل Rudy) ───
+     سه‌گام قطعی: یافتن مسیر گرم → انتخاب واسطهٔ مجاز (سقف ماهانه + رضایت صریح)
+     → پیش‌نویس متن معرفی به لحن واسطه؛ حالت مستقیم بدون واسطه. بدون LLM. */
+  const [agentTarget, setAgentTarget] = useState('');
+  const [agentGoal, setAgentGoal] = useState('');
+  const [agentBusy, setAgentBusy] = useState(false);
+  const [agentPlan, setAgentPlan] = useState<any>(null);
+  const [agentDraftMsg, setAgentDraftMsg] = useState('');
+  const [agentMsg, setAgentMsg] = useState('');
+  const [agentLaunchBusy, setAgentLaunchBusy] = useState(false);
+  const [agentRuns, setAgentRuns] = useState<any[]>([]);
+
+  const loadAgentRuns = useCallback(async () => {
+    try { setAgentRuns((await api<any>('/core-domain/referrals/agent/runs'))?.items ?? []); }
+    catch { setAgentRuns([]); }
+  }, []);
+
   const loadConversion = useCallback(async () => {
     try { setConversion(await api<any>('/core-domain/referrals/conversion')); } catch { setConversion(null); }
   }, []);
@@ -168,6 +185,43 @@ export default function ReferralsPage() {
     finally { setIntroBusy(false); }
   };
 
+  /* عامل معرفی — گام ۱: برنامه‌ریزی (مسیر گرم + واسطهٔ مجاز + پیش‌نویس) */
+  const runAgent = async () => {
+    if (!agentTarget) return;
+    setAgentBusy(true); setAgentMsg(''); setAgentPlan(null);
+    try {
+      const p = await api<any>('/core-domain/referrals/agent/plan', {
+        method: 'POST',
+        body: JSON.stringify({ targetOrganizationId: agentTarget, goal: agentGoal }),
+      });
+      setAgentPlan(p);
+      setAgentDraftMsg(p?.draft?.message ?? '');
+      await loadAgentRuns();
+    } catch (e) { setAgentMsg((e as Error).message); }
+    finally { setAgentBusy(false); }
+  };
+
+  /* عامل معرفی — گام ۲: اجرا. حالت واسطه‌ای فقط «درخواست رضایت» می‌سازد؛
+     حالت مستقیم معرفی را مستقیم ثبت می‌کند (واسطه‌ای در کار نیست). */
+  const launchAgent = async () => {
+    if (!agentPlan?.to?.orgId) return;
+    setAgentLaunchBusy(true); setAgentMsg('');
+    try {
+      const res = await api<any>('/core-domain/referrals/agent/launch', {
+        method: 'POST',
+        body: JSON.stringify({
+          targetOrganizationId: agentPlan.to.orgId,
+          intermediaryPersonId: agentPlan.mode === 'INTERMEDIARY' ? agentPlan.intermediary?.personId : '',
+          draft: agentPlan.draft ? { ...agentPlan.draft, message: agentDraftMsg } : null,
+        }),
+      });
+      setFlash(res?.message ?? t('عامل معرفی اجرا شد.'));
+      setAgentPlan(null); setAgentTarget(''); setAgentGoal(''); setAgentDraftMsg('');
+      await load(); await loadConversion(); await loadAgentRuns();
+    } catch (e) { setAgentMsg((e as Error).message); }
+    finally { setAgentLaunchBusy(false); }
+  };
+
   const load = useCallback(async () => {
     setLoading(true); setError('');
     try {
@@ -192,7 +246,7 @@ export default function ReferralsPage() {
     finally { setLoading(false); }
   }, [me]);
   /* بارگذاری داده پس از آماده‌شدن هویت — تا can('admin.users') درست ارزیابی شود */
-  useEffect(() => { if (!meLoading) { load(); loadConversion(); } }, [meLoading, load, loadConversion]);
+  useEffect(() => { if (!meLoading) { load(); loadConversion(); loadAgentRuns(); } }, [meLoading, load, loadConversion, loadAgentRuns]);
 
   /* پر کردن خودکار فرم از «پذیرش و پیگیری معرفی» در شبکهٔ ارتباطات */
   useEffect(() => {
@@ -539,6 +593,117 @@ export default function ReferralsPage() {
                   </label>
                   <button className="btn btn-primary" style={{ minHeight: 0, padding: '8px 14px' }} disabled={introBusy} onClick={saveIntro}>{t('ذخیره')}</button>
                   <button className="btn btn-ghost" style={{ minHeight: 0, padding: '8px 14px' }} onClick={() => setIntroEdit(null)}>{t('انصراف')}</button>
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* ─── مسترپلن فاز ۴/۲۴: عامل معرفی خودکار (الگوی Boomerang/عامل Rudy) ─── */}
+          <section className="panel" aria-label={t('عامل معرفی خودکار')}>
+            <div className="panel-title">
+              <div>
+                <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Bot size={16} /> {t('عامل معرفی خودکار')}</h2>
+                <p>{t('عامل سه‌گامِ Boomerang را اجرا می‌کند: یافتن مسیر گرم، انتخاب واسطهٔ مجاز (سقف ماهانه + رضایت صریح)، و نوشتن پیش‌نویس معرفی به لحن واسطه — موتور قطعیِ قالب‌محور، بدون LLM.')}</p>
+              </div>
+              <Badge tone="info">{t('قطعی · بدون LLM')}</Badge>
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <label className="field" style={{ margin: 0, flex: '1 1 240px' }}>
+                <span className="field-label">{t('سازمان هدف')}</span>
+                <select value={agentTarget} onChange={e => setAgentTarget(e.target.value)}>
+                  <option value="">{t('انتخاب کنید…')}</option>
+                  {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                </select>
+              </label>
+              <label className="field" style={{ margin: 0, flex: '1 1 240px' }}>
+                <span className="field-label">{t('هدف معرفی (اختیاری)')}</span>
+                <input value={agentGoal} onChange={e => setAgentGoal(e.target.value)} placeholder={t('مثلاً: جلسهٔ بررسی همکاری در حوزهٔ انرژی')} />
+              </label>
+              <button className="btn btn-primary" style={{ minHeight: 0, padding: '8px 14px' }} disabled={!agentTarget || agentBusy} onClick={runAgent}>
+                {agentBusy ? t('در حال برنامه‌ریزی…') : t('برنامه‌ریزی عامل')}
+              </button>
+            </div>
+            {agentMsg && <p className="form-error" role="alert" style={{ marginTop: 8 }}>{agentMsg}</p>}
+            {agentPlan && (
+              <div style={{ marginTop: 10, border: '1px solid var(--border,#e2e8f0)', borderRadius: 8, padding: 10 }}>
+                {agentPlan.mode === 'DIRECT' && (
+                  <p className="criteria-saved">{t('مسیر مستقیمِ قوی موجود است — عامل واسطه پیشنهاد نمی‌کند و پیش‌نویس معرفی را به لحن خودتان آماده کرده است.')}</p>
+                )}
+                {agentPlan.mode === 'INTERMEDIARY' && (
+                  <p className="criteria-saved">{t('مسیر گرم یافت شد و عامل یک واسطهٔ «مجاز» (تنظیم فعال + سقف ماهانهٔ باز) انتخاب کرد.')}</p>
+                )}
+                {agentPlan.reason && <p className="form-error" role="alert">{agentPlan.reason}</p>}
+                {agentPlan.bestPath && (
+                  <p style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '8px 0' }}>
+                    <span className="chip info">{t('بهترین مسیر')} ({fmtNum(agentPlan.bestPath.hopCount)} {t('پرش')}): </span>
+                    {agentPlan.bestPath.hops.map((h: any, i: number) => (
+                      <span key={i} className="chip neutral">{h.fromOrgName} ← {h.toOrgName} · {fmtNum(h.score)}</span>
+                    ))}
+                  </p>
+                )}
+                {agentPlan.intermediary && (
+                  <div className="kpi-card" style={{ margin: '0 0 8px' }}>
+                    <small>{t('واسطهٔ انتخاب‌شده')}: {agentPlan.intermediary.name} — {agentPlan.intermediary.orgName}</small>
+                    <strong style={{ fontSize: 13 }}>{agentPlan.intermediary.title ?? '—'}</strong>
+                    <span style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 4 }}>
+                      {agentPlan.intermediary.champion && <span className="chip success">{t('حامی')}</span>}
+                      {agentPlan.intermediary.influenceScore != null && <span className="chip neutral">{t('نفوذ')} {fmtNum(agentPlan.intermediary.influenceScore)}</span>}
+                      <span className="chip neutral">{t('کانال ترجیحی')}: {t(agentPlan.intermediary.preferredChannel === 'EMAIL' ? 'ایمیل' : agentPlan.intermediary.preferredChannel === 'MEETING' ? 'جلسه' : agentPlan.intermediary.preferredChannel === 'CALL' ? 'تماس' : 'پیام')}</span>
+                      <span className={`chip ${agentPlan.intermediary.remaining > 0 ? 'success' : 'danger'}`}>
+                        {t('سقف ماهانه')}: {fmtNum(agentPlan.intermediary.usedThisMonth)}/{fmtNum(agentPlan.intermediary.introSettings?.maxRequestsPerMonth ?? 0)}
+                      </span>
+                    </span>
+                    <p style={{ fontSize: 11.5, marginTop: 6, marginBottom: 0 }}>{t('هیچ پیامی بدون پذیرش صریح واسطه ارسال نمی‌شود — تا پاسخ او پیش‌نویس نزد مقصد نمی‌رود.')}</p>
+                  </div>
+                )}
+                {agentPlan.draft && (
+                  <div>
+                    <b style={{ fontSize: 12.5 }}>{t('پیش‌نویس معرفی')}: {agentPlan.draft.title}</b>
+                    <textarea className="input" style={{ width: '100%', marginTop: 6, minHeight: 120, fontFamily: 'inherit' }}
+                      aria-label={t('متن پیش‌نویس معرفی (قابل ویرایش)')}
+                      value={agentDraftMsg} onChange={e => setAgentDraftMsg(e.target.value)} />
+                    <span style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 4 }}>
+                      <span className="chip neutral">{t('هدف')}: {agentPlan.draft.instruction?.goal ?? '—'}</span>
+                      {(agentPlan.draft.instruction?.allowed ?? []).map((a: string, i: number) => <span key={i} className="chip success">{t('مجاز')}: {a}</span>)}
+                      {(agentPlan.draft.instruction?.forbidden ?? []).map((a: string, i: number) => <span key={i} className="chip danger">{t('ممنوع')}: {a}</span>)}
+                      <span className="chip neutral">{t('مهلت')}: {fmtNum(agentPlan.draft.instruction?.dueDays ?? 30)} {t('روز')}</span>
+                    </span>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                      <button className="btn btn-primary" disabled={agentLaunchBusy} onClick={launchAgent}>
+                        {agentLaunchBusy ? t('در حال ثبت…') : (agentPlan.mode === 'INTERMEDIARY' ? t('ارسال درخواست رضایت واسطه') : t('ثبت معرفی مستقیم'))}
+                      </button>
+                      <button className="btn btn-ghost" onClick={() => { setAgentPlan(null); setAgentDraftMsg(''); }}>{t('انصراف')}</button>
+                    </div>
+                  </div>
+                )}
+                {!agentPlan.draft && agentPlan.mode !== 'NO_PATH' && agentPlan.alternatives?.length > 0 && (
+                  <div>
+                    <h4 style={{ fontSize: 12.5, margin: '8px 0 6px' }}>{t('واسطه‌های موجود و وضعیت سقفشان')}</h4>
+                    <div className="list">
+                      {agentPlan.alternatives.map((a: any) => (
+                        <div className="listRow" key={a.personId}>
+                          <span style={{ flex: 1, minWidth: 0 }}>{a.name} — {a.orgName}</span>
+                          <Badge tone={a.eligible ? 'success' : 'danger'}>
+                            {a.eligible ? `${t('سقف باز')}: ${fmtNum(a.remaining)}` : (a.reason === 'INTRO_INACTIVE' ? t('درخواست نمی‌پذیرد') : t('سقف ماهانه پر'))}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            {agentRuns.length > 0 && (
+              <div style={{ marginTop: 10 }}>
+                <h4 style={{ fontSize: 12.5, margin: '0 0 6px' }}>{t('اجراهای اخیر عامل')}</h4>
+                <div className="list">
+                  {agentRuns.slice(0, 5).map((r: any) => (
+                    <div className="listRow" key={r.id}>
+                      <Badge tone={r.kind === 'LAUNCH' ? 'success' : 'neutral'}>{r.kind === 'LAUNCH' ? t('اجرای عامل') : t('برنامه‌ریزی')}</Badge>
+                      <span style={{ flex: 1, minWidth: 0 }}>{r.fromOrgName} ← {r.toOrgName}{r.intermediaryName ? ` · ${t('واسطه')}: ${r.intermediaryName}` : ''}</span>
+                      {r.referralId && <Link className="chip neutral" href="/referrals">{t('ثبت‌شده در معرفی‌ها')}</Link>}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
