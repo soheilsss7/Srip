@@ -240,12 +240,15 @@ export const REL_TYPE_FA: Record<string, string> = {
   MISSING_ENTRY:'بدون ورودی', CADENCE_BREAK:'کیدنس شکسته',
 
 };
+import { getLocale } from './i18n';
 const TYPE_FA: Record<string, string> = {
   ORGANIZATION: 'سازمان', PERSON: 'شخص', PROJECT: 'پروژه',
 };
 export const fa = (v: unknown): string => {
   if (v == null) return '—';
   const s = String(v);
+  /* فاز ۴/۲۳: در حالت انگلیسی مقدار خام (انگلیسی) نمایش داده می‌شود */
+  if (getLocale() === 'en') return s;
   return STATUS_FA[s.toUpperCase()] ?? REL_TYPE_FA[s.toUpperCase()] ?? TYPE_FA[s.toUpperCase()] ?? s;
 };
 
@@ -285,12 +288,15 @@ export const KEY_FA: Record<string, string> = {
   successProbability:'احتمال موفقیت', targetFit:'تناسب هدف', pathStrength:'قدرت مسیر',
   hopCount:'تعداد گام‌ها', connectorPerson:'شخص اتصال‌دهنده',
 };
-export const labelKey = (k: string): string => KEY_FA[k] ?? k.replace(/[A-Z]/g, c => ' ' + c.toLowerCase()).replace(/_/g, ' ');
+export const labelKey = (k: string): string => getLocale() === 'en'
+  ? k.replace(/[A-Z]/g, c => ' ' + c.toLowerCase()).replace(/_/g, ' ').replace(/^./, c => c.toUpperCase())
+  : (KEY_FA[k] ?? k.replace(/[A-Z]/g, c => ' ' + c.toLowerCase()).replace(/_/g, ' '));
 
 /* ---------- شناسه‌ها و مسیرهای فنی -> نمایش فارسی ---------- */
 const ID_PREFIX_FA: Record<string, string> = { se: 'رویداد', u: 'کاربر', ap: 'تأیید', org: 'سازمان', ev: 'رویداد', ce: 'رویداد', sn: 'شماره', rel: 'رابطه', dev: 'دستگاه' };
 export const idFa = (v: string): string => {
   if (!v) return v;
+  if (getLocale() === 'en') return v;
   const m = String(v).match(/^(se|u|ap|org|ev|ce|sn|rel|dev)[-_]?(\d+)(?:-[a-z0-9]{2,})?$/i);
   if (m) return `${ID_PREFIX_FA[m[1].toLowerCase()] ?? ''} ${new Intl.NumberFormat('fa-IR').format(Number(m[2]))}`;
   return v;

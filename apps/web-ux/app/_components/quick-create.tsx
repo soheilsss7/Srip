@@ -2,6 +2,7 @@
 import {useEffect,useState} from 'react';
 import {api} from '../_lib/api';
 import { JalaliDateField } from './jalali-date-field';
+import { t } from '../_lib/i18n';
 
 /* ============================================================================
    ایجاد سریع — فرم‌های کامل و دقیق، هم‌تراز با قرارداد API
@@ -23,181 +24,181 @@ type Section = { title: string; fields: Field[] };
 type Entity = { key: string; label: string; endpoint: string; sections: Section[]; successName?: (v: Record<string, any>) => string };
 
 /* ─── enum های استاندارد (همسان با صفحات اصلی و mock) ─── */
-const ORG_TYPES: Opt[] = [
-  { value:'HOLDING', label:'هلدینگ' }, { value:'SUBSIDIARY', label:'زیرمجموعه' }, { value:'CUSTOMER', label:'مشتری' },
-  { value:'PARTNER', label:'شریک' }, { value:'BANK', label:'بانک' }, { value:'GOVERNMENT', label:'دولتی' },
-  { value:'INVESTOR', label:'سرمایه‌گذار' }, { value:'SUPPLIER', label:'تأمین‌کننده' }, { value:'OTHER', label:'سایر' },
-];
-const REL_TYPES: Opt[] = [
-  { value:'STRATEGIC_PARTNERSHIP', label:'مشارکت راهبردی' }, { value:'BANKING', label:'بانکی' }, { value:'CUSTOMER', label:'مشتری' },
-  { value:'SUPPLY', label:'تأمین' }, { value:'INVESTMENT', label:'سرمایه‌گذاری' }, { value:'GOVERNMENT', label:'دولتی' },
-  { value:'SUBSIDIARY', label:'زیرمجموعه' }, { value:'HOLDING', label:'هلدینگ' }, { value:'PARTNER', label:'شریک' }, { value:'OTHER', label:'سایر' },
-];
-const MARKET_KINDS: Opt[] = [
-  { value:'MARKET', label:'بازاری' }, { value:'NON_MARKET', label:'غیربازاری (عمومی)' }, { value:'HYBRID', label:'هیبریدی' },
-];
-const PRIORITIES: Opt[] = [
-  { value:'CRITICAL', label:'بحرانی' }, { value:'HIGH', label:'بالا' }, { value:'MEDIUM', label:'متوسط' }, { value:'LOW', label:'پایین' },
-];
-const ACTION_STATUSES: Opt[] = [
-  { value:'OPEN', label:'باز' }, { value:'IN_PROGRESS', label:'در حال انجام' }, { value:'BLOCKED', label:'مسدود' }, { value:'DONE', label:'انجام‌شده' },
-];
-const RISKS: Opt[] = [ { value:'HIGH', label:'بالا' }, { value:'MEDIUM', label:'متوسط' }, { value:'LOW', label:'پایین' } ];
-const COMMITMENT_STATUSES: Opt[] = [ { value:'OPEN', label:'باز' }, { value:'FULFILLED', label:'ایفا شده' } ];
-const DIRECTIONS: Opt[] = [ { value:'OURS', label:'تعهد ما' }, { value:'THEIRS', label:'تعهد طرف مقابل' } ];
+const ORG_TYPES: Opt[] = lt([
+  { value:'HOLDING', label:t('هلدینگ') }, { value:'SUBSIDIARY', label:t('زیرمجموعه') }, { value:'CUSTOMER', label:t('مشتری') },
+  { value:'PARTNER', label:t('شریک') }, { value:'BANK', label:t('بانک') }, { value:'GOVERNMENT', label:t('دولتی') },
+  { value:'INVESTOR', label:t('سرمایه‌گذار') }, { value:'SUPPLIER', label:t('تأمین‌کننده') }, { value:'OTHER', label:t('سایر') },
+]);
+const REL_TYPES: Opt[] = lt([
+  { value:'STRATEGIC_PARTNERSHIP', label:t('مشارکت راهبردی') }, { value:'BANKING', label:t('بانکی') }, { value:'CUSTOMER', label:t('مشتری') },
+  { value:'SUPPLY', label:t('تأمین') }, { value:'INVESTMENT', label:t('سرمایه‌گذاری') }, { value:'GOVERNMENT', label:t('دولتی') },
+  { value:'SUBSIDIARY', label:t('زیرمجموعه') }, { value:'HOLDING', label:t('هلدینگ') }, { value:'PARTNER', label:t('شریک') }, { value:'OTHER', label:t('سایر') },
+]);
+const MARKET_KINDS: Opt[] = lt([
+  { value:'MARKET', label:t('بازاری') }, { value:'NON_MARKET', label:t('غیربازاری (عمومی)') }, { value:'HYBRID', label:t('هیبریدی') },
+]);
+const PRIORITIES: Opt[] = lt([
+  { value:'CRITICAL', label:t('بحرانی') }, { value:'HIGH', label:t('بالا') }, { value:'MEDIUM', label:t('متوسط') }, { value:'LOW', label:t('پایین') },
+]);
+const ACTION_STATUSES: Opt[] = lt([
+  { value:'OPEN', label:t('باز') }, { value:'IN_PROGRESS', label:t('در حال انجام') }, { value:'BLOCKED', label:t('مسدود') }, { value:'DONE', label:t('انجام‌شده') },
+]);
+const RISKS: Opt[] = lt( [ { value:'HIGH', label:t('بالا') }, { value:'MEDIUM', label:t('متوسط') }, { value:'LOW', label:t('پایین') } ]);
+const COMMITMENT_STATUSES: Opt[] = lt( [ { value:'OPEN', label:t('باز') }, { value:'FULFILLED', label:t('ایفا شده') } ]);
+const DIRECTIONS: Opt[] = lt( [ { value:'OURS', label:t('تعهد ما') }, { value:'THEIRS', label:t('تعهد طرف مقابل') } ]);
 const PROJECT_STATUSES: Opt[] = [
-  { value:'PLANNED', label:'برنامه‌ریزی‌شده' }, { value:'IN_PROGRESS', label:'در حال اجرا' }, { value:'ON_HOLD', label:'معلق' }, { value:'DONE', label:'تکمیل‌شده' }, { value:'CANCELLED', label:'لغو‌شده' },
+  { value:'PLANNED', label:t('برنامه‌ریزی‌شده') }, { value:'IN_PROGRESS', label:t('در حال اجرا') }, { value:'ON_HOLD', label:t('معلق') }, { value:'DONE', label:t('تکمیل‌شده') }, { value:'CANCELLED', label:t('لغو‌شده') },
 ];
-const OPP_STATUSES: Opt[] = [
-  { value:'IDENTIFIED', label:'شناسایی‌شده' }, { value:'ACTIVE', label:'باز' }, { value:'PROPOSAL', label:'در حال پیشنهاد' },
-  { value:'NEGOTIATION', label:'در حال مذاکره' }, { value:'WON', label:'برنده' }, { value:'LOST', label:'از دست رفته' }, { value:'ON_HOLD', label:'معلق' },
-];
-const OPP_SOURCES: Opt[] = [
-  { value:'COLD', label:'سرد (بدون معرفی)' }, { value:'EVENT', label:'رویداد' }, { value:'REFERRAL', label:'معرفی' }, { value:'EXISTING_RELATIONSHIP', label:'رابطهٔ موجود' },
-];
+const OPP_STATUSES: Opt[] = lt([
+  { value:'IDENTIFIED', label:t('شناسایی‌شده') }, { value:'ACTIVE', label:t('باز') }, { value:'PROPOSAL', label:t('در حال پیشنهاد') },
+  { value:'NEGOTIATION', label:t('در حال مذاکره') }, { value:'WON', label:t('برنده') }, { value:'LOST', label:t('از دست رفته') }, { value:'ON_HOLD', label:t('معلق') },
+]);
+const OPP_SOURCES: Opt[] = lt([
+  { value:'COLD', label:t('سرد (بدون معرفی)') }, { value:'EVENT', label:t('رویداد') }, { value:'REFERRAL', label:t('معرفی') }, { value:'EXISTING_RELATIONSHIP', label:t('رابطهٔ موجود') },
+]);
 
-const entities: Entity[] = [
+const entities: Entity[] = lt([
   {
-    key:'organization', label:'سازمان', endpoint:'/organizations', successName:(v)=>`«${v.name}»`,
+    key:'organization', label:t('سازمان'), endpoint:'/organizations', successName:(v)=>`«${v.name}»`,
     sections:[
-      { title:'اطلاعات پایه', fields:[
-        { name:'name', label:'نام سازمان', required:true, placeholder:'مثلاً: شرکت فناوری نوآور', full:true },
-        { name:'type', label:'نوع سازمان', type:'select', options:ORG_TYPES, default:'OTHER' },
+      { title:t('اطلاعات پایه'), fields:[
+        { name:'name', label:t('نام سازمان'), required:true, placeholder:t('مثلاً: شرکت فناوری نوآور'), full:true },
+        { name:'type', label:t('نوع سازمان'), type:'select', options:ORG_TYPES, default:'OTHER' },
       ]},
-      { title:'مشخصات تکمیلی', fields:[
-        { name:'industry', label:'صنعت', placeholder:'مثلاً: نرم‌افزار، بانکداری، پتروشیمی' },
-        { name:'country', label:'کشور', placeholder:'ایران', default:'ایران' },
-        { name:'parentOrganizationId', label:'سازمان مادر', type:'org', hint:'برای ساخت سلسله‌مراتب هلدینگ', full:true },
+      { title:t('مشخصات تکمیلی'), fields:[
+        { name:'industry', label:t('صنعت'), placeholder:t('مثلاً: نرم‌افزار، بانکداری، پتروشیمی') },
+        { name:'country', label:t('کشور'), placeholder:t('ایران'), default:t('ایران') },
+        { name:'parentOrganizationId', label:t('سازمان مادر'), type:'org', hint:t('برای ساخت سلسله‌مراتب هلدینگ'), full:true },
       ]},
     ],
   },
   {
-    key:'person', label:'شخص', endpoint:'/people', successName:(v)=>`«${v.firstName} ${v.lastName}»`,
+    key:'person', label:t('شخص'), endpoint:'/people', successName:(v)=>`«${v.firstName} ${v.lastName}»`,
     sections:[
-      { title:'اطلاعات پایه', fields:[
-        { name:'firstName', label:'نام', required:true, placeholder:'مثلاً: سارا' },
-        { name:'lastName', label:'نام خانوادگی', required:true, placeholder:'مثلاً: محمدی' },
-        { name:'organizationId', label:'سازمان', type:'org', required:true, full:true },
+      { title:t('اطلاعات پایه'), fields:[
+        { name:'firstName', label:t('نام'), required:true, placeholder:t('مثلاً: سارا') },
+        { name:'lastName', label:t('نام خانوادگی'), required:true, placeholder:t('مثلاً: محمدی') },
+        { name:'organizationId', label:t('سازمان'), type:'org', required:true, full:true },
       ]},
-      { title:'نقش و تماس', fields:[
-        { name:'title', label:'سمت', placeholder:'مثلاً: مدیر فروش' },
-        { name:'department', label:'واحد سازمانی', placeholder:'مثلاً: فروش' },
-        { name:'email', label:'ایمیل', type:'email', placeholder:'name@company.com' },
-        { name:'phone', label:'تلفن', type:'tel', placeholder:'+98 21 00000000' },
-        { name:'influenceScore', label:'امتیاز نفوذ (۰ تا ۱۰۰)', type:'number', min:0, max:100, placeholder:'60' },
+      { title:t('نقش و تماس'), fields:[
+        { name:'title', label:t('سمت'), placeholder:t('مثلاً: مدیر فروش') },
+        { name:'department', label:t('واحد سازمانی'), placeholder:t('مثلاً: فروش') },
+        { name:'email', label:t('ایمیل'), type:'email', placeholder:'name@company.com' },
+        { name:'phone', label:t('تلفن'), type:'tel', placeholder:'+98 21 00000000' },
+        { name:'influenceScore', label:t('امتیاز نفوذ (۰ تا ۱۰۰)'), type:'number', min:0, max:100, placeholder:'60' },
       ]},
     ],
   },
   {
-    key:'relationship', label:'رابطه', endpoint:'/relationships', successName:(v)=>'جدید',
+    key:'relationship', label:t('رابطه'), endpoint:'/relationships', successName:(v)=>t('جدید'),
     sections:[
-      { title:'طرفین رابطه', fields:[
-        { name:'sourceOrganizationId', label:'سازمان مبدأ', type:'org', required:true },
-        { name:'targetOrganizationId', label:'سازمان مقصد', type:'org', required:true },
+      { title:t('طرفین رابطه'), fields:[
+        { name:'sourceOrganizationId', label:t('سازمان مبدأ'), type:'org', required:true },
+        { name:'targetOrganizationId', label:t('سازمان مقصد'), type:'org', required:true },
       ]},
-      { title:'مشخصات رابطه', fields:[
-        { name:'relationshipType', label:'نوع رابطه', type:'select', options:REL_TYPES, required:true, default:'PARTNER' },
-        { name:'marketKind', label:'جنس بازار', type:'select', options:MARKET_KINDS, default:'MARKET' },
-        { name:'marketSegment', label:'سگمنت بازار', placeholder:'مثلاً: تأمین مالی دانش‌بنیان', full:true },
+      { title:t('مشخصات رابطه'), fields:[
+        { name:'relationshipType', label:t('نوع رابطه'), type:'select', options:REL_TYPES, required:true, default:'PARTNER' },
+        { name:'marketKind', label:t('جنس بازار'), type:'select', options:MARKET_KINDS, default:'MARKET' },
+        { name:'marketSegment', label:t('سگمنت بازار'), placeholder:t('مثلاً: تأمین مالی دانش‌بنیان'), full:true },
       ]},
     ],
   },
   {
-    key:'meeting', label:'جلسه', endpoint:'/meetings', successName:(v)=>`«${v.title}»`,
+    key:'meeting', label:t('جلسه'), endpoint:'/meetings', successName:(v)=>`«${v.title}»`,
     sections:[
-      { title:'اطلاعات پایه', fields:[
-        { name:'title', label:'عنوان جلسه', required:true, placeholder:'مثلاً: جلسهٔ راهبردی فصل', full:true },
-        { name:'startAt', label:'زمان شروع', type:'datetime', required:true },
-        { name:'endAt', label:'زمان پایان', type:'datetime' },
+      { title:t('اطلاعات پایه'), fields:[
+        { name:'title', label:t('عنوان جلسه'), required:true, placeholder:t('مثلاً: جلسهٔ راهبردی فصل'), full:true },
+        { name:'startAt', label:t('زمان شروع'), type:'datetime', required:true },
+        { name:'endAt', label:t('زمان پایان'), type:'datetime' },
       ]},
-      { title:'پیوند و مکان', fields:[
-        { name:'relationshipId', label:'رابطهٔ مرتبط', type:'rel', hint:'با انتخاب رابطه، سازمان جلسه خودکار ثبت می‌شود' },
-        { name:'organizationId', label:'سازمان مرتبط', type:'org' },
-        { name:'location', label:'محل برگزاری', placeholder:'مثلاً: دفتر مرکزی — اتاق جلسات ۲' },
-        { name:'meetingUrl', label:'لینک جلسه (ویدئوکنفرانس)', type:'url', placeholder:'https://meet.example.com/…' },
-        { name:'participants', label:'شرکت‌کنندگان', type:'people-multi', full:true, hint:'با Ctrl چند نفر را انتخاب کنید' },
+      { title:t('پیوند و مکان'), fields:[
+        { name:'relationshipId', label:t('رابطهٔ مرتبط'), type:'rel', hint:t('با انتخاب رابطه، سازمان جلسه خودکار ثبت می‌شود') },
+        { name:'organizationId', label:t('سازمان مرتبط'), type:'org' },
+        { name:'location', label:t('محل برگزاری'), placeholder:t('مثلاً: دفتر مرکزی — اتاق جلسات ۲') },
+        { name:'meetingUrl', label:t('لینک جلسه (ویدئوکنفرانس)'), type:'url', placeholder:'https://meet.example.com/…' },
+        { name:'participants', label:t('شرکت‌کنندگان'), type:'people-multi', full:true, hint:t('با Ctrl چند نفر را انتخاب کنید') },
       ]},
-      { title:'دستور جلسه', fields:[
-        { name:'objective', label:'هدف جلسه', type:'textarea', placeholder:'خروجی مورد انتظار از این جلسه چیست؟', full:true },
-        { name:'agenda', label:'دستور جلسه', type:'textarea', placeholder:'۱) مرورد وضعیت\n۲) …', full:true },
+      { title:t('دستور جلسه'), fields:[
+        { name:'objective', label:t('هدف جلسه'), type:'textarea', placeholder:t('خروجی مورد انتظار از این جلسه چیست؟'), full:true },
+        { name:'agenda', label:t('دستور جلسه'), type:'textarea', placeholder:'۱) مرورد وضعیت\n۲) …', full:true },
       ]},
     ],
   },
   {
-    key:'action', label:'اقدام', endpoint:'/actions', successName:(v)=>`«${v.title}»`,
+    key:'action', label:t('اقدام'), endpoint:'/actions', successName:(v)=>`«${v.title}»`,
     sections:[
-      { title:'اطلاعات پایه', fields:[
-        { name:'title', label:'عنوان اقدام', required:true, placeholder:'مثلاً: ارسال پیش‌فاکتور', full:true },
-        { name:'dueAt', label:'موعد انجام', type:'datetime' },
-        { name:'priority', label:'اولویت', type:'select', options:PRIORITIES, default:'MEDIUM' },
-        { name:'status', label:'وضعیت', type:'select', options:ACTION_STATUSES, default:'OPEN' },
+      { title:t('اطلاعات پایه'), fields:[
+        { name:'title', label:t('عنوان اقدام'), required:true, placeholder:t('مثلاً: ارسال پیش‌فاکتور'), full:true },
+        { name:'dueAt', label:t('موعد انجام'), type:'datetime' },
+        { name:'priority', label:t('اولویت'), type:'select', options:PRIORITIES, default:'MEDIUM' },
+        { name:'status', label:t('وضعیت'), type:'select', options:ACTION_STATUSES, default:'OPEN' },
       ]},
-      { title:'مالکیت و پیوند', fields:[
-        { name:'ownerId', label:'مسئول انجام', type:'person' },
-        { name:'relationshipId', label:'رابطهٔ مرتبط', type:'rel' },
-        { name:'organizationId', label:'سازمان مرتبط', type:'org' },
-        { name:'description', label:'توضیح', type:'textarea', full:true },
+      { title:t('مالکیت و پیوند'), fields:[
+        { name:'ownerId', label:t('مسئول انجام'), type:'person' },
+        { name:'relationshipId', label:t('رابطهٔ مرتبط'), type:'rel' },
+        { name:'organizationId', label:t('سازمان مرتبط'), type:'org' },
+        { name:'description', label:t('توضیح'), type:'textarea', full:true },
       ]},
     ],
   },
   {
-    key:'commitment', label:'تعهد', endpoint:'/commitments', successName:(v)=>`«${String(v.description).slice(0, 40)}…»`,
+    key:'commitment', label:t('تعهد'), endpoint:'/commitments', successName:(v)=>`«${String(v.description).slice(0, 40)}…»`,
     sections:[
-      { title:'شرح تعهد', fields:[
-        { name:'description', label:'شرح', type:'textarea', required:true, placeholder:'مثلاً: تحویل پیش‌فاکتور نهایی', full:true },
-        { name:'direction', label:'طرف تعهد', type:'select', options:DIRECTIONS, default:'OURS' },
-        { name:'risk', label:'ریسک', type:'select', options:RISKS, default:'MEDIUM' },
+      { title:t('شرح تعهد'), fields:[
+        { name:'description', label:t('شرح'), type:'textarea', required:true, placeholder:t('مثلاً: تحویل پیش‌فاکتور نهایی'), full:true },
+        { name:'direction', label:t('طرف تعهد'), type:'select', options:DIRECTIONS, default:'OURS' },
+        { name:'risk', label:t('ریسک'), type:'select', options:RISKS, default:'MEDIUM' },
       ]},
-      { title:'زمان‌بندی', fields:[
-        { name:'dueAt', label:'موعد', type:'datetime' },
-        { name:'reminderAt', label:'یادآوری', type:'datetime' },
-        { name:'status', label:'وضعیت', type:'select', options:COMMITMENT_STATUSES, default:'OPEN' },
+      { title:t('زمان‌بندی'), fields:[
+        { name:'dueAt', label:t('موعد'), type:'datetime' },
+        { name:'reminderAt', label:t('یادآوری'), type:'datetime' },
+        { name:'status', label:t('وضعیت'), type:'select', options:COMMITMENT_STATUSES, default:'OPEN' },
       ]},
-      { title:'پیوند', fields:[
-        { name:'relationshipId', label:'رابطهٔ مرتبط', type:'rel' },
-        { name:'organizationId', label:'سازمان طرف', type:'org' },
-        { name:'personId', label:'شخص طرف', type:'person' },
-        { name:'notes', label:'یادداشت', type:'textarea', full:true },
+      { title:t('پیوند'), fields:[
+        { name:'relationshipId', label:t('رابطهٔ مرتبط'), type:'rel' },
+        { name:'organizationId', label:t('سازمان طرف'), type:'org' },
+        { name:'personId', label:t('شخص طرف'), type:'person' },
+        { name:'notes', label:t('یادداشت'), type:'textarea', full:true },
       ]},
     ],
   },
   {
-    key:'project', label:'پروژه', endpoint:'/projects', successName:(v)=>`«${v.name}»`,
+    key:'project', label:t('پروژه'), endpoint:'/projects', successName:(v)=>`«${v.name}»`,
     sections:[
-      { title:'اطلاعات پایه', fields:[
-        { name:'name', label:'نام پروژه', required:true, placeholder:'مثلاً: توسعهٔ پلتفرم مشتریان', full:true },
-        { name:'status', label:'وضعیت', type:'select', options:PROJECT_STATUSES, default:'PLANNED' },
-        { name:'priority', label:'اولویت', type:'select', options:PRIORITIES, default:'MEDIUM' },
+      { title:t('اطلاعات پایه'), fields:[
+        { name:'name', label:t('نام پروژه'), required:true, placeholder:t('مثلاً: توسعهٔ پلتفرم مشتریان'), full:true },
+        { name:'status', label:t('وضعیت'), type:'select', options:PROJECT_STATUSES, default:'PLANNED' },
+        { name:'priority', label:t('اولویت'), type:'select', options:PRIORITIES, default:'MEDIUM' },
       ]},
-      { title:'پیوند و زمان‌بندی', fields:[
-        { name:'organizationId', label:'سازمان پروژه', type:'org', required:true },
-        { name:'ownerId', label:'مدیر پروژه', type:'person' },
-        { name:'startAt', label:'تاریخ شروع', type:'date' },
-        { name:'targetAt', label:'مهلت هدف', type:'date' },
+      { title:t('پیوند و زمان‌بندی'), fields:[
+        { name:'organizationId', label:t('سازمان پروژه'), type:'org', required:true },
+        { name:'ownerId', label:t('مدیر پروژه'), type:'person' },
+        { name:'startAt', label:t('تاریخ شروع'), type:'date' },
+        { name:'targetAt', label:t('مهلت هدف'), type:'date' },
       ]},
-      { title:'شرح', fields:[
-        { name:'objective', label:'هدف پروژه', placeholder:'چرا این پروژه انجام می‌شود؟', full:true },
-        { name:'description', label:'توضیح', type:'textarea', full:true },
+      { title:t('شرح'), fields:[
+        { name:'objective', label:t('هدف پروژه'), placeholder:t('چرا این پروژه انجام می‌شود؟'), full:true },
+        { name:'description', label:t('توضیح'), type:'textarea', full:true },
       ]},
     ],
   },
   {
-    key:'opportunity', label:'فرصت', endpoint:'/opportunities', successName:(v)=>`«${v.name}»`,
+    key:'opportunity', label:t('فرصت'), endpoint:'/opportunities', successName:(v)=>`«${v.name}»`,
     sections:[
-      { title:'اطلاعات پایه', fields:[
-        { name:'name', label:'نام فرصت', required:true, placeholder:'مثلاً: قرارداد تأمین سالانه', full:true },
-        { name:'status', label:'وضعیت', type:'select', options:OPP_STATUSES, default:'IDENTIFIED' },
-        { name:'sourceType', label:'منبع فرصت', type:'select', options:OPP_SOURCES, default:'COLD' },
+      { title:t('اطلاعات پایه'), fields:[
+        { name:'name', label:t('نام فرصت'), required:true, placeholder:t('مثلاً: قرارداد تأمین سالانه'), full:true },
+        { name:'status', label:t('وضعیت'), type:'select', options:OPP_STATUSES, default:'IDENTIFIED' },
+        { name:'sourceType', label:t('منبع فرصت'), type:'select', options:OPP_SOURCES, default:'COLD' },
       ]},
-      { title:'ارزش و زمان', fields:[
-        { name:'value', label:'ارزش (ریال)', type:'number', min:0, step:1000000, placeholder:'مثلاً: 5000000000' },
-        { name:'probability', label:'احتمال موفقیت (۰ تا ۱۰۰)', type:'number', min:0, max:100, placeholder:'مثلاً: 40' },
-        { name:'expectedDate', label:'تاریخ مورد انتظار', type:'date' },
+      { title:t('ارزش و زمان'), fields:[
+        { name:'value', label:t('ارزش (ریال)'), type:'number', min:0, step:1000000, placeholder:t('مثلاً: 5000000000') },
+        { name:'probability', label:t('احتمال موفقیت (۰ تا ۱۰۰)'), type:'number', min:0, max:100, placeholder:t('مثلاً: 40') },
+        { name:'expectedDate', label:t('تاریخ مورد انتظار'), type:'date' },
       ]},
-      { title:'پیوند', fields:[
-        { name:'relationshipId', label:'رابطهٔ مرتبط', type:'rel' },
-        { name:'organizationId', label:'سازمان فرصت', type:'org' },
-        { name:'description', label:'توضیح', type:'textarea', full:true },
+      { title:t('پیوند'), fields:[
+        { name:'relationshipId', label:t('رابطهٔ مرتبط'), type:'rel' },
+        { name:'organizationId', label:t('سازمان فرصت'), type:'org' },
+        { name:'description', label:t('توضیح'), type:'textarea', full:true },
       ]},
     ],
   },
@@ -205,7 +206,7 @@ const entities: Entity[] = [
 
 type Ref = { orgs: { id: string; name: string }[]; people: { id: string; firstName: string; lastName: string }[]; rels: { id: string; sourceOrganization?: { name?: string } | null; targetOrganization?: { name?: string } | null }[] };
 
-const relLabel = (r: Ref['rels'][number]) => `${r.sourceOrganization?.name ?? '؟'} ↔ ${r.targetOrganization?.name ?? '؟'}`;
+const relLabel = (r: Ref['rels'][number]) => `${r.sourceOrganization?.name ?? t('؟')} ↔ ${r.targetOrganization?.name ?? t('؟')}`;
 const personLabel = (p: Ref['people'][number]) => `${p.firstName} ${p.lastName}`;
 
 export function QuickCreate({open,onClose}:{open:boolean;onClose:()=>void}){
@@ -266,7 +267,7 @@ export function QuickCreate({open,onClose}:{open:boolean;onClose:()=>void}){
        else body[f.name]=raw;
      }));
      const created:any=await api(entity.endpoint,{method:'POST',body:JSON.stringify(body)});
-     setMsg({ok:true,text:`${entity.label} ${entity.successName?entity.successName(body):''} با موفقیت ایجاد شد.`});
+     setMsg({ok:true,text:`${entity.label} ${entity.successName?entity.successName(body):''} ${t('با موفقیت ایجاد شد.')}`});
      const init:Record<string,any>={_init:true};
      entity.sections.forEach(s=>s.fields.forEach(f=>{if(f.default!==undefined)init[f.name]=f.default;}));
      setV(init);
@@ -288,17 +289,17 @@ export function QuickCreate({open,onClose}:{open:boolean;onClose:()=>void}){
        </select>;
      case 'org':
        return <select id={`qc-${f.name}`} value={val} required={f.required} onChange={e=>setField(f.name,e.target.value)}>
-         <option value="">{refLoading?'در حال دریافت…':'— انتخاب سازمان —'}</option>
+         <option value="">{refLoading?t('در حال دریافت…'):t('— انتخاب سازمان —')}</option>
          {ref.orgs.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}
        </select>;
      case 'person':
        return <select id={`qc-${f.name}`} value={val} required={f.required} onChange={e=>setField(f.name,e.target.value)}>
-         <option value="">{refLoading?'در حال دریافت…':'— انتخاب شخص —'}</option>
+         <option value="">{refLoading?t('در حال دریافت…'):t('— انتخاب شخص —')}</option>
          {ref.people.map(p=><option key={p.id} value={p.id}>{personLabel(p)}</option>)}
        </select>;
      case 'rel':
        return <select id={`qc-${f.name}`} value={val} required={f.required} onChange={e=>setField(f.name,e.target.value)}>
-         <option value="">{refLoading?'در حال دریافت…':'— انتخاب رابطه —'}</option>
+         <option value="">{refLoading?t('در حال دریافت…'):t('— انتخاب رابطه —')}</option>
          {ref.rels.map(r=><option key={r.id} value={r.id}>{relLabel(r)}</option>)}
        </select>;
      case 'people-multi':
@@ -313,10 +314,10 @@ export function QuickCreate({open,onClose}:{open:boolean;onClose:()=>void}){
 
  return (
   <div className="quick-overlay" onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
-   <section className="quick-card" role="dialog" aria-label="ایجاد سریع">
+   <section className="quick-card" role="dialog" aria-label={t('ایجاد سریع')}>
     <header>
-      <div><span className="eyebrow">اقدام سریع</span><h2>ایجاد سریع</h2></div>
-      <button onClick={onClose} aria-label="بستن">×</button>
+      <div><span className="eyebrow">{t('اقدام سریع')}</span><h2>{t('ایجاد سریع')}</h2></div>
+      <button onClick={onClose} aria-label={t('بستن')}>×</button>
     </header>
     <div className="quick-types">{entities.map(x=><button type="button" className={x.key===entity.key?'active':''} onClick={()=>pickEntity(x)} key={x.key}>{x.label}</button>)}</div>
     <form className="entity-form" onSubmit={submit}>
@@ -334,7 +335,7 @@ export function QuickCreate({open,onClose}:{open:boolean;onClose:()=>void}){
           </div>
         </div>
       ))}
-      <button className="primary-action" disabled={busy}>{busy?'در حال ثبت…':'ایجاد '+entity.label}</button>
+      <button className="primary-action" disabled={busy}>{busy?t('در حال ثبت…'):t('ایجاد')+entity.label}</button>
     </form>
     {msg&&<div className={msg.ok?'status-message ok':'status-message err'} role="status">{msg.text}</div>}
    </section>

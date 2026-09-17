@@ -1,5 +1,6 @@
 'use client';
 import { Filter, TrendingDown } from 'lucide-react';
+import { localeTag, t } from '../_lib/i18n';
 
 /* ============================================================================
    FunnelVisual — قیف پیشنهادهای هوشمند (تک‌منبع برای داشبورد و تحلیل محصول)
@@ -19,22 +20,22 @@ import { Filter, TrendingDown } from 'lucide-react';
 export type FunnelStages = Record<string, number>;
 export type FunnelConversion = Record<string, number>;
 
-const STAGES: ReadonlyArray<{ key: string; fa: string }> = [
-  { key: 'viewed', fa: 'دیده‌شده' },
-  { key: 'accepted', fa: 'پذیرفته‌شده' },
-  { key: 'actionCreated', fa: 'اقدام ساخته‌شده' },
-  { key: 'actionCompleted', fa: 'اقدام انجام‌شده' },
-  { key: 'outcome', fa: 'ثبت نتیجه' },
-];
-const CONV: ReadonlyArray<{ key: string; fa: string }> = [
-  { key: 'viewedToAcceptedPct', fa: 'دیده‌شده ← پذیرفته‌شده' },
-  { key: 'acceptedToActionCreatedPct', fa: 'پذیرفته ← ایجاد اقدام' },
-  { key: 'actionCreatedToCompletedPct', fa: 'ایجاد ← انجام' },
-  { key: 'completedToOutcomePct', fa: 'انجام ← نتیجه' },
-];
+const STAGES: ReadonlyArray<{ key: string; fa: string }> = lt([
+  { key: 'viewed', fa: t('دیده‌شده') },
+  { key: 'accepted', fa: t('پذیرفته‌شده') },
+  { key: 'actionCreated', fa: t('اقدام ساخته‌شده') },
+  { key: 'actionCompleted', fa: t('اقدام انجام‌شده') },
+  { key: 'outcome', fa: t('ثبت نتیجه') },
+]);
+const CONV: ReadonlyArray<{ key: string; fa: string }> = lt([
+  { key: 'viewedToAcceptedPct', fa: t('دیده‌شده ← پذیرفته‌شده') },
+  { key: 'acceptedToActionCreatedPct', fa: t('پذیرفته ← ایجاد اقدام') },
+  { key: 'actionCreatedToCompletedPct', fa: t('ایجاد ← انجام') },
+  { key: 'completedToOutcomePct', fa: t('انجام ← نتیجه') },
+]);
 
-const faNum = (v: number) => new Intl.NumberFormat('fa-IR').format(v);
-const faPct = (v: number) => new Intl.NumberFormat('fa-IR', { maximumFractionDigits: 1 }).format(v);
+const faNum = (v: number) => new Intl.NumberFormat(localeTag()).format(v);
+const faPct = (v: number) => new Intl.NumberFormat(localeTag(), { maximumFractionDigits: 1 }).format(v);
 
 /* رنگ مرحله: از سبزآبی (بالای قیف) به بنفش (نتیجه) */
 const stepHue = (i: number, n: number) => {
@@ -51,11 +52,11 @@ export function FunnelVisual({ stages, conversion, compact = false }: {
   const viewed = s.viewed ?? 0;
   const rows = STAGES.map((x, i) => ({ ...x, value: s[x.key] ?? 0, i }));
   if (!viewed) {
-    return <div className="empty-inline">فعلاً داده‌ای از قیف پیشنهادها ثبت نشده است.</div>;
+    return <div className="empty-inline">{t('فعلاً داده‌ای از قیف پیشنهادها ثبت نشده است.')}</div>;
   }
 
   return (
-    <div className="funnel-v2" role="list" aria-label="قیف پیشنهادهای هوشمند">
+    <div className="funnel-v2" role="list" aria-label={t('قیف پیشنهادهای هوشمند')}>
       {rows.map((r, idx) => {
         const pct = viewed ? (r.value / viewed) * 100 : 0;
         const conv = idx > 0 ? CONV[idx - 1] : null;
@@ -66,7 +67,7 @@ export function FunnelVisual({ stages, conversion, compact = false }: {
           <div key={r.key} className="fv-step-wrap">
             {/* سطر تبدیل از مرحلهٔ قبل */}
             {conv && (
-              <div className="fv-conv" role="separator" aria-label={`${conv.fa}: ${convVal != null ? faPct(convVal) + '٪' : 'نامشخص'}`}>
+              <div className="fv-conv" role="separator" aria-label={`${conv.fa}: ${convVal != null ? faPct(convVal) + t('٪') : t('نامشخص')}`}>
                 <span className="fv-conv-arrow"><TrendingDown size={12} aria-hidden="true" /></span>
                 <span className="fv-conv-text">{conv.fa}</span>
                 {convVal != null && <b className="fv-conv-pct">{faPct(convVal)}٪</b>}
@@ -74,7 +75,7 @@ export function FunnelVisual({ stages, conversion, compact = false }: {
               </div>
             )}
             {/* مرحله — سطر اطلاعات */}
-            <div className="fv-step" role="listitem" aria-label={`${r.fa}: ${faNum(r.value)} از ${faNum(viewed)}، ${faPct(pct)}٪`}>
+            <div className="fv-step" role="listitem" aria-label={`${r.fa}: ${faNum(r.value)} ${t('از')} ${faNum(viewed)}${t('،')} ${faPct(pct)}${t('٪')}`}>
               <div className="fv-step-head">
                 <span className="fv-idx" style={{ background: stepHue(r.i, rows.length) }} aria-hidden="true">{faNum(idx + 1)}</span>
                 <span className="fv-label">{r.fa}</span>

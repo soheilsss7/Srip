@@ -8,12 +8,13 @@ import { EgoGraph, type EgoNode } from '../../_components/ego-graph';
 import { suggestConnections } from '../../_lib/connections';
 import { CriteriaScoreCard } from '../../_components/criteria';
 import { Building2, Mail, Star, Crown, Sparkles, Link2, CalendarDays, HeartPulse, UserCheck, Zap, AlarmClock, ChevronLeft } from 'lucide-react';
+import { localeTag, t } from '../../_lib/i18n';
 
 const arr = (x: any): any[] => Array.isArray(x) ? x : Array.isArray(x?.items) ? x.items : Array.isArray(x?.data) ? x.data : Array.isArray(x?.rows) ? x.rows : [];
 const fmtNum = (v: number | undefined | null): string =>
-  v == null ? '—' : new Intl.NumberFormat('fa-IR').format(v);
+  v == null ? '—' : new Intl.NumberFormat(localeTag()).format(v);
 const fmtDate = (iso?: string | null): string =>
-  iso ? new Date(iso).toLocaleDateString('fa-IR', { month: 'short', day: 'numeric' }) : '—';
+  iso ? new Date(iso).toLocaleDateString(localeTag(), { month: 'short', day: 'numeric' }) : '—';
 const DONE_STATUSES = ['DONE', 'COMPLETED', 'CANCELLED'];
 const scoreCls = (v: number | undefined | null): string => {
   if (v == null) return 'h-null';
@@ -82,7 +83,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
     colleagues.forEach((c: any) => {
       nodes.push({
         id: c.id, name: `${c.firstName} ${c.lastName ?? ''}`, kind: 'person',
-        sub: c.title ?? 'همکار', edgeStyle: 'dashed', score: c.influenceScore ?? 60,
+        sub: c.title ?? t('همکار'), edgeStyle: 'dashed', score: c.influenceScore ?? 60,
         href: `/people/${c.id}`,
       });
     });
@@ -110,30 +111,30 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
     return { upcoming, openActs, lastMeetingAt: pastMeetings[0]?.startAt ?? null, maxPrio };
   }, [meetings, actions, id]);
 
-  if (!p && !error) return <main className="feature-page"><PageHeader eyebrow="اشخاص" title="شخص" description="" actions={<></>} /><Loading /></main>;
+  if (!p && !error) return <main className="feature-page"><PageHeader eyebrow={t('اشخاص')} title={t('شخص')} description="" actions={<></>} /><Loading /></main>;
 
-  const displayName = `${p?.firstName ?? ''} ${p?.lastName ?? ''}`.trim() || 'شخص';
-  const initials = `${p?.firstName?.[0] ?? ''}${p?.lastName?.[0] ?? ''}` || '؟';
+  const displayName = `${p?.firstName ?? ''} ${p?.lastName ?? ''}`.trim() || t('شخص');
+  const initials = `${p?.firstName?.[0] ?? ''}${p?.lastName?.[0] ?? ''}` || t('؟');
   const infoRows: Array<[string, string]> = [];
-  if (p?.email) infoRows.push(['ایمیل', p.email]);
-  if (p?.phone) infoRows.push(['تلفن', p.phone]);
-  if (p?.title) infoRows.push(['سمت', p.title]);
-  if (p?.department) infoRows.push(['بخش', p.department]);
-  if (p?.country) infoRows.push(['کشور', p.country]);
-  if (p?.status) infoRows.push(['وضعیت', fa(p.status)]);
+  if (p?.email) infoRows.push([t('ایمیل'), p.email]);
+  if (p?.phone) infoRows.push([t('تلفن'), p.phone]);
+  if (p?.title) infoRows.push([t('سمت'), p.title]);
+  if (p?.department) infoRows.push([t('بخش'), p.department]);
+  if (p?.country) infoRows.push([t('کشور'), p.country]);
+  if (p?.status) infoRows.push([t('وضعیت'), fa(p.status)]);
   const tlTone = (k: string): any =>
     k === 'MEETING' ? 'success' : k === 'ACTION' ? 'warning' : k === 'INTERACTION' ? 'info' : 'neutral';
 
   return (
     <main className="feature-page">
       <PageHeader
-        eyebrow="اشخاص · پروفایل"
+        eyebrow={t('اشخاص · پروفایل')}
         title={displayName}
-        description={[p?.title, p?.department].filter(Boolean).join(' · ') || 'بدون سمت'}
+        description={[p?.title, p?.department].filter(Boolean).join(' · ') || t('بدون سمت')}
         actions={
           <div className="toolbar">
             {org && <Link className="secondary-action" href={`/organizations/${org.id}`}><Building2 size={14} /> {org.name}</Link>}
-            <button className="secondary-action" onClick={load}>بازخوانی</button>
+            <button className="secondary-action" onClick={load}>{t('بازخوانی')}</button>
           </div>
         }
       />
@@ -149,12 +150,12 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                 <Badge tone={p.status === 'ACTIVE' ? 'success' : 'neutral'}>{fa(p.status ?? 'ACTIVE')}</Badge>
                 {org && <Link className="chip info" href={`/organizations/${org.id}`}><Building2 size={12} /> {org.name}</Link>}
               </div>
-              <p>{p.title ?? 'بدون سمت'}{p.department ? ` · ${p.department}` : ''}</p>
+              <p>{p.title ?? t('بدون سمت')}{p.department ? ` · ${p.department}` : ''}</p>
             </div>
             <div className="profile-metrics">
-              <span className="person-score"><Star size={13} /><b className={scoreCls(p.influenceScore) === 'h-hi' ? 'hi' : scoreCls(p.influenceScore) === 'h-mid' ? 'mid' : 'lo'}>{fmtNum(p.influenceScore)}</b><small>نفوذ</small></span>
-              <span className="person-score"><Crown size={13} /><b className="mid">{fmtNum(p.decisionPower)}</b><small>قدرت تصمیم</small></span>
-              <span className="person-score"><UserCheck size={13} /><b className="mid">{fmtNum(p.accessibilityScore)}</b><small>دسترس‌پذیری</small></span>
+              <span className="person-score"><Star size={13} /><b className={scoreCls(p.influenceScore) === 'h-hi' ? 'hi' : scoreCls(p.influenceScore) === 'h-mid' ? 'mid' : 'lo'}>{fmtNum(p.influenceScore)}</b><small>{t('نفوذ')}</small></span>
+              <span className="person-score"><Crown size={13} /><b className="mid">{fmtNum(p.decisionPower)}</b><small>{t('قدرت تصمیم')}</small></span>
+              <span className="person-score"><UserCheck size={13} /><b className="mid">{fmtNum(p.accessibilityScore)}</b><small>{t('دسترس‌پذیری')}</small></span>
             </div>
           </section>
 
@@ -163,8 +164,8 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
             <div className="rel-status-head">
               <span className="rel-status-ico"><HeartPulse size={17} /></span>
               <div>
-                <h2>وضعیت همکاری با این شخص</h2>
-                <p>بر پایهٔ امتیازهای شخص، جلسات آینده و اقدامات در انتظار او — محاسبهٔ زنده از داده‌های واقعی</p>
+                <h2>{t('وضعیت همکاری با این شخص')}</h2>
+                <p>{t('بر پایهٔ امتیازهای شخص، جلسات آینده و اقدامات در انتظار او — محاسبهٔ زنده از داده‌های واقعی')}</p>
               </div>
               {(collab.openActs.length > 0 || collab.upcoming.length > 0) && (
                 <Badge tone="info">{fmtNum(collab.upcoming.length)} جلسه · {fmtNum(collab.openActs.length)} اقدام باز</Badge>
@@ -173,31 +174,31 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
 
             <div className="rel-status-metrics">
               <div className="rel-metric">
-                <span>نفوذ</span>
-                <div className="rel-metric-value"><b className={scoreCls(p.influenceScore)}>{fmtNum(p.influenceScore)}</b><small>از ۱۰۰</small></div>
+                <span>{t('نفوذ')}</span>
+                <div className="rel-metric-value"><b className={scoreCls(p.influenceScore)}>{fmtNum(p.influenceScore)}</b><small>{t('از ۱۰۰')}</small></div>
                 <div className="rel-metric-bar"><span className={scoreCls(p.influenceScore)} style={{ width: `${p.influenceScore ?? 0}%` }} /></div>
               </div>
               <div className="rel-metric">
-                <span>قدرت تصمیم</span>
-                <div className="rel-metric-value"><b className={scoreCls(p.decisionPower)}>{fmtNum(p.decisionPower)}</b><small>از ۱۰۰</small></div>
+                <span>{t('قدرت تصمیم')}</span>
+                <div className="rel-metric-value"><b className={scoreCls(p.decisionPower)}>{fmtNum(p.decisionPower)}</b><small>{t('از ۱۰۰')}</small></div>
                 <div className="rel-metric-bar"><span className={scoreCls(p.decisionPower)} style={{ width: `${p.decisionPower ?? 0}%` }} /></div>
               </div>
               <div className="rel-metric">
-                <span>دسترس‌پذیری</span>
-                <div className="rel-metric-value"><b className={scoreCls(p.accessibilityScore)}>{fmtNum(p.accessibilityScore)}</b><small>از ۱۰۰</small></div>
+                <span>{t('دسترس‌پذیری')}</span>
+                <div className="rel-metric-value"><b className={scoreCls(p.accessibilityScore)}>{fmtNum(p.accessibilityScore)}</b><small>{t('از ۱۰۰')}</small></div>
                 <div className="rel-metric-bar"><span className={scoreCls(p.accessibilityScore)} style={{ width: `${p.accessibilityScore ?? 0}%` }} /></div>
               </div>
               <div className="rel-metric">
-                <span>جلسهٔ بعدی</span>
+                <span>{t('جلسهٔ بعدی')}</span>
                 <div className="rel-metric-value">
                   <b>{collab.upcoming[0] ? fmtNum(new Date(collab.upcoming[0].startAt).getDate()) : '—'}</b>
-                  <small>{collab.upcoming[0] ? new Date(collab.upcoming[0].startAt).toLocaleDateString('fa-IR', { month: 'short' }) : 'جلسه‌ای ثبت نشده'}</small>
+                  <small>{collab.upcoming[0] ? new Date(collab.upcoming[0].startAt).toLocaleDateString(localeTag(), { month: 'short' }) : t('جلسه‌ای ثبت نشده')}</small>
                 </div>
                 {collab.upcoming[0] && <div className="rel-metric-note">{collab.upcoming[0].title}</div>}
               </div>
               <div className="rel-metric">
-                <span>اقدامات در انتظار</span>
-                <div className="rel-metric-value"><b className={collab.maxPrio >= 3 ? 'h-crit' : collab.maxPrio === 2 ? 'h-low' : ''}>{fmtNum(collab.openActs.length)}</b><small>مورد باز</small></div>
+                <span>{t('اقدامات در انتظار')}</span>
+                <div className="rel-metric-value"><b className={collab.maxPrio >= 3 ? 'h-crit' : collab.maxPrio === 2 ? 'h-low' : ''}>{fmtNum(collab.openActs.length)}</b><small>{t('مورد باز')}</small></div>
                 {collab.openActs[0] && <div className="rel-metric-note">{collab.openActs[0].title}</div>}
               </div>
             </div>
@@ -212,7 +213,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                       <CalendarDays size={13} style={{ color: 'var(--text-muted)' }} />
                       <b className="t-num" style={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: 11.5 }}>{fmtDate(m.startAt)}</b>
                     </span>
-                    <Badge tone="info">جلسهٔ پیشِ رو</Badge>
+                    <Badge tone="info">{t('جلسهٔ پیشِ رو')}</Badge>
                   </Link>
                 ))}
                 {collab.openActs.slice(0, 3).map((a: any) => (
@@ -221,7 +222,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                     <span className="rel-status-row-name">{a.title}</span>
                     <span className="rel-status-row-bar" style={{ width: 'auto', border: 0, background: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                       {a.dueAt ? <AlarmClock size={13} style={{ color: 'var(--text-muted)' }} /> : <Zap size={13} style={{ color: 'var(--text-muted)' }} />}
-                      <b className="t-num" style={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: 11.5 }}>{a.dueAt ? fmtDate(a.dueAt) : 'بدون موعد'}</b>
+                      <b className="t-num" style={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: 11.5 }}>{a.dueAt ? fmtDate(a.dueAt) : t('بدون موعد')}</b>
                     </span>
                     <Badge tone={a.priority === 'CRITICAL' ? 'danger' : a.priority === 'HIGH' ? 'warning' : 'neutral'}>{fa(a.status)}{a.priority ? ` · ${fa(a.priority)}` : ''}</Badge>
                   </Link>
@@ -236,54 +237,54 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
             {/* Ego graph */}
             <section className="panel graph-panel">
               <div className="panel-title">
-                <div><h2>گراف ارتباطات {displayName}</h2><p>سازمان‌های در ارتباط + همکاران — با وضعیت رابطه</p></div>
-                <Link className="btn btn-ghost btn-sm" href="/network">شبکهٔ کامل ←</Link>
+                <div><h2>گراف ارتباطات {displayName}</h2><p>{t('سازمان‌های در ارتباط + همکاران — با وضعیت رابطه')}</p></div>
+                <Link className="btn btn-ghost btn-sm" href="/network">{t('شبکهٔ کامل ←')}</Link>
               </div>
               <EgoGraph center={{ name: displayName, kind: 'person', sub: org?.name ?? '' }} centerHref={`/people/${id}`} nodes={graphNodes} height={330} />
             </section>
 
             {/* Info + org */}
             <section className="panel">
-              <div className="panel-title"><div><h2>اطلاعات شخص</h2><p>داده‌های اصلی پروفایل</p></div></div>
+              <div className="panel-title"><div><h2>{t('اطلاعات شخص')}</h2><p>{t('داده‌های اصلی پروفایل')}</p></div></div>
               <div className="detail-grid">
                 {infoRows.map(([k, v]) => (
                   <div className="detail-item" key={k}><small>{k}</small><strong>{v}</strong></div>
                 ))}
-                {infoRows.length === 0 && <p className="empty-state">داده‌ای ثبت نشده است.</p>}
+                {infoRows.length === 0 && <p className="empty-state">{t('داده‌ای ثبت نشده است.')}</p>}
               </div>
-              <div className="panel-title" style={{ marginTop: 20 }}><div><h2>سازمان‌ها و نقش‌ها</h2><Badge>{fmtNum(orgs.length)}</Badge></div></div>
+              <div className="panel-title" style={{ marginTop: 20 }}><div><h2>{t('سازمان‌ها و نقش‌ها')}</h2><Badge>{fmtNum(orgs.length)}</Badge></div></div>
               {orgs.length ? (
                 <div className="list">
                   {orgs.map((o: any) => (
                     <div className="listRow" key={o.organizationId}>
-                      <Badge tone={o.isPrimary ? 'success' : 'neutral'}>{o.isPrimary ? 'اصلی' : fa(o.status ?? 'ACTIVE')}</Badge>
-                      <span><strong>{o.organization?.name ?? o.organizationId}</strong><small>{[o.roleTitle, o.department].filter(Boolean).join(' · ') || 'بدون نقش'}</small></span>
+                      <Badge tone={o.isPrimary ? 'success' : 'neutral'}>{o.isPrimary ? t('اصلی') : fa(o.status ?? 'ACTIVE')}</Badge>
+                      <span><strong>{o.organization?.name ?? o.organizationId}</strong><small>{[o.roleTitle, o.department].filter(Boolean).join(' · ') || t('بدون نقش')}</small></span>
                     </div>
                   ))}
                 </div>
-              ) : <p className="empty-state">انتساب سازمانی ثبت نشده است.</p>}
+              ) : <p className="empty-state">{t('انتساب سازمانی ثبت نشده است.')}</p>}
             </section>
           </div>
 
           <div className="split-panels">
             {/* Contacts */}
             <section className="panel">
-              <div className="panel-title"><div><h2>اطلاعات تماس</h2><Badge>{fmtNum(contacts.length)}</Badge></div></div>
+              <div className="panel-title"><div><h2>{t('اطلاعات تماس')}</h2><Badge>{fmtNum(contacts.length)}</Badge></div></div>
               {contacts.length ? (
                 <div className="list">
                   {contacts.map((c: any) => (
                     <div className="listRow" key={c.id}>
                       <Badge tone={c.isPrimary ? 'success' : 'neutral'}>{fa(c.kind)}</Badge>
-                      <span><strong dir="ltr">{c.value}</strong><small>{c.label || ''}{c.isPrimary ? ' · تماس اصلی' : ''}</small></span>
+                      <span><strong dir="ltr">{c.value}</strong><small>{c.label || ''}{c.isPrimary ? t('· تماس اصلی') : ''}</small></span>
                     </div>
                   ))}
                 </div>
-              ) : <p className="empty-state"><Mail size={18} /> تماسی ثبت نشده است.</p>}
+              ) : <p className="empty-state"><Mail size={18} /> {t('تماسی ثبت نشده است.')}</p>}
             </section>
 
             {/* Suggestions */}
             <section className="panel">
-              <div className="panel-title"><div><h2>پیشنهاد ارتباط جدید</h2><p>بر اساس شبکهٔ سازمان «{org?.name ?? ''}»</p></div></div>
+              <div className="panel-title"><div><h2>{t('پیشنهاد ارتباط جدید')}</h2><p>بر اساس شبکهٔ سازمان «{org?.name ?? ''}»</p></div></div>
               {suggestions.length ? (
                 <div className="list">
                   {suggestions.map((s) => (
@@ -297,25 +298,25 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                     </Link>
                   ))}
                 </div>
-              ) : <p className="empty-state"><Sparkles size={18} /> پیشنهادی برای این شبکه موجود نیست.</p>}
+              ) : <p className="empty-state"><Sparkles size={18} /> {t('پیشنهادی برای این شبکه موجود نیست.')}</p>}
             </section>
           </div>
 
           {/* Timeline */}
           <section className="panel">
-            <div className="panel-title"><div><h2>خط زمانی</h2><p>جلسات، تعاملات و اقدامات</p></div><Badge>{fmtNum(timeline.length)}</Badge></div>
+            <div className="panel-title"><div><h2>{t('خط زمانی')}</h2><p>{t('جلسات، تعاملات و اقدامات')}</p></div><Badge>{fmtNum(timeline.length)}</Badge></div>
             {timeline.length ? (
               <div className="list">
                 {timeline.slice(0, 50).map((x: any, i: number) => (
                   <div className="listRow" key={x.id ?? i}>
                     <Badge tone={tlTone(x.kind ?? '')}>{fa(x.kind ?? 'EVENT')}</Badge>
                     <span><strong>{x.title || x.subject || x.description || x.name || x.eventType || '—'}</strong>
-                      {(x.date || x.createdAt) ? <small><CalendarDays size={11} style={{ verticalAlign: '-1px' }} /> {new Date(x.date ?? x.createdAt).toLocaleString('fa-IR')}</small> : null}</span>
+                      {(x.date || x.createdAt) ? <small><CalendarDays size={11} style={{ verticalAlign: '-1px' }} /> {new Date(x.date ?? x.createdAt).toLocaleString(localeTag())}</small> : null}</span>
                     {x.status && <Badge tone={x.status === 'DONE' ? 'success' : x.status === 'UPCOMING' ? 'info' : x.status === 'OPEN' ? 'warning' : 'neutral'}>{fa(x.status)}</Badge>}
                   </div>
                 ))}
               </div>
-            ) : <p className="empty-state">رویدادی ثبت نشده است.</p>}
+            ) : <p className="empty-state">{t('رویدادی ثبت نشده است.')}</p>}
           </section>
         </>
       )}

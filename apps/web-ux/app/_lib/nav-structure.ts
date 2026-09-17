@@ -14,6 +14,7 @@
    ۶) NAV_PERMISSION_MAP: نگاشت متمرکز هر مسیر به مجوزِ دیدنش.
    ========================================================================== */
 
+import { t } from './i18n';
 export type NavItem = readonly [href: string, label: string, permission: string];
 export type NavZone = readonly [title: string, subtitle: string, items: readonly NavItem[]];
 export type AdminSection = readonly [title: string, items: readonly NavItem[]];
@@ -31,105 +32,105 @@ export function itemVisible(item: NavItem, can: (p: string) => boolean, isAdmin 
 
 /* --------------------------- سطح ۱: ساختار ثابت --------------------------- */
 
-export const NAV_ZONES: readonly NavZone[] = [
-  ['خانه', 'کار امروز من', [
-    ['/', 'پیشخوان', 'dashboard.read'],
-    ['/push', 'اعلان‌ها و آفلاین', 'dashboard.read'],
+export const NAV_ZONES: readonly NavZone[] = lt([
+  [t('خانه'), t('کار امروز من'), [
+    ['/', t('پیشخوان'), 'dashboard.read'],
+    ['/push', t('اعلان‌ها و آفلاین'), 'dashboard.read'],
   ]],
-  ['مخاطب‌ها', 'سازمان‌ها و افراد کلیدی', [
-    ['/organizations', 'سازمان‌ها', 'organization.read'],
-    ['/people', 'اشخاص', 'person.read'],
-    ['/enrichment', 'غنی‌سازی منابع رسمی', 'organization.read'],
+  [t('مخاطب‌ها'), t('سازمان‌ها و افراد کلیدی'), [
+    ['/organizations', t('سازمان‌ها'), 'organization.read'],
+    ['/people', t('اشخاص'), 'person.read'],
+    ['/enrichment', t('غنی‌سازی منابع رسمی'), 'organization.read'],
   ]],
-  ['روابط', 'وضعیت پیوندها و شبکه', [
-    ['/relationships', 'روابط', 'relationship.read'],
-    ['/network', 'شبکهٔ روابط', 'network.read'],
-    ['/publics', 'عموم‌ها', 'publics.read'],
-    ['/interactions', 'تعاملات', 'interaction.read'],
-    ['/referrals', 'معرفی‌ها', 'relationship.read'],
-    ['/gis', 'نقشهٔ ذینفعان', 'organization.read'],
-    ['/portal', 'پورتال عمومی', 'publics.read'],
+  [t('روابط'), t('وضعیت پیوندها و شبکه'), [
+    ['/relationships', t('روابط'), 'relationship.read'],
+    ['/network', t('شبکهٔ روابط'), 'network.read'],
+    ['/publics', t('عموم‌ها'), 'publics.read'],
+    ['/interactions', t('تعاملات'), 'interaction.read'],
+    ['/referrals', t('معرفی‌ها'), 'relationship.read'],
+    ['/gis', t('نقشهٔ ذینفعان'), 'organization.read'],
+    ['/portal', t('پورتال عمومی'), 'publics.read'],
   ]],
-  ['کار و اجرا', 'جلسه‌ها، قول‌ها و پروژه‌ها', [ /* ۷ آیتم — مرز قانون Miller؛ آیتم هشتم = شکستن به دو Workspace */
-    ['/meetings', 'جلسات', 'meeting.read'],
-    ['/calendar', 'تقویم', 'meeting.read'],
-    ['/actions', 'اقدامات', 'action.read'],
-    ['/commitments', 'تعهدات', 'commitment.read'],
-    ['/projects', 'پروژه‌ها', 'project.read'],
-    ['/opportunities', 'فرصت‌ها', 'opportunity.read'],
-    ['/requirements', 'نیازمندی‌ها', 'project.read'],
+  [t('کار و اجرا'), t('جلسه‌ها، قول‌ها و پروژه‌ها'), [ /* ۷ آیتم — مرز قانون Miller؛ آیتم هشتم = شکستن به دو Workspace */
+    ['/meetings', t('جلسات'), 'meeting.read'],
+    ['/calendar', t('تقویم'), 'meeting.read'],
+    ['/actions', t('اقدامات'), 'action.read'],
+    ['/commitments', t('تعهدات'), 'commitment.read'],
+    ['/projects', t('پروژه‌ها'), 'project.read'],
+    ['/opportunities', t('فرصت‌ها'), 'opportunity.read'],
+    ['/requirements', t('نیازمندی‌ها'), 'project.read'],
   ]],
-  ['هوش', 'دستیار، بریف و تحلیل‌ها', [
-    ['/alerts', 'هشدارها', 'dashboard.read'],
-    ['/intelligence', 'هوشمندی و توصیه‌ها', 'analytics.read'],
-    ['/board', 'هیئت‌مدیره', 'analytics.read'],
-    ['/ai', 'دستیار هوشمند', 'ai.query'],
-    ['/strategy', 'تحلیل راهبردی', 'strategy.read'],
-    ['/mcp', 'سرور MCP', 'analytics.read'],
-    ['/qbr', 'بریف فصلی (QBR)', 'analytics.read'],
+  [t('هوش'), t('دستیار، بریف و تحلیل‌ها'), [
+    ['/alerts', t('هشدارها'), 'dashboard.read'],
+    ['/intelligence', t('هوشمندی و توصیه‌ها'), 'analytics.read'],
+    ['/board', t('هیئت‌مدیره'), 'analytics.read'],
+    ['/ai', t('دستیار هوشمند'), 'ai.query'],
+    ['/strategy', t('تحلیل راهبردی'), 'strategy.read'],
+    ['/mcp', t('سرور MCP'), 'analytics.read'],
+    ['/qbr', t('بریف فصلی (QBR)'), 'analytics.read'],
   ]],
-  ['اتوماسیون و هماهنگی', 'گردش کار، اسناد و داده', [
-    ['/workflows', 'گردش کار و تأییدها', 'workflow.read'],
-    ['/documents', 'مرکز دانش', 'document.read'],
-    ['/data-management', 'داده و کیفیت', 'data.quality.read'],
-    ['/data-exchange', 'تبادل داده', 'report.read'],
-    ['/imports', 'ورود ایمیل/تقویم', 'interaction.write'],
-    ['/developers', 'API و وب‌هوک', 'integration.read'],
-    ['/settings', 'تنظیمات من', 'user.read'],
-    ['/sessions', 'نشست‌های من', 'session.read'],
+  [t('اتوماسیون و هماهنگی'), t('گردش کار، اسناد و داده'), [
+    ['/workflows', t('گردش کار و تأییدها'), 'workflow.read'],
+    ['/documents', t('مرکز دانش'), 'document.read'],
+    ['/data-management', t('داده و کیفیت'), 'data.quality.read'],
+    ['/data-exchange', t('تبادل داده'), 'report.read'],
+    ['/imports', t('ورود ایمیل/تقویم'), 'interaction.write'],
+    ['/developers', t('API و وب‌هوک'), 'integration.read'],
+    ['/settings', t('تنظیمات من'), 'user.read'],
+    ['/sessions', t('نشست‌های من'), 'session.read'],
   ]],
-];
+]);
 
 /** زیرصفحه‌های «مرکز سیستم» — از هاب /admin در دسترس‌اند (نه در سایدبار) */
-export const ADMIN_SUBS: readonly AdminSection[] = [
-  ['کاربران و مجوزها', [
-    ['/admin', 'مرکز سیستم', 'admin.users'],
-    ['/admin/users', 'کاربران و دسترسی‌ها', 'admin.users'],
-    ['/admin/roles', 'نقش‌ها', 'admin.users'],
-    ['/admin/permissions', 'مجوزها', 'admin.users'],
-    ['/admin/audit', 'ممیزی', 'audit.read'],
-    ['/admin/feature-flags', 'پرچم‌های ویژگی', 'feature_flag.read'],
-    ['/admin/scoring', 'قواعد امتیازدهی', 'admin.users'],
-    ['/admin/tags', 'برچسب‌ها', 'admin.users'],
-    ['/admin/custom-fields', 'فیلدهای سفارشی', 'admin.users'],
-    ['/admin/criteria', 'معیارهای ارزیابی', 'admin.users'],
-    ['/admin/notification-rules', 'قواعد اعلان', 'admin.users'],
-    ['/admin/exports', 'کنترل خروجی داده', 'audit.read'],
-    ['/admin/sessions', 'مدیریت نشست‌ها', 'session.read'],
-    ['/admin/retention', 'نگهداری داده', 'privacy.manage'],
+export const ADMIN_SUBS: readonly AdminSection[] = lt([
+  [t('کاربران و مجوزها'), [
+    ['/admin', t('مرکز سیستم'), 'admin.users'],
+    ['/admin/users', t('کاربران و دسترسی‌ها'), 'admin.users'],
+    ['/admin/roles', t('نقش‌ها'), 'admin.users'],
+    ['/admin/permissions', t('مجوزها'), 'admin.users'],
+    ['/admin/audit', t('ممیزی'), 'audit.read'],
+    ['/admin/feature-flags', t('پرچم‌های ویژگی'), 'feature_flag.read'],
+    ['/admin/scoring', t('قواعد امتیازدهی'), 'admin.users'],
+    ['/admin/tags', t('برچسب‌ها'), 'admin.users'],
+    ['/admin/custom-fields', t('فیلدهای سفارشی'), 'admin.users'],
+    ['/admin/criteria', t('معیارهای ارزیابی'), 'admin.users'],
+    ['/admin/notification-rules', t('قواعد اعلان'), 'admin.users'],
+    ['/admin/exports', t('کنترل خروجی داده'), 'audit.read'],
+    ['/admin/sessions', t('مدیریت نشست‌ها'), 'session.read'],
+    ['/admin/retention', t('نگهداری داده'), 'privacy.manage'],
   ]],
-  ['امنیت و حاکمیت', [
-    ['/security', 'امنیت', 'security.read'],
-    ['/security-events', 'رویدادهای امنیتی', 'security.read'],
-    ['/governance', 'حاکمیت', 'enterprise.security'],
-    ['/enterprise', 'حاکمیت سازمانی', 'enterprise.read'],
-    ['/privacy', 'حریم خصوصی', 'privacy.read'],
-    ['/data-lifecycle', 'چرخهٔ حیات داده', 'data.lifecycle_status'],
+  [t('امنیت و حاکمیت'), [
+    ['/security', t('امنیت'), 'security.read'],
+    ['/security-events', t('رویدادهای امنیتی'), 'security.read'],
+    ['/governance', t('حاکمیت'), 'enterprise.security'],
+    ['/enterprise', t('حاکمیت سازمانی'), 'enterprise.read'],
+    ['/privacy', t('حریم خصوصی'), 'privacy.read'],
+    ['/data-lifecycle', t('چرخهٔ حیات داده'), 'data.lifecycle_status'],
   ]],
-  ['داده و یکپارچه‌سازی', [
-    ['/data-management', 'داده و کیفیت', 'data.manage'],
-    ['/data-quality', 'کیفیت داده', 'data.quality.read'],
-    ['/admin/master-data', 'داده‌های مبنایی', 'org.read'],
-    ['/integrations', 'یکپارچه‌سازی', 'integration.read'],
-    ['/workflows', 'گردش کار', 'workflow.read'],
-    ['/approvals', 'تأییدها', 'approval.read'],
+  [t('داده و یکپارچه‌سازی'), [
+    ['/data-management', t('داده و کیفیت'), 'data.manage'],
+    ['/data-quality', t('کیفیت داده'), 'data.quality.read'],
+    ['/admin/master-data', t('داده‌های مبنایی'), 'org.read'],
+    ['/integrations', t('یکپارچه‌سازی'), 'integration.read'],
+    ['/workflows', t('گردش کار'), 'workflow.read'],
+    ['/approvals', t('تأییدها'), 'approval.read'],
   ]],
-  ['پایش و سلامت', [
-    ['/monitoring', 'مرکز پایش', 'metrics.read'],
-    ['/analytics', 'تحلیل محصول', 'analytics.read'],
-    ['/health', 'سلامت زمان اجرا', 'health.read'],
-    ['/observability', 'مشاهده‌پذیری', 'metrics.read'],
-    ['/metrics', 'سنجه‌ها', 'metrics.read'],
+  [t('پایش و سلامت'), [
+    ['/monitoring', t('مرکز پایش'), 'metrics.read'],
+    ['/analytics', t('تحلیل محصول'), 'analytics.read'],
+    ['/health', t('سلامت زمان اجرا'), 'health.read'],
+    ['/observability', t('مشاهده‌پذیری'), 'metrics.read'],
+    ['/metrics', t('سنجه‌ها'), 'metrics.read'],
   ]],
-];
+]);
 
 /** نوار تب پایین موبایل — چهار خانهٔ اصلی؛ بقیه از دکمهٔ «بیشتر» */
-export const MOBILE_TABS: readonly NavItem[] = [
-  ['/', 'خانه', 'dashboard.read'],
-  ['/organizations', 'سازمان‌ها', 'organization.read'],
-  ['/network', 'شبکه', 'network.read'],
-  ['/interactions', 'تعامل‌ها', 'interaction.read'],
-];
+export const MOBILE_TABS: readonly NavItem[] = lt([
+  ['/', t('خانه'), 'dashboard.read'],
+  ['/organizations', t('سازمان‌ها'), 'organization.read'],
+  ['/network', t('شبکه'), 'network.read'],
+  ['/interactions', t('تعامل‌ها'), 'interaction.read'],
+]);
 
 /* ---------------- سطح ۲: فیلتر نمایشی (توابع خالص، بدون تغییر ساختار) ---------------- */
 
@@ -181,35 +182,35 @@ export function getVisibleMobileTabs(can: (p: string) => boolean): NavItem[] {
 }
 
 /** واژه‌نامهٔ یک‌خطی — «این بخش چیست؟» برای هر مسیر */
-export const GLOSS: Record<string, string> = {
-  '/': 'کار امروز شما: اولویت‌ها، هشدارها و جلسات پیش رو در یک نگاه',
-  '/organizations': 'شرکت‌ها/سازمان‌های عضو شبکه و اطلاعات هرکدام',
-  '/people': 'افراد کلیدی هر سازمان و ارتباطات آن‌ها',
-  '/relationships': 'پیوند رسمی بین دو سازمان — با تفکیک بازاری/غیربازاری، نقطهٔ ورود به بازار، امتیاز سلامت/ریسک و هشدار هوشمند',
-  '/network': 'نقشهٔ گرافیکی روابط: خوشه‌ها، مسیرها و تحلیل شبکه',
-  '/interactions': 'هر تماس/جلسه/مکاتبه‌ای که روی یک رابطه رخ داده است',
-  '/referrals': 'معرفی‌ها و واسطه‌های رسیدن به یک سازمان',
-  '/alerts': 'همهٔ هشدارهای فعال سیستم در یک نگاه — فیلترپذیر بر اساس ماژول و شدت',
-  '/intelligence': 'سیگنال‌های ریسک، فرصت‌های در جریان و پیشنهاد رشد',
-  '/board': 'گزارش هیئت‌مدیره: بازده سرمایهٔ رابطه، سرمایه، سلامت پرتفوی و ریسک تک‌نقطه',
-  '/meetings': 'جلسات برنامه‌ریزی‌شده با ثبت دستور و خلاصه',
-  '/calendar': 'نمای تقویمی جلسات در محدودهٔ شما',
-  '/actions': 'کارهایی که کسی قول داده تا موعد معین انجام دهد',
-  '/commitments': 'قول‌های بلندمدت‌تر میان طرفین با سررسید',
-  '/projects': 'پروژه‌های مشترک و مرحله‌های آن‌ها',
-  '/opportunities': 'فرصت‌های تجاری شناسایی‌شده با ارزش و احتمال',
-  '/ai': 'گفتگو با داده‌های شبکه: بپرسید و توصیه بگیرید',
-  '/ai-executive-brief': 'گزارش دوره‌ای خودکار وضعیت روابط و هشدارها',
-  '/recommendations': 'توصیه‌های داده‌محور برای قدم بعدی',
-  '/reports': 'گزارش‌ها و خروجی‌های تحلیلی',
-  '/documents': 'اسناد، دانش و قالب‌های اشتراکی',
-  '/requirements': 'نیازمندی‌های پروژه‌ها',
-  '/approvals': 'درخواست‌های در انتظار تأیید شما',
-  '/data-exchange': 'ورود/خروج و تبادل داده بین سامانه‌ها',
-  '/settings': 'تنظیمات حساب و ترجیحات شما',
-  '/sessions': 'نشست‌های فعال ورود شما در دستگاه‌ها',
-  '/data-management': 'مرکز داده: کیفیت، ورود و حاکمیت داده در یک نگاه',
-  '/workflows': 'زنجیره‌های خودکار تصمیم، اجرا و تأییدها',
-  '/publics': 'نقشهٔ عموم‌ها: شناسنامهٔ سازمان، دسته‌بندی بازیگران و شکاف‌های اثرگذار',
-  '/strategy': 'تحلیل رقابت و تعامل راهبردی',
-};
+export const GLOSS: Record<string, string> = lt({
+  '/': t('کار امروز شما: اولویت‌ها، هشدارها و جلسات پیش رو در یک نگاه'),
+  '/organizations': t('شرکت‌ها/سازمان‌های عضو شبکه و اطلاعات هرکدام'),
+  '/people': t('افراد کلیدی هر سازمان و ارتباطات آن‌ها'),
+  '/relationships': t('پیوند رسمی بین دو سازمان — با تفکیک بازاری/غیربازاری، نقطهٔ ورود به بازار، امتیاز سلامت/ریسک و هشدار هوشمند'),
+  '/network': t('نقشهٔ گرافیکی روابط: خوشه‌ها، مسیرها و تحلیل شبکه'),
+  '/interactions': t('هر تماس/جلسه/مکاتبه‌ای که روی یک رابطه رخ داده است'),
+  '/referrals': t('معرفی‌ها و واسطه‌های رسیدن به یک سازمان'),
+  '/alerts': t('همهٔ هشدارهای فعال سیستم در یک نگاه — فیلترپذیر بر اساس ماژول و شدت'),
+  '/intelligence': t('سیگنال‌های ریسک، فرصت‌های در جریان و پیشنهاد رشد'),
+  '/board': t('گزارش هیئت‌مدیره: بازده سرمایهٔ رابطه، سرمایه، سلامت پرتفوی و ریسک تک‌نقطه'),
+  '/meetings': t('جلسات برنامه‌ریزی‌شده با ثبت دستور و خلاصه'),
+  '/calendar': t('نمای تقویمی جلسات در محدودهٔ شما'),
+  '/actions': t('کارهایی که کسی قول داده تا موعد معین انجام دهد'),
+  '/commitments': t('قول‌های بلندمدت‌تر میان طرفین با سررسید'),
+  '/projects': t('پروژه‌های مشترک و مرحله‌های آن‌ها'),
+  '/opportunities': t('فرصت‌های تجاری شناسایی‌شده با ارزش و احتمال'),
+  '/ai': t('گفتگو با داده‌های شبکه: بپرسید و توصیه بگیرید'),
+  '/ai-executive-brief': t('گزارش دوره‌ای خودکار وضعیت روابط و هشدارها'),
+  '/recommendations': t('توصیه‌های داده‌محور برای قدم بعدی'),
+  '/reports': t('گزارش‌ها و خروجی‌های تحلیلی'),
+  '/documents': t('اسناد، دانش و قالب‌های اشتراکی'),
+  '/requirements': t('نیازمندی‌های پروژه‌ها'),
+  '/approvals': t('درخواست‌های در انتظار تأیید شما'),
+  '/data-exchange': t('ورود/خروج و تبادل داده بین سامانه‌ها'),
+  '/settings': t('تنظیمات حساب و ترجیحات شما'),
+  '/sessions': t('نشست‌های فعال ورود شما در دستگاه‌ها'),
+  '/data-management': t('مرکز داده: کیفیت، ورود و حاکمیت داده در یک نگاه'),
+  '/workflows': t('زنجیره‌های خودکار تصمیم، اجرا و تأییدها'),
+  '/publics': t('نقشهٔ عموم‌ها: شناسنامهٔ سازمان، دسته‌بندی بازیگران و شکاف‌های اثرگذار'),
+  '/strategy': t('تحلیل رقابت و تعامل راهبردی'),
+});

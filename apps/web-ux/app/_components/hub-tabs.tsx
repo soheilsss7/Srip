@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { t } from '../_lib/i18n';
 
 /**
  * نوار تب هاب‌های یکپارچه — هر تب یک URL واقعی است؛ تب فعال بر اساس مسیر
@@ -23,7 +24,7 @@ export default function HubTabs({ tabs, base }: { tabs: HubTab[]; base?: boolean
     return best;
   })();
   return (
-    <nav className="tabs" role="tablist" aria-label="بخش‌های این مرکز">
+    <nav className="tabs" role="tablist" aria-label={t('بخش‌های این مرکز')}>
       {tabs.map(({ href, label, icon }) => {
         const active = href === activeHref;
         return (

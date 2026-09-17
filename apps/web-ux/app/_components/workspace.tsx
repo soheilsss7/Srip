@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { api, clearSession, getAccessToken, getRefreshToken, apiPost, setScope, getScope } from '../_lib/api';
 import { NAV_ZONES, ADMIN_SUBS, getVisibleZones, getVisibleMobileTabs, NAV_PERMISSION_MAP, ADMIN_PERMISSION_MAP, GLOSS } from '../_lib/nav-structure';
 import { AppShellEnhancement } from './app-shell-enhancement';
+import { LocaleToggle, TranslationCoverageNote } from './locale-context';
 import Portal from './portal';
 import { Button } from '@srip/design-system';
 import {
@@ -15,6 +16,7 @@ import {
   Shield, Plug, Workflow, LineChart, Gauge, Activity, Table2, Flag, FileDown, KeyRound,
   DatabaseBackup, Archive, ScrollText, HeartPulse, ChevronDown, ChevronUp, Landmark, Radar
 } from 'lucide-react';
+import { t } from '../_lib/i18n';
 
 type Role = 'SUPER_ADMIN'|'HOLDING_ADMIN'|'HOLDING_EXECUTIVE'|'SUBSIDIARY_ADMIN'|'SUBSIDIARY_EXECUTIVE'|'RELATIONSHIP_MANAGER'|'PROJECT_MANAGER'|'ANALYST'|'STANDARD_USER'|'READ_ONLY';
 type Membership = { id: string; organizationId: string; organizationName: string; role: Role; department?: string|null; dataScope: string; accessScope: string; isPrimary: boolean };
@@ -23,7 +25,7 @@ type Me = { id: string; email: string; name: string; memberships: Membership[]; 
 type WorkspaceContextValue = { me: Me|null; loading: boolean; error: string; scopeId: string; setScopeId: (id: string)=>void; role: Role; can: (permission: string)=>boolean; isAdmin: boolean };
 const WorkspaceContext = createContext<WorkspaceContextValue|null>(null);
 
-export const ROLE_LABELS: Record<Role,string> = { SUPER_ADMIN:'مدیر کل سیستم', HOLDING_ADMIN:'مدیر هلدینگ', HOLDING_EXECUTIVE:'مدیر ارشد هلدینگ', SUBSIDIARY_ADMIN:'مدیر شرکت', SUBSIDIARY_EXECUTIVE:'مدیر ارشد شرکت', RELATIONSHIP_MANAGER:'مدیر روابط', PROJECT_MANAGER:'مدیر پروژه', ANALYST:'تحلیلگر', STANDARD_USER:'کاربر استاندارد', READ_ONLY:'فقط خواندنی' };
+export const ROLE_LABELS: Record<Role,string> = lt( { SUPER_ADMIN:t('مدیر کل سیستم'), HOLDING_ADMIN:t('مدیر هلدینگ'), HOLDING_EXECUTIVE:t('مدیر ارشد هلدینگ'), SUBSIDIARY_ADMIN:t('مدیر شرکت'), SUBSIDIARY_EXECUTIVE:t('مدیر ارشد شرکت'), RELATIONSHIP_MANAGER:t('مدیر روابط'), PROJECT_MANAGER:t('مدیر پروژه'), ANALYST:t('تحلیلگر'), STANDARD_USER:t('کاربر استاندارد'), READ_ONLY:t('فقط خواندنی') });
 
 /**
  * کاوش نشست با مهلت.
@@ -35,7 +37,7 @@ function probeMe(): Promise<Me> {
   return Promise.race<Me>([
     api<Me>('/auth/me'),
     new Promise<Me>((_resolve, reject) => {
-      setTimeout(() => reject(new Error('بررسی نشست بیش از حد طول کشید')), SESSION_PROBE_TIMEOUT_MS);
+      setTimeout(() => reject(new Error(t('بررسی نشست بیش از حد طول کشید'))), SESSION_PROBE_TIMEOUT_MS);
     }),
   ]);
 }
@@ -161,8 +163,8 @@ function ThemeToggle() {
     <button
       className={`icon-btn theme-toggle ${dark ? 'light' : 'dark'}`}
       onClick={toggle}
-      title={dark ? 'پوسته روشن' : 'پوسته تیره'}
-      aria-label={dark ? 'تغییر به پوستهٔ روشن' : 'تغییر به پوستهٔ تیره'}
+      title={dark ? t('پوسته روشن') : t('پوسته تیره')}
+      aria-label={dark ? t('تغییر به پوستهٔ روشن') : t('تغییر به پوستهٔ تیره')}
     >
       <svg className="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
       <svg className="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></svg>
@@ -227,10 +229,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const group = (nav: Array<readonly [string, string, string]>): Array<readonly [string, string, string]> =>
     nav.filter(([href, , permission]) => href === '/' || permission === 'dashboard.read' || can(permission));
   const scopeOptions = [...memberships.map(m => ({ id: m.organizationId, name: m.organizationName })), ...ownerOrgs.filter(o => !memberships.some(m => m.organizationId === o.id))];
-  const selectedLabel = scopeId === 'all' ? 'همه محدوده مجاز' : scopeOptions.find(o => o.id === scopeId)?.name ?? 'محدوده انتخاب‌شده';
+  const selectedLabel = scopeId === 'all' ? t('همه محدوده مجاز') : scopeOptions.find(o => o.id === scopeId)?.name ?? t('محدوده انتخاب‌شده');
 
   const engineState = error ? 'degraded' : me ? 'online' : 'pending';
-  const engineLabel = error ? 'ناکارآمد' : me ? 'آنلاین' : 'در حال راه‌اندازی';
+  const engineLabel = error ? t('ناکارآمد') : me ? t('آنلاین') : t('در حال راه‌اندازی');
 
   async function logout() {
     try {
@@ -246,29 +248,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="auth-gate" role="status" aria-live="polite">
           <div className="auth-gate-card">
             <div className="auth-gate-mark" aria-hidden="true">S</div>
-            <div className="auth-gate-title"><strong>SRIP</strong><span>هوش روابط راهبردی</span></div>
+            <div className="auth-gate-title"><strong>SRIP</strong><span>{t('هوش روابط راهبردی')}</span></div>
             <div className="spinner" aria-hidden="true" />
-            <p>{loading ? 'در حال بررسی نشست و محدودهٔ دسترسی…' : 'نشست فعالی یافت نشد؛ انتقال به صفحهٔ ورود…'}</p>
-            <Link className="auth-gate-escape" href="/login" onClick={() => clearSession()}>رفتن به صفحهٔ ورود</Link>
+            <p>{loading ? t('در حال بررسی نشست و محدودهٔ دسترسی…') : t('نشست فعالی یافت نشد؛ انتقال به صفحهٔ ورود…')}</p>
+            <Link className="auth-gate-escape" href="/login" onClick={() => clearSession()}>{t('رفتن به صفحهٔ ورود')}</Link>
           </div>
         </div>
       )}
       <div className="app-shell" aria-hidden={gated || undefined}>
       {navOpen && <div className="nav-backdrop" onClick={() => setNavOpen(false)} aria-hidden="true" />}
-      <aside className={`sidebar ${navOpen ? 'open' : ''}`} aria-label="ناوبری اصلی">
+      <aside className={`sidebar ${navOpen ? 'open' : ''}`} aria-label={t('ناوبری اصلی')}>
         <div className="brand">
           <div className="brand-mark">S</div>
           <div className="brand-title">
             <strong>SRIP</strong>
-            <span>هوش راهبردی</span>
+            <span>{t('هوش راهبردی')}</span>
           </div>
         </div>
         <div className="workspace-role">
-          <span>فضای کاری</span>
+          <span>{t('فضای کاری')}</span>
           <strong>{ROLE_LABELS[role]}</strong>
           {primaryMembership && <strong className="role-org">{primaryMembership.organizationName}</strong>}
         </div>
-        <nav className="side-nav" aria-label="ناوبری فضای کاری">
+        <nav className="side-nav" aria-label={t('ناوبری فضای کاری')}>
           {getVisibleZones(can, isAdmin).map(([title, sub, vis]) => (
             <React.Fragment key={title}>
               <div className="nav-zone" key={title}>
@@ -286,8 +288,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ))}
           {isAdmin && (
             <div className="nav-zone nav-admin">
-              <div className="nav-zone-title"><span>سیستم</span><small>مرکز مدیریت</small></div>
-              <Link href="/admin" className={pathname === '/admin' || pathname.startsWith('/admin/') ? 'active' : ''} title="کاربران، حاکمیت، داده و پایش">
+              <div className="nav-zone-title"><span>{t('سیستم')}</span><small>{t('مرکز مدیریت')}</small></div>
+              <Link href="/admin" className={pathname === '/admin' || pathname.startsWith('/admin/') ? 'active' : ''} title={t('کاربران، حاکمیت، داده و پایش')}>
                 {NAV_ICONS['/admin']}مرکز سیستم
               </Link>
             </div>
@@ -297,7 +299,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="ec-top">
             <span className={`dot ${engineState === 'online' ? '' : engineState}`} />
             <div>
-              <b>موتور هوشمندی</b>
+              <b>{t('موتور هوشمندی')}</b>
               <span>{engineLabel}</span>
             </div>
           </div>
@@ -306,55 +308,57 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </svg>
         </div>
         <div className="sidebar-bottom-actions">
-          <button className="icon-btn dict-btn" onClick={() => setDictOpen(true)} title="واژه‌نامه و راهنما — هر بخش یعنی چه؟" aria-label="واژه‌نامه و راهنما">؟</button>
-          <Button className="logout-button ghost" onClick={logout}><span className="logout-label">خروج امن</span></Button>
+          <button className="icon-btn dict-btn" onClick={() => setDictOpen(true)} title={t('واژه‌نامه و راهنما — هر بخش یعنی چه؟')} aria-label={t('واژه‌نامه و راهنما')}>{t('؟')}</button>
+          <Button className="logout-button ghost" onClick={logout}><span className="logout-label">{t('خروج امن')}</span></Button>
         </div>
       </aside>
       <div className="app-main">
         <header className="global-header" role="banner">
           <div className="header-left">
-            <button className="icon-btn nav-toggle" onClick={() => setNavOpen(true)} aria-label="باز کردن منو" title="منو">
+            <button className="icon-btn nav-toggle" onClick={() => setNavOpen(true)} aria-label={t('باز کردن منو')} title={t('منو')}>
               <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
             </button>
             <div className="global-search">
               <Link href="/search">
                 <Search size={13}/>
-                <span className="gs-label">جستجوی سراسری…</span>
+                <span className="gs-label">{t('جستجوی سراسری…')}</span>
                 <kbd className="kbd">⌘K</kbd>
               </Link>
             </div>
           </div>
           <div className="header-actions">
-            {me?.email === 'demo@srip.local' && <span className="demo-chip" title="این یک محیط دمو با دادهٔ نمایشی است">حالت دمو · مالک</span>}
-            {me?.email === 'client@arya-tech.ir' && <span className="demo-chip" title="مشتری که پلتفرم را تحویل گرفته — فقط محدودهٔ خودش">مستأجر · آریا فناوری</span>}
-            <label className="scope-chip" title="محدوده سازمانی — اعمال‌شده در سرور">
+            {me?.email === 'demo@srip.local' && <span className="demo-chip" title={t('این یک محیط دمو با دادهٔ نمایشی است')}>{t('حالت دمو · مالک')}</span>}
+            {me?.email === 'client@arya-tech.ir' && <span className="demo-chip" title={t('مشتری که پلتفرم را تحویل گرفته — فقط محدودهٔ خودش')}>{t('مستأجر · آریا فناوری')}</span>}
+            <label className="scope-chip" title={t('محدوده سازمانی — اعمال‌شده در سرور')}>
               <span className="globe"><Network size={13}/></span>
               <span className="scope-label">{selectedLabel}</span>
-              <select aria-label="محدوده سازمانی" value={scopeId} onChange={e => setScopeId(e.target.value)}>
-                {isOwner && <option value="all">همه محدوده مجاز (جلسات من)</option>}
+              <select aria-label={t('محدوده سازمانی')} value={scopeId} onChange={e => setScopeId(e.target.value)}>
+                {isOwner && <option value="all">{t('همه محدوده مجاز (جلسات من)')}</option>}
                 {scopeOptions.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
               </select>
             </label>
-            <Link className="ai-btn" href="/ai"><Sparkles size={14}/> دستیار هوشمند</Link>
+            <Link className="ai-btn" href="/ai"><Sparkles size={14}/> {t('دستیار هوشمند')}</Link>
             <AppShellEnhancement />
+            <LocaleToggle />
             <ThemeToggle />
-            <Link href="/settings" className="user-chip" aria-label="پروفایل">
-              <span className="avatar">{(me?.name ?? 'کاربر').slice(0, 1)}</span>
+            <Link href="/settings" className="user-chip" aria-label={t('پروفایل')}>
+              <span className="avatar">{(me?.name ?? t('کاربر')).slice(0, 1)}</span>
               <span className="uc-meta">
-                <strong>{me?.name ?? 'کاربر'}</strong>
+                <strong>{me?.name ?? t('کاربر')}</strong>
                 <small>{ROLE_LABELS[role]}</small>
               </span>
               <span className="chev">▾</span>
             </Link>
           </div>
         </header>
-        {error && <div className="runtime-banner" role="status">اطلاعات نقش/محدوده از API دریافت نشد؛ سرور همچنان مرجع نهایی مجوزها است.</div>}
-        {loading && <div className="loading-strip" aria-live="polite">در حال بارگذاری هویت و محدوده دسترسی…</div>}
+        {error && <div className="runtime-banner" role="status">{t('اطلاعات نقش/محدوده از API دریافت نشد؛ سرور همچنان مرجع نهایی مجوزها است.')}</div>}
+        {loading && <div className="loading-strip" aria-live="polite">{t('در حال بارگذاری هویت و محدوده دسترسی…')}</div>}
+        <TranslationCoverageNote pathname={pathname} />
         <main id="workspace-main" className="workspace-content" tabIndex={-1}>{children}</main>
       </div>
       </div>
       {/* نوار تب پایین موبایل — در دسکتاپ با CSS پنهان است */}
-      <nav className="mobile-tabs" aria-label="ناوبری سریع">
+      <nav className="mobile-tabs" aria-label={t('ناوبری سریع')}>
         {getVisibleMobileTabs(can).map(([href, label]) => {
           const active = href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(href + '/');
           return (
@@ -364,18 +368,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
           );
         })}
-        <button type="button" className="mobile-tabs-more" onClick={() => setNavOpen(true)} aria-label="همهٔ بخش‌ها" aria-expanded={navOpen}>
+        <button type="button" className="mobile-tabs-more" onClick={() => setNavOpen(true)} aria-label={t('همهٔ بخش‌ها')} aria-expanded={navOpen}>
           <span className="mt-ico" aria-hidden="true"><ListChecks size={16}/></span>
-          <span className="mt-label">بیشتر</span>
+          <span className="mt-label">{t('بیشتر')}</span>
         </button>
       </nav>
       {dictOpen && (
         <Portal>
-        <div className="command-overlay" onClick={() => setDictOpen(false)} role="dialog" aria-modal="true" aria-label="واژه‌نامه">
+        <div className="command-overlay" onClick={() => setDictOpen(false)} role="dialog" aria-modal="true" aria-label={t('واژه‌نامه')}>
           <div className="dict-card" onClick={(e) => e.stopPropagation()}>
             <header>
-              <div><span className="eyebrow">راهنمای سریع</span><h2>این بخش یعنی چه؟</h2></div>
-              <button onClick={() => setDictOpen(false)} aria-label="بستن">×</button>
+              <div><span className="eyebrow">{t('راهنمای سریع')}</span><h2>{t('این بخش یعنی چه؟')}</h2></div>
+              <button onClick={() => setDictOpen(false)} aria-label={t('بستن')}>×</button>
             </header>
             <div className="dict-list">
               {NAV_ZONES.flatMap(([, , items]) => items)
@@ -391,14 +395,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 .map(({ href, label, sub }) => (
                   <div className="dict-row" key={href}>
                     <b>{label} <small>· {sub}</small></b>
-                    <span>{GLOSS[href] ?? 'بخش مدیریتی — فقط مدیران'}</span>
+                    <span>{GLOSS[href] ?? t('بخش مدیریتی — فقط مدیران')}</span>
                   </div>
                 ))}
-              <div className="dict-row"><b>جستجو و اعلان‌ها</b><span>جستجوی سراسری و اعلان‌ها همیشه در نوار بالا در دسترس‌اند.</span></div>
+              <div className="dict-row"><b>{t('جستجو و اعلان‌ها')}</b><span>{t('جستجوی سراسری و اعلان‌ها همیشه در نوار بالا در دسترس‌اند.')}</span></div>
             </div>
             <footer className="dict-foot">
-              <Link href="/help" onClick={() => setDictOpen(false)}>راهنمای کامل ←</Link>
-              <span>هر آیتم منو نیز با نگه‌داشتن نشانگر، توضیح کوتاه نشان می‌دهد.</span>
+              <Link href="/help" onClick={() => setDictOpen(false)}>{t('راهنمای کامل ←')}</Link>
+              <span>{t('هر آیتم منو نیز با نگه‌داشتن نشانگر، توضیح کوتاه نشان می‌دهد.')}</span>
             </footer>
           </div>
         </div>
@@ -410,6 +414,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
 export function ScopeBadge() {
   const { scopeId, me } = useWorkspace();
-  const label = scopeId === 'all' ? 'همه محدوده مجاز' : me?.memberships.find(m => m.organizationId === scopeId)?.organizationName ?? 'محدوده';
+  const label = scopeId === 'all' ? t('همه محدوده مجاز') : me?.memberships.find(m => m.organizationId === scopeId)?.organizationName ?? t('محدوده');
   return <span className="scope-badge">محدوده: {label}</span>;
 }

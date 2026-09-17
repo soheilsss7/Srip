@@ -8,6 +8,7 @@ import { Card } from '@srip/design-system';
 import { Badge, ErrorCard, Modal, PageHeader, StatCard, Toolbar } from '../_components/page-ui';
 import { Zap, AlertTriangle, CalendarClock, User, ChevronLeft, Plus, RefreshCw, Search, ArrowDownWideNarrow, CheckCircle2 } from 'lucide-react';;
 import { JalaliDateField } from '../_components/jalali-date-field';
+import { localeTag, t } from '../_lib/i18n';
 
 type Action = {
   id: string; title: string; status: string; priority?: string | null; dueAt?: string | null;
@@ -30,17 +31,17 @@ const STATUS_OPTIONS = ['OPEN', 'IN_PROGRESS', 'BLOCKED', 'DONE', 'CANCELLED'];
 const PRIO_OPTIONS = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
 const DONE_STATUSES = ['DONE', 'COMPLETED', 'CANCELLED'];
 const SORTS = [
-  { value: 'due', label: 'نزدیک‌ترین موعد' },
-  { value: 'overdue', label: 'عقب‌افتاده‌ترین اول' },
-  { value: 'priority', label: 'بحرانی‌ترین اول' },
-  { value: 'created', label: 'جدیدترین' },
+  { value: 'due', label: t('نزدیک‌ترین موعد') },
+  { value: 'overdue', label: t('عقب‌افتاده‌ترین اول') },
+  { value: 'priority', label: t('بحرانی‌ترین اول') },
+  { value: 'created', label: t('جدیدترین') },
 ] as const;
 type SortKey = typeof SORTS[number]['value'];
 
 const fmtNum = (v: number | undefined | null): string =>
-  v == null ? '—' : new Intl.NumberFormat('fa-IR').format(v);
+  v == null ? '—' : new Intl.NumberFormat(localeTag()).format(v);
 const fmtDate = (iso?: string | null): string =>
-  iso ? new Date(iso).toLocaleDateString('fa-IR', { month: 'short', day: 'numeric' }) : '—';
+  iso ? new Date(iso).toLocaleDateString(localeTag(), { month: 'short', day: 'numeric' }) : '—';
 const prioLevel = (p?: string | null) => (p === 'CRITICAL' ? 3 : p === 'HIGH' ? 2 : p === 'MEDIUM' ? 1 : 0);
 const isOverdue = (a: Action) => !!a.dueAt && !DONE_STATUSES.includes(a.status) && new Date(a.dueAt).getTime() < Date.now();
 const relLabel = (r: Action['relationship']) =>
@@ -129,7 +130,7 @@ export default function ActionsPage() {
     e.preventDefault();
     if (!writable) return;
     setSaving(true); setError(''); setFormError('');
-    if (!form.title.trim()) { setFormError('عنوان اقدام لازم است.'); setSaving(false); return; }
+    if (!form.title.trim()) { setFormError(t('عنوان اقدام لازم است.')); setSaving(false); return; }
     try {
       await api('/actions', { method: 'POST', body: JSON.stringify({
         title: form.title.trim(),
@@ -159,13 +160,13 @@ export default function ActionsPage() {
   return (
     <main className="feature-page">
       <PageHeader
-        eyebrow="فضای کاری · عملیات"
-        title="اقدامات"
-        description="هر اقدام با مالک، اولویت، موعد و زمینهٔ رابطه — عقب‌افتاده‌ها و بحرانی‌ها در یک نگاه."
+        eyebrow={t('فضای کاری · عملیات')}
+        title={t('اقدامات')}
+        description={t('هر اقدام با مالک، اولویت، موعد و زمینهٔ رابطه — عقب‌افتاده‌ها و بحرانی‌ها در یک نگاه.')}
         actions={
           <>
-            <button className="btn btn-secondary" onClick={load} aria-label="بازخوانی"><RefreshCw size={15} /> بازخوانی</button>
-            {writable && <button className="btn btn-primary" onClick={() => { setError(''); setFormError(''); setCreateOpen(true); }}><Plus size={16} /> اقدام جدید</button>}
+            <button className="btn btn-secondary" onClick={load} aria-label={t('بازخوانی')}><RefreshCw size={15} /> {t('بازخوانی')}</button>
+            {writable && <button className="btn btn-primary" onClick={() => { setError(''); setFormError(''); setCreateOpen(true); }}><Plus size={16} /> {t('اقدام جدید')}</button>}
           </>
         }
       />
@@ -175,23 +176,23 @@ export default function ActionsPage() {
         <div className="stat-grid">{[0, 1, 2, 3].map(i => <div key={i} className="skeleton skeleton-card" style={{ height: 110 }} />)}</div>
       ) : (
         <div className="stat-grid">
-          <StatCard icon={<Zap size={18} />} label="کل اقدامات" value={fmtNum(stats.total)} iconClass="ic-indigo" sub="در محدودهٔ مجاز" />
-          <StatCard icon={<CheckCircle2 size={18} />} label="باز" value={fmtNum(stats.open)} iconClass="ic-teal" sub={stats.completion != null ? `${fmtNum(stats.completion)}٪ تکمیل‌شده` : ''} />
-          <StatCard icon={<AlertTriangle size={18} />} label="عقب‌افتاده" value={fmtNum(stats.overdue)} iconClass="ic-red" sub="موعد گذشته و باز" />
-          <StatCard icon={<AlertTriangle size={18} />} label="بحرانی" value={fmtNum(stats.critical)} iconClass="ic-gold" sub="اولویت بحرانی و باز" />
+          <StatCard icon={<Zap size={18} />} label={t('کل اقدامات')} value={fmtNum(stats.total)} iconClass="ic-indigo" sub={t('در محدودهٔ مجاز')} />
+          <StatCard icon={<CheckCircle2 size={18} />} label={t('باز')} value={fmtNum(stats.open)} iconClass="ic-teal" sub={stats.completion != null ? `${fmtNum(stats.completion)}${t('٪ تکمیل‌شده')}` : ''} />
+          <StatCard icon={<AlertTriangle size={18} />} label={t('عقب‌افتاده')} value={fmtNum(stats.overdue)} iconClass="ic-red" sub={t('موعد گذشته و باز')} />
+          <StatCard icon={<AlertTriangle size={18} />} label={t('بحرانی')} value={fmtNum(stats.critical)} iconClass="ic-gold" sub={t('اولویت بحرانی و باز')} />
         </div>
       )}
 
-      <Toolbar search={q} onSearch={setQ} searchPlaceholder="جستجوی عنوان، مالک یا سازمان…">
-        <select aria-label="فیلتر وضعیت" value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="toolbar-select">
-          <option value="">همهٔ وضعیت‌ها</option>
+      <Toolbar search={q} onSearch={setQ} searchPlaceholder={t('جستجوی عنوان، مالک یا سازمان…')}>
+        <select aria-label={t('فیلتر وضعیت')} value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="toolbar-select">
+          <option value="">{t('همهٔ وضعیت‌ها')}</option>
           {STATUS_OPTIONS.map(s => <option key={s} value={s}>{fa(s)}</option>)}
         </select>
-        <select aria-label="فیلتر اولویت" value={prioFilter} onChange={e => setPrioFilter(e.target.value)} className="toolbar-select">
-          <option value="">همهٔ اولویت‌ها</option>
+        <select aria-label={t('فیلتر اولویت')} value={prioFilter} onChange={e => setPrioFilter(e.target.value)} className="toolbar-select">
+          <option value="">{t('همهٔ اولویت‌ها')}</option>
           {PRIO_OPTIONS.map(p => <option key={p} value={p}>{fa(p)}</option>)}
         </select>
-        <label className="toolbar-sort" aria-label="مرتب‌سازی">
+        <label className="toolbar-sort" aria-label={t('مرتب‌سازی')}>
           <ArrowDownWideNarrow size={14} />
           <select value={sortBy} onChange={e => setSortBy(e.target.value as SortKey)}>
             {SORTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
@@ -205,20 +206,20 @@ export default function ActionsPage() {
       ) : filtered.length === 0 ? (
         <div className="empty-state-v4">
           <div className="empty-ico"><Search size={24} /></div>
-          <strong>{items.length === 0 ? 'اقدامی ثبت نشده است' : 'نتیجه‌ای یافت نشد'}</strong>
-          <p>{items.length === 0 ? 'از دکمهٔ «اقدام جدید» برای ثبت نخستین اقدام استفاده کنید.' : 'فیلترها یا عبارت جستجو را تغییر دهید.'}</p>
+          <strong>{items.length === 0 ? t('اقدامی ثبت نشده است') : t('نتیجه‌ای یافت نشد')}</strong>
+          <p>{items.length === 0 ? t('از دکمهٔ «اقدام جدید» برای ثبت نخستین اقدام استفاده کنید.') : t('فیلترها یا عبارت جستجو را تغییر دهید.')}</p>
         </div>
       ) : (
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>اقدام</th>
-                <th>زمینه (رابطه)</th>
-                <th>مالک</th>
-                <th>اولویت</th>
-                <th>موعد</th>
-                <th>وضعیت</th>
+                <th>{t('اقدام')}</th>
+                <th>{t('زمینه (رابطه)')}</th>
+                <th>{t('مالک')}</th>
+                <th>{t('اولویت')}</th>
+                <th>{t('موعد')}</th>
+                <th>{t('وضعیت')}</th>
                 <th></th>
               </tr>
             </thead>
@@ -248,13 +249,13 @@ export default function ActionsPage() {
                     <td>
                       {a.dueAt ? (
                         <span className={`cell-count ${overdue ? 'danger' : ''}`}>
-                          <CalendarClock size={12} /> {fmtDate(a.dueAt)}{overdue ? ' · عقب‌افتاده' : ''}
+                          <CalendarClock size={12} /> {fmtDate(a.dueAt)}{overdue ? t('· عقب‌افتاده') : ''}
                         </span>
                       ) : <span className="t-muted">—</span>}
                     </td>
                     <td>
                       {writable ? (
-                        <select aria-label={`تغییر وضعیت ${a.title}`} className="toolbar-select" style={{ minHeight: 30, padding: '2px 6px', fontSize: 11.5 }}
+                        <select aria-label={`${t('تغییر وضعیت')} ${a.title}`} className="toolbar-select" style={{ minHeight: 30, padding: '2px 6px', fontSize: 11.5 }}
                           value={a.status} disabled={patchId === a.id}
                           onChange={e => quickStatus(a, e.target.value)}>
                           {STATUS_OPTIONS.map(s => <option key={s} value={s}>{fa(s)}</option>)}
@@ -262,7 +263,7 @@ export default function ActionsPage() {
                       ) : <Badge tone={STATUS_TONE[a.status] ?? 'neutral'}>{fa(a.status)}</Badge>}
                     </td>
                     <td>
-                      <Link className="row-action" href={`/actions/${a.id}`} aria-label={`مشاهدهٔ ${a.title}`}><ChevronLeft size={16} /></Link>
+                      <Link className="row-action" href={`/actions/${a.id}`} aria-label={`${t('مشاهدهٔ')} ${a.title}`}><ChevronLeft size={16} /></Link>
                     </td>
                   </tr>
                 );
@@ -274,66 +275,66 @@ export default function ActionsPage() {
 
       <Modal
         open={createOpen}
-        title="ثبت اقدام جدید"
-        description="اقدام با مالک و زمینهٔ رابطه ثبت می‌شود و در داشبورد و فهرست اقدامات ظاهر می‌شود."
+        title={t('ثبت اقدام جدید')}
+        description={t('اقدام با مالک و زمینهٔ رابطه ثبت می‌شود و در داشبورد و فهرست اقدامات ظاهر می‌شود.')}
         onClose={() => setCreateOpen(false)}
         footer={<>
-          <button className="btn btn-secondary" onClick={() => setCreateOpen(false)}>انصراف</button>
-          <button className="btn btn-primary" form="action-create-form" type="submit" disabled={saving}>{saving ? 'در حال ثبت…' : 'ثبت اقدام'}</button>
+          <button className="btn btn-secondary" onClick={() => setCreateOpen(false)}>{t('انصراف')}</button>
+          <button className="btn btn-primary" form="action-create-form" type="submit" disabled={saving}>{saving ? t('در حال ثبت…') : t('ثبت اقدام')}</button>
         </>}
       >
         {formError && <div className="error-card" role="alert">{formError}</div>}
         <form id="action-create-form" className="entity-form org-form" onSubmit={create}>
-          <div className="form-section-head"><h3>اقدام</h3></div>
+          <div className="form-section-head"><h3>{t('اقدام')}</h3></div>
           <div className="form-grid">
             <div className="field full">
-              <label className="field-label" htmlFor="a-title">عنوان اقدام <span className="req">*</span></label>
-              <input id="a-title" required value={form.title} onChange={setF('title')} placeholder="مثلاً: پیگیری امضای قرارداد همکار کلیدی" />
+              <label className="field-label" htmlFor="a-title">{t('عنوان اقدام')} <span className="req">*</span></label>
+              <input id="a-title" required value={form.title} onChange={setF('title')} placeholder={t('مثلاً: پیگیری امضای قرارداد همکار کلیدی')} />
             </div>
             <div className="field full">
-              <label className="field-label" htmlFor="a-desc">توضیح (اختیاری)</label>
-              <textarea id="a-desc" value={form.description} onChange={setF('description')} placeholder="شرحی کوتاه از اقدام…" />
+              <label className="field-label" htmlFor="a-desc">{t('توضیح (اختیاری)')}</label>
+              <textarea id="a-desc" value={form.description} onChange={setF('description')} placeholder={t('شرحی کوتاه از اقدام…')} />
             </div>
           </div>
-          <div className="form-section-head"><h3>مالک و زمینه</h3></div>
+          <div className="form-section-head"><h3>{t('مالک و زمینه')}</h3></div>
           <div className="form-grid">
             <div className="field">
-              <label className="field-label" htmlFor="a-owner">مالک (شخص مسئول)</label>
+              <label className="field-label" htmlFor="a-owner">{t('مالک (شخص مسئول)')}</label>
               <select id="a-owner" value={form.ownerId} onChange={setF('ownerId')}>
-                <option value="">بدون مالک</option>
+                <option value="">{t('بدون مالک')}</option>
                 {people.map(p => <option key={p.id} value={p.id}>{p.firstName} {p.lastName}{p.title ? ` — ${p.title}` : ''}</option>)}
               </select>
             </div>
             <div className="field">
-              <label className="field-label" htmlFor="a-rel">رابطهٔ مرتبط</label>
+              <label className="field-label" htmlFor="a-rel">{t('رابطهٔ مرتبط')}</label>
               <select id="a-rel" value={form.relationshipId} onChange={setF('relationshipId')}>
-                <option value="">بدون رابطه</option>
+                <option value="">{t('بدون رابطه')}</option>
                 {rels.map((r: any) => (
                   <option key={r.id} value={r.id}>{r.sourceOrganization?.name ?? '—'} ↔ {r.targetOrganization?.name ?? '—'}{r.relationshipType ? ` (${fa(r.relationshipType)})` : ''}</option>
                 ))}
               </select>
             </div>
           </div>
-          <div className="form-section-head"><h3>اولویت و زمان‌بندی</h3></div>
+          <div className="form-section-head"><h3>{t('اولویت و زمان‌بندی')}</h3></div>
           <div className="form-grid">
             <div className="field">
-              <label className="field-label" htmlFor="a-prio">اولویت</label>
+              <label className="field-label" htmlFor="a-prio">{t('اولویت')}</label>
               <select id="a-prio" value={form.priority} onChange={setF('priority')}>
                 {PRIO_OPTIONS.map(p => <option key={p} value={p}>{fa(p)}</option>)}
               </select>
             </div>
             <div className="field">
-              <label className="field-label" htmlFor="a-status">وضعیت شروع</label>
+              <label className="field-label" htmlFor="a-status">{t('وضعیت شروع')}</label>
               <select id="a-status" value={form.status} onChange={setF('status')}>
                 {STATUS_OPTIONS.filter(s => s !== 'DONE' && s !== 'CANCELLED').map(s => <option key={s} value={s}>{fa(s)}</option>)}
               </select>
             </div>
             <div className="field">
-              <label className="field-label" htmlFor="a-due">موعد</label>
+              <label className="field-label" htmlFor="a-due">{t('موعد')}</label>
               <JalaliDateField id="a-due" withTime value={form.dueAt} onChange={setF('dueAt')} />
             </div>
             <div className="field">
-              <label className="field-label" htmlFor="a-rem">یادآور</label>
+              <label className="field-label" htmlFor="a-rem">{t('یادآور')}</label>
               <JalaliDateField id="a-rem" withTime value={form.reminderAt} onChange={setF('reminderAt')} />
             </div>
           </div>

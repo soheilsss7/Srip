@@ -4,6 +4,7 @@ import { api, apiGet } from '../_lib/api';
 import { useWorkspace } from '../_components/workspace';
 import { Badge, ErrorCard, Loading, PageHeader, SectionCard, StatCard } from '../_components/page-ui';
 import { Bell, BellOff, BellRing, CheckCheck, HardDriveDownload, RefreshCw, Send, Trash2, Wifi, WifiOff } from 'lucide-react';
+import { localeTag, t } from '../_lib/i18n';
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Web Push + ارتقای PWA (مسترپلن فاز ۳/۲۱) — الگوی اپ‌های نیتیو، مسیر سبک
@@ -16,7 +17,7 @@ import { Bell, BellOff, BellRing, CheckCheck, HardDriveDownload, RefreshCw, Send
 type Sub = { id: string; endpointMasked: string; topics: string[]; consent: string; active: boolean; createdAt: string; revokedAt: string | null };
 type Pending = { id: string; title: string; body: string; topic: string; createdAt: string };
 
-const fmtN = (v: unknown) => (v === null || v === undefined || v === '') ? '—' : new Intl.NumberFormat('fa-IR').format(Number(v));
+const fmtN = (v: unknown) => (v === null || v === undefined || v === '') ? '—' : new Intl.NumberFormat(localeTag()).format(Number(v));
 
 export default function PushPage() {
   const { can } = useWorkspace();
@@ -97,13 +98,13 @@ export default function PushPage() {
   };
 
   const requestPermission = async () => {
-    if (typeof Notification === 'undefined') { setError('این مرورگر از Notification پشتیبانی نمی‌کند.'); return; }
+    if (typeof Notification === 'undefined') { setError(t('این مرورگر از Notification پشتیبانی نمی‌کند.')); return; }
     try { setPermission(await Notification.requestPermission()); }
     catch { setPermission('denied'); }
   };
 
   const subscribe = async () => {
-    if (permission !== 'granted') { setError('ابتدا رضایت اعلان را بگیرید (دکمهٔ «درخواست رضایت اعلان»).'); return; }
+    if (permission !== 'granted') { setError(t('ابتدا رضایت اعلان را بگیرید (دکمهٔ «درخواست رضایت اعلان»).')); return; }
     setBusy(true); setError(''); setFlash('');
     try {
       const synthetic = `https://push.srip.local/sub/${crypto.randomUUID?.() ?? String(Date.now())}`;
@@ -111,7 +112,7 @@ export default function PushPage() {
         method: 'POST',
         body: JSON.stringify({ endpoint: synthetic, consent: 'GRANTED', topics: ['PORTAL', 'MEDIA', 'GENERAL'], keys: { p256dh: 'demo-static', auth: 'demo-static' } }),
       });
-      setFlash(`اشتراک ثبت شد (${r.id.slice(0, 12)}…) — رضایت شما در سرور ذخیره شد.`);
+      setFlash(`${t('اشتراک ثبت شد (')}${r.id.slice(0, 12)}${t('…) — رضایت شما در سرور ذخیره شد.')}`);
       await loadSubs();
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }
@@ -127,7 +128,7 @@ export default function PushPage() {
   const dispatchTest = async () => {
     setBusy(true); setError(''); setFlash('');
     try {
-      const r = await api<{ sent: number; message: string }>('/notifications/push/dispatch', { method: 'POST', body: JSON.stringify({ title: 'اعلان آزمون SRIP', body: 'این پیام از مسیر Web Push (نقل‌ونقل polling در دمو) رسید.' }) });
+      const r = await api<{ sent: number; message: string }>('/notifications/push/dispatch', { method: 'POST', body: JSON.stringify({ title: t('اعلان آزمون SRIP'), body: t('این پیام از مسیر Web Push (نقل‌ونقل polling در دمو) رسید.') }) });
       setFlash(r.message);
       await ackAll();
     } catch (e) { setError((e as Error).message); }
@@ -142,7 +143,7 @@ export default function PushPage() {
         await Promise.all(names.map(n => caches.delete(n)));
         await loadCaches();
       }
-      setFlash('حافظهٔ آفلاین پاک شد — صفحات با بازدید بعدی دوباره ذخیره می‌شوند.');
+      setFlash(t('حافظهٔ آفلاین پاک شد — صفحات با بازدید بعدی دوباره ذخیره می‌شوند.'));
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }
   };
@@ -153,12 +154,12 @@ export default function PushPage() {
   return (
     <>
       <PageHeader
-        eyebrow="مسترپلن فاز ۳/۲۱ — استقرار ترکیبی: هستهٔ استاتیک می‌ماند، سرویس اعلان اختیاری"
-        title="اعلان‌ها و آفلاین (PWA)"
-        description="اشتراک اعلان فقط با رضایت صریح شما ثبت می‌شود و هر زمان قابل لغو است. پیام‌های پورتال و رسانه به‌طور خودکار به صف اعلان می‌روند. صفحات بازدیدشده برای استفادهٔ بدون اینترنت ذخیره می‌شوند."
+        eyebrow={t('مسترپلن فاز ۳/۲۱ — استقرار ترکیبی: هستهٔ استاتیک می‌ماند، سرویس اعلان اختیاری')}
+        title={t('اعلان‌ها و آفلاین (PWA)')}
+        description={t('اشتراک اعلان فقط با رضایت صریح شما ثبت می‌شود و هر زمان قابل لغو است. پیام‌های پورتال و رسانه به‌طور خودکار به صف اعلان می‌روند. صفحات بازدیدشده برای استفادهٔ بدون اینترنت ذخیره می‌شوند.')}
         actions={
           <button className="btn btn-secondary" onClick={togglePolling}>
-            {polling ? <><BellOff size={14} /> توقف دریافت</> : <><BellRing size={14} /> شروع دریافت (polling)</>}
+            {polling ? <><BellOff size={14} /> {t('توقف دریافت')}</> : <><BellRing size={14} /> {t('شروع دریافت (polling)')}</>}
           </button>
         }
       />
@@ -167,18 +168,18 @@ export default function PushPage() {
       {loading ? <Loading /> : (
         <>
           <div className="stat-grid">
-            <StatCard icon={permission === 'granted' ? <Bell size={18} /> : <BellOff size={18} />} label="رضایت اعلان مرورگر" value={permission === 'granted' ? 'داده‌شده' : permission === 'denied' ? 'ردشده' : 'خواسته‌نشده'} iconClass={permission === 'granted' ? 'ic-teal' : 'ic-blue'} sub={permission === 'denied' ? 'از تنظیمات مرورگر فعال کنید' : 'قابل لغو در هر زمان'} />
-            <StatCard icon={<Wifi size={18} />} label="وضعیت شبکه" value={online ? 'برخط' : 'آفلاین'} iconClass={online ? 'ic-teal' : 'ic-purple'} sub={online ? 'داده تازه‌سازی می‌شود' : 'صفحات بازدیدشده از حافظهٔ محلی'} />
-            <StatCard icon={<CheckCheck size={18} />} label="اشتراک‌های فعال" value={fmtN(activeSubs.length)} iconClass="ic-indigo" sub={`${fmtN(subs.length)} اشتراک ثبت‌شده`} />
-            <StatCard icon={<HardDriveDownload size={18} />} label="حافظهٔ آفلاین" value={runtimeCache ? `${fmtN(runtimeCache.entries)} مورد` : '—'} iconClass="ic-blue" sub={swReady ? 'سرویس‌ورکر فعال' : 'سرویس‌ورکر نامشخص'} />
+            <StatCard icon={permission === 'granted' ? <Bell size={18} /> : <BellOff size={18} />} label={t('رضایت اعلان مرورگر')} value={permission === 'granted' ? t('داده‌شده') : permission === 'denied' ? t('ردشده') : t('خواسته‌نشده')} iconClass={permission === 'granted' ? 'ic-teal' : 'ic-blue'} sub={permission === 'denied' ? t('از تنظیمات مرورگر فعال کنید') : t('قابل لغو در هر زمان')} />
+            <StatCard icon={<Wifi size={18} />} label={t('وضعیت شبکه')} value={online ? t('برخط') : t('آفلاین')} iconClass={online ? 'ic-teal' : 'ic-purple'} sub={online ? t('داده تازه‌سازی می‌شود') : t('صفحات بازدیدشده از حافظهٔ محلی')} />
+            <StatCard icon={<CheckCheck size={18} />} label={t('اشتراک‌های فعال')} value={fmtN(activeSubs.length)} iconClass="ic-indigo" sub={`${fmtN(subs.length)} ${t('اشتراک ثبت‌شده')}`} />
+            <StatCard icon={<HardDriveDownload size={18} />} label={t('حافظهٔ آفلاین')} value={runtimeCache ? `${fmtN(runtimeCache.entries)} ${t('مورد')}` : '—'} iconClass="ic-blue" sub={swReady ? t('سرویس‌ورکر فعال') : t('سرویس‌ورکر نامشخص')} />
           </div>
 
-          <SectionCard title="اشتراک اعلان این دستگاه" icon={<Bell size={16} />}
-            description="در دمو، انتقال پیام با polling از صف سرور انجام می‌شود (همان ساختار اشتراک Web Push)؛ در استقرار واقعی با VAPID تحویل از سرویس اعلان انجام می‌شود — سرویس‌ورکر پوش و کلیک اعلان از همین حالا فعال است.">
+          <SectionCard title={t('اشتراک اعلان این دستگاه')} icon={<Bell size={16} />}
+            description={t('در دمو، انتقال پیام با polling از صف سرور انجام می‌شود (همان ساختار اشتراک Web Push)؛ در استقرار واقعی با VAPID تحویل از سرویس اعلان انجام می‌شود — سرویس‌ورکر پوش و کلیک اعلان از همین حالا فعال است.')}>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {permission !== 'granted' && <button className="btn btn-secondary" onClick={requestPermission}><Bell size={14} /> درخواست رضایت اعلان</button>}
-              <button className="btn btn-primary" disabled={busy || permission !== 'granted'} onClick={subscribe}><BellRing size={14} /> اشتراک این دستگاه</button>
-              {canWrite && <button className="btn btn-secondary" disabled={busy} onClick={dispatchTest}><Send size={14} /> ارسال آزمایشی به حساب</button>}
+              {permission !== 'granted' && <button className="btn btn-secondary" onClick={requestPermission}><Bell size={14} /> {t('درخواست رضایت اعلان')}</button>}
+              <button className="btn btn-primary" disabled={busy || permission !== 'granted'} onClick={subscribe}><BellRing size={14} /> {t('اشتراک این دستگاه')}</button>
+              {canWrite && <button className="btn btn-secondary" disabled={busy} onClick={dispatchTest}><Send size={14} /> {t('ارسال آزمایشی به حساب')}</button>}
             </div>
             {subs.length > 0 && (
               <div className="p3-list" style={{ marginTop: 10 }}>
@@ -188,20 +189,20 @@ export default function PushPage() {
                       <code style={{ fontSize: 11, direction: 'ltr', wordBreak: 'break-all' }}>{s.endpointMasked}</code>
                       <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap', alignItems: 'center' }}>
                         {s.topics.map(t => <span key={t} className="p3-chip">{t}</span>)}
-                        {s.active ? <Badge tone="success">فعال · رضایت داده‌شده</Badge> : <Badge tone="danger">لغوشده</Badge>}
+                        {s.active ? <Badge tone="success">{t('فعال · رضایت داده‌شده')}</Badge> : <Badge tone="danger">{t('لغوشده')}</Badge>}
                       </div>
                     </div>
-                    {s.active && <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => revoke(s.id)}><BellOff size={13} /> لغو رضایت</button>}
+                    {s.active && <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => revoke(s.id)}><BellOff size={13} /> {t('لغو رضایت')}</button>}
                   </div>
                 ))}
               </div>
             )}
           </SectionCard>
 
-          <SectionCard title="پیام‌های دریافت‌شده" icon={<BellRing size={16} />}
-            description="با «شروع دریافت»، هر ۸ ثانیه صف بررسی می‌شود؛ پیام تازه با اعلان سیستم (در صورت پشتیبانی) و این فهرست نمایش داده می‌شود. هر پیام پوش هم‌زمان به‌عنوان اعلان درون‌برنامه‌ای سازمان‌محور در صفحهٔ «اعلان‌ها» هم ظاهر می‌شود.">
+          <SectionCard title={t('پیام‌های دریافت‌شده')} icon={<BellRing size={16} />}
+            description={t('با «شروع دریافت»، هر ۸ ثانیه صف بررسی می‌شود؛ پیام تازه با اعلان سیستم (در صورت پشتیبانی) و این فهرست نمایش داده می‌شود. هر پیام پوش هم‌زمان به‌عنوان اعلان درون‌برنامه‌ای سازمان‌محور در صفحهٔ «اعلان‌ها» هم ظاهر می‌شود.')}>
             {received.length === 0 ? (
-              <p className="pp-muted">هنوز پیامی دریافت نشده — «شروع دریافت» را بزنید و با «ارسال آزمایشی» یا ثبت پیام در پورتال عمومی، چرخهٔ کامل را ببینید.</p>
+              <p className="pp-muted">{t('هنوز پیامی دریافت نشده — «شروع دریافت» را بزنید و با «ارسال آزمایشی» یا ثبت پیام در پورتال عمومی، چرخهٔ کامل را ببینید.')}</p>
             ) : (
               <div className="p3-list">
                 {received.map(p => (
@@ -217,13 +218,13 @@ export default function PushPage() {
             )}
           </SectionCard>
 
-          <SectionCard title="آفلاین و حافظهٔ محلی" icon={online ? <Wifi size={16} /> : <WifiOff size={16} />}
-            description="سرویس‌ورکر صفحات بازدیدشده را ذخیره می‌کند تا بدون اینترنت در دسترس باشند؛ دادهٔ API دمو نیز به‌طور کامل داخل سرویس‌ورکر اجرا می‌شود.">
+          <SectionCard title={t('آفلاین و حافظهٔ محلی')} icon={online ? <Wifi size={16} /> : <WifiOff size={16} />}
+            description={t('سرویس‌ورکر صفحات بازدیدشده را ذخیره می‌کند تا بدون اینترنت در دسترس باشند؛ دادهٔ API دمو نیز به‌طور کامل داخل سرویس‌ورکر اجرا می‌شود.')}>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-              <Badge tone={swReady ? 'success' : 'warning'}>{swReady ? 'سرویس‌ورکر فعال' : 'سرویس‌ورکر در این نشست فعال نیست'}</Badge>
+              <Badge tone={swReady ? 'success' : 'warning'}>{swReady ? t('سرویس‌ورکر فعال') : t('سرویس‌ورکر در این نشست فعال نیست')}</Badge>
               {cacheList.map(c => <span key={c.name} className="p3-chip"><code style={{ direction: 'ltr', fontSize: 10.5 }}>{c.name}</code> · {fmtN(c.entries)} مورد</span>)}
-              <button className="btn btn-secondary btn-sm" disabled={busy} onClick={clearOffline}><Trash2 size={13} /> پاک‌سازی حافظهٔ آفلاین</button>
-              <button className="btn btn-secondary btn-sm" disabled={busy} onClick={loadCaches}><RefreshCw size={13} /> به‌روزرسانی</button>
+              <button className="btn btn-secondary btn-sm" disabled={busy} onClick={clearOffline}><Trash2 size={13} /> {t('پاک‌سازی حافظهٔ آفلاین')}</button>
+              <button className="btn btn-secondary btn-sm" disabled={busy} onClick={loadCaches}><RefreshCw size={13} /> {t('به‌روزرسانی')}</button>
             </div>
             <p className="pp-muted" style={{ fontSize: 11.5, marginTop: 8 }}>
               صداقت محدوده: پوش واقعی (VAPID) نیازمند سرویس اعلان اختیاری در استقرار ترکیبی است؛ در این دمو ساختار اشتراک/رضایت/صف تحویل همان است و فقط نقل‌ونقل با polling شبیه‌سازی شده است. دریافت در Android/iOS PWA پس از استقرار سرویس اعلان، بدون تغییر این صفحه فعال می‌شود.

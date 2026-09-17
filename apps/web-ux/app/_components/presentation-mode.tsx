@@ -4,6 +4,7 @@ import { api } from '../_lib/api';
 import { Badge } from './page-ui';
 import { Camera, ChevronLeft, ChevronRight, Pause, Play, Plus, Presentation, Trash2, X } from 'lucide-react';
 import type { GGraph } from '../network/_nodes';
+import { localeTag, t } from '../_lib/i18n';
 
 /* ═══════════════════════════════════════════════════════════════════════════
    حالت ارائه/روایت گراف (مسترپلن فاز ۲/۱۷) — الگوی Kumu Presentation Builder
@@ -19,8 +20,8 @@ type Scene = {
 };
 type GisPoint = { organizationId: string; name: string; publicsCategory: string | null; stance: string | null; power: number | null; provinceFa: string; isTenantNode: boolean };
 
-const fmtN = (v: unknown) => (v === null || v === undefined || v === '') ? '—' : new Intl.NumberFormat('fa-IR').format(Number(v));
-const CAT_FA: Record<string, string> = { INTERNAL: 'داخلی', INSTITUTIONAL: 'نهادی و حاکمیتی', ACADEMIC: 'علمی و پژوهشی', ECONOMIC: 'اقتصادی', MEDIA: 'رسانه‌ای', ECOSYSTEM: 'اکوسیستم' };
+const fmtN = (v: unknown) => (v === null || v === undefined || v === '') ? '—' : new Intl.NumberFormat(localeTag()).format(Number(v));
+const CAT_FA: Record<string, string> = { INTERNAL: t('داخلی'), INSTITUTIONAL: t('نهادی و حاکمیتی'), ACADEMIC: t('علمی و پژوهشی'), ECONOMIC: t('اقتصادی'), MEDIA: t('رسانه‌ای'), ECOSYSTEM: t('اکوسیستم') };
 const STANCE_COLOR: Record<string, string> = { KEY_PLAYER: '#dc2626', INFLUENCER: '#f59e0b', SUPPORTER: '#16a34a', OBSERVER: '#94a3b8' };
 
 /* چیدمان قطعی: hash شناسه → زاویه؛ هستهٔ مستأجر حلقهٔ داخلی، بقیه حلقهٔ بیرونی */
@@ -153,9 +154,9 @@ export default function PresentationMode({ graph, currentFocus, currentVariant, 
       });
       setBForm({ title: '', note: '' });
       setBuilderOpen(false);
-      setFlash('صحنه به انتهای روایت اضافه شد.');
+      setFlash(t('صحنه به انتهای روایت اضافه شد.'));
       await load();
-    } catch (e) { setFlash(`خطا: ${(e as Error).message}`); }
+    } catch (e) { setFlash(`${t('خطا:')} ${(e as Error).message}`); }
     finally { setBusy(false); }
   };
   const delScene = async (id: string) => {
@@ -167,25 +168,25 @@ export default function PresentationMode({ graph, currentFocus, currentVariant, 
   return (
     <>
       <button className="net-btn primary" onClick={() => { setOpen(true); setIdx(0); }} disabled={!scenes.length}
-        title="حالت ارائه: پخش روایت صحنه‌به‌صحنه برای جلسهٔ هیئت‌مدیره (کلیدهای جهت)">
+        title={t('حالت ارائه: پخش روایت صحنه‌به‌صحنه برای جلسهٔ هیئت‌مدیره (کلیدهای جهت)')}>
         <Presentation size={13} /> ارائه ({fmtN(scenes.length)})
       </button>
 
       {open && scene && (
-        <div className="pres-overlay" role="dialog" aria-label="حالت ارائهٔ گراف">
+        <div className="pres-overlay" role="dialog" aria-label={t('حالت ارائهٔ گراف')}>
           <div className="pres-top">
             <Badge tone="info">صحنهٔ {fmtN(idx + 1)} از {fmtN(scenes.length)}</Badge>
             <h2>{scene.title}</h2>
             {scene.note && <p>{scene.note}</p>}
             <span style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
               {scene.filters.category !== 'ALL' && <span className="chip neutral">{CAT_FA[scene.filters.category] ?? scene.filters.category}</span>}
-              {scene.filters.stance && <span className="chip neutral">{scene.filters.stance === 'KEY_PLAYER' ? 'بازیگر کلیدی' : scene.filters.stance}</span>}
+              {scene.filters.stance && <span className="chip neutral">{scene.filters.stance === 'KEY_PLAYER' ? t('بازیگر کلیدی') : scene.filters.stance}</span>}
               {scene.filters.minPower > 0 && <span className="chip neutral">قدرت ≥ {fmtN(scene.filters.minPower)}</span>}
-              <span className="chip neutral">{scene.filters.view === 'neighbors' ? 'تمرکز + همسایه‌ها' : 'کل اکوسیستم'}</span>
+              <span className="chip neutral">{scene.filters.view === 'neighbors' ? t('تمرکز + همسایه‌ها') : t('کل اکوسیستم')}</span>
             </span>
           </div>
 
-          <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`صحنهٔ ${scene.title} — ${fmtN(nodes.length)} گره و ${fmtN(edges.length)} پیوند`} style={{ width: '100%', maxWidth: 1100, height: 'auto', direction: 'ltr', alignSelf: 'center' }}>
+          <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${t('صحنهٔ')} ${scene.title} — ${fmtN(nodes.length)} ${t('گره و')} ${fmtN(edges.length)} ${t('پیوند')}`} style={{ width: '100%', maxWidth: 1100, height: 'auto', direction: 'ltr', alignSelf: 'center' }}>
             <text x={W - 16} y={26} fontSize={12} fill="#94a3b8" textAnchor="end" direction="rtl">
               {scene.title} — {fmtN(nodes.length)} ذینفع · {fmtN(edges.length)} پیوند
             </text>
@@ -221,35 +222,35 @@ export default function PresentationMode({ graph, currentFocus, currentVariant, 
           </svg>
 
           <div className="pres-controls">
-            <button className="btn btn-ghost" onClick={prev} disabled={idx === 0} aria-label="صحنهٔ قبلی"><ChevronRight size={16} /></button>
+            <button className="btn btn-ghost" onClick={prev} disabled={idx === 0} aria-label={t('صحنهٔ قبلی')}><ChevronRight size={16} /></button>
             <button className="btn btn-primary" onClick={() => setAutoPlay(a => !a)} aria-pressed={autoPlay}>
-              {autoPlay ? <><Pause size={13} /> توقف</> : <><Play size={13} /> پخش خودکار</>}
+              {autoPlay ? <><Pause size={13} /> {t('توقف')}</> : <><Play size={13} /> {t('پخش خودکار')}</>}
             </button>
-            <button className="btn btn-ghost" onClick={next} disabled={idx >= scenes.length - 1} aria-label="صحنهٔ بعدی"><ChevronLeft size={16} /></button>
-            <div className="pres-dots" role="tablist" aria-label="فهرست صحنه‌ها">
+            <button className="btn btn-ghost" onClick={next} disabled={idx >= scenes.length - 1} aria-label={t('صحنهٔ بعدی')}><ChevronLeft size={16} /></button>
+            <div className="pres-dots" role="tablist" aria-label={t('فهرست صحنه‌ها')}>
               {scenes.map((sc, i) => (
                 <button key={sc.id} role="tab" aria-selected={i === idx} className={i === idx ? 'on' : ''} title={sc.title}
-                  onClick={() => setIdx(i)} aria-label={`صحنهٔ ${i + 1}: ${sc.title}`} />
+                  onClick={() => setIdx(i)} aria-label={`${t('صحنهٔ')} ${i + 1}: ${sc.title}`} />
               ))}
             </div>
-            <button className="btn btn-secondary btn-sm" onClick={exportPng}><Camera size={13} /> خروجی صحنه</button>
-            {canWrite && <button className="btn btn-secondary btn-sm" onClick={() => setBuilderOpen(b => !b)}><Plus size={13} /> صحنهٔ تازه</button>}
-            <button className="btn btn-ghost" onClick={() => { setOpen(false); setAutoPlay(false); }} aria-label="بستن ارائه"><X size={16} /></button>
+            <button className="btn btn-secondary btn-sm" onClick={exportPng}><Camera size={13} /> {t('خروجی صحنه')}</button>
+            {canWrite && <button className="btn btn-secondary btn-sm" onClick={() => setBuilderOpen(b => !b)}><Plus size={13} /> {t('صحنهٔ تازه')}</button>}
+            <button className="btn btn-ghost" onClick={() => { setOpen(false); setAutoPlay(false); }} aria-label={t('بستن ارائه')}><X size={16} /></button>
           </div>
           {flash && <div className="pres-flash" role="status">{flash}</div>}
 
           {builderOpen && (
             <div className="pres-builder">
-              <b>افزودن صحنه از نمای فعلی شبکه</b>
+              <b>{t('افزودن صحنه از نمای فعلی شبکه')}</b>
               <p className="t-muted" style={{ fontSize: 11 }}>
-                تمرکز فعلی گراف ({currentFocus || 'بدون تمرکز'}) و چیدمان ({currentVariant === 'nested' ? 'مرحله‌ای' : 'کلاسیک'}) در صحنهٔ تازه ذخیره می‌شود.
+                تمرکز فعلی گراف ({currentFocus || t('بدون تمرکز')}) و چیدمان ({currentVariant === 'nested' ? t('مرحله‌ای') : t('کلاسیک')}) در صحنهٔ تازه ذخیره می‌شود.
               </p>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <input placeholder="عنوان صحنه (مثلاً: تنظیم‌گران کلیدی انرژی)" value={bForm.title}
+                <input placeholder={t('عنوان صحنه (مثلاً: تنظیم‌گران کلیدی انرژی)')} value={bForm.title}
                   onChange={e => setBForm(f => ({ ...f, title: e.target.value }))} style={{ flex: '1 1 220px' }} />
-                <input placeholder="یادداشت گفتار (اختیاری)" value={bForm.note}
+                <input placeholder={t('یادداشت گفتار (اختیاری)')} value={bForm.note}
                   onChange={e => setBForm(f => ({ ...f, note: e.target.value }))} style={{ flex: '1 1 220px' }} />
-                <button className="btn btn-primary" disabled={busy || !bForm.title.trim()} onClick={addScene}>افزودن</button>
+                <button className="btn btn-primary" disabled={busy || !bForm.title.trim()} onClick={addScene}>{t('افزودن')}</button>
               </div>
               {scenes.length > 0 && (
                 <div style={{ display: 'grid', gap: 4, marginTop: 10, maxHeight: 130, overflow: 'auto' }}>
@@ -257,7 +258,7 @@ export default function PresentationMode({ graph, currentFocus, currentVariant, 
                     <span key={sc.id} style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 11.5 }}>
                       <b className="t-muted">{fmtN(i + 1)}.</b> {sc.title}
                       <button className="btn icon-only danger" style={{ marginInlineStart: 'auto' }} disabled={busy}
-                        onClick={() => delScene(sc.id)} title="حذف صحنه" aria-label={`حذف صحنهٔ ${sc.title}`}><Trash2 size={11} /></button>
+                        onClick={() => delScene(sc.id)} title={t('حذف صحنه')} aria-label={`${t('حذف صحنهٔ')} ${sc.title}`}><Trash2 size={11} /></button>
                     </span>
                   ))}
                 </div>

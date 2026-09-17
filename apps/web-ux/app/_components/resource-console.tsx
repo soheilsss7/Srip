@@ -4,6 +4,7 @@ import {api} from '../_lib/api';
 import {fa} from '../_lib/fa';
 import {DataTable,Empty,ErrorCard,Loading,Modal,PageHeader} from './page-ui';
 import {RefreshCw, Plus, Pencil, Trash2, X, Play} from 'lucide-react';
+import { t } from '../_lib/i18n';
 export type Field={name:string;label:string;type?:'text'|'number'|'date'|'datetime-local'|'email'|'textarea'|'select'|'checkbox';required?:boolean;options?:string[]};
 export type Action={label:string;method:'POST'|'PATCH'|'DELETE';path:(id:string)=>string;confirm?:string;tone?:'primary'|'secondary'|'danger'};
 export type ResourceConfig={title:string;eyebrow:string;description:string;endpoint:string;idField?:string;fields?:Field[];columns?:string[];labels?:Record<string,string>;create?:boolean;update?:boolean;remove?:boolean;actions?:Action[];query?:Record<string,string|number|boolean|undefined>;uppercase?:string[]};
@@ -21,14 +22,14 @@ export function ResourceConsole({config}:{config:ResourceConfig}){
  function change(k:string,v:any){setForm(x=>({...x,[k]:(config.uppercase??[]).includes(k)?String(v).toUpperCase():v}))}
  async function save(e:React.FormEvent){e.preventDefault();setSaving(true);setError('');try{if(editing?.[config.idField??'id']&&config.update)await api(`${config.endpoint}/${encodeURIComponent(id(editing))}`,{method:'PATCH',body:JSON.stringify(form)});else await api(config.endpoint,{method:'POST',body:JSON.stringify(form)});setEditing(null);setForm({});setOpen(false);await load()}catch(x){setError((x as Error).message)}finally{setSaving(false)}}
  function closeEdit(){setEditing(null);setForm({});setOpen(false)}
- async function remove(r:any){if(!config.remove||!id(r))return;if(!confirm('حذف این مورد انجام شود؟'))return;try{await api(`${config.endpoint}/${encodeURIComponent(id(r))}`,{method:'DELETE'});await load()}catch(x){setError((x as Error).message)}}
+ async function remove(r:any){if(!config.remove||!id(r))return;if(!confirm(t('حذف این مورد انجام شود؟')))return;try{await api(`${config.endpoint}/${encodeURIComponent(id(r))}`,{method:'DELETE'});await load()}catch(x){setError((x as Error).message)}}
  async function run(a:Action,r:any){if(a.confirm&&!confirm(a.confirm))return;try{await api(a.path(id(r)),{method:a.method,body:a.method==='DELETE'?undefined:'{}'});await load()}catch(x){setError((x as Error).message)}}
  const toneCls=(a:Action)=>a.tone==='danger'?'btn-danger':a.tone==='secondary'?'btn-secondary':'btn-primary';
  return <main className="feature-page">
    <PageHeader eyebrow={config.eyebrow} title={config.title} description={config.description} actions={
      <div className="toolbar">
-       {config.create&&<button className="btn btn-primary" onClick={()=>begin()}><Plus size={15}/> ایجاد</button>}
-       <button className="btn btn-secondary" onClick={load} disabled={loading}><RefreshCw size={15}/> بازخوانی</button>
+       {config.create&&<button className="btn btn-primary" onClick={()=>begin()}><Plus size={15}/> {t('ایجاد')}</button>}
+       <button className="btn btn-secondary" onClick={load} disabled={loading}><RefreshCw size={15}/> {t('بازخوانی')}</button>
      </div>
    }/>
    <ErrorCard message={error}/>
@@ -36,20 +37,20 @@ export function ResourceConsole({config}:{config:ResourceConfig}){
    {loading?<Loading/>:(
     <section className="section-card">
       <div className="section-head">
-        <div><h2>داده‌ها</h2><p>{rows.length} مورد</p></div>
+        <div><h2>{t('داده‌ها')}</h2><p>{rows.length} مورد</p></div>
         <span className="chip info">{rows.length} مورد</span>
       </div>
       {rows.length?(
         <DataTable columns={columns.map(k=>({key:k,label:config.labels?.[k]??k}))} rows={rows.map(r=>Object.fromEntries(columns.map(k=>[k,text(k,r[k])])))}/>
-      ):<Empty>داده‌ای برای این Scope وجود ندارد.</Empty>}
+      ):<Empty>{t('داده‌ای برای این Scope وجود ندارد.')}</Empty>}
       {(config.actions||config.update||config.remove)&&rows.length>0&&(
         <div className="crud-actions">
           {rows.map(r=>(
             <div key={id(r)} className="crud-row-actions">
               <span className="t-primary" style={{fontWeight:800}}>{text(columns[0]??'id',r[columns[0]??'id'])}</span>
               <div className="row-actions">
-                {config.update&&<button className="btn btn-ghost btn-sm" onClick={()=>begin(r)}><Pencil size={13}/> ویرایش</button>}
-                {config.remove&&<button className="btn btn-danger btn-sm" onClick={()=>remove(r)}><Trash2 size={13}/> حذف</button>}
+                {config.update&&<button className="btn btn-ghost btn-sm" onClick={()=>begin(r)}><Pencil size={13}/> {t('ویرایش')}</button>}
+                {config.remove&&<button className="btn btn-danger btn-sm" onClick={()=>remove(r)}><Trash2 size={13}/> {t('حذف')}</button>}
                 {config.actions?.map(a=><button key={a.label} className={`btn btn-sm ${toneCls(a)}`} onClick={()=>run(a,r)}><Play size={12}/> {a.label}</button>)}
               </div>
             </div>
@@ -59,10 +60,10 @@ export function ResourceConsole({config}:{config:ResourceConfig}){
     </section>
    )}
 
-   <Modal open={open} title={editing?.[config.idField??'id']?'ویرایش':'ایجاد'} description="اطلاعات را وارد کنید؛ مجوز و محدوده در سرور اعمال می‌شود." onClose={closeEdit}
+   <Modal open={open} title={editing?.[config.idField??'id']?t('ویرایش'):t('ایجاد')} description={t('اطلاعات را وارد کنید؛ مجوز و محدوده در سرور اعمال می‌شود.')} onClose={closeEdit}
      footer={<>
-       <button type="button" className="btn btn-secondary" onClick={closeEdit}><X size={14}/> انصراف</button>
-       <button type="submit" form="rc-modal-form" className="btn btn-primary" disabled={saving}>{saving?'در حال ذخیره…':'ذخیره'}</button>
+       <button type="button" className="btn btn-secondary" onClick={closeEdit}><X size={14}/> {t('انصراف')}</button>
+       <button type="submit" form="rc-modal-form" className="btn btn-primary" disabled={saving}>{saving?t('در حال ذخیره…'):t('ذخیره')}</button>
      </>}>
      <form id="rc-modal-form" className="entity-form" onSubmit={save}>
        {(config.fields??[]).map(f=>(
@@ -71,7 +72,7 @@ export function ResourceConsole({config}:{config:ResourceConfig}){
            {f.type==='textarea'
              ? <textarea value={form[f.name]??''} onChange={e=>change(f.name,e.target.value)} required={f.required}/>
              : f.type==='select'
-               ? <select value={form[f.name]??''} onChange={e=>change(f.name,e.target.value)} required={f.required}><option value="">انتخاب کنید</option>{f.options?.map(o=><option key={o} value={o}>{fa(o)}</option>)}</select>
+               ? <select value={form[f.name]??''} onChange={e=>change(f.name,e.target.value)} required={f.required}><option value="">{t('انتخاب کنید')}</option>{f.options?.map(o=><option key={o} value={o}>{fa(o)}</option>)}</select>
                : f.type==='checkbox'
                  ? <input type="checkbox" checked={!!form[f.name]} onChange={e=>change(f.name,e.target.checked)} style={{width:18,height:18,accentColor:'var(--srip-accent)'}}/>
                  : <input type={f.type??'text'} value={form[f.name]??''} onChange={e=>change(f.name,e.target.value)} required={f.required}/>}

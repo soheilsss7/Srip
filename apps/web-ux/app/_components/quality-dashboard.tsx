@@ -2,15 +2,16 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { api, apiPost } from '../_lib/api';
 import { fa } from '../_lib/fa';
-const FIELD_FA: Record<string, string> = { email: 'پست الکترونیکی', phone: 'شمارهٔ تماس', website: 'وب‌سایت', country: 'کشور', industry: 'صنعت', size: 'اندازه', taxId: 'شناسهٔ مالیاتی', registrationId: 'شناسهٔ ثبت', firstName: 'نام', lastName: 'نام خانوادگی', title: 'عنوان' };
-const ID_FA: Record<string, string> = { p: 'شخص', person: 'شخص', r: 'رابطه', rel: 'رابطه', org: 'سازمان', o: 'فرصت', m: 'جلسه', i: 'تعامل', a: 'اقدام', c: 'تعهد', u: 'کاربر' };
-const faId = (v: unknown): string => { const raw = String(v ?? ''); const m = raw.match(/^([a-z]+)[-:](\d+)$/i); return m ? `${ID_FA[m[1].toLowerCase()] ?? m[1]} ${new Intl.NumberFormat('fa-IR').format(Number(m[2]))}` : fa(raw); };
+const FIELD_FA: Record<string, string> = lt( { email: t('پست الکترونیکی'), phone: t('شمارهٔ تماس'), website: t('وب‌سایت'), country: t('کشور'), industry: t('صنعت'), size: t('اندازه'), taxId: t('شناسهٔ مالیاتی'), registrationId: t('شناسهٔ ثبت'), firstName: t('نام'), lastName: t('نام خانوادگی'), title: t('عنوان') });
+const ID_FA: Record<string, string> = lt( { p: t('شخص'), person: t('شخص'), r: t('رابطه'), rel: t('رابطه'), org: t('سازمان'), o: t('فرصت'), m: t('جلسه'), i: t('تعامل'), a: t('اقدام'), c: t('تعهد'), u: t('کاربر') });
+const faId = (v: unknown): string => { const raw = String(v ?? ''); const m = raw.match(/^([a-z]+)[-:](\d+)$/i); return m ? `${ID_FA[m[1].toLowerCase()] ?? m[1]} ${new Intl.NumberFormat(localeTag()).format(Number(m[2]))}` : fa(raw); };
 import { Badge, ErrorCard, Loading, PageHeader, StatCard } from './page-ui';
 import {
   AlertTriangle, ArrowLeft, BadgeCheck, Building2, CalendarX2,
   CopyX, Fingerprint, Gauge, MailX,
   RefreshCw, ScanSearch, Search, ShieldCheck, UserX, Users, Wallet, Zap,
 } from 'lucide-react';
+import { localeTag, t } from '../_lib/i18n';
 
 /* ------------------------------------------------------------------ */
 /*  داشبورد کیفیت داده — هم‌مسیر با /data-quality و /data-management/  */
@@ -18,21 +19,21 @@ import {
 /*  · GET /data/duplicates · POST /data/duplicates/detect             */
 /* ------------------------------------------------------------------ */
 
-const fmt = new Intl.NumberFormat('fa-IR');
+const fmt = new Intl.NumberFormat(localeTag());
 const faDT = (iso?: string | null) => {
   if (!iso) return '—';
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('fa-IR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString(localeTag(), { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', second: '2-digit' });
 };
 const list = (x: any) => (Array.isArray(x) ? x : x?.items ?? x?.rows ?? x?.data ?? x?.values ?? []);
 const reasonFA = (r: string) => {
   const m = r.match(/^([a-z_]+)(?::([0-9.]+))?$/);
   if (!m) return r;
   const map: Record<string, string> = {
-    name: 'نام یکسان', name_similarity: 'شباهت نام', domain: 'دامنهٔ وب یکسان', registration_id: 'شناسهٔ ثبت یکسان',
-    phone: 'شمارهٔ تماس یکسان', country: 'کشور یکسان', email: 'ایمیل یکسان', organization: 'سازمان یکسان',
+    name: t('نام یکسان'), name_similarity: t('شباهت نام'), domain: t('دامنهٔ وب یکسان'), registration_id: t('شناسهٔ ثبت یکسان'),
+    phone: t('شمارهٔ تماس یکسان'), country: t('کشور یکسان'), email: t('ایمیل یکسان'), organization: t('سازمان یکسان'),
   };
-  return m[2] ? `${map[m[1]] ?? m[1]} (٪${fmt.format(Math.round(Number(m[2]) * 100))})` : (map[m[1]] ?? m[1]);
+  return m[2] ? `${map[m[1]] ?? m[1]} ${t('(٪')}${fmt.format(Math.round(Number(m[2]) * 100))})` : (map[m[1]] ?? m[1]);
 };
 
 type Cap = { values: string[]; total: number; truncated: boolean };
@@ -58,8 +59,8 @@ type Candidate = { id: string; score: number; reasons: string[]; entityType: str
 type Named = { id: string; name: string };
 
 const OrgSelect = ({ value, onChange, orgs, disabled }: { value: string; onChange: (v: string) => void; orgs: Named[]; disabled?: boolean }) => (
-  <select value={value} onChange={e => onChange(e.target.value)} style={{ maxWidth: 230 }} disabled={disabled} aria-label="سازمان">
-    <option value="">همهٔ سازمان‌های محدوده</option>
+  <select value={value} onChange={e => onChange(e.target.value)} style={{ maxWidth: 230 }} disabled={disabled} aria-label={t('سازمان')}>
+    <option value="">{t('همهٔ سازمان‌های محدوده')}</option>
     {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
   </select>
 );
@@ -114,7 +115,7 @@ export default function QualityDashboard({ mode = 'hub' }: { mode?: 'hub' | 'ops
       const body = orgSel ? { organizationId: orgSel } : {};
       const s = await apiPost<Snapshot>('/data/quality/scan', body);
       setSnap(s);
-      setNotice(`بازبینی کیفیت با موفقیت انجام شد — ${fmt.format(issueTotalOf(s))} مورد در ${s.metrics.checks.length} سنجه.`);
+      setNotice(`${t('بازبینی کیفیت با موفقیت انجام شد —')} ${fmt.format(issueTotalOf(s))} ${t('مورد در')} ${s.metrics.checks.length} ${t('سنجه.')}`);
     } catch (x) { setError((x as Error).message); }
     finally { setScanning(false); }
   }
@@ -125,7 +126,7 @@ export default function QualityDashboard({ mode = 'hub' }: { mode?: 'hub' | 'ops
     try {
       const s = await apiPost<Snapshot>('/data/quality/scan', { organizationId: v });
       setSnap(s);
-      setNotice(`بازبینی محدوده به «${orgs.find(o => o.id === v)?.name ?? v}» انجام شد.`);
+      setNotice(`${t('بازبینی محدوده به «')}${orgs.find(o => o.id === v)?.name ?? v}${t('» انجام شد.')}`);
     } catch (x) { setError((x as Error).message); }
     finally { setScanning(false); }
   }
@@ -173,7 +174,7 @@ export default function QualityDashboard({ mode = 'hub' }: { mode?: 'hub' | 'ops
 
   async function detect(e: FormEvent) {
     e.preventDefault(); setError(''); setCands(null);
-    if (!fOrg) { setError('برای تشخیص تکراری، سازمان مقصد را انتخاب کنید.'); return; }
+    if (!fOrg) { setError(t('برای تشخیص تکراری، سازمان مقصد را انتخاب کنید.')); return; }
     const data = detType === 'ORGANIZATION'
       ? { name: fName, website: fWeb || undefined, phone: fPhone || undefined, registrationId: fReg || undefined, country: fCountry || undefined }
       : { firstName: fFirst, lastName: fLast, email: fEmail || undefined, phone: fPhone || undefined };
@@ -188,36 +189,36 @@ export default function QualityDashboard({ mode = 'hub' }: { mode?: 'hub' | 'ops
   const myMembership = (me?.memberships ?? []).find(m => m.isPrimary) ?? (me?.memberships ?? [])[0];
   const myOrgId = myMembership?.organizationId ?? '';
   const myOrgName = myMembership?.organizationName ?? '';
-  const demoOrg = () => { setDetType('ORGANIZATION'); setFOrg(myOrgId); setFName(myOrgName); setFWeb(''); setFPhone(''); setFReg(''); setFCountry('ایران'); };
+  const demoOrg = () => { setDetType('ORGANIZATION'); setFOrg(myOrgId); setFName(myOrgName); setFWeb(''); setFPhone(''); setFReg(''); setFCountry(t('ایران')); };
   const demoPerson = () => { setDetType('PERSON'); setFOrg(myOrgId); setFFirst('مریم'); setFLast('رضایی'); setFEmail(''); setFPhone(''); };
 
   const isOps = mode === 'ops';
   const checksList = m ? [
-    { key: 'dups', icon: <CopyX size={15} />, title: 'سازمان‌های تکراری', desc: 'نام، دامنهٔ وب، شمارهٔ تماس یا شناسهٔ ثبت یکسان', total: m.duplicateOrganizations?.length ?? 0, tone: (m.duplicateOrganizations?.length ?? 0) > 0 ? 'danger' as const : 'success' as const },
-    { key: 'owners', icon: <UserX size={15} />, title: 'بدون مالک', desc: 'سازمان‌هایی که مالک (مسئول رابطه) ندارند', total: m.missingOwners?.total ?? 0, tone: (m.missingOwners?.total ?? 0) > 0 ? 'warning' as const : 'success' as const },
-    { key: 'contacts', icon: <Users size={15} />, title: 'بدون مخاطب', desc: 'سازمان/شخص بدون مخاطبِ مرتبط', total: (m.missingContacts?.organizations?.total ?? 0) + (m.missingContacts?.people?.total ?? 0), tone: (m.missingContacts?.organizations?.total ?? 0) + (m.missingContacts?.people?.total ?? 0) > 0 ? 'warning' as const : 'success' as const },
-    { key: 'stale', icon: <Wallet size={15} />, title: 'روابط کهنه', desc: 'بدون تعامل اخیر یا بازبینیِ عقب‌افتاده', total: m.staleRelationships?.total ?? 0, tone: (m.staleRelationships?.total ?? 0) > 0 ? 'warning' as const : 'success' as const },
-    { key: 'invalid', icon: <MailX size={15} />, title: 'ایمیل‌های نامعتبر', desc: 'قالب ایمیل نادرست در سازمان‌ها/اشخاص', total: m.invalidEmails?.total ?? 0, tone: (m.invalidEmails?.total ?? 0) > 0 ? 'danger' as const : 'success' as const },
-    { key: 'missingOrgs', icon: <Building2 size={15} />, title: 'سازمان‌های ناموجود', desc: 'ارجاع به سازمان/مخاطبِ حذف‌شده', total: (m.missingOrganizations?.people?.total ?? 0) + (m.missingOrganizations?.contacts?.total ?? 0), tone: 'success' as const },
-    { key: 'noDates', icon: <CalendarX2 size={15} />, title: 'تاریخ‌های ازدست‌رفته', desc: 'بازبینی رابطه، زمان جلسه یا موعد اقدام نامشخص', total: (m.missingDates?.relationships?.total ?? 0) + (m.missingDates?.meetings?.total ?? 0) + (m.missingDates?.actions?.total ?? 0) + (m.missingDates?.interactions?.total ?? 0), tone: (m.missingDates?.relationships?.total ?? 0) > 0 ? 'warning' as const : 'success' as const },
-    { key: 'incomplete', icon: <Gauge size={15} />, title: 'پروفایل‌های ناقص', desc: 'کمبود فیلدهای الزامی (نام، کشور، وب، تماس، ایمیل)', total: (m.incompleteProfiles?.organizations?.total ?? 0) + (m.incompleteProfiles?.people?.total ?? 0), tone: (m.incompleteProfiles?.organizations?.total ?? 0) + (m.incompleteProfiles?.people?.total ?? 0) > 0 ? 'danger' as const : 'success' as const },
+    { key: 'dups', icon: <CopyX size={15} />, title: t('سازمان‌های تکراری'), desc: t('نام، دامنهٔ وب، شمارهٔ تماس یا شناسهٔ ثبت یکسان'), total: m.duplicateOrganizations?.length ?? 0, tone: (m.duplicateOrganizations?.length ?? 0) > 0 ? 'danger' as const : 'success' as const },
+    { key: 'owners', icon: <UserX size={15} />, title: t('بدون مالک'), desc: t('سازمان‌هایی که مالک (مسئول رابطه) ندارند'), total: m.missingOwners?.total ?? 0, tone: (m.missingOwners?.total ?? 0) > 0 ? 'warning' as const : 'success' as const },
+    { key: 'contacts', icon: <Users size={15} />, title: t('بدون مخاطب'), desc: t('سازمان/شخص بدون مخاطبِ مرتبط'), total: (m.missingContacts?.organizations?.total ?? 0) + (m.missingContacts?.people?.total ?? 0), tone: (m.missingContacts?.organizations?.total ?? 0) + (m.missingContacts?.people?.total ?? 0) > 0 ? 'warning' as const : 'success' as const },
+    { key: 'stale', icon: <Wallet size={15} />, title: t('روابط کهنه'), desc: t('بدون تعامل اخیر یا بازبینیِ عقب‌افتاده'), total: m.staleRelationships?.total ?? 0, tone: (m.staleRelationships?.total ?? 0) > 0 ? 'warning' as const : 'success' as const },
+    { key: 'invalid', icon: <MailX size={15} />, title: t('ایمیل‌های نامعتبر'), desc: t('قالب ایمیل نادرست در سازمان‌ها/اشخاص'), total: m.invalidEmails?.total ?? 0, tone: (m.invalidEmails?.total ?? 0) > 0 ? 'danger' as const : 'success' as const },
+    { key: 'missingOrgs', icon: <Building2 size={15} />, title: t('سازمان‌های ناموجود'), desc: t('ارجاع به سازمان/مخاطبِ حذف‌شده'), total: (m.missingOrganizations?.people?.total ?? 0) + (m.missingOrganizations?.contacts?.total ?? 0), tone: 'success' as const },
+    { key: 'noDates', icon: <CalendarX2 size={15} />, title: t('تاریخ‌های ازدست‌رفته'), desc: t('بازبینی رابطه، زمان جلسه یا موعد اقدام نامشخص'), total: (m.missingDates?.relationships?.total ?? 0) + (m.missingDates?.meetings?.total ?? 0) + (m.missingDates?.actions?.total ?? 0) + (m.missingDates?.interactions?.total ?? 0), tone: (m.missingDates?.relationships?.total ?? 0) > 0 ? 'warning' as const : 'success' as const },
+    { key: 'incomplete', icon: <Gauge size={15} />, title: t('پروفایل‌های ناقص'), desc: t('کمبود فیلدهای الزامی (نام، کشور، وب، تماس، ایمیل)'), total: (m.incompleteProfiles?.organizations?.total ?? 0) + (m.incompleteProfiles?.people?.total ?? 0), tone: (m.incompleteProfiles?.organizations?.total ?? 0) + (m.incompleteProfiles?.people?.total ?? 0) > 0 ? 'danger' as const : 'success' as const },
   ] : [];
 
   return (
     <main className="feature-page">
       <PageHeader
-        eyebrow={isOps ? 'مدیریت داده' : 'داده و کیفیت'}
-        title={isOps ? 'یکسان‌سازی کیفیت داده' : 'کیفیت داده'}
-        description="پویش یکپارچهٔ کیفیت: رکوردهای تکراری، بدون مالک/مخاطب، روابط کهنه، ایمیل‌های نامعتبر، تاریخ‌های ازدست‌رفته و پروفایل‌های ناقص — هر دو مسیر «کیفیت داده» و «مرکز داده» به یک موتور مشترک وصل‌اند."
+        eyebrow={isOps ? t('مدیریت داده') : t('داده و کیفیت')}
+        title={isOps ? t('یکسان‌سازی کیفیت داده') : t('کیفیت داده')}
+        description={t('پویش یکپارچهٔ کیفیت: رکوردهای تکراری، بدون مالک/مخاطب، روابط کهنه، ایمیل‌های نامعتبر، تاریخ‌های ازدست‌رفته و پروفایل‌های ناقص — هر دو مسیر «کیفیت داده» و «مرکز داده» به یک موتور مشترک وصل‌اند.')}
         actions={
           <>
-            {isOps && <Badge tone="info">هم‌مسیر با /data-quality</Badge>}
+            {isOps && <Badge tone="info">{t('هم‌مسیر با /data-quality')}</Badge>}
             <OrgSelect value={orgSel} onChange={rescanForOrg} orgs={orgs} disabled={scanning} />
             <button className="btn btn-secondary" onClick={() => load(true)} disabled={refreshing || scanning}>
               <RefreshCw size={15} className={refreshing ? 'spin' : ''} /> بازخوانی
             </button>
             <button className="btn btn-primary" onClick={scan} disabled={scanning || !canExec}>
-              {scanning ? 'در حال پویش…' : <><ScanSearch size={15} /> پویش کیفیت</>}
+              {scanning ? t('در حال پویش…') : <><ScanSearch size={15} /> {t('پویش کیفیت')}</>}
             </button>
           </>
         }
@@ -229,31 +230,31 @@ export default function QualityDashboard({ mode = 'hub' }: { mode?: 'hub' | 'ops
           <AlertTriangle size={13} style={{ verticalAlign: -2 }} /> حساب شما مجوزهای کیفیت داده (data.quality.read / data.quality.execute) را ندارد — این قابلیت مانند سامانهٔ واقعی ویژهٔ نقش‌های عملیاتی (مدیر/مدیر ارشد) است.
         </div>
       )}
-      {loading && !m ? <Loading label="در حال پویش کیفیت داده…" /> : m && snap && (
+      {loading && !m ? <Loading label={t('در حال پویش کیفیت داده…')} /> : m && snap && (
         <>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', margin: '2px 0 14px' }}>
-            <Badge tone="info"><Fingerprint size={11} style={{ verticalAlign: -2 }} /> شناسهٔ پویش: <code dir="ltr" style={{ fontSize: 9.5 }}>{snap.id}</code></Badge>
+            <Badge tone="info"><Fingerprint size={11} style={{ verticalAlign: -2 }} /> {t('شناسهٔ پویش:')} <code dir="ltr" style={{ fontSize: 9.5 }}>{snap.id}</code></Badge>
             <Badge tone="neutral"><RefreshCw size={11} style={{ verticalAlign: -2 }} /> {faDT(snap.scannedAt)}</Badge>
-            <Badge tone="neutral">پوشش: {snap.organizationId ? (orgOf(snap.organizationId)?.name ?? snap.organizationId) : 'همهٔ سازمان‌های محدوده'}</Badge>
-            <Badge tone="neutral">محدودشده: {m.bounded ? 'بله' : 'خیر'} (بیشینه {fmt.format(m.maxReturnedIds)} شناسه)</Badge>
+            <Badge tone="neutral">پوشش: {snap.organizationId ? (orgOf(snap.organizationId)?.name ?? snap.organizationId) : t('همهٔ سازمان‌های محدوده')}</Badge>
+            <Badge tone="neutral">محدودشده: {m.bounded ? t('بله') : t('خیر')} (بیشینه {fmt.format(m.maxReturnedIds)} شناسه)</Badge>
           </div>
 
           <div className="stat-grid">
-            <StatCard icon={<Building2 size={18} />} label="پوشش رکوردها" value={fmt.format(totalCovered)} sub={`${fmt.format(cov.organizations)} سازمان · ${fmt.format(cov.people)} شخص · ${fmt.format(cov.relationships)} رابطه`} iconClass="ic-blue" />
-            <StatCard icon={<AlertTriangle size={18} />} label="موارد کیفیت" value={fmt.format(issueTotal)} sub="جمع‌شده از ۸ سنجهٔ پویش" iconClass={issueTotal > 0 ? 'ic-red' : 'ic-green'} />
-            <StatCard icon={<BadgeCheck size={18} />} label="امتیاز کیفیت" value={<>{fmt.format(score)}<small style={{ fontSize: 12 }}> /۱۰۰</small></>} sub="از نسبت موارد به پوشش" iconClass={gradeTone === 'danger' ? 'ic-red' : gradeTone === 'warning' ? 'ic-gold' : 'ic-green'} />
-            <StatCard icon={<Gauge size={18} />} label="سازمان‌های دارای مشکل" value={fmt.format(affectedOrgs)} sub={`از ${fmt.format(cov.organizations)} سازمان در محدوده`} iconClass="ic-gold" />
-            <StatCard icon={<Zap size={18} />} label="روابط نیازمند توجه" value={fmt.format((m.staleRelationships?.total ?? 0) + (m.missingDates?.relationships?.total ?? 0))} sub="کهنه یا بدون برنامهٔ بازبینی" iconClass="ic-purple" />
-            <StatCard icon={<ShieldCheck size={18} />} label="پروفایل‌های ناقص" value={fmt.format((m.incompleteProfiles?.organizations?.total ?? 0) + (m.incompleteProfiles?.people?.total ?? 0))} sub="سازمان‌ها و اشخاص" iconClass="ic-blue" />
+            <StatCard icon={<Building2 size={18} />} label={t('پوشش رکوردها')} value={fmt.format(totalCovered)} sub={`${fmt.format(cov.organizations)} ${t('سازمان ·')} ${fmt.format(cov.people)} ${t('شخص ·')} ${fmt.format(cov.relationships)} ${t('رابطه')}`} iconClass="ic-blue" />
+            <StatCard icon={<AlertTriangle size={18} />} label={t('موارد کیفیت')} value={fmt.format(issueTotal)} sub={t('جمع‌شده از ۸ سنجهٔ پویش')} iconClass={issueTotal > 0 ? 'ic-red' : 'ic-green'} />
+            <StatCard icon={<BadgeCheck size={18} />} label={t('امتیاز کیفیت')} value={<>{fmt.format(score)}<small style={{ fontSize: 12 }}> {t('/۱۰۰')}</small></>} sub={t('از نسبت موارد به پوشش')} iconClass={gradeTone === 'danger' ? 'ic-red' : gradeTone === 'warning' ? 'ic-gold' : 'ic-green'} />
+            <StatCard icon={<Gauge size={18} />} label={t('سازمان‌های دارای مشکل')} value={fmt.format(affectedOrgs)} sub={`${t('از')} ${fmt.format(cov.organizations)} ${t('سازمان در محدوده')}`} iconClass="ic-gold" />
+            <StatCard icon={<Zap size={18} />} label={t('روابط نیازمند توجه')} value={fmt.format((m.staleRelationships?.total ?? 0) + (m.missingDates?.relationships?.total ?? 0))} sub={t('کهنه یا بدون برنامهٔ بازبینی')} iconClass="ic-purple" />
+            <StatCard icon={<ShieldCheck size={18} />} label={t('پروفایل‌های ناقص')} value={fmt.format((m.incompleteProfiles?.organizations?.total ?? 0) + (m.incompleteProfiles?.people?.total ?? 0))} sub={t('سازمان‌ها و اشخاص')} iconClass="ic-blue" />
           </div>
 
           <section className="panel">
             <div className="panel-title">
               <div>
-                <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><ScanSearch size={16} /> نتیجهٔ پویش (۸ سنجه)</h2>
-                <p>برای هر سنجه، شناسهٔ رکوردهای مشکل‌دار از همان پویش می‌آید؛ کلیک روی هر شناسه، صفحهٔ همان موجودیت را باز می‌کند.</p>
+                <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><ScanSearch size={16} /> {t('نتیجهٔ پویش (۸ سنجه)')}</h2>
+                <p>{t('برای هر سنجه، شناسهٔ رکوردهای مشکل‌دار از همان پویش می‌آید؛ کلیک روی هر شناسه، صفحهٔ همان موجودیت را باز می‌کند.')}</p>
               </div>
-              <Badge tone={issueTotal > 0 ? 'warning' : 'success'}>{issueTotal > 0 ? `${fmt.format(issueTotal)} مورد` : 'پاک'}</Badge>
+              <Badge tone={issueTotal > 0 ? 'warning' : 'success'}>{issueTotal > 0 ? `${fmt.format(issueTotal)} ${t('مورد')}` : t('پاک')}</Badge>
             </div>
             <div style={{ display: 'grid', gap: 8 }}>
               {checksList.map(c => {
@@ -262,7 +263,7 @@ export default function QualityDashboard({ mode = 'hub' }: { mode?: 'hub' | 'ops
                   <div key={c.key} style={{ border: '1px solid var(--border,#e2e8f0)', borderRadius: 12, padding: '10px 12px', display: 'flex', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
                     <span style={{ width: 30, height: 30, borderRadius: 9, display: 'grid', placeItems: 'center', flex: '0 0 auto', background: empty ? 'color-mix(in srgb, var(--green,#16a34a) 10%, transparent)' : 'color-mix(in srgb, var(--gold,#d97706) 12%, transparent)', color: empty ? 'var(--green,#16a34a)' : 'var(--gold,#b45309)' }}>{c.icon}</span>
                     <div style={{ flex: '1 1 200px', minWidth: 180 }}>
-                      <b style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>{c.title} {empty ? <Badge tone="success">پاک</Badge> : <Badge tone={c.tone}>{fmt.format(c.total)}</Badge>}</b>
+                      <b style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>{c.title} {empty ? <Badge tone="success">{t('پاک')}</Badge> : <Badge tone={c.tone}>{fmt.format(c.total)}</Badge>}</b>
                       <small className="t-muted" style={{ display: 'block', marginTop: 1, fontSize: 10 }}>{c.desc}</small>
                     </div>
                     <div style={{ flex: '1 1 320px', minWidth: 240, display: 'grid', gap: 4 }}>
@@ -277,7 +278,7 @@ export default function QualityDashboard({ mode = 'hub' }: { mode?: 'hub' | 'ops
                       {!empty && c.key === 'contacts' && (
                         <span style={{ display: 'grid', gap: 3 }}>
                           {(m.missingContacts?.organizations?.values ?? []).length > 0 && <small>سازمان‌ها: {(m.missingContacts.organizations.values ?? []).map(id => <span key={id} style={{ fontSize: 10.5 }}><code dir="ltr" style={{ fontSize: 9.5 }}>{id}</code>{orgOf(id)?.name && <> — {orgOf(id)?.name}</>} · </span>)}</small>}
-                          {(m.missingContacts?.people?.values ?? []).length > 0 && <small>اشخاص: {(m.missingContacts.people.values ?? []).map((x:any)=>faId(x)).join('، ')}</small>}
+                          {(m.missingContacts?.people?.values ?? []).length > 0 && <small>اشخاص: {(m.missingContacts.people.values ?? []).map((x:any)=>faId(x)).join(t('،'))}</small>}
                         </span>
                       )}
                       {!empty && c.key === 'stale' && (m.staleRelationships?.values ?? []).map((v: any) => (
@@ -290,7 +291,7 @@ export default function QualityDashboard({ mode = 'hub' }: { mode?: 'hub' | 'ops
                       ))}
                       {!empty && c.key === 'invalid' && (m.invalidEmails?.values ?? []).map((v: any) => (
                         <span key={`${v.entityType}-${v.id}`} style={{ fontSize: 10.5, display: 'flex', gap: 6, alignItems: 'center' }}>
-                          <Badge tone="neutral">{v.entityType === 'Organization' ? 'سازمان' : 'شخص'}</Badge>
+                          <Badge tone="neutral">{v.entityType === 'Organization' ? t('سازمان') : t('شخص')}</Badge>
                           <code dir="ltr" style={{ fontSize: 9.5 }}>{v.id}</code>
                           <small className="t-muted">فیلد: {FIELD_FA[String(v.field ?? '')] ?? v.field}</small>
                           {v.entityType === 'Organization' && orgOf(v.id)?.name && <small>— {orgOf(v.id)?.name}</small>}
@@ -298,18 +299,18 @@ export default function QualityDashboard({ mode = 'hub' }: { mode?: 'hub' | 'ops
                       ))}
                       {!empty && c.key === 'noDates' && (
                         <span style={{ display: 'grid', gap: 3 }}>
-                          {(m.missingDates?.relationships?.values ?? []).length > 0 && <small>بازبینی رابطه: {(m.missingDates.relationships.values ?? []).map((x:any)=>faId(x)).join('، ')}</small>}
-                          {(m.missingDates?.meetings?.values ?? []).length > 0 && <small>زمان جلسه: {(m.missingDates.meetings.values ?? []).join('، ')}</small>}
-                          {(m.missingDates?.actions?.values ?? []).length > 0 && <small>موعد اقدام: {(m.missingDates.actions.values ?? []).join('، ')}</small>}
+                          {(m.missingDates?.relationships?.values ?? []).length > 0 && <small>بازبینی رابطه: {(m.missingDates.relationships.values ?? []).map((x:any)=>faId(x)).join(t('،'))}</small>}
+                          {(m.missingDates?.meetings?.values ?? []).length > 0 && <small>زمان جلسه: {(m.missingDates.meetings.values ?? []).join(t('،'))}</small>}
+                          {(m.missingDates?.actions?.values ?? []).length > 0 && <small>موعد اقدام: {(m.missingDates.actions.values ?? []).join(t('،'))}</small>}
                         </span>
                       )}
                       {!empty && c.key === 'incomplete' && (
                         <span style={{ display: 'grid', gap: 3 }}>
                           {(m.incompleteProfiles?.organizations?.values ?? []).length > 0 && <small>سازمان‌ها: {(m.incompleteProfiles.organizations.values ?? []).map(id => <span key={id} style={{ fontSize: 10.5 }}><code dir="ltr" style={{ fontSize: 9.5 }}>{id}</code>{orgOf(id)?.name && <> — {orgOf(id)?.name}</>} · </span>)}</small>}
-                          {(m.incompleteProfiles?.people?.values ?? []).length > 0 && <small>اشخاص: {(m.incompleteProfiles.people.values ?? []).map((x:any)=>faId(x)).join('، ')}</small>}
+                          {(m.incompleteProfiles?.people?.values ?? []).length > 0 && <small>اشخاص: {(m.incompleteProfiles.people.values ?? []).map((x:any)=>faId(x)).join(t('،'))}</small>}
                         </span>
                       )}
-                      {!empty && c.key === 'missingOrgs' && <small>ارجاع به موجودیت حذف‌شده یافت نشد.</small>}
+                      {!empty && c.key === 'missingOrgs' && <small>{t('ارجاع به موجودیت حذف‌شده یافت نشد.')}</small>}
                     </div>
                   </div>
                 );
@@ -320,60 +321,60 @@ export default function QualityDashboard({ mode = 'hub' }: { mode?: 'hub' | 'ops
           <section className="panel" style={{ borderColor: 'color-mix(in srgb, var(--blue,#2563eb) 25%, transparent)' }}>
             <div className="panel-title">
               <div>
-                <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Search size={16} /> تشخیص تکراری هنگام ثبت (پیش‌ثبت)</h2>
-                <p>هم‌ارزی با سنجش تکراری‌ها: پیش از ثبت سازمان/شخص، کاندیداهای تکراری با شباهت لون‌اشتاین و قواعد دامنه/شناسه/تلفن/کشور سنجیده می‌شوند (حد آستانه ۰٫۴۰). نیازمند مجوز واردکردن داده.</p>
+                <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Search size={16} /> {t('تشخیص تکراری هنگام ثبت (پیش‌ثبت)')}</h2>
+                <p>{t('هم‌ارزی با سنجش تکراری‌ها: پیش از ثبت سازمان/شخص، کاندیداهای تکراری با شباهت لون‌اشتاین و قواعد دامنه/شناسه/تلفن/کشور سنجیده می‌شوند (حد آستانه ۰٫۴۰). نیازمند مجوز واردکردن داده.')}</p>
               </div>
-              <Badge tone={canImport ? 'success' : 'warning'}>{canImport ? 'مجوز واردکردن داده فعال' : 'بدون مجوز واردکردن داده'}</Badge>
+              <Badge tone={canImport ? 'success' : 'warning'}>{canImport ? t('مجوز واردکردن داده فعال') : t('بدون مجوز واردکردن داده')}</Badge>
             </div>
-            {!canImport ? <p className="t-muted" style={{ fontSize: 11 }}>حساب شما مجوز واردکردن داده را ندارد؛ ابزار پیش‌ثبت برای نقش‌های دارای مجوز فعال است.</p> : (
+            {!canImport ? <p className="t-muted" style={{ fontSize: 11 }}>{t('حساب شما مجوز واردکردن داده را ندارد؛ ابزار پیش‌ثبت برای نقش‌های دارای مجوز فعال است.')}</p> : (
               <>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
                   <button className="btn btn-ghost" style={{ minHeight: 0, padding: '6px 10px', fontSize: 10.5 }} onClick={demoOrg}>نمونه: «{myOrgName || 'سازمان شما'}»</button>
-                  <button className="btn btn-ghost" style={{ minHeight: 0, padding: '6px 10px', fontSize: 10.5 }} onClick={demoPerson}>نمونه: «مریم رضایی»</button>
+                  <button className="btn btn-ghost" style={{ minHeight: 0, padding: '6px 10px', fontSize: 10.5 }} onClick={demoPerson}>{t('نمونه: «مریم رضایی»')}</button>
                 </div>
                 <form className="entity-form" onSubmit={detect} style={{ gap: 8 }}>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'end' }}>
                     <div className="field" style={{ minWidth: 150 }}>
-                      <label className="field-label" htmlFor="det-type">نوع نهاد</label>
+                      <label className="field-label" htmlFor="det-type">{t('نوع نهاد')}</label>
                       <select id="det-type" value={detType} onChange={e => { setDetType(e.target.value as any); setCands(null); }}>
-                        <option value="ORGANIZATION">سازمان</option>
-                        <option value="PERSON">شخص</option>
+                        <option value="ORGANIZATION">{t('سازمان')}</option>
+                        <option value="PERSON">{t('شخص')}</option>
                       </select>
                     </div>
                     <div className="field" style={{ minWidth: 200 }}>
-                      <label className="field-label" htmlFor="det-org">سازمان مقصد <span className="req">*</span></label>
+                      <label className="field-label" htmlFor="det-org">{t('سازمان مقصد')} <span className="req">*</span></label>
                       <OrgSelect value={fOrg} onChange={setFOrg} orgs={orgs} />
                     </div>
                     {detType === 'ORGANIZATION' ? (
                       <>
-                        <div className="field"><label className="field-label" htmlFor="det-name">نام سازمان</label><input id="det-name" dir="rtl" value={fName} onChange={e => setFName(e.target.value)} placeholder="نامی که می‌خواهید ثبت کنید" /></div>
-                        <div className="field"><label className="field-label" htmlFor="det-web">وب‌سایت</label><input id="det-web" dir="ltr" value={fWeb} onChange={e => setFWeb(e.target.value)} placeholder="example.com" style={{ fontSize: 10.5 }} /></div>
-                        <div className="field"><label className="field-label" htmlFor="det-ph">تلفن</label><input id="det-ph" dir="ltr" value={fPhone} onChange={e => setFPhone(e.target.value)} placeholder="+98 …" style={{ fontSize: 10.5 }} /></div>
-                        <div className="field"><label className="field-label" htmlFor="det-reg">شناسهٔ ثبت</label><input id="det-reg" dir="ltr" value={fReg} onChange={e => setFReg(e.target.value)} style={{ fontSize: 10.5 }} /></div>
-                        <div className="field"><label className="field-label" htmlFor="det-country">کشور</label><input id="det-country" value={fCountry} onChange={e => setFCountry(e.target.value)} placeholder="ایران" style={{ fontSize: 10.5 }} /></div>
+                        <div className="field"><label className="field-label" htmlFor="det-name">{t('نام سازمان')}</label><input id="det-name" dir="rtl" value={fName} onChange={e => setFName(e.target.value)} placeholder={t('نامی که می‌خواهید ثبت کنید')} /></div>
+                        <div className="field"><label className="field-label" htmlFor="det-web">{t('وب‌سایت')}</label><input id="det-web" dir="ltr" value={fWeb} onChange={e => setFWeb(e.target.value)} placeholder="example.com" style={{ fontSize: 10.5 }} /></div>
+                        <div className="field"><label className="field-label" htmlFor="det-ph">{t('تلفن')}</label><input id="det-ph" dir="ltr" value={fPhone} onChange={e => setFPhone(e.target.value)} placeholder="+98 …" style={{ fontSize: 10.5 }} /></div>
+                        <div className="field"><label className="field-label" htmlFor="det-reg">{t('شناسهٔ ثبت')}</label><input id="det-reg" dir="ltr" value={fReg} onChange={e => setFReg(e.target.value)} style={{ fontSize: 10.5 }} /></div>
+                        <div className="field"><label className="field-label" htmlFor="det-country">{t('کشور')}</label><input id="det-country" value={fCountry} onChange={e => setFCountry(e.target.value)} placeholder={t('ایران')} style={{ fontSize: 10.5 }} /></div>
                       </>
                     ) : (
                       <>
-                        <div className="field"><label className="field-label" htmlFor="det-f">نام</label><input id="det-f" value={fFirst} onChange={e => setFFirst(e.target.value)} /></div>
-                        <div className="field"><label className="field-label" htmlFor="det-l">نام خانوادگی</label><input id="det-l" value={fLast} onChange={e => setFLast(e.target.value)} /></div>
-                        <div className="field"><label className="field-label" htmlFor="det-em">ایمیل</label><input id="det-em" dir="ltr" value={fEmail} onChange={e => setFEmail(e.target.value)} style={{ fontSize: 10.5 }} /></div>
-                        <div className="field"><label className="field-label" htmlFor="det-ph2">تلفن</label><input id="det-ph2" dir="ltr" value={fPhone} onChange={e => setFPhone(e.target.value)} style={{ fontSize: 10.5 }} /></div>
+                        <div className="field"><label className="field-label" htmlFor="det-f">{t('نام')}</label><input id="det-f" value={fFirst} onChange={e => setFFirst(e.target.value)} /></div>
+                        <div className="field"><label className="field-label" htmlFor="det-l">{t('نام خانوادگی')}</label><input id="det-l" value={fLast} onChange={e => setFLast(e.target.value)} /></div>
+                        <div className="field"><label className="field-label" htmlFor="det-em">{t('ایمیل')}</label><input id="det-em" dir="ltr" value={fEmail} onChange={e => setFEmail(e.target.value)} style={{ fontSize: 10.5 }} /></div>
+                        <div className="field"><label className="field-label" htmlFor="det-ph2">{t('تلفن')}</label><input id="det-ph2" dir="ltr" value={fPhone} onChange={e => setFPhone(e.target.value)} style={{ fontSize: 10.5 }} /></div>
                       </>
                     )}
                     <button className="btn btn-primary" style={{ padding: '9px 16px', minHeight: 0 }} disabled={detecting}>
-                      {detecting ? 'در حال سنجش…' : <><ScanSearch size={14} /> بررسی تکراری</>}
+                      {detecting ? t('در حال سنجش…') : <><ScanSearch size={14} /> {t('بررسی تکراری')}</>}
                     </button>
                   </div>
                 </form>
                 {cands && (
                   <div style={{ marginTop: 12 }}>
                     <b style={{ fontSize: 11.5, display: 'block', marginBottom: 7 }}>کاندیداهای تکراری ({fmt.format(cands.length)})</b>
-                    {cands.length === 0 ? <p className="t-muted" style={{ fontSize: 11 }}>کاندیدایی بالای آستانه یافت نشد — ثبت امن به نظر می‌رسد.</p> : (
+                    {cands.length === 0 ? <p className="t-muted" style={{ fontSize: 11 }}>{t('کاندیدایی بالای آستانه یافت نشد — ثبت امن به نظر می‌رسد.')}</p> : (
                       <div style={{ display: 'grid', gap: 6 }}>
                         {cands.map(c => (
                           <div key={c.id} style={{ border: '1px solid color-mix(in srgb, var(--red,#dc2626) 25%, transparent)', background: 'color-mix(in srgb, var(--red,#dc2626) 4%, transparent)', borderRadius: 10, padding: '8px 10px', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                             <Badge tone="danger">{Math.round(c.score * 100)}٪</Badge>
-                            <Badge tone="neutral">{c.entityType === 'ORGANIZATION' ? 'سازمان' : 'شخص'}</Badge>
+                            <Badge tone="neutral">{c.entityType === 'ORGANIZATION' ? t('سازمان') : t('شخص')}</Badge>
                             <code dir="ltr" style={{ fontSize: 9.5 }}>{c.id}</code>
                             {c.entityType === 'ORGANIZATION' && orgOf(c.id)?.name && <b style={{ fontSize: 11 }}>{orgOf(c.id)?.name}</b>}
                             <span style={{ flex: 1, display: 'flex', gap: 4, flexWrap: 'wrap' }}>

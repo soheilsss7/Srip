@@ -3,18 +3,19 @@ import Link from 'next/link';
 import React, { useEffect } from 'react';
 import {Badge as DSBadge, EmptyState, ErrorState} from '@srip/design-system';
 import { X } from 'lucide-react';
+import { isEn, localeTag, t } from '../_lib/i18n';
 
 export function PageHeader({eyebrow,title,description,actions}:{eyebrow?:string;title:string;description?:string;actions?:React.ReactNode}){
  return <header className="page-heading"><div>{eyebrow&&<div className="eyebrow">{eyebrow}</div>}<h1>{title}</h1>{description&&<p>{description}</p>}</div>{actions&&<div className="heading-tools">{actions}</div>}</header>
 }
 export function ErrorCard({message}:{message?:string}){return message?<ErrorState message={message}/>:null}
-export function Loading({label='در حال بارگذاری…'}:{label?:string}){return <div className="loading-strip" aria-live="polite">{label}</div>}
-export function Empty({children='داده‌ای برای نمایش وجود ندارد.'}){return <EmptyState title="">{children}</EmptyState>}
+export function Loading({label=t('در حال بارگذاری…')}:{label?:string}){return <div className="loading-strip" aria-live="polite">{label}</div>}
+export function Empty({children=t('داده‌ای برای نمایش وجود ندارد.')}){return <EmptyState title="">{children}</EmptyState>}
 export function Badge({children,tone='neutral'}:{children:React.ReactNode;tone?:'neutral'|'success'|'warning'|'danger'|'info'}){return <DSBadge className={`${tone}`}>{children}</DSBadge>}
-export function DataTable({columns,rows,empty='داده‌ای وجود ندارد.'}:{columns:{key:string;label:string}[];rows:Record<string,any>[];empty?:string}){
+export function DataTable({columns,rows,empty=t('داده‌ای وجود ندارد.')}:{columns:{key:string;label:string}[];rows:Record<string,any>[];empty?:string}){
  return <div className="table-wrap"><table><thead><tr>{columns.map(c=><th key={c.key}>{c.label}</th>)}</tr></thead><tbody>{rows.length?rows.map((r,i)=><tr key={r.id??i}>{columns.map(c=><td key={c.key}>{r[c.key]===null||r[c.key]===undefined?'—':String(r[c.key])}</td>)}</tr>):<tr><td colSpan={columns.length}><Empty>{empty}</Empty></td></tr>}</tbody></table></div>
 }
-export function AdminNav(){const items=[['/admin','نمای کلی'],['/admin/users','کاربران'],['/admin/roles','نقش‌ها'],['/admin/permissions','مجوزها'],['/admin/tags','برچسب‌ها'],['/admin/custom-fields','فیلدهای سفارشی'],['/admin/scoring','امتیازدهی'],['/admin/criteria','معیارها'],['/admin/notification-rules','قوانین اعلان'],['/integrations','یکپارچه‌سازی'],['/admin/audit','ممیزی'],['/admin/feature-flags','پرچم‌ها'],['/admin/exports','خروجی داده'],['/admin/sessions','نشست‌ها'],['/admin/retention','نگهداری'],['/admin/master-data','دادهٔ مبنایی'],['/data-management','مدیریت داده'],['/data-quality','کیفیت داده'],['/workflows','گردش کار'],['/approvals','تأییدها'],['/monitoring','مرکز پایش'],['/analytics','تحلیل محصول'],['/security','امنیت'],['/governance','حاکمیت'],['/privacy','حریم خصوصی']];return <nav className="subnav" aria-label="مدیریت">{items.map(([href,label])=><Link href={href} key={href}>{label}</Link>)}</nav>}
+export function AdminNav(){const items=[['/admin',t('نمای کلی')],['/admin/users',t('کاربران')],['/admin/roles',t('نقش‌ها')],['/admin/permissions',t('مجوزها')],['/admin/tags',t('برچسب‌ها')],['/admin/custom-fields',t('فیلدهای سفارشی')],['/admin/scoring',t('امتیازدهی')],['/admin/criteria',t('معیارها')],['/admin/notification-rules',t('قوانین اعلان')],['/integrations',t('یکپارچه‌سازی')],['/admin/audit',t('ممیزی')],['/admin/feature-flags',t('پرچم‌ها')],['/admin/exports',t('خروجی داده')],['/admin/sessions',t('نشست‌ها')],['/admin/retention',t('نگهداری')],['/admin/master-data',t('دادهٔ مبنایی')],['/data-management',t('مدیریت داده')],['/data-quality',t('کیفیت داده')],['/workflows',t('گردش کار')],['/approvals',t('تأییدها')],['/monitoring',t('مرکز پایش')],['/analytics',t('تحلیل محصول')],['/security',t('امنیت')],['/governance',t('حاکمیت')],['/privacy',t('حریم خصوصی')]];return <nav className="subnav" aria-label={t('مدیریت')}>{items.map(([href,label])=><Link href={href} key={href}>{label}</Link>)}</nav>}
 
 /* ==========================================================================
    SRIP UI v4 — shared page components
@@ -75,7 +76,7 @@ export function Segmented<T extends string>({options,value,onChange,counts}:{
   );
 }
 
-export function Toolbar({children,search,onSearch,searchPlaceholder='جستجو…'}:{
+export function Toolbar({children,search,onSearch,searchPlaceholder=t('جستجو…')}:{
   children?:React.ReactNode;search?:string;onSearch?:(v:string)=>void;searchPlaceholder?:string
 }){
   return (
@@ -116,7 +117,7 @@ export function Modal({open,title,description,onClose,children,footer}:{
       <div className="modal-card">
         <div className="modal-head">
           <div><h2>{title}</h2>{description && <p>{description}</p>}</div>
-          <button className="modal-close" onClick={onClose} aria-label="بستن"><X size={16}/></button>
+          <button className="modal-close" onClick={onClose} aria-label={t('بستن')}><X size={16}/></button>
         </div>
         {children}
         {footer && <div className="form-actions">{footer}</div>}
@@ -141,7 +142,9 @@ export function formatDate(v?:string|null, withTime=false){
   const d=new Date(v);
   if(isNaN(d.getTime())) return String(v);
   try{
-    return withTime ? d.toLocaleString('fa-IR',{dateStyle:'medium',timeStyle:'short'}) : d.toLocaleDateString('fa-IR',{year:'numeric',month:'long',day:'numeric'});
+    /* فاز ۴/۲۳: تاریخ/ارقام مطابق زبان رابط (شمسی-فارسی / میلادی-انگلیسی) */
+    const tag=localeTag();
+    return withTime ? d.toLocaleString(tag,{dateStyle:'medium',timeStyle:'short'}) : d.toLocaleDateString(tag,{year:'numeric',month:'long',day:'numeric'});
   }catch{ return d.toLocaleDateString(); }
 }
 
@@ -151,11 +154,12 @@ export function formatRelative(v?:string|null){
   if(isNaN(d)) return String(v);
   const diff=Date.now()-d;
   const m=Math.round(diff/60000);
-  if(m<1) return 'همین حالا';
-  if(m<60) return `${m} دقیقه پیش`;
+  const en=isEn();
+  if(m<1) return en ? 'just now' : t('همین حالا');
+  if(m<60) return en ? `${m} minute${m===1?'':'s'} ago` : `${m} ${t('دقیقه پیش')}`;
   const h=Math.round(m/60);
-  if(h<24) return `${h} ساعت پیش`;
+  if(h<24) return en ? `${h} hour${h===1?'':'s'} ago` : `${h} ${t('ساعت پیش')}`;
   const days=Math.round(h/24);
-  if(days<30) return `${days} روز پیش`;
+  if(days<30) return en ? `${days} day${days===1?'':'s'} ago` : `${days} ${t('روز پیش')}`;
   return formatDate(v);
 }

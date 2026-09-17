@@ -14,6 +14,7 @@ import {
   Activity, HeartPulse, TrendingUp, Gauge, Bell, Workflow, Sparkles, Crown,
   AlertTriangle, Clock, ChevronLeft, CircleCheck, Flame, ListTodo, Store, Landmark, Layers, DoorOpen, Siren, Globe,
 } from 'lucide-react';
+import { localeTag, t } from './_lib/i18n';
 
 /* ---------------------------------- types --------------------------------- */
 type Summary = {
@@ -42,11 +43,11 @@ type GraphLists = { orgs: any[]; people: any[]; rels: any[]; interactions: any[]
 
 /* ---------------------------------- utils --------------------------------- */
 const fmtNum = (v: number | undefined | null): string =>
-  v == null ? '—' : new Intl.NumberFormat('fa-IR').format(v);
+  v == null ? '—' : new Intl.NumberFormat(localeTag()).format(v);
 const fmtDate = (iso?: string | null): string =>
-  iso ? new Date(iso).toLocaleDateString('fa-IR', { month: 'short', day: 'numeric' }) : '—';
+  iso ? new Date(iso).toLocaleDateString(localeTag(), { month: 'short', day: 'numeric' }) : '—';
 const fmtTime = (iso?: string | null): string =>
-  iso ? new Date(iso).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }) : '—';
+  iso ? new Date(iso).toLocaleTimeString(localeTag(), { hour: '2-digit', minute: '2-digit' }) : '—';
 const daysUntil = (iso?: string | null): number | null => {
   if (!iso) return null;
   return Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000);
@@ -56,31 +57,31 @@ const scoreTone = (v: number): 'success' | 'info' | 'warning' | 'danger' =>
 const toneClass = (t: string): string =>
   t === 'success' ? 's' : t === 'warning' ? 'w' : t === 'danger' ? 'd' : '';
 
-const KPI_CARDS: Array<{ key: string; label: string; href: string; icon: React.ReactNode; grad: string }> = [
-  { key: 'organizations', label: 'سازمان‌ها', href: '/organizations', icon: <Building2 size={18} />, grad: 'ic-blue' },
-  { key: 'people', label: 'اشخاص', href: '/people', icon: <Users size={18} />, grad: 'ic-purple' },
-  { key: 'relationships', label: 'روابط فعال', href: '/relationships', icon: <Share2 size={18} />, grad: 'ic-teal' },
-  { key: 'meetings', label: 'جلسات', href: '/meetings', icon: <CalendarDays size={18} />, grad: 'ic-indigo' },
-  { key: 'actions', label: 'اقدامات باز', href: '/actions', icon: <Zap size={18} />, grad: 'ic-gold' },
-  { key: 'commitments', label: 'تعهدات باز', href: '/commitments', icon: <ShieldCheck size={18} />, grad: 'ic-red' },
-  { key: 'projects', label: 'پروژه‌ها', href: '/projects', icon: <FolderKanban size={18} />, grad: 'ic-blue' },
-  { key: 'opportunities', label: 'فرصت‌ها', href: '/opportunities', icon: <Target size={18} />, grad: 'ic-purple' },
-];
+const KPI_CARDS: Array<{ key: string; label: string; href: string; icon: React.ReactNode; grad: string }> = lt([
+  { key: 'organizations', label: t('سازمان‌ها'), href: '/organizations', icon: <Building2 size={18} />, grad: 'ic-blue' },
+  { key: 'people', label: t('اشخاص'), href: '/people', icon: <Users size={18} />, grad: 'ic-purple' },
+  { key: 'relationships', label: t('روابط فعال'), href: '/relationships', icon: <Share2 size={18} />, grad: 'ic-teal' },
+  { key: 'meetings', label: t('جلسات'), href: '/meetings', icon: <CalendarDays size={18} />, grad: 'ic-indigo' },
+  { key: 'actions', label: t('اقدامات باز'), href: '/actions', icon: <Zap size={18} />, grad: 'ic-gold' },
+  { key: 'commitments', label: t('تعهدات باز'), href: '/commitments', icon: <ShieldCheck size={18} />, grad: 'ic-red' },
+  { key: 'projects', label: t('پروژه‌ها'), href: '/projects', icon: <FolderKanban size={18} />, grad: 'ic-blue' },
+  { key: 'opportunities', label: t('فرصت‌ها'), href: '/opportunities', icon: <Target size={18} />, grad: 'ic-purple' },
+]);
 
-const COMPONENT_LABELS: Record<string, string> = {
-  relationshipQuality: 'کیفیت رابطه', influence: 'نفوذ', strategicValue: 'ارزش راهبردی',
-  opportunityPotential: 'پتانسیل فرصت', resilience: 'تاب‌آوری', coverage: 'پوشش',
-  diversity: 'تنوع', engagement: 'درگیری', riskAdjusted: 'تعدیل‌شده با ریسک',
-};
-const SRI_LABELS: Record<string, string> = {
-  coverage: 'پوشش', strength: 'قوت', influence: 'نفوذ', opportunity: 'فرصت', resilience: 'تاب‌آوری',
-};
-const FEATURE_LABELS: Record<string, string> = {
-  network_explorer: 'کاوش شبکه', smart_search: 'جستجوی هوشمند', meeting_briefs: 'بریف جلسه',
-  recommendations: 'پیشنهادها', executive_brief: 'گزارش راهبردی', meeting_summary: 'خلاصهٔ جلسه',
-  action_extraction: 'استخراج اقدام', commitment_extraction: 'استخراج تعهد',
-  risk_detection: 'تشخیص ریسک', opportunity_detection: 'تشخیص فرصت', next_best_action: 'اقدام بعدی',
-};
+const COMPONENT_LABELS: Record<string, string> = lt({
+  relationshipQuality: t('کیفیت رابطه'), influence: t('نفوذ'), strategicValue: t('ارزش راهبردی'),
+  opportunityPotential: t('پتانسیل فرصت'), resilience: t('تاب‌آوری'), coverage: t('پوشش'),
+  diversity: t('تنوع'), engagement: t('درگیری'), riskAdjusted: t('تعدیل‌شده با ریسک'),
+});
+const SRI_LABELS: Record<string, string> = lt({
+  coverage: t('پوشش'), strength: t('قوت'), influence: t('نفوذ'), opportunity: t('فرصت'), resilience: t('تاب‌آوری'),
+});
+const FEATURE_LABELS: Record<string, string> = lt({
+  network_explorer: t('کاوش شبکه'), smart_search: t('جستجوی هوشمند'), meeting_briefs: t('بریف جلسه'),
+  recommendations: t('پیشنهادها'), executive_brief: t('گزارش راهبردی'), meeting_summary: t('خلاصهٔ جلسه'),
+  action_extraction: t('استخراج اقدام'), commitment_extraction: t('استخراج تعهد'),
+  risk_detection: t('تشخیص ریسک'), opportunity_detection: t('تشخیص فرصت'), next_best_action: t('اقدام بعدی'),
+});
 
 function Score({ value, label }: { value: number | undefined; label: string }) {
   const v = Math.max(0, Math.min(100, value ?? 0));
@@ -224,20 +225,20 @@ export default function Dashboard() {
       {/* HEADER */}
       <div className="page-heading">
         <div>
-          <div className="eyebrow">پیشخوان — برنامهٔ کار امروز شما</div>
-          <h1>{me?.name ? `سلام، ${me.name}` : 'سلام'}</h1>
-          <p className="subtitle">امروز چه چیزی نیازمند اقدام شماست؟ اولویت‌ها، هشدارها و جلسات پیش رو — هر عدد با دلیلی از دادهٔ واقعی.</p>
+          <div className="eyebrow">{t('پیشخوان — برنامهٔ کار امروز شما')}</div>
+          <h1>{me?.name ? `${t('سلام،')} ${me.name}` : t('سلام')}</h1>
+          <p className="subtitle">{t('امروز چه چیزی نیازمند اقدام شماست؟ اولویت‌ها، هشدارها و جلسات پیش رو — هر عدد با دلیلی از دادهٔ واقعی.')}</p>
         </div>
         <div className="heading-tools">
           <span className={`chip ${isOwnerMode ? 'purple' : 'info'}`}>
             {isOwnerMode ? <Crown size={12} /> : <Building2 size={12} />}
-            {isOwnerMode ? 'نمای مالک — همهٔ محدوده' : 'نمای سازمانی'}
+            {isOwnerMode ? t('نمای مالک — همهٔ محدوده') : t('نمای سازمانی')}
           </span>
           <span className="chip info"><CalendarDays size={12} /> {todayLabel}</span>
           <ScopeBadge />
-          <Link className="primary-action" href="/organizations"><Building2 size={14} /> + سازمان</Link>
-          <Link className="secondary-action" href="/people"><Users size={14} /> + شخص</Link>
-          <Link className="secondary-action" href="/relationships"><Share2 size={14} /> + رابطه</Link>
+          <Link className="primary-action" href="/organizations"><Building2 size={14} /> {t('+ سازمان')}</Link>
+          <Link className="secondary-action" href="/people"><Users size={14} /> {t('+ شخص')}</Link>
+          <Link className="secondary-action" href="/relationships"><Share2 size={14} /> {t('+ رابطه')}</Link>
         </div>
       </div>
 
@@ -245,10 +246,10 @@ export default function Dashboard() {
       <AlertBanner />
 
       {!loading && !error && (lists?.rels?.length ?? 0) === 0 && meetings.length === 0 && actions.length === 0 && (
-        <section className="onboarding-strip" aria-label="از کجا شروع کنم؟">
-          <div className="ob-step"><b>۱</b><span>سازمان‌ها را ثبت کنید</span></div>
-          <div className="ob-step"><b>۲</b><span>بین آن‌ها رابطه بسازید</span></div>
-          <div className="ob-step"><b>۳</b><span>اولین تعامل و اقدام را ثبت کنید — هوشمندی فعال می‌شود</span></div>
+        <section className="onboarding-strip" aria-label={t('از کجا شروع کنم؟')}>
+          <div className="ob-step"><b>{t('۱')}</b><span>{t('سازمان‌ها را ثبت کنید')}</span></div>
+          <div className="ob-step"><b>{t('۲')}</b><span>{t('بین آن‌ها رابطه بسازید')}</span></div>
+          <div className="ob-step"><b>{t('۳')}</b><span>{t('اولین تعامل و اقدام را ثبت کنید — هوشمندی فعال می‌شود')}</span></div>
         </section>
       )}
 
@@ -261,50 +262,50 @@ export default function Dashboard() {
 
       {/* STRATEGIC BANNER */}
       <section className="strategic-banner">
-        <div><span>نقش فعال</span><strong>{ROLE_LABELS[role] ?? '—'}</strong></div>
-        <div><span>محدوده</span><strong>{scopeId === 'all' ? 'همهٔ محدودهٔ مجاز' : scopeId}</strong></div>
-        <div><span>اصل محصول</span><strong>رابطه‌محور · شبکه‌محور · هوشمحور</strong></div>
+        <div><span>{t('نقش فعال')}</span><strong>{ROLE_LABELS[role] ?? '—'}</strong></div>
+        <div><span>{t('محدوده')}</span><strong>{scopeId === 'all' ? t('همهٔ محدودهٔ مجاز') : scopeId}</strong></div>
+        <div><span>{t('اصل محصول')}</span><strong>{t('رابطه‌محور · شبکه‌محور · هوشمحور')}</strong></div>
       </section>
 
       {/* ACTION CENTER — پاسخ به «امروز چه کاری مهم است» */}
-      <section className="action-center" aria-label="مرکز اقدام امروز">
+      <section className="action-center" aria-label={t('مرکز اقدام امروز')}>
         <div className="action-center-head">
           <div className="action-center-title">
             <span className="action-center-ico"><ListTodo size={15} /></span>
             <div>
-              <h2>اولویت‌های امروز</h2>
-              <p>پاسخ به پرسش «امروز چه کاری مهم است» — بر اساس سررسیدها، ریسک‌ها و رویدادها</p>
+              <h2>{t('اولویت‌های امروز')}</h2>
+              <p>{t('پاسخ به پرسش «امروز چه کاری مهم است» — بر اساس سررسیدها، ریسک‌ها و رویدادها')}</p>
             </div>
           </div>
           <Badge className="danger">{fmtNum(unreadAlerts)} مورد نیازمند توجه</Badge>
         </div>
         <div className="action-center-grid">
           <div className="ac-card ac-overdue">
-            <div className="ac-card-head"><AlertTriangle size={14} /><b>اقدامات عقب‌افتاده</b><span>{fmtNum(overdue.length)} مورد</span></div>
+            <div className="ac-card-head"><AlertTriangle size={14} /><b>{t('اقدامات عقب‌افتاده')}</b><span>{fmtNum(overdue.length)} مورد</span></div>
             {overdue.length ? overdue.slice(0, 3).map((a) => (
               <Link className="ac-item" href={`/actions/${a.id}`} key={a.id}>
                 <span className="ac-dot d" /><span className="ac-name">{a.title}</span>
                 <span className="ac-date">موعد: {fmtDate(a.dueAt)}</span>
               </Link>
-            )) : <div className="ac-none"><CircleCheck size={14} /> اقدام عقب‌افتاده‌ای ندارید</div>}
+            )) : <div className="ac-none"><CircleCheck size={14} /> {t('اقدام عقب‌افتاده‌ای ندارید')}</div>}
           </div>
           <div className="ac-card ac-soon">
-            <div className="ac-card-head"><Clock size={14} /><b>سررسید تا ۳ روز</b><span>{fmtNum(dueSoon.length)} مورد</span></div>
+            <div className="ac-card-head"><Clock size={14} /><b>{t('سررسید تا ۳ روز')}</b><span>{fmtNum(dueSoon.length)} مورد</span></div>
             {dueSoon.length ? dueSoon.slice(0, 3).map((a) => (
               <Link className="ac-item" href={`/actions/${a.id}`} key={a.id}>
                 <span className="ac-dot w" /><span className="ac-name">{a.title}</span>
                 <span className="ac-date">{fmtDate(a.dueAt)}</span>
               </Link>
-            )) : <div className="ac-none"><CircleCheck size={14} /> سررسید فوری‌ای ندارید</div>}
+            )) : <div className="ac-none"><CircleCheck size={14} /> {t('سررسید فوری‌ای ندارید')}</div>}
           </div>
           <div className="ac-card ac-next">
-            <div className="ac-card-head"><CalendarDays size={14} /><b>جلسهٔ بعدی</b><span>{meetings.length ? fmtNum(meetings.length) + ' جلسهٔ پیش رو' : ''}</span></div>
+            <div className="ac-card-head"><CalendarDays size={14} /><b>{t('جلسهٔ بعدی')}</b><span>{meetings.length ? fmtNum(meetings.length) + t('جلسهٔ پیش رو') : ''}</span></div>
             {nextMeeting ? (
               <Link className="ac-item" href={`/meetings/${nextMeeting.id}`} key={nextMeeting.id}>
                 <span className="ac-dot s" /><span className="ac-name">{nextMeeting.title}</span>
                 <span className="ac-date">{fmtDate(nextMeeting.startAt)} · {fmtTime(nextMeeting.startAt)}</span>
               </Link>
-            ) : <div className="ac-none"><CalendarDays size={14} /> جلسهٔ پیش روی برنامه‌ریزی‌شده ندارید</div>}
+            ) : <div className="ac-none"><CalendarDays size={14} /> {t('جلسهٔ پیش روی برنامه‌ریزی‌شده ندارید')}</div>}
             {meetings.filter((m) => m.id !== nextMeeting?.id).slice(0, 2).map((m) => (
               <Link className="ac-item" href={`/meetings/${m.id}`} key={m.id}>
                 <span className="ac-dot n" /><span className="ac-name">{m.title}</span>
@@ -316,10 +317,10 @@ export default function Dashboard() {
       </section>
 
       {/* KPI ROW — در یک نگاه */}
-      <section className="kpi-grid" aria-label="شاخص‌های راهبردی">
+      <section className="kpi-grid" aria-label={t('شاخص‌های راهبردی')}>
         {KPI_CARDS.map(({ key, label, href, icon, grad }) => (
           <Link className="kpi-card" href={href} key={key}>
-            <div className="kpi-top"><span className={`kpi-ico ${grad}`}>{icon}</span><small>مشاهده ←</small></div>
+            <div className="kpi-top"><span className={`kpi-ico ${grad}`}>{icon}</span><small>{t('مشاهده ←')}</small></div>
             {loading ? <strong className="skeleton" style={{ width: 52, height: 26, display: 'inline-block', borderRadius: 8 }}>&nbsp;</strong> : <strong>{fmtNum(counts[key])}</strong>}
             <span>{label}</span>
           </Link>
@@ -328,26 +329,26 @@ export default function Dashboard() {
 
       {/* بازار — در یک نگاه — کجا ورود ما به بازار است؟ */}
       {lists?.rels?.length ? (
-        <section className="panel" aria-label="نقشهٔ بازار در پیشخوان" style={{marginTop:14}}>
+        <section className="panel" aria-label={t('نقشهٔ بازار در پیشخوان')} style={{marginTop:14}}>
           <div className="panel-title">
-            <div><h2 style={{display:'inline-flex', gap:6, alignItems:'center'}}><Globe size={16}/> نقشهٔ بازار — تفکیک بازاری / غیربازاری</h2><p>روابط بازاری ارزش می‌سازند، روابط غیربازاری مسیر را باز/مسدود می‌کنند — نقطهٔ ورود، دروازهٔ شما به هر سگمنت است</p></div>
-            <Link className="head-link" href="/relationships">همهٔ روابط ←</Link>
+            <div><h2 style={{display:'inline-flex', gap:6, alignItems:'center'}}><Globe size={16}/> {t('نقشهٔ بازار — تفکیک بازاری / غیربازاری')}</h2><p>{t('روابط بازاری ارزش می‌سازند، روابط غیربازاری مسیر را باز/مسدود می‌کنند — نقطهٔ ورود، دروازهٔ شما به هر سگمنت است')}</p></div>
+            <Link className="head-link" href="/relationships">{t('همهٔ روابط ←')}</Link>
           </div>
           <div className="stats-row" style={{margin:0}}>
-            <div className="stat-card"><div className="st-top"><span className={`kpi-ico ic-teal`}><Store size={16}/></span><span>بازاری</span></div><strong className="st-value">{fmtNum(lists.rels.filter((x:any)=>(x.marketKind??'MARKET')==='MARKET').length)}</strong><small className="t-muted">در زنجیرهٔ ارزش</small></div>
-            <div className="stat-card"><div className="st-top"><span className={`kpi-ico ic-purple`}><Landmark size={16}/></span><span>غیربازاری</span></div><strong className="st-value">{fmtNum(lists.rels.filter((x:any)=>x.marketKind==='NON_MARKET').length)}</strong><small className="t-muted">نهاد/تنظیم‌گر</small></div>
-            <div className="stat-card"><div className="st-top"><span className={`kpi-ico ic-gold`}><DoorOpen size={16}/></span><span>نقاط ورود</span></div><strong className="st-value">{fmtNum(lists.rels.filter((x:any)=>x.isMarketEntry).length)}</strong><small className="t-muted">{fmtNum(lists.rels.filter((x:any)=>x.isMarketEntry && (x.marketKind??'MARKET')==='MARKET').length)} بازاری · {fmtNum(lists.rels.filter((x:any)=>x.isMarketEntry && x.marketKind==='NON_MARKET').length)} غیربازاری</small></div>
-            <div className="stat-card"><div className="st-top"><span className={`kpi-ico ic-red`}><Layers size={16}/></span><span>هیبرید</span></div><strong className="st-value">{fmtNum(lists.rels.filter((x:any)=>x.marketKind==='HYBRID').length)}</strong><small className="t-muted">دو نقش همزمان</small></div>
+            <div className="stat-card"><div className="st-top"><span className={`kpi-ico ic-teal`}><Store size={16}/></span><span>{t('بازاری')}</span></div><strong className="st-value">{fmtNum(lists.rels.filter((x:any)=>(x.marketKind??'MARKET')==='MARKET').length)}</strong><small className="t-muted">{t('در زنجیرهٔ ارزش')}</small></div>
+            <div className="stat-card"><div className="st-top"><span className={`kpi-ico ic-purple`}><Landmark size={16}/></span><span>{t('غیربازاری')}</span></div><strong className="st-value">{fmtNum(lists.rels.filter((x:any)=>x.marketKind==='NON_MARKET').length)}</strong><small className="t-muted">{t('نهاد/تنظیم‌گر')}</small></div>
+            <div className="stat-card"><div className="st-top"><span className={`kpi-ico ic-gold`}><DoorOpen size={16}/></span><span>{t('نقاط ورود')}</span></div><strong className="st-value">{fmtNum(lists.rels.filter((x:any)=>x.isMarketEntry).length)}</strong><small className="t-muted">{fmtNum(lists.rels.filter((x:any)=>x.isMarketEntry && (x.marketKind??'MARKET')==='MARKET').length)} بازاری · {fmtNum(lists.rels.filter((x:any)=>x.isMarketEntry && x.marketKind==='NON_MARKET').length)} غیربازاری</small></div>
+            <div className="stat-card"><div className="st-top"><span className={`kpi-ico ic-red`}><Layers size={16}/></span><span>{t('هیبرید')}</span></div><strong className="st-value">{fmtNum(lists.rels.filter((x:any)=>x.marketKind==='HYBRID').length)}</strong><small className="t-muted">{t('دو نقش همزمان')}</small></div>
           </div>
         </section>
       ) : null}
 
       {/* RISK STRIP — بازاری / غیربازاری و نقاط ورود */}
       {(relAlerts.length > 0 || riskyRels.length > 0) && (
-        <section className="alert-strip" aria-label="هشدارهای شبکه — بازاری و غیربازاری" style={{borderColor: (relAlertSummary?.danger ?? 0) > 0 ? 'var(--danger, #dc2626)' : undefined}}>
+        <section className="alert-strip" aria-label={t('هشدارهای شبکه — بازاری و غیربازاری')} style={{borderColor: (relAlertSummary?.danger ?? 0) > 0 ? 'var(--danger, #dc2626)' : undefined}}>
           <div className="alert-strip-head">
             <Siren size={15} />
-            <span>هشدارهای هوشمند — بازاری / غیربازاری و نقاط ورود</span>
+            <span>{t('هشدارهای هوشمند — بازاری / غیربازاری و نقاط ورود')}</span>
             <b>{fmtNum(relAlerts.length || riskyRels.length)} هشدار</b>
             {relAlertSummary ? <><span className="chip danger" style={{fontSize:11}}>{fmtNum(relAlertSummary.danger)} بحرانی</span><span className="chip warning" style={{fontSize:11}}>{fmtNum(relAlertSummary.warning)} هشدار</span><span className="chip info" style={{fontSize:11}}><DoorOpen size={11} style={{display:'inline'}}/> {fmtNum(relAlertSummary.entry)} ورودی</span></> : null}
           </div>
@@ -355,26 +356,26 @@ export default function Dashboard() {
             {(relAlerts.length ? relAlerts.slice(0,5) : riskyRels).map((r: any) => (
               <Link className={`alert-pill ${r.tone==='danger'?'ap-danger':r.tone==='warning'?'ap-warning':''}`} href={r.relationshipId ? `/relationships/${r.relationshipId}` : `/relationships/${r.id}`} key={r.id}>
                 <span className="alert-pill-name">{r.title ?? r.name}</span>
-                <span className="alert-pill-meta">{r.marketKind ? (r.marketKind==='MARKET'?'بازاری':r.marketKind==='NON_MARKET'?'غیربازاری':'دوگانه') : ''}{r.isMarketEntry ? ' · نقطهٔ ورود' : ''}{r.segment ? ` · ${r.segment}` : ''}{r.risk ? ` · ریسک ${fmtNum(r.risk)}` : ''}</span>
+                <span className="alert-pill-meta">{r.marketKind ? (r.marketKind==='MARKET'?t('بازاری'):r.marketKind==='NON_MARKET'?t('غیربازاری'):t('دوگانه')) : ''}{r.isMarketEntry ? t('· نقطهٔ ورود') : ''}{r.segment ? ` · ${r.segment}` : ''}{r.risk ? ` ${t('· ریسک')} ${fmtNum(r.risk)}` : ''}</span>
                 {r.body || r.why ? <span className="alert-pill-why">{r.body ?? r.why}</span> : null}
               </Link>
             ))}
           </div>
-          <Link className="alert-strip-more" href="/relationships"><ChevronLeft size={13} /> همهٔ روابط · نقشهٔ بازار</Link>
+          <Link className="alert-strip-more" href="/relationships"><ChevronLeft size={13} /> {t('همهٔ روابط · نقشهٔ بازار')}</Link>
         </section>
       )}
 
       {/* UPCOMING MEETINGS — کار امروز */}
       <section className="dash-upcoming">
         <Card className="dash-panel">
-          <div className="panel-title"><div><h2>جلسات پیش رو</h2><p>رویدادهای برنامه‌ریزی‌شده در محدودهٔ شما</p></div><Link className="head-link" href="/meetings">تقویم ←</Link></div>
+          <div className="panel-title"><div><h2>{t('جلسات پیش رو')}</h2><p>{t('رویدادهای برنامه‌ریزی‌شده در محدودهٔ شما')}</p></div><Link className="head-link" href="/meetings">{t('تقویم ←')}</Link></div>
           {meetings.length ? (
             <div className="meeting-list">
               {meetings.slice(0, 5).map((m) => (
                 <Link className="meeting-row" href={`/meetings/${m.id}`} key={m.id}>
                   <span className="meeting-date">
                     <b>{fmtNum(new Date(m.startAt).getDate())}</b>
-                    <small>{new Date(m.startAt).toLocaleDateString('fa-IR', { month: 'short' })}</small>
+                    <small>{new Date(m.startAt).toLocaleDateString(localeTag(), { month: 'short' })}</small>
                   </span>
                   <span className="meeting-body">
                     <strong>{m.title}</strong>
@@ -385,7 +386,7 @@ export default function Dashboard() {
               ))}
             </div>
           ) : (
-            <EmptyState title="جلسهٔ پیش روی ثبت نشده" description="جلسات آیندهٔ برنامه‌ریزی‌شده اینجا ظاهر می‌شوند." />
+            <EmptyState title={t('جلسهٔ پیش روی ثبت نشده')} description={t('جلسات آیندهٔ برنامه‌ریزی‌شده اینجا ظاهر می‌شوند.')} />
           )}
         </Card>
       </section>
@@ -395,17 +396,17 @@ export default function Dashboard() {
         <section className="section-card">
           <div className="section-head">
             <div>
-              <h2><Sparkles size={17} /> پیشنهاد ارتباط جدید</h2>
-              <p>بر اساس ارتباطات مشترک، تعاملات اخیر و هم‌صنف‌بودن — محاسبهٔ قطعی موتور، بدون سرویس خارجی.</p>
+              <h2><Sparkles size={17} /> {t('پیشنهاد ارتباط جدید')}</h2>
+              <p>{t('بر اساس ارتباطات مشترک، تعاملات اخیر و هم‌صنف‌بودن — محاسبهٔ قطعی موتور، بدون سرویس خارجی.')}</p>
             </div>
-            <Link className="btn btn-ghost btn-sm" href="/network">مشاهدهٔ شبکه ←</Link>
+            <Link className="btn btn-ghost btn-sm" href="/network">{t('مشاهدهٔ شبکه ←')}</Link>
           </div>
           <div className="suggestions-grid">
             {suggestions.map((s) => (
               <Link className="ai-match-card" href={s.href} key={s.id}>
                 <div className="match-meta">
-                  <Badge className="info">{s.kind === 'person' ? 'شخص' : 'سازمان'}</Badge>
-                  {s.via.length > 0 && <span>از طریق: {s.via.join('، ')}</span>}
+                  <Badge className="info">{s.kind === 'person' ? t('شخص') : t('سازمان')}</Badge>
+                  {s.via.length > 0 && <span>از طریق: {s.via.join(t('،'))}</span>}
                 </div>
                 <strong>{s.name}</strong>
                 {s.reasons.length > 0 && (
@@ -427,7 +428,7 @@ export default function Dashboard() {
       <section className="dash-grid-top">
         <Card className="dash-panel">
           <div className="panel-title">
-            <div><h2>سرمایهٔ شبکه · اجزا</h2><p>نه مؤلفهٔ سرمایهٔ شبکه — محاسبهٔ زنده توسط موتور تحلیلی</p></div>
+            <div><h2>{t('سرمایهٔ شبکه · اجزا')}</h2><p>{t('نه مؤلفهٔ سرمایهٔ شبکه — محاسبهٔ زنده توسط موتور تحلیلی')}</p></div>
             <Badge className="info">سرمایهٔ شبکه: {fmtNum(network?.networkCapital?.score)}</Badge>
           </div>
           {hasCapital ? (
@@ -435,13 +436,13 @@ export default function Dashboard() {
               {Object.entries(capital).map(([k, v]) => <Score key={k} value={v as number} label={COMPONENT_LABELS[k] ?? k} />)}
             </div>
           ) : (
-            <EmptyState title="دادهٔ سرمایهٔ شبکه در دسترس نیست" description="پس از ثبت نخستین روابط، این بخش به‌روز می‌شود." />
+            <EmptyState title={t('دادهٔ سرمایهٔ شبکه در دسترس نیست')} description={t('پس از ثبت نخستین روابط، این بخش به‌روز می‌شود.')} />
           )}
         </Card>
 
         <Card className="dash-panel">
           <div className="panel-title">
-            <div><h2>شاخص رابطهٔ راهبردی</h2><p>شکستِ وزن‌دار امتیاز راهبردی روابط</p></div>
+            <div><h2>{t('شاخص رابطهٔ راهبردی')}</h2><p>{t('شکستِ وزن‌دار امتیاز راهبردی روابط')}</p></div>
             <Badge className="success">شاخص راهبردی: {fmtNum(network?.strategicRelationshipIndex?.score)}</Badge>
           </div>
           {hasSri ? (
@@ -449,13 +450,13 @@ export default function Dashboard() {
               {Object.entries(sri).map(([k, v]) => <Score key={k} value={v as number} label={SRI_LABELS[k] ?? k} />)}
             </div>
           ) : (
-            <EmptyState title="دادهٔ شاخص راهبردی در دسترس نیست" />
+            <EmptyState title={t('دادهٔ شاخص راهبردی در دسترس نیست')} />
           )}
           <div className="mini-metrics">
-            <div><span>تاب‌آوری رابطه</span><strong>{fmtNum(network?.relationshipResilienceScore)}</strong></div>
-            <div><span>ارزش وزنی فرصت</span><strong>{fmtNum(network?.weightedOpportunityValue != null ? Math.round(network.weightedOpportunityValue) : null)}</strong></div>
-            <div><span>میزان موفقیت معرفی</span><strong>{network?.referralSuccessRate?.rate != null ? `${fmtNum(network.referralSuccessRate.rate)}٪` : '—'}</strong></div>
-            <div><span>میانگین سلامت روابط</span><strong>{avgHealth != null ? fmtNum(avgHealth) : '—'}</strong></div>
+            <div><span>{t('تاب‌آوری رابطه')}</span><strong>{fmtNum(network?.relationshipResilienceScore)}</strong></div>
+            <div><span>{t('ارزش وزنی فرصت')}</span><strong>{fmtNum(network?.weightedOpportunityValue != null ? Math.round(network.weightedOpportunityValue) : null)}</strong></div>
+            <div><span>{t('میزان موفقیت معرفی')}</span><strong>{network?.referralSuccessRate?.rate != null ? `${fmtNum(network.referralSuccessRate.rate)}${t('٪')}` : '—'}</strong></div>
+            <div><span>{t('میانگین سلامت روابط')}</span><strong>{avgHealth != null ? fmtNum(avgHealth) : '—'}</strong></div>
           </div>
         </Card>
       </section>
@@ -463,16 +464,16 @@ export default function Dashboard() {
       {/* MID GRID: Engagement + Funnel + Workflows */}
       <section className="dash-grid-mid">
         <Card className="dash-panel">
-          <div className="panel-title"><div><h2>درگیری و فعالیت</h2><p>فعالیت ۳۰ روز اخیر کاربران</p></div><Badge>کاربر فعال: {fmtNum(eng.activeUsers30d)}</Badge></div>
+          <div className="panel-title"><div><h2>{t('درگیری و فعالیت')}</h2><p>{t('فعالیت ۳۰ روز اخیر کاربران')}</p></div><Badge>کاربر فعال: {fmtNum(eng.activeUsers30d)}</Badge></div>
           <div className="mini-metrics">
-            <div><span>کاربران فعال ۳۰ روز</span><strong>{fmtNum(eng.activeUsers30d)}</strong></div>
-            <div><span>پذیرش پیشنهادها</span><strong>{fmtNum(eng.recommendationAcceptance)}{eng.recommendationAcceptanceRate != null ? <small> · {fmtNum(eng.recommendationAcceptanceRate)}٪</small> : null}</strong></div>
-            <div><span>ارتباط موفق</span><strong>{fmtNum(eng.successfulConnections)}</strong></div>
-            <div><span>به‌روزرسانی رابطه</span><strong>{fmtNum(eng.relationshipUpdates)}</strong></div>
+            <div><span>{t('کاربران فعال ۳۰ روز')}</span><strong>{fmtNum(eng.activeUsers30d)}</strong></div>
+            <div><span>{t('پذیرش پیشنهادها')}</span><strong>{fmtNum(eng.recommendationAcceptance)}{eng.recommendationAcceptanceRate != null ? <small> · {fmtNum(eng.recommendationAcceptanceRate)}٪</small> : null}</strong></div>
+            <div><span>{t('ارتباط موفق')}</span><strong>{fmtNum(eng.successfulConnections)}</strong></div>
+            <div><span>{t('به‌روزرسانی رابطه')}</span><strong>{fmtNum(eng.relationshipUpdates)}</strong></div>
           </div>
           {featureUsage.length > 0 && (
             <>
-              <div className="sub-panel-title">بیشترین استفاده از امکانات</div>
+              <div className="sub-panel-title">{t('بیشترین استفاده از امکانات')}</div>
               <div className="feature-list">
                 {featureUsage.slice(0, 7).map((f) => (
                   <div className="feature-row" key={f.feature}>
@@ -487,12 +488,12 @@ export default function Dashboard() {
         </Card>
 
         <Card className="dash-panel">
-          <div className="panel-title"><div><h2>قیف پیشنهادات</h2><p>مسیر پیشنهاد هوشمند تا نتیجه</p></div><Link className="head-link" href="/recommendations">پیشنهادها ←</Link></div>
+          <div className="panel-title"><div><h2>{t('قیف پیشنهادات')}</h2><p>{t('مسیر پیشنهاد هوشمند تا نتیجه')}</p></div><Link className="head-link" href="/recommendations">{t('پیشنهادها ←')}</Link></div>
           <FunnelVisual stages={funnel?.stages} conversion={funnel?.conversion} />
         </Card>
 
         <Card className="dash-panel">
-          <div className="panel-title"><div><h2>اجراهای گردش کار</h2><p>وضعیت اجرای گردش‌های کاری</p></div><Badge className="info">{fmtNum(totalExecutions)} اجرا</Badge></div>
+          <div className="panel-title"><div><h2>{t('اجراهای گردش کار')}</h2><p>{t('وضعیت اجرای گردش‌های کاری')}</p></div><Badge className="info">{fmtNum(totalExecutions)} اجرا</Badge></div>
           {workflows?.executions?.length ? (
             <div className="wf-grid">
               {workflows.executions.map((e) => (
@@ -504,7 +505,7 @@ export default function Dashboard() {
               ))}
             </div>
           ) : (
-            <EmptyState title="اجرای گردش کاری ثبت نشده" description="با اجرای نخستین گردش کار، وضعیت اینجا نمایش داده می‌شود." />
+            <EmptyState title={t('اجرای گردش کاری ثبت نشده')} description={t('با اجرای نخستین گردش کار، وضعیت اینجا نمایش داده می‌شود.')} />
           )}
           {wfFailed > 0 && (
             <div className="wf-alert"><AlertTriangle size={13} /> {fmtNum(wfFailed)} اجرای ناموفق نیازمند بررسی</div>
@@ -517,7 +518,7 @@ export default function Dashboard() {
 
 
         <Card className="dash-panel">
-          <div className="panel-title"><div><h2>نمای هلدینگ / شرکت</h2><p>ساختار شرکت‌های در محدودهٔ دسترسی</p></div><Link className="head-link" href="/reports">گزارش‌ها ←</Link></div>
+          <div className="panel-title"><div><h2>{t('نمای هلدینگ / شرکت')}</h2><p>{t('ساختار شرکت‌های در محدودهٔ دسترسی')}</p></div><Link className="head-link" href="/reports">{t('گزارش‌ها ←')}</Link></div>
           {holding?.roots?.length ? (
             <div className="holding-tree">
               {(() => {
@@ -538,62 +539,62 @@ export default function Dashboard() {
               })()}
             </div>
           ) : (
-            <EmptyState title="دادهٔ ساختار در دسترس نیست" description="ساختار شرکت‌های هلدینگ پس از ثبت نخستین رابطهٔ مالکیت نمایش داده می‌شود." />
+            <EmptyState title={t('دادهٔ ساختار در دسترس نیست')} description={t('ساختار شرکت‌های هلدینگ پس از ثبت نخستین رابطهٔ مالکیت نمایش داده می‌شود.')} />
           )}
         </Card>
 
         <Card className="dash-panel">
-          <div className="panel-title"><div><h2>سلامت پلتفرم</h2><p>وضعیت زندهٔ ماژول‌های سرویس</p></div><Badge className="success">سالم</Badge></div>
+          <div className="panel-title"><div><h2>{t('سلامت پلتفرم')}</h2><p>{t('وضعیت زندهٔ ماژول‌های سرویس')}</p></div><Badge className="success">{t('سالم')}</Badge></div>
           <div className="health-list">
-            <div className="health-row"><Activity size={16} /><span>موتور تحلیلی</span><Badge className="success">پیاده‌سازی‌شده</Badge></div>
-            <div className="health-row"><Gauge size={16} /><span>شاخص‌های سنجش</span><Badge className="success">فعال</Badge></div>
-            <div className="health-row"><HeartPulse size={16} /><span>تاب‌آوری کل شبکه</span><strong>{fmtNum(network?.relationshipResilienceScore)}</strong></div>
-            <div className="health-row"><Bell size={16} /><span>اعلان خوانده‌نشده</span><strong>{fmtNum(counts.unreadNotifications)}</strong></div>
-            <div className="health-row"><Workflow size={16} /><span>اجرای گردش کار</span><strong>{fmtNum(totalExecutions)}</strong></div>
-            <div className="health-row"><TrendingUp size={16} /><span>سرمایهٔ شبکه</span><strong>{fmtNum(network?.networkCapital?.score)}</strong></div>
+            <div className="health-row"><Activity size={16} /><span>{t('موتور تحلیلی')}</span><Badge className="success">{t('پیاده‌سازی‌شده')}</Badge></div>
+            <div className="health-row"><Gauge size={16} /><span>{t('شاخص‌های سنجش')}</span><Badge className="success">{t('فعال')}</Badge></div>
+            <div className="health-row"><HeartPulse size={16} /><span>{t('تاب‌آوری کل شبکه')}</span><strong>{fmtNum(network?.relationshipResilienceScore)}</strong></div>
+            <div className="health-row"><Bell size={16} /><span>{t('اعلان خوانده‌نشده')}</span><strong>{fmtNum(counts.unreadNotifications)}</strong></div>
+            <div className="health-row"><Workflow size={16} /><span>{t('اجرای گردش کار')}</span><strong>{fmtNum(totalExecutions)}</strong></div>
+            <div className="health-row"><TrendingUp size={16} /><span>{t('سرمایهٔ شبکه')}</span><strong>{fmtNum(network?.networkCapital?.score)}</strong></div>
           </div>
         </Card>
       </section>
 
       {/* QUICK CREATE */}
       <section className="quick-create panel">
-        <div><h2>شروع سریع</h2><p>مدیر مجاز می‌تواند موجودیت‌های اصلی را مستقیم ایجاد کند.</p></div>
+        <div><h2>{t('شروع سریع')}</h2><p>{t('مدیر مجاز می‌تواند موجودیت‌های اصلی را مستقیم ایجاد کند.')}</p></div>
         <div className="quick-actions">
-          <Link href="/organizations"><Building2 size={13} /> سازمان</Link>
-          <Link href="/people"><Users size={13} /> شخص</Link>
-          <Link href="/relationships"><Share2 size={13} /> رابطه</Link>
-          <Link href="/meetings"><CalendarDays size={13} /> جلسه</Link>
-          <Link href="/actions"><Zap size={13} /> اقدام</Link>
-          <Link href="/commitments"><ShieldCheck size={13} /> تعهد</Link>
-          <Link href="/projects"><FolderKanban size={13} /> پروژه</Link>
-          <Link href="/opportunities"><Target size={13} /> فرصت</Link>
-          <Link href="/ai"><Sparkles size={13} /> هوش مصنوعی</Link>
+          <Link href="/organizations"><Building2 size={13} /> {t('سازمان')}</Link>
+          <Link href="/people"><Users size={13} /> {t('شخص')}</Link>
+          <Link href="/relationships"><Share2 size={13} /> {t('رابطه')}</Link>
+          <Link href="/meetings"><CalendarDays size={13} /> {t('جلسه')}</Link>
+          <Link href="/actions"><Zap size={13} /> {t('اقدام')}</Link>
+          <Link href="/commitments"><ShieldCheck size={13} /> {t('تعهد')}</Link>
+          <Link href="/projects"><FolderKanban size={13} /> {t('پروژه')}</Link>
+          <Link href="/opportunities"><Target size={13} /> {t('فرصت')}</Link>
+          <Link href="/ai"><Sparkles size={13} /> {t('هوش مصنوعی')}</Link>
         </div>
       </section>
       {tour > 0 && (
-        <div className="tour-overlay" role="dialog" aria-modal="true" aria-label="تور خوش‌آمد">
+        <div className="tour-overlay" role="dialog" aria-modal="true" aria-label={t('تور خوش‌آمد')}>
           <div className="tour-card">
             <span className="tour-step">گام {tour} از ۳</span>
             {tour === 1 && (<>
               <div className="tour-ico">👋</div>
-              <h2>به SRIP خوش آمدید</h2>
-              <p>این «پیشخوان» پاسخِ «امروز چه کاری مهم است» است: اولویت‌های نیازمند اقدام، روابط در معرض ریسک و جلسات پیش رو — همه با لینک مستقیم به همان کار.</p>
+              <h2>{t('به SRIP خوش آمدید')}</h2>
+              <p>{t('این «پیشخوان» پاسخِ «امروز چه کاری مهم است» است: اولویت‌های نیازمند اقدام، روابط در معرض ریسک و جلسات پیش رو — همه با لینک مستقیم به همان کار.')}</p>
             </>)}
             {tour === 2 && (<>
               <div className="tour-ico">🧭</div>
-              <h2>منو در «خانه‌های کاری»</h2>
-              <p>به‌جای فهرست بلند، منو به شش خانهٔ کاری تقسیم شده: اشخاص و سازمان‌ها، روابط و شبکه، جریان کار، هوش و بینش، دانش. با «نمای ساده / نمای کامل» بالای منو، می‌توانید فقط کارهای روزمره را ببینید.</p>
+              <h2>{t('منو در «خانه‌های کاری»')}</h2>
+              <p>{t('به‌جای فهرست بلند، منو به شش خانهٔ کاری تقسیم شده: اشخاص و سازمان‌ها، روابط و شبکه، جریان کار، هوش و بینش، دانش. با «نمای ساده / نمای کامل» بالای منو، می‌توانید فقط کارهای روزمره را ببینید.')}</p>
             </>)}
             {tour === 3 && (<>
               <div className="tour-ico">✨</div>
-              <h2>هر عدد یک «چرا» دارد</h2>
-              <p>روی هر رابطهٔ پرریسک بزنید تا دلیلش را ببینید، و اگر نام بخشی را نمی‌دانید، دکمهٔ «؟» پایین منو واژه‌نامهٔ یک‌خطی را باز می‌کند.</p>
+              <h2>{t('هر عدد یک «چرا» دارد')}</h2>
+              <p>{t('روی هر رابطهٔ پرریسک بزنید تا دلیلش را ببینید، و اگر نام بخشی را نمی‌دانید، دکمهٔ «؟» پایین منو واژه‌نامهٔ یک‌خطی را باز می‌کند.')}</p>
             </>)}
             <div className="tour-actions">
-              <button className="tour-skip" onClick={finishTour}>رد شدن</button>
+              <button className="tour-skip" onClick={finishTour}>{t('رد شدن')}</button>
               {tour < 3
-                ? <button className="primary-action" onClick={() => setTour(t => t + 1)}>بعدی</button>
-                : <button className="primary-action" onClick={finishTour}>شروع کار</button>}
+                ? <button className="primary-action" onClick={() => setTour(t => t + 1)}>{t('بعدی')}</button>
+                : <button className="primary-action" onClick={finishTour}>{t('شروع کار')}</button>}
             </div>
           </div>
         </div>

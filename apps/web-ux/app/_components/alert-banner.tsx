@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { api } from '../_lib/api';
 import { Siren, X, ArrowLeft } from 'lucide-react';
+import { t } from '../_lib/i18n';
 
 /* <AlertBanner> — نوار هشدار بحرانی بالای پیشخوان (فاز ۳ · ADR-0007).
    تا ۲ هشدار «بحرانی» فعال از GET /alerts?severity=CRITICAL را نشان می‌دهد.
@@ -42,20 +43,20 @@ export function AlertBanner() {
       <div className="ab-icon" aria-hidden="true"><Siren size={17} /></div>
       <div className="ab-body">
         <div className="ab-title">
-          <b>{top.length === 1 ? 'یک هشدار بحرانی' : `${faNum(top.length)} هشدار بحرانی`} نیازمند اقدام فوری است</b>
-          <Link className="ab-link" href="/alerts">همهٔ هشدارها <ArrowLeft size={12} /></Link>
+          <b>{top.length === 1 ? t('یک هشدار بحرانی') : `${faNum(top.length)} ${t('هشدار بحرانی')}`} نیازمند اقدام فوری است</b>
+          <Link className="ab-link" href="/alerts">{t('همهٔ هشدارها')} <ArrowLeft size={12} /></Link>
         </div>
         <ul className="ab-list">
           {top.map(a => (
             <li key={a.id}>
               <span className="chip danger">{a.moduleFa}</span>
               <span className="ab-item-title">{a.title}</span>
-              {a.actionUrl && <Link className="btn btn-ghost btn-sm" href={a.actionUrl}>{a.actionLabel ?? 'مشاهده'}</Link>}
+              {a.actionUrl && <Link className="btn btn-ghost btn-sm" href={a.actionUrl}>{a.actionLabel ?? t('مشاهده')}</Link>}
             </li>
           ))}
         </ul>
       </div>
-      <button className="ab-close" onClick={dismiss} aria-label="بستن نوار هشدار (تا پایان نشست دوباره نشان داده نمی‌شود)"><X size={14} /></button>
+      <button className="ab-close" onClick={dismiss} aria-label={t('بستن نوار هشدار (تا پایان نشست دوباره نشان داده نمی‌شود)')}><X size={14} /></button>
     </div>
   );
 }

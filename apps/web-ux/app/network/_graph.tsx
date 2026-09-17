@@ -32,6 +32,7 @@ import {
   PUBLIC_CATEGORY_ORDER,
   PUBLIC_CATEGORY_META,
 } from './_nodes';
+import { localeTag, t } from '../_lib/i18n';
 
 export interface NetworkGraphHandle {
   fit: () => void;
@@ -69,7 +70,7 @@ const PERSON_R = 12;
 const PROJECT_R = 13;
 const CLUSTER_PAD = 66;
 
-const TYPE_FA: Record<string, string> = { organization: 'سازمان', person: 'شخص', project: 'پروژه' };
+const TYPE_FA: Record<string, string> = lt( { organization: t('سازمان'), person: t('شخص'), project: t('پروژه') });
 
 /* ---------- اندازه‌گیری واقعی عرض متن (تصویربردار SVG از کادر بیرون نزند) ---------- */
 let _mctx: CanvasRenderingContext2D | null = null;
@@ -199,7 +200,7 @@ type FocusModel = {
   parentCount: Map<string, number>;
 };
 const RED_LINE_COLOR = '#DC2626';
-const faNum = (v: number): string => new Intl.NumberFormat('fa-IR').format(v);
+const faNum = (v: number): string => new Intl.NumberFormat(localeTag()).format(v);
 
 function layoutFocus(opts: {
   focus: GNode;
@@ -489,11 +490,11 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
   const [crumbIds, setCrumbIds] = useState<string[]>([]);
   const [expandedTray, setExpandedTray] = useState<string | null>(null);
   /* برچسب کوتاه دسته‌ها برای چیپ‌ها */
-  const TRAY_OTHER_FA = 'بدون دستهٔ عموم';
+  const TRAY_OTHER_FA = t('بدون دستهٔ عموم');
   const TRAY_OTHER_COLOR = '#64748B';
   const TRAY_SHORT_FA: Record<string, string> = {
-    INTERNAL: 'داخلی', INSTITUTIONAL: 'نهادی و حاکمیتی', ACADEMIC: 'دانشگاهی و پژوهشی',
-    ECONOMIC: 'اقتصادی و سرمایه', MEDIA: 'رسانه‌ای', ECOSYSTEM: 'اکوسیستم فناوری', OTHER: TRAY_OTHER_FA,
+    INTERNAL: t('داخلی'), INSTITUTIONAL: t('نهادی و حاکمیتی'), ACADEMIC: t('دانشگاهی و پژوهشی'),
+    ECONOMIC: t('اقتصادی و سرمایه'), MEDIA: t('رسانه‌ای'), ECOSYSTEM: t('اکوسیستم فناوری'), OTHER: TRAY_OTHER_FA,
   };
   useEffect(() => {
     setCrumbIds((prev) => prev.filter((id) => graph.nodes.some((n) => n.id === id)));
@@ -512,7 +513,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
   const clusters = useMemo(() => buildClusters(graph.nodes), [graph.nodes]);
   const sectorMeta = (cat: string) =>
     cat === 'OTHER'
-      ? { fa: 'سایر سازمان‌ها', shortFa: 'سایر', color: TRAY_OTHER_COLOR }
+      ? { fa: t('سایر سازمان‌ها'), shortFa: t('سایر'), color: TRAY_OTHER_COLOR }
       : { fa: PUBLIC_CATEGORY_META[cat]?.fa ?? cat, shortFa: TRAY_SHORT_FA[cat] ?? cat, color: PUBLIC_CATEGORY_META[cat]?.color ?? TRAY_OTHER_COLOR };
 
   /* مدل تمرکز: زیرمجموعه‌ها / روابط مستقیم / هلدینگ‌های بزرگ / عموم‌های بدون رابطه */
@@ -851,7 +852,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
       preserveAspectRatio="xMidYMid meet"
       style={{ display: 'block', touchAction: 'none', cursor: panning ? 'grabbing' : 'default' }}
       role="img"
-      aria-label="گراف شبکه روابط — نمای مرحله‌ای: زیرمجموعه‌ها، روابط مستقیم و عموم‌ها"
+      aria-label={t('گراف شبکه روابط — نمای مرحله‌ای: زیرمجموعه‌ها، روابط مستقیم و عموم‌ها')}
       onPointerDown={onSvgPointerDown}
       onPointerMove={onSvgPointerMove}
       onPointerUp={onSvgPointerUp}
@@ -908,7 +909,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
               {(() => {
                 const memberCount = b.ids.size - 1;
                 const nameText = nodeDisplayName(b.root).length > 26 ? nodeDisplayName(b.root).slice(0, 25) + '…' : nodeDisplayName(b.root);
-                const labelText = memberCount > 0 ? `${nameText} · ${new Intl.NumberFormat('fa-IR').format(memberCount)}` : nameText;
+                const labelText = memberCount > 0 ? `${nameText} · ${new Intl.NumberFormat(localeTag()).format(memberCount)}` : nameText;
                 const pillW = Math.max(108, Math.ceil(textWidth(labelText, 800, 11)) + 40 + (dotColor ? 14 : 0));
                 const pillX = b.labelX - pillW / 2;
                 return (
@@ -929,7 +930,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
                 clipPath={`url(#pill-clip-${safeId(b.key)})`}
                 style={{ pointerEvents: 'none', userSelect: 'none' }}
               >
-                {(() => { const mc = b.ids.size - 1; const nt = nodeDisplayName(b.root).length > 26 ? nodeDisplayName(b.root).slice(0, 25) + '…' : nodeDisplayName(b.root); return mc > 0 ? `${nt} · ${new Intl.NumberFormat('fa-IR').format(mc)}` : nt; })()}
+                {(() => { const mc = b.ids.size - 1; const nt = nodeDisplayName(b.root).length > 26 ? nodeDisplayName(b.root).slice(0, 25) + '…' : nodeDisplayName(b.root); return mc > 0 ? `${nt} · ${new Intl.NumberFormat(localeTag()).format(mc)}` : nt; })()}
               </text>
             </g>
           );
@@ -1127,7 +1128,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
               {/* P3: نشان «خودِ شرکت» (ego) */}
               {nested && n.type === 'organization' && !n.ego && (focusModel?.parentCount.get(n.organizationId ?? bareId(n.id)) ?? 0) > 0 && (() => {
                 const cCount = faNum(focusModel!.parentCount.get(n.organizationId ?? bareId(n.id)) ?? 0);
-                const bLabel = `${cCount} زیرمجموعه`;
+                const bLabel = `${cCount} ${t('زیرمجموعه')}`;
                 const bW = Math.ceil(textWidth(bLabel, 800, 8.6)) + 14;
                 return (
                   <g style={{ pointerEvents: 'none' }}>
@@ -1236,9 +1237,9 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
         {nested && !expandedTray && (() => {
           if (!focusModel) return null;
           const capR = focusModel.children.length || focusModel.hubs.length
-            ? [focusModel.children.length ? 'زیرمجموعه‌ها' : '', focusModel.hubs.length ? 'هلدینگ‌های بزرگ' : ''].filter(Boolean).join(' و ')
+            ? [focusModel.children.length ? t('زیرمجموعه‌ها') : '', focusModel.hubs.length ? t('هلدینگ‌های بزرگ') : ''].filter(Boolean).join(t('و'))
             : '';
-          const capL = focusModel.relations.length ? 'روابط مستقیم' : '';
+          const capL = focusModel.relations.length ? t('روابط مستقیم') : '';
           if (!capR && !capL) return null;
           const capX = (side: 1 | -1) => {
             const items = side === 1 ? focusModel!.children.length + focusModel!.hubs.length : focusModel!.relations.length;
@@ -1257,7 +1258,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
         {nested && focusModel && !focusModel.children.length && !focusModel.relations.length && !focusModel.hubs.length && !lines.length && (
           <text x={W / 2} y={520} textAnchor="middle" fontSize={11.5} fontWeight={700}
             fill="var(--text-muted, #7A8699)" style={{ pointerEvents: 'none', userSelect: 'none' }}>
-            این سازمان هنوز زیرمجموعه یا رابطهٔ ثبت‌شده‌ای ندارد
+            {t('این سازمان هنوز زیرمجموعه یا رابطهٔ ثبت‌شده‌ای ندارد')}
           </text>
         )}
 
@@ -1285,7 +1286,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
               </text>
               <text x={pg.x + pg.w - 43 - textWidth(fitText(t.fa, pg.w - 300, 800, 13), 800, 13) - 10} y={pg.y + 23.5} fontSize={10.5} fontWeight={700}
                 fill="var(--text-muted, #7A8699)" style={{ pointerEvents: 'none', userSelect: 'none' }}>
-                {new Intl.NumberFormat('fa-IR').format(t.members.length)} سازمان — کلیک = انتخاب · دابل‌کلیک = صفحهٔ سازمان
+                {new Intl.NumberFormat(localeTag()).format(t.members.length)} سازمان — کلیک = انتخاب · دابل‌کلیک = صفحهٔ سازمان
               </text>
               {/* بستن پنل — سمت چپ */}
               <g style={{ cursor: 'pointer' }}
@@ -1308,7 +1309,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
               {rest > 0 && (
                 <text x={pg.x + pg.w / 2} y={pg.y + pg.h - 14} textAnchor="middle" fontSize={9.6} fontWeight={700}
                   fill="var(--text-muted, #7A8699)" style={{ pointerEvents: 'none', userSelect: 'none' }}>
-                  نمایش {new Intl.NumberFormat('fa-IR').format(shown.length)} از {new Intl.NumberFormat('fa-IR').format(t.members.length)} — برای یافتن سریع، از جستجوی نوار بالا استفاده کنید
+                  نمایش {new Intl.NumberFormat(localeTag()).format(shown.length)} از {new Intl.NumberFormat(localeTag()).format(t.members.length)} — برای یافتن سریع، از جستجوی نوار بالا استفاده کنید
                 </text>
               )}
             </g>
@@ -1322,11 +1323,11 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
           const isOrgCard = cardNode.type === 'organization';
           const metaC = st.hasRel ? statusMeta(st.status).color : null;
           const name = nodeDisplayName(cardNode);
-          const line1 = `${TYPE_FA[cardNode.type] ?? cardNode.type}${metaC ? ` · وضعیت غالب: ${statusMeta(st.status).label}` : ''}`;
+          const line1 = `${TYPE_FA[cardNode.type] ?? cardNode.type}${metaC ? ` ${t('· وضعیت غالب:')} ${statusMeta(st.status).label}` : ''}`;
           const line2 = st.hasRel
-            ? `${st.relCount} رابطه${st.riskCount ? ` · ${st.riskCount} پرریسک ⚠` : ''} · ${st.degree} پیوند`
-            : `${st.degree} پیوند`;
-          const hint = 'کلیک = جزئیات · دابل‌کلیک = صفحه';
+            ? `${st.relCount} ${t('رابطه')}${st.riskCount ? ` · ${st.riskCount} ${t('پرریسک ⚠')}` : ''} · ${st.degree} ${t('پیوند')}`
+            : `${st.degree} ${t('پیوند')}`;
+          const hint = t('کلیک = جزئیات · دابل‌کلیک = صفحه');
           const nameRaw = name.length > 30 ? name.slice(0, 29) + '…' : name;
           /* عرض کارت از اندازهٔ واقعی هر خط محاسبه می‌شود تا متن از کادر بیرون نزند */
           const wName = textWidth(nameRaw, 800, 11.5);
@@ -1397,7 +1398,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
                   <text
                     x={x0 + 12 + (wCard / 2 - 18) / 2} y={y0 + hCard - 16.5} textAnchor="middle"
                     fontSize={9.4} fontWeight={800} fill="#FFFFFF" style={{ userSelect: 'none', pointerEvents: 'none' }}>
-                    مبدأ مسیر
+                    {t('مبدأ مسیر')}
                   </text>
                   <rect
                     x={x0 + wCard / 2 + 6} y={y0 + hCard - 30} width={wCard / 2 - 18} height={20} rx={10}
@@ -1408,7 +1409,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
                   <text
                     x={x0 + wCard / 2 + 6 + (wCard / 2 - 18) / 2} y={y0 + hCard - 16.5} textAnchor="middle"
                     fontSize={9.4} fontWeight={800} fill="#FFFFFF" style={{ userSelect: 'none', pointerEvents: 'none' }}>
-                    مقصد مسیر
+                    {t('مقصد مسیر')}
                   </text>
                 </g>
               )}
@@ -1464,7 +1465,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, NetworkGraphProps>(function 
               <rect x={18} y={16} width={86} height={26} rx={13} fill="var(--card-bg, #FFFFFF)"
                 stroke="var(--card-border-strong, #DDE3EE)" strokeWidth={1.2} style={{ filter: 'url(#node-shadow)' }} />
               <text x={61} y={33} textAnchor="middle" fontSize={10.6} fontWeight={800}
-                fill="var(--text-secondary, #556070)" style={{ userSelect: 'none' }}>→ بازگشت</text>
+                fill="var(--text-secondary, #556070)" style={{ userSelect: 'none' }}>{t('→ بازگشت')}</text>
             </g>
             {chipsRow.map((c, i) => (
               <g key={i}>

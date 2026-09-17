@@ -5,6 +5,7 @@ import { api } from '../_lib/api';
 import { fa } from '../_lib/fa';
 import { Badge, DataTable, Empty, ErrorCard, Loading, Modal, PageHeader } from './page-ui';
 import { RefreshCw, Plus, Pencil, Trash2, X, Eye } from 'lucide-react';
+import { t } from '../_lib/i18n';
 
 type Field={name:string;label:string;type?:'text'|'number'|'date'|'datetime-local'|'textarea'|'select';required?:boolean;options?:string[];placeholder?:string};
 export type CrudConfig={
@@ -34,22 +35,22 @@ export function CrudWorkspace({config}:{config:CrudConfig}){
    const path=editing?`${config.endpoint}/${encodeURIComponent(editing[idField])}`:config.endpoint;
    await api(path,{method:editing?'PATCH':'POST',body:JSON.stringify(payload)}); close(); await load();
  }catch(e){setError((e as Error).message)}finally{setBusy(false)}}
- async function remove(row:any){if(!config.delete||!row[idField])return; if(!window.confirm('این مورد حذف شود؟'))return;setBusy(true);setError('');try{await api(`${config.endpoint}/${encodeURIComponent(row[idField])}`,{method:'DELETE'});if(editing?.[idField]===row[idField])close();await load()}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
+ async function remove(row:any){if(!config.delete||!row[idField])return; if(!window.confirm(t('این مورد حذف شود؟')))return;setBusy(true);setError('');try{await api(`${config.endpoint}/${encodeURIComponent(row[idField])}`,{method:'DELETE'});if(editing?.[idField]===row[idField])close();await load()}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
  const tableRows=rows.map(r=>Object.fromEntries(config.columns.map(k=>[k,display(k,r[k])])));
  const firstCol=config.columns[0]??'id';
- const title=editing?config.updateLabel??'ویرایش':config.createLabel??'ایجاد جدید';
+ const title=editing?config.updateLabel??t('ویرایش'):config.createLabel??t('ایجاد جدید');
  return <main className="feature-page">
    <PageHeader eyebrow={config.eyebrow} title={config.title} description={config.description} actions={
      <div className="toolbar">
-       <button className="btn btn-primary" onClick={openCreate}><Plus size={15}/> {config.createLabel??'ایجاد جدید'}</button>
-       <button className="btn btn-secondary" onClick={load} disabled={loading}><RefreshCw size={15}/> بازخوانی</button>
+       <button className="btn btn-primary" onClick={openCreate}><Plus size={15}/> {config.createLabel??t('ایجاد جدید')}</button>
+       <button className="btn btn-secondary" onClick={load} disabled={loading}><RefreshCw size={15}/> {t('بازخوانی')}</button>
      </div>
    }/>
    <ErrorCard message={error}/>
    <div className="entity-layout">
     <section className="section-card">
       <div className="section-head">
-        <div><h2>فهرست</h2><p>{rows.length} مورد در پاسخ فعلی</p></div>
+        <div><h2>{t('فهرست')}</h2><p>{rows.length} مورد در پاسخ فعلی</p></div>
         <span className="chip info">{rows.length} مورد</span>
       </div>
       {loading?<Loading/>:rows.length===0?<Empty/>:<>
@@ -59,9 +60,9 @@ export function CrudWorkspace({config}:{config:CrudConfig}){
          <div key={String(r[idField])} className="crud-row-actions">
           <span className="t-primary" style={{fontWeight:800}}>{display(firstCol,r[firstCol])}</span>
           <div className="row-actions">
-           {config.detailPath&&<Link className="btn btn-secondary btn-sm" href={config.detailPath.replace('{id}',encodeURIComponent(String(r[idField])))}><Eye size={13}/> مشاهده</Link>}
-           <button className="btn btn-ghost btn-sm" onClick={()=>beginEdit(r)}><Pencil size={13}/> ویرایش</button>
-           {config.delete&&<button className="btn btn-danger btn-sm" onClick={()=>remove(r)} disabled={busy}><Trash2 size={13}/> حذف</button>}
+           {config.detailPath&&<Link className="btn btn-secondary btn-sm" href={config.detailPath.replace('{id}',encodeURIComponent(String(r[idField])))}><Eye size={13}/> {t('مشاهده')}</Link>}
+           <button className="btn btn-ghost btn-sm" onClick={()=>beginEdit(r)}><Pencil size={13}/> {t('ویرایش')}</button>
+           {config.delete&&<button className="btn btn-danger btn-sm" onClick={()=>remove(r)} disabled={busy}><Trash2 size={13}/> {t('حذف')}</button>}
           </div>
          </div>
         ))}
@@ -70,10 +71,10 @@ export function CrudWorkspace({config}:{config:CrudConfig}){
     </section>
    </div>
 
-   <Modal open={open} title={title} description={editing?'مقادیر موردنظر را اصلاح و ذخیره کنید.':'اطلاعات جدید را وارد کنید؛ مجوز و محدوده در سرور اعمال می‌شود.'} onClose={close}
+   <Modal open={open} title={title} description={editing?t('مقادیر موردنظر را اصلاح و ذخیره کنید.'):t('اطلاعات جدید را وارد کنید؛ مجوز و محدوده در سرور اعمال می‌شود.')} onClose={close}
      footer={<>
-       <button className="btn btn-secondary" type="button" onClick={close}><X size={14}/> انصراف</button>
-       <button className="btn btn-primary" type="submit" form="crud-modal-form" disabled={busy}>{busy?'در حال ذخیره…':editing?'ذخیره تغییرات':config.createLabel??'ایجاد'}</button>
+       <button className="btn btn-secondary" type="button" onClick={close}><X size={14}/> {t('انصراف')}</button>
+       <button className="btn btn-primary" type="submit" form="crud-modal-form" disabled={busy}>{busy?t('در حال ذخیره…'):editing?t('ذخیره تغییرات'):config.createLabel??t('ایجاد')}</button>
      </>}>
      <form id="crud-modal-form" className="entity-form" onSubmit={submit}>
       {config.fields.map(f=>(
@@ -82,7 +83,7 @@ export function CrudWorkspace({config}:{config:CrudConfig}){
          {f.type==='textarea'
            ? <textarea id={`crud-${f.name}`} placeholder={f.placeholder} value={form[f.name]??''} onChange={e=>setForm({...form,[f.name]:e.target.value})} required={f.required}/>
            : f.type==='select'
-             ? <select id={`crud-${f.name}`} value={form[f.name]??''} onChange={e=>setForm({...form,[f.name]:e.target.value})} required={f.required}><option value="">انتخاب کنید</option>{f.options?.map(o=><option key={o} value={o}>{fa(o)}</option>)}</select>
+             ? <select id={`crud-${f.name}`} value={form[f.name]??''} onChange={e=>setForm({...form,[f.name]:e.target.value})} required={f.required}><option value="">{t('انتخاب کنید')}</option>{f.options?.map(o=><option key={o} value={o}>{fa(o)}</option>)}</select>
              : <input id={`crud-${f.name}`} placeholder={f.placeholder} type={f.type??'text'} value={form[f.name]??''} onChange={e=>setForm({...form,[f.name]:e.target.value})} required={f.required}/>}
        </div>
       ))}

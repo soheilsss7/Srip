@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { api } from '../_lib/api';
+import { t } from '../_lib/i18n';
 
 export function NotificationsDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [items, setItems] = useState<any[]>([]);
@@ -34,26 +35,26 @@ export function NotificationsDrawer({ open, onClose }: { open: boolean; onClose:
   return (
     <>
       <div className="drawer-backdrop" onClick={onClose} aria-hidden="true" />
-      <aside className="notification-drawer" aria-label="اعلان‌ها">
+      <aside className="notification-drawer" aria-label={t('اعلان‌ها')}>
         <header>
           <div>
-            <span className="eyebrow">مرکز اعلان‌ها</span>
-            <h2>اعلان‌ها</h2>
+            <span className="eyebrow">{t('مرکز اعلان‌ها')}</span>
+            <h2>{t('اعلان‌ها')}</h2>
           </div>
-          <button onClick={onClose} aria-label="بستن">×</button>
+          <button onClick={onClose} aria-label={t('بستن')}>×</button>
         </header>
         <div className="drawer-actions">
-          <button onClick={() => api('/notifications/read-all', { method: 'PATCH' }).then(load).catch(e => setError(e.message))}>همه خوانده شد</button>
+          <button onClick={() => api('/notifications/read-all', { method: 'PATCH' }).then(load).catch(e => setError(e.message))}>{t('همه خوانده شد')}</button>
           <button onClick={load}>↻</button>
         </div>
-        {loading ? <p>در حال بارگذاری…</p> :
+        {loading ? <p>{t('در حال بارگذاری…')}</p> :
           items.length ? items.map(n => (
             <button className={'notification-item ' + (!n.read ? 'unread' : '')} key={n.id} onClick={() => read(n.id)}>
-              <strong>{n.title ?? ({REMINDER:'یادآوری',RECOMMENDATION:'پیشنهاد',SYSTEM:'سیستمی',ALERT:'هشدار'} as Record<string,string>)[n.type] ?? 'اعلان'}</strong>
+              <strong>{n.title ?? ({REMINDER:t('یادآوری'),RECOMMENDATION:t('پیشنهاد'),SYSTEM:t('سیستمی'),ALERT:t('هشدار')} as Record<string,string>)[n.type] ?? t('اعلان')}</strong>
               <span>{n.message ?? n.body ?? ''}</span>
               <small>{n.createdAt ?? ''}</small>
             </button>
-          )) : <p>اعلانی وجود ندارد.</p>}
+          )) : <p>{t('اعلانی وجود ندارد.')}</p>}
         {error && <div className="error-card">{error}</div>}
       </aside>
     </>

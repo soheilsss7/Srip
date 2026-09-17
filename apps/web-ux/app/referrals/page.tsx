@@ -13,6 +13,7 @@ import {
   Clock3, CalendarCheck2, ChevronLeft, ShieldCheck, ShieldAlert, ShieldX,
   ClipboardList, Target, ListChecks, Rows3, RotateCcw, BellRing,
 } from 'lucide-react';
+import { localeTag, t } from '../_lib/i18n';
 
 /* ------------------------------------------------------------------ */
 /*  معرفی‌ها — مسیرهای معرفی با دستورالعمل و ممیزی (معرفیِ امن)        */
@@ -43,36 +44,36 @@ type RefRow = {
   connectorLoad?: number;
 };
 
-const fmtNum = (v: number): string => new Intl.NumberFormat('fa-IR').format(v);
+const fmtNum = (v: number): string => new Intl.NumberFormat(localeTag()).format(v);
 const fmtDT = (iso?: string | null) => iso
-  ? new Date(iso).toLocaleDateString('fa-IR', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+  ? new Date(iso).toLocaleDateString(localeTag(), { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 const unwrap = (x: any): any[] => (Array.isArray(x) ? x : x?.items ?? x?.rows ?? x?.data ?? x?.users ?? x?.referrals ?? []);
 
-const STATUS_FA: Record<string, string> = {
-  PENDING: 'در انتظار', ACCEPTED: 'پذیرفته‌شده', DECLINED: 'رد شده',
-  COMPLETED: 'انجام‌شده', CANCELLED: 'لغو شده',
-};
+const STATUS_FA: Record<string, string> = lt({
+  PENDING: t('در انتظار'), ACCEPTED: t('پذیرفته‌شده'), DECLINED: t('رد شده'),
+  COMPLETED: t('انجام‌شده'), CANCELLED: t('لغو شده'),
+});
 const STATUS_TONE: Record<string, 'warning' | 'info' | 'danger' | 'success' | 'neutral'> = {
   PENDING: 'warning', ACCEPTED: 'info', DECLINED: 'danger', COMPLETED: 'success', CANCELLED: 'neutral',
 };
-const GATE_META: Record<string, { label: string; tone: 'success' | 'warning' | 'danger' | 'neutral'; icon: ReactNode }> = {
-  PASS: { label: 'ممیزی سبز', tone: 'success', icon: <ShieldCheck size={12} /> },
-  WARN: { label: 'ممیزی زرد', tone: 'warning', icon: <ShieldAlert size={12} /> },
-  BLOCKED: { label: 'ممیزی قرمز', tone: 'danger', icon: <ShieldX size={12} /> },
-  'N/A': { label: 'ممیزی ندارد', tone: 'neutral', icon: <ShieldCheck size={12} /> },
-};
-const REQ_STATUS_FA: Record<string, { label: string; tone: 'warning' | 'info' | 'success' | 'neutral' | 'danger' }> = {
-  REQUESTED: { label: 'درخواست از معرف ارسال شد', tone: 'warning' },
-  RESPONDED_YES: { label: 'معرف پذیرفت', tone: 'success' },
-  RESPONDED_NO: { label: 'معرف نپذیرفت', tone: 'danger' },
-  NO_RESPONSE: { label: 'بدون پاسخ از معرف', tone: 'neutral' },
-};
-const OUTCOME_FA: Record<string, { label: string; tone: 'success' | 'info' | 'neutral' | 'warning' | 'danger' }> = {
-  MEET_BOOKED: { label: 'ملاقات برقرار شد', tone: 'success' },
-  NO_REPLY: { label: 'بدون پاسخ', tone: 'neutral' },
-  DECLINED: { label: 'رد شد', tone: 'danger' },
-  BAD_FIT: { label: 'نامناسب بود', tone: 'warning' },
-};
+const GATE_META: Record<string, { label: string; tone: 'success' | 'warning' | 'danger' | 'neutral'; icon: ReactNode }> = lt({
+  PASS: { label: t('ممیزی سبز'), tone: 'success', icon: <ShieldCheck size={12} /> },
+  WARN: { label: t('ممیزی زرد'), tone: 'warning', icon: <ShieldAlert size={12} /> },
+  BLOCKED: { label: t('ممیزی قرمز'), tone: 'danger', icon: <ShieldX size={12} /> },
+  'N/A': { label: t('ممیزی ندارد'), tone: 'neutral', icon: <ShieldCheck size={12} /> },
+});
+const REQ_STATUS_FA: Record<string, { label: string; tone: 'warning' | 'info' | 'success' | 'neutral' | 'danger' }> = lt({
+  REQUESTED: { label: t('درخواست از معرف ارسال شد'), tone: 'warning' },
+  RESPONDED_YES: { label: t('معرف پذیرفت'), tone: 'success' },
+  RESPONDED_NO: { label: t('معرف نپذیرفت'), tone: 'danger' },
+  NO_RESPONSE: { label: t('بدون پاسخ از معرف'), tone: 'neutral' },
+});
+const OUTCOME_FA: Record<string, { label: string; tone: 'success' | 'info' | 'neutral' | 'warning' | 'danger' }> = lt({
+  MEET_BOOKED: { label: t('ملاقات برقرار شد'), tone: 'success' },
+  NO_REPLY: { label: t('بدون پاسخ'), tone: 'neutral' },
+  DECLINED: { label: t('رد شد'), tone: 'danger' },
+  BAD_FIT: { label: t('نامناسب بود'), tone: 'warning' },
+});
 const personName = (p?: MiniPerson | null) => p ? `${p.firstName} ${p.lastName}` : '';
 const orgName = (o?: MiniOrg | null) => o?.name ?? '';
 
@@ -91,7 +92,7 @@ function AuditList({ audit, emptyLabel, onCheckin }: { audit?: Audit | null; emp
             {c.evidence && <code className="ref-audit-evidence" dir="ltr">{c.evidence}</code>}
           </div>
           {onCheckin && ['FOLLOW_UP', 'OUTCOME'].includes(c.code) &&
-            <button className="btn btn-ghost btn-sm" onClick={() => onCheckin(c.code)} title="ثبت شواهد این بررسی"><BellRing size={12} /> ثبت</button>}
+            <button className="btn btn-ghost btn-sm" onClick={() => onCheckin(c.code)} title={t('ثبت شواهد این بررسی')}><BellRing size={12} /> {t('ثبت')}</button>}
         </li>
       ))}
     </ul>
@@ -160,7 +161,7 @@ export default function ReferralsPage() {
         method: 'PUT',
         body: JSON.stringify({ active: introEdit.active, maxRequestsPerMonth: introEdit.maxRequestsPerMonth, preferredChannel: introEdit.preferredChannel, note: introEdit.note }),
       });
-      setFlash(`تنظیمات واسطه‌گری «${introEdit.name}» ذخیره شد.`);
+      setFlash(`${t('تنظیمات واسطه‌گری «')}${introEdit.name}${t('» ذخیره شد.')}`);
       setIntroEdit(null);
       if (warmTarget) await findWarmPath(warmTarget);
     } catch (e) { setError((e as Error).message); }
@@ -213,13 +214,13 @@ export default function ReferralsPage() {
     suggestionRef.current = sp.get('suggestion') ?? '';
     setForm(f => ({
       ...f,
-      title: sp.get('title') || (srcLabel && dstLabel ? `معرفی ${srcLabel} به ${dstLabel}` : ''),
+      title: sp.get('title') || (srcLabel && dstLabel ? `${t('معرفی')} ${srcLabel} ${t('به')} ${dstLabel}` : ''),
       srcType, srcId: srcOk ? srcRaw : '',
       dstType, dstId: dstOk ? dstRaw : '',
       message: sp.get('message') ?? '',
-      goal: sp.get('goal') || (srcLabel && dstLabel ? `برقراری ارتباط و بررسی فرصت همکاری میان «${srcLabel}» و «${dstLabel}»` : ''),
-      forbidden: sp.get('forbidden') || 'مذاکره یا توافق نهایی بدون هماهنگی با واحد روابط',
-      boundaries: sp.get('boundaries') || 'حداکثر دو جلسهٔ مقدماتی؛ نتیجه حداکثر در ۳۰ روز ثبت شود.',
+      goal: sp.get('goal') || (srcLabel && dstLabel ? `${t('برقراری ارتباط و بررسی فرصت همکاری میان «')}${srcLabel}${t('» و «')}${dstLabel}»` : ''),
+      forbidden: sp.get('forbidden') || t('مذاکره یا توافق نهایی بدون هماهنگی با واحد روابط'),
+      boundaries: sp.get('boundaries') || t('حداکثر دو جلسهٔ مقدماتی؛ نتیجه حداکثر در ۳۰ روز ثبت شود.'),
       dueDays: sp.get('dueDays') || '30',
     }));
     setOpen(true);
@@ -277,12 +278,12 @@ export default function ReferralsPage() {
       setForm({ title: '', srcType: 'person', srcId: '', dstType: 'org', dstId: '', message: '', goal: '', allowed: '', forbidden: '', boundaries: '', dueDays: '30', relationshipId: '' });
       const g = res?.audit?.gate;
       const gateMsg = g === 'BLOCKED'
-        ? 'معرفی ثبت شد اما ممیزی قرمز است — پذیرش تا رفع موارد مسدودکننده ممکن نیست.'
+        ? t('معرفی ثبت شد اما ممیزی قرمز است — پذیرش تا رفع موارد مسدودکننده ممکن نیست.')
         : g === 'WARN'
-          ? 'معرفی ثبت شد؛ ممیزی زرد است — موارد هشدار را در جزئیات ببینید.'
-          : 'معرفی ثبت شد و ممیزی پیش از پذیرش سبز است.';
+          ? t('معرفی ثبت شد؛ ممیزی زرد است — موارد هشدار را در جزئیات ببینید.')
+          : t('معرفی ثبت شد و ممیزی پیش از پذیرش سبز است.');
       setFlash(fromSuggestion
-        ? `معرفی از پیشنهاد شبکه ثبت شد و به فهرست معرفیها اضافه شد — ${gateMsg}`
+        ? `${t('معرفی از پیشنهاد شبکه ثبت شد و به فهرست معرفیها اضافه شد —')} ${gateMsg}`
         : gateMsg);
       await load();
     } catch (x) { setFormError((x as Error).message); }
@@ -297,7 +298,7 @@ export default function ReferralsPage() {
       if (status === 'COMPLETED' && finishFor?.id === r.id && finishNotes.trim()) body.notes = finishNotes.trim();
       await api(`/core-domain/referrals/${r.id}`, { method: 'PATCH', body: JSON.stringify(body) });
       setFinishFor(null); setFinishNotes('');
-      setFlash(`معرفی «${r.title}» به وضعیت «${STATUS_FA[status]}» رفت.`);
+      setFlash(`${t('معرفی «')}${r.title}${t('» به وضعیت «')}${STATUS_FA[status]}${t('» رفت.')}`);
       await load();
       if (status === 'ACCEPTED') setDetail(null);
     } catch (x) { setError((x as Error).message); await load(); }
@@ -318,7 +319,7 @@ export default function ReferralsPage() {
     setBusy('audit-' + r.id); setError(''); setFlash('');
     try {
       const a: any = await api(`/core-domain/referrals/${r.id}/audit`, { method: 'POST' });
-      setFlash(a?.gate === 'BLOCKED' ? `ممیزی «${r.title}» قرمز است (${a?.summary?.block} مسدود).` : a?.gate === 'WARN' ? `ممیزی «${r.title}» زرد است (${a?.summary?.warn} هشدار).` : `ممیزی «${r.title}» سبز شد.`);
+      setFlash(a?.gate === 'BLOCKED' ? `${t('ممیزی «')}${r.title}${t('» قرمز است (')}${a?.summary?.block} ${t('مسدود).')}` : a?.gate === 'WARN' ? `${t('ممیزی «')}${r.title}${t('» زرد است (')}${a?.summary?.warn} ${t('هشدار).')}` : `${t('ممیزی «')}${r.title}${t('» سبز شد.')}`);
       setDetail(null);
       await load();
     } catch (x) { setError((x as Error).message); }
@@ -333,7 +334,7 @@ export default function ReferralsPage() {
         body: JSON.stringify({ code: checkinFor.code, note: checkinNote.trim() }),
       });
       setCheckinFor(null); setCheckinNote('');
-      setFlash('شاهد بررسی ثبت شد و ممیزی پس از معرفی به‌روزرسانی شد.');
+      setFlash(t('شاهد بررسی ثبت شد و ممیزی پس از معرفی به‌روزرسانی شد.'));
       setDetail(null);
       await load();
     } catch (x) { setError((x as Error).message); }
@@ -342,7 +343,7 @@ export default function ReferralsPage() {
   function openEditInstr(r: RefRow) {
     const i = r.instruction;
     setEditForm({
-      goal: i?.goal ?? '', allowed: (i?.allowed ?? []).join('، '), forbidden: (i?.forbidden ?? []).join('، '),
+      goal: i?.goal ?? '', allowed: (i?.allowed ?? []).join(t('،')), forbidden: (i?.forbidden ?? []).join(t('،')),
       boundaries: i?.boundaries ?? '', dueDays: String(i?.dueDays ?? 30),
     });
     setEditError(''); setEditInstr(r);
@@ -364,7 +365,7 @@ export default function ReferralsPage() {
         }),
       });
       setEditInstr(null); setDetail(null);
-      setFlash('دستورالعمل و ممیزی معرفی به‌روزرسانی شد؛ ممیزی پیش دوباره اجرا شده است.');
+      setFlash(t('دستورالعمل و ممیزی معرفی به‌روزرسانی شد؛ ممیزی پیش دوباره اجرا شده است.'));
       await load();
     } catch (x) { setEditError((x as Error).message); }
     finally { setBusy(null); }
@@ -377,13 +378,13 @@ export default function ReferralsPage() {
   return (
     <main className="feature-page">
       <PageHeader
-        eyebrow="معرفی‌ها"
-        title="معرفی‌ها (با ممیزی)"
-        description="هر معرفی با دستورالعملِ هدف و خط قرمز ثبت می‌شود؛ پیش از پذیرش ممیزی (سلامت رابطه، مقصد، تکرار، کامل بودن دستور) و پس از آن پیگیری/نتیجه/اثر بر رابطه اجرا می‌شود تا معرفی رابطه را خراب نکند."
+        eyebrow={t('معرفی‌ها')}
+        title={t('معرفی‌ها (با ممیزی)')}
+        description={t('هر معرفی با دستورالعملِ هدف و خط قرمز ثبت می‌شود؛ پیش از پذیرش ممیزی (سلامت رابطه، مقصد، تکرار، کامل بودن دستور) و پس از آن پیگیری/نتیجه/اثر بر رابطه اجرا می‌شود تا معرفی رابطه را خراب نکند.')}
         actions={
           <>
-            <button className="btn btn-secondary" onClick={load} disabled={loading}><RefreshCw size={15} /> بازخوانی</button>
-            <button className="btn btn-primary" onClick={() => { setError(''); setFormError(''); setOpen(true); }}><UserPlus size={16} /> معرفی جدید</button>
+            <button className="btn btn-secondary" onClick={load} disabled={loading}><RefreshCw size={15} /> {t('بازخوانی')}</button>
+            <button className="btn btn-primary" onClick={() => { setError(''); setFormError(''); setOpen(true); }}><UserPlus size={16} /> {t('معرفی جدید')}</button>
           </>
         }
       />
@@ -398,44 +399,44 @@ export default function ReferralsPage() {
       ) : (
         <>
           <div className="stat-grid">
-            <StatCard icon={<Handshake size={18} />} label="کل معرفی‌ها" value={fmtNum(stats.total)} iconClass="ic-indigo" sub="در بازهٔ نگهداری" />
-            <StatCard icon={<Clock3 size={18} />} label="در انتظار" value={fmtNum(stats.pending)} iconClass="ic-gold" sub="نیازمند تصمیم" />
-            <StatCard icon={<ThumbsUp size={18} />} label="پذیرفته‌شده" value={fmtNum(stats.accepted)} iconClass="ic-teal" sub="در جریان" />
-            <StatCard icon={<CheckCircle2 size={18} />} label="انجام‌شده" value={fmtNum(stats.done)} iconClass="ic-red" sub="به نتیجه رسیده" />
-            <StatCard icon={<ShieldCheck size={18} />} label="ممیزی سبز" value={fmtNum(stats.pass)} iconClass="ic-teal" sub="امن برای پذیرش" />
-            <StatCard icon={<ShieldAlert size={18} />} label="ممیزی زرد" value={fmtNum(stats.warn)} iconClass="ic-gold" sub="با هشدار" />
-            <StatCard icon={<ShieldX size={18} />} label="ممیزی قرمز" value={fmtNum(stats.block)} iconClass="ic-red" sub="پذیرش مسدود" />
+            <StatCard icon={<Handshake size={18} />} label={t('کل معرفی‌ها')} value={fmtNum(stats.total)} iconClass="ic-indigo" sub={t('در بازهٔ نگهداری')} />
+            <StatCard icon={<Clock3 size={18} />} label={t('در انتظار')} value={fmtNum(stats.pending)} iconClass="ic-gold" sub={t('نیازمند تصمیم')} />
+            <StatCard icon={<ThumbsUp size={18} />} label={t('پذیرفته‌شده')} value={fmtNum(stats.accepted)} iconClass="ic-teal" sub={t('در جریان')} />
+            <StatCard icon={<CheckCircle2 size={18} />} label={t('انجام‌شده')} value={fmtNum(stats.done)} iconClass="ic-red" sub={t('به نتیجه رسیده')} />
+            <StatCard icon={<ShieldCheck size={18} />} label={t('ممیزی سبز')} value={fmtNum(stats.pass)} iconClass="ic-teal" sub={t('امن برای پذیرش')} />
+            <StatCard icon={<ShieldAlert size={18} />} label={t('ممیزی زرد')} value={fmtNum(stats.warn)} iconClass="ic-gold" sub={t('با هشدار')} />
+            <StatCard icon={<ShieldX size={18} />} label={t('ممیزی قرمز')} value={fmtNum(stats.block)} iconClass="ic-red" sub={t('پذیرش مسدود')} />
           </div>
 
           {/* ─── مسترپلن فاز ۱/۹: مسیر گرم + حاکمیت واسطه + قیف تبدیل (Affinity/Boomerang) ─── */}
-          <section className="panel" aria-label="مسیر معرفی گرم و واسطه‌ها">
+          <section className="panel" aria-label={t('مسیر معرفی گرم و واسطه‌ها')}>
             <div className="panel-title">
               <div>
-                <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Target size={16} /> مسیر معرفی گرم و واسطه‌ها</h2>
-                <p>قوی‌ترین مسیر چندپرشی تا سازمان هدف با امتیاز هر پرش (سلامت + تازگی + ریسک)؛ واسطه‌ها سقف و کانال خودشان را تعیین می‌کنند — «هیچ واسطه‌ای در معرض سی درخواست نیست».</p>
+                <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Target size={16} /> {t('مسیر معرفی گرم و واسطه‌ها')}</h2>
+                <p>{t('قوی‌ترین مسیر چندپرشی تا سازمان هدف با امتیاز هر پرش (سلامت + تازگی + ریسک)؛ واسطه‌ها سقف و کانال خودشان را تعیین می‌کنند — «هیچ واسطه‌ای در معرض سی درخواست نیست».')}</p>
               </div>
               {conversion && (
                 <Badge tone={conversion.conversion?.meetingRate != null && conversion.conversion.meetingRate >= 50 ? 'success' : 'info'}>
-                  مسیر گرم → جلسه: {conversion.conversion?.meetingRate != null ? `${fmtNum(conversion.conversion.meetingRate)}٪` : '—'}
+                  مسیر گرم → جلسه: {conversion.conversion?.meetingRate != null ? `${fmtNum(conversion.conversion.meetingRate)}${t('٪')}` : '—'}
                 </Badge>
               )}
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 10 }}>
               <label className="field" style={{ margin: 0, flex: '1 1 240px' }}>
-                <span className="field-label">سازمان هدف</span>
+                <span className="field-label">{t('سازمان هدف')}</span>
                 <select value={warmTarget} onChange={e => setWarmTarget(e.target.value)}>
-                  <option value="">انتخاب کنید…</option>
+                  <option value="">{t('انتخاب کنید…')}</option>
                   {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
                 </select>
               </label>
               <button className="btn btn-primary" style={{ minHeight: 0, padding: '8px 14px' }} disabled={!warmTarget || warmBusy}
                 onClick={() => findWarmPath(warmTarget)}>
-                {warmBusy ? 'در حال جست‌وجو…' : 'یافتن مسیر گرم'}
+                {warmBusy ? t('در حال جست‌وجو…') : t('یافتن مسیر گرم')}
               </button>
               {conversion && (
                 <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                   <span className="chip neutral">معرفی: {fmtNum(conversion.total)}</span>
-                  <span className="chip neutral">پذیرش: {fmtNum(conversion.accepted)} ({conversion.conversion?.acceptRate != null ? `${fmtNum(conversion.conversion.acceptRate)}٪` : '—'})</span>
+                  <span className="chip neutral">پذیرش: {fmtNum(conversion.accepted)} ({conversion.conversion?.acceptRate != null ? `${fmtNum(conversion.conversion.acceptRate)}${t('٪')}` : '—'})</span>
                   <span className="chip neutral">انجام: {fmtNum(conversion.completed)}</span>
                 </span>
               )}
@@ -446,7 +447,7 @@ export default function ReferralsPage() {
                   <div className="list">
                     {warm.paths.map((p: any, idx: number) => (
                       <div className="listRow" key={idx} style={{ alignItems: 'flex-start' }}>
-                        <Badge tone={idx === 0 ? 'success' : 'neutral'}>{idx === 0 ? 'بهترین' : `${fmtNum(p.hopCount)} پرش`}</Badge>
+                        <Badge tone={idx === 0 ? 'success' : 'neutral'}>{idx === 0 ? t('بهترین') : `${fmtNum(p.hopCount)} ${t('پرش')}`}</Badge>
                         <span style={{ flex: 1, minWidth: 0 }}>
                           <strong style={{ fontSize: 12.5 }}>
                             {p.hops.map((h: any, i: number) => (
@@ -457,7 +458,7 @@ export default function ReferralsPage() {
                             <span className="chip info">امتیاز مسیر: {fmtNum(p.totalScore)}</span>
                             <span className="chip neutral">گلوگاه: {fmtNum(p.bottleneckScore)}</span>
                             {p.hops.map((h: any, i: number) => (
-                              <span key={i} className="chip neutral" title={`سلامت ${fmtNum(h.healthScore)}${h.daysSinceInteraction != null ? ` · آخرین تعامل ${fmtNum(h.daysSinceInteraction)} روز پیش` : ''}`}>
+                              <span key={i} className="chip neutral" title={`${t('سلامت')} ${fmtNum(h.healthScore)}${h.daysSinceInteraction != null ? ` ${t('· آخرین تعامل')} ${fmtNum(h.daysSinceInteraction)} ${t('روز پیش')}` : ''}`}>
                                 {h.fromOrgName}↔{h.toOrgName}: {fmtNum(h.score)}
                               </span>
                             ))}
@@ -467,24 +468,24 @@ export default function ReferralsPage() {
                     ))}
                   </div>
                 ) : (
-                  <p className="criteria-saved">مسیری تا این سازمان در شبکهٔ روابط شما نیست — ابتدا یک رابطهٔ میانی بسازید یا از جلسات مشترک شروع کنید.</p>
+                  <p className="criteria-saved">{t('مسیری تا این سازمان در شبکهٔ روابط شما نیست — ابتدا یک رابطهٔ میانی بسازید یا از جلسات مشترک شروع کنید.')}</p>
                 )}
                 {warm.intermediaryPeople?.length > 0 && (
                   <div style={{ marginTop: 10 }}>
-                    <h4 style={{ fontSize: 12.5, margin: '0 0 6px' }}>واسطه‌های پیشنهادی (اشخاص پرنفوذ در مسیر)</h4>
+                    <h4 style={{ fontSize: 12.5, margin: '0 0 6px' }}>{t('واسطه‌های پیشنهادی (اشخاص پرنفوذ در مسیر)')}</h4>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                       {warm.intermediaryPeople.map((ip: any) => (
                         <div key={ip.personId} className="kpi-card" style={{ margin: 0, flex: '1 1 230px' }}>
                           <small>{ip.name} — {ip.orgName}</small>
                           <strong style={{ fontSize: 13 }}>{ip.title ?? '—'}</strong>
                           <span style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 4 }}>
-                            {ip.champion && <span className="chip success">حامی</span>}
+                            {ip.champion && <span className="chip success">{t('حامی')}</span>}
                             {ip.influenceScore != null && <span className="chip neutral">نفوذ {fmtNum(ip.influenceScore)}</span>}
                             <span className={`chip ${ip.introSettings?.active === false ? 'danger' : 'neutral'}`}>
-                              {ip.introSettings ? (ip.introSettings.active ? `سقف: ${fmtNum(ip.introSettings.maxRequestsPerMonth)} درخواست/ماه` : 'درخواست نمی‌پذیرد') : 'بدون سقف تعیین‌شده'}
+                              {ip.introSettings ? (ip.introSettings.active ? `${t('سقف:')} ${fmtNum(ip.introSettings.maxRequestsPerMonth)} ${t('درخواست/ماه')}` : t('درخواست نمی‌پذیرد')) : t('بدون سقف تعیین‌شده')}
                             </span>
                           </span>
-                          <button className="btn btn-ghost btn-sm" style={{ marginTop: 6 }} title={`تنظیم واسطه‌گری ${ip.name}`}
+                          <button className="btn btn-ghost btn-sm" style={{ marginTop: 6 }} title={`${t('تنظیم واسطه‌گری')} ${ip.name}`}
                             onClick={() => setIntroEdit({
                               personId: ip.personId, name: ip.name,
                               active: ip.introSettings?.active !== false,
@@ -492,7 +493,7 @@ export default function ReferralsPage() {
                               preferredChannel: ip.introSettings?.preferredChannel ?? 'EMAIL',
                               note: ip.introSettings?.note ?? '',
                             })}>
-                            تنظیم واسطه‌گری
+                            {t('تنظیم واسطه‌گری')}
                           </button>
                         </div>
                       ))}
@@ -502,49 +503,49 @@ export default function ReferralsPage() {
               </>
             )}
             {introEdit && (
-              <div className="notice" role="dialog" aria-label="تنظیم واسطه‌گری" style={{ marginTop: 10, border: '1px solid var(--border,#e2e8f0)' }}>
+              <div className="notice" role="dialog" aria-label={t('تنظیم واسطه‌گری')} style={{ marginTop: 10, border: '1px solid var(--border,#e2e8f0)' }}>
                 <b>حاکمیت واسطه‌گری — {introEdit.name}</b>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginTop: 8 }}>
                   <label className="field" style={{ margin: 0 }}>
-                    <span className="field-label">وضعیت</span>
+                    <span className="field-label">{t('وضعیت')}</span>
                     <select value={introEdit.active ? '1' : '0'} onChange={e => setIntroEdit(introEdit ? { ...introEdit, active: e.target.value === "1" } : null)}>
-                      <option value="1">درخواست معرفی می‌پذیرد</option>
-                      <option value="0">فعلاً درخواست نمی‌پذیرد</option>
+                      <option value="1">{t('درخواست معرفی می‌پذیرد')}</option>
+                      <option value="0">{t('فعلاً درخواست نمی‌پذیرد')}</option>
                     </select>
                   </label>
                   <label className="field" style={{ margin: 0 }}>
-                    <span className="field-label">سقف درخواست در ماه</span>
+                    <span className="field-label">{t('سقف درخواست در ماه')}</span>
                     <input type="number" min={0} max={20} value={introEdit.maxRequestsPerMonth}
                       onChange={e => setIntroEdit(introEdit ? { ...introEdit, maxRequestsPerMonth: Number(e.target.value) } : null)} />
                   </label>
                   <label className="field" style={{ margin: 0 }}>
-                    <span className="field-label">کانال ترجیحی</span>
+                    <span className="field-label">{t('کانال ترجیحی')}</span>
                     <select value={introEdit.preferredChannel} onChange={e => setIntroEdit(introEdit ? { ...introEdit, preferredChannel: e.target.value } : null)}>
-                      <option value="EMAIL">ایمیل</option>
-                      <option value="MEETING">جلسه</option>
-                      <option value="CALL">تماس</option>
-                      <option value="MESSAGE">پیام</option>
+                      <option value="EMAIL">{t('ایمیل')}</option>
+                      <option value="MEETING">{t('جلسه')}</option>
+                      <option value="CALL">{t('تماس')}</option>
+                      <option value="MESSAGE">{t('پیام')}</option>
                     </select>
                   </label>
                   <label className="field" style={{ margin: 0, flex: '1 1 200px' }}>
-                    <span className="field-label">یادداشت</span>
-                    <input value={introEdit.note} onChange={e => setIntroEdit(introEdit ? { ...introEdit, note: e.target.value } : null)} placeholder="مثلاً: فقط با هماهنگی دفتر مدیرعامل" />
+                    <span className="field-label">{t('یادداشت')}</span>
+                    <input value={introEdit.note} onChange={e => setIntroEdit(introEdit ? { ...introEdit, note: e.target.value } : null)} placeholder={t('مثلاً: فقط با هماهنگی دفتر مدیرعامل')} />
                   </label>
-                  <button className="btn btn-primary" style={{ minHeight: 0, padding: '8px 14px' }} disabled={introBusy} onClick={saveIntro}>ذخیره</button>
-                  <button className="btn btn-ghost" style={{ minHeight: 0, padding: '8px 14px' }} onClick={() => setIntroEdit(null)}>انصراف</button>
+                  <button className="btn btn-primary" style={{ minHeight: 0, padding: '8px 14px' }} disabled={introBusy} onClick={saveIntro}>{t('ذخیره')}</button>
+                  <button className="btn btn-ghost" style={{ minHeight: 0, padding: '8px 14px' }} onClick={() => setIntroEdit(null)}>{t('انصراف')}</button>
                 </div>
               </div>
             )}
           </section>
 
-          <Toolbar search={q} onSearch={setQ} searchPlaceholder="جستجوی عنوان، مبدأ، مقصد، دستورالعمل یا گیرنده…">
-            <select aria-label="فیلتر وضعیت" value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="toolbar-select">
-              <option value="">همهٔ وضعیت‌ها</option>
-              <option value="PENDING">در انتظار</option>
-              <option value="ACCEPTED">پذیرفته‌شده</option>
-              <option value="COMPLETED">انجام‌شده</option>
-              <option value="DECLINED">رد شده</option>
-              <option value="CANCELLED">لغو شده</option>
+          <Toolbar search={q} onSearch={setQ} searchPlaceholder={t('جستجوی عنوان، مبدأ، مقصد، دستورالعمل یا گیرنده…')}>
+            <select aria-label={t('فیلتر وضعیت')} value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="toolbar-select">
+              <option value="">{t('همهٔ وضعیت‌ها')}</option>
+              <option value="PENDING">{t('در انتظار')}</option>
+              <option value="ACCEPTED">{t('پذیرفته‌شده')}</option>
+              <option value="COMPLETED">{t('انجام‌شده')}</option>
+              <option value="DECLINED">{t('رد شده')}</option>
+              <option value="CANCELLED">{t('لغو شده')}</option>
             </select>
             <span className="chip info">{fmtNum(filtered.length)} معرفی</span>
           </Toolbar>
@@ -552,21 +553,21 @@ export default function ReferralsPage() {
           {filtered.length === 0 ? (
             <div className="empty-state-v4">
               <div className="empty-ico"><Search size={24} /></div>
-              <strong>معرفی‌ای یافت نشد</strong>
-              <p>با «معرفی جدید» نخستین مسیر معرفی را ثبت کنید.</p>
+              <strong>{t('معرفی‌ای یافت نشد')}</strong>
+              <p>{t('با «معرفی جدید» نخستین مسیر معرفی را ثبت کنید.')}</p>
             </div>
           ) : (
             <div className="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>معرفی</th>
-                    <th>مسیر (مبدأ ← مقصد)</th>
-                    <th>ممیزی پیش</th>
-                    <th>وضعیت</th>
-                    <th>گیرنده/معرف</th>
-                    <th>تاریخ</th>
-                    <th style={{ width: 260 }}>عملیات</th>
+                    <th>{t('معرفی')}</th>
+                    <th>{t('مسیر (مبدأ ← مقصد)')}</th>
+                    <th>{t('ممیزی پیش')}</th>
+                    <th>{t('وضعیت')}</th>
+                    <th>{t('گیرنده/معرف')}</th>
+                    <th>{t('تاریخ')}</th>
+                    <th style={{ width: 260 }}>{t('عملیات')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -579,7 +580,7 @@ export default function ReferralsPage() {
                         <td>
                           <b className="t-primary" style={{ fontSize: 12.5 }}>{r.title}</b>
                           <div className="t-muted" style={{ fontSize: 10.5, maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {r.instruction?.goal || r.message || 'بدون پیام'}
+                            {r.instruction?.goal || r.message || t('بدون پیام')}
                           </div>
                           {r.instruction && (
                             <div className="t-muted" style={{ fontSize: 10, maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -611,7 +612,7 @@ export default function ReferralsPage() {
                           </span>
                         </td>
                         <td>
-                          <span className="ref-gate" title={blocked ? 'پذیرش مسدود است — موارد قرمز را رفع کنید' : `${r.audit?.summary?.warn ?? 0} هشدار · ${r.audit?.summary?.block ?? 0} مسدود`}>
+                          <span className="ref-gate" title={blocked ? t('پذیرش مسدود است — موارد قرمز را رفع کنید') : `${r.audit?.summary?.warn ?? 0} ${t('هشدار ·')} ${r.audit?.summary?.block ?? 0} ${t('مسدود')}`}>
                             <Badge tone={gm.tone}>{gm.icon} {gm.label} ({fmtNum((r.audit?.summary?.warn ?? 0) + (r.audit?.summary?.block ?? 0))})</Badge>
                           </span>
                         </td>
@@ -625,20 +626,20 @@ export default function ReferralsPage() {
                           <span style={{ display: 'inline-flex', gap: 5, flexWrap: 'wrap' }}>
                             {can(r.status).includes('ACCEPTED') && (
                               <button className="btn btn-success btn-sm" onClick={() => changeStatus(r, 'ACCEPTED')} disabled={!!busy || blocked}
-                                title={blocked ? 'ممیزی قرمز است؛ ابتدا موارد مسدود را رفع کنید' : 'پذیرش معرفی'}>
+                                title={blocked ? t('ممیزی قرمز است؛ ابتدا موارد مسدود را رفع کنید') : t('پذیرش معرفی')}>
                                 <ThumbsUp size={12} /> پذیرش
                               </button>
                             )}
                             {can(r.status).includes('COMPLETED') && (
-                              <button className="btn btn-primary btn-sm" onClick={() => { setFinishFor(r); setFinishNotes(''); setError(''); }} disabled={!!busy} title="ثبت انجام‌شدن معرفی"><CheckCircle2 size={12} /> انجام شد</button>
+                              <button className="btn btn-primary btn-sm" onClick={() => { setFinishFor(r); setFinishNotes(''); setError(''); }} disabled={!!busy} title={t('ثبت انجام‌شدن معرفی')}><CheckCircle2 size={12} /> {t('انجام شد')}</button>
                             )}
                             {can(r.status).includes('DECLINED') && (
-                              <button className="btn btn-ghost btn-sm" onClick={() => changeStatus(r, 'DECLINED')} disabled={!!busy} title="رد معرفی"><XCircle size={12} /></button>
+                              <button className="btn btn-ghost btn-sm" onClick={() => changeStatus(r, 'DECLINED')} disabled={!!busy} title={t('رد معرفی')}><XCircle size={12} /></button>
                             )}
                             {can(r.status).includes('CANCELLED') && (
-                              <button className="btn btn-ghost btn-sm" onClick={() => changeStatus(r, 'CANCELLED')} disabled={!!busy} title="لغو معرفی"><Ban size={12} /></button>
+                              <button className="btn btn-ghost btn-sm" onClick={() => changeStatus(r, 'CANCELLED')} disabled={!!busy} title={t('لغو معرفی')}><Ban size={12} /></button>
                             )}
-                            <button className="btn btn-ghost btn-sm" onClick={() => { setError(''); setDetail(r); }} title="جزئیات و ممیزی"><StickyNote size={12} /> جزئیات</button>
+                            <button className="btn btn-ghost btn-sm" onClick={() => { setError(''); setDetail(r); }} title={t('جزئیات و ممیزی')}><StickyNote size={12} /> {t('جزئیات')}</button>
                           </span>
                         </td>
                       </tr>
@@ -654,12 +655,12 @@ export default function ReferralsPage() {
       {/* ------- new referral ------- */}
       <Modal
         open={open}
-        title="معرفی جدید (با دستورالعمل)"
-        description="هدف، موضوعات مجاز، خط قرمزها و مرزها را روشن کنید — پذیرنده دقیقاً می‌داند چه کند و چه نکند. پس از ثبت، ممیزی پیش از پذیرش خودکار اجرا می‌شود."
+        title={t('معرفی جدید (با دستورالعمل)')}
+        description={t('هدف، موضوعات مجاز، خط قرمزها و مرزها را روشن کنید — پذیرنده دقیقاً می‌داند چه کند و چه نکند. پس از ثبت، ممیزی پیش از پذیرش خودکار اجرا می‌شود.')}
         onClose={() => setOpen(false)}
         footer={
           <>
-            <button type="button" className="btn btn-secondary" onClick={() => setOpen(false)}><X size={14} /> انصراف</button>
+            <button type="button" className="btn btn-secondary" onClick={() => setOpen(false)}><X size={14} /> {t('انصراف')}</button>
             <button type="submit" form="ref-form" className="btn btn-primary" disabled={saving}>
               {saving ? <RefreshCw size={14} className="spin" /> : <UserPlus size={14} />} ثبت و ممیزی
             </button>
@@ -670,20 +671,20 @@ export default function ReferralsPage() {
         <form id="ref-form" className="entity-form org-form" onSubmit={create}>
           <div className="form-grid">
             <label className="field full">
-              <span className="field-label">عنوان معرفی <i className="req">*</i></span>
-              <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="مثال: معرفی مدیر فروش به سازمان همکار" required />
+              <span className="field-label">{t('عنوان معرفی')} <i className="req">*</i></span>
+              <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder={t('مثال: معرفی مدیر فروش به سازمان همکار')} required />
             </label>
             <label className="field">
-              <span className="field-label">مبدأ <i className="req">*</i></span>
+              <span className="field-label">{t('مبدأ')} <i className="req">*</i></span>
               <select value={form.srcType} onChange={e => setForm(f => ({ ...f, srcType: e.target.value, srcId: '' }))}>
-                <option value="person">شخص</option>
-                <option value="org">سازمان</option>
+                <option value="person">{t('شخص')}</option>
+                <option value="org">{t('سازمان')}</option>
               </select>
             </label>
             <label className="field">
-              <span className="field-label">مبدأ — مقدار</span>
+              <span className="field-label">{t('مبدأ — مقدار')}</span>
               <select value={form.srcId} onChange={e => setForm(f => ({ ...f, srcId: e.target.value }))} required>
-                <option value="">انتخاب کنید…</option>
+                <option value="">{t('انتخاب کنید…')}</option>
                 {(form.srcType === 'org' ? orgs : people).map(x => (
                   <option key={x.id} value={x.id}>
                     {form.srcType === 'org' ? orgName(x as MiniOrg) : personName(x as MiniPerson)}
@@ -692,17 +693,17 @@ export default function ReferralsPage() {
               </select>
             </label>
             <label className="field">
-              <span className="field-label">مقصد <i className="req">*</i></span>
+              <span className="field-label">{t('مقصد')} <i className="req">*</i></span>
               <select value={form.dstType} onChange={e => setForm(f => ({ ...f, dstType: e.target.value, dstId: '' }))}>
-                <option value="org">سازمان</option>
-                <option value="person">شخص</option>
-                <option value="user">کاربر داخلی</option>
+                <option value="org">{t('سازمان')}</option>
+                <option value="person">{t('شخص')}</option>
+                <option value="user">{t('کاربر داخلی')}</option>
               </select>
             </label>
             <label className="field">
-              <span className="field-label">مقصد — مقدار</span>
+              <span className="field-label">{t('مقصد — مقدار')}</span>
               <select value={form.dstId} onChange={e => setForm(f => ({ ...f, dstId: e.target.value }))} required>
-                <option value="">انتخاب کنید…</option>
+                <option value="">{t('انتخاب کنید…')}</option>
                 {form.dstType === 'user'
                   ? users.map(u => <option key={u.id} value={u.id}>{u.email}</option>)
                   : (form.dstType === 'org' ? orgs : people).map(x => (
@@ -713,9 +714,9 @@ export default function ReferralsPage() {
               </select>
             </label>
             <label className="field">
-              <span className="field-label">رابطهٔ پیوند (برای ممیزی)</span>
+              <span className="field-label">{t('رابطهٔ پیوند (برای ممیزی)')}</span>
               <select value={form.relationshipId ?? ''} onChange={e => setForm(f => ({ ...f, relationshipId: e.target.value }))}>
-                <option value="">بدون رابطهٔ مشخص</option>
+                <option value="">{t('بدون رابطهٔ مشخص')}</option>
                 {rels.map(rr => (
                   <option key={rr.id} value={rr.id}>
                     {orgName(rr.sourceOrganization)} ↔ {orgName(rr.targetOrganization)}
@@ -725,31 +726,31 @@ export default function ReferralsPage() {
               </select>
             </label>
             <label className="field full">
-              <span className="field-label">پیام/توضیح (برای گیرنده)</span>
-              <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} rows={2} placeholder="چند خط که در معرفی به طرف مقابل گفته می‌شود…" />
+              <span className="field-label">{t('پیام/توضیح (برای گیرنده)')}</span>
+              <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} rows={2} placeholder={t('چند خط که در معرفی به طرف مقابل گفته می‌شود…')} />
             </label>
             <div className="field full ref-instruction-box">
-              <div className="ref-instruction-head"><ClipboardList size={14} /> دستورالعمل — این همان چیزی است که به معرفی‌شونده می‌دهید</div>
+              <div className="ref-instruction-head"><ClipboardList size={14} /> {t('دستورالعمل — این همان چیزی است که به معرفی‌شونده می‌دهید')}</div>
               <label className="field">
-                <span className="field-label">هدفِ معرفی (چرا این معرفی؟) <i className="req">*</i></span>
-                <input value={form.goal} onChange={e => setForm(f => ({ ...f, goal: e.target.value }))} placeholder="مثال: بررسی امکان همکاری فروش در ۳۰ روز؛ بدون مذاکرهٔ قرارداد" required />
+                <span className="field-label">{t('هدفِ معرفی (چرا این معرفی؟)')} <i className="req">*</i></span>
+                <input value={form.goal} onChange={e => setForm(f => ({ ...f, goal: e.target.value }))} placeholder={t('مثال: بررسی امکان همکاری فروش در ۳۰ روز؛ بدون مذاکرهٔ قرارداد')} required />
               </label>
               <div className="ref-instruction-grid">
                 <label className="field">
-                  <span className="field-label">موضوعات مجاز</span>
-                  <input value={form.allowed} onChange={e => setForm(f => ({ ...f, allowed: e.target.value }))} placeholder="جدا با ویرگول؛ مثال: قیمت مصوب، زمان تحویل" />
+                  <span className="field-label">{t('موضوعات مجاز')}</span>
+                  <input value={form.allowed} onChange={e => setForm(f => ({ ...f, allowed: e.target.value }))} placeholder={t('جدا با ویرگول؛ مثال: قیمت مصوب، زمان تحویل')} />
                 </label>
                 <label className="field">
-                  <span className="field-label">خط قرمز (ممنوع) <i className="req">*</i></span>
-                  <input value={form.forbidden} onChange={e => setForm(f => ({ ...f, forbidden: e.target.value }))} placeholder="جدا با ویرگول؛ مثال: تخفیف جدید، تعهد حجم" required />
+                  <span className="field-label">{t('خط قرمز (ممنوع)')} <i className="req">*</i></span>
+                  <input value={form.forbidden} onChange={e => setForm(f => ({ ...f, forbidden: e.target.value }))} placeholder={t('جدا با ویرگول؛ مثال: تخفیف جدید، تعهد حجم')} required />
                 </label>
               </div>
               <label className="field">
-                <span className="field-label">مرزها و محدودیت‌ها <i className="req">*</i></span>
-                <textarea value={form.boundaries} onChange={e => setForm(f => ({ ...f, boundaries: e.target.value }))} rows={2} placeholder="مثال: حداکثر ۲ جلسهٔ مقدماتی؛ مذاکره فقط با حضور مدیر حساب؛ نتیجه تا ۳۰ روز ثبت شود." required />
+                <span className="field-label">{t('مرزها و محدودیت‌ها')} <i className="req">*</i></span>
+                <textarea value={form.boundaries} onChange={e => setForm(f => ({ ...f, boundaries: e.target.value }))} rows={2} placeholder={t('مثال: حداکثر ۲ جلسهٔ مقدماتی؛ مذاکره فقط با حضور مدیر حساب؛ نتیجه تا ۳۰ روز ثبت شود.')} required />
               </label>
               <label className="field ref-due">
-                <span className="field-label">مهلت نتیجه (روز)</span>
+                <span className="field-label">{t('مهلت نتیجه (روز)')}</span>
                 <input type="number" min={3} max={365} value={form.dueDays} onChange={e => setForm(f => ({ ...f, dueDays: e.target.value }))} />
               </label>
             </div>
@@ -761,16 +762,16 @@ export default function ReferralsPage() {
       <Modal
         open={!!detail}
         title={detail?.title ?? ''}
-        description={`وضعیت: ${detail ? STATUS_FA[detail.status] : ''} · ممیزی پیش: ${detail?.audit ? GATE_META[detail.audit.gate]?.label : '—'}`}
+        description={`${t('وضعیت:')} ${detail ? STATUS_FA[detail.status] : ''} ${t('· ممیزی پیش:')} ${detail?.audit ? GATE_META[detail.audit.gate]?.label : '—'}`}
         onClose={() => setDetail(null)}
         footer={
           <>
-            <button type="button" className="btn btn-secondary" onClick={() => detail && rerunAudit(detail)} disabled={!!busy}><RotateCcw size={14} /> بازاجرای ممیزی</button>
+            <button type="button" className="btn btn-secondary" onClick={() => detail && rerunAudit(detail)} disabled={!!busy}><RotateCcw size={14} /> {t('بازاجرای ممیزی')}</button>
             {detail && ['PENDING', 'ACCEPTED'].includes(detail.status) && (
-              <button type="button" className="btn btn-secondary" onClick={() => openEditInstr(detail)} disabled={!!busy}><ClipboardList size={14} /> ویرایش دستورالعمل</button>
+              <button type="button" className="btn btn-secondary" onClick={() => openEditInstr(detail)} disabled={!!busy}><ClipboardList size={14} /> {t('ویرایش دستورالعمل')}</button>
             )}
             <span style={{ flex: 1 }} />
-            <button type="button" className="btn btn-secondary" onClick={() => setDetail(null)}><X size={14} /> بستن</button>
+            <button type="button" className="btn btn-secondary" onClick={() => setDetail(null)}><X size={14} /> {t('بستن')}</button>
           </>
         }
       >
@@ -778,32 +779,32 @@ export default function ReferralsPage() {
           <div className="ref-detail">
             <div className="detail-row" style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
               <ArrowLeft size={14} className="t-muted" style={{ marginTop: 2 }} />
-              <span><b>مسیر:</b> {detail.sourceOrganization ? `سازمان «${orgName(detail.sourceOrganization)}»` : `شخص «${personName(detail.sourcePerson)}»`} ← {detail.targetOrganization ? `سازمان «${orgName(detail.targetOrganization)}»` : detail.targetPerson ? `شخص «${personName(detail.targetPerson)}»` : `کاربر داخلی (${detail.recipientUser?.email})`}</span>
+              <span><b>{t('مسیر:')}</b> {detail.sourceOrganization ? `${t('سازمان «')}${orgName(detail.sourceOrganization)}»` : `${t('شخص «')}${personName(detail.sourcePerson)}»`} ← {detail.targetOrganization ? `${t('سازمان «')}${orgName(detail.targetOrganization)}»` : detail.targetPerson ? `${t('شخص «')}${personName(detail.targetPerson)}»` : `${t('کاربر داخلی (')}${detail.recipientUser?.email})`}</span>
             </div>
             {detail.relationshipCriteria && (
               <div className="ref-rel-line">
-                <Target size={13} /> رابطهٔ پیوند: امتیاز معیارها <b>{fmtNum(detail.relationshipCriteria.effectiveScore ?? detail.relationshipCriteria.score ?? 0)}</b>
+                <Target size={13} /> {t('رابطهٔ پیوند: امتیاز معیارها')} <b>{fmtNum(detail.relationshipCriteria.effectiveScore ?? detail.relationshipCriteria.score ?? 0)}</b>
                 {' '}· پوشش {fmtNum(detail.relationshipCriteria.coverage ?? 0)}٪ · حکم «{detail.relationshipCriteria.verdictLabel}»
               </div>
             )}
-            {detail.message && <div style={{ display: 'flex', gap: 6 }}><StickyNote size={14} className="t-muted" /><span><b>پیام:</b> {detail.message}</span></div>}
-            {detail.notes && <div style={{ display: 'flex', gap: 6 }}><CheckCircle2 size={14} className="t-muted" /><span><b>یادداشت پایانی:</b> {detail.notes}</span></div>}
+            {detail.message && <div style={{ display: 'flex', gap: 6 }}><StickyNote size={14} className="t-muted" /><span><b>{t('پیام:')}</b> {detail.message}</span></div>}
+            {detail.notes && <div style={{ display: 'flex', gap: 6 }}><CheckCircle2 size={14} className="t-muted" /><span><b>{t('یادداشت پایانی:')}</b> {detail.notes}</span></div>}
             <div className="ref-mission-panel">
-              <div className="ref-instruction-head"><Send size={14} /> مِیشن گرم (ارکستراسیون)</div>
+              <div className="ref-instruction-head"><Send size={14} /> {t('مِیشن گرم (ارکستراسیون)')}</div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                <span className="t-muted" style={{ fontSize: 11.5 }}>وضعیت درخواست از معرف:</span>
+                <span className="t-muted" style={{ fontSize: 11.5 }}>{t('وضعیت درخواست از معرف:')}</span>
                 {(['REQUESTED', 'RESPONDED_YES', 'RESPONDED_NO', 'NO_RESPONSE'] as const).map(st => (
                   <button key={st} type="button" className={`btn btn-sm ${detail.requestStatus === st ? 'btn-primary' : 'btn-ghost'}`} disabled={!!busy}
-                    onClick={() => updateMission(detail, { requestStatus: st }, `وضعیت درخواست به «${REQ_STATUS_FA[st].label}» تغییر کرد.`)}>
+                    onClick={() => updateMission(detail, { requestStatus: st }, `${t('وضعیت درخواست به «')}${REQ_STATUS_FA[st].label}${t('» تغییر کرد.')}`)}>
                     {REQ_STATUS_FA[st].label}
                   </button>
                 ))}
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginTop: 8 }}>
-                <span className="t-muted" style={{ fontSize: 11.5 }}>نتیجهٔ نهایی:</span>
+                <span className="t-muted" style={{ fontSize: 11.5 }}>{t('نتیجهٔ نهایی:')}</span>
                 {(['MEET_BOOKED', 'NO_REPLY', 'DECLINED', 'BAD_FIT'] as const).map(oc => (
                   <button key={oc} type="button" className={`btn btn-sm ${detail.outcome === oc ? 'btn-primary' : 'btn-ghost'}`} disabled={!!busy}
-                    onClick={() => updateMission(detail, { outcome: oc }, `نتیجهٔ معرفی «${OUTCOME_FA[oc].label}» ثبت شد.`)}>
+                    onClick={() => updateMission(detail, { outcome: oc }, `${t('نتیجهٔ معرفی «')}${OUTCOME_FA[oc].label}${t('» ثبت شد.')}`)}>
                     {OUTCOME_FA[oc].label}
                   </button>
                 ))}
@@ -811,22 +812,22 @@ export default function ReferralsPage() {
               {detail.outcome && (
                 <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
                   <StickyNote size={13} className="t-muted" />
-                  <input className="ref-outcome-note" placeholder="یادداشت نتیجه (اختیاری)" defaultValue={detail.outcomeNote ?? ''}
+                  <input className="ref-outcome-note" placeholder={t('یادداشت نتیجه (اختیاری)')} defaultValue={detail.outcomeNote ?? ''}
                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLInputElement).blur(); } }}
-                    onBlur={e => { const v = e.target.value.trim(); if (v !== (detail.outcomeNote ?? '')) updateMission(detail, { outcomeNote: v }, 'یادداشت نتیجه ذخیره شد.'); }} />
+                    onBlur={e => { const v = e.target.value.trim(); if (v !== (detail.outcomeNote ?? '')) updateMission(detail, { outcomeNote: v }, t('یادداشت نتیجه ذخیره شد.')); }} />
                 </div>
               )}
               {detail.opportunity && (
                 <div className="ref-rel-line" style={{ marginTop: 8 }}>
                   <Link href={`/opportunities/${detail.opportunity.id}`}>فرصت متصل: {detail.opportunity.name} ({fa(detail.opportunity.status)})</Link>
-                  <button type="button" className="btn btn-ghost btn-sm" disabled={!!busy} onClick={() => updateMission(detail, { opportunityId: null }, 'اتصال به فرصت برداشته شد.')}>✕</button>
+                  <button type="button" className="btn btn-ghost btn-sm" disabled={!!busy} onClick={() => updateMission(detail, { opportunityId: null }, t('اتصال به فرصت برداشته شد.'))}>✕</button>
                 </div>
               )}
               {detail.connectorLoad != null && detail.connectorLoad > 0 && (
                 <small className="t-muted" style={{ display: 'block', marginTop: 6 }}>این معرف {fmtNum(detail.connectorLoad)} درخواست فعال دیگر نیز دارد.</small>
               )}
             </div>
-            <div style={{ display: 'flex', gap: 6 }}><UserRound size={14} className="t-muted" /><span><b>معرف:</b> {detail.createdBy?.name ?? '—'} {detail.createdBy?.email ? `(${detail.createdBy.email})` : ''}</span></div>
+            <div style={{ display: 'flex', gap: 6 }}><UserRound size={14} className="t-muted" /><span><b>{t('معرف:')}</b> {detail.createdBy?.name ?? '—'} {detail.createdBy?.email ? `(${detail.createdBy.email})` : ''}</span></div>
             <div style={{ display: 'flex', gap: 12, color: 'var(--text-muted)', fontSize: 11.5 }}>
               <span>ایجاد: {fmtDT(detail.createdAt)}</span>
               {detail.acceptedAt && <span>پذیرش: {fmtDT(detail.acceptedAt)}</span>}
@@ -835,32 +836,32 @@ export default function ReferralsPage() {
 
             {detail.instruction && (
               <div className="ref-instruction-panel">
-                <div className="ref-instruction-head"><ClipboardList size={14} /> دستورالعمل معرفی‌شونده</div>
-                <p><b>هدف:</b> {detail.instruction.goal || '—'}</p>
+                <div className="ref-instruction-head"><ClipboardList size={14} /> {t('دستورالعمل معرفی‌شونده')}</div>
+                <p><b>{t('هدف:')}</b> {detail.instruction.goal || '—'}</p>
                 <div className="ref-instr-cols">
-                  <div><small>موضوعات مجاز</small>
+                  <div><small>{t('موضوعات مجاز')}</small>
                     <ul>{(detail.instruction.allowed ?? []).map((a, i) => <li key={i}>✓ {a}</li>)}
-                      {!detail.instruction.allowed?.length && <li className="t-muted">تعیین نشده</li>}</ul>
+                      {!detail.instruction.allowed?.length && <li className="t-muted">{t('تعیین نشده')}</li>}</ul>
                   </div>
-                  <div className="ref-instr-danger"><small>خط قرمز</small>
+                  <div className="ref-instr-danger"><small>{t('خط قرمز')}</small>
                     <ul>{(detail.instruction.forbidden ?? []).map((a, i) => <li key={i}>✕ {a}</li>)}
-                      {!detail.instruction.forbidden?.length && <li className="t-muted">تعیین نشده</li>}</ul>
+                      {!detail.instruction.forbidden?.length && <li className="t-muted">{t('تعیین نشده')}</li>}</ul>
                   </div>
                 </div>
-                <p><b>مرزها:</b> {detail.instruction.boundaries || '—'}</p>
+                <p><b>{t('مرزها:')}</b> {detail.instruction.boundaries || '—'}</p>
                 <small className="t-muted">مهلت نتیجه: {fmtNum(detail.instruction.dueDays)} روز</small>
               </div>
             )}
 
             <div className="ref-audit-panel">
               <div className="ref-instruction-head"><ShieldCheck size={14} /> ممیزی پیش از پذیرش {detail.audit ? `— ${GATE_META[detail.audit.gate]?.label}` : ''}</div>
-              <AuditList audit={detail.audit} emptyLabel="هنوز ممیزی اجرا نشده؛ با «بازاجرای ممیزی» اجرا کنید." />
+              <AuditList audit={detail.audit} emptyLabel={t('هنوز ممیزی اجرا نشده؛ با «بازاجرای ممیزی» اجرا کنید.')} />
             </div>
 
             {(detail.status === 'ACCEPTED' || detail.status === 'COMPLETED') && (
               <div className="ref-audit-panel">
                 <div className="ref-instruction-head"><ListChecks size={14} /> ممیزی پس از معرفی {detail.postAudit ? `— ${GATE_META[detail.postAudit.gate]?.label}` : ''}</div>
-                <AuditList audit={detail.postAudit} emptyLabel="پس از پذیرش، پیگیری و اثر بر رابطه به‌صورت خودکار بررسی می‌شود." onCheckin={(code) => { setCheckinFor({ ref: detail, code }); setCheckinNote(''); }} />
+                <AuditList audit={detail.postAudit} emptyLabel={t('پس از پذیرش، پیگیری و اثر بر رابطه به‌صورت خودکار بررسی می‌شود.')} onCheckin={(code) => { setCheckinFor({ ref: detail, code }); setCheckinNote(''); }} />
               </div>
             )}
           </div>
@@ -870,12 +871,12 @@ export default function ReferralsPage() {
       {/* ------- edit instructions modal ------- */}
       <Modal
         open={!!editInstr}
-        title="ویرایش دستورالعمل معرفی"
-        description="دستورالعمل دقیق تری برای معرفی‌شونده بنویسید؛ ممیزی پیش از پذیرش دوباره اجرا می‌شود و نتیجهٔ آن با ذخیره نمایش داده می‌شود."
+        title={t('ویرایش دستورالعمل معرفی')}
+        description={t('دستورالعمل دقیق تری برای معرفی‌شونده بنویسید؛ ممیزی پیش از پذیرش دوباره اجرا می‌شود و نتیجهٔ آن با ذخیره نمایش داده می‌شود.')}
         onClose={() => setEditInstr(null)}
         footer={
           <>
-            <button type="button" className="btn btn-secondary" onClick={() => setEditInstr(null)}><X size={14} /> انصراف</button>
+            <button type="button" className="btn btn-secondary" onClick={() => setEditInstr(null)}><X size={14} /> {t('انصراف')}</button>
             <button type="submit" form="ref-instr-edit" className="btn btn-primary" disabled={busy === `instr-${editInstr?.id}`}>
               <ClipboardList size={14} /> ذخیره و ممیزی
             </button>
@@ -885,27 +886,27 @@ export default function ReferralsPage() {
         <ErrorCard message={editError} />
         <form id="ref-instr-edit" onSubmit={saveInstr}>
           <div className="ref-instruction-box">
-            <div className="ref-instruction-head"><ClipboardList size={14} /> دستورالعمل معرفی‌شونده</div>
+            <div className="ref-instruction-head"><ClipboardList size={14} /> {t('دستورالعمل معرفی‌شونده')}</div>
             <label className="field">
-              <span className="field-label">هدفِ معرفی (چرا این معرفی؟) <i className="req">*</i></span>
+              <span className="field-label">{t('هدفِ معرفی (چرا این معرفی؟)')} <i className="req">*</i></span>
               <input value={editForm.goal} onChange={e => setEditForm(f => ({ ...f, goal: e.target.value }))} required />
             </label>
             <div className="ref-instruction-grid">
               <label className="field">
-                <span className="field-label">موضوعات مجاز</span>
-                <input value={editForm.allowed} onChange={e => setEditForm(f => ({ ...f, allowed: e.target.value }))} placeholder="جدا با ویرگول" />
+                <span className="field-label">{t('موضوعات مجاز')}</span>
+                <input value={editForm.allowed} onChange={e => setEditForm(f => ({ ...f, allowed: e.target.value }))} placeholder={t('جدا با ویرگول')} />
               </label>
               <label className="field">
-                <span className="field-label">خط قرمز (ممنوع) <i className="req">*</i></span>
-                <input value={editForm.forbidden} onChange={e => setEditForm(f => ({ ...f, forbidden: e.target.value }))} placeholder="جدا با ویرگول" required />
+                <span className="field-label">{t('خط قرمز (ممنوع)')} <i className="req">*</i></span>
+                <input value={editForm.forbidden} onChange={e => setEditForm(f => ({ ...f, forbidden: e.target.value }))} placeholder={t('جدا با ویرگول')} required />
               </label>
             </div>
             <label className="field">
-              <span className="field-label">مرزها و محدودیت‌ها <i className="req">*</i></span>
+              <span className="field-label">{t('مرزها و محدودیت‌ها')} <i className="req">*</i></span>
               <textarea value={editForm.boundaries} onChange={e => setEditForm(f => ({ ...f, boundaries: e.target.value }))} rows={2} required />
             </label>
             <label className="field ref-due">
-              <span className="field-label">مهلت نتیجه (روز)</span>
+              <span className="field-label">{t('مهلت نتیجه (روز)')}</span>
               <input type="number" min={3} max={365} value={editForm.dueDays} onChange={e => setEditForm(f => ({ ...f, dueDays: e.target.value }))} />
             </label>
           </div>
@@ -915,12 +916,12 @@ export default function ReferralsPage() {
       {/* ------- finish modal ------- */}
       <Modal
         open={!!finishFor}
-        title="ثبت انجام‌شدن معرفی"
-        description={finishFor ? `«${finishFor.title}» — پس از ثبت، ممیزی پس از معرفی (پیگیری، نتیجه، اثر بر رابطه) اجرا می‌شود.` : ''}
+        title={t('ثبت انجام‌شدن معرفی')}
+        description={finishFor ? `«${finishFor.title}${t('» — پس از ثبت، ممیزی پس از معرفی (پیگیری، نتیجه، اثر بر رابطه) اجرا می‌شود.')}` : ''}
         onClose={() => setFinishFor(null)}
         footer={
           <>
-            <button type="button" className="btn btn-secondary" onClick={() => setFinishFor(null)}><X size={14} /> انصراف</button>
+            <button type="button" className="btn btn-secondary" onClick={() => setFinishFor(null)}><X size={14} /> {t('انصراف')}</button>
             <button type="button" className="btn btn-primary" onClick={() => finishFor && changeStatus(finishFor, 'COMPLETED')} disabled={busy === finishFor?.id}>
               {busy === finishFor?.id ? <RefreshCw size={14} className="spin" /> : <CheckCircle2 size={14} />} ثبت
             </button>
@@ -928,20 +929,20 @@ export default function ReferralsPage() {
         }
       >
         <label className="field">
-          <span className="field-label">یادداشت پایانی (نتیجهٔ واقعی)</span>
-          <textarea value={finishNotes} onChange={e => setFinishNotes(e.target.value)} rows={3} placeholder="مثال: جلسهٔ ارزیابی برگزار شد، تأمین‌کننده تأیید شد و قرارداد اولیه امضا شد…" />
+          <span className="field-label">{t('یادداشت پایانی (نتیجهٔ واقعی)')}</span>
+          <textarea value={finishNotes} onChange={e => setFinishNotes(e.target.value)} rows={3} placeholder={t('مثال: جلسهٔ ارزیابی برگزار شد، تأمین‌کننده تأیید شد و قرارداد اولیه امضا شد…')} />
         </label>
       </Modal>
 
       {/* ------- checkin modal ------- */}
       <Modal
         open={!!checkinFor}
-        title={checkinFor?.code === 'FOLLOW_UP' ? 'ثبت پیگیری پس از معرفی' : 'ثبت نتیجهٔ معرفی'}
-        description={checkinFor ? `«${checkinFor.ref.title}» — این شاهد در ممیزی پس از معرفی محاسبه می‌شود.` : ''}
+        title={checkinFor?.code === 'FOLLOW_UP' ? t('ثبت پیگیری پس از معرفی') : t('ثبت نتیجهٔ معرفی')}
+        description={checkinFor ? `«${checkinFor.ref.title}${t('» — این شاهد در ممیزی پس از معرفی محاسبه می‌شود.')}` : ''}
         onClose={() => setCheckinFor(null)}
         footer={
           <>
-            <button type="button" className="btn btn-secondary" onClick={() => setCheckinFor(null)}><X size={14} /> انصراف</button>
+            <button type="button" className="btn btn-secondary" onClick={() => setCheckinFor(null)}><X size={14} /> {t('انصراف')}</button>
             <button type="button" className="btn btn-primary" onClick={checkin} disabled={busy === `${checkinFor?.code}-${checkinFor?.ref.id}`}>
               <BellRing size={14} /> ثبت شاهد
             </button>
@@ -949,8 +950,8 @@ export default function ReferralsPage() {
         }
       >
         <label className="field">
-          <span className="field-label">توضیح شاهد</span>
-          <textarea value={checkinNote} onChange={e => setCheckinNote(e.target.value)} rows={3} placeholder={checkinFor?.code === 'FOLLOW_UP' ? 'مثال: جلسهٔ آشنایی با مدیر خرید برگزار شد (۱۴۰۵/۰۶/۰۲)…' : 'مثال: قرارداد اولیه امضا شد و وضعیت رابطه بهبود یافت…'} />
+          <span className="field-label">{t('توضیح شاهد')}</span>
+          <textarea value={checkinNote} onChange={e => setCheckinNote(e.target.value)} rows={3} placeholder={checkinFor?.code === 'FOLLOW_UP' ? t('مثال: جلسهٔ آشنایی با مدیر خرید برگزار شد (۱۴۰۵/۰۶/۰۲)…') : t('مثال: قرارداد اولیه امضا شد و وضعیت رابطه بهبود یافت…')} />
         </label>
       </Modal>
     </main>

@@ -14,6 +14,7 @@ import {
   parseIsoParts, formatJalaliDisplay, todayJalali, jalaaliMonthLength, jalaaliWeekday,
   toGregorian, toIsoString, JALALI_MONTHS, WEEKDAYS_FA, faNum as faN,
 } from '../_lib/jalali';
+import { t } from '../_lib/i18n';
 
 type Props = {
   value: string;                                   // 'YYYY-MM-DD' | 'YYYY-MM-DDTHH:mm' | ISO
@@ -156,18 +157,18 @@ export function JalaliDateField({ value, onChange, withTime = false, placeholder
 
   const pop = (
     <div ref={popRef} className={`jalali-pop ${pos?.up ? 'up' : ''}`} style={{ top: pos?.top, left: pos?.left }}
-      role="dialog" aria-label="انتخاب تاریخ شمسی">
+      role="dialog" aria-label={t('انتخاب تاریخ شمسی')}>
       {/* سربرگ: ماه */}
       <div className="jalali-head">
-        <button type="button" className="j-nav" onClick={() => shiftMonth(-1)} aria-label="ماه قبل" tabIndex={-1}><ChevronRight size={15} /></button>
+        <button type="button" className="j-nav" onClick={() => shiftMonth(-1)} aria-label={t('ماه قبل')} tabIndex={-1}><ChevronRight size={15} /></button>
         <span className="j-month">{JALALI_MONTHS[view.jm - 1]} <b>{faN(view.jy)}</b></span>
-        <button type="button" className="j-nav" onClick={() => shiftMonth(1)} aria-label="ماه بعد" tabIndex={-1}><ChevronLeft size={15} /></button>
+        <button type="button" className="j-nav" onClick={() => shiftMonth(1)} aria-label={t('ماه بعد')} tabIndex={-1}><ChevronLeft size={15} /></button>
       </div>
       {/* سال */}
       <div className="jalali-year">
-        <button type="button" className="j-nav sm" onClick={() => shiftYear(-1)} aria-label="سال قبل" tabIndex={-1}><ChevronsRight size={13} /></button>
+        <button type="button" className="j-nav sm" onClick={() => shiftYear(-1)} aria-label={t('سال قبل')} tabIndex={-1}><ChevronsRight size={13} /></button>
         <span>سال {faN(view.jy)}</span>
-        <button type="button" className="j-nav sm" onClick={() => shiftYear(1)} aria-label="سال بعد" tabIndex={-1}><ChevronsLeft size={13} /></button>
+        <button type="button" className="j-nav sm" onClick={() => shiftYear(1)} aria-label={t('سال بعد')} tabIndex={-1}><ChevronsLeft size={13} /></button>
       </div>
       {/* روزهای هفته */}
       <div className="jalali-wdays">
@@ -193,27 +194,27 @@ export function JalaliDateField({ value, onChange, withTime = false, placeholder
       {withTime && (
         <div className="jalali-time">
           <label>ساعت
-            <select value={hh} onChange={(e) => { const v = Number(e.target.value); setHh(v); if (viewHasDate) commit({ jy: view.jy, jm: view.jm, jd: selDay! }, { hh: v, mm }); }} aria-label="ساعت">
+            <select value={hh} onChange={(e) => { const v = Number(e.target.value); setHh(v); if (viewHasDate) commit({ jy: view.jy, jm: view.jm, jd: selDay! }, { hh: v, mm }); }} aria-label={t('ساعت')}>
               {Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{faN(String(h).padStart(2, '0'))}</option>)}
             </select>
           </label>
           <label>دقیقه
-            <select value={mm} onChange={(e) => { const v = Number(e.target.value); setMm(v); if (viewHasDate) commit({ jy: view.jy, jm: view.jm, jd: selDay! }, { hh, mm: v }); }} aria-label="دقیقه">
+            <select value={mm} onChange={(e) => { const v = Number(e.target.value); setMm(v); if (viewHasDate) commit({ jy: view.jy, jm: view.jm, jd: selDay! }, { hh, mm: v }); }} aria-label={t('دقیقه')}>
               {Array.from({ length: 60 }, (_, m) => <option key={m} value={m}>{faN(String(m).padStart(2, '0'))}</option>)}
             </select>
           </label>
-          <span className="j-time-hint">{viewHasDate ? 'تغییر زمان بلافاصله اعمال می‌شود' : 'ابتدا روز را انتخاب کنید'}</span>
+          <span className="j-time-hint">{viewHasDate ? t('تغییر زمان بلافاصله اعمال می‌شود') : t('ابتدا روز را انتخاب کنید')}</span>
         </div>
       )}
       {/* پابرگ */}
       <div className="jalali-foot">
-        <button type="button" className="j-ghost" onClick={todayNow}><CalendarDays size={12} /> امروز</button>
+        <button type="button" className="j-ghost" onClick={todayNow}><CalendarDays size={12} /> {t('امروز')}</button>
         {withTime && (
           <button type="button" className="j-primary" onClick={() => closePopup()} disabled={!viewHasDate}>
-            <Check size={12} /> {displayTime ? 'تأیید و بستن' : 'انتخاب شد'}
+            <Check size={12} /> {displayTime ? t('تأیید و بستن') : t('انتخاب شد')}
           </button>
         )}
-        <button type="button" className="j-clear" onClick={clear} disabled={!value}><Eraser size={12} /> پاک کردن</button>
+        <button type="button" className="j-clear" onClick={clear} disabled={!value}><Eraser size={12} /> {t('پاک کردن')}</button>
       </div>
     </div>
   );
@@ -227,7 +228,7 @@ export function JalaliDateField({ value, onChange, withTime = false, placeholder
         readOnly
         required={required}
         value={display}
-        placeholder={placeholder ?? (withTime ? 'انتخاب تاریخ و ساعت شمسی…' : 'انتخاب تاریخ شمسی…')}
+        placeholder={placeholder ?? (withTime ? t('انتخاب تاریخ و ساعت شمسی…') : t('انتخاب تاریخ شمسی…'))}
         aria-label={rest['aria-label']}
         onClick={openPopup}
         onFocus={openPopup}

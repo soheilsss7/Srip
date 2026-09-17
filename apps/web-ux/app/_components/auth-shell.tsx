@@ -1,13 +1,15 @@
 'use client';
 import React from 'react';
 import { Building2, Users, Share2, Sparkles, ShieldCheck, BarChart3, Zap } from 'lucide-react';
+import { t } from '../_lib/i18n';
+import { LocaleToggle } from './locale-context';
 
-const FEATURES = [
-  {icon:<Share2 size={16}/>, title:'مدیریت روابط راهبردی', desc:'هر رابطه با امتیاز، ریسک و ارزش استراتژیک رصد می‌شود.'},
-  {icon:<Zap size={16}/>, title:'پیشنهادهای هوشمند', desc:'موتور قطعی و شفاف — بدون وابستگی به مدل خارجی.'},
-  {icon:<BarChart3 size={16}/>, title:'داشبورد فرماندهی', desc:'شاخص‌های زنده از سرمایهٔ شبکه تا هوش روابط راهبردی.'},
-  {icon:<ShieldCheck size={16}/>, title:'امنیت چندلایه', desc:'احراز هویت دومرحله‌ای و کنترل دسترسی مبتنی بر نقش.'},
-] as const;
+const FEATURES = lt([
+  {icon:<Share2 size={16}/>, title:t('مدیریت روابط راهبردی'), desc:t('هر رابطه با امتیاز، ریسک و ارزش استراتژیک رصد می‌شود.')},
+  {icon:<Zap size={16}/>, title:t('پیشنهادهای هوشمند'), desc:t('موتور قطعی و شفاف — بدون وابستگی به مدل خارجی.')},
+  {icon:<BarChart3 size={16}/>, title:t('داشبورد فرماندهی'), desc:t('شاخص‌های زنده از سرمایهٔ شبکه تا هوش روابط راهبردی.')},
+  {icon:<ShieldCheck size={16}/>, title:t('امنیت چندلایه'), desc:t('احراز هویت دومرحله‌ای و کنترل دسترسی مبتنی بر نقش.')},
+] as const);
 
 /**
  * Split-panel auth layout.
@@ -21,7 +23,8 @@ export function AuthShell({children}:{children:React.ReactNode}){
         <div className="auth-card-inner">
           <div className="auth-card-logo">
             <span className="acl-mark">S</span>
-            <span className="acl-title"><strong>SRIP</strong><small>هوش روابط راهبردی</small></span>
+            <span className="acl-title"><strong>SRIP</strong><small>{t('هوش روابط راهبردی')}</small></span>
+            <span style={{ marginInlineStart: 'auto' }}><LocaleToggle compact /></span>
           </div>
           {children}
         </div>
@@ -29,13 +32,12 @@ export function AuthShell({children}:{children:React.ReactNode}){
       <aside className="auth-brand" aria-hidden="true">
         <div className="ab-top">
           <div className="ab-logo">S</div>
-          <div className="ab-title"><strong>SRIP</strong><span>پلتفرم هوشمندی روابط راهبردی</span></div>
+          <div className="ab-title"><strong>SRIP</strong><span>{t('پلتفرم هوشمندی روابط راهبردی')}</span></div>
         </div>
         <div>
-          <h1>سیستم عامل هوشمند<br/>روابط <em>استراتژیک</em> سازمان شما</h1>
+          <h1>{t('سیستم عامل هوشمند')}<br/>{t('روابط')} <em>{t('استراتژیک')}</em> {t('سازمان شما')}</h1>
           <p className="ab-sub">
-            از شبکه ارتباطات کسب‌وکار تا اقدام عملی — همه‌چیز در یک داشبورد فرماندهی یکپارچه،
-            مبتنی بر داده، با شفافیت کامل و کنترل دسترسی سازمانی.
+            {t('از شبکه ارتباطات کسب‌وکار تا اقدام عملی — همه‌چیز در یک داشبورد فرماندهی یکپارچه، مبتنی بر داده، با شفافیت کامل و کنترل دسترسی سازمانی.')}
           </p>
           <div className="auth-features">
             {FEATURES.map(f=>(
@@ -47,9 +49,9 @@ export function AuthShell({children}:{children:React.ReactNode}){
           </div>
         </div>
         <div className="ab-foot">
-          <span><ShieldCheck size={13}/> احراز هویت امن + دومرحله‌ای</span>
-          <span><Building2 size={13}/> محدودهٔ سازمانی</span>
-          <span><BarChart3 size={13}/> ممیزی کامل</span>
+          <span><ShieldCheck size={13}/> {t('احراز هویت امن + دومرحله‌ای')}</span>
+          <span><Building2 size={13}/> {t('محدودهٔ سازمانی')}</span>
+          <span><BarChart3 size={13}/> {t('ممیزی کامل')}</span>
         </div>
       </aside>
     </main>

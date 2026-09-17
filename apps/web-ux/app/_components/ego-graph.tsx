@@ -3,6 +3,7 @@ import Link from 'next/link';
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link2, Building2, User, Maximize2, X } from 'lucide-react';
+import { t } from '../_lib/i18n';
 
 export type EgoNode = {
   id: string;
@@ -233,7 +234,7 @@ export function EgoGraph({ center, centerHref, nodes, height = 360 }: {
     const centerSub = center.sub ? fitText(center.sub, 8.2, CENTER_R * 2 - 16) : null;
     const nameLineY = centerName.length > 1 ? [CY - 5, CY + 5.5] : [CY - 1];
     return (
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`گراف ارتباطات ${center.name}`}
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${t('گراف ارتباطات')} ${center.name}`}
         style={{ width: widthCss, height: 'auto', display: 'block' }}>
         <defs>
           <radialGradient id="ego-center-grad" cx="50%" cy="40%" r="70%">
@@ -348,7 +349,7 @@ export function EgoGraph({ center, centerHref, nodes, height = 360 }: {
             {centerSub.text}
           </text>
         )}
-        {centerHref && <Link href={centerHref} aria-label={`مشاهده ${center.name}`}>
+        {centerHref && <Link href={centerHref} aria-label={`${t('مشاهده')} ${center.name}`}>
           <circle cx={CX} cy={CY} r={CENTER_R + 11} fill="transparent"
             style={{ pointerEvents: 'all', cursor: 'pointer' }} />
         </Link>}
@@ -358,36 +359,36 @@ export function EgoGraph({ center, centerHref, nodes, height = 360 }: {
 
   const legend = ring.length > 0 ? (
     <div className="ego-legend">
-      <span className="chip info"><Building2 size={12}/> سازمان</span>
-      <span className="chip" style={{ color: 'var(--teal)', borderColor: 'color-mix(in srgb,var(--teal) 32%,transparent)', background: 'color-mix(in srgb,var(--teal) 12%,transparent)' }}><User size={12}/> شخص</span>
-      <span className="chip success">فعال</span>
-      <span className="chip warning">در خطر</span>
-      <span className="chip neutral">عضویت</span>
+      <span className="chip info"><Building2 size={12}/> {t('سازمان')}</span>
+      <span className="chip" style={{ color: 'var(--teal)', borderColor: 'color-mix(in srgb,var(--teal) 32%,transparent)', background: 'color-mix(in srgb,var(--teal) 12%,transparent)' }}><User size={12}/> {t('شخص')}</span>
+      <span className="chip success">{t('فعال')}</span>
+      <span className="chip warning">{t('در خطر')}</span>
+      <span className="chip neutral">{t('عضویت')}</span>
     </div>
   ) : null;
 
   const empty = ring.length === 0 ? (
-    <div className="ego-empty"><Link2 size={20}/> هنوز ارتباطی برای این موجودیت ثبت نشده است.</div>
+    <div className="ego-empty"><Link2 size={20}/> {t('هنوز ارتباطی برای این موجودیت ثبت نشده است.')}</div>
   ) : null;
 
   const fsOverlay = fs ? (
     createPortal(
-      <div className="ego-fs" role="dialog" aria-modal="true" aria-label={`گراف ارتباطات تمام‌صفحه ${center.name}`}
+      <div className="ego-fs" role="dialog" aria-modal="true" aria-label={`${t('گراف ارتباطات تمام‌صفحه')} ${center.name}`}
         onMouseDown={(e) => { if ((e.target as HTMLElement).classList.contains('ego-fs')) setFs(false); }}>
         <div className="ego-fs-card">
           <header className="ego-fs-head">
             <div>
-              <span className="eyebrow">نمای تمام‌صفحه</span>
+              <span className="eyebrow">{t('نمای تمام‌صفحه')}</span>
               <h2>گراف ارتباطات {center.name}</h2>
             </div>
-            <button className="ego-fs-close" onClick={() => setFs(false)} aria-label="بستن نمای تمام‌صفحه" title="بستن (Esc)">
+            <button className="ego-fs-close" onClick={() => setFs(false)} aria-label={t('بستن نمای تمام‌صفحه')} title={t('بستن (Esc)')}>
               <X size={16}/>
             </button>
           </header>
           <div className="ego-fs-body">{svgBody('min(1180px,96vw)')}</div>
           {legend}
           {empty}
-          <p className="ego-fs-note">برای جزئیات هر گره روی آن کلیک کنید — بستن با دکمهٔ بالا یا کلید Esc.</p>
+          <p className="ego-fs-note">{t('برای جزئیات هر گره روی آن کلیک کنید — بستن با دکمهٔ بالا یا کلید Esc.')}</p>
         </div>
       </div>,
       document.body
@@ -398,8 +399,8 @@ export function EgoGraph({ center, centerHref, nodes, height = 360 }: {
     <>
       <div className="ego-card">
         {ring.length > 0 && (
-          <button className="ego-fs-btn" onClick={() => setFs(true)} title="نمایش تمام‌صفحهٔ گراف ارتباطات"
-            aria-label={`نمایش تمام‌صفحهٔ گراف ارتباطات ${center.name}`}>
+          <button className="ego-fs-btn" onClick={() => setFs(true)} title={t('نمایش تمام‌صفحهٔ گراف ارتباطات')}
+            aria-label={`${t('نمایش تمام‌صفحهٔ گراف ارتباطات')} ${center.name}`}>
             <Maximize2 size={13}/>
           </button>
         )}

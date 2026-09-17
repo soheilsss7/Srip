@@ -1,6 +1,7 @@
 // Shared visual encoding + shape drawing for the network graph (Web).
 // Single source of truth for node/edge colors, shapes, risk and weight styling.
 
+import { t } from '../_lib/i18n';
 export type GNodeType = 'organization' | 'person' | 'project';
 export type GEdgeKind = 'membership' | 'project' | 'relationship' | 'person_relationship';
 
@@ -44,15 +45,15 @@ export interface GGraph {
 /* P3: رنگ دسته‌های عموم‌ها — هم‌راستا با PUBLICS-MASTER-PLAN (۶ دسته) */
 export const PUBLIC_CATEGORY_ORDER = ['INTERNAL', 'INSTITUTIONAL', 'ACADEMIC', 'ECONOMIC', 'MEDIA', 'ECOSYSTEM'] as const;
 export const PUBLIC_CATEGORY_META: Record<string, { fa: string; color: string }> = {
-  INTERNAL:      { fa: 'داخلی',                       color: '#2457D6' },
-  INSTITUTIONAL: { fa: 'نهادی و حاکمیتی',              color: '#7A5AF8' },
-  ACADEMIC:      { fa: 'علمی، دانشگاهی و پژوهشی',     color: '#0E9F6E' },
-  ECONOMIC:      { fa: 'اقتصادی و سرمایه‌گذاری',      color: '#B45309' },
-  MEDIA:         { fa: 'رسانه‌ای و عمومی',             color: '#DC2626' },
-  ECOSYSTEM:     { fa: 'اکوسیستم فناوری و صنعت',      color: '#0891B2' },
+  INTERNAL:      { fa: t('داخلی'),                       color: '#2457D6' },
+  INSTITUTIONAL: { fa: t('نهادی و حاکمیتی'),              color: '#7A5AF8' },
+  ACADEMIC:      { fa: t('علمی، دانشگاهی و پژوهشی'),     color: '#0E9F6E' },
+  ECONOMIC:      { fa: t('اقتصادی و سرمایه‌گذاری'),      color: '#B45309' },
+  MEDIA:         { fa: t('رسانه‌ای و عمومی'),             color: '#DC2626' },
+  ECOSYSTEM:     { fa: t('اکوسیستم فناوری و صنعت'),      color: '#0891B2' },
 };
 export const EGO_COLOR = '#D97706';
-export const EGO_FA = 'خودِ شرکت';
+export const EGO_FA = t('خودِ شرکت');
 export function nodeCategoryColor(n: GNode): string | null {
   if (!n.category) return null;
   return PUBLIC_CATEGORY_META[n.category]?.color ?? null;
@@ -99,18 +100,18 @@ export interface StatusMeta {
   width: number;
 }
 
-export const STATUS_META: Record<string, StatusMeta> = {
-  ACTIVE:      { label: 'فعال',     color: '#0E9F6E', dash: null,    icon: 'check',  width: 2.4 },
-  AT_RISK:     { label: 'در ریسک',  color: '#D97706', dash: [7, 4],  icon: 'alert',  width: 2.6 },
-  WATCH:       { label: 'در ریسک',  color: '#D97706', dash: [7, 4],  icon: 'alert',  width: 2.6 },
-  DORMANT:     { label: 'خواب',     color: '#8A94A6', dash: [2, 4],  icon: 'pause',  width: 2.0 },
-  ARCHIVED:    { label: 'بایگانی',  color: '#DC2626', dash: [4, 3],  icon: 'x',      width: 1.8 },
-  PROSPECTIVE: { label: 'آینده',    color: '#2563EB', dash: [5, 3],  icon: 'plus',   width: 2.2 },
-};
+export const STATUS_META: Record<string, StatusMeta> = lt({
+  ACTIVE:      { label: t('فعال'),     color: '#0E9F6E', dash: null,    icon: 'check',  width: 2.4 },
+  AT_RISK:     { label: t('در ریسک'),  color: '#D97706', dash: [7, 4],  icon: 'alert',  width: 2.6 },
+  WATCH:       { label: t('در ریسک'),  color: '#D97706', dash: [7, 4],  icon: 'alert',  width: 2.6 },
+  DORMANT:     { label: t('خواب'),     color: '#8A94A6', dash: [2, 4],  icon: 'pause',  width: 2.0 },
+  ARCHIVED:    { label: t('بایگانی'),  color: '#DC2626', dash: [4, 3],  icon: 'x',      width: 1.8 },
+  PROSPECTIVE: { label: t('آینده'),    color: '#2563EB', dash: [5, 3],  icon: 'plus',   width: 2.2 },
+});
 
-export const DEFAULT_STATUS: StatusMeta = {
-  label: 'نامشخص', color: '#94A3B8', dash: null, icon: 'pause', width: 1.8,
-};
+export const DEFAULT_STATUS: StatusMeta = lt({
+  label: t('نامشخص'), color: '#94A3B8', dash: null, icon: 'pause', width: 1.8,
+});
 
 /** Effective status of an edge — explicit status, else derived from risk. */
 export function edgeStatus(e: GEdge): string {
@@ -203,13 +204,13 @@ export function drawNode(
 export function kindLabel(kind: GEdgeKind): string {
   switch (kind) {
     case 'membership':
-      return 'عضویت (شخص→سازمان)';
+      return t('عضویت (شخص→سازمان)');
     case 'project':
-      return 'پروژه (پروژه→سازمان)';
+      return t('پروژه (پروژه→سازمان)');
     case 'relationship':
-      return 'رابطهٔ سازمانی';
+      return t('رابطهٔ سازمانی');
     case 'person_relationship':
-      return 'رابطهٔ شخصی';
+      return t('رابطهٔ شخصی');
     default:
       return kind;
   }
@@ -219,7 +220,7 @@ export function edgeDisplayLabel(e: GEdge): string {
   const rel = e.label ? `${e.label}` : kindLabel(e.kind);
   const weight = Number.isFinite(e.weight) ? String(e.weight) : '—';
   const risk = Number.isFinite(e.risk) ? String(e.risk) : '—';
-  return `${rel} · وزن ${weight} · ریسک ${risk}`;
+  return `${rel} ${t('· وزن')} ${weight} ${t('· ریسک')} ${risk}`;
 }
 
 export function nodeDisplayName(n: GNode): string {

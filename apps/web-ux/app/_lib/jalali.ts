@@ -100,11 +100,13 @@ export function saturdayFirst(gy: number, gm: number, gd: number) {
   return (weekday(gy, gm, gd) + 1) % 7;
 }
 
+import { getLocale } from './i18n';
 export const JALALI_MONTHS = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
 export const WEEKDAYS_SAT = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه'];
 
 const FA_DIGITS = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
 export function faNum(value: number | string): string {
+  if (getLocale() === 'en') return String(value);
   return String(value).replace(/\d/g, (d) => FA_DIGITS[Number(d)]);
 }
 
@@ -115,6 +117,10 @@ export function faNum(value: number | string): string {
  * و خودمان با ترتیب دستوری فارسی می‌چینیم — مستقل از ICU و نسخهٔ مرورگر.
  */
 export function faFullDate(d: Date = new Date()): string {
+  if (getLocale() === 'en') {
+    try { return d.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }); }
+    catch { return d.toDateString(); }
+  }
   const j = toJalali(d.getFullYear(), d.getMonth() + 1, d.getDate());
   const wd = WEEKDAYS_SAT[saturdayFirst(d.getFullYear(), d.getMonth() + 1, d.getDate())];
   return `${wd} ${faNum(j.jd)} ${JALALI_MONTHS[j.jm - 1]} ${faNum(j.jy)}`;

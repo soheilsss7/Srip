@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../_lib/api';
 import { AlertTriangle, BellRing, CalendarClock, Link2, RefreshCw, SlidersHorizontal } from 'lucide-react';
+import { t } from '../_lib/i18n';
 
 export type NudgeType = {
   kind: string;
@@ -20,11 +21,11 @@ export type NudgeType = {
   data?: any;
 };
 
-const TYPE_FA: Record<string, string> = {
-  STALE_ANSWER: 'ارزیابی کهنه',
-  MANUAL_ACTIVE: 'تنظیم دستی',
-  REVIEW: 'بازبینی',
-};
+const TYPE_FA: Record<string, string> = lt({
+  STALE_ANSWER: t('ارزیابی کهنه'),
+  MANUAL_ACTIVE: t('تنظیم دستی'),
+  REVIEW: t('بازبینی'),
+});
 const TYPE_ICON: Record<string, React.ReactNode> = {
   STALE_ANSWER: <CalendarClock size={13} />,
   MANUAL_ACTIVE: <SlidersHorizontal size={13} />,
@@ -69,10 +70,10 @@ export function NudgeBanner({ items, loading, onRefresh, compact }: { items: Nud
       <div className="nudge-banner-head">
         <span className="stat-ico ic-gold"><BellRing size={14} /></span>
         <div>
-          <strong>امتیازها نیاز به توجه دارند</strong>
+          <strong>{t('امتیازها نیاز به توجه دارند')}</strong>
           <small>{items.length} مورد — پاسخ کهنه، دادهٔ ناقص یا تنظیم دستی</small>
         </div>
-        {onRefresh && <button className="btn btn-ghost btn-sm" onClick={onRefresh} aria-label="بازخوانی"><RefreshCw size={13} /></button>}
+        {onRefresh && <button className="btn btn-ghost btn-sm" onClick={onRefresh} aria-label={t('بازخوانی')}><RefreshCw size={13} /></button>}
       </div>
       <div className={`nudge-banner-list${compact ? ' compact' : ''}`}>
         {items.slice(0, compact ? 3 : 8).map((n, i) => (
@@ -83,7 +84,7 @@ export function NudgeBanner({ items, loading, onRefresh, compact }: { items: Nud
               {n.age != null && <small>{n.age} روز پیش</small>}
             </div>
             <button className="btn btn-secondary btn-sm" disabled={busy === n.subjectId} onClick={() => remind(n)}>
-              <BellRing size={12} /> {busy === n.subjectId ? 'ارسال…' : 'یادآوری'}
+              <BellRing size={12} /> {busy === n.subjectId ? t('ارسال…') : t('یادآوری')}
             </button>
           </div>
         ))}
@@ -102,7 +103,7 @@ export function NudgeList({ items, refresh }: { items: NudgeType[]; refresh: () 
     }
     return Array.from(m.entries());
   }, [items]);
-  if (!items.length) return <p className="criteria-saved">هیچ موردی برای یادآوری نیست — داده‌ها تازه‌اند.</p>;
+  if (!items.length) return <p className="criteria-saved">{t('هیچ موردی برای یادآوری نیست — داده‌ها تازه‌اند.')}</p>;
   return (
     <div className="nudge-list">
       {grouped.map(([key, rows]) => {
@@ -111,7 +112,7 @@ export function NudgeList({ items, refresh }: { items: NudgeType[]; refresh: () 
           <div key={key} className="nudge-row">
             <div>
               <a href={hrefFor(first.subjectType, first.subjectId)} className="t-primary" style={{ fontWeight: 700 }}>{first.body.split('—')[0].trim()}</a>
-              <small style={{ display: 'block' }}>{rows.map((r) => `${TYPE_FA[r.kind] ?? r.kind}: ${r.body}`).join('؛ ')}</small>
+              <small style={{ display: 'block' }}>{rows.map((r) => `${TYPE_FA[r.kind] ?? r.kind}: ${r.body}`).join(t('؛'))}</small>
             </div>
             <button className="btn btn-secondary btn-sm" onClick={() => api(`/criteria/nudges/${first.subjectType}/${first.subjectId}`, { method: 'POST', body: JSON.stringify({ kind: 'REVIEW' }) }).then(refresh).catch(() => undefined)}>
               <BellRing size={12} /> یادآوری دوباره
