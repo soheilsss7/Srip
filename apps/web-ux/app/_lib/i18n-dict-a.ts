@@ -755,4 +755,5 @@ export const EN_DICT_A: Record<string, string> = {
   'خروجی صحنه': 'Export scene',
   'خروجی مورد انتظار از این جلسه چیست؟': 'What is the expected outcome of this meeting?',
   'خصوصی': 'Private',
+  'خط · سیاهه روابط': 'Line · relationship ledger',
 };

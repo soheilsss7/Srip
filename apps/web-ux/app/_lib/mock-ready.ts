@@ -74,8 +74,8 @@ export function useSwControlled(): boolean {
     const upd = () => setControlled(swControllerReady());
     upd();
     navigator.serviceWorker.addEventListener('controllerchange', upd);
-    const t = setInterval(upd, 1000); /* شمارش معکوس فوری برای حالت‌های مرزی */
-    const stop = setTimeout(() => clearInterval(t), 15000);
+    const t = setInterval(upd, 1000); /* نظارت پیوسته — دانلود اولیهٔ SW روی اینترنت کند ممکن است ده‌ها ثانیه طول بکشد */
+    const stop = setTimeout(() => clearInterval(t), 120000);
     return () => { navigator.serviceWorker.removeEventListener('controllerchange', upd); clearInterval(t); clearTimeout(stop); };
   }, []);
   return controlled;

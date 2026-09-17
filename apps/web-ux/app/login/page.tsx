@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import {FormEvent,useState} from 'react';
+import {FormEvent,useEffect,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {apiPost,setSession} from '../_lib/api';
 import {AuthShell} from '../_components/auth-shell';
@@ -12,11 +12,17 @@ import { t } from '../_lib/i18n';
 export default function Login(){
  const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[otp,setOtp]=useState('');
  const [mfa,setMfa]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const [slowWait,setSlowWait]=useState(false),[gaveUp,setGaveUp]=useState(false);
  const mockReady=useMockApiReady();
  const swControlled=useSwControlled();
  const router=useRouter();
  const waitingSw=MOCK_PAGES&&!swControlled;
- const canSubmit=mockReady&&!waitingSw&&!busy;
+ const canSubmit=mockReady&&(!waitingSw||gaveUp)&&!busy;
+ /* روی هاست واقعی، دانلود اولیهٔ سرویس‌کارگر (~۱٫۲MB) روی اینترنت کند ممکن است
+    ده‌ها ثانیه طول بکشد؛ بعد از ۱۲ ثانیه راهنمای دقیق نشان می‌دهیم و بعد از
+    ۳۰ ثانیه دکمه را آزاد می‌کنیم تا کاربر به‌جای دکمهٔ مرده، پیام سرور را ببیند. */
+ useEffect(()=>{ if(!waitingSw||slowWait) return; const t=setTimeout(()=>setSlowWait(true),12000); return ()=>clearTimeout(t); },[waitingSw,slowWait]);
+ useEffect(()=>{ if(!waitingSw||gaveUp) return; const t=setTimeout(()=>setGaveUp(true),30000); return ()=>clearTimeout(t); },[waitingSw,gaveUp]);
  const demoError=(m:string)=>MOCK_PAGES&&/404|Failed to fetch|خطای سرور/.test(m)?t('سرویس در حال راه‌اندازی است؛ یک لحظه صبر کنید و دوباره تلاش کنید.'):m;
 
  async function finish(d:any){
@@ -25,7 +31,7 @@ export default function Login(){
  }
  async function submit(e:FormEvent){
   e.preventDefault();
-  if(waitingSw){ setError(t('سامانه در حال آماده‌سازی اتصال است؛ چند لحظه صبر کنید.')); return; }
+  if(waitingSw&&!gaveUp){ setError(t('سامانه در حال آماده‌سازی اتصال است؛ چند لحظه صبر کنید.')); return; }
   setBusy(true); setError('');
   const ident=email.trim().toLowerCase();
   try{
@@ -87,7 +93,8 @@ export default function Login(){
           {busy?t('در حال احراز هویت…'):t('ورود امن')}
         </button>
         {!mockReady&&<span className="auth-sec-note" role="status">{t('در حال آماده‌سازی محیط… (کمتر از یک لحظه)')}</span>}
-        {waitingSw&&<span className="auth-sec-note" role="status">{t('در حال برقراری اتصال به سامانه… اگر بیش از چند ثانیه طول کشید، صفحه را یک‌بار به‌صورت عادی رفرش کنید.')}</span>}
+        {waitingSw&&!slowWait&&<span className="auth-sec-note" role="status">{t('در حال برقراری اتصال به سامانه… بار اول چند لحظه طول می‌کشد.')}</span>}
+        {waitingSw&&slowWait&&<span className="auth-sec-note" role="status">{t('اتصال کند است — بار اول فایل سرویس‌دهندهٔ داده (حدود ۱٫۲ مگابایت) دانلود می‌شود و روی اینترنت کند ممکن است تا یک دقیقه طول بکشد؛ دکمهٔ ورود خودکار فعال می‌شود. اگر بیشتر از یک دقیقه گذشت: (۱) آدرس باید با https:// شروع شود، (۲) پنجرهٔ ناشناس/حالت خصوصی مرورگر نباشد، (۳) یک‌بار با Ctrl+Shift+R رفرش کنید.')}</span>}
       </div>
       <p className="auth-note">
         <ShieldCheck size={12} style={{verticalAlign:'-2px'}}/> دسترسی‌ها بر اساس نقش و محدودهٔ سازمانی شما تعیین می‌شود.

@@ -1,7 +1,5 @@
 /* دیکشنری انگلیسی فاز ۴/۲۳ — بخش 3 از 3 (تولیدشده توسط scripts/_i18n-gen-dict.py) */
 export const EN_DICT_C: Record<string, string> = {
-  'مسدود': 'Blocked',
-  'مسدود).': 'blocked).',
   'مسیر': 'Path',
   'مسیر (مبدأ ← مقصد)': 'Path (origin → target)',
   'مسیر / تمرکز': 'Path / focus',
@@ -754,4 +752,6 @@ export const EN_DICT_C: Record<string, string> = {
   'هم‌حوزهٔ فعالیت': 'Same field of activity',
   'با اتصال، یک سازمان در محدودهٔ سازمانی شما ساخته می‌شود؛ دادهٔ مستأجرهای دیگر هرگز نمایش داده نمی‌شود.': 'Connecting creates an organization inside your organizational scope; other tenants’ data is never revealed.',
   'در حال اتصال…': 'Connecting…',
+  'در حال برقراری اتصال به سامانه… بار اول چند لحظه طول می‌کشد.': 'Connecting to the service… the first load takes a few moments.',
+  'اتصال کند است — بار اول فایل سرویس‌دهندهٔ داده (حدود ۱٫۲ مگابایت) دانلود می‌شود و روی اینترنت کند ممکن است تا یک دقیقه طول بکشد؛ دکمهٔ ورود خودکار فعال می‌شود. اگر بیشتر از یک دقیقه گذشت: (۱) آدرس باید با https:// شروع شود، (۲) پنجرهٔ ناشناس/حالت خصوصی مرورگر نباشد، (۳) یک‌بار با Ctrl+Shift+R رفرش کنید.': 'Slow connection — on first visit the data-service file (~1.2 MB) is downloaded, which can take up to a minute on a slow link; the sign-in button enables automatically. If more than a minute passes: (1) the address must start with https://, (2) don’t use a private/incognito window, (3) refresh once with Ctrl+Shift+R.',
 };

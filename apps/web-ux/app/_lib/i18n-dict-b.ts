@@ -1,6 +1,5 @@
 /* دیکشنری انگلیسی فاز ۴/۲۳ — بخش 2 از 3 (تولیدشده توسط scripts/_i18n-gen-dict.py) */
 export const EN_DICT_B: Record<string, string> = {
-  'خط · سیاهه روابط': 'Line · relationship ledger',
   'خط زمانی': 'Timeline',
   'خط زمانی رابطه': 'Relationship timeline',
   'خط قرمز': 'Red line',
@@ -755,4 +754,6 @@ export const EN_DICT_B: Record<string, string> = {
   'مسترپلن فاز ۳/۲۱ — استقرار ترکیبی: هستهٔ استاتیک می‌ماند، سرویس اعلان اختیاری': 'Masterplan phase 3/21 — hybrid deployment: static core stays, notification service optional',
   'مستقیم در زنجیرهٔ ارزش/مبادله': 'Directly in the value/exchange chain',
   'مستقیماً معامله/پروژه/تأمین': 'Direct deal/project/supply',
+  'مسدود': 'Blocked',
+  'مسدود).': 'blocked).',
 };
