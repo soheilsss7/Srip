@@ -19,7 +19,7 @@ const PORT = Number(process.env.MOCK_API_PORT || 4000);
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.16.04';
+const DEMO_MOCK_VERSION = '2026.09.17.01';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -7376,6 +7376,102 @@ const server=http.createServer(async(req,res)=>{
       channel:'IN_APP',priority:'MEDIUM',createdAt:nowIso(),readAt:null,data:{referralId:r.id}});
     return json(res,201,{...r,intermediary:iv,audit:auditRes,
       message:person?'درخواست رضایت واسطه ثبت شد؛ معرفی فقط پس از پذیرش صریح او فعال می‌شود.':'معرفی مستقیم ثبت شد؛ روند پذیرش و پیگیری از فهرست معرفی‌ها فعال شد.'});
+  }
+  /* ─── مسترپلن فاز ۴/۲۵: دیتابیس روابط بیرونی (الگوی RelSci/TSC.ai) ───
+     «محصول دادهٔ جدا»: کاتالوگ فقط-خواندنیِ نهادهای عمومی (تنظیم‌گر/نهاد/
+     دانشگاه/بازار سرمایه/اکوسیستم) با پایهٔ رکورد عمومی — جدا از دادهٔ
+     مستأجرها؛ سهمیه و متر مصرف جدا (اشتراک محصول)؛ «اتصال» نهاد به شبکهٔ
+     خودتان سازمانی در محدودهٔ همان مستأجر می‌سازد. حریم خصوصی: فقط رکورد
+     سازمانی عمومی — هیچ دادهٔ شخص خصوصی و هیچ نشانی از مستأجرهای دیگر. */
+  const DIRECTORY_PREFIXES=[['org-reg','REGULATOR'],['org-inst','INSTITUTION'],['org-ac','ACADEMIA'],['org-eco','CAPITAL_MARKET'],['org-ecx','ECOSYSTEM']];
+  const DIRECTORY_QUOTA=300; /* جست‌وجو در ماه — اشتراک directory-basic */
+  const DIRECTORY_BRANCH_TIES=[
+    ['org-ecx-utpark','org-ac-tehran','نام پارک: «پارک علم و فناوری دانشگاه تهران»'],
+    ['org-ecx-innofactory','org-ecx-pardis','نام شعبه: «کارخانهٔ نوآوری (شعبهٔ پردیس)»'],
+    ['org-eco-ifb','org-eco-tse','هر دو زیر چتر بازار سرمایهٔ ایران'],
+  ];
+  const directoryEntities=()=>ORGS.filter(o=>DIRECTORY_PREFIXES.some(([pre])=>o.id.startsWith(pre))).map(o=>({
+    id:o.id,name:o.name,type:o.type,industry:o.industry??null,
+    category:(DIRECTORY_PREFIXES.find(([pre])=>o.id.startsWith(pre))??[null,null])[1],
+    jurisdiction:'ایران',dataBasis:'PUBLIC_RECORD',
+    source:{name:'سند نهادهای عمومی SRIP (رکورد عمومی)',license:'عمومی — قابل استناد با ذکر منبع'},
+    verifiedAt:o.createdAt??null}));
+  const dirUsageKey=()=>`tenant:${orgTenant(orgById(primaryOrgId(authUser)??visibleOrgIds(req)[0]??null))??'personal'}`;
+  const dirUsageRow=()=>{
+    const period=new Date().toISOString().slice(0,7);
+    DB.directoryUsage=DB.directoryUsage??{};
+    let row=DB.directoryUsage[dirUsageKey()];
+    if(!row||row.period!==period){ row={period,queries:0,links:0}; DB.directoryUsage[dirUsageKey()]=row; }
+    return row;
+  };
+  const dirLinkedOrg=(dirId)=>{
+    const tid=orgTenant(orgById(primaryOrgId(authUser)??visibleOrgIds(req)[0]??null));
+    return ORGS.find(o=>o.directorySource?.directoryId===dirId&&orgTenant(o)===tid)??null;
+  };
+  if(is('/directory/entities')&&method==='GET'){
+    const u=new URL(req.url,'http://x');
+    const search=String(u.searchParams.get('search')??'').trim().toLowerCase();
+    const category=String(u.searchParams.get('category')??'').trim().toUpperCase();
+    const page=Math.max(1,Number(u.searchParams.get('page'))||1);
+    const pageSize=Math.min(50,Math.max(5,Number(u.searchParams.get('pageSize'))||20));
+    const row=dirUsageRow();
+    if(row.queries>=DIRECTORY_QUOTA) return json(res,429,{code:'QUOTA_EXCEEDED',
+      message:`سهمیهٔ جست‌وجوی دیتابیس بیرونی این ماه پر شده (${row.queries}/${DIRECTORY_QUOTA}) — برای ارتقای اشتراک directory-basic با فروش تماس بگیرید.`,
+      usage:{...row,quota:DIRECTORY_QUOTA,remaining:0,plan:'directory-basic'}});
+    row.queries++; saveDb();
+    let items=directoryEntities();
+    if(search) items=items.filter(e=>e.name.toLowerCase().includes(search)||(e.industry??'').toLowerCase().includes(search));
+    if(category&&category!=='ALL') items=items.filter(e=>e.category===category);
+    const total=items.length;
+    items=items.slice((page-1)*pageSize,page*pageSize).map(e=>{
+      const linked=dirLinkedOrg(e.id);
+      return {...e,alreadyLinked:!!linked,linkedOrgId:linked?.id??null,linkedOrgName:linked?.name??null};
+    });
+    return json(res,200,{items,total,page,pageSize,
+      catalog:{categories:DIRECTORY_PREFIXES.map(([,c])=>c),entityCount:directoryEntities().length},
+      usage:{...row,quota:DIRECTORY_QUOTA,remaining:Math.max(0,DIRECTORY_QUOTA-row.queries),plan:'directory-basic'},
+      privacyNote:'فقط رکورد سازمانی عمومی؛ دادهٔ شخص خصوصی در کاتالوگ نیست و مستأجرهای دیگر دیده نمی‌شوند.'});
+  }
+  const dirEnt=match('/directory/entities/:id');
+  if(dirEnt&&(method==='GET'||method==='POST')){
+    const ent=directoryEntities().find(e=>e.id===dirEnt[0]);
+    if(!ent) return json(res,404,{message:'این نهاد در دیتابیس بیرونی نیست.'});
+    if(method==='GET'){
+      const sameIndustry=directoryEntities().filter(e=>e.id!==ent.id&&e.industry&&e.industry===ent.industry).slice(0,6)
+        .map(e=>({directoryId:e.id,name:e.name,kind:'SAME_INDUSTRY',basis:'دسته‌بندی عمومی حوزهٔ فعالیت'}));
+      const branch=DIRECTORY_BRANCH_TIES.filter(t=>t[0]===ent.id||t[1]===ent.id)
+        .map(t=>{const other=t[0]===ent.id?t[1]:t[0];const o=directoryEntities().find(e=>e.id===other);
+          return o?{directoryId:o.id,name:o.name,kind:'STRUCTURAL',basis:t[2]}:null;}).filter(Boolean);
+      const linked=dirLinkedOrg(ent.id);
+      return json(res,200,{...ent,ties:[...branch,...sameIndustry],
+        alreadyLinked:!!linked,linkedOrgId:linked?.id??null,linkedOrgName:linked?.name??null});
+    }
+    /* POST = اتصال نهاد به شبکهٔ خودتان (سازمانی در محدودهٔ همان مستأجر) */
+    const linked=dirLinkedOrg(ent.id);
+    if(linked) return json(res,200,{...ent,alreadyLinked:true,linkedOrgId:linked.id,linkedOrgName:linked.name,
+      message:'این نهاد پیش‌تر به شبکهٔ شما متصل است.'});
+    const primary=orgById(primaryOrgId(authUser)??visibleOrgIds(req)[0]??null);
+    const tid=orgTenant(primary)??(DEMO_USER_IDS.has(authUser.id)?'demo':(authUser.isOwner?'real':'personal'));
+    const o={id:`org-${Date.now()}`,name:ent.name,type:ent.type,industry:ent.industry,country:'ایران',parentOrganizationId:null,
+      tenant:tid,createdAt:nowIso(),
+      directorySource:{directoryId:ent.id,category:ent.category,dataBasis:ent.dataBasis,
+        sourceName:ent.source.name,linkedAt:nowIso(),linkedBy:authUser.id}};
+    ORGS.push(o);
+    if(!authUser.isOwner&&Array.isArray(authUser.accessibleOrganizationIds)&&!authUser.accessibleOrganizationIds.includes(o.id)) authUser.accessibleOrganizationIds.push(o.id);
+    const row=dirUsageRow(); row.links++; saveDb();
+    audit(req,'CREATE','organization',o.id,'OK',{meta:{fromDirectory:true,directoryId:ent.id,category:ent.category,tenant:tid}});
+    await autoRunWorkflows('Organization',o.id,'ORGANIZATION_CREATED',{organization:{id:o.id,name:o.name,type:o.type,industry:o.industry,country:o.country,fromDirectory:true}});
+    NOTIFICATIONS.unshift({id:`n-dir-${Date.now()}`,userId:authUser.id,type:'INFO',title:'دیتابیس بیرونی: نهاد متصل شد',
+      body:`«${ent.name}» از دیتابیس روابط بیرونی به شبکهٔ شما متصل شد — حالا می‌توانید رابطه، تعامل و برنامهٔ عموم‌ها برایش تعریف کنید.`,
+      channel:'IN_APP',priority:'MEDIUM',createdAt:nowIso(),readAt:null,data:{organizationId:o.id,directoryId:ent.id}});
+    return json(res,201,{...ent,alreadyLinked:true,linkedOrgId:o.id,linkedOrgName:o.name,
+      message:'نهاد به شبکهٔ شما متصل شد و در فهرست سازمان‌ها قابل استفاده است.'});
+  }
+  if(is('/directory/usage')&&method==='GET'){
+    const row=dirUsageRow();
+    return json(res,200,{...row,quota:DIRECTORY_QUOTA,remaining:Math.max(0,DIRECTORY_QUOTA-row.queries),plan:'directory-basic',
+      catalogSize:directoryEntities().length,
+      note:'مصرف دیتابیس بیرونی جدا از دادهٔ سازمانی شما شمارش می‌شود (اشتراک ماهانه).'});
   }
   if(is('/core-domain/referrals/agent/runs')&&method==='GET'){
     const ids=visibleOrgIds(req);

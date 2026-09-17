@@ -41,6 +41,7 @@ export const NAV_ZONES: readonly NavZone[] = lt([
     ['/organizations', t('سازمان‌ها'), 'organization.read'],
     ['/people', t('اشخاص'), 'person.read'],
     ['/enrichment', t('غنی‌سازی منابع رسمی'), 'organization.read'],
+    ['/directory', t('دیتابیس روابط بیرونی'), 'organization.read'],
   ]],
   [t('روابط'), t('وضعیت پیوندها و شبکه'), [
     ['/relationships', t('روابط'), 'relationship.read'],
@@ -190,6 +191,7 @@ export const GLOSS: Record<string, string> = lt({
   '/network': t('نقشهٔ گرافیکی روابط: خوشه‌ها، مسیرها و تحلیل شبکه'),
   '/interactions': t('هر تماس/جلسه/مکاتبه‌ای که روی یک رابطه رخ داده است'),
   '/referrals': t('معرفی‌ها و واسطه‌های رسیدن به یک سازمان'),
+  '/directory': t('کاتالوگ نهادهای عمومی برای جست‌وجو و اتصال به شبکهٔ روابط شما'),
   '/alerts': t('همهٔ هشدارهای فعال سیستم در یک نگاه — فیلترپذیر بر اساس ماژول و شدت'),
   '/intelligence': t('سیگنال‌های ریسک، فرصت‌های در جریان و پیشنهاد رشد'),
   '/board': t('گزارش هیئت‌مدیره: بازده سرمایهٔ رابطه، سرمایه، سلامت پرتفوی و ریسک تک‌نقطه'),

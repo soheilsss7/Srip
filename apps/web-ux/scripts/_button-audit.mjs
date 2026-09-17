@@ -22,6 +22,7 @@ const PAGES_ALL = [
   '/requirements', '/reports', '/admin', '/workspace',
   '/imports', '/gis', '/mcp', '/portal', '/p',
   '/ai', '/enrichment', '/developers', '/qbr', '/push',
+  '/referrals', '/directory',
 ];
 const PAGES_CORE = ['/', '/organizations', '/network', '/publics', '/relationships', '/actions', '/workflows', '/board'];
 const TENANTS = [

@@ -121,6 +121,7 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   '/calendar': <Calendar size={16}/>,
   '/requirements': <ListChecks size={16}/>,
   '/referrals': <UserCheck size={16}/>,
+  '/directory': <Database size={16}/>,
   '/approvals': <CheckCircle2 size={16}/>,
   '/settings': <Settings size={16}/>,
   '/sessions': <Timer size={16}/>,

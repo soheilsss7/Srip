@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.16.04';
+const DEMO_MOCK_VERSION = '2026.09.17.01';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -8906,6 +8906,244 @@ async function __handler(req, res) {
     saveDb();
     audit(req,'UPDATE','IntroSettings',p.id,'OK',{meta:row});
     return json(res,200,{personId:p.id,name:`${p.firstName??''} ${p.lastName??''}`.trim(),...row});
+  }
+  /* ─── مسترپلن فاز ۴/۲۴: عامل معرفی خودکار (الگوی Boomerang/عامل Rudy) ───
+     عامل سه‌گامِ Boomerang را قطعی و شفاف اجرا می‌کند:
+       ۱) یافتن مسیر گرم (همان موتور /network/warm-path — سلامت + تازگی + ریسک)
+       ۲) انتخاب واسطهٔ «مجاز» — فقط با intro-settings فعال و سقف ماهانهٔ باز؛
+          بدون رضایت صریح واسطه هیچ چیزی ارسال نمی‌شود (requestStatus=REQUESTED)
+       ۳) پیش‌نویس متن معرفی به لحن واسطه — موتور قالب‌محورِ قطعی، بدون LLM؛
+          فقط از دادهٔ واقعی رابطه + دستورالعمل (هدف/مجاز/ممنوع/مرز/مهلت) */
+  const agentMonth=()=>new Date().toISOString().slice(0,7);
+  const agentUsedThisMonth=(personId)=>(DB.referrals??[]).filter(r=>r.sourcePersonId===personId&&String(r.createdAt??'').slice(0,7)===agentMonth()).length;
+  const agentIntermediaryView=(p)=>{
+    const st=DB.introSettings?.[p.personId]??{active:true,maxRequestsPerMonth:2,preferredChannel:'EMAIL',note:null};
+    const used=agentUsedThisMonth(p.personId);
+    const remaining=Math.max(0,(st.maxRequestsPerMonth??0)-used);
+    const eligible=st.active!==false&&remaining>0;
+    const reason=!eligible?(st.active===false?'INTRO_INACTIVE':'CAP_REACHED'):'OK';
+    return {personId:p.personId,name:p.name,title:p.title??null,orgId:p.orgId,orgName:p.orgName,
+      influenceScore:p.influenceScore??null,champion:!!p.champion,
+      introSettings:st,usedThisMonth:used,remaining,eligible,reason,
+      preferredChannel:st.preferredChannel??'EMAIL'};
+  };
+  const agentDraft=(req,intermediary,fromOrg,toOrg,goal)=>{
+    /* پیش‌نویس به لحن واسطه — فقط از دادهٔ واقعی؛ هر ادعایی ساخته نمی‌شود */
+    const requester=authUser?.name??'همکارم';
+    const titles=intermediary.title?`، ${intermediary.title}`:'';
+    const allowed=['معرفی دو طرف','تعیین یک جلسهٔ مقدماتی'];
+    const forbidden=['قیمت و شرایط قرارداد','تعهدی فراتر از جلسه'];
+    const boundaries='حداکثر دو جلسهٔ مقدماتی؛ نتیجه حداکثر تا ۳۰ روز ثبت می‌شود.';
+    const g=String(goal||'').trim()||`جلسهٔ آشنایی و بررسی امکان همکاری ${fromOrg.name} و ${toOrg.name}`;
+    const message=`سلام،\nمن ${intermediary.name}${titles} از ${intermediary.orgName} هستم.\nدوستم ${requester} در ${fromOrg.name} درخواست کرد شما را به تیم ${toOrg.name} معرفی کنم؛ موضوع: ${g}.\nاین معرفی فقط دربارهٔ ${allowed.join(' و ')} است و دربارهٔ ${forbidden.join(' و ')} صحبتی نمی‌شود.\nاگر موافق باشید، یک جلسهٔ ۲۰ دقیقه‌ای مقدماتی هماهنگ می‌کنم؛ نتیجه تا ۳۰ روز مشخص می‌شود.\n${boundaries}`;
+    return {title:`معرفی ${fromOrg.name} به ${toOrg.name} با واسطه‌گری ${intermediary.name}`,
+      message,instruction:{goal:g,allowed,forbidden,boundaries,dueDays:30}};
+  };
+  const agentDirectDraft=(req,fromOrg,toOrg,goal)=>{
+    /* مسیر مستقیم: پیش‌نویس به لحن خودِ درخواست‌دهنده — بدون واسطه، بدون نیاز به رضایت ثالث */
+    const requester=authUser?.name??'کاربر';
+    const g=String(goal||'').trim()||`جلسهٔ آشنایی و بررسی امکان همکاری ${fromOrg.name} و ${toOrg.name}`;
+    const message=`سلام،\nمن ${requester} از ${fromOrg.name} هستم.\nخواستم خودم را به تیم ${toOrg.name} معرفی کنم؛ موضوع: ${g}.\nاگر موافق باشید، یک جلسهٔ ۲۰ دقیقه‌ای مقدماتی هماهنگ می‌کنیم؛ نتیجه تا ۳۰ روز مشخص می‌شود.`;
+    return {title:`معرفی مستقیم ${fromOrg.name} به ${toOrg.name}`,
+      message,instruction:{goal:g,allowed:['معرفی دو طرف','تعیین یک جلسهٔ مقدماتی'],forbidden:['قیمت و شرایط قرارداد'],boundaries:'حداکثر دو جلسهٔ مقدماتی؛ نتیجه حداکثر تا ۳۰ روز ثبت می‌شود.',dueDays:30}};
+  };
+  if(is('/core-domain/referrals/agent/plan')&&method==='POST'){
+    const b=await readBody(req);
+    const toId=String(b.targetOrganizationId??'');
+    const toOrg=orgById(toId);
+    if(!toOrg) return json(res,404,{message:'سازمان مقصد یافت نشد.'});
+    const fromId=primaryOrgId(authUser)??visibleOrgIds(req)[0]??null;
+    const fromOrg=orgById(fromId);
+    if(!fromOrg) return json(res,400,{message:'سازمان مبدأ شما قابل تشخیص نیست.'});
+    if(!inScope(req,fromId)&&!inScope(req,toId)) return json(res,403,{message:'مسیر خارج از محدودهٔ دسترسی شماست.'});
+    const out=warmPathsTo(req,fromId,toId,3);
+    /* عامل خودش کاندیدهای واسطه را از سازمان‌های میانیِ مسیرهای گرم می‌سازد
+       (فراتر از فهرست پرنفوذهای warm-path: هر شخصِ سازمان میانی، مرتب بر نفوذ) */
+    const midOrgs=[...new Set((out.paths??[]).flatMap(v=>(v.intermediaries??[]).map(i=>i.orgId)))].slice(0,5);
+    const seenP=new Set();
+    const rawCands=(out.intermediaryPeople??[]).concat(midOrgs.flatMap(oid=>
+      PEOPLE.filter(p2=>!p2.deletedAt&&p2.organizationId===oid)
+        .sort((a,b2)=>((b2.influenceScore??0)-(a.influenceScore??0))||((b2.champion?.flag?1:0)-(a.champion?.flag?1:0)))
+        .slice(0,3)
+        .map(p2=>({personId:p2.id,name:`${p2.firstName??''} ${p2.lastName??''}`.trim(),title:p2.title??null,orgId:oid,orgName:orgById(oid)?.name??'',influenceScore:p2.influenceScore??null,champion:!!p2.champion?.flag}))
+    )).filter(c=>{ if(!c.personId||seenP.has(c.personId)) return false; seenP.add(c.personId); return true; });
+    const cands=rawCands.map(agentIntermediaryView)
+      .sort((a,b2)=>(b2.eligible?1:0)-(a.eligible?1:0)||((b2.influenceScore??0)-(a.influenceScore??0))||((b2.champion?1:0)-(a.champion?1:0)));
+    const bestPath=out.summary?.best??null;
+    const hasDirect=!!bestPath&&bestPath.hopCount===1;
+    /* منطق Boomerang: مسیر مستقیمِ قوی → معرفی مستقیم (بدون واسطه)؛
+       فقط وقتی واسطه لازم است، واسطهٔ «مجاز» انتخاب می‌شود */
+    const mode=hasDirect?'DIRECT':((out.summary?.pathCount??0)>0?(cands.find(c=>c.eligible)?'INTERMEDIARY':'NO_ELIGIBLE_INTERMEDIARY'):'NO_PATH');
+    const chosen=mode==='INTERMEDIARY'?cands.find(c=>c.eligible):null;
+    const draft=mode==='DIRECT'?agentDirectDraft(req,fromOrg,toOrg,b.goal):(mode==='INTERMEDIARY'?agentDraft(req,chosen,fromOrg,toOrg,b.goal):null);
+    DB.agentRuns=DB.agentRuns??[];
+    DB.agentRuns.unshift({id:`ag-${Date.now()}`,at:nowIso(),userId:authUser.id,kind:'PLAN',
+      fromOrgId:fromId,toOrgId:toId,intermediaryPersonId:chosen?.personId??null,
+      pathCount:out.summary?.pathCount??0,eligibleCount:cands.filter(c=>c.eligible).length});
+    DB.agentRuns=DB.agentRuns.slice(0,50);
+    saveDb();
+    return json(res,200,{engine:'deterministic-template · بدون LLM — الگوی Boomerang (Rudy)',
+      from:{orgId:fromId,name:fromOrg.name},to:{orgId:toId,name:toOrg.name},
+      paths:out.paths??[],bestPath,mode,
+      reason:mode==='NO_PATH'?'در شبکهٔ شما تا ۳ گام مسیری به این سازمان نیست.':(mode==='NO_ELIGIBLE_INTERMEDIARY'?'مسیر گرم هست ولی هیچ واسطهٔ مجازی (تنظیم فعال + سقف ماهانهٔ باز) در سازمان‌های میانی نیست.':null),
+      intermediary:chosen,alternatives:(mode==='DIRECT'?[]:cands.filter(c=>c!==chosen).slice(0,4)),draft,
+      consentRule:mode==='DIRECT'?'مسیر مستقیم است؛ معرفی به لحن خودتان بدون نیاز به رضایت واسطه.':'هیچ پیامی بدون پذیرش صریح واسطه (requestStatus=RESPONDED_YES) ارسال نمی‌شود.',
+      summary:{pathCount:out.summary?.pathCount??0,eligibleCount:cands.filter(c=>c.eligible).length,
+        chosenLabel:chosen?`${chosen.name} (${chosen.orgName})`:null}});
+  }
+  if(is('/core-domain/referrals/agent/launch')&&method==='POST'){
+    const b=await readBody(req);
+    const toId=String(b.targetOrganizationId??'');
+    const toOrg=orgById(toId);
+    if(!toOrg) return json(res,404,{message:'سازمان مقصد یافت نشد.'});
+    const fromId=primaryOrgId(authUser)??visibleOrgIds(req)[0]??null;
+    const fromOrg=orgById(fromId);
+    if(!fromOrg) return json(res,400,{message:'سازمان مبدأ شما قابل تشخیص نیست.'});
+    const pid=String(b.intermediaryPersonId??'').trim();
+    const person=pid?PEOPLE.find(p=>p.id===pid&&!p.deletedAt):null;
+    if(pid&&!person) return json(res,404,{message:'واسطه یافت نشد.'});
+    let iv=null;
+    if(person){
+      if(!inScope(req,person.organizationId)) return json(res,403,{message:'واسطه خارج از محدودهٔ دسترسی شماست.'});
+      iv=agentIntermediaryView({personId:person.id,name:`${person.firstName??''} ${person.lastName??''}`.trim(),title:person.title??null,orgId:person.organizationId,orgName:orgById(person.organizationId)?.name??'',influenceScore:person.influenceScore??null,champion:person.champion?.flag});
+      if(!iv.eligible) return json(res,409,{message:iv.reason==='INTRO_INACTIVE'?'تنظیم واسطه‌گری این شخص غیرفعال است؛ ابتدا از بخش واسطه‌ها فعالش کنید.':'سقف درخواست ماهانهٔ این واسطه پر است (۰ باقی‌مانده).',intermediary:iv});
+    }
+    const d=(b.draft&&typeof b.draft==='object')?b.draft:null;
+    if(!d||!String(d.title||'').trim()||!String(d.message||'').trim()) return json(res,400,{message:'عنوان و متن پیش‌نویس معرفی الزامی است.'});
+    const ins=(d.instruction&&typeof d.instruction==='object')?{
+      goal:String(d.instruction.goal??'').trim(),
+      allowed:(Array.isArray(d.instruction.allowed)?d.instruction.allowed:[]).map(String).slice(0,6),
+      forbidden:(Array.isArray(d.instruction.forbidden)?d.instruction.forbidden:[]).map(String).slice(0,6),
+      boundaries:String(d.instruction.boundaries??'').trim(),
+      dueDays:Math.max(3,Math.min(365,Number(d.instruction.dueDays)||30))}:null;
+    /* حالت واسطه: عامل فقط «درخواست رضایت واسطه» می‌سازد — نه ارسال، نه پذیرش.
+       حالت مستقیم: بدون واسطه، بدون رضایت ثالث. */
+    const r={id:`ref-${Date.now()}`,title:String(d.title).trim(),message:String(d.message),
+      sourcePersonId:person?person.id:null,targetPersonId:null,sourceOrganizationId:fromId,targetOrganizationId:toId,
+      relationshipId:null,status:'PENDING',createdById:authUser.id,recipientUserId:null,completedAt:null,notes:null,
+      createdAt:nowIso(),acceptedAt:null,instruction:ins,baselineCriteria:null,postCheckins:{},
+      requestStatus:person?'REQUESTED':null,requestedAt:person?nowIso():null,outcome:null,outcomeNote:null,opportunityId:null,
+      agent:{launchedBy:authUser.id,at:nowIso(),engine:'deterministic-template',consentRequired:!!person,mode:person?'INTERMEDIARY':'DIRECT'}};
+    DB.referrals.unshift(r);
+    DB.agentRuns=DB.agentRuns??[];
+    DB.agentRuns.unshift({id:`ag-${Date.now()}`,at:nowIso(),userId:authUser.id,kind:'LAUNCH',
+      fromOrgId:fromId,toOrgId:toId,intermediaryPersonId:person?person.id:null,referralId:r.id,pathCount:null,eligibleCount:null});
+    DB.agentRuns=DB.agentRuns.slice(0,50);
+    saveDb();
+    const auditRes=referralAudit(r);
+    audit(req,'CREATE','Referral',r.id,'OK',{meta:{title:r.title,agent:true,gate:auditRes.gate,intermediary:person?person.id:null,mode:person?'INTERMEDIARY':'DIRECT'}});
+    await autoRunWorkflows('Referral',r.id,'REFERRAL_CREATED',{referral:{id:r.id,title:r.title,sourcePersonId:person?person.id:null,sourceOrganizationId:fromId,targetOrganizationId:toId,agent:true}});
+    if(person) NOTIFICATIONS.unshift({id:`n-ag-${Date.now()}`,userId:authUser.id,type:'INFO',title:'عامل معرفی: درخواست رضایت واسطه ارسال شد',
+      body:`برای معرفی «${r.title}» درخواست رضایت به ${iv.name} (${iv.orgName}) ارسال شد — تا پاسخ او هیچ پیامی نزد مقصد نمی‌رود.`,
+      channel:'IN_APP',priority:'MEDIUM',createdAt:nowIso(),readAt:null,data:{referralId:r.id}});
+    else NOTIFICATIONS.unshift({id:`n-ag-${Date.now()}`,userId:authUser.id,type:'INFO',title:'عامل معرفی: معرفی مستقیم ثبت شد',
+      body:`پیش‌نویس مستقیم «${r.title}» به‌عنوان معرفی ثبت شد؛ روند پذیرش/پیگیری از فهرست معرفی‌ها ادامه می‌یابد.`,
+      channel:'IN_APP',priority:'MEDIUM',createdAt:nowIso(),readAt:null,data:{referralId:r.id}});
+    return json(res,201,{...r,intermediary:iv,audit:auditRes,
+      message:person?'درخواست رضایت واسطه ثبت شد؛ معرفی فقط پس از پذیرش صریح او فعال می‌شود.':'معرفی مستقیم ثبت شد؛ روند پذیرش و پیگیری از فهرست معرفی‌ها فعال شد.'});
+  }
+  /* ─── مسترپلن فاز ۴/۲۵: دیتابیس روابط بیرونی (الگوی RelSci/TSC.ai) ───
+     «محصول دادهٔ جدا»: کاتالوگ فقط-خواندنیِ نهادهای عمومی (تنظیم‌گر/نهاد/
+     دانشگاه/بازار سرمایه/اکوسیستم) با پایهٔ رکورد عمومی — جدا از دادهٔ
+     مستأجرها؛ سهمیه و متر مصرف جدا (اشتراک محصول)؛ «اتصال» نهاد به شبکهٔ
+     خودتان سازمانی در محدودهٔ همان مستأجر می‌سازد. حریم خصوصی: فقط رکورد
+     سازمانی عمومی — هیچ دادهٔ شخص خصوصی و هیچ نشانی از مستأجرهای دیگر. */
+  const DIRECTORY_PREFIXES=[['org-reg','REGULATOR'],['org-inst','INSTITUTION'],['org-ac','ACADEMIA'],['org-eco','CAPITAL_MARKET'],['org-ecx','ECOSYSTEM']];
+  const DIRECTORY_QUOTA=300; /* جست‌وجو در ماه — اشتراک directory-basic */
+  const DIRECTORY_BRANCH_TIES=[
+    ['org-ecx-utpark','org-ac-tehran','نام پارک: «پارک علم و فناوری دانشگاه تهران»'],
+    ['org-ecx-innofactory','org-ecx-pardis','نام شعبه: «کارخانهٔ نوآوری (شعبهٔ پردیس)»'],
+    ['org-eco-ifb','org-eco-tse','هر دو زیر چتر بازار سرمایهٔ ایران'],
+  ];
+  const directoryEntities=()=>ORGS.filter(o=>DIRECTORY_PREFIXES.some(([pre])=>o.id.startsWith(pre))).map(o=>({
+    id:o.id,name:o.name,type:o.type,industry:o.industry??null,
+    category:(DIRECTORY_PREFIXES.find(([pre])=>o.id.startsWith(pre))??[null,null])[1],
+    jurisdiction:'ایران',dataBasis:'PUBLIC_RECORD',
+    source:{name:'سند نهادهای عمومی SRIP (رکورد عمومی)',license:'عمومی — قابل استناد با ذکر منبع'},
+    verifiedAt:o.createdAt??null}));
+  const dirUsageKey=()=>`tenant:${orgTenant(orgById(primaryOrgId(authUser)??visibleOrgIds(req)[0]??null))??'personal'}`;
+  const dirUsageRow=()=>{
+    const period=new Date().toISOString().slice(0,7);
+    DB.directoryUsage=DB.directoryUsage??{};
+    let row=DB.directoryUsage[dirUsageKey()];
+    if(!row||row.period!==period){ row={period,queries:0,links:0}; DB.directoryUsage[dirUsageKey()]=row; }
+    return row;
+  };
+  const dirLinkedOrg=(dirId)=>{
+    const tid=orgTenant(orgById(primaryOrgId(authUser)??visibleOrgIds(req)[0]??null));
+    return ORGS.find(o=>o.directorySource?.directoryId===dirId&&orgTenant(o)===tid)??null;
+  };
+  if(is('/directory/entities')&&method==='GET'){
+    const u=new URL(req.url,'http://x');
+    const search=String(u.searchParams.get('search')??'').trim().toLowerCase();
+    const category=String(u.searchParams.get('category')??'').trim().toUpperCase();
+    const page=Math.max(1,Number(u.searchParams.get('page'))||1);
+    const pageSize=Math.min(50,Math.max(5,Number(u.searchParams.get('pageSize'))||20));
+    const row=dirUsageRow();
+    if(row.queries>=DIRECTORY_QUOTA) return json(res,429,{code:'QUOTA_EXCEEDED',
+      message:`سهمیهٔ جست‌وجوی دیتابیس بیرونی این ماه پر شده (${row.queries}/${DIRECTORY_QUOTA}) — برای ارتقای اشتراک directory-basic با فروش تماس بگیرید.`,
+      usage:{...row,quota:DIRECTORY_QUOTA,remaining:0,plan:'directory-basic'}});
+    row.queries++; saveDb();
+    let items=directoryEntities();
+    if(search) items=items.filter(e=>e.name.toLowerCase().includes(search)||(e.industry??'').toLowerCase().includes(search));
+    if(category&&category!=='ALL') items=items.filter(e=>e.category===category);
+    const total=items.length;
+    items=items.slice((page-1)*pageSize,page*pageSize).map(e=>{
+      const linked=dirLinkedOrg(e.id);
+      return {...e,alreadyLinked:!!linked,linkedOrgId:linked?.id??null,linkedOrgName:linked?.name??null};
+    });
+    return json(res,200,{items,total,page,pageSize,
+      catalog:{categories:DIRECTORY_PREFIXES.map(([,c])=>c),entityCount:directoryEntities().length},
+      usage:{...row,quota:DIRECTORY_QUOTA,remaining:Math.max(0,DIRECTORY_QUOTA-row.queries),plan:'directory-basic'},
+      privacyNote:'فقط رکورد سازمانی عمومی؛ دادهٔ شخص خصوصی در کاتالوگ نیست و مستأجرهای دیگر دیده نمی‌شوند.'});
+  }
+  const dirEnt=match('/directory/entities/:id');
+  if(dirEnt&&(method==='GET'||method==='POST')){
+    const ent=directoryEntities().find(e=>e.id===dirEnt[0]);
+    if(!ent) return json(res,404,{message:'این نهاد در دیتابیس بیرونی نیست.'});
+    if(method==='GET'){
+      const sameIndustry=directoryEntities().filter(e=>e.id!==ent.id&&e.industry&&e.industry===ent.industry).slice(0,6)
+        .map(e=>({directoryId:e.id,name:e.name,kind:'SAME_INDUSTRY',basis:'دسته‌بندی عمومی حوزهٔ فعالیت'}));
+      const branch=DIRECTORY_BRANCH_TIES.filter(t=>t[0]===ent.id||t[1]===ent.id)
+        .map(t=>{const other=t[0]===ent.id?t[1]:t[0];const o=directoryEntities().find(e=>e.id===other);
+          return o?{directoryId:o.id,name:o.name,kind:'STRUCTURAL',basis:t[2]}:null;}).filter(Boolean);
+      const linked=dirLinkedOrg(ent.id);
+      return json(res,200,{...ent,ties:[...branch,...sameIndustry],
+        alreadyLinked:!!linked,linkedOrgId:linked?.id??null,linkedOrgName:linked?.name??null});
+    }
+    /* POST = اتصال نهاد به شبکهٔ خودتان (سازمانی در محدودهٔ همان مستأجر) */
+    const linked=dirLinkedOrg(ent.id);
+    if(linked) return json(res,200,{...ent,alreadyLinked:true,linkedOrgId:linked.id,linkedOrgName:linked.name,
+      message:'این نهاد پیش‌تر به شبکهٔ شما متصل است.'});
+    const primary=orgById(primaryOrgId(authUser)??visibleOrgIds(req)[0]??null);
+    const tid=orgTenant(primary)??(DEMO_USER_IDS.has(authUser.id)?'demo':(authUser.isOwner?'real':'personal'));
+    const o={id:`org-${Date.now()}`,name:ent.name,type:ent.type,industry:ent.industry,country:'ایران',parentOrganizationId:null,
+      tenant:tid,createdAt:nowIso(),
+      directorySource:{directoryId:ent.id,category:ent.category,dataBasis:ent.dataBasis,
+        sourceName:ent.source.name,linkedAt:nowIso(),linkedBy:authUser.id}};
+    ORGS.push(o);
+    if(!authUser.isOwner&&Array.isArray(authUser.accessibleOrganizationIds)&&!authUser.accessibleOrganizationIds.includes(o.id)) authUser.accessibleOrganizationIds.push(o.id);
+    const row=dirUsageRow(); row.links++; saveDb();
+    audit(req,'CREATE','organization',o.id,'OK',{meta:{fromDirectory:true,directoryId:ent.id,category:ent.category,tenant:tid}});
+    await autoRunWorkflows('Organization',o.id,'ORGANIZATION_CREATED',{organization:{id:o.id,name:o.name,type:o.type,industry:o.industry,country:o.country,fromDirectory:true}});
+    NOTIFICATIONS.unshift({id:`n-dir-${Date.now()}`,userId:authUser.id,type:'INFO',title:'دیتابیس بیرونی: نهاد متصل شد',
+      body:`«${ent.name}» از دیتابیس روابط بیرونی به شبکهٔ شما متصل شد — حالا می‌توانید رابطه، تعامل و برنامهٔ عموم‌ها برایش تعریف کنید.`,
+      channel:'IN_APP',priority:'MEDIUM',createdAt:nowIso(),readAt:null,data:{organizationId:o.id,directoryId:ent.id}});
+    return json(res,201,{...ent,alreadyLinked:true,linkedOrgId:o.id,linkedOrgName:o.name,
+      message:'نهاد به شبکهٔ شما متصل شد و در فهرست سازمان‌ها قابل استفاده است.'});
+  }
+  if(is('/directory/usage')&&method==='GET'){
+    const row=dirUsageRow();
+    return json(res,200,{...row,quota:DIRECTORY_QUOTA,remaining:Math.max(0,DIRECTORY_QUOTA-row.queries),plan:'directory-basic',
+      catalogSize:directoryEntities().length,
+      note:'مصرف دیتابیس بیرونی جدا از دادهٔ سازمانی شما شمارش می‌شود (اشتراک ماهانه).'});
+  }
+  if(is('/core-domain/referrals/agent/runs')&&method==='GET'){
+    const ids=visibleOrgIds(req);
+    const rows=(DB.agentRuns??[]).filter(x=>ids.includes(x.fromOrgId)||ids.includes(x.toOrgId)).slice(0,20)
+      .map(x=>({...x,fromOrgName:orgById(x.fromOrgId)?.name??x.fromOrgId,toOrgName:orgById(x.toOrgId)?.name??x.toOrgId,
+        intermediaryName:(()=>{const p2=personById(x.intermediaryPersonId);return p2?`${p2.firstName??''} ${p2.lastName??''}`.trim():null;})()}));
+    return json(res,200,{items:rows,total:rows.length});
   }
   /* گراف ۴ ستون (P1-6) */
   if(is('/network/columns')&&method==='GET') return json(res,200,networkColumns(req));

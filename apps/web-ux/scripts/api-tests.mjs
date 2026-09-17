@@ -813,6 +813,46 @@ section('فاز ۴ — عامل معرفی خودکار: مسیر گرم، وا�
   await api(`/people/${iv.personId}/intro-settings`, { method: 'PUT', token: dt, body: { maxRequestsPerMonth: st0.body?.maxRequestsPerMonth ?? 2 } });
 }
 
+/* ================== ۲۱. مسترپلن فاز ۴/۲۵ — دیتابیس روابط بیرونی ================== */
+section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کاتالوگ عمومی، اشتراک، اتصال per-tenant');
+{
+  const dl = await login(OWNER.email, OWNER.password);
+  const dt = dl.body?.accessToken;
+  const pl = await login('pars@srip.local', 'pars1234');
+  const pt = pl.body?.accessToken;
+  const HD = { authorization: `Bearer ${dt}` };
+  const HP = { authorization: `Bearer ${pt}` };
+
+  /* جست‌وجو + متر مصرف */
+  const s1 = await api('/directory/entities?search=' + encodeURIComponent('بورس'), { token: dt });
+  check('جست‌وجوی کاتالوگ → نهاد + متر مصرف', s1.status === 200 && s1.body?.items?.length >= 1 && s1.body.items[0].dataBasis === 'PUBLIC_RECORD' && s1.body.usage?.plan === 'directory-basic' && s1.body.usage.queries >= 1,
+    JSON.stringify({ n: s1.body?.items?.length, u: s1.body?.usage }));
+  check('منبع و مجوز در هر رکورد', !!s1.body.items[0].source?.name && !!s1.body.items[0].source?.license);
+  /* دسته‌ها */
+  const cat = await api('/directory/entities?category=REGULATOR&pageSize=50', { token: dt });
+  check('فیلتر دستهٔ تنظیم‌گر (۱۵ وزارت/سازمان)', cat.status === 200 && cat.body?.total === 15 && cat.body.items.every(e => e.category === 'REGULATOR'));
+  /* جزئیات + پیوندهای عمومی */
+  const d1 = await api('/directory/entities/org-eco-tse', { token: dt });
+  check('جزئیات نهاد → پیوند ساختاری با فرابورس', d1.status === 200 && d1.body?.ties?.some(x => x.directoryId === 'org-eco-ifb' && x.kind === 'STRUCTURAL'));
+  /* اتصال per-tenant: دمو و پارس هرکدام سازمان خودشان را می‌گیرند */
+  const l1 = await api('/directory/entities/org-eco-tse', { method: 'POST', token: dt });
+  check('اتصال دمو → 200/201 + سازمان در محدودهٔ دمو', (l1.status === 200 || l1.status === 201) && !!l1.body?.linkedOrgId);
+  const l2 = await api('/directory/entities/org-eco-tse', { method: 'POST', token: pt });
+  check('اتصال pars → سازمان جدا (جداسازی مستأجر)', (l2.status === 200 || l2.status === 201) && l2.body?.linkedOrgId !== l1.body?.linkedOrgId);
+  const reLink = await api('/directory/entities/org-eco-tse', { method: 'POST', token: dt });
+  check('اتصال تکراری → همان سازمان (idempotent)', reLink.status === 200 && reLink.body?.linkedOrgId === l1.body?.linkedOrgId);
+  const demoOrgs = await api('/organizations', { token: dt });
+  const dlist = Array.isArray(demoOrgs.body) ? demoOrgs.body : demoOrgs.body?.items ?? [];
+  check('سازمان متصل‌شده در فهرست سازمان‌های دمو', dlist.some(o => o.id === l1.body.linkedOrgId && o.directorySource?.directoryId === 'org-eco-tse'));
+  /* متر مصرف جدا */
+  const u1 = await api('/directory/usage', { token: dt });
+  const u2 = await api('/directory/usage', { token: pt });
+  check('متر مصرف per-tenant', u1.status === 200 && u2.status === 200 && u1.body?.links >= 1 && u2.body?.links >= 1 && u1.body.quota === 300);
+  /* 404 */
+  const nf = await api('/directory/entities/org-99', { token: dt });
+  check('نهاد ناموجود → 404', nf.status === 404);
+}
+
 /* ============================ SUMMARY ============================ */
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
