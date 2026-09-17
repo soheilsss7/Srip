@@ -54,8 +54,13 @@ GD=--git-dir="$ROOT/.git"
 git "$GD" read-tree --empty
 ( cd "$OUT" && git "$GD" --work-tree="$OUT" add -A . )
 TREE=$(git "$GD" write-tree)
+# سرشاخهٔ فعلی برنچ استقرار — برای parent بودن باید خودِ آبجکت هم محلی باشد
 PARENT="$(git "$GD" ls-remote origin "refs/heads/$BRANCH" | cut -f1 || true)"
-if [ -n "$PARENT" ]; then PARENT_ARGS=(-p "$PARENT"); else PARENT_ARGS=(); fi
+PARENT_ARGS=()
+if [ -n "$PARENT" ]; then
+  git "$GD" fetch -q origin "refs/heads/$BRANCH" 2>/dev/null || true
+  if git "$GD" cat-file -e "$PARENT^{commit}" 2>/dev/null; then PARENT_ARGS=(-p "$PARENT"); fi
+fi
 VER="$(grep -oP "DEMO_MOCK_VERSION\s*=\s*'[^']+'" "$ROOT/apps/web-ux/scripts/mock-api.mjs" | grep -oP "'[^']+'" | tr -d "'")"
 COMMIT=$(printf 'site release %s\n\nstatic export for subdomain root (SRIP_BASE_PATH=/) — Plesk/Apache\n' "$VER" \
   | git "$GD" commit-tree "$TREE" ${PARENT_ARGS[@]+"${PARENT_ARGS[@]}"})
