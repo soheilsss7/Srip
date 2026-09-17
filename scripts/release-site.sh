@@ -15,7 +15,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BRANCH="${SRIP_DEPLOY_BRANCH:-deploy/plesk}"
 OUT="$(mktemp -d)"
-trap 'rm -rf "$OUT" "$GIT_INDEX_FILE"' EXIT
+GIT_INDEX_FILE=""
+trap 'rm -rf "$OUT" "${GIT_INDEX_FILE:-}"' EXIT
 # هویت گیت برای commit-tree در محیط‌های بدون config (مثل GitHub Actions)
 export GIT_AUTHOR_NAME="${GIT_AUTHOR_NAME:-srip-release}"
 export GIT_AUTHOR_EMAIL="${GIT_AUTHOR_EMAIL:-release@srip.local}"
