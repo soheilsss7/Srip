@@ -219,7 +219,6 @@ export default function PeoplePage() {
       <div className="people-page">
         <section className="page-heading">
           <div>
-            <div className="eyebrow">{t('فضای کاری · فهرست اصلی')}</div>
             <h1>{t('اشخاص')}</h1>
             <p className="subtitle">{t('فهرست اشخاص با نفوذ، قدرت تصمیم و درگیریِ واقعی هر شخص (جلسات پیشِ رو، اقدامات باز و تازگی تعامل) — محدودهٔ سازمانی شما.')}</p>
           </div>

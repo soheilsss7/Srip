@@ -136,7 +136,6 @@ export default function DataExchangePage() {
     <main className="feature-page">
       <section className="page-heading">
         <div>
-          <div className="eyebrow">فضای کاری SRIP · تبادل داده</div>
           <h1><FileSpreadsheet size={20} style={{ verticalAlign: '-4px' }}/> تبادل داده</h1>
           <p className="subtitle">خروجی فهرست‌ها به فایل سازگار با اکسل (جدولی با پشتیبانی فارسی) و ورود گروهی اشخاص با پیش‌نمایش و اعتبارسنجی — همیشه در محدودهٔ دسترسی شما.</p>
         </div>

@@ -686,7 +686,6 @@ export default function Page() {
       {/* Header */}
       <section className="net-head">
         <div>
-          <div className="eyebrow">{t('شبکه اطلاعاتی SRIP')}</div>
           <h1>{t('شبکهٔ روابط')}</h1>
           <p className="subtitle">
             {t('گراف تعاملی روابط استراتژیک با فیلتر، مسیر و تحلیل ریسک/تأثیرگذاری. همهٔ مقادیر از دادهٔ واقعیِ همان محدودهٔ سازمانی محاسبه می‌شوند.')}

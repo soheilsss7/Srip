@@ -259,7 +259,6 @@ export default function RelationshipsPage() {
       <div className="people-page">
         <section className="page-heading">
           <div>
-            <div className="eyebrow">{t('فضای کاری · رابطه‌محور')}</div>
             <h1>{t('روابط سازمانی')}</h1>
             <p className="subtitle">{t('وضعیت واقعی هر رابطه: سلامت، ریسک، آخرین تعامل و اقدام بعدی — حالا با تفکیک')} <b>{t('بازاری / غیربازاری')}</b> {t('و نشان')} <b>{t('نقطهٔ ورود به بازار')}</b>{t('، همراه با هشدارهای هوشمند.')}</p>
           </div>

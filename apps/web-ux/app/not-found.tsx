@@ -40,7 +40,6 @@ export default function NotFound() {
       <section className="route-error" style={{ maxWidth: 460, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
         <div className="empty-ico" style={{ width: 64, height: 64, borderRadius: 20 }}><AlertTriangle size={30} /></div>
         <div>
-          <div className="eyebrow" style={{ textAlign: 'center' }}>{t('۴۰۴ · یافت نشد')}</div>
           <strong style={{ fontSize: 24, display: 'block', marginTop: 4 }}>{t('صفحه پیدا نشد')}</strong>
           <p style={{ marginTop: 8 }}>{t('مسیر در این Workspace وجود ندارد یا برای شما قابل دسترسی نیست.')}</p>
         </div>

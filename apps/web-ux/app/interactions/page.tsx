@@ -153,7 +153,6 @@ export default function InteractionsPage() {
     <div className="interactions-page">
       <section className="page-heading">
         <div>
-          <div className="eyebrow">فضای کاری SRIP · خط زمانی تعاملات</div>
           <h1>تعاملات</h1>
           <p className="subtitle">تماس‌ها، ایمیل‌ها، جلسات، یادداشت‌ها و پیگیری‌ها در یک خط زمانی یکپارچه — از سرور واقعی.</p>
         </div>

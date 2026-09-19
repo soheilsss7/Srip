@@ -225,7 +225,6 @@ export default function Dashboard() {
       {/* HEADER */}
       <div className="page-heading">
         <div>
-          <div className="eyebrow">{t('پیشخوان — برنامهٔ کار امروز شما')}</div>
           <h1>{me?.name ? `${t('سلام،')} ${me.name}` : t('سلام')}</h1>
           <p className="subtitle">{t('امروز چه چیزی نیازمند اقدام شماست؟ اولویت‌ها، هشدارها و جلسات پیش رو — هر عدد با دلیلی از دادهٔ واقعی.')}</p>
         </div>
