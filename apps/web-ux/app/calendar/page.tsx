@@ -120,7 +120,6 @@ export default function CalendarPage() {
     <main className="feature-page">
       <section className="page-heading">
         <div>
-          <div className="eyebrow">فضای کاری SRIP · تقویم جلسات</div>
           <h1>تقویم جلسات</h1>
           <p className="subtitle">نمای ماهانهٔ جلالی — هر روز جلسات، سازمان مرتبط و وضعیت نتیجه را نشان می‌دهد. کلیک روی هر جلسه، پروفایل کامل آن را باز می‌کند.</p>
         </div>
