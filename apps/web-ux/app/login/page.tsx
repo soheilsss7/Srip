@@ -17,7 +17,10 @@ export default function Login(){
  const swControlled=useSwControlled();
  const router=useRouter();
  const waitingSw=MOCK_PAGES&&!swControlled;
- const canSubmit=mockReady&&(!waitingSw||gaveUp)&&!busy;
+ /* دکمهٔ ورود هرگز به آماده‌شدن سرویس‌کارگر گره نمی‌خورد — با پرشدن ایمیل و
+    رمز فعال می‌شود؛ اگر SW هنوز آماده نباشد، خودِ submit با تلاش مجدد منتظر
+    می‌ماند (تا ~۹۰ ثانیه) تا اتصال برقرار شود و ورود خودکار کامل شود. */
+ const canSubmit=!busy;
  /* روی هاست واقعی، دانلود اولیهٔ سرویس‌کارگر (~۱٫۲MB) روی اینترنت کند ممکن است
     ده‌ها ثانیه طول بکشد؛ بعد از ۱۲ ثانیه راهنمای دقیق نشان می‌دهیم و بعد از
     ۳۰ ثانیه دکمه را آزاد می‌کنیم تا کاربر به‌جای دکمهٔ مرده، پیام سرور را ببیند. */
@@ -31,18 +34,34 @@ export default function Login(){
  }
  async function submit(e:FormEvent){
   e.preventDefault();
-  if(waitingSw&&!gaveUp){ setError(t('سامانه در حال آماده‌سازی اتصال است؛ چند لحظه صبر کنید.')); return; }
+  if(!email.trim()||password.length<6||(mfa&&otp.length<6)) return;
   setBusy(true); setError('');
-  const ident=email.trim().toLowerCase();
-  try{
-   const d=await apiPost<any>('/auth/login',{email,password,...(otp?{otp}:{})});
-   await finish(d);
-  }catch(x){
-   const msg=(x as Error).message||'';
-   if(/MFA|کد.*MFA|multi.?factor|دومرحله‌ای/i.test(msg)){
-    setMfa(true); setError(t('کد تأیید دومرحله‌ای لازم است. کد ۶ رقمی را وارد کنید.'));
-   }else setError(demoError(msg));
-  }finally{setBusy(false);}
+  /* در بیلد استاتیک، بار اول ممکن است سرویس‌کارگر هنوز دانلود/فعال نشده باشد؛
+     به‌جای خطای بی‌فایده، با آرامش تا ~۹۰ ثانیه تلاش مجدد می‌کنیم. */
+  const attempts=MOCK_PAGES?30:1;
+  for(let i=1;i<=attempts;i++){
+   try{
+    const d=await apiPost<any>('/auth/login',{email,password,...(otp?{otp}:{})});
+    await finish(d);
+    setBusy(false);
+    return;
+   }catch(x){
+    const msg=(x as Error).message||'';
+    if(/MFA|کد.*MFA|multi.?factor|دومرحله‌ای/i.test(msg)){
+     setMfa(true); setError(t('کد تأیید دومرحله‌ای لازم است. کد ۶ رقمی را وارد کنید.'));
+     break;
+    }
+    const transient=MOCK_PAGES&&/404|Failed to fetch|خطای سرور|NetworkError|fetch/i.test(msg);
+    if(transient&&i<attempts){
+     setError(t('در حال برقراری اتصال به سامانه… چند لحظه صبر کنید؛ ورود خودکار ادامه می‌یابد.'));
+     await new Promise(r=>setTimeout(r,3000));
+     continue;
+    }
+    setError(demoError(msg));
+    break;
+   }
+  }
+  setBusy(false);
  }
  return (
   <AuthShell>

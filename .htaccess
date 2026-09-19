@@ -5,6 +5,9 @@ AddType application/manifest+json .webmanifest
 AddType application/javascript .js
 AddType text/css .css
 AddType text/html .html
+# خروجی Next برای هر مسیر، علاوه بر foo.html یک پوشهٔ foo/ (فایل‌های RSC بدون
+# index.html) هم می‌سازد؛ ریدایرکت خودکار «پوشهٔ با اسلش» آپاچی به 403 می‌افتد.
+DirectorySlash Off
 # سرویس‌کارگر باید همیشه تازه سرو شود تا به‌روزرسانی‌ها فوری اعمال شوند
 <FilesMatch "sw\.js$">
   <IfModule mod_headers.c>
@@ -13,12 +16,17 @@ AddType text/html .html
 </FilesMatch>
 <IfModule mod_rewrite.c>
 RewriteEngine On
-RewriteBase /
-RewriteCond %{REQUEST_FILENAME} -f [OR]
-RewriteCond %{REQUEST_FILENAME} -d
+# http → https (پشت nginx هم امن: فقط وقتی هر دو نشانهٔ http باشند)
+RewriteCond %{HTTP:X-Forwarded-Proto} !https
+RewriteCond %{HTTPS} !=on
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# فایل واقعی → همان
+RewriteCond %{REQUEST_FILENAME} -f
 RewriteRule ^ - [L]
+# /login → /login.html (حتی اگر پوشهٔ login/ وجود داشته باشد — .html مقدم است)
 RewriteCond %{REQUEST_FILENAME}.html -f
 RewriteRule ^(.+?)/?$ $1.html [L]
+# پوشهٔ دارای index.html (مسیرهای زیرمجموعه مثل organizations/o-1)
 RewriteCond %{REQUEST_FILENAME}/index.html -f
 RewriteRule ^(.+?)/?$ $1/index.html [L]
 </IfModule>

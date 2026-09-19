@@ -31,14 +31,18 @@ cat > "$OUT/.htaccess" <<'EOT'
 Options -Indexes
 DirectoryIndex index.html
 AddType application/manifest+json .webmanifest
+DirectorySlash Off
 <IfModule mod_rewrite.c>
 RewriteEngine On
 RewriteBase /
-# real file/directory → serve as-is
-RewriteCond %{REQUEST_FILENAME} -f [OR]
-RewriteCond %{REQUEST_FILENAME} -d
+# http → https (پشت nginx هم امن)
+RewriteCond %{HTTP:X-Forwarded-Proto} !https
+RewriteCond %{HTTPS} !=on
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# real file → serve as-is
+RewriteCond %{REQUEST_FILENAME} -f
 RewriteRule ^ - [L]
-# /login → /login.html
+# /login → /login.html (حتی اگر پوشهٔ login/ وجود داشته باشد)
 RewriteCond %{REQUEST_FILENAME}.html -f
 RewriteRule ^(.+?)/?$ $1.html [L]
 # /foo/ → /foo/index.html
