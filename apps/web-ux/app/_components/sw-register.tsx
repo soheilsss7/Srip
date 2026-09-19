@@ -68,15 +68,26 @@ async function healStaleWorker(reg: ServiceWorkerRegistration): Promise<void> {
  */
 function recontrolOrphanedPage(): void {
   if (navigator.serviceWorker.controller) return;
-  const KEY = 'srip_sw_recontrol_at';
-  let attempts: number[] = [];
-  try { attempts = JSON.parse(sessionStorage.getItem(KEY) ?? '[]') ?? []; } catch { attempts = []; }
-  const now = Date.now();
-  attempts = attempts.filter((t: number) => now - t < 60_000);
-  if (attempts.length >= 2) return;
-  attempts.push(now);
-  try { sessionStorage.setItem(KEY, JSON.stringify(attempts)); } catch { /* حالت خصوصی */ }
-  window.location.reload();
+  /* SW تازه (با clients.claim) معمولاً همان لحظهٔ فعال‌شدن صفحه را تحویل می‌گیرد؛
+     پیش از reload کمی صبر می‌کنیم تا reload بی‌دلیل زده نشود (بار اول سایت). */
+  const waitAndReload = (tries = 0) => {
+    if (navigator.serviceWorker.controller) return; // تحویل گرفته شد — reload لازم نیست
+    /* فرمی که کاربر در حال پرکردنش است را با reload نپاک کنیم؛ دوباره چک می‌شود */
+    const typing = Array.from(document.querySelectorAll('input, textarea'))
+      .some((el) => String((el as HTMLInputElement).value || '').length > 0);
+    if (typing && tries < 40) { window.setTimeout(() => waitAndReload(tries + 1), 1000); return; }
+    if (tries < 3) { window.setTimeout(() => waitAndReload(tries + 1), 1000); return; }
+    const KEY = 'srip_sw_recontrol_at';
+    let attempts: number[] = [];
+    try { attempts = JSON.parse(sessionStorage.getItem(KEY) ?? '[]') ?? []; } catch { attempts = []; }
+    const now = Date.now();
+    attempts = attempts.filter((t: number) => now - t < 60_000);
+    if (attempts.length >= 2) return;
+    attempts.push(now);
+    try { sessionStorage.setItem(KEY, JSON.stringify(attempts)); } catch { /* حالت خصوصی */ }
+    window.location.reload();
+  };
+  waitAndReload();
 }
 
 export default function SwRegister() {

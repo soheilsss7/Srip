@@ -10,7 +10,12 @@ import { t } from '../_lib/i18n';
 
 
 export default function Login(){
- const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[otp,setOtp]=useState('');
+ /* مقاوم‌سازی در برابر reload خودکار (تحویل‌گرفتن صفحه توسط سرویس‌کارگر):
+    ورودی‌های کاربر چند ثانیه‌ای در sessionStorage می‌ماند تا ری‌لود اولین
+    بازدید چیزی را که تایپ کرده پاک نکند؛ پس از ورود موفق حذف می‌شود. */
+ const DRAFT_KEY='srip_login_draft';
+ const draft=(()=>{ try{ return JSON.parse(sessionStorage.getItem(DRAFT_KEY)||'null'); }catch{ return null; } })();
+ const [email,setEmail]=useState<string>(draft?.email??''),[password,setPassword]=useState<string>(draft?.password??''),[otp,setOtp]=useState('');
  const [mfa,setMfa]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const [slowWait,setSlowWait]=useState(false),[gaveUp,setGaveUp]=useState(false);
  const mockReady=useMockApiReady();
@@ -26,10 +31,12 @@ export default function Login(){
     ۳۰ ثانیه دکمه را آزاد می‌کنیم تا کاربر به‌جای دکمهٔ مرده، پیام سرور را ببیند. */
  useEffect(()=>{ if(!waitingSw||slowWait) return; const t=setTimeout(()=>setSlowWait(true),12000); return ()=>clearTimeout(t); },[waitingSw,slowWait]);
  useEffect(()=>{ if(!waitingSw||gaveUp) return; const t=setTimeout(()=>setGaveUp(true),30000); return ()=>clearTimeout(t); },[waitingSw,gaveUp]);
+ useEffect(()=>{ try{ (email||password)?sessionStorage.setItem(DRAFT_KEY,JSON.stringify({email,password})):sessionStorage.removeItem(DRAFT_KEY); }catch{} },[email,password]);
  const demoError=(m:string)=>MOCK_PAGES&&/404|Failed to fetch|خطای سرور/.test(m)?t('سرویس در حال راه‌اندازی است؛ یک لحظه صبر کنید و دوباره تلاش کنید.'):m;
 
  async function finish(d:any){
   if(!d?.accessToken) throw new Error(t('پاسخ احراز هویت نامعتبر است.'));
+  try{ sessionStorage.removeItem(DRAFT_KEY); }catch{}
   setSession(d); router.replace('/dashboard');
  }
  async function submit(e:FormEvent){
