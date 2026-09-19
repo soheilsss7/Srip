@@ -1,5 +1,6 @@
 'use client';
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { useWorkspace } from '../_components/workspace';
 import Link from 'next/link';
 import { api, apiPost, apiDelete, unwrapList } from '../_lib/api';
 import { fa } from '../_lib/fa';
@@ -65,6 +66,7 @@ type Tab = 'overview' | 'policies' | 'flags' | 'exports';
 const POLICY_EMPTY = { key: '', permissionKey: '', effect: 'ALLOW', role: '', organizationId: '', department: '', maxDataClassification: '', ownerOnly: false, subjectScope: '', conditions: '', enabled: true };
 
 export default function EnterprisePage() {
+  const { isRealTenant } = useWorkspace();
   const [tab, setTab] = useState<Tab>('overview');
   const [overview, setOverview] = useState<Overview | null>(null);
   const [policies, setPolicies] = useState<Policy[]>([]);
@@ -264,7 +266,7 @@ export default function EnterprisePage() {
               </div>
               <div className="stat-grid" style={{ marginTop: 0 }}>
                 <StatCard icon={<FileDown size={18} />} label="کل خروجی‌های ثبت‌شده" value={fmtNum(overview?.exports?.total ?? 0)} iconClass="ic-blue" sub="لاگ خروجی داده" />
-                <StatCard icon={<Lock size={18} />} label="طبقه‌بندی اسناد" value="—" iconClass="ic-gold" sub="سامانهٔ اسناد در این دمو خالی است" />
+                <StatCard icon={<Lock size={18} />} label="طبقه‌بندی اسناد" value="—" iconClass="ic-gold" sub={isRealTenant ? 'در حال راه‌اندازی' : 'سامانهٔ اسناد در این دمو خالی است'} />
               </div>
 
               <div className="grid2">

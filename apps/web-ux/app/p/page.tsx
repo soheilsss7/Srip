@@ -190,7 +190,7 @@ export default function PublicPortalPage() {
         ) : !slug ? (
           <div className="pp-done">
             <h1>پورتال عمومی</h1>
-            <p className="pp-muted">نشانی پورتال هر سازمان اختصاصی است؛ نمونهٔ دمو: <a href={base + '/p?slug=pars'}>پورتال هلدینگ پارس</a></p>
+            <p className="pp-muted">نشانی پورتال هر سازمان اختصاصی است؛ نمونه: <a href={base + '/p?slug=pars'}>پورتال هلدینگ پارس</a></p>
             {err && <p className="pp-err">{err}</p>}
           </div>
         ) : (

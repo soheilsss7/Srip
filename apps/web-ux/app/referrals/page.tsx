@@ -439,7 +439,7 @@ export default function ReferralsPage() {
     <main className="feature-page">
       <PageHeader
         eyebrow={t('معرفی‌ها')}
-        title={t('معرفی‌ها (با ممیزی)')}
+        title={t('معرفی‌ها')}
         description={t('هر معرفی با دستورالعملِ هدف و خط قرمز ثبت می‌شود؛ پیش از پذیرش ممیزی (سلامت رابطه، مقصد، تکرار، کامل بودن دستور) و پس از آن پیگیری/نتیجه/اثر بر رابطه اجرا می‌شود تا معرفی رابطه را خراب نکند.')}
         actions={
           <>
@@ -469,15 +469,15 @@ export default function ReferralsPage() {
           </div>
 
           {/* ─── مسترپلن فاز ۱/۹: مسیر گرم + حاکمیت واسطه + قیف تبدیل (Affinity/Boomerang) ─── */}
-          <section className="panel" aria-label={t('مسیر معرفی گرم و واسطه‌ها')}>
+          <section className="panel" aria-label={t('مسیر معرفی مطمئن و واسطه‌ها')}>
             <div className="panel-title">
               <div>
-                <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Target size={16} /> {t('مسیر معرفی گرم و واسطه‌ها')}</h2>
+                <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Target size={16} /> {t('مسیر معرفی مطمئن و واسطه‌ها')}</h2>
                 <p>{t('قوی‌ترین مسیر چندپرشی تا سازمان هدف با امتیاز هر پرش (سلامت + تازگی + ریسک)؛ واسطه‌ها سقف و کانال خودشان را تعیین می‌کنند — «هیچ واسطه‌ای در معرض سی درخواست نیست».')}</p>
               </div>
               {conversion && (
                 <Badge tone={conversion.conversion?.meetingRate != null && conversion.conversion.meetingRate >= 50 ? 'success' : 'info'}>
-                  مسیر گرم → جلسه: {conversion.conversion?.meetingRate != null ? `${fmtNum(conversion.conversion.meetingRate)}${t('٪')}` : '—'}
+                  مسیر مطمئن → جلسه: {conversion.conversion?.meetingRate != null ? `${fmtNum(conversion.conversion.meetingRate)}${t('٪')}` : '—'}
                 </Badge>
               )}
             </div>
@@ -491,7 +491,7 @@ export default function ReferralsPage() {
               </label>
               <button className="btn btn-primary" style={{ minHeight: 0, padding: '8px 14px' }} disabled={!warmTarget || warmBusy}
                 onClick={() => findWarmPath(warmTarget)}>
-                {warmBusy ? t('در حال جست‌وجو…') : t('یافتن مسیر گرم')}
+                {warmBusy ? t('در حال جست‌وجو…') : t('یافتن مسیر مطمئن')}
               </button>
               {conversion && (
                 <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -603,7 +603,7 @@ export default function ReferralsPage() {
             <div className="panel-title">
               <div>
                 <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><Bot size={16} /> {t('عامل معرفی خودکار')}</h2>
-                <p>{t('عامل سه‌گامِ Boomerang را اجرا می‌کند: یافتن مسیر گرم، انتخاب واسطهٔ مجاز (سقف ماهانه + رضایت صریح)، و نوشتن پیش‌نویس معرفی به لحن واسطه — موتور قطعیِ قالب‌محور، بدون LLM.')}</p>
+                <p>{t('عامل سه‌گامِ Boomerang را اجرا می‌کند: یافتن مسیر مطمئن، انتخاب واسطهٔ مجاز (سقف ماهانه + رضایت صریح)، و نوشتن پیش‌نویس معرفی به لحن واسطه — موتور قطعیِ قالب‌محور، بدون LLM.')}</p>
               </div>
               <Badge tone="info">{t('قطعی · بدون LLM')}</Badge>
             </div>
@@ -630,7 +630,7 @@ export default function ReferralsPage() {
                   <p className="criteria-saved">{t('مسیر مستقیمِ قوی موجود است — عامل واسطه پیشنهاد نمی‌کند و پیش‌نویس معرفی را به لحن خودتان آماده کرده است.')}</p>
                 )}
                 {agentPlan.mode === 'INTERMEDIARY' && (
-                  <p className="criteria-saved">{t('مسیر گرم یافت شد و عامل یک واسطهٔ «مجاز» (تنظیم فعال + سقف ماهانهٔ باز) انتخاب کرد.')}</p>
+                  <p className="criteria-saved">{t('مسیر مطمئن یافت شد و عامل یک واسطهٔ «مجاز» (تنظیم فعال + سقف ماهانهٔ باز) انتخاب کرد.')}</p>
                 )}
                 {agentPlan.reason && <p className="form-error" role="alert">{agentPlan.reason}</p>}
                 {agentPlan.bestPath && (
@@ -961,7 +961,7 @@ export default function ReferralsPage() {
             {detail.message && <div style={{ display: 'flex', gap: 6 }}><StickyNote size={14} className="t-muted" /><span><b>{t('پیام:')}</b> {detail.message}</span></div>}
             {detail.notes && <div style={{ display: 'flex', gap: 6 }}><CheckCircle2 size={14} className="t-muted" /><span><b>{t('یادداشت پایانی:')}</b> {detail.notes}</span></div>}
             <div className="ref-mission-panel">
-              <div className="ref-instruction-head"><Send size={14} /> {t('مِیشن گرم (ارکستراسیون)')}</div>
+              <div className="ref-instruction-head"><Send size={14} /> {t('مأموریت معرفی (ارکستراسیون)')}</div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                 <span className="t-muted" style={{ fontSize: 11.5 }}>{t('وضعیت درخواست از معرف:')}</span>
                 {(['REQUESTED', 'RESPONDED_YES', 'RESPONDED_NO', 'NO_RESPONSE'] as const).map(st => (

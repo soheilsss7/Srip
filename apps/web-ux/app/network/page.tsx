@@ -819,11 +819,11 @@ export default function Page() {
           <div className="panel-title">
             <div>
               <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><BrainCircuit size={16} /> {t('پیش‌بینی شبکه (مدل سبک)')}</h2>
-              <p>{t('پیش‌بینی پیوند بین سازمان‌های بی‌رابطه، خوشه‌های گراف و مسیر گرم به فرصت‌های باز — همه از روی داده‌های همان شبکه محاسبه شده‌اند')}</p>
+              <p>{t('پیش‌بینی پیوند بین سازمان‌های بی‌رابطه، خوشه‌های گراف و مسیر مطمئن به فرصت‌های باز — همه از روی داده‌های همان شبکه محاسبه شده‌اند')}</p>
             </div>
             <div className="toolbar">
               <Badge tone="info">{fmtNum(predict.kpis?.predictedLinks)} پیوند پیش‌بینی‌شده</Badge>
-              <Badge tone={predict.kpis?.warmPaths ? 'success' : 'neutral'}>{fmtNum(predict.kpis?.warmPaths)} مسیر گرم</Badge>
+              <Badge tone={predict.kpis?.warmPaths ? 'success' : 'neutral'}>{fmtNum(predict.kpis?.warmPaths)} مسیر مطمئن</Badge>
             </div>
           </div>
           <div className="attr-grid">
@@ -837,7 +837,7 @@ export default function Page() {
           </div>
           {(predict.warmPaths ?? []).length > 0 && (
             <div style={{ marginTop: 12 }}>
-              <b style={{ fontSize: 12 }}>{t('مسیر گرم به فرصت‌های باز')}</b>
+              <b style={{ fontSize: 12 }}>{t('مسیر مطمئن به فرصت‌های باز')}</b>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
                 {(predict.warmPaths ?? []).map((w: any) => (
                   <span key={w.organizationId} className={w.found ? 'chip success' : 'chip danger'} title={w.path?.join(' ← ') ?? ''}>

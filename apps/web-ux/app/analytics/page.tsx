@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useWorkspace } from '../_components/workspace';
 import { api, apiPost } from '../_lib/api';
 import { Badge, ErrorCard, Loading, PageHeader, StatCard } from '../_components/page-ui';
 import { FunnelVisual } from '../_components/funnel-visual';
@@ -101,6 +102,7 @@ function MiniBars({ rows }: { rows: [string, number][] }) {
 }
 
 export default function Analytics() {
+  const { isRealTenant } = useWorkspace();
   const [data, setData] = useState<Summary | null>(null);
   const [net, setNet] = useState<Network | null>(null);
   const [wf, setWf] = useState<{ generatedAt?: string; executions: { status: string; count: number }[] } | null>(null);
@@ -324,7 +326,7 @@ export default function Analytics() {
               {net.attribution && (
                 <div className="panel-sub" style={{ marginTop: 16 }}>
                   <div className="panel-title" style={{ marginBottom: 8 }}>
-                    <div><h3 style={{ fontSize: 14 }}>منبع فرصت‌ها — گرم در برابر سرد</h3><p>انتساب هر فرصت به مسیر ورود؛ مقایسهٔ نرخ برد</p></div>
+                    <div><h3 style={{ fontSize: 14 }}>منبع فرصت‌ها — مسیر مطمئن در برابر سرد</h3><p>انتساب هر فرصت به مسیر ورود؛ مقایسهٔ نرخ برد</p></div>
                   </div>
                   <div className="attr-grid">
                     {(net.attribution.bySource ?? []).filter(x => x.type !== 'COLD').map(x => (
@@ -336,7 +338,7 @@ export default function Analytics() {
                     ))}
                   </div>
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
-                    <span className="chip success">گرم: {fmt.format(net.attribution.warm.count)} فرصت · {fmt1.format(net.attribution.warm.rate)}٪ برد</span>
+                    <span className="chip success">مطمئن: {fmt.format(net.attribution.warm.count)} فرصت · {fmt1.format(net.attribution.warm.rate)}٪ برد</span>
                     <span className="chip info">سرد: {fmt.format(net.attribution.cold.count)} فرصت · {fmt1.format(net.attribution.cold.rate)}٪ برد</span>
                     {net.attribution.warm.count + net.attribution.cold.count > 0 && (
                       <span className="chip">تفاوت نرخ برد: {fmt1.format(Math.min(99, Math.round((net.attribution.warm.rate - net.attribution.cold.rate) * 10) / 10))} واحد درصد</span>
@@ -465,7 +467,7 @@ export default function Analytics() {
               <div className="panel-title">
                 <div>
                   <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><CalendarDays size={16} /> حامی‌ها و رویدادهای شغلی</h2>
-                  <p>هشدار جابه‌جایی حامی + «چه کسی در سازمان جدید او را می‌شناسد» + مسیر گرم به سازمان مقصد</p>
+                  <p>هشدار جابه‌جایی حامی + «چه کسی در سازمان جدید او را می‌شناسد» + مسیر مطمئن به سازمان مقصد</p>
                 </div>
                 <Badge tone="info">{fmt.format(career.champions?.length ?? 0)} حامی</Badge>
               </div>
@@ -475,7 +477,7 @@ export default function Analytics() {
                     <small>{a.person?.name ?? '—'} ← {a.destinationOrg?.name ?? '—'}</small>
                     <strong style={{ fontSize: 15 }}>{a.destinationOrg?.name ?? 'جابه‌جایی'}</strong>
                     <span className="t-muted" style={{ fontSize: 10 }}>
-                      {fmtDate(a.departedAt)} · {Array.isArray(a.warmPaths) ? `مسیر گرم: ${a.warmPaths.map((p: any) => p.via?.label ?? p.relationshipId).join('، ')}` : ''}
+                      {fmtDate(a.departedAt)} · {Array.isArray(a.warmPaths) ? `مسیر مطمئن: ${a.warmPaths.map((p: any) => p.via?.label ?? p.relationshipId).join('، ')}` : ''}
                     </span>
                   </div>
                 ))}
@@ -496,7 +498,7 @@ export default function Analytics() {
               <div className="panel-title">
                 <div>
                   <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><HeartPulse size={16} /> سلامت پذیرش و ارزش</h2>
-                  <p>پوشش چندنخی، بستن چرخهٔ جلسات و پذیرش هوش شبکه — مبنای «از نشان‌دادن به اندازه‌گرفتن»؛ دادهٔ دمو در حساب واقعی شمرده نمی‌شود.</p>
+                  <p>پوشش چندنخی، بستن چرخهٔ جلسات و پذیرش هوش شبکه — مبنای «از نشان‌دادن به اندازه‌گرفتن»{!isRealTenant && '؛ دادهٔ دمو در حساب واقعی شمرده نمی‌شود'}.</p>
                 </div>
               </div>
               <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))' }}>
@@ -519,7 +521,7 @@ export default function Analytics() {
                 <span className="chip neutral">بریف جلسه: {fmt.format(adoption.counters?.briefsGenerated ?? 0)}</span>
                 <span className="chip neutral">ثبت سریع پس از جلسه: {fmt.format(adoption.counters?.quickLogs ?? 0)}</span>
                 <span className="chip neutral">جابه‌جایی ماتریس: {fmt.format(adoption.counters?.matrixDrags ?? 0)}</span>
-                <span className="chip neutral">درخواست مسیر گرم: {fmt.format(adoption.counters?.warmPathRequests ?? 0)}</span>
+                <span className="chip neutral">درخواست مسیر مطمئن: {fmt.format(adoption.counters?.warmPathRequests ?? 0)}</span>
                 <span className="chip neutral">گزارش دوره‌ای: {fmt.format(adoption.counters?.periodicReports ?? 0)}</span>
               </div>
             </section>
@@ -530,7 +532,7 @@ export default function Analytics() {
             <div className="panel-title">
               <div>
                 <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><UserRoundCheck size={16} /> تغییر نقش و همکاران سابق</h2>
-                <p>ثبت ارتقا/جابه‌جایی/عنوان جدید → هشدار + اقدام پیگیری خودکار (محرک «تغییر نقش شخص»)؛ همکاران سابق، منبع مسیر گرم‌اند.</p>
+                <p>ثبت ارتقا/جابه‌جایی/عنوان جدید → هشدار + اقدام پیگیری خودکار (محرک «تغییر نقش شخص»)؛ همکاران سابق، منبع مسیر مطمئن‌اند.</p>
               </div>
               {alumni && <Badge tone="info">{fmt.format(alumni.summary?.alumniCount ?? 0)} همکار سابق</Badge>}
             </div>

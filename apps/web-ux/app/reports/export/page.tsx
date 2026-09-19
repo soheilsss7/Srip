@@ -16,7 +16,7 @@ const KIND_FA: Record<string, string> = {
 const KINDS = Object.keys(KIND_FA);
 
 export default function ExportPage() {
-  const { can } = useWorkspace();
+  const { can, isRealTenant } = useWorkspace();
   const canJson = can('enterprise.admin');
   const [kind, setKind] = useState('executive-summary');
   const [format, setFormat] = useState('csv');
@@ -50,7 +50,7 @@ export default function ExportPage() {
       <PageHeader
         eyebrow="گزارش‌گیری"
         title="خروجی سریع گزارش"
-        description="خروجی تحت مجوز، محدودهٔ دسترسی، تأیید دو مرحله‌ای و ممیزی انجام می‌شود: سرور فایل را تنها با درخواست تأییدشده برای خروجی برمی‌گرداند و هر دانلود در لاگ خروجی داده ثبت می‌شود. در محیط دمو، صفحهٔ گسترده و سند به‌صورت فایل جدولی تحویل می‌شوند."
+        description={`خروجی تحت مجوز، محدودهٔ دسترسی، تأیید دو مرحله‌ای و ممیزی انجام می‌شود: سرور فایل را تنها با درخواست تأییدشده برای خروجی برمی‌گرداند و هر دانلود در لاگ خروجی داده ثبت می‌شود.${!isRealTenant ? ' در محیط دمو، صفحهٔ گسترده و سند به‌صورت فایل جدولی تحویل می‌شوند.' : ''}`}
         actions={<Link className="btn btn-ghost" href="/reports"><FileDown size={15} /> گزارش‌ها و پیش‌نمایش</Link>}
       />
       <ErrorCard message={error} />

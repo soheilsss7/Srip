@@ -22,7 +22,7 @@ const CONF_TONE: Record<string, 'success' | 'info' | 'warning'> = { HIGH: 'succe
 const fmtN = (v: unknown) => (v === null || v === undefined || v === '') ? '—' : new Intl.NumberFormat(localeTag()).format(Number(v));
 
 export default function EnrichmentPage() {
-  const { can } = useWorkspace();
+  const { can, isRealTenant } = useWorkspace();
   const [sources, setSources] = useState<Source[]>([]);
   const [items, setItems] = useState<Suggestion[]>([]);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
@@ -94,7 +94,7 @@ export default function EnrichmentPage() {
           </div>
 
           <SectionCard title={t('منابع رسمی')} icon={<Landmark size={16} />}
-            description={t('پویش مرحله‌ای است — هر بار بخشی از منبع تازه بررسی می‌شود (بدون فراخوانی زنده در دمو).')}>
+            description={isRealTenant ? t('پویش مرحله‌ای است — هر بار بخشی از منبع تازه بررسی می‌شود.') : t('پویش مرحله‌ای است — هر بار بخشی از منبع تازه بررسی می‌شود (بدون فراخوانی زنده در دمو).')}>
             <div className="p3-grid">
               {sources.map(s => (
                 <div key={s.id} className="p3-src">
@@ -148,7 +148,7 @@ export default function EnrichmentPage() {
           </SectionCard>
 
           <p className="pp-muted" style={{ fontSize: 11.5 }}>
-            {t('حاکمیت داده: پیشنهادها فقط دربارهٔ سازمان‌های شخص ثالثِ ردیابی‌شده ساخته می‌شوند؛ مقادیر شبیه‌سازِ قطعیِ «منبع رسمی» در دمو هستند و پس از تأیید انسانی با منبع، سطح اطمینان، شاهد و تاریخ در پروفایل ثبت می‌شوند.')}
+            {isRealTenant ? t('حاکمیت داده: پیشنهادها فقط دربارهٔ سازمان‌های شخص ثالثِ ردیابی‌شده ساخته می‌شوند؛ پس از تأیید انسانی با منبع، سطح اطمینان، شاهد و تاریخ در پروفایل ثبت می‌شوند.') : t('حاکمیت داده: پیشنهادها فقط دربارهٔ سازمان‌های شخص ثالثِ ردیابی‌شده ساخته می‌شوند؛ مقادیر شبیه‌سازِ قطعیِ «منبع رسمی» در دمو هستند و پس از تأیید انسانی با منبع، سطح اطمینان، شاهد و تاریخ در پروفایل ثبت می‌شوند.')}
           </p>
         </>
       )}

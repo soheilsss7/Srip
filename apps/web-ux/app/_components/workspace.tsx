@@ -14,9 +14,9 @@ import { lt, t } from '../_lib/i18n';
 
 type Role = 'SUPER_ADMIN'|'HOLDING_ADMIN'|'HOLDING_EXECUTIVE'|'SUBSIDIARY_ADMIN'|'SUBSIDIARY_EXECUTIVE'|'RELATIONSHIP_MANAGER'|'PROJECT_MANAGER'|'ANALYST'|'STANDARD_USER'|'READ_ONLY';
 type Membership = { id: string; organizationId: string; organizationName: string; role: Role; department?: string|null; dataScope: string; accessScope: string; isPrimary: boolean };
-type Me = { id: string; email: string; name: string; isOwner?: boolean; memberships: Membership[]; permissions: string[]; accessibleOrganizationIds: string[] };
+type Me = { id: string; email: string; name: string; isOwner?: boolean; tenant?: 'demo'|'real'|'personal'; memberships: Membership[]; permissions: string[]; accessibleOrganizationIds: string[] };
 
-type WorkspaceContextValue = { me: Me|null; loading: boolean; error: string; scopeId: string; setScopeId: (id: string)=>void; role: Role; can: (permission: string)=>boolean; isAdmin: boolean };
+type WorkspaceContextValue = { me: Me|null; loading: boolean; error: string; scopeId: string; setScopeId: (id: string)=>void; role: Role; can: (permission: string)=>boolean; isAdmin: boolean; isRealTenant: boolean };
 const WorkspaceContext = createContext<WorkspaceContextValue|null>(null);
 
 export const ROLE_LABELS: Record<Role,string> = lt( { SUPER_ADMIN:t('مدیر کل سیستم'), HOLDING_ADMIN:t('مدیر هلدینگ'), HOLDING_EXECUTIVE:t('مدیر ارشد هلدینگ'), SUBSIDIARY_ADMIN:t('مدیر شرکت'), SUBSIDIARY_EXECUTIVE:t('مدیر ارشد شرکت'), RELATIONSHIP_MANAGER:t('مدیر روابط'), PROJECT_MANAGER:t('مدیر پروژه'), ANALYST:t('تحلیلگر'), STANDARD_USER:t('کاربر استاندارد'), READ_ONLY:t('فقط خواندنی') });
@@ -76,7 +76,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const permissions = me?.permissions ?? [];
   const can = (p: string) => permissions.includes(p) || permissions.includes('*');
   const isAdmin = ['SUPER_ADMIN','HOLDING_ADMIN','SUBSIDIARY_ADMIN'].includes(role);
-  return <WorkspaceContext.Provider value={{ me, loading, error, scopeId, setScopeId, role, can, isAdmin }}>{children}</WorkspaceContext.Provider>;
+  /* مستأجر واقعی (aroun/پارس) هرگز واژه‌های دمو نمی‌بیند — فقط حساب دمو */
+  const isRealTenant = me?.tenant === 'real';
+  return <WorkspaceContext.Provider value={{ me, loading, error, scopeId, setScopeId, role, can, isAdmin, isRealTenant }}>{children}</WorkspaceContext.Provider>;
 }
 export function useWorkspace() {
   const v = useContext(WorkspaceContext);

@@ -56,7 +56,7 @@ const personFull = (p?: Person | null) => p ? `${p.firstName} ${p.lastName}` : '
 const orgName = (id: string | null | undefined, orgs: MiniOrg[]) => orgs.find(o => o.id === id)?.name ?? '—';
 
 export default function ApprovalsPage() {
-  const { me } = useWorkspace();
+  const { me, isRealTenant } = useWorkspace();
   const isOwner = !!me?.permissions?.includes('*');
 
   const [rows, setRows] = useState<Approval[]>([]);
@@ -154,7 +154,9 @@ export default function ApprovalsPage() {
       setOpen(false);
       setFlash(created.requestedById === me?.id
         ? (isOwner
-          ? 'درخواست ثبت شد — در این دمو مالک تنها تصمیم‌گیرنده است و می‌تواند همین درخواست را از همین صفحه تأیید یا رد کند (در محیط واقعی، درخواست‌دهنده هرگز درخواست خودش را تصمیم نمی‌گیرد).'
+          ? (isRealTenant
+            ? 'درخواست ثبت شد و به صف تصمیم رسید.'
+            : 'درخواست ثبت شد — در این دمو مالک تنها تصمیم‌گیرنده است و می‌تواند همین درخواست را از همین صفحه تأیید یا رد کند (در محیط واقعی، درخواست‌دهنده هرگز درخواست خودش را تصمیم نمی‌گیرد).')
           : 'درخواست ثبت شد — شما درخواست‌دهنده هستید؛ تصمیم با مالک سامانه است (درخواست‌دهنده نمی‌تواند درخواست خودش را تأیید کند).')
         : `درخواست «${ACTION_FA[created.actionType] ?? created.actionType}» ثبت شد و در صف انتظار است.`);
       await load();
@@ -246,7 +248,7 @@ export default function ApprovalsPage() {
 
       <div className="stat-grid">
         <StatCard icon={<ShieldQuestion size={18} />} label="در انتظار" value={fmtNum(rows.filter(a => a.status === 'PENDING').length)} iconClass="ic-gold" sub={`نمای فعلی: ${statusTab === 'ALL' ? 'همه' : fa(statusTab)}`} />
-        <StatCard icon={<Scale size={18} />} label="نیازمند تصمیم من" value={fmtNum(myPending)} iconClass="ic-indigo" sub={isOwner ? 'همهٔ درخواست‌های در انتظار (در دمو مالک تصمیم‌گیرنده است)' : 'کاربران غیرمالک در این دمو تصمیم نمی‌گیرند'} />
+        <StatCard icon={<Scale size={18} />} label="نیازمند تصمیم من" value={fmtNum(myPending)} iconClass="ic-indigo" sub={isRealTenant ? (isOwner ? 'همهٔ درخواست‌های در انتظار تصمیم' : 'درخواست‌های در انتظار تصمیم شما') : (isOwner ? 'همهٔ درخواست‌های در انتظار (در دمو مالک تصمیم‌گیرنده است)' : 'کاربران غیرمالک در این دمو تصمیم نمی‌گیرند')} />
         <StatCard icon={<ThumbsUp size={18} />} label="تأییدشده (این نما)" value={fmtNum(rows.filter(a => a.status === 'APPROVED').length)} iconClass="ic-teal" sub={statusTab === 'APPROVED' ? 'در بازهٔ نگهداری' : 'از فیلتر وضعیت استفاده کنید'} />
         <StatCard icon={<ThumbsDown size={18} />} label="ردشده (این نما)" value={fmtNum(rows.filter(a => a.status === 'REJECTED').length)} iconClass="ic-red" sub={statusTab === 'REJECTED' ? 'در بازهٔ نگهداری' : 'از فیلتر وضعیت استفاده کنید'} />
         <StatCard icon={<History size={18} />} label="همهٔ عملیات" value={fmtNum(6)} iconClass="ic-teal" sub="۶ نوع عملیات قابل تأیید" />
@@ -354,7 +356,7 @@ export default function ApprovalsPage() {
       <Modal
         open={open}
         title="درخواست تأیید جدید"
-        description="درخواست به صف تأیید می‌رود. در محیط واقعی درخواست‌دهنده نمی‌تواند درخواست خودش را تصمیم بگیرد (تصمیم‌گیرنده باید فرد دیگری باشد)؛ در این دمو مالک سامانه تصمیم‌گیرنده است و درخواست‌های خودش را هم می‌تواند تأیید کند."
+        description={isRealTenant ? "درخواست به صف تأیید می‌رود؛ تصمیم‌گیرنده باید مجوز لازم را داشته باشد و تصمیم‌ها در ممیزی ثبت می‌شوند." : "درخواست به صف تأیید می‌رود. در محیط واقعی درخواست‌دهنده نمی‌تواند درخواست خودش را تصمیم بگیرد (تصمیم‌گیرنده باید فرد دیگری باشد)؛ در این دمو مالک سامانه تصمیم‌گیرنده است و درخواست‌های خودش را هم می‌تواند تأیید کند."}
         onClose={() => setOpen(false)}
         footer={
           <>

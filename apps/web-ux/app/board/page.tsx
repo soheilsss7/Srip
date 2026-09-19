@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
+import { useWorkspace } from '../_components/workspace';
 import { api } from '../_lib/api';
 import { Badge, ErrorCard, Loading, PageHeader } from '../_components/page-ui';
 import {
@@ -19,6 +20,7 @@ const CLASS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'info' | 'ne
 };
 
 export default function Board() {
+  const { isRealTenant } = useWorkspace();
   const [d, setD] = useState<any | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -168,9 +170,11 @@ export default function Board() {
               </div>
             </section>
           </div>
+          {!isRealTenant && (
           <p className="t-muted" style={{ fontSize: 10.5, marginTop: 8 }}>
             {t('برچسب دمو: اعداد از دادهٔ نمونهٔ همین سامانه محاسبه شده‌اند و برای گزارش‌برداری هیئت واقعی کافی نیستند (بند ۹ — ریسک‌ها و ملاحظات).')}
           </p>
+          )}
         </>
       )}
     </main>

@@ -20,7 +20,7 @@ type Pending = { id: string; title: string; body: string; topic: string; created
 const fmtN = (v: unknown) => (v === null || v === undefined || v === '') ? '—' : new Intl.NumberFormat(localeTag()).format(Number(v));
 
 export default function PushPage() {
-  const { can } = useWorkspace();
+  const { can, isRealTenant } = useWorkspace();
   const [subs, setSubs] = useState<Sub[]>([]);
   const [received, setReceived] = useState<Pending[]>([]);
   const [permission, setPermission] = useState<string>('default');
@@ -128,7 +128,7 @@ export default function PushPage() {
   const dispatchTest = async () => {
     setBusy(true); setError(''); setFlash('');
     try {
-      const r = await api<{ sent: number; message: string }>('/notifications/push/dispatch', { method: 'POST', body: JSON.stringify({ title: t('اعلان آزمون SRIP'), body: t('این پیام از مسیر Web Push (نقل‌ونقل polling در دمو) رسید.') }) });
+      const r = await api<{ sent: number; message: string }>('/notifications/push/dispatch', { method: 'POST', body: JSON.stringify({ title: t('اعلان آزمون SRIP'), body: isRealTenant ? t('این پیام از مسیر Web Push رسید.') : t('این پیام از مسیر Web Push (نقل‌ونقل polling در دمو) رسید.') }) });
       setFlash(r.message);
       await ackAll();
     } catch (e) { setError((e as Error).message); }
@@ -175,7 +175,7 @@ export default function PushPage() {
           </div>
 
           <SectionCard title={t('اشتراک اعلان این دستگاه')} icon={<Bell size={16} />}
-            description={t('در دمو، انتقال پیام با polling از صف سرور انجام می‌شود (همان ساختار اشتراک Web Push)؛ در استقرار واقعی با VAPID تحویل از سرویس اعلان انجام می‌شود — سرویس‌ورکر پوش و کلیک اعلان از همین حالا فعال است.')}>
+            description={isRealTenant ? t('انتقال پیام با polling از صف سرور انجام می‌شود (همان ساختار اشتراک Web Push)؛ در استقرار با سرویس اعلان، تحویل با VAPID انجام می‌شود — سرویس‌ورکر پوش و کلیک اعلان از همین حالا فعال است.') : t('در دمو، انتقال پیام با polling از صف سرور انجام می‌شود (همان ساختار اشتراک Web Push)؛ در استقرار واقعی با VAPID تحویل از سرویس اعلان انجام می‌شود — سرویس‌ورکر پوش و کلیک اعلان از همین حالا فعال است.')}>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {permission !== 'granted' && <button className="btn btn-secondary" onClick={requestPermission}><Bell size={14} /> {t('درخواست رضایت اعلان')}</button>}
               <button className="btn btn-primary" disabled={busy || permission !== 'granted'} onClick={subscribe}><BellRing size={14} /> {t('اشتراک این دستگاه')}</button>
@@ -219,7 +219,7 @@ export default function PushPage() {
           </SectionCard>
 
           <SectionCard title={t('آفلاین و حافظهٔ محلی')} icon={online ? <Wifi size={16} /> : <WifiOff size={16} />}
-            description={t('سرویس‌ورکر صفحات بازدیدشده را ذخیره می‌کند تا بدون اینترنت در دسترس باشند؛ دادهٔ API دمو نیز به‌طور کامل داخل سرویس‌ورکر اجرا می‌شود.')}>
+            description={isRealTenant ? t('سرویس‌ورکر صفحات بازدیدشده را ذخیره می‌کند تا بدون اینترنت در دسترس باشند.') : t('سرویس‌ورکر صفحات بازدیدشده را ذخیره می‌کند تا بدون اینترنت در دسترس باشند؛ دادهٔ API دمو نیز به‌طور کامل داخل سرویس‌ورکر اجرا می‌شود.')}>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
               <Badge tone={swReady ? 'success' : 'warning'}>{swReady ? t('سرویس‌ورکر فعال') : t('سرویس‌ورکر در این نشست فعال نیست')}</Badge>
               {cacheList.map(c => <span key={c.name} className="p3-chip"><code style={{ direction: 'ltr', fontSize: 10.5 }}>{c.name}</code> · {fmtN(c.entries)} مورد</span>)}
@@ -227,7 +227,7 @@ export default function PushPage() {
               <button className="btn btn-secondary btn-sm" disabled={busy} onClick={loadCaches}><RefreshCw size={13} /> {t('به‌روزرسانی')}</button>
             </div>
             <p className="pp-muted" style={{ fontSize: 11.5, marginTop: 8 }}>
-              صداقت محدوده: پوش واقعی (VAPID) نیازمند سرویس اعلان اختیاری در استقرار ترکیبی است؛ در این دمو ساختار اشتراک/رضایت/صف تحویل همان است و فقط نقل‌ونقل با polling شبیه‌سازی شده است. دریافت در Android/iOS PWA پس از استقرار سرویس اعلان، بدون تغییر این صفحه فعال می‌شود.
+              صداقت محدوده: پوش واقعی (VAPID) نیازمند سرویس اعلان اختیاری در استقرار است؛ ساختار اشتراک/رضایت/صف تحویل همین است{!isRealTenant && ' و نقل‌ونقل با polling شبیه‌سازی شده است'}. دریافت در Android/iOS PWA پس از استقرار سرویس اعلان، بدون تغییر این صفحه فعال می‌شود.
             </p>
           </SectionCard>
         </>

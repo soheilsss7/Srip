@@ -113,7 +113,7 @@ const LOGIN_STEPS = `
       console.log('PLANNED=' + planned);
       await new Promise(r => setTimeout(r, 2000));
       const body1 = await page.evaluate(() => document.body.innerText);
-      console.log('WARM_FOUND=' + body1.includes('مسیر گرم یافت شد و عامل یک واسطه'));
+      console.log('WARM_FOUND=' + body1.includes('مسیر مطمئن یافت شد و عامل یک واسطه'));
       console.log('INTERMEDIARY_SHOWN=' + body1.includes('سارا محمدی'));
       console.log('CONSENT_NOTE=' + body1.includes('هیچ پیامی بدون پذیرش صریح واسطه ارسال نمی‌شود'));
       const draftLen = await page.evaluate(() => {
@@ -155,7 +155,7 @@ const LOGIN_STEPS = `
   ok(out.includes('SECTION=true'), 'A: بخش «عامل معرفی خودکار» در صفحه');
   ok(out.includes('PICKED=true'), 'A: انتخاب سازمان هدف');
   ok(out.includes('PLANNED=true'), 'A: کلیک برنامه‌ریزی عامل');
-  ok(out.includes('WARM_FOUND=true'), 'A: مسیر گرم + واسطهٔ مجاز اعلام شد');
+  ok(out.includes('WARM_FOUND=true'), 'A: مسیر مطمئن + واسطهٔ مجاز اعلام شد');
   ok(out.includes('INTERMEDIARY_SHOWN=true'), 'A: واسطهٔ انتخاب‌شده (سارا محمدی) با کارت سقف');
   ok(out.includes('CONSENT_NOTE=true'), 'A: قاعدهٔ رضایت صریح نمایش داده شد');
   ok(out.includes('DRAFT_LEN=') && !out.includes('DRAFT_LEN=0'), 'A: پیش‌نویس متن معرفی تولید شد');

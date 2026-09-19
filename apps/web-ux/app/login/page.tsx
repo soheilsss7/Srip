@@ -5,7 +5,7 @@ import {useRouter} from 'next/navigation';
 import {apiPost,setSession} from '../_lib/api';
 import {AuthShell} from '../_components/auth-shell';
 import {MOCK_PAGES,useMockApiReady,useSwControlled} from '../_lib/mock-ready';
-import {Sparkles,Lock,User,ShieldCheck,AlertCircle} from 'lucide-react';
+import {Lock,User,ShieldCheck,AlertCircle} from 'lucide-react';
 import { t } from '../_lib/i18n';
 
 
@@ -72,12 +72,7 @@ export default function Login(){
  }
  return (
   <AuthShell>
-    <span className="auth-badge"><Sparkles size={14}/> {t('پلتفرم آماده بهره‌برداری است')}</span>
     <h2>{t('ورود به حساب کاربری')}</h2>
-    <p className="ac-sub">
-      {t('برای ادامه، اطلاعات ورود خود را وارد کنید. دسترسی‌ها بر اساس نقش و محدودهٔ سازمانی شما تعیین می‌شود.')}
-    </p>
-
     <form onSubmit={submit} className="auth-form" noValidate>
       <div className="field">
         <label className="field-label" htmlFor="login-email">{t('ایمیل یا نام کاربری')}</label>
@@ -103,7 +98,7 @@ export default function Login(){
             <input id="login-otp" autoComplete="one-time-code" inputMode="numeric" maxLength={6}
               value={otp} onChange={e=>setOtp(e.target.value.replace(/\D/g,''))} placeholder="123456" required/>
           </div>
-          <span className="field-hint">{t('کد ۶ رقمی را وارد کنید (در محیط دمو هر ۶ رقم پذیرفته می‌شود).')}</span>
+          <span className="field-hint">{t('کد ۶ رقمی تأیید دومرحله‌ای را وارد کنید.')}</span>
         </div>
       )}
       {error&&(
@@ -122,9 +117,6 @@ export default function Login(){
         {waitingSw&&!slowWait&&<span className="auth-sec-note" role="status">{t('در حال برقراری اتصال به سامانه… بار اول چند لحظه طول می‌کشد.')}</span>}
         {waitingSw&&slowWait&&<span className="auth-sec-note" role="status">{t('اتصال کند است — بار اول فایل سرویس‌دهندهٔ داده (حدود ۱٫۲ مگابایت) دانلود می‌شود و روی اینترنت کند ممکن است تا یک دقیقه طول بکشد؛ دکمهٔ ورود خودکار فعال می‌شود. اگر بیشتر از یک دقیقه گذشت: (۱) آدرس باید با https:// شروع شود، (۲) پنجرهٔ ناشناس/حالت خصوصی مرورگر نباشد، (۳) یک‌بار با Ctrl+Shift+R رفرش کنید.')}</span>}
       </div>
-      <p className="auth-note">
-        <ShieldCheck size={12} style={{verticalAlign:'-2px'}}/> دسترسی‌ها بر اساس نقش و محدودهٔ سازمانی شما تعیین می‌شود.
-      </p>
     </form>
 
     <div className="auth-links">

@@ -756,4 +756,8 @@ export const EN_DICT_A: Record<string, string> = {
   'خروجی مورد انتظار از این جلسه چیست؟': 'What is the expected outcome of this meeting?',
   'خصوصی': 'Private',
   'خط · سیاهه روابط': 'Line · relationship ledger',
+  'خط زمانی': 'Timeline',
+  'خط زمانی رابطه': 'Relationship timeline',
+  'خط قرمز': 'Red line',
+  'خط قرمز (ممنوع)': 'Red line (forbidden)',
 };

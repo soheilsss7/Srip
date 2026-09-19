@@ -146,7 +146,7 @@ function Stats({ map }: { map: Record<string, unknown> }) {
 }
 
 export default function Reports() {
-  const { me, can } = useWorkspace();
+  const { me, can, isRealTenant } = useWorkspace();
   const isOwner = can('*');
   const canExport = can('report.export');
   const canJson = can('enterprise.admin');
@@ -253,7 +253,7 @@ export default function Reports() {
       return (
         <div style={{ display: 'grid', gap: 12 }}>
           <Stats map={(data.summary ?? {}) as Record<string, unknown>} />
-          <p className="muted">گزارش شبکه در نسخهٔ کامل شامل گراف تعاملی، مرکزیت، پل‌ها و گلوگاه‌ها نیز می‌شود (سرویس network در دمو محدود به شمارش است).</p>
+          <p className="muted">گزارش شبکه در نسخهٔ کامل شامل گراف تعاملی، مرکزیت، پل‌ها و گلوگاه‌ها نیز می‌شود{!isRealTenant && ' (سرویس network در دمو محدود به شمارش است)'}.</p>
         </div>
       );
     }
@@ -265,7 +265,7 @@ export default function Reports() {
             <StatCard icon={<Share2 size={17} />} label="ریشه‌های ساختار" value={fmtN((data.roots ?? []).length)} iconClass="ic-green" />
           </div>
           {Array.isArray(data.roots) && data.roots.length > 0 && (
-            <SectionCard title="سازمان‌ها (سلسله‌مراتب)" description="در دمو، دادهٔ سازمانی فاقد والد است؛ ساختار در نسخهٔ کامل با children بازگشتی می‌آید">
+            <SectionCard title="سازمان‌ها (سلسله‌مراتب)" description={!isRealTenant ? "در دمو، دادهٔ سازمانی فاقد والد است؛ ساختار در نسخهٔ کامل با children بازگشتی می‌آید" : "ساختار سلسله‌مراتب در نسخهٔ کامل با children بازگشتی می‌آید"}>
               <ul style={{ display: 'grid', gap: 6, fontSize: 12.5, listStyle: 'none', padding: 0 }}>
                 {(data.roots as Array<Record<string, unknown>>).map((r, i) => (
                   <li key={String(r.id ?? i)} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '6px 10px', background: 'var(--surface-2)', borderRadius: 8 }}>
@@ -451,7 +451,7 @@ export default function Reports() {
           <div className="section-head">
             <div>
               <h2 style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><FileDown size={16} /> خروجی فایل</h2>
-              <p>خروجی فقط با درخواست تأیید و پس از تصمیم مالک صادر می‌شود و در لاگ خروجی داده با طبقه‌بندی «داخلی» ثبت می‌گردد. {!canJson && 'قالب متنی ویژهٔ مدیران سازمانی است.'} در محیط دمو، قالب‌های صفحه‌ای و سند به‌صورت فایل جدولی دانلود می‌شوند.</p>
+              <p>خروجی فقط با درخواست تأیید و پس از تصمیم مالک صادر می‌شود و در لاگ خروجی داده با طبقه‌بندی «داخلی» ثبت می‌گردد. {!canJson && 'قالب متنی ویژهٔ مدیران سازمانی است.'} {!isRealTenant && ' در محیط دمو، قالب‌های صفحه‌ای و سند به‌صورت فایل جدولی دانلود می‌شوند.'}</p>
             </div>
           </div>
           <div className="toolbar" style={{ flexWrap: 'wrap' }}>

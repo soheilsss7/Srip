@@ -161,7 +161,7 @@ function scenario(name, { before, steps }) {
       await new Promise(r => setTimeout(r, 1500));
       console.log('URL=' + await page.url());
       const body = await page.evaluate(() => document.body.innerText.slice(0, 3000));
-      console.log('REFERRALS_EN=' + (body.includes('Introductions (with audit)')));
+      console.log('REFERRALS_EN=' + (body.includes('Introductions') && !body.includes('(with audit)')));
       console.log('REFERRALS_FA_LEFTOVER=' + (body.includes('کل معرفی') || body.includes('بازخوانی')));
       const nav = await page.evaluate(() => document.querySelector('.side-nav')?.innerText.slice(0, 400) ?? 'NONE');
       console.log('NAV=' + nav.replace(/\\n/g, ' | ').slice(0, 300));

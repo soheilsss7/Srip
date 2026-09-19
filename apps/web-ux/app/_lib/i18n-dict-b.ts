@@ -1,9 +1,5 @@
 /* دیکشنری انگلیسی فاز ۴/۲۳ — بخش 2 از 3 (تولیدشده توسط scripts/_i18n-gen-dict.py) */
 export const EN_DICT_B: Record<string, string> = {
-  'خط زمانی': 'Timeline',
-  'خط زمانی رابطه': 'Relationship timeline',
-  'خط قرمز': 'Red line',
-  'خط قرمز (ممنوع)': 'Red line (forbidden)',
   'خطا': 'Error',
   'خطا در دریافت جستجوهای ذخیره‌شده': 'Failed to load saved searches',
   'خطا:': 'Error:',
@@ -756,4 +752,12 @@ export const EN_DICT_B: Record<string, string> = {
   'مستقیماً معامله/پروژه/تأمین': 'Direct deal/project/supply',
   'مسدود': 'Blocked',
   'مسدود).': 'blocked).',
+  'مسیر': 'Path',
+  'مسیر (مبدأ ← مقصد)': 'Path (origin → target)',
+  'مسیر / تمرکز': 'Path / focus',
+  'مسیر در این Workspace وجود ندارد یا برای شما قابل دسترسی نیست.': 'This route doesn\'t exist in this workspace or isn\'t accessible to you.',
+  'مسیر را باز یا مسدود می‌کنند. هیبرید هر دو نقش را دارد.': 'open or block the path. Hybrid plays both roles.',
+  'مسیر سازمانی': 'Organizational path',
+  'مسیر سازمانی بین این دو گره یافت نشد — در دادهٔ فعلی به هم متصل نیستند (سازمان دیگری بین آن‌ها نیست).': 'No organizational path between these two nodes — they aren\'t connected in current data (no organization sits between them).',
+  'مسیر سازمانی بین دو گره انتخاب‌شده یافت نشد.': 'No organizational path found between the selected nodes.',
 };

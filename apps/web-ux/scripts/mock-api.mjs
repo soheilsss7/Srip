@@ -19,7 +19,7 @@ const PORT = Number(process.env.MOCK_API_PORT || 4000);
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.17.01';
+const DEMO_MOCK_VERSION = '2026.09.19.01';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -6223,7 +6223,11 @@ const server=http.createServer(async(req,res)=>{
     if(!u) return json(res,401,{code:'UNAUTHENTICATED',message:'نشست نامعتبر است.'});
     const memberships=(u.memberships??[]).map(m=>({id:m.id,organizationId:m.organizationId,organizationName:m.organizationName??orgById(m.organizationId)?.name??null,role:m.role,department:m.department??null,dataScope:m.dataScope??null,accessScope:m.accessScope??null,scope:m.scope??null,isPrimary:!!m.isPrimary}));
     const perms=u.permissions??[];
-    return json(res,200,{id:u.id,email:u.email,name:u.name,isOwner:!!u.isOwner,memberships,permissions:[...new Set(perms)],accessibleOrganizationIds:u.accessibleOrganizationIds??[]});
+    /* مستأجرِ حساب (demo/real/personal) — رابط کاربری بر اساس آن واژه‌های دمو را
+       فقط برای حساب دمو نشان می‌دهد؛ حساب واقعی هرگز برچسب دمو نمی‌بیند */
+    const primaryOrgId=(memberships.find(m=>m.isPrimary)??memberships[0])?.organizationId??null;
+    const tenant=primaryOrgId?(orgTenant(orgById(primaryOrgId))??'personal'):'personal';
+    return json(res,200,{id:u.id,email:u.email,name:u.name,isOwner:!!u.isOwner,tenant,memberships,permissions:[...new Set(perms)],accessibleOrganizationIds:u.accessibleOrganizationIds??[]});
   }
 
   /* --------------------------- organizations --------------------------- */

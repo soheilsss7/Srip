@@ -163,7 +163,7 @@ function ExecStatus({ status }: { status: string }) {
 }
 
 export default function WorkflowsPage({ initialTab = 'workflows' }: { initialTab?: 'workflows' | 'executions' }) {
-  const { me, can } = useWorkspace();
+  const { me, can, isRealTenant } = useWorkspace();
   const isOwner = !!me?.permissions?.includes('*');
   const canWrite = isOwner || can('workflow.write');
   const canExec = isOwner || can('workflow.execute');
@@ -315,7 +315,7 @@ export default function WorkflowsPage({ initialTab = 'workflows' }: { initialTab
     try {
       if (existing) {
         await api(`/workflows/${existing.id}/delete`, { method: 'DELETE', body: JSON.stringify(payload) }).catch(() => null);
-        setFlash('ویرایش در این دمو با حذف و بازآفرینی اعمال شد (متد PUT پشتیبانی نمی‌شود).');
+        setFlash(isRealTenant ? 'ویرایش با حذف و بازآفرینی اعمال شد (متد PUT پشتیبانی نمی‌شود).' : 'ویرایش در این دمو با حذف و بازآفرینی اعمال شد (متد PUT پشتیبانی نمی‌شود).');
         clean();
         await load();
       } else {
@@ -782,7 +782,9 @@ export default function WorkflowsPage({ initialTab = 'workflows' }: { initialTab
       </Modal>
 
       <p className="muted" style={{ marginTop: 14 }}>
-        نکته: در این دمو مالک تنها تصمیم‌گیرنده است؛ در محیط واقعی تصمیم با کاربرِ دارای مجوز <code dir="ltr">workflow.execute</code> است. اجراها در <Link href="/admin/audit">ممیزی</Link> با برچسب Workflow ثبت می‌شوند.
+        نکته: {isRealTenant
+          ? <>تصمیم با کاربرِ دارای مجوز <code dir="ltr">workflow.execute</code> است.</>
+          : <>در این دمو مالک تنها تصمیم‌گیرنده است؛ در محیط واقعی تصمیم با کاربرِ دارای مجوز <code dir="ltr">workflow.execute</code> است.</>} اجراها در <Link href="/admin/audit">ممیزی</Link> با برچسب Workflow ثبت می‌شوند.
       </p>
     </main>
   );

@@ -308,3 +308,16 @@
 در حال برقراری اتصال به سامانه… بار اول چند لحظه طول می‌کشد.	Connecting to the service… the first load takes a few moments.
 اتصال کند است — بار اول فایل سرویس‌دهندهٔ داده (حدود ۱٫۲ مگابایت) دانلود می‌شود و روی اینترنت کند ممکن است تا یک دقیقه طول بکشد؛ دکمهٔ ورود خودکار فعال می‌شود. اگر بیشتر از یک دقیقه گذشت: (۱) آدرس باید با https:// شروع شود، (۲) پنجرهٔ ناشناس/حالت خصوصی مرورگر نباشد، (۳) یک‌بار با Ctrl+Shift+R رفرش کنید.	Slow connection — on first visit the data-service file (~1.2 MB) is downloaded, which can take up to a minute on a slow link; the sign-in button enables automatically. If more than a minute passes: (1) the address must start with https://, (2) don’t use a private/incognito window, (3) refresh once with Ctrl+Shift+R.
 در حال برقراری اتصال به سامانه… چند لحظه صبر کنید؛ ورود خودکار ادامه می‌یابد.	Connecting to the service… please wait; sign-in resumes automatically.
+کد ۶ رقمی تأیید دومرحله‌ای را وارد کنید.	Enter the 6-digit two-step verification code.
+مسیر معرفی مطمئن و واسطه‌ها	Trusted introduction path & intermediaries
+یافتن مسیر مطمئن	Find a trusted path
+عامل سه‌گامِ Boomerang را اجرا می‌کند: یافتن مسیر مطمئن، انتخاب واسطهٔ مجاز (سقف ماهانه + رضایت صریح)، و نوشتن پیش‌نویس معرفی به لحن واسطه — موتور قطعیِ قالب‌محور، بدون LLM.	The agent runs Boomerang’s three steps: finding a trusted path, choosing an authorized intermediary (monthly cap + explicit consent), and drafting the introduction in the intermediary’s voice — a deterministic template engine, no LLM.
+مسیر مطمئن یافت شد و عامل یک واسطهٔ «مجاز» (تنظیم فعال + سقف ماهانهٔ باز) انتخاب کرد.	A trusted path was found and the agent picked an “authorized” intermediary (active setting + open monthly cap).
+مأموریت معرفی (ارکستراسیون)	Introduction mission (orchestration)
+پیش‌بینی پیوند بین سازمان‌های بی‌رابطه، خوشه‌های گراف و مسیر مطمئن به فرصت‌های باز — همه از روی داده‌های همان شبکه محاسبه شده‌اند	Link prediction between unconnected organizations, graph clusters and trusted paths to open opportunities — all computed from that same network’s data
+مسیر مطمئن به فرصت‌های باز	Trusted path to open opportunities
+این پیام از مسیر Web Push رسید.	This message arrived via Web Push.
+انتقال پیام با polling از صف سرور انجام می‌شود (همان ساختار اشتراک Web Push)؛ در استقرار با سرویس اعلان، تحویل با VAPID انجام می‌شود — سرویس‌ورکر پوش و کلیک اعلان از همین حالا فعال است.	Messages move via polling from the server queue (same structure as Web Push subscriptions); with a notification service in place, delivery uses VAPID — the push service worker and notification click are already active.
+سرویس‌ورکر صفحات بازدیدشده را ذخیره می‌کند تا بدون اینترنت در دسترس باشند.	The service worker stores visited pages so they stay available offline.
+پویش مرحله‌ای است — هر بار بخشی از منبع تازه بررسی می‌شود.	Staged scanning — each run examines a fresh portion of the source.
+حاکمیت داده: پیشنهادها فقط دربارهٔ سازمان‌های شخص ثالثِ ردیابی‌شده ساخته می‌شوند؛ پس از تأیید انسانی با منبع، سطح اطمینان، شاهد و تاریخ در پروفایل ثبت می‌شوند.	Data governance: suggestions are built only about tracked third-party organizations; after human confirmation, the profile records source, confidence, evidence and date.
