@@ -1,57 +1,65 @@
 'use client';
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, apiGet } from '../_lib/api';
 import { useWorkspace } from '../_components/workspace';
 import { Badge, ErrorCard, Loading, PageHeader, SectionCard, Segmented, StatCard } from '../_components/page-ui';
 import IntelHub, { RecSubTabs } from '../_components/intel-hub';
-import { Building2, CheckCircle2, Database, FileSearch, Landmark, RefreshCw, ScanSearch, ShieldQuestion, XCircle } from 'lucide-react';
+import { Building2, CheckCircle2, Database, FileSearch, Landmark, RefreshCw, ScanSearch, ShieldCheck, XCircle } from 'lucide-react';
 import { localeTag, t } from '../_lib/i18n';
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   غنی‌سازی از منابع رسمی بیرونی (مسترپلن فاز ۳/۱۸) — الگوی Affinity/TSC
-   سه منبع عمومی رسمی → تطبیق با سازمان‌های ردیابی‌شده → پیشنهاد تکمیل
-   پروفایل با «منبع + سطح اطمینان» → تأیید انسانی (همان الگوی پیشنهاد یال).
-   شفافیت منبع در همهٔ فیلدهای غنی‌شده؛ هرگز دربارهٔ پروفایل خودِ مستأجر.
+   غنی‌سازی منابع رسمی — تکمیل پروفایل سازمان‌های همکار از دادهٔ عمومیِ منابع رسمی
+   (ثبت شرکت‌ها، روزنامهٔ رسمی، پورتال‌های نهادی).
+   سه گام: پویش ← بازبینی با منبع و سطح اطمینان ← تأیید و ثبت در پروفایل.
+   شفافیت منبع در هر فیلد ثبت‌شده؛ پیشنهادها هرگز دربارهٔ سازمان خودِ کاربر نیستند.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 type Source = { id: string; kind: string; nameFa: string; fields: string[]; fieldsFa: string[]; cadenceFa: string; coverageFa: string; availableInScope: number; revealed: number; remaining: number };
 type Suggestion = { id: string; orgId: string; orgName: string; sourceId: string; sourceNameFa: string; field: string; fieldFa: string; proposedValue: string; currentValue?: string | null; confidence: string; confidenceFa: string; evidence: string; status: string; createdAt: string; applied?: { value: string; sourceNameFa: string; confidence: string; appliedAt: string } | null };
 type Metrics = { totalSuggestions: number; accepted: number; rejected: number; pending: number; acceptanceRateFa: string | null; organizationsEnriched: number };
+type OrgRow = { orgId: string; orgName: string; available: number; pending: number; accepted: number; rejected: number; applied: number; coverage: number; fields: { field: string; fieldFa: string; sourceNameFa: string }[] };
 
 const CONF_TONE: Record<string, 'success' | 'info' | 'warning'> = { HIGH: 'success', MEDIUM: 'info', LOW: 'warning' };
+const CONF_FA: Record<string, string> = { HIGH: 'بالا', MEDIUM: 'متوسط', LOW: 'کم' };
 const fmtN = (v: unknown) => (v === null || v === undefined || v === '') ? '—' : new Intl.NumberFormat(localeTag()).format(Number(v));
+const fmtDate = (iso?: string | null) => iso ? new Date(iso).toLocaleDateString(localeTag()) : '';
 
 export default function EnrichmentPage() {
   const { can, isRealTenant } = useWorkspace();
   const [sources, setSources] = useState<Source[]>([]);
   const [items, setItems] = useState<Suggestion[]>([]);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [orgs, setOrgs] = useState<OrgRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [flash, setFlash] = useState('');
   const [busy, setBusy] = useState('');
   const [tab, setTab] = useState<'PENDING' | 'DECIDED'>('PENDING');
+  const [srcFilter, setSrcFilter] = useState('ALL');
+  const [confFilter, setConfFilter] = useState('ALL');
+  const [query, setQuery] = useState('');
   const canWrite = can('organization.write');
 
   const load = useCallback(async () => {
     try {
-      const [s, sg, m] = await Promise.all([
+      const [s, sg, m, og] = await Promise.all([
         apiGet<{ sources: Source[] }>('/enrichment/sources'),
         apiGet<{ items: Suggestion[] }>('/enrichment/suggestions'),
         apiGet<Metrics>('/enrichment/metrics'),
+        apiGet<{ items: OrgRow[] }>('/enrichment/organizations').catch(() => ({ items: [] as OrgRow[] })),
       ]);
-      setSources(s.sources ?? []); setItems(sg.items ?? []); setMetrics(m);
+      setSources(s.sources ?? []); setItems(sg.items ?? []); setMetrics(m); setOrgs(og.items ?? []);
     } catch (e) { setError((e as Error).message); }
     finally { setLoading(false); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const scan = async (sourceId?: string) => {
-    setBusy(sourceId ?? 'ALL'); setError(''); setFlash('');
+  const scan = async (opts?: { sourceId?: string; orgId?: string }) => {
+    setBusy(opts?.sourceId ?? opts?.orgId ?? 'ALL'); setError(''); setFlash('');
     try {
-      const r = await api<{ created: number; message: string }>('/enrichment/scan', { method: 'POST', body: JSON.stringify(sourceId ? { sourceId } : {}) });
+      const r = await api<{ created: number; message: string }>('/enrichment/scan', { method: 'POST', body: JSON.stringify(opts ?? {}) });
       setFlash(r.message);
       await load();
     } catch (e) { setError((e as Error).message); }
@@ -61,22 +69,43 @@ export default function EnrichmentPage() {
     setBusy(id); setError(''); setFlash('');
     try {
       const r = await api<{ fieldFa: string; orgName: string }>(`/enrichment/suggestions/${id}/${action}`, { method: 'POST', body: '{}' });
-      setFlash(action === 'accept' ? `«${r.orgName} — ${r.fieldFa}${t('» با منبع و سطح اطمینان ثبت شد.')}` : t('پیشنهاد رد شد.'));
+      setFlash(action === 'accept' ? `«${r.orgName} — ${r.fieldFa}${t('» با منبع و سطح اطمینان در پروفایل ثبت شد.')}` : t('پیشنهاد رد شد.'));
+      await load();
+    } catch (e) { setError((e as Error).message); }
+    finally { setBusy(''); }
+  };
+  const bulkAcceptHigh = async () => {
+    setBusy('bulk'); setError(''); setFlash('');
+    try {
+      const ids = pendingRows.filter(s => s.confidence === 'HIGH').map(s => s.id);
+      const r = await api<{ accepted: number; rejected: number; message: string }>('/enrichment/suggestions/bulk', { method: 'POST', body: JSON.stringify({ action: 'accept', ids }) });
+      setFlash(r.message || t('پیشنهادهای اطمینان‌بالا در پروفایل‌ها ثبت شد.'));
       await load();
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(''); }
   };
 
-  const pending = items.filter(s => s.status === 'PENDING');
-  const decided = items.filter(s => s.status !== 'PENDING');
-  const rows = tab === 'PENDING' ? pending : decided;
+  const pending = useMemo(() => items.filter(s => s.status === 'PENDING'), [items]);
+  const decided = useMemo(() => items.filter(s => s.status !== 'PENDING'), [items]);
+
+  /* فیلترها روی هر دو تب اعمال می‌شوند: منبع، سطح اطمینان، جستجو */
+  const applyFilters = (rows: Suggestion[]) => {
+    const q = query.trim().toLowerCase();
+    return rows
+      .filter(s => srcFilter === 'ALL' || s.sourceId === srcFilter)
+      .filter(s => confFilter === 'ALL' || s.confidence === confFilter)
+      .filter(s => !q || (s.orgName ?? '').toLowerCase().includes(q) || (s.fieldFa ?? '').toLowerCase().includes(q) || (s.proposedValue ?? '').toLowerCase().includes(q));
+  };
+  const pendingRows = useMemo(() => applyFilters(pending), [pending, srcFilter, confFilter, query]); // eslint-disable-line react-hooks/exhaustive-deps
+  const decidedRows = useMemo(() => applyFilters(decided), [decided, srcFilter, confFilter, query]); // eslint-disable-line react-hooks/exhaustive-deps
+  const rows = tab === 'PENDING' ? pendingRows : decidedRows;
+  const highCount = pendingRows.filter(s => s.confidence === 'HIGH').length;
 
   return (
     <>
       <PageHeader
-        eyebrow={t('مسترپلن فاز ۳/۱۸ — الگوی Affinity (۴۰+ منبع) / TSC.ai')}
-        title={t('غنی‌سازی از منابع رسمی')}
-        description={t('دریافت دوره‌ای دادهٔ عمومی از منابع رسمی، تطبیق با سازمان‌های ردیابی‌شده و پیشنهاد تکمیل پروفایل با «منبع + سطح اطمینان» — اعمال فقط با تأیید انسانی. پیشنهادها فقط دربارهٔ سازمان‌های شخص ثالث‌اند، هرگز پروفایل خودتان.')}
+        title={t('غنی‌سازی منابع رسمی')}
+        description={t('پروفایل سازمان‌های همکار را با داده‌های عمومی منابع رسمی — شمارهٔ ثبت، سال تأسیس، شکل حقوقی، سرمایه و راه‌های ارتباطی — تکمیل کنید. هر پیشنهاد با ذکر منبع، شاهد و سطح اطمینان ارائه می‌شود و فقط با تأیید شما در پروفایل همان سازمان ثبت می‌شود.')}
         actions={canWrite ? (
           <button className="btn btn-primary" disabled={!!busy} onClick={() => scan()}>
             <RefreshCw size={14} /> {busy === 'ALL' ? t('در حال پویش…') : t('پویش همهٔ منابع')}
@@ -96,8 +125,29 @@ export default function EnrichmentPage() {
             <StatCard icon={<Database size={18} />} label={t('سازمان‌های غنی‌شده')} value={fmtN(metrics?.organizationsEnriched ?? 0)} iconClass="ic-purple" sub={t('با شفافیت منبع در هر فیلد')} />
           </div>
 
+          {/* چطور کار می‌کند — سه گام */}
+          <section className="panel" aria-label={t('چطور کار می‌کند')}>
+            <div className="panel-title">
+              <div><h2>{t('چطور کار می‌کند؟')}</h2><p>{t('سه گام تا تکمیل پروفایل سازمان‌ها — بدون ورود دستی داده')}</p></div>
+            </div>
+            <div className="enr-steps">
+              <div className="enr-step">
+                <span className="stat-ico ic-blue"><ScanSearch size={16} /></span>
+                <div><strong>{t('۱. پویش کنید')}</strong><small>{t('داده‌های عمومی منابع رسمی به‌صورت دوره‌ای با سازمان‌های محدودهٔ شما تطبیق داده می‌شود.')}</small></div>
+              </div>
+              <div className="enr-step">
+                <span className="stat-ico ic-teal"><FileSearch size={16} /></span>
+                <div><strong>{t('۲. بازبینی کنید')}</strong><small>{t('هر پیشنهاد با منبع، شاهد و سطح اطمینان نمایش داده می‌شود؛ مقدار فعلی و پیشنهادی کنار هم می‌آیند.')}</small></div>
+              </div>
+              <div className="enr-step">
+                <span className="stat-ico ic-indigo"><CheckCircle2 size={16} /></span>
+                <div><strong>{t('۳. تأیید کنید')}</strong><small>{t('با پذیرش شما، مقدار همراه نام منبع و تاریخ در پروفایل همان سازمان ثبت می‌شود و همیشه قابل ردیابی است.')}</small></div>
+              </div>
+            </div>
+          </section>
+
           <SectionCard title={t('منابع رسمی')} icon={<Landmark size={16} />}
-            description={isRealTenant ? t('پویش مرحله‌ای است — هر بار بخشی از منبع تازه بررسی می‌شود.') : t('پویش مرحله‌ای است — هر بار بخشی از منبع تازه بررسی می‌شود (بدون فراخوانی زنده در دمو).')}>
+            description={t('این منابع به‌صورت دوره‌ای بررسی می‌شوند؛ هر پویش بخش تازه‌ای از هر منبع را آشکار و پیشنهادهای تازه را به صف بازبینی می‌آورد.')}>
             <div className="p3-grid">
               {sources.map(s => {
                 const total = Math.max(1, s.availableInScope);
@@ -119,7 +169,7 @@ export default function EnrichmentPage() {
                       <span className="confidence-num">{fmtN(pct)}٪</span>
                     </div>
                     {canWrite && s.remaining > 0 && (
-                      <button className="btn btn-secondary btn-sm" style={{ marginTop: 8 }} disabled={!!busy} onClick={() => scan(s.id)}>
+                      <button className="btn btn-secondary btn-sm" style={{ marginTop: 8 }} disabled={!!busy} onClick={() => scan({ sourceId: s.id })}>
                         <ScanSearch size={13} /> {busy === s.id ? t('در حال پویش…') : t('پویش این منبع')}
                       </button>
                     )}
@@ -129,19 +179,45 @@ export default function EnrichmentPage() {
             </div>
           </SectionCard>
 
-          <SectionCard title={t('صف تأیید انسانی')} icon={<ShieldQuestion size={16} />}
-            description={t('هر پیشنهاد با شاهد از منبع و سطح اطمینان نمایش داده می‌شود؛ پذیرش، مقدار را با برچسب منبع در پروفایل سازمان ثبت می‌کند.')}>
-            <div style={{ marginBottom: 10 }}>
-              <Segmented options={[{ value: 'PENDING', label: t('در انتظار') }, { value: 'DECIDED', label: t('تعیین‌تکلیف‌شده') }]} value={tab} onChange={setTab} counts={{ PENDING: pending.length, DECIDED: decided.length }} />
+          <SectionCard title={t('صف تأیید انسانی')} icon={<ShieldCheck size={16} />}
+            description={t('پیشنهادها را با منبع و سطح اطمینان بازبینی کنید؛ با پذیرش شما، مقدار همراه برچسب منبع در پروفایل سازمان ثبت می‌شود.')}>
+            <div className="page-toolbar" style={{ marginBottom: 10 }}>
+              <label className="toolbar-search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+                <input value={query} onChange={e => setQuery(e.target.value)} placeholder={t('جستجوی سازمان، فیلد یا مقدار…')} aria-label={t('جستجو در پیشنهادها')} />
+              </label>
+              <select aria-label={t('فیلتر منبع')} value={srcFilter} onChange={e => setSrcFilter(e.target.value)}
+                style={{ minHeight: 40, border: '1px solid var(--card-border-strong)', borderRadius: 'var(--radius-md)', background: 'var(--card-bg)', color: 'var(--text-primary)', padding: '0 12px', fontSize: 12.5, fontWeight: 700, maxWidth: 220 }}>
+                <option value="ALL">{t('همهٔ منابع')}</option>
+                {sources.map(s => <option key={s.id} value={s.id}>{s.nameFa}</option>)}
+              </select>
+              <select aria-label={t('فیلتر اطمینان')} value={confFilter} onChange={e => setConfFilter(e.target.value)}
+                style={{ minHeight: 40, border: '1px solid var(--card-border-strong)', borderRadius: 'var(--radius-md)', background: 'var(--card-bg)', color: 'var(--text-primary)', padding: '0 12px', fontSize: 12.5, fontWeight: 700, maxWidth: 160 }}>
+                <option value="ALL">{t('همهٔ سطوح')}</option>
+                <option value="HIGH">{t('اطمینان بالا')}</option>
+                <option value="MEDIUM">{t('اطمینان متوسط')}</option>
+                <option value="LOW">{t('اطمینان کم')}</option>
+              </select>
+              <span className="chip info" style={{ marginInlineStart: 'auto' }}>{fmtN(rows.length)} {t('پیشنهاد')}</span>
+            </div>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
+              <Segmented options={[{ value: 'PENDING', label: t('در انتظار') }, { value: 'DECIDED', label: t('تعیین‌تکلیف‌شده') }]} value={tab} onChange={setTab} counts={{ PENDING: pendingRows.length, DECIDED: decidedRows.length }} />
+              {tab === 'PENDING' && canWrite && highCount > 0 && (
+                <button className="btn btn-primary btn-sm" disabled={!!busy} onClick={bulkAcceptHigh}>
+                  <CheckCircle2 size={13} /> {busy === 'bulk' ? t('در حال اعمال…') : t('پذیرش گروهی اطمینان بالا')} ({fmtN(highCount)})
+                </button>
+              )}
             </div>
             {rows.length === 0 ? (
               <div className="empty-state-v4" style={{ padding: '18px 12px' }}>
                 <div className="empty-ico"><FileSearch size={22} /></div>
-                <strong>{tab === 'PENDING' ? t('پیشنهادی در انتظار نیست') : t('هنوز پیشنهادی تعیین تکلیف نشده است')}</strong>
+                <strong>{tab === 'PENDING' ? (pending.length === 0 ? t('پیشنهادی در انتظار نیست') : t('نتیجه‌ای یافت نشد')) : t('هنوز پیشنهادی تعیین تکلیف نشده است')}</strong>
                 <p className="pp-muted" style={{ margin: '6px 0 10px' }}>{tab === 'PENDING'
-                  ? t('«پویش همهٔ منابع» را اجرا کنید — یا از دکمهٔ پویش روی هر منبع، همان منبع را مرحله‌ای پیش ببرید.')
+                  ? (pending.length === 0
+                    ? t('«پویش همهٔ منابع» را اجرا کنید — یا از دکمهٔ پویش روی هر منبع، همان منبع را مرحله‌ای پیش ببرید.')
+                    : t('فیلترها یا عبارت جستجو را تغییر دهید.'))
                   : t('پیشنهادهای پذیرفته/ردشده پس از تعیین تکلیف اینجا می‌مانند.')}</p>
-                {tab === 'PENDING' && canWrite && sources.some(x => x.remaining > 0) && (
+                {tab === 'PENDING' && pending.length === 0 && canWrite && sources.some(x => x.remaining > 0) && (
                   <button className="btn btn-primary btn-sm" disabled={!!busy} onClick={() => scan()}>
                     <RefreshCw size={13} /> {busy === 'ALL' ? t('در حال پویش…') : t('پویش همهٔ منابع')}
                   </button>
@@ -156,8 +232,9 @@ export default function EnrichmentPage() {
                         <Building2 size={14} style={{ flexShrink: 0 }} />
                         <Link href={`/organizations/${s.orgId}`} style={{ fontSize: 12.5, fontWeight: 700 }}>{s.orgName}</Link>
                         <span className="p3-chip">{s.fieldFa}</span>
-                        <Badge tone={CONF_TONE[s.confidence] ?? 'neutral'}>اطمینان {s.confidenceFa}</Badge>
+                        <Badge tone={CONF_TONE[s.confidence] ?? 'neutral'}>{t('اطمینان')} {s.confidenceFa}</Badge>
                         {s.status !== 'PENDING' && <Badge tone={s.status === 'ACCEPTED' ? 'success' : 'danger'}>{s.status === 'ACCEPTED' ? t('پذیرفته‌شده') : t('ردشده')}</Badge>}
+                        {s.status !== 'PENDING' && s.applied?.appliedAt && <span className="t-muted" style={{ fontSize: 10.5 }}>{t('تاریخ تأیید')}: {fmtDate(s.applied.appliedAt)}</span>}
                       </div>
                       <div style={{ marginTop: 4, fontSize: 13, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                         {s.status === 'PENDING' && s.currentValue != null && s.currentValue !== '' && (
@@ -180,8 +257,60 @@ export default function EnrichmentPage() {
             )}
           </SectionCard>
 
+          <SectionCard title={t('سازمان‌ها و پوشش پروفایل')} icon={<Building2 size={16} />}
+            description={t('کدام سازمان‌های محدودهٔ شما از منابع رسمی داده دارند، چه بخشی از پروفایل تکمیل شده و چه چیزی در انتظار بازبینی است.')}>
+            {orgs.length === 0 ? (
+              <p className="pp-muted">{t('سازمانی از منابع رسمی در محدودهٔ شما شناسایی نشده است.')}</p>
+            ) : (
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>{t('سازمان')}</th>
+                      <th>{t('فیلدهای در دسترس')}</th>
+                      <th>{t('در انتظار بازبینی')}</th>
+                      <th>{t('پذیرفته‌شده')}</th>
+                      <th>{t('پوشش پروفایل')}</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orgs.map(o => {
+                      const notSuggested = o.available - o.pending - o.accepted - o.rejected;
+                      return (
+                        <tr key={o.orgId}>
+                          <td><Link className="t-primary" href={`/organizations/${o.orgId}`} style={{ fontWeight: 700 }}>{o.orgName}</Link>
+                            <div className="t-muted" style={{ fontSize: 10.5 }}>{o.fields.map(f => f.fieldFa).join('، ')}</div>
+                          </td>
+                          <td><strong>{fmtN(o.available)}</strong></td>
+                          <td>{o.pending > 0 ? <Badge tone="warning">{fmtN(o.pending)}</Badge> : <span className="t-muted">—</span>}</td>
+                          <td>{o.accepted > 0 ? <Badge tone="success">{fmtN(o.accepted)}</Badge> : <span className="t-muted">—</span>}</td>
+                          <td style={{ minWidth: 130 }}>
+                            <div className="confidence-wrap" title={`${fmtN(o.applied)}/${fmtN(o.available)}`}>
+                              <div className="confidence-track"><span className="confidence-fill" style={{ width: `${o.coverage}%` }} /></div>
+                              <span className="confidence-num">{fmtN(o.coverage)}٪</span>
+                            </div>
+                          </td>
+                          <td>
+                            {canWrite && notSuggested > 0 && (
+                              <button className="btn btn-secondary btn-sm" disabled={!!busy} onClick={() => scan({ orgId: o.orgId })}>
+                                <ScanSearch size={13} /> {busy === o.orgId ? t('در حال پویش…') : t('غنی‌سازی این سازمان')}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </SectionCard>
+
           <p className="pp-muted" style={{ fontSize: 11.5 }}>
-            {isRealTenant ? t('حاکمیت داده: پیشنهادها فقط دربارهٔ سازمان‌های شخص ثالثِ ردیابی‌شده ساخته می‌شوند؛ پس از تأیید انسانی با منبع، سطح اطمینان، شاهد و تاریخ در پروفایل ثبت می‌شوند.') : t('حاکمیت داده: پیشنهادها فقط دربارهٔ سازمان‌های شخص ثالثِ ردیابی‌شده ساخته می‌شوند؛ مقادیر شبیه‌سازِ قطعیِ «منبع رسمی» در دمو هستند و پس از تأیید انسانی با منبع، سطح اطمینان، شاهد و تاریخ در پروفایل ثبت می‌شوند.')}
+            {isRealTenant
+              ? t('شفافیت داده: مقدارهای غنی‌شده همیشه با منبع، سطح اطمینان و تاریخ تأیید در پروفایل سازمان می‌مانند و پیشنهادها هرگز دربارهٔ سازمان خودِ شما ساخته نمی‌شوند.')
+              : t('شفافیت داده: مقدارهای غنی‌شده همیشه با منبع، سطح اطمینان و تاریخ تأیید در پروفایل سازمان می‌مانند و پیشنهادها هرگز دربارهٔ سازمان خودِ شما ساخته نمی‌شوند. در نسخهٔ نمایشی، دادهٔ منابع رسمی به‌صورت نمونه ارائه می‌شود.')}
           </p>
         </>
       )}

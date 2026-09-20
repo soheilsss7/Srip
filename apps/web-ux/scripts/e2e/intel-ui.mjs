@@ -140,33 +140,63 @@ try {
   ok('رفتیم به /ai-executive-brief', page.url().includes('/ai-executive-brief'), page.url());
   await checkHub('/ai-executive-brief');
 
-  /* ── ۳) جریان غنی‌سازی: پویش ← پیشنهاد ← پذیرش ── */
+  /* ── ۳) جریان غنی‌سازی: پویش ← بازبینی ← تأیید (فردی و گروهی) ── */
   await page.goto(`${BASE}/enrichment`, { waitUntil: 'networkidle0', timeout: 60000 });
   await new Promise(r => setTimeout(r, 2500));
   ok('صفحهٔ غنی‌سازی: سه منبع رسمی', await page.evaluate(() => document.querySelectorAll('.p3-src').length === 3));
   ok('دکمهٔ پویش همهٔ منابع', await page.evaluate(() => [...document.querySelectorAll('button')].some(b => (b.textContent ?? '').includes('پویش همهٔ منابع'))));
   ok('دکمهٔ پویش تک‌منبع روی کارت', await page.evaluate(() => document.querySelectorAll('.p3-src button').length >= 1));
+  ok('راهنمای «چطور کار می‌کند؟» با سه گام', await page.evaluate(() => {
+    const t = document.body.textContent ?? '';
+    return t.includes('چطور کار می‌کند؟') && t.includes('۱. پویش کنید') && t.includes('۲. بازبینی کنید') && t.includes('۳. تأیید کنید');
+  }));
+  ok('متن user-facing: بدون واژهٔ توسعه (مسترپلن/فاز/الگوی/شبیه‌ساز)', await page.evaluate(() => {
+    const t = document.body.textContent ?? '';
+    return !['مسترپلن', 'الگوی', 'شبیه‌ساز', 'TSC', 'Affinity'].some(w => t.includes(w)) && !/فاز\s*[۳0-9]/.test(t);
+  }));
+  ok('فیلترهای صف: منبع + اطمینان + جستجو', await page.evaluate(() => {
+    const sels = [...document.querySelectorAll('select')].map(x => x.getAttribute('aria-label') ?? '');
+    return sels.some(x => x.includes('فیلتر منبع')) && sels.some(x => x.includes('فیلتر اطمینان')) && !!document.querySelector('.toolbar-search input');
+  }));
+  ok('نمای «سازمان‌ها و پوشش پروفایل» خالی نیست', await page.evaluate(() => (document.body.textContent ?? '').includes('سازمان‌ها و پوشش پروفایل')));
 
-  // پویش تک‌منبع: سامانهٔ ثبت شرکت‌ها
+  // ۳-الف) پویش تک‌منبع → دو پیشنهاد اطمینان‌بالا
   ok('پویش منبع «سامانهٔ ثبت شرکت‌ها»', await clickByText('.p3-src button', 'پویش این منبع'));
   await new Promise(r => setTimeout(r, 3000));
   const rows1 = await page.evaluate(() => document.querySelectorAll('.p3-row').length);
   ok('پویش تک‌منبع: پیشنهاد ساخته شد', rows1 >= 1, 'rows=' + rows1);
 
-  // پذیرش اولین پیشنهاد
+  // ۳-ب) پذیرش گروهی اطمینان‌بالا
+  const bulkShown = await page.evaluate(() => {
+    const b = [...document.querySelectorAll('button')].find(x => (x.textContent ?? '').includes('پذیرش گروهی اطمینان بالا'));
+    if (!b) return null;
+    b.click(); return b.textContent ?? '';
+  });
+  ok('دکمهٔ «پذیرش گروهی اطمینان بالا» دیده و کلیک شد', typeof bulkShown === 'string' && bulkShown.length > 0, String(bulkShown));
+  await new Promise(r => setTimeout(r, 3000));
+  ok('پیام پذیرش گروهی', await waitForText('پیشنهاد پذیرفته'));
+  const orgRows = await page.evaluate(() => document.querySelectorAll('.table-wrap tbody tr').length);
+  ok('نمای سازمان‌ها: ردیف با پوشش', orgRows >= 3, 'rows=' + orgRows);
+
+  // ۳-پ) پویش تک‌سازمان از نمای سازمان‌ها
+  ok('دکمهٔ «غنی‌سازی این سازمان»', await clickByText('button', 'غنی‌سازی این سازمان'));
+  await new Promise(r => setTimeout(r, 3000));
+  ok('پویش تک‌سازمان: پیشنهاد تازه', await page.evaluate(() => document.querySelectorAll('.p3-row').length >= 1));
+
+  // ۳-ت) پذیرش فردی + ثبت در پروفایل
   const firstOrgHref = await page.evaluate(() => document.querySelector('.p3-row a')?.getAttribute('href') ?? null);
   ok('پذیرش اولین پیشنهاد', await clickByText('.p3-row button', 'پذیرش'));
   await new Promise(r => setTimeout(r, 3000));
-  ok('پیام تأیید پس از پذیرش', await waitForText('با منبع و سطح اطمینان ثبت شد'));
+  ok('پیام تأیید پس از پذیرش', await waitForText('با منبع و سطح اطمینان در پروفایل ثبت شد'));
 
-  // تب تعیین‌تکلیف‌شده: ردیف پذیرفته‌شده
+  // تب تعیین‌تکلیف‌شده: ردیف‌های پذیرفته‌شده
   ok('رفتن به تب تعیین‌تکلیف‌شده', await clickByText('[role="tab"]', 'تعیین‌تکلیف‌شده'));
   await new Promise(r => setTimeout(r, 800));
   const decidedOk = await page.evaluate(() => {
     const rows = [...document.querySelectorAll('.p3-row')];
-    return rows.some(r => (r.textContent ?? '').includes('پذیرفته‌شده'));
+    return rows.filter(r => (r.textContent ?? '').includes('پذیرفته‌شده')).length >= 2;
   });
-  ok('ردیف پذیرفته‌شده در تعیین‌تکلیف‌شده‌ها', decidedOk);
+  ok('ردیف‌های پذیرفته‌شده (فردی + گروهی) در تعیین‌تکلیف‌شده‌ها', decidedOk);
 
   // اعمال روی پروفایل سازمان
   if (firstOrgHref) {
@@ -192,6 +222,10 @@ try {
   ok('ماندگاری SW: تعیین‌تکلیف‌شده‌ها پس از ری‌استارت مرورگر', await clickByText('[role="tab"]', 'تعیین‌تکلیف‌شده').then(async () => {
     await new Promise(r => setTimeout(r, 800));
     return page.evaluate(() => [...document.querySelectorAll('.p3-row')].some(r => (r.textContent ?? '').includes('پذیرفته‌شده')));
+  }));
+  ok('ماندگاری SW: نمای سازمان‌ها پوشش را نگه داشته', await page.evaluate(() => {
+    const bars = [...document.querySelectorAll('.table-wrap .confidence-fill')];
+    return bars.some(b => parseFloat((b.style.width ?? '0')) > 0);
   }));
 
   // موبایل ۳۶۰×۷۶۰: نوار تب هاب بدون سرریز

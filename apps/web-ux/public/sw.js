@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.20.04';
+const DEMO_MOCK_VERSION = '2026.09.20.05';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -13302,14 +13302,23 @@ async function __handler(req, res) {
     if(b.sourceId&&!sources.length) return json(res,400,{message:'شناسهٔ منبع ناشناخته است.'});
     const list=b.sourceId?sources:PHASE3_ENRICHMENT_SOURCES;
     const ids=visibleOrgIds(req);
+    if(b.orgId&&!ids.includes(String(b.orgId))) return json(res,403,{message:'این سازمان در محدودهٔ شما نیست.'});
     const p3tenant=DEMO_USER_IDS.has(authUser.id)?'demo':'real';
     let created=0; const perSource=[];
     for(const src of list){
-      const pool=PHASE3_ENRICHMENT_POOL.filter(p=>p.sourceId===src.id&&ids.includes(p.orgId));
-      const cursorKey=`${p3tenant}:${src.id}`;
-      const cursor=(DB.enrichmentCursor??{})[cursorKey]??0;
-      const batch=pool.slice(cursor,cursor+3);
-      DB.enrichmentCursor[cursorKey]=Math.min(cursor+3,pool.length);
+      let pool=PHASE3_ENRICHMENT_POOL.filter(p=>p.sourceId===src.id&&ids.includes(p.orgId));
+      if(b.orgId) pool=pool.filter(p=>p.orgId===String(b.orgId));
+      let batch; let remaining;
+      if(b.orgId){
+        /* پویش تک‌سازمان: همهٔ رکوردهای همان سازمان، مستقل از نشانگر مرحله‌ای منبع */
+        batch=pool; remaining=0;
+      } else {
+        const cursorKey=`${p3tenant}:${src.id}`;
+        const cursor=(DB.enrichmentCursor??{})[cursorKey]??0;
+        batch=pool.slice(cursor,cursor+3);
+        DB.enrichmentCursor[cursorKey]=Math.min(cursor+3,pool.length);
+        remaining=Math.max(0,pool.length-DB.enrichmentCursor[cursorKey]);
+      }
       let made=0;
       for(const p of batch){
         if((DB.enrichmentSuggestions??[]).some(s=>s.orgId===p.orgId&&s.field===p.field&&s.sourceId===p.sourceId)) continue;
@@ -13319,13 +13328,15 @@ async function __handler(req, res) {
           status:'PENDING',createdAt:nowIso(),decidedAt:null,decidedBy:null});
         made++; created++;
       }
-      perSource.push({sourceId:src.id,revealed:batch.length,created:made,remaining:Math.max(0,pool.length-DB.enrichmentCursor[cursorKey])});
+      perSource.push({sourceId:src.id,revealed:batch.length,created:made,remaining});
     }
-    saveDb(); audit(req,'SCAN','Enrichment','official-sources','OK',{meta:{created}});
+    saveDb(); audit(req,'SCAN','Enrichment',b.orgId?String(b.orgId):'official-sources','OK',{meta:{created}});
     if(created) await autoRunWorkflows('Enrichment','scan','ENRICHMENT_SUGGESTIONS_READY',{enrichment:{created,perSource}},`enrichment-scan:${Date.now()}`);
     return json(res,200,{created,perSource,message:created
       ?`${faN(created)} پیشنهاد تکمیل پروفایل از منابع رسمی یافت شد — در صف تأیید انسانی.`
-      :'در این مرحله پیشنهاد تازه‌ای از منابع رسمی یافت نشد (پویش مرحله‌ای منابع تمام شده است).'});
+      :(b.orgId
+        ?'برای این سازمان پیشنهاد تازه‌ای در دسترس نیست.'
+        :'در این مرحله پیشنهاد تازه‌ای یافت نشد — همهٔ رکوردهای در دسترسِ منابع بررسی شده‌اند.')});
   }
   if(is('/enrichment/suggestions')&&method==='GET'){
     if(!hasPerm('organization.read')) return json(res,403,{message:'شما مجوز «مشاهده سازمان‌ها» (organization.read) را ندارید.'});
@@ -13340,6 +13351,58 @@ async function __handler(req, res) {
     return json(res,200,{items:rows.map(s=>({...s,sourceNameFa:phase3EnrichSourceFa(s.sourceId),confidenceFa:PHASE3_CONFIDENCE_FA[s.confidence]??s.confidence,
       currentValue:(((DB.enrichmentApplied??{})[s.orgId]??{})[s.field]??{})?.value ?? (orgById(s.orgId)??{})[s.field] ?? null,
       applied:((DB.enrichmentApplied??{})[s.orgId]??{})[s.field]??null})),total:rows.length});
+  }
+  /* پذیرش/رد گروهی — مثلاً همهٔ اطمینان‌بالاها در یک اقدام */
+  if(is('/enrichment/suggestions/bulk')&&method==='POST'){
+    if(!hasPerm('organization.write')) return json(res,403,{message:'شما مجوز «ویرایش سازمان‌ها» (organization.write) را ندارید.'});
+    const b=await readBody(req);
+    const action=b.action==='accept'?'accept':b.action==='reject'?'reject':null;
+    if(!action) return json(res,400,{message:'action باید accept یا reject باشد.'});
+    const onlyIds=Array.isArray(b.ids)?b.ids.map(String):null;
+    const conf=b.confidence?String(b.confidence).toUpperCase():null;
+    const scope=visibleOrgIds(req);
+    let accepted=0,rejected=0;
+    for(const row of (DB.enrichmentSuggestions??[])){
+      if(row.status!=='PENDING') continue;
+      if(!scope.includes(row.orgId)) continue;
+      if(onlyIds&&!onlyIds.includes(row.id)) continue;
+      if(conf&&row.confidence!==conf) continue;
+      if(action==='accept'){
+        row.status='ACCEPTED';
+        DB.enrichmentApplied[row.orgId]=DB.enrichmentApplied[row.orgId]??{};
+        DB.enrichmentApplied[row.orgId][row.field]={value:row.proposedValue,sourceId:row.sourceId,sourceNameFa:phase3EnrichSourceFa(row.sourceId),
+          confidence:row.confidence,evidence:row.evidence,suggestionId:row.id,appliedAt:nowIso(),appliedBy:authUser.id};
+        accepted++;
+      } else { row.status='REJECTED'; rejected++; }
+      row.decidedAt=nowIso(); row.decidedBy=authUser.id;
+    }
+    saveDb(); audit(req,action==='accept'?'BULK_APPLY':'BULK_REJECT','Enrichment','bulk','OK',{meta:{accepted,rejected}});
+    return json(res,200,{accepted,rejected,message:accepted+rejected
+      ?`${faN(accepted)} پیشنهاد پذیرفته و ${faN(rejected)} پیشنهاد رد شد.`
+      :'پیشنهاد منطبقی برای این اقدام نبود.'});
+  }
+  /* نمای سازمان‌ها: هر سازمان چند فیلد در دسترس دارد، چند فیلد تکمیل شده */
+  if(is('/enrichment/organizations')&&method==='GET'){
+    if(!hasPerm('organization.read')) return json(res,403,{message:'شما مجوز «مشاهده سازمان‌ها» (organization.read) را ندارید.'});
+    const ids=visibleOrgIds(req);
+    const orgMap=new Map();
+    for(const p of PHASE3_ENRICHMENT_POOL.filter(x=>ids.includes(x.orgId))){
+      if(!orgMap.has(p.orgId)) orgMap.set(p.orgId,{orgId:p.orgId,orgName:orgById(p.orgId)?.name??p.orgId,
+        available:0,pending:0,accepted:0,rejected:0,applied:0,coverage:0,fields:[]});
+      const o=orgMap.get(p.orgId); o.available++; o.fields.push({field:p.field,fieldFa:PHASE3_ENRICHMENT_FIELD_FA[p.field]??p.field,sourceNameFa:phase3EnrichSourceFa(p.sourceId)});
+    }
+    for(const sg of (DB.enrichmentSuggestions??[])){
+      const o=orgMap.get(sg.orgId); if(!o) continue;
+      if(sg.status==='PENDING') o.pending++;
+      else if(sg.status==='ACCEPTED') o.accepted++;
+      else if(sg.status==='REJECTED') o.rejected++;
+    }
+    for(const o of orgMap.values()){
+      o.applied=Object.keys((DB.enrichmentApplied??{})[o.orgId]??{}).length;
+      o.coverage=o.available?Math.round(o.applied/o.available*100):0;
+    }
+    const items=[...orgMap.values()].sort((a,b)=>(b.pending-a.pending)||(b.coverage-a.coverage)||String(a.orgName).localeCompare(b.orgName,'fa'));
+    return json(res,200,{items,total:items.length});
   }
   const enrichSug=match('/enrichment/suggestions/:id/:action');
   if(enrichSug&&(method==='POST')&&['accept','reject'].includes(enrichSug[1])){

@@ -574,8 +574,20 @@ section('فاز ۳ — غنی‌سازی منابع رسمی، API عمومی + 
   check('جداسازی: پیشنهادهای دمو جدا از پارس', demoSug.status === 200 && !demoSug.body?.items?.some(s => s.id === target.id));
   const crossAcc = await api(`/enrichment/suggestions/${target.id}/accept`, { method: 'POST', token: dt });
   check('پذیرش خارج از محدوده → 403', crossAcc.status === 403);
+  /* ── ۱۸ب: ارتقای غنی‌سازی — پویش تک‌سازمان، اقدام گروهی و نمای سازمان‌ها ── */
+  const orgScan = await api('/enrichment/scan', { method: 'POST', token: dt, body: { orgId: 'org-4' } });
+  check('پویش تک‌سازمان → پیشنهاد همان سازمان', orgScan.status === 200 && orgScan.body?.created >= 1, JSON.stringify(orgScan.body?.created));
   const scanDemo = await api('/enrichment/scan', { method: 'POST', token: dt, body: {} });
   check('پویش دمو → استخر مستقل (کشوری per-tenant)', scanDemo.status === 200 && scanDemo.body?.created >= 1, JSON.stringify(scanDemo.body?.created));
+  const bulk = await api('/enrichment/suggestions/bulk', { method: 'POST', token: dt, body: { action: 'accept', confidence: 'HIGH' } });
+  check('پذیرش گروهی اطمینان‌بالا', bulk.status === 200 && bulk.body?.accepted >= 1, JSON.stringify(bulk.body));
+  const demoOrgs = await api('/enrichment/organizations', { token: dt });
+  check('نمای سازمان‌ها: محدودهٔ دمو + پوشش پذیرفته‌شده', demoOrgs.status === 200 && demoOrgs.body?.items?.length >= 2
+    && demoOrgs.body.items.every(o => !String(o.orgId).startsWith('org-ac-')) && demoOrgs.body.items.some(o => o.accepted >= 1 && o.coverage > 0), JSON.stringify(demoOrgs.body?.total));
+  const bulkRej = await api('/enrichment/suggestions/bulk', { method: 'POST', token: dt, body: { action: 'reject' } });
+  check('رد گروهی باقی پیشنهادها', bulkRej.status === 200 && bulkRej.body?.rejected >= 1, JSON.stringify(bulkRej.body));
+  const demoMet2 = await api('/enrichment/metrics', { token: dt });
+  check('سنجهٔ دمو: صف خالی پس از تعیین تکلیف گروهی', demoMet2.status === 200 && demoMet2.body?.pending === 0 && demoMet2.body?.accepted >= 1, JSON.stringify(demoMet2.body));
 
   /* ── ۱۹: کلید API عمومی ── */
   const kc = await api('/developer/keys', { method: 'POST', token: pt, body: { name: 'کلید آزمون خودکار', scopes: ['graph:read'] } });

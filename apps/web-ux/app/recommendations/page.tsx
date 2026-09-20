@@ -138,7 +138,7 @@ const evText = (k: string, v: any): string => {
     <PageHeader
       eyebrow="هوشمندی قابل اقدام"
       title="پیشنهادهای هوشمند"
-      description="هر پیشنهاد دارای شواهد، اطمینان، دلیل و نیاز به تأیید انسانی است — تولیدشده توسط موتور قطعی، بدون وابستگی به مدل خارجی."
+      description="هر پیشنهاد با شواهد، میزان اطمینان و دلیل روشن ارائه می‌شود و پیش از اجرا به تأیید شما می‌رسد؛ با تأیید، اقدام متناظر به‌صورت خودکار ساخته می‌شود."
       actions={
         <>
           <button className="btn btn-secondary" onClick={load} aria-label="بازخوانی"><RefreshCw size={15}/> بازخوانی</button>
