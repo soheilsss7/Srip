@@ -2,12 +2,13 @@
 import Link from 'next/link';
 import { use, useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../../_lib/api';
+import { useWorkspace } from '../../_components/workspace';
 import { fa } from '../../_lib/fa';
-import { Badge, ErrorCard, Loading, Modal, PageHeader } from '../../_components/page-ui';
+import { Badge, ErrorCard, Loading, Modal, PageHeader, SectionCard, StatCard } from '../../_components/page-ui';
 import { EgoGraph, type EgoNode } from '../../_components/ego-graph';
 import { CriteriaBadge, CriteriaScoreCard, verdictTone, type Summary as CriteriaSummary } from '../../_components/criteria';
 import { suggestConnections } from '../../_lib/connections';
-import { Building2, Users, Share2, Link2, Sparkles, ArrowUpRight, CalendarDays, Network, HeartPulse, AlertTriangle, TrendingUp, Clock, ChevronLeft } from 'lucide-react';
+import { Building2, Users, Share2, Link2, Sparkles, ArrowUpRight, CalendarDays, Network, HeartPulse, AlertTriangle, TrendingUp, Clock, ChevronLeft, Fingerprint, Layers, Radar, Users2, CheckCircle2 } from 'lucide-react';
 import { localeTag, t } from '../../_lib/i18n';
 
 const arr = (x: any): any[] => Array.isArray(x) ? x : Array.isArray(x?.items) ? x.items : Array.isArray(x?.data) ? x.data : Array.isArray(x?.rows) ? x.rows : [];
@@ -37,6 +38,131 @@ const bandTone = (cls: string): 'success'|'info'|'warning'|'danger'|'neutral' =>
 
 const UNIT_TYPES = ['DEPARTMENT', 'DIVISION', 'BRANCH', 'BUSINESS_UNIT', 'LOCATION', 'OTHER'];
 const CONTACT_KINDS = ['PHONE', 'EMAIL', 'ADDRESS', 'WEBSITE', 'LINKEDIN', 'OTHER'];
+
+/* ═══ شناسنامهٔ سازمان — از نقشهٔ عموم‌ها به پروفایل خود سازمان منتقل شد ═══ */
+function OrgSelfCard({ orgId, allOrgs, onSaved }: { orgId: string; allOrgs: any[]; onSaved: () => void }) {
+  const { me, can } = useWorkspace();
+  const canWrite = !!me?.permissions?.includes('*') || can('publics.write');
+  const [self, setSelf] = useState<any>(null);
+  const [catalog, setCatalog] = useState<any>(null);
+  const [form, setForm] = useState({ companyType: 'HOLDING', missionTopic: '', reviewIntervalDays: 90, subsidiaries: [] as string[], ownership: 'PRIVATE' });
+  const [dirty, setDirty] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  const load = useCallback(async () => {
+    try {
+      const [s, c] = await Promise.all([
+        api<any>(`/publics/self/${orgId}`).catch(() => null),
+        api<any>('/publics/catalog').catch(() => null),
+      ]);
+      setSelf(s); setCatalog(c);
+      if (s) setForm({
+        companyType: s.self?.companyType ?? s.template?.id ?? 'HOLDING',
+        missionTopic: s.missionTopic ?? '',
+        reviewIntervalDays: s.reviewIntervalDays ?? 90,
+        subsidiaries: s.structure?.subsidiaries ?? [],
+        ownership: s.structure?.ownership ?? 'PRIVATE',
+      });
+      setDirty(false);
+    } catch { /* بدون دسترسی به عموم‌ها */ }
+  }, [orgId]);
+  useEffect(() => { load(); }, [load]);
+
+  const save = async () => {
+    setBusy(true); setMsg('');
+    try {
+      await api(`/publics/self/${orgId}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          companyType: form.companyType,
+          missionTopic: form.missionTopic.trim(),
+          reviewIntervalDays: Number(form.reviewIntervalDays) || 90,
+          structure: { sectors: [], subsidiaries: form.subsidiaries, ownership: form.ownership },
+        }),
+      });
+      setMsg(t('شناسنامهٔ سازمان ذخیره شد؛ نقشهٔ عموم‌ها به‌روزرسانی شد.'));
+      setDirty(false);
+      await load();
+      onSaved();
+    } catch (e) { setMsg(`${t('خطا:')} ${(e as Error).message}`); }
+    finally { setBusy(false); }
+  };
+
+  if (!self && !canWrite) return null;
+  const tplFa = self?.template?.fa ?? '—';
+  const cov = self?.coverage ?? {};
+  const covPct = cov.groupsExpected ? Math.round((cov.groupsCovered ?? 0) / cov.groupsExpected * 100) : null;
+  const templates: Array<[string, string]> = Object.entries(catalog?.templates ?? {}).map(([k, v]: any) => [k, v.fa ?? k]);
+
+  return (
+    <SectionCard
+      title={t('شناسنامهٔ سازمان')}
+      icon={<Fingerprint size={16} />}
+      description={t('الگوی شروع، مأموریت و ساختار — مبنای نقشهٔ عموم‌ها، پوشش و خلاصه‌های مدیریتی همین سازمان.')}
+      actions={<Link className="btn btn-ghost btn-sm" href="/publics">{t('نقشهٔ عموم‌ها ←')}</Link>}
+    >
+      <div className="stat-grid">
+        <StatCard icon={<Layers size={16} />} iconClass="ic-blue" label={t('الگوی شروع')} value={tplFa} sub={self?.effective ? `${fmtNum(self.effective.active)} ${t('گروه فعال در نقشه')}` : undefined} />
+        <StatCard icon={<Radar size={16} />} iconClass="ic-teal" label={t('پوشش عموم‌ها')} value={covPct == null ? '—' : `${fmtNum(covPct)}٪`} sub={cov.groupsExpected ? `${fmtNum(cov.groupsCovered ?? 0)} ${t('از')} ${fmtNum(cov.groupsExpected)} ${t('گروه')}` : undefined} />
+        <StatCard icon={<Users2 size={16} />} iconClass="ic-purple" label={t('اعضای نقشه')} value={fmtNum(cov.members ?? 0)} sub={cov.keyPlayers ? `${fmtNum(cov.keyPlayers)} ${t('بازیگر کلیدی')}` : undefined} />
+      </div>
+      {canWrite ? (
+        <>
+          <div className="form-grid" style={{ marginTop: 12 }}>
+            <div className="field full">
+              <label className="field-label">{t('نوع شرکت (الگوی شروع)')}</label>
+              <select value={form.companyType} onChange={e => { setForm(f => ({ ...f, companyType: e.target.value })); setDirty(true); }}>
+                {templates.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+              </select>
+            </div>
+            <div className="field full">
+              <label className="field-label">{t('مأموریت سازمان')}</label>
+              <input value={form.missionTopic} placeholder={t('مثلاً: پیشرو در فناوری‌های نوین کشور')} onChange={e => { setForm(f => ({ ...f, missionTopic: e.target.value })); setDirty(true); }} />
+            </div>
+            <div className="field">
+              <label className="field-label">{t('دورهٔ بازبینی (روز)')}</label>
+              <input type="number" min={30} max={365} value={form.reviewIntervalDays} onChange={e => { setForm(f => ({ ...f, reviewIntervalDays: Number(e.target.value) })); setDirty(true); }} />
+            </div>
+            <div className="field">
+              <label className="field-label">{t('نوع مالکیت')}</label>
+              <select value={form.ownership} onChange={e => { setForm(f => ({ ...f, ownership: e.target.value })); setDirty(true); }}>
+                <option value="PRIVATE">{t('خصوصی')}</option>
+                <option value="STATE">{t('دولتی')}</option>
+                <option value="PUBLIC">{t('عمومی/بورسی')}</option>
+                <option value="FAMILY">{t('خانوادگی')}</option>
+              </select>
+            </div>
+            <div className="field full">
+              <label className="field-label">{t('شرکت‌های تابعه')}</label>
+              <div className="chip-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {allOrgs.filter(o => o.id !== orgId).map(o => {
+                  const on = form.subsidiaries.includes(o.id);
+                  return (
+                    <button key={o.id} type="button" className={`chip ${on ? 'info' : 'neutral'}`} onClick={() => {
+                      setForm(f => ({ ...f, subsidiaries: on ? f.subsidiaries.filter(x => x !== o.id) : [...f.subsidiaries, o.id] }));
+                      setDirty(true);
+                    }}>{on ? <CheckCircle2 size={12} /> : null}{o.name}</button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+          <div className="form-actions" style={{ justifyContent: 'flex-start' }}>
+            <button className="btn btn-primary btn-sm" disabled={busy || !dirty} onClick={save}>{busy ? t('در حال ذخیره…') : t('ذخیرهٔ شناسنامه')}</button>
+            {dirty && <span className="field-hint">{t('تغییرات ذخیره نشده است.')}</span>}
+          </div>
+        </>
+      ) : (
+        <div className="detail-grid" style={{ marginTop: 12 }}>
+          <div className="detail-item"><small>{t('مأموریت سازمان')}</small><strong>{self?.missionTopic || '—'}</strong></div>
+          <div className="detail-item"><small>{t('دورهٔ بازبینی')}</small><strong>{fmtNum(self?.reviewIntervalDays ?? 90)} {t('روز')}</strong></div>
+        </div>
+      )}
+      {msg && <div className="notice" role="status" style={{ marginTop: 8 }}>{msg}</div>}
+    </SectionCard>
+  );
+}
 
 export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -184,6 +310,9 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
               <span className="person-score"><Network size={13}/><b className="mid">{fmtNum((counts.projects ?? 0) + (counts.opportunities ?? 0))}</b><small>{t('پروژه/فرصت')}</small></span>
             </div>
           </section>
+
+          {/* شناسنامهٔ سازمان — الگو، مأموریت و ساختار (از عموم‌ها به اینجا منتقل شد) */}
+          <OrgSelfCard orgId={id} allOrgs={allOrgs} onSaved={load} />
 
           {/* رابطه استاتوس — پاسخ به «وضعیت رابطه با این سازمان چیست؟» */}
           <section className="rel-status-card">

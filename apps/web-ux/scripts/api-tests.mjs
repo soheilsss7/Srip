@@ -689,6 +689,30 @@ section('فاز ۳ — غنی‌سازی منابع رسمی، API عمومی + 
   const ack404 = await api('/notifications/push/pending/none/ack', { method: 'POST', token: pt });
   check('رسید ناشناخته → 404', ack404.status === 404);
 
+  /* ── مرکز اعلان‌ها: ترجیحات ماندگار + اعلان آزمایشی + خلاصهٔ دوره‌ای + گزارش تحویل ── */
+  const prefGet1 = await api('/notifications/preferences', { token: pt });
+  check('ترجیحات اعلان → پیش‌فرض سرور', prefGet1.status === 200 && prefGet1.body?.inAppEnabled === true && prefGet1.body?.digestEnabled === false);
+  const prefSet = await api('/notifications/preferences', { method: 'PATCH', token: pt, body: { digestEnabled: true, emailEnabled: true, pushEnabled: true } });
+  check('ذخیرهٔ ترجیحات اعلان → 200', prefSet.status === 200 && prefSet.body?.ok === true);
+  const prefGet2 = await api('/notifications/preferences', { token: pt });
+  check('ترجیحات ماندگار شد (roundtrip)', prefGet2.body?.digestEnabled === true && prefGet2.body?.pushEnabled === true && prefGet2.body?.inAppEnabled === true);
+  const prefDemo = await api('/notifications/preferences', { token: dt });
+  check('ترجیحات per-user (حساب دیگر پیش‌فرض)', prefDemo.body?.digestEnabled === false);
+  const testNoSub = await api('/notifications/push/test', { method: 'POST', token: dt, body: {} });
+  check('اعلان آزمایشی بدون اشتراک → 409', testNoSub.status === 409);
+  const sub2 = await api('/notifications/push/subscribe', { method: 'POST', token: pt, body: { endpoint: 'https://mock.push.srip.local/sub/auto-2', consent: 'GRANTED', topics: ['GENERAL'] } });
+  check('اشتراک دوباره (برای اعلان آزمایشی) → 201', sub2.status === 201);
+  const testOk = await api('/notifications/push/test', { method: 'POST', token: pt, body: {} });
+  check('اعلان آزمایشی → صف شد', testOk.status === 200 && testOk.body?.sent >= 1);
+  const ptNotif = await api('/notifications', { token: pt });
+  const ptN = Array.isArray(ptNotif.body) ? ptNotif.body : (ptNotif.body?.items ?? []);
+  check('اعلان آزمایشی در فهرست اعلان‌ها', ptN.some(n => n.title === 'اعلان آزمایشی SRIP'));
+  const digestOk = await api('/notifications/digest/DAILY', { method: 'POST', token: pt, body: {} });
+  check('خلاصهٔ روزانه → ارسال شد', digestOk.status === 200 && digestOk.body?.sent === true && digestOk.body?.count >= 1, JSON.stringify(digestOk.body).slice(0, 80));
+  const dlogRowsR = await api('/notifications/delivery-log', { token: pt });
+  const dlogRows = Array.isArray(dlogRowsR.body) ? dlogRowsR.body : [];
+  check('گزارش تحویل → رکورد پوش، آزمایشی و خلاصه', dlogRows.some(r => r.provider === 'web-push') && dlogRows.some(r => r.provider === 'test') && dlogRows.some(r => r.channel === 'EMAIL' && r.provider === 'digest'));
+
   /* ── ۲۲: دستیار پرسش‌وپاسخ طبیعی روی گراف ── */
   const ask = async (q, token = pt) => (await api('/assistant/ask', { method: 'POST', token, body: { question: q } })).body;
   const sugg = await api('/assistant/suggestions', { token: pt });
@@ -757,10 +781,11 @@ section('فاز ۳ — غنی‌سازی منابع رسمی، API عمومی + 
   const xitems = Array.isArray(xacts.body) ? xacts.body : xacts.body?.items ?? [];
   check('اقدام SLA → در سازمان درست (نه یتیم)', xitems.some(a => String(a.title).includes('SLA') && a.organizationId === 'org-x'));
 
-  /* پوش → اعلان درون‌برنامه‌ای سازمان‌محور + خوانده‌شدن با رسید تحویل */
+  /* پوش → اعلان درون‌برنامه‌ای سازمان‌محور؛ رسید تحویل (ack) «رسیدن» را ثبت
+     می‌کند اما اعلان را «خوانده» نمی‌کند — خواندن اقدام کاربر است */
   const dNotifs = await api('/notifications', { token: pt });
   const pushNotif = (dNotifs.body ?? []).find(n => n.title === 'اعلان آزمون فاز ۳' && n.channel === 'PUSH');
-  check('پوش → اعلان درون‌برنامه‌ای سازمان‌محور + خوانده‌شده با ack', !!pushNotif && pushNotif.organizationId === 'org-pars' && pushNotif.isRead === true, JSON.stringify(pushNotif).slice(0, 90));
+  check('پوش → اعلان درون‌برنامه‌ای سازمان‌محور (رسیده ولی هنوز خوانده‌نشده)', !!pushNotif && pushNotif.organizationId === 'org-pars' && pushNotif.isRead === false, JSON.stringify(pushNotif).slice(0, 90));
   const fbNotif = (dNotifs.body ?? []).find(n => n.title === 'پیام تازه در پورتال عمومی' && n.organizationId === 'org-pars');
   check('پوش پورتال (بازخورد) → اعلان درون‌برنامه‌ای pars', !!fbNotif);
 

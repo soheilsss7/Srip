@@ -59,7 +59,7 @@ export const TRANSLATED_ROUTES: readonly string[] = [
   '/', '/login', '/register', '/forgot-password', '/password-reset', '/mfa',
   '/dashboard', '/organizations', '/people', '/relationships', '/network',
   '/referrals', '/actions', '/notifications', '/search', '/settings',
-  '/board', '/ai', '/qbr', '/enrichment', '/push', '/directory',
+  '/board', '/ai', '/qbr', '/enrichment', '/directory',
 ];
 
 export function isTranslatedRoute(pathname: string): boolean {

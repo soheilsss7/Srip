@@ -9,7 +9,7 @@ import { AppShellEnhancement } from './app-shell-enhancement';
 import { LocaleToggle, TranslationCoverageNote } from './locale-context';
 import Portal from './portal';
 import { Button } from '@srip/design-system';
-import {Activity, Archive, ArrowLeftRight, BarChart3, Bell, BellRing, Blocks, BookOpen, BrainCircuit, Building2, Calendar, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, Code2, Database, DatabaseBackup, FileDown, FileSearch, FileText, Flag, FolderKanban, Gauge, Globe, HeartPulse, KeyRound, Landmark, LayoutDashboard, LineChart, ListChecks, MailPlus, MapPinned, MessagesSquare, Network, Plug, Presentation, Radar, ScrollText, Search, Settings, Settings2, Share2, Shield, ShieldCheck, Sparkles, Table2, Target, ThumbsUp, Timer, UserCheck, Users, Workflow, Zap } from 'lucide-react';
+import {Activity, Archive, ArrowLeftRight, BarChart3, Bell, Blocks, BookOpen, BrainCircuit, Building2, Calendar, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, Code2, Database, DatabaseBackup, FileDown, FileSearch, FileText, Flag, FolderKanban, Gauge, Globe, HeartPulse, KeyRound, Landmark, LayoutDashboard, LineChart, ListChecks, MailPlus, MapPinned, MessagesSquare, Network, Plug, Presentation, Radar, ScrollText, Search, Settings, Settings2, Share2, Shield, ShieldCheck, Sparkles, Table2, Target, ThumbsUp, Timer, UserCheck, Users, Workflow, Zap } from 'lucide-react';
 import { lt, t } from '../_lib/i18n';
 
 type Role = 'SUPER_ADMIN'|'HOLDING_ADMIN'|'HOLDING_EXECUTIVE'|'SUBSIDIARY_ADMIN'|'SUBSIDIARY_EXECUTIVE'|'RELATIONSHIP_MANAGER'|'PROJECT_MANAGER'|'ANALYST'|'STANDARD_USER'|'READ_ONLY';
@@ -142,7 +142,6 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   '/enterprise': <Archive size={16}/>,
   '/data-lifecycle': <DatabaseBackup size={16}/>,
   '/health': <HeartPulse size={16}/>,
-  '/push': <BellRing size={16}/>,
   '/enrichment': <FileSearch size={16}/>,
   '/gis': <MapPinned size={16}/>,
   '/portal': <Globe size={16}/>,

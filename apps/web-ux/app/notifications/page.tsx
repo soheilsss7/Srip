@@ -1,162 +1,407 @@
 'use client';
-import {useEffect,useState,useCallback} from 'react';
-import {api,unwrapList} from '../_lib/api';
-import {ErrorCard,Loading,PageHeader,SectionCard,StatCard} from '../_components/page-ui';
-import {Bell, BellRing, Mail, Smartphone, CheckCheck, RefreshCw, Inbox, Zap, CalendarClock, CheckCircle2} from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { api, apiGet, unwrapList } from '../_lib/api';
+import { useWorkspace } from '../_components/workspace';
+import { Badge, ErrorCard, Loading, PageHeader, SectionCard, StatCard } from '../_components/page-ui';
+import { Bell, BellOff, BellRing, CalendarClock, CheckCheck, CheckCircle2, HardDriveDownload, Inbox, Mail, RefreshCw, Send, Smartphone, Trash2, Wifi, WifiOff, Zap } from 'lucide-react';
 import { localeTag, lt, t } from '../_lib/i18n';
 
-const PREF_FIELDS=['inAppEnabled','emailEnabled','pushEnabled','digestEnabled','criticalOnly','dailyDigest','weeklyDigest'] as const;
-const PREF_LABELS:Record<string,{label:string;desc:string}> = {
-  inAppEnabled:{label:t('اعلان درون‌برنامه‌ای'),desc:t('نمایش در مرکز اعلان')},
-  emailEnabled:{label:t('ایمیل'),desc:t('ارسال به ایمیل سازمانی')},
-  pushEnabled:{label:t('فشاری'),desc:t('اعلان لحظه‌ای دستگاه')},
-  digestEnabled:{label:t('خلاصهٔ فعال'),desc:t('خلاصهٔ دوره‌ای فعال است')},
-  criticalOnly:{label:t('فقط موارد بحرانی'),desc:t('ارسال فقط برای اولویت بحرانی')},
-  dailyDigest:{label:t('خلاصهٔ روزانه'),desc:t('خلاصهٔ روزانه')},
-  weeklyDigest:{label:t('خلاصهٔ هفتگی'),desc:t('خلاصهٔ هفتگی')},
-};
-const PRIORITY_TONE:Record<string,'danger'|'warning'|'info'|'neutral'|'success'>={critical:'danger',important:'warning',recommendation:'info',reminder:'info',information:'neutral',success:'success'};
-const TYPE_FA:Record<string,string>= lt({REMINDER:t('یادآوری'),RECOMMENDATION:t('پیشنهاد'),SYSTEM:t('سیستمی'),ALERT:t('هشدار')});
-const PRIORITY_FA:Record<string,string>= lt({LOW:t('کم'),MEDIUM:t('متوسط'),HIGH:t('زیاد'),CRITICAL:t('بحرانی'),IMPORTANT:t('مهم'),RECOMMENDATION:t('پیشنهاد'),INFORMATION:t('اطلاع')});
-const CHANNEL_FA:Record<string,string>= lt({IN_APP:t('درون‌برنامه‌ای'),EMAIL:t('ایمیل'),PUSH:t('اعلان فشاری'),SMS:t('پیامک'),WEBHOOK:t('وبهوک')});
-const TYPE_ICON:Record<string,React.ReactNode>={REMINDER:<BellRing size={15}/>,RECOMMENDATION:<Zap size={15}/>,SYSTEM:<CheckCircle2 size={15}/>,ALERT:<BellRing size={15}/>};
+/* ═══════════════════════════════════════════════════════════════════════════
+   مرکز اعلان‌ها — یکپارچه (نوبت ۲۰۲۶-۰۹-۲۰):
+   · اعلان‌های درون‌برنامه‌ای با فیلتر همه/خوانده‌نشده/مهم + علامت‌گذاری خوانده
+   · اعلان‌های این دستگاه: رضایت مرورگر، اشتراک/لغو، اعلان آزمایشی، دریافت خودکار
+   · ترجیحات اعلان (ماندگار در سرور) + خلاصهٔ روزانه/هفتگی
+   · گزارش تحویل (رکورد واقعی ارسال‌ها)
+   · دسترسی بدون اینترنت: صفحات بازدیدشده در حافظهٔ محلی
+   ═══════════════════════════════════════════════════════════════════════════ */
 
-export default function Notifications(){
- const [items,setItems]=useState<any[]>([]),[unread,setUnread]=useState(0),[prefs,setPrefs]=useState<Record<string,boolean>>({}),[log,setLog]=useState<any[]>([]);
- const [error,setError]=useState(''),[status,setStatus]=useState(''),[loading,setLoading]=useState(true),[busy,setBusy]=useState('');
- const load=useCallback(async()=>{
-   setLoading(true);setError('');
-   try{
-     const [n,u,pref,l]=await Promise.all([
-       api('/notifications').then(unwrapList),
-       api('/notifications/unread-count'),
-       api<any>('/notifications/preferences'),
-       api('/notifications/delivery-log').then(unwrapList),
-     ]);
-     setItems(n);
-     setUnread(typeof u==='number'?u:typeof (u as any)?.count==='number'?(u as any).count:0);
-     setPrefs(pref&&typeof pref==='object'?pref:{});
-     setLog(l);
-   }catch(x){setError((x as Error).message)}
-   finally{setLoading(false)}
- },[setItems,setUnread,setPrefs,setLog,setLoading,setError]);
- useEffect(()=>{load()},[load]);
- async function read(id:string){setBusy('read'+id);try{await api('/notifications/'+id+'/read',{method:'PATCH'});await load()}catch(x){setError((x as Error).message)}finally{setBusy('')}}
- async function readAll(){setBusy('readall');try{await api('/notifications/read-all',{method:'PATCH'});await load()}catch(x){setError((x as Error).message)}finally{setBusy('')}}
- async function savePrefs(){setBusy('prefs');setError('');setStatus('');try{await api('/notifications/preferences',{method:'PATCH',body:JSON.stringify(prefs)});setStatus(t('تنظیمات اعلان ذخیره شد.'));await load()}catch(x){setError((x as Error).message)}finally{setBusy('')}}
- async function digest(cadence:string){setBusy(cadence);setError('');setStatus('');try{const r:any=await api(`/notifications/digest/${cadence}`,{method:'POST',body:JSON.stringify({})});setStatus(r?.sent?`${t('خلاصهٔ')} ${cadence === 'DAILY' ? t('روزانه') : t('هفتگی')} ${t('ارسال شد (')}${r?.count??0} ${t('مورد).')}`:r?.reason==='digest-disabled'?`${t('خلاصهٔ دوره‌ای')} ${cadence} ${t('غیرفعال است یا ایمیل خاموش است.')}`:r?.reason==='empty'?t('اعلانی برای خلاصهٔ دوره‌ای نبود.'):r?.reason==='no-email'?t('حساب شما ایمیل ندارد.'):t('خلاصهٔ دوره‌ای ارسال نشد.'));}catch(x){setError((x as Error).message)}finally{setBusy('')}}
- const toggle=(k:string)=>setPrefs(p=>({...p,[k]:!p[k]}));
+type Sub = { id: string; endpointMasked: string; topics: string[]; consent: string; active: boolean; createdAt: string; revokedAt: string | null };
+type Delivery = { id: string; channel: string; provider: string; title: string; count: number | null; accepted: boolean; createdAt: string };
 
- const channels=new Set(items.map(n=>n.channel).filter(Boolean)).size;
+const PREF_FIELDS = ['inAppEnabled', 'emailEnabled', 'pushEnabled', 'digestEnabled', 'criticalOnly', 'dailyDigest', 'weeklyDigest'] as const;
+const PREF_LABELS: Record<string, { label: string; desc: string }> = lt({
+  inAppEnabled: { label: t('اعلان درون‌برنامه‌ای'), desc: t('نمایش در مرکز اعلان') },
+  emailEnabled: { label: t('ایمیل'), desc: t('ارسال به ایمیل سازمانی') },
+  pushEnabled: { label: t('اعلان دستگاه'), desc: t('اعلان لحظه‌ای این مرورگر') },
+  digestEnabled: { label: t('خلاصهٔ دوره‌ای'), desc: t('خلاصهٔ اعلان‌های خوانده‌نشده') },
+  criticalOnly: { label: t('فقط موارد مهم'), desc: t('ارسال فقط برای اولویت مهم و بحرانی') },
+  dailyDigest: { label: t('خلاصهٔ روزانه'), desc: t('یک نگاه هر صبح') },
+  weeklyDigest: { label: t('خلاصهٔ هفتگی'), desc: t('جمع‌بندی پایان هفته') },
+});
+const PRIORITY_TONE: Record<string, 'danger' | 'warning' | 'info' | 'neutral' | 'success'> = { critical: 'danger', important: 'warning', recommendation: 'info', reminder: 'info', information: 'neutral', success: 'success' };
+const TYPE_FA: Record<string, string> = lt({ REMINDER: t('یادآوری'), RECOMMENDATION: t('پیشنهاد'), SYSTEM: t('سیستمی'), ALERT: t('هشدار') });
+const PRIORITY_FA: Record<string, string> = lt({ LOW: t('کم'), MEDIUM: t('متوسط'), HIGH: t('زیاد'), CRITICAL: t('بحرانی'), IMPORTANT: t('مهم'), RECOMMENDATION: t('پیشنهاد'), INFORMATION: t('اطلاع') });
+const CHANNEL_FA: Record<string, string> = lt({ IN_APP: t('درون‌برنامه‌ای'), EMAIL: t('ایمیل'), PUSH: t('اعلان دستگاه'), SMS: t('پیامک'), WEBHOOK: t('وبهوک') });
+const TYPE_ICON: Record<string, React.ReactNode> = { REMINDER: <BellRing size={15} />, RECOMMENDATION: <Zap size={15} />, SYSTEM: <CheckCircle2 size={15} />, ALERT: <BellRing size={15} /> };
 
- return (
-  <main className="feature-page">
-    <PageHeader
-      eyebrow={t('اعلان‌ها')}
-      title={t('مرکز اعلان')}
-      description={t('اعلان‌ها در کانال‌های درون‌برنامه‌ای/ایمیل/فشاری، ترجیحات، خلاصهٔ دوره‌ای و گزارش تحویل — با واقعیت سرور.')}
-      actions={
-        <>
-          <button className="btn btn-secondary" onClick={load} disabled={!!busy}><RefreshCw size={15}/> {t('بازخوانی')}</button>
-          <button className="btn btn-primary" onClick={readAll} disabled={!!busy}><CheckCheck size={15}/> {t('خواندن همه')}</button>
-        </>
+const fmtN = (v: unknown) => (v === null || v === undefined || v === '') ? '—' : new Intl.NumberFormat(localeTag()).format(Number(v));
+const fmtTime = (iso: string) => new Date(iso).toLocaleString(localeTag(), { dateStyle: 'medium', timeStyle: 'short' });
+
+export default function NotificationsPage() {
+  const { isRealTenant } = useWorkspace();
+  const [items, setItems] = useState<any[]>([]);
+  const [unread, setUnread] = useState(0);
+  const [prefs, setPrefs] = useState<Record<string, boolean>>({});
+  const [log, setLog] = useState<Delivery[]>([]);
+  const [subs, setSubs] = useState<Sub[]>([]);
+  const [filter, setFilter] = useState<'all' | 'unread' | 'important'>('all');
+  const [permission, setPermission] = useState<string>('default');
+  const [online, setOnline] = useState(true);
+  const [swReady, setSwReady] = useState(false);
+  const [cachedPages, setCachedPages] = useState<number | null>(null);
+  const [lastCheck, setLastCheck] = useState<Date | null>(null);
+  const [error, setError] = useState('');
+  const [status, setStatus] = useState('');
+  const [flash, setFlash] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState('');
+  const permRef = useRef<string>('default');
+  permRef.current = permission;
+
+  const loadSubs = useCallback(async () => {
+    try { setSubs((await apiGet<{ items: Sub[] }>('/notifications/push/subscriptions')).items ?? []); }
+    catch { /* اشتراکی نیست */ }
+  }, []);
+
+  const loadCaches = useCallback(async () => {
+    try {
+      if (typeof caches === 'undefined') { setCachedPages(null); return; }
+      let total = 0;
+      for (const n of await caches.keys()) total += (await (await caches.open(n)).keys()).length;
+      setCachedPages(total);
+    } catch { setCachedPages(null); }
+  }, []);
+
+  const load = useCallback(async () => {
+    try {
+      const [n, u, pref, l] = await Promise.all([
+        api('/notifications').then(unwrapList),
+        api('/notifications/unread-count'),
+        api<Record<string, boolean>>('/notifications/preferences'),
+        api('/notifications/delivery-log').then(unwrapList<Delivery>),
+      ]);
+      setItems(n);
+      setUnread(typeof u === 'number' ? u : (u as any)?.count ?? 0);
+      setPrefs(pref && typeof pref === 'object' ? pref : {});
+      setLog(l);
+    } catch (e) { setError((e as Error).message); }
+  }, []);
+
+  /* دریافت خودکار: صف اعلان این دستگاه هر ۱۰ ثانیه بررسی می‌شود؛ پیام تازه
+     با اعلان مرورگر (در صورت رضایت) نمایش و رسید تحویل ثبت می‌شود. */
+  const receive = useCallback(async () => {
+    try {
+      const pend = await apiGet<{ items: { id: string; title: string; body: string; topic: string }[] }>('/notifications/push/pending');
+      let fresh = 0;
+      for (const p of pend.items ?? []) {
+        fresh++;
+        try {
+          if (permRef.current === 'granted' && 'serviceWorker' in navigator) {
+            const reg = await navigator.serviceWorker.getRegistration();
+            await reg?.showNotification?.(p.title, { body: p.body, dir: 'rtl', lang: 'fa', tag: p.id });
+          }
+        } catch { /* اعلان سیستم در محیط بدون تعامل نمایش نمی‌شود */ }
+        await api(`/notifications/push/pending/${p.id}/ack`, { method: 'POST', body: '{}' });
       }
-    />
-    <ErrorCard message={error}/>
-    {status&&<div className="notice" role="status">{status}</div>}
+      setLastCheck(new Date());
+      if (fresh > 0) await load();
+    } catch { /* قطع موقت — بررسی بعدی */ }
+  }, [load]);
 
-    {loading ? (
-      <div className="stat-grid">{[0,1,2,3].map(i=><div key={i} className="skeleton skeleton-card" style={{height:110}}/>)}</div>
-    ) : (<>
-      <div className="stat-grid">
-        <StatCard icon={<Bell size={18}/>} label={t('خوانده‌نشده')} value={unread} iconClass="ic-red" sub={unread>0?t('نیازمند توجه'):t('همه خوانده شد')} trend={unread>0?{dir:'down',text:t('جدید')}:undefined}/>
-        <StatCard icon={<Inbox size={18}/>} label={t('کل اعلان‌ها')} value={items.length} iconClass="ic-blue"/>
-        <StatCard icon={<Smartphone size={18}/>} label={t('کانال‌های فعال')} value={channels} iconClass="ic-teal"/>
-        <StatCard icon={<Mail size={18}/>} label={t('تحویل‌های ثبت‌شده')} value={log.length} iconClass="ic-gold"/>
-      </div>
+  useEffect(() => {
+    setPermission(typeof Notification !== 'undefined' ? Notification.permission : 'unsupported');
+    setOnline(navigator.onLine);
+    const on = () => setOnline(true), off = () => setOnline(false);
+    window.addEventListener('online', on); window.addEventListener('offline', off);
+    (async () => {
+      try {
+        if ('serviceWorker' in navigator) {
+          const reg = await navigator.serviceWorker.getRegistration();
+          setSwReady(!!reg?.active);
+        }
+      } catch { /* سرویس‌ورکر در دسترس نیست */ }
+      await Promise.all([load(), loadSubs(), loadCaches()]);
+      setLoading(false);
+    })();
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
+  }, [load, loadSubs, loadCaches]);
 
-      <SectionCard title={t('اعلان‌ها')} icon={<BellRing size={17}/>} description={`${unread} ${t('مورد خوانده‌نشده')}`}
-        actions={unread>0&&<button className="btn btn-ghost btn-sm" onClick={readAll} disabled={!!busy}><CheckCheck size={14}/> {t('همه خوانده شد')}</button>}>
-        {items.length===0 ? (
-          <div className="empty-state-v4">
-            <div className="empty-ico"><Inbox size={24}/></div>
-            <strong>{t('اعلانی وجود ندارد')}</strong>
-            <p>{t('اعلان‌های جدید (یادآوری، پیشنهاد هوشمند، سیستم) اینجا نمایش داده می‌شوند.')}</p>
-          </div>
-        ) : (
-          <div style={{display:'flex',flexDirection:'column',gap:9}}>
-            {items.map(n=>{
-              const tone=PRIORITY_TONE[String(n.priority).toLowerCase()]??'neutral';
-              const readAt=n.readAt??n.isRead===true;
-              return (
-                <div key={n.id} className={`ai-match-card ${!readAt?'unread-card':''}`} style={{borderInlineStart:!readAt?'3px solid var(--srip-accent)':undefined,display:'flex',gap:12,alignItems:'flex-start'}}>
-                  <span className={`stat-ico ${tone==='danger'?'ic-red':tone==='warning'?'ic-gold':tone==='info'?'ic-purple':'ic-blue'}`} style={{width:36,height:36,borderRadius:10,flex:'0 0 auto'}}>
-                    {TYPE_ICON[n.type]??<Bell size={16}/>}
-                  </span>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-                      <b style={{fontSize:13.5}}>{n.title}</b>
-                      {!readAt&&<span className="chip danger">{t('جدید')}</span>}
-                    </div>
-                    <p style={{fontSize:12,color:'var(--text-secondary)',lineHeight:1.75,margin:'3px 0 0'}}>{n.body}</p>
-                    <div className="match-meta" style={{marginTop:6}}>
-                      <span className="chip neutral">{PRIORITY_FA[String(n.priority).toUpperCase()] ?? String(n.priority).toUpperCase()}</span>
-                      {n.channel&&<span className="chip neutral">{CHANNEL_FA[String(n.channel).toUpperCase()] ?? n.channel}</span>}
-                      <span style={{display:'inline-flex',alignItems:'center',gap:4}}><CalendarClock size={12}/> {new Date(n.createdAt).toLocaleString(localeTag(),{dateStyle:'medium',timeStyle:'short'})}</span>
-                      {!readAt&&<button className="btn btn-ghost btn-sm" style={{marginInlineStart:'auto'}} onClick={()=>read(n.id)} disabled={!!busy}>{t('علامت‌گذاری خوانده')}</button>}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </SectionCard>
+  useEffect(() => {
+    void receive();
+    const id = setInterval(() => { if (navigator.onLine) void receive(); }, 10000);
+    return () => clearInterval(id);
+  }, [receive]);
 
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(340px,1fr))',gap:14}}>
-        <SectionCard title={t('ترجیحات اعلان')} icon={<Bell size={17}/>} description={t('کانال‌ها و حالت‌های ارسال')}>
-          <div style={{display:'grid',gap:9}}>
-            {PREF_FIELDS.map(k=>{
-              const meta=PREF_LABELS[k];
-              return (
-                <label key={k} className="checkbox-label" style={{display:'flex',alignItems:'center',gap:10,padding:'10px 12px',border:'1px solid var(--card-border)',borderRadius:'var(--radius-md)',background:'var(--card-bg-soft)',cursor:'pointer'}}>
-                  <input type="checkbox" checked={!!prefs[k]} onChange={()=>toggle(k)} style={{width:17,height:17,accentColor:'var(--srip-accent)'}}/>
-                  <span style={{flex:1}}><b style={{display:'block',fontSize:12.5,color:'var(--text-primary)'}}>{meta.label}</b><small style={{color:'var(--text-muted)',fontSize:10.5}}>{meta.desc}</small></span>
-                </label>
-              );
-            })}
-          </div>
-          <div className="form-actions" style={{justifyContent:'flex-start'}}>
-            <button className="btn btn-primary btn-sm" onClick={savePrefs} disabled={!!busy}>{busy==='prefs'?t('در حال ذخیره…'):t('ذخیره ترجیحات')}</button>
-            <button className="btn btn-secondary btn-sm" onClick={()=>digest('DAILY')} disabled={!!busy}>{t('ارسال خلاصهٔ روزانه')}</button>
-            <button className="btn btn-secondary btn-sm" onClick={()=>digest('WEEKLY')} disabled={!!busy}>{t('ارسال خلاصهٔ هفتگی')}</button>
-          </div>
-        </SectionCard>
+  async function markRead(id: string) {
+    setBusy('read' + id);
+    try { await api(`/notifications/${id}/read`, { method: 'PATCH' }); await load(); }
+    catch (e) { setError((e as Error).message); }
+    finally { setBusy(''); }
+  }
+  async function markAllRead() {
+    setBusy('readall');
+    try { await api('/notifications/read-all', { method: 'PATCH' }); await load(); }
+    catch (e) { setError((e as Error).message); }
+    finally { setBusy(''); }
+  }
+  async function savePrefs() {
+    setBusy('prefs'); setError(''); setStatus('');
+    try {
+      await api('/notifications/preferences', { method: 'PATCH', body: JSON.stringify(prefs) });
+      setStatus(t('ترجیحات اعلان ذخیره شد.'));
+      await load();
+    } catch (e) { setError((e as Error).message); }
+    finally { setBusy(''); }
+  }
+  async function digest(cadence: 'DAILY' | 'WEEKLY') {
+    setBusy(cadence); setError(''); setStatus('');
+    try {
+      const r: any = await api(`/notifications/digest/${cadence}`, { method: 'POST', body: '{}' });
+      setStatus(r?.sent
+        ? `${cadence === 'DAILY' ? t('خلاصهٔ روزانه برای') : t('خلاصهٔ هفتگی برای')} ${fmtN(r.count)} ${t('اعلان خوانده‌نشده ارسال شد.')}`
+        : r?.reason === 'digest-disabled' ? t('خلاصهٔ دوره‌ای یا ایمیل در ترجیحات فعال نیست.')
+        : r?.reason === 'empty' ? t('اعلان خوانده‌نشده‌ای در بازهٔ خلاصه نیست.')
+        : r?.reason === 'no-email' ? t('حساب شما ایمیل ندارد.')
+        : t('خلاصهٔ دوره‌ای ارسال نشد.'));
+      await load();
+    } catch (e) { setError((e as Error).message); }
+    finally { setBusy(''); }
+  }
+  const togglePref = (k: string) => setPrefs(p => ({ ...p, [k]: !p[k] }));
 
-        <SectionCard title={t('گزارش ارسال')} icon={<Mail size={17}/>} description={t('سوابق تحویل اعلان در کانال‌ها')}>
-          {log.length===0 ? (
+  const requestPermission = async () => {
+    if (typeof Notification === 'undefined') { setError(t('این مرورگر از اعلان پشتیبانی نمی‌کند.')); return; }
+    try { setPermission(await Notification.requestPermission()); }
+    catch { setPermission('denied'); }
+  };
+
+  const subscribe = async () => {
+    if (permission !== 'granted') { setError(t('ابتدا رضایت اعلان مرورگر را بدهید.')); return; }
+    setBusy('subscribe'); setError(''); setFlash('');
+    try {
+      const endpoint = `https://push.srip.local/sub/${crypto.randomUUID?.() ?? String(Date.now())}`;
+      const r = await api<{ id: string }>('/notifications/push/subscribe', {
+        method: 'POST',
+        body: JSON.stringify({ endpoint, consent: 'GRANTED', topics: ['PORTAL', 'MEDIA', 'GENERAL'], keys: { p256dh: 'browser', auth: 'browser' } }),
+      });
+      setFlash(`${t('این دستگاه مشترک اعلان شد (')}${r.id.slice(0, 10)}${t('…).')}`);
+      await loadSubs();
+    } catch (e) { setError((e as Error).message); }
+    finally { setBusy(''); }
+  };
+
+  const sendTest = async () => {
+    setBusy('test'); setError(''); setFlash('');
+    try {
+      const r = await api<{ sent: number; message: string }>('/notifications/push/test', { method: 'POST', body: '{}' });
+      setFlash(r.message);
+      await Promise.all([load(), loadSubs()]);
+      await receive();
+    } catch (e) { setError((e as Error).message); }
+    finally { setBusy(''); }
+  };
+
+  const revoke = async (id: string) => {
+    setBusy('revoke' + id); setError('');
+    try { await api(`/notifications/push/subscriptions/${id}/revoke`, { method: 'POST', body: '{}' }); await loadSubs(); }
+    catch (e) { setError((e as Error).message); }
+    finally { setBusy(''); }
+  };
+
+  const clearOffline = async () => {
+    setBusy('offline'); setError('');
+    try {
+      if (typeof caches !== 'undefined') {
+        await Promise.all((await caches.keys()).map(n => caches.delete(n)));
+        await loadCaches();
+      }
+      setFlash(t('حافظهٔ آفلاین پاک شد — صفحات با بازدید بعدی دوباره ذخیره می‌شوند.'));
+    } catch (e) { setError((e as Error).message); }
+    finally { setBusy(''); }
+  };
+
+  const refreshAll = async () => {
+    setBusy('refresh');
+    try { await Promise.all([load(), loadSubs(), loadCaches(), receive()]); }
+    finally { setBusy(''); }
+  };
+
+  const activeSubs = subs.filter(s => s.active);
+  const shown = items.filter(n => {
+    if (filter === 'unread') return !(n.readAt ?? n.isRead === true);
+    if (filter === 'important') return ['critical', 'important', 'high'].includes(String(n.priority).toLowerCase());
+    return true;
+  });
+  const channels = new Set(items.map(n => n.channel).filter(Boolean)).size;
+
+  return (
+    <main className="feature-page">
+      <PageHeader
+        title={t('مرکز اعلان‌ها')}
+        description={t('اعلان‌های سامانه، ترجیحات دریافت و اعلان‌های این دستگاه — همه در یک‌جا.')}
+        actions={
+          <>
+            <button className="btn btn-secondary" onClick={refreshAll} disabled={!!busy}><RefreshCw size={15} /> {t('بازخوانی')}</button>
+            <button className="btn btn-primary" onClick={markAllRead} disabled={!!busy || unread === 0}><CheckCheck size={15} /> {t('خواندن همه')}</button>
+          </>
+        }
+      />
+      <ErrorCard message={error} />
+      {status && <div className="notice" role="status">{status}</div>}
+      {flash && <div className="flash" role="status">{flash}</div>}
+
+      {loading ? <Loading /> : (<>
+        <div className="stat-grid">
+          <StatCard icon={<Bell size={18} />} label={t('خوانده‌نشده')} value={fmtN(unread)} iconClass="ic-red" sub={unread > 0 ? t('نیازمند توجه') : t('همه خوانده شد')} />
+          <StatCard icon={<Inbox size={18} />} label={t('کل اعلان‌ها')} value={fmtN(items.length)} iconClass="ic-blue" sub={`${fmtN(channels)} ${t('کانال دریافت')}`} />
+          <StatCard icon={<Smartphone size={18} />} label={t('اشتراک فعال این حساب')} value={fmtN(activeSubs.length)} iconClass="ic-teal" sub={permission === 'granted' ? t('اعلان مرورگر فعال است') : t('اعلان مرورگر فعال نیست')} />
+          <StatCard icon={<Mail size={18} />} label={t('تحویل ثبت‌شده')} value={fmtN(log.length)} iconClass="ic-gold" sub={t('ارسال اعلان و خلاصهٔ دوره‌ای')} />
+        </div>
+
+        <SectionCard title={t('اعلان‌ها')} icon={<BellRing size={17} />} description={`${fmtN(unread)} ${t('مورد خوانده‌نشده')}`}
+          actions={
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+              {([['all', t('همه')], ['unread', t('خوانده‌نشده')], ['important', t('مهم')]] as const).map(([k, label]) => (
+                <button key={k} className={`chip ${filter === k ? 'info' : 'neutral'}`} style={{ cursor: 'pointer', border: 'none' }}
+                  onClick={() => setFilter(k)} aria-pressed={filter === k}>{label}</button>
+              ))}
+            </div>
+          }>
+          {shown.length === 0 ? (
             <div className="empty-state-v4">
-              <div className="empty-ico"><Mail size={24}/></div>
-              <strong>{t('لاگ تحویلی ثبت نشده است')}</strong>
-              <p>{t('پس از اولین ارسال اعلان، سوابق اینجا نمایش داده می‌شوند.')}</p>
+              <div className="empty-ico"><Inbox size={24} /></div>
+              <strong>{filter === 'unread' ? t('اعلان خوانده‌نشده نیست') : filter === 'important' ? t('اعلان مهمی نیست') : t('اعلانی وجود ندارد')}</strong>
+              <p>{t('یادآوری‌ها، پیشنهادهای هوشمند و پیام‌های سیستمی اینجا نمایش داده می‌شوند.')}</p>
             </div>
           ) : (
-            <div style={{display:'flex',flexDirection:'column',gap:8}}>
-              {log.slice(0,12).map((l:any,i:number)=>(
-                <div className="ai-match-card" key={l.id??i} style={{display:'flex',alignItems:'center',gap:10}}>
-                  <span className={`stat-ico ${l.accepted?'ic-green':'ic-red'}`} style={{width:30,height:30,borderRadius:9,flex:'0 0 auto'}}>{l.accepted?<CheckCircle2 size={14}/>:<BellRing size={14}/>}</span>
-                  <div style={{flex:1,minWidth:0}}>
-                    <b style={{fontSize:12.5}}>{l.title??l.channel??t('تحویل')}</b>
-                    <div className="match-meta">{l.channel} · {l.provider} · {l.createdAt?new Date(l.createdAt).toLocaleString(localeTag()):'—'}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+              {shown.map(n => {
+                const tone = PRIORITY_TONE[String(n.priority).toLowerCase()] ?? 'neutral';
+                const readAt = n.readAt ?? n.isRead === true;
+                return (
+                  <div key={n.id} className={`ai-match-card ${!readAt ? 'unread-card' : ''}`} style={{ borderInlineStart: !readAt ? '3px solid var(--srip-accent)' : undefined, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                    <span className={`stat-ico ${tone === 'danger' ? 'ic-red' : tone === 'warning' ? 'ic-gold' : tone === 'info' ? 'ic-purple' : 'ic-blue'}`} style={{ width: 36, height: 36, borderRadius: 10, flex: '0 0 auto' }}>
+                      {TYPE_ICON[n.type] ?? <Bell size={16} />}
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <b style={{ fontSize: 13.5 }}>{n.title}</b>
+                        {!readAt && <span className="chip danger">{t('جدید')}</span>}
+                      </div>
+                      <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.75, margin: '3px 0 0' }}>{n.body}</p>
+                      <div className="match-meta" style={{ marginTop: 6 }}>
+                        <span className="chip neutral">{TYPE_FA[n.type] ?? t('سیستمی')}</span>
+                        <span className="chip neutral">{PRIORITY_FA[String(n.priority).toUpperCase()] ?? String(n.priority)}</span>
+                        {n.channel && <span className="chip neutral">{CHANNEL_FA[String(n.channel).toUpperCase()] ?? n.channel}</span>}
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><CalendarClock size={12} /> {fmtTime(n.createdAt)}</span>
+                        {!readAt && <button className="btn btn-ghost btn-sm" style={{ marginInlineStart: 'auto' }} onClick={() => markRead(n.id)} disabled={!!busy}>{t('علامت‌گذاری خوانده')}</button>}
+                      </div>
+                    </div>
                   </div>
-                  <span className={`chip ${l.accepted?'success':'danger'}`}>{l.accepted?t('پذیرفته'):t('خطا')}</span>
+                );
+              })}
+            </div>
+          )}
+        </SectionCard>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(340px,1fr))', gap: 14 }}>
+          <SectionCard title={t('اعلان‌های این دستگاه')} icon={<Smartphone size={17} />}
+            description={t('رضایت اعلان ملزم است و هر زمان می‌توانید آن را لغو کنید.')}>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+              <Badge tone={permission === 'granted' ? 'success' : permission === 'denied' ? 'danger' : 'warning'}>
+                {permission === 'granted' ? t('رضایت اعلان: داده‌شده') : permission === 'denied' ? t('رضایت اعلان: ردشده') : t('رضایت اعلان: خواسته‌نشده')}
+              </Badge>
+              <Badge tone={online ? 'success' : 'warning'}>{online ? t('برخط') : t('آفلاین')}</Badge>
+              {swReady && <Badge tone="info">{t('سرویس‌ورکر فعال')}</Badge>}
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+              {permission !== 'granted' && <button className="btn btn-secondary" onClick={requestPermission}><Bell size={14} /> {t('فعال‌سازی اعلان مرورگر')}</button>}
+              <button className="btn btn-primary" disabled={busy !== '' || permission !== 'granted'} onClick={subscribe}><BellRing size={14} /> {t('اشتراک این دستگاه')}</button>
+              <button className="btn btn-secondary" disabled={busy !== '' || activeSubs.length === 0} onClick={sendTest}><Send size={14} /> {t('ارسال اعلان آزمایشی')}</button>
+            </div>
+            <p className="pp-muted" style={{ fontSize: 11.5, marginTop: 8 }}>
+              {online
+                ? `${t('دریافت خودکار فعال است (هر ۱۰ ثانیه)')}${lastCheck ? ` — ${t('آخرین بررسی:')} ${lastCheck.toLocaleTimeString(localeTag())}` : ''}`
+                : t('اتصال قطع است — پس از برقراری اتصال، اعلان‌ها دریافت می‌شوند.')}
+              {' '}
+              {isRealTenant
+                ? t('اعلان‌های این حساب هنگام باز بودن سامانه دریافت می‌شوند.')
+                : t('در دمو، اعلان‌ها با بازبینی دوره‌ای صف سرور دریافت می‌شوند؛ در استقرار کامل با سرویس اعلان (Web Push) تحویل انجام می‌شود.')}
+            </p>
+            {subs.length > 0 && (
+              <div className="p3-list" style={{ marginTop: 10 }}>
+                {subs.map(s => (
+                  <div key={s.id} className="p3-row">
+                    <div style={{ minWidth: 0 }}>
+                      <code style={{ fontSize: 11, direction: 'ltr', wordBreak: 'break-all' }}>{s.endpointMasked}</code>
+                      <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+                        {s.topics.map(tp => <span key={tp} className="p3-chip">{tp}</span>)}
+                        {s.active ? <Badge tone="success">{t('فعال')}</Badge> : <Badge tone="danger">{t('لغوشده')}</Badge>}
+                      </div>
+                    </div>
+                    {s.active && <button className="btn btn-secondary btn-sm" disabled={busy !== ''} onClick={() => revoke(s.id)}><BellOff size={13} /> {t('لغو رضایت')}</button>}
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--card-border)' }}>
+              <HardDriveDownload size={14} />
+              <b style={{ fontSize: 12 }}>{t('دسترسی بدون اینترنت')}</b>
+              <span className="chip neutral">{cachedPages === null ? '—' : `${fmtN(cachedPages)} ${t('صفحه ذخیره‌شده')}`}</span>
+              <button className="btn btn-secondary btn-sm" disabled={busy !== ''} onClick={clearOffline}><Trash2 size={13} /> {t('پاک‌سازی')}</button>
+            </div>
+            <p className="pp-muted" style={{ fontSize: 11, marginTop: 6 }}>
+              {isRealTenant
+                ? t('صفحات بازدیدشده برای دسترسی بدون اینترنت ذخیره می‌شوند.')
+                : t('صفحات بازدیدشده برای دسترسی بدون اینترنت ذخیره می‌شوند؛ دادهٔ API دمو نیز داخل سرویس‌ورکر اجرا می‌شود.')}
+            </p>
+          </SectionCard>
+
+          <SectionCard title={t('ترجیحات اعلان')} icon={<Bell size={17} />} description={t('کانال‌ها و حالت‌های ارسال')}>
+            <div style={{ display: 'grid', gap: 9 }}>
+              {PREF_FIELDS.map(k => {
+                const meta = PREF_LABELS[k];
+                return (
+                  <label key={k} className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', border: '1px solid var(--card-border)', borderRadius: 'var(--radius-md)', background: 'var(--card-bg-soft)', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={!!prefs[k]} onChange={() => togglePref(k)} style={{ width: 17, height: 17, accentColor: 'var(--srip-accent)' }} />
+                    <span style={{ flex: 1 }}><b style={{ display: 'block', fontSize: 12.5, color: 'var(--text-primary)' }}>{meta.label}</b><small style={{ color: 'var(--text-muted)', fontSize: 10.5 }}>{meta.desc}</small></span>
+                  </label>
+                );
+              })}
+            </div>
+            <div className="form-actions" style={{ justifyContent: 'flex-start' }}>
+              <button className="btn btn-primary btn-sm" onClick={savePrefs} disabled={busy !== ''}>{busy === 'prefs' ? t('در حال ذخیره…') : t('ذخیره ترجیحات')}</button>
+              <button className="btn btn-secondary btn-sm" onClick={() => digest('DAILY')} disabled={busy !== ''}>{t('ارسال خلاصهٔ روزانه')}</button>
+              <button className="btn btn-secondary btn-sm" onClick={() => digest('WEEKLY')} disabled={busy !== ''}>{t('ارسال خلاصهٔ هفتگی')}</button>
+            </div>
+          </SectionCard>
+        </div>
+
+        <SectionCard title={t('گزارش تحویل')} icon={<Mail size={17} />} description={t('سوابق ارسال اعلان و خلاصهٔ دوره‌ای در کانال‌ها')}>
+          {log.length === 0 ? (
+            <div className="empty-state-v4">
+              <div className="empty-ico"><Mail size={24} /></div>
+              <strong>{t('تحویلی ثبت نشده است')}</strong>
+              <p>{t('پس از اولین ارسال اعلان یا خلاصهٔ دوره‌ای، سوابق اینجا نمایش داده می‌شوند.')}</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {log.map(l => (
+                <div className="ai-match-card" key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span className={`stat-ico ${l.accepted ? 'ic-green' : 'ic-red'}`} style={{ width: 30, height: 30, borderRadius: 9, flex: '0 0 auto' }}>{l.accepted ? <CheckCircle2 size={14} /> : <BellOff size={14} />}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <b style={{ fontSize: 12.5 }}>{l.title}</b>
+                    <div className="match-meta">
+                      {CHANNEL_FA[l.channel] ?? l.channel} · {l.provider}{l.count != null ? ` · ${fmtN(l.count)} ${t('گیرنده')}` : ''} · {fmtTime(l.createdAt)}
+                    </div>
+                  </div>
+                  <span className={`chip ${l.accepted ? 'success' : 'danger'}`}>{l.accepted ? t('تحویل شد') : t('خطا')}</span>
                 </div>
               ))}
             </div>
           )}
         </SectionCard>
-      </div>
-    </>)}
-  </main>
- );
+      </>)}
+    </main>
+  );
 }

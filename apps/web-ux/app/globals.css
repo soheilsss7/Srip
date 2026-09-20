@@ -756,7 +756,8 @@ textarea{resize:vertical}
 .runtime-banner,.loading-strip{margin:12px 26px 0}
 .feature-page{display:flex;flex-direction:column;gap:18px}
 .page-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;flex-wrap:wrap}
-.page-heading h1{margin:4px 0 8px;font-size:32px;font-weight:800}
+.page-heading>div{min-width:0}
+.page-heading h1{margin:4px 0 8px;font-size:32px;font-weight:800;min-width:0}
 .page-heading p{margin:0;color:var(--text-muted);font-size:13px}
 .heading-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 
@@ -1563,6 +1564,7 @@ textarea{resize:vertical}
 /* ---------- Page heading refinements ---------- */
 .page-heading{position:relative;margin-bottom:6px}
 .page-heading h1{font-size:30px;letter-spacing:-.02em;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.page-heading h1 .h1-text{min-width:0;overflow-wrap:anywhere}
 .page-heading .eyebrow{display:inline-flex;align-items:center;gap:6px;letter-spacing:.12em}
 .page-heading p{max-width:720px}
 .breadcrumbs{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);margin-bottom:10px;flex-wrap:wrap}
@@ -1608,7 +1610,7 @@ a.stat-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-
 .stat-card .stat-trend{font-size:10.5px;font-weight:800;display:inline-flex;align-items:center;gap:3px;border-radius:999px;padding:3px 8px}
 .stat-card .stat-trend.up{background:color-mix(in srgb,var(--srip-success) 12%,transparent);color:var(--srip-success)}
 .stat-card .stat-trend.down{background:var(--srip-danger-soft);color:var(--srip-danger)}
-.stat-card .stat-value{font-size:28px;font-weight:900;letter-spacing:-.02em;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat-card .stat-value{font-size:28px;font-weight:900;letter-spacing:-.02em;line-height:1.1;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .stat-card .stat-label{font-size:12px;color:var(--text-secondary);font-weight:700;display:flex;align-items:center;gap:6px}
 .stat-card .stat-sub{font-size:10.5px;color:var(--text-muted);margin-top:-4px}
 .stat-card::after{content:"";position:absolute;inset-inline-end:-24px;top:-24px;width:88px;height:88px;border-radius:50%;
@@ -2053,9 +2055,10 @@ p{text-wrap:pretty}
 /* ============ Profile strip (entity detail pages) ============ */
 .profile-strip{display:flex;align-items:center;gap:16px;background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius-lg);padding:18px 20px;margin-bottom:16px;flex-wrap:wrap}
 .profile-main{flex:1;min-width:220px}
-.profile-main h2{margin:0;font-size:19px}
+.profile-main h2{margin:0;font-size:19px;overflow-wrap:anywhere;max-width:100%}
 .profile-main p{margin:3px 0 0;color:var(--text-secondary);font-size:13px}
 .profile-metrics{display:flex;gap:8px;flex-wrap:wrap}
+@media(max-width:480px){.profile-strip .profile-main{flex:1 1 calc(100% - 64px);min-width:180px}.profile-strip .profile-main h2{font-size:17px}}
 .avatar-lg{width:52px;height:52px;font-size:19px;border-radius:16px}
 .avatar-sm{width:30px;height:30px;font-size:10.5px;border-radius:10px}
 .listRow.linkable:hover{background:color-mix(in srgb,var(--srip-accent) 7%,transparent)}

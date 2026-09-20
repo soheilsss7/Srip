@@ -62,15 +62,27 @@ try {
     return r.ok;
   }, BASE));
 
-  // 2) open publics hub
+  // 2) open publics hub — شناسنامه به پروفایل سازمان منتقل شده؛ تب پیش‌فرض «گروه‌ها»
   await page.goto(`${BASE}/publics`, { waitUntil: 'networkidle0', timeout: 60000 });
   ok('hub header', await waitForText('نقشهٔ عموم‌ها'));
-  ok('tab شناسنامهٔ سازمان', await waitForText('شناسنامهٔ سازمان'));
+  ok('بدون تب شناسنامه (منتقل‌شده به پروفایل سازمان)', await page.evaluate(() => ![...document.querySelectorAll('button[role="tab"]')].some(b => (b.textContent ?? '').includes('شناسنامه'))));
+  ok('تب پیش‌فرض: گروه‌ها', await page.evaluate(() => [...document.querySelectorAll('button[role="tab"]')].some(b => (b.textContent ?? '').includes('گروه‌ها') && b.className.includes('active'))));
+  ok('بدون تب تکراری «پوشش» (ادغام در هیت‌مپ)', await page.evaluate(() => ![...document.querySelectorAll('button[role="tab"]')].some(b => (b.textContent ?? '').trim() === 'پوشش')));
+  ok('تب پوشش (هیت‌مپ) موجود', await page.evaluate(() => [...document.querySelectorAll('button[role="tab"]')].some(b => (b.textContent ?? '').includes('پوشش (هیت‌مپ)'))));
 
-  // 3) self tab content
-  ok('کارت شناسنامهٔ سازمان', await waitForText('شناسنامهٔ سازمان'));
-  ok('org هلدینگ آریا', await waitForText('هلدینگ آریا'));
-  ok('6 kategori rows', await page.evaluate(() => document.querySelectorAll('.table-wrap tbody tr').length === 6), 'rows=' + await page.evaluate(() => document.querySelectorAll('.table-wrap tbody tr').length));
+  // 2b) ماتریس نفوذ×حمایت — تب رندر می‌شود و نقطه‌ها روی ماتریس‌اند
+  await clickByText('button[role="tab"]', 'ماتریس نفوذ×حمایت');
+  await new Promise(r => setTimeout(r, 900));
+  ok('ماتریس: عنوان بخش', await waitForText('ماتریس نفوذ × حمایت'));
+  ok('ماتریس: نقطه‌های اعضا روی نمودار', await page.evaluate(() => document.querySelectorAll('[role="application"] button').length >= 5), 'dots=' + await page.evaluate(() => document.querySelectorAll('[role="application"] button').length));
+
+  // 3) شناسنامهٔ سازمان در پروفایل خود سازمان
+  await page.goto(`${BASE}/organizations/org-1`, { waitUntil: 'networkidle0', timeout: 60000 });
+  ok('کارت شناسنامهٔ سازمان در پروفایل', await waitForText('شناسنامهٔ سازمان'));
+  ok('شناسنامه: الگو و پوشش', await waitForText('پوشش عموم‌ها'));
+  ok('شناسنامه: فرم ویرایش (مأموریت)', await waitForText('مأموریت سازمان'));
+  await page.goto(`${BASE}/publics`, { waitUntil: 'networkidle0', timeout: 60000 });
+  await new Promise(r => setTimeout(r, 900));
   ok('groups count 105', await waitForText('۱۰۵'));
 
   // 4) members tab
@@ -145,6 +157,7 @@ ok('add member flash', addFlash);
     return !!t && t.className.includes('active') && body.includes('۱۰۵') && body.includes('٪ پوشش');
   }, { timeout: 35000 }).then(() => true).catch(() => false);
   ok('coverage totals', covOk);
+  ok('هیت‌مپ پوشش عمومی (جدول منبع×دسته)', await waitForText('هیت‌مپ پوشش عمومی'));
   ok('coverage category cards', await page.evaluate(() => (document.body.textContent ?? '').includes('نهادی و حاکمیتی') && (document.body.textContent ?? '').includes('اکوسیستم فناوری و صنعت')));
 
   // 8) gaps tab

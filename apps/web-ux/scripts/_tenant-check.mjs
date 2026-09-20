@@ -82,7 +82,7 @@ try {
   /* ---------- ۲) حساب واقعی aroun (tenant=real) ---------- */
   const ar = await login(page, 'aroun', '12356784');
   ok('ورود aroun', ar.ok);
-  const REAL_PAGES = ['/board','/analytics','/referrals','/network','/help','/push','/enterprise','/approvals','/enrichment','/reports','/reports/export','/workflows','/p'];
+  const REAL_PAGES = ['/board','/analytics','/referrals','/network','/help','/notifications','/enterprise','/approvals','/enrichment','/reports','/reports/export','/workflows','/p'];
   const real = await sweep(page, REAL_PAGES);
   for (const pg of REAL_PAGES) {
     ok(`aroun ${pg}: بدون «دمو»`, !real[pg].includes('دمو'), (real[pg].match(/.{0,25}دمو.{0,25}/) || [''])[0]);
@@ -108,7 +108,7 @@ try {
   ok('aroun /analytics: بدون «دادهٔ دمو»', !real['/analytics'].includes('دادهٔ دمو'));
   ok('aroun /board: بدون «برچسب دمو»', !real['/board'].includes('برچسب دمو'));
   ok('aroun /enterprise: «در حال راه‌اندازی»', real['/enterprise'].includes('در حال راه‌اندازی'));
-  ok('aroun /push: بدون «نقل‌ونقل polling در دمو»', !real['/push'].includes('نقل‌ونقل polling در دمو'));
+  ok('aroun /notifications: مرکز اعلان‌ها بدون واژهٔ دمو', real['/notifications'].includes('مرکز اعلان‌ها') && !real['/notifications'].includes('نقل‌ونقل polling در دمو'));
   ok('aroun /help: بدون «بازنشانی دمو»', !real['/help'].includes('بازنشانی دمو'));
 
   /* ---------- ۳) حساب دمو (tenant=demo) — گیت دوطرفه ---------- */

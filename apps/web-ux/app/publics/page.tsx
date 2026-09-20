@@ -4,7 +4,7 @@ import { api, apiBlob, unwrapList } from '../_lib/api';
 import { useWorkspace } from '../_components/workspace';
 import { Badge, ErrorCard, Loading, Modal, PageHeader, SectionCard, StatCard, StatusBadge, Toolbar } from '../_components/page-ui';
 import {
-  Building2, Users2, Radar, AlertTriangle, Download, FileJson, FileSpreadsheet, Fingerprint,
+  Building2, Users2, Radar, AlertTriangle, Download, FileJson, FileSpreadsheet,
   Plus, RefreshCw, Trash2, SlidersHorizontal, Megaphone, Newspaper, Target, Eye, Heart,
   CheckCircle2, ChevronLeft, Layers, Landmark, GraduationCap, Briefcase, Newspaper as News2, Cpu,
   Copy, Sparkles, UserPlus, Pencil, RotateCcw, Power, Grid3x3, History, TrendingDown,
@@ -437,7 +437,7 @@ export default function PublicsPage() {
   useEffect(() => { if (orgId !== scopeId && scopeId !== 'all') setOrgId(scopeId); }, [scopeId, orgId]);
   useEffect(() => { if (!orgId && primaryOrg) setOrgId(primaryOrg); }, [orgId, primaryOrg]);
 
-  const [tab, setTab] = useState<'self' | 'groups' | 'members' | 'matrix' | 'heatmap' | 'coverage' | 'gaps' | 'media' | 'export'>('self');
+  const [tab, setTab] = useState<'groups' | 'members' | 'matrix' | 'heatmap' | 'gaps' | 'media' | 'export'>('groups');
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [selfRow, setSelfRow] = useState<SelfRow | null>(null);
   const [members, setMembers] = useState<MemberView[]>([]);
@@ -480,12 +480,6 @@ export default function PublicsPage() {
   const [assessForm, setAssessForm] = useState({ stage: 'AWARE', linkage: 'DIFFUSED', power: 50, interest: 50, stance: 'OBSERVER', note: '', assess: true });
 
   /* self form */
-  const [selfForm, setSelfForm] = useState({
-    companyType: 'HOLDING', missionTopic: '', reviewIntervalDays: 90,
-    sectors: [] as string[], subsidiaries: [] as string[], ownership: 'PRIVATE',
-  });
-  const [selfDirty, setSelfDirty] = useState(false);
-
   /* media form */
   const [mediaOpen, setMediaOpen] = useState(false);
   const [mediaForm, setMediaForm] = useState({ name: '', type: 'TECH_MEDIA', url: '', audience: '', country: '', note: '' });
@@ -528,19 +522,6 @@ export default function PublicsPage() {
       setOrgs(Array.isArray(orgsList) ? orgsList : []);
       setPeople(Array.isArray(ppl) ? ppl : []);
       setRels(Array.isArray(rls) ? rls : []);
-      if (self) {
-        const t = cat?.templates[self.self?.templateId ?? 'HOLDING'] ?? cat?.templates.HOLDING;
-        setSelfForm(f => ({
-          companyType: self.self?.companyType ?? f.companyType,
-          missionTopic: self.missionTopic ?? '',
-          reviewIntervalDays: self.reviewIntervalDays ?? 90,
-          sectors: self.structure?.sectors ?? f.sectors,
-          subsidiaries: self.structure?.subsidiaries ?? f.subsidiaries,
-          ownership: self.structure?.ownership ?? 'PRIVATE',
-        }));
-        setSelfDirty(false);
-        void t;
-      }
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -550,10 +531,6 @@ export default function PublicsPage() {
 
   useEffect(() => { if (orgId && canRead) refresh(orgId); }, [orgId, canRead, refresh]);
 
-  const tpl = useMemo(() => {
-    const id = selfRow?.template?.id ?? 'HOLDING';
-    return catalog?.templates[id] ?? catalog?.templates.HOLDING ?? null;
-  }, [catalog, selfRow]);
   const groupsByCat = useMemo(() => {
     const map: Record<string, EffGroup[]> = {};
     for (const g of groups.filter(x => x.active !== false)) { (map[g.cat] ??= []).push(g); }
@@ -627,26 +604,6 @@ export default function PublicsPage() {
     try {
       await api(`/publics/groups/${orgId}/${g.id}`, { method: 'DELETE' });
       notify('گروه اختصاصی حذف شد.');
-      await refresh(orgId);
-    } catch (e) { notify(`خطا: ${(e as Error).message}`); } finally { setBusy(''); }
-  };
-
-  /* ---------- self save ---------- */
-  const saveSelf = async () => {
-    if (!canWrite) { notify('مجوز ویرایش «عموم‌ها» را ندارید.'); return; }
-    setBusy('self');
-    try {
-      await api(`/publics/self/${orgId}`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          companyType: selfForm.companyType,
-          missionTopic: selfForm.missionTopic.trim(),
-          reviewIntervalDays: Number(selfForm.reviewIntervalDays) || 90,
-          structure: { sectors: selfForm.sectors, subsidiaries: selfForm.subsidiaries, ownership: selfForm.ownership },
-        }),
-      });
-      notify('شناسنامهٔ سازمان ذخیره شد؛ نقشهٔ عموم‌ها به‌روزرسانی شد.');
-      setSelfDirty(false);
       await refresh(orgId);
     } catch (e) { notify(`خطا: ${(e as Error).message}`); } finally { setBusy(''); }
   };
@@ -823,12 +780,10 @@ export default function PublicsPage() {
   }, [tab]);
 
   const TABS: Array<{ key: typeof tab; label: string; icon?: React.ReactNode }> = [
-    { key: 'self', label: 'شناسنامهٔ سازمان', icon: <Fingerprint size={14} /> },
     { key: 'groups', label: 'گروه‌ها', icon: <Layers size={14} /> },
     { key: 'members', label: 'اعضا و ارزیابی', icon: <Users2 size={14} /> },
     { key: 'matrix', label: 'ماتریس نفوذ×حمایت', icon: <Target size={14} /> },
-    { key: 'heatmap', label: 'هیت‌مپ پوشش', icon: <Grid3x3 size={14} /> },
-    { key: 'coverage', label: 'پوشش', icon: <Radar size={14} /> },
+    { key: 'heatmap', label: 'پوشش (هیت‌مپ)', icon: <Grid3x3 size={14} /> },
     { key: 'gaps', label: 'شکاف‌ها و اقدام', icon: <AlertTriangle size={14} /> },
     { key: 'media', label: 'پوشش رسانه‌ای', icon: <Radio size={14} /> },
     { key: 'export', label: 'خروجی و رسانه', icon: <Download size={14} /> },
@@ -868,7 +823,7 @@ export default function PublicsPage() {
   if (!canRead) {
     return (
       <div className="page">
-        <PageHeader eyebrow="عموم‌ها" title="نقشهٔ عموم‌ها" description="شناسنامهٔ سازمان و بازیگران اثرگذار" />
+        <PageHeader eyebrow="عموم‌ها" title="نقشهٔ عموم‌ها" description="بازیگران اثرگذار و پوشش عموم‌های سازمان" />
         <ErrorCard message="مجوز مشاهدهٔ ماژول «عموم‌ها» را ندارید." />
       </div>
     );
@@ -879,7 +834,7 @@ export default function PublicsPage() {
       <PageHeader
         eyebrow="عموم‌ها"
         title="نقشهٔ عموم‌ها"
-        description="شناخت سازمان، چیدمان گروه‌ها، ارزیابی اعضا و تبدیل شکاف‌ها به اقدام"
+        description="چیدمان گروه‌ها، ارزیابی اعضا، ماتریس نفوذ×حمایت و تبدیل شکاف‌ها به اقدام"
         actions={
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <label className="scope-chip" title="سازمانی که نقشهٔ عموم‌های آن را مشاهده می‌کنید">
@@ -909,92 +864,6 @@ export default function PublicsPage() {
               </button>
             ))}
           </nav>
-
-          {/* ---------------- شناسنامهٔ سازمان ---------------- */}
-          {tab === 'self' && (
-            <div className="stack" style={{ gap: 14 }}>
-              <div className="grid-2" style={{ gap: 14 }}>
-                <SectionCard
-                  title="ویرایش شناسنامه"
-                  icon={<Fingerprint size={15} />}
-                  description={canWrite ? 'مشخصات سازمان را کامل کنید و «ذخیرهٔ شناسنامه» را بزنید؛ مبنای پوشش، شکاف‌ها و خلاصهٔ مدیریتی همین است.' : 'نمای خواندنی'}
-                  actions={canWrite && <button className="btn btn-primary" disabled={busy === 'self'} onClick={saveSelf}><CheckCircle2 size={14} /> ذخیرهٔ شناسنامه</button>}
-                >
-                  <div className="form-grid">
-                    <div className="field full">
-                      <label className="field-label">نوع شرکت (الگوی شروع)</label>
-                      <select value={selfForm.companyType} disabled={!canWrite} onChange={e => { setSelfForm(f => ({ ...f, companyType: e.target.value })); setSelfDirty(true); }}>
-                        {(Object.values(catalog?.templates ?? {}) as PubTpl[]).map(t => (
-                          <option key={t.id} value={t.id}>{t.fa}</option>
-                        ))}
-                      </select>
-                      <span className="field-hint">الگو فقط فهرست آغازین است؛ در تب «گروه‌ها» آن را ویژهٔ سازمان خود کنید.{tpl?.note ? ` راهنمای الگو: ${tpl.note}` : ''}</span>
-                    </div>
-                    <div className="field full">
-                      <label className="field-label">مأموریت سازمان</label>
-                      <input value={selfForm.missionTopic} disabled={!canWrite} placeholder="مثلاً: پیشرو در فناوری‌های نوین کشور" onChange={e => { setSelfForm(f => ({ ...f, missionTopic: e.target.value })); setSelfDirty(true); }} />
-                      <span className="field-hint">جملهٔ راهنمای سازمان شما؛ در خلاصهٔ مدیریتی و اولویت‌بندی شکاف‌ها به کار می‌رود.</span>
-                    </div>
-                    <div className="field">
-                      <label className="field-label">دورهٔ بازبینی (روز)</label>
-                      <input type="number" min={30} max={365} value={selfForm.reviewIntervalDays} disabled={!canWrite} onChange={e => { setSelfForm(f => ({ ...f, reviewIntervalDays: Number(e.target.value) })); setSelfDirty(true); }} />
-                      <span className="field-hint">شناسنامه هر چند روز یک‌بار بازبینی می‌شود؟</span>
-                    </div>
-                    <div className="field">
-                      <label className="field-label">نوع مالکیت</label>
-                      <select value={selfForm.ownership} disabled={!canWrite} onChange={e => { setSelfForm(f => ({ ...f, ownership: e.target.value })); setSelfDirty(true); }}>
-                        {[['PRIVATE', 'خصوصی'], ['STATE', 'دولتی'], ['PUBLIC', 'عمومی/بورسی'], ['FAMILY', 'خانوادگی']].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                      </select>
-                    </div>
-                    <div className="field full">
-                      <label className="field-label">شرکت‌های تابعه</label>
-                      <div className="chip-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                        {orgs.filter(o => o.id !== orgId).map(o => {
-                          const on = selfForm.subsidiaries.includes(o.id);
-                          return (
-                            <button key={o.id} type="button" disabled={!canWrite} className={`chip ${on ? 'info' : 'neutral'}`} onClick={() => {
-                              setSelfForm(f => ({ ...f, subsidiaries: on ? f.subsidiaries.filter(x => x !== o.id) : [...f.subsidiaries, o.id] }));
-                              setSelfDirty(true);
-                            }}>{on ? <CheckCircle2 size={12} /> : null}{o.name}</button>
-                          );
-                        })}
-                      </div>
-                      <span className="field-hint">شرکت‌های زیرمجموعهٔ شما؛ در تب «اعضا و ارزیابی» می‌توانید آن‌ها را به نقشه بیفزایید.</span>
-                    </div>
-                  </div>
-                  {selfDirty && <div className="field-hint" style={{ marginTop: 8 }}>تغییرات ذخیره نشده است؛ دکمهٔ «ذخیرهٔ شناسنامه» را بزنید.</div>}
-                </SectionCard>
-
-                <SectionCard title="شناسنامهٔ سازمان" icon={<Fingerprint size={15} />} description={`${selectedOrgName} · الگوی شروع: ${selfRow?.template?.fa ?? '—'} · ${fmtNum(selfRow?.effective?.active ?? 0)} گروه فعال`} actions={<button className="chip info" onClick={() => setTab('groups')}>مدیریت گروه‌ها <ChevronLeft size={12} /></button>}>
-                  <div className="stat-grid" style={{ marginBottom: 12 }}>
-                    <StatCard icon={<Building2 size={16} />} iconClass="ic-teal" label="سازمان" value={selectedOrgName} />
-                    <StatCard icon={<Layers size={16} />} iconClass="ic-blue" label="گروه‌های الگو" value={fmtNum(selfRow?.template?.groups ?? tpl?.groups?.length ?? 0)} sub={`${fmtNum(selfRow?.effective?.active ?? selfRow?.coverage.groupsExpected ?? 0)} فعال در نقشه · ${fmtNum(selfRow?.coverage.groupsCovered ?? 0)} پوشش‌داده‌شده`} />
-                    <StatCard icon={<Users2 size={16} />} iconClass="ic-purple" label="اعضای ثبت‌شده" value={fmtNum(selfRow?.coverage.members ?? members.length)} sub={`${fmtNum(selfRow?.coverage.keyPlayers ?? 0)} بازیگر کلیدی`} />
-                    <StatCard icon={<Radar size={16} />} iconClass="ic-orange" label="پوشش" value={`${Math.round(((selfRow?.coverage.groupsCovered ?? 0) / Math.max(1, selfRow?.coverage.groupsExpected ?? 1)) * 100)}٪`} sub={`${fmtNum(selfRow?.coverage.groupsExpected ?? 0)} گروه`} />
-                  </div>
-                  <div className="table-wrap">
-                    <table>
-                      <thead><tr><th>دسته</th><th>گروه‌ها</th><th>کانال اصلی</th><th>یادداشت</th></tr></thead>
-                      <tbody>
-                        {(tpl?.focus ?? []).map(cid => {
-                          const groups = groupsByCat[cid] ?? [];
-                          const cnt = groups.length;
-                          return (
-                            <tr key={cid}>
-                              <td><StatusBadge tone="neutral">{CAT_ICONS[cid]}{catOf(cid)}</StatusBadge></td>
-                              <td>{fmtNum(cnt)}</td>
-                              <td className="t-muted">{groups.slice(0, 2).map(g => g.kanal).filter(Boolean).join('، ') || '—'}</td>
-                              <td className="t-muted">{groups.slice(0, 3).map(g => g.fa).join('، ')}{cnt > 3 ? ` +${fmtNum(cnt - 3)}` : ''}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </SectionCard>
-              </div>
-            </div>
-          )}
 
           {/* ---------------- اعضا و ارزیابی ---------------- */}
           {tab === 'members' && (
@@ -1136,14 +1005,21 @@ export default function PublicsPage() {
           )}
 
           {/* ---------------- پوشش ---------------- */}
-          {tab === 'coverage' && (
+          {/* ---------------- ماتریس نفوذ×حمایت ---------------- */}
+          {tab === 'matrix' && (
+            <MatrixTab members={members} canWrite={canWrite} onSave={saveMatrix} onNotify={notify} />
+          )}
+
+          {/* ---------------- پوشش (هیت‌مپ) — آمار + هیت‌مپ + دسته‌ها ---------------- */}
+          {tab === 'heatmap' && (
             <div className="stack" style={{ gap: 14 }}>
               <div className="stat-grid">
                 <StatCard icon={<Layers size={16} />} iconClass="ic-blue" label="گروه‌های نقشه" value={fmtNum(coverage?.totals.groupsExpected ?? 0)} sub={`${fmtNum(coverage?.totals.groupsCovered ?? 0)} پوشش‌داده‌شده`} />
-                <StatCard icon={<Radar size={16} />} iconClass="ic-teal" label="٪ پوشش" value={`${Math.round(((coverage?.totals.groupsCovered ?? 0) / Math.max(1, coverage?.totals.groupsExpected ?? 1)) * 100)}٪`} />
+                <StatCard icon={<Radar size={16} />} iconClass="ic-teal" label="٪ پوشش" value={`${fmtNum(coverage?.totals.groupsExpected ? Math.round((coverage.totals.groupsCovered / coverage.totals.groupsExpected) * 100) : 0)}٪`} />
                 <StatCard icon={<AlertTriangle size={16} />} iconClass="ic-orange" label="شکاف‌ها" value={fmtNum(coverage?.totals.gaps ?? 0)} sub={`${fmtNum(coverage?.totals.criticalGaps ?? 0)} بحرانی`} />
                 <StatCard icon={<Eye size={16} />} iconClass="ic-purple" label="اعضای فعال" value={fmtNum(coverage?.totals.active ?? 0)} />
               </div>
+              <HeatmapTab members={members} categories={(coverage?.byCategory ?? []).map(c => ({ id: c.categoryId, fa: c.fa }))} />
               <div className="grid-2" style={{ gap: 14 }}>
                 {(coverage?.byCategory ?? []).map(c => {
                   const pct = Math.round((c.covered / Math.max(1, c.expected)) * 100);
@@ -1152,7 +1028,7 @@ export default function PublicsPage() {
                       <div style={{ marginBottom: 10 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                           <span style={{ fontSize: 11, fontWeight: 700 }}>پوشش گروهی</span>
-                          <b style={{ fontSize: 12, color: CAT_COLORS[c.categoryId] ?? 'var(--srip-accent)' }}>{pct}٪</b>
+                          <b style={{ fontSize: 12, color: CAT_COLORS[c.categoryId] ?? 'var(--srip-accent)' }}>{fmtNum(pct)}٪</b>
                         </div>
                         <div style={{ height: 8, borderRadius: 999, background: 'var(--card-bg-soft)', overflow: 'hidden' }}>
                           <div style={{ width: `${pct}%`, height: '100%', borderRadius: 999, background: CAT_COLORS[c.categoryId] ?? 'var(--srip-accent)' }} />

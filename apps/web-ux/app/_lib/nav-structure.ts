@@ -35,7 +35,7 @@ export function itemVisible(item: NavItem, can: (p: string) => boolean, isAdmin 
 export const NAV_ZONES: readonly NavZone[] = lt([
   [t('خانه'), t('کار امروز من'), [
     ['/', t('پیشخوان'), 'dashboard.read'],
-    ['/push', t('اعلان‌ها و آفلاین'), 'dashboard.read'],
+    ['/notifications', t('اعلان‌ها'), 'dashboard.read'],
   ]],
   [t('مخاطب‌ها'), t('سازمان‌ها و افراد کلیدی'), [
     ['/organizations', t('سازمان‌ها'), 'organization.read'],
@@ -149,7 +149,7 @@ export const NAV_PERMISSION_MAP: Record<string, string> = {
   '/workflows': 'workflow.read', '/publics': 'publics.read', '/strategy': 'strategy.read',
   '/gis': 'organization.read', '/portal': 'publics.read', '/mcp': 'analytics.read', '/imports': 'interaction.write',
   '/enrichment': 'organization.read', '/developers': 'integration.read', '/qbr': 'analytics.read',
-  '/push': 'dashboard.read',
+  '/notifications': 'dashboard.read',
 };
 
 /** نگاشت مسیرهای مرکز سیستم → مجوز (عمق دسترسی مدیریتی، جداست از سایدبار) */
@@ -193,6 +193,7 @@ export const GLOSS: Record<string, string> = lt({
   '/referrals': t('معرفی‌ها و واسطه‌های رسیدن به یک سازمان'),
   '/directory': t('کاتالوگ نهادهای عمومی برای جست‌وجو و اتصال به شبکهٔ روابط شما'),
   '/alerts': t('همهٔ هشدارهای فعال سیستم در یک نگاه — فیلترپذیر بر اساس ماژول و شدت'),
+  '/notifications': t('اعلان‌ها، ترجیحات دریافت و وضعیت اعلان این دستگاه'),
   '/intelligence': t('سیگنال‌های ریسک، فرصت‌های در جریان و پیشنهاد رشد'),
   '/board': t('گزارش هیئت‌مدیره: بازده سرمایهٔ رابطه، سرمایه، سلامت پرتفوی و ریسک تک‌نقطه'),
   '/meetings': t('جلسات برنامه‌ریزی‌شده با ثبت دستور و خلاصه'),
@@ -213,6 +214,6 @@ export const GLOSS: Record<string, string> = lt({
   '/sessions': t('نشست‌های فعال ورود شما در دستگاه‌ها'),
   '/data-management': t('مرکز داده: کیفیت، ورود و حاکمیت داده در یک نگاه'),
   '/workflows': t('زنجیره‌های خودکار تصمیم، اجرا و تأییدها'),
-  '/publics': t('نقشهٔ عموم‌ها: شناسنامهٔ سازمان، دسته‌بندی بازیگران و شکاف‌های اثرگذار'),
+  '/publics': t('نقشهٔ عموم‌ها: بازیگران اثرگذار، ماتریس نفوذ×حمایت و شکاف‌های پوشش'),
   '/strategy': t('تحلیل رقابت و تعامل راهبردی'),
 });

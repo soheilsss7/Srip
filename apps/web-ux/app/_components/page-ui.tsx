@@ -8,7 +8,7 @@ import { isEn, localeTag, t } from '../_lib/i18n';
 export function PageHeader({eyebrow:_eyebrow,title,description,actions}:{eyebrow?:string;title:string;description?:string;actions?:React.ReactNode}){
  /* «برچسب بالای عنوان» (eyebrow — همان کادر آبی مثل «مسترپلن فاز …») به درخواست
     مالک حذف شد؛ پراپ پذیرفته می‌ماند تا صدها فراخوانی صفحه شکسته نشود. */
- return <header className="page-heading"><div><h1>{title}</h1>{description&&<p>{description}</p>}</div>{actions&&<div className="heading-tools">{actions}</div>}</header>
+ return <header className="page-heading"><div><h1><span className="h1-text">{title}</span></h1>{description&&<p>{description}</p>}</div>{actions&&<div className="heading-tools">{actions}</div>}</header>
 }
 export function ErrorCard({message}:{message?:string}){return message?<ErrorState message={message}/>:null}
 export function Loading({label=t('در حال بارگذاری…')}:{label?:string}){return <div className="loading-strip" aria-live="polite">{label}</div>}

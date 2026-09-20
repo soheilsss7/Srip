@@ -19,7 +19,7 @@ const PORT = Number(process.env.MOCK_API_PORT || 4000);
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.19.01';
+const DEMO_MOCK_VERSION = '2026.09.20.03';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -3423,6 +3423,8 @@ function seedPhase3Store(){
   if(!Array.isArray(DB.webhookDeliveries)) DB.webhookDeliveries=[];
   if(!Array.isArray(DB.pushSubscriptions)) DB.pushSubscriptions=[];
   if(!Array.isArray(DB.pushPending)) DB.pushPending=[];
+  if(!Array.isArray(DB.notificationPrefs)) DB.notificationPrefs=[];
+  if(!Array.isArray(DB.notificationDeliveries)) DB.notificationDeliveries=[];
   /* کلید دموی عمومی برای حساب دمو (برای سند برنامه‌نویس) */
   if(!DB.apiKeys.some(k=>k.id==='ak-demo-1')){
     DB.apiKeys.push({id:'ak-demo-1',key:'srip_ak_demo0000000000000000000000000001',name:'کلید دمو (برای نمونه‌کد)',
@@ -3525,6 +3527,7 @@ function resetDbInPlace(){
   DB = { version: 2, users: {}, orgs: ORGS, people: PEOPLE, rels: RELS, meetings: MEETINGS,
     actions: ACTIONS, commitments: COMMITMENTS, projects: PROJECTS, projectExtra: PROJECT_EXTRA,
     opportunities: OPPORTUNITIES, interactions: INTERACTIONS, notifications: NOTIFICATIONS,
+    notificationPrefs: [], notificationDeliveries: [],
     recs: RECS, aiUsage: AI_USAGE, personOrgs: PERSON_ORGS, audit: [], revokedJtis: [], nextId: 1,
     assessments: seedCriteriaAssessments(), criteriaManual: [], knowledge: seedKnowledge(), documents: seedDocuments(),
     scoreSnapshots: seedScoreSnapshots(), accountPlans: seedAccountPlans(), careerEvents: seedCareerEvents(),
@@ -6812,19 +6815,47 @@ const server=http.createServer(async(req,res)=>{
   }
 
   /* ----------------------------- notifications ----------------------------- */
+  /* ترجیحات اعلان و گزارش تحویل، per-user در DB ذخیره می‌شوند (مرکز اعلان‌ها) */
+  const NOTIF_PREF_DEFAULTS={inAppEnabled:true,emailEnabled:true,pushEnabled:false,digestEnabled:false,criticalOnly:false,dailyDigest:false,weeklyDigest:false};
+  const notifPrefsOf=(u)=>{const row=(DB.notificationPrefs??[]).find(p=>p.userId===u.id); return {...NOTIF_PREF_DEFAULTS,...(row?.prefs??{})};};
+  const notifDelivery=(row)=>{DB.notificationDeliveries.unshift({id:`nd-${Date.now()}-${String(Math.random()).slice(2,6)}`,userId:row.userId??null,organizationId:row.organizationId??null,channel:row.channel,provider:row.provider,title:String(row.title??'').slice(0,120),count:row.count??null,accepted:row.accepted!==false,createdAt:nowIso()}); if(DB.notificationDeliveries.length>200) DB.notificationDeliveries.length=200;};
   if(is('/notifications')&&method==='GET') return json(res,200,visibleNotifications(req));
   if(is('/notifications/unread-count')&&method==='GET') return json(res,200,{count:visibleNotifications(req).filter(n=>!n.isRead).length});
-  if(is('/notifications/preferences')&&method==='GET') return json(res,200,{inAppEnabled:true,emailEnabled:true,pushEnabled:false,digestEnabled:false,criticalOnly:false,dailyDigest:false,weeklyDigest:false});
-  if(is('/notifications/preferences')&&method==='PATCH'){ await readBody(req); return json(res,200,{ok:true}); }
+  if(is('/notifications/preferences')&&method==='GET') return json(res,200,notifPrefsOf(authUser));
+  if(is('/notifications/preferences')&&method==='PATCH'){
+    const b=await readBody(req);
+    const prefs=notifPrefsOf(authUser);
+    for(const k of Object.keys(NOTIF_PREF_DEFAULTS)) if(typeof b[k]==='boolean') prefs[k]=b[k];
+    const row=(DB.notificationPrefs??[]).find(p=>p.userId===authUser.id);
+    if(row) row.prefs=prefs; else DB.notificationPrefs.push({userId:authUser.id,prefs});
+    saveDb(); audit(req,'UPDATE','NotificationPreferences',authUser.id,'OK',{meta:{changed:Object.keys(b).filter(k=>k in NOTIF_PREF_DEFAULTS).join(',')||'-'}});
+    return json(res,200,{ok:true,prefs});
+  }
   const notifRead=match('/notifications/:id/read');
   if(notifRead&&method==='PATCH'){
     const n=NOTIFICATIONS.find(x=>x.id===notifRead[0]);
     if(n) n.isRead=true;
+    saveDb();
     return json(res,200,{ok:true});
   }
-  if(is('/notifications/read-all')&&method==='PATCH'){ NOTIFICATIONS.forEach(n=>n.isRead=true); return json(res,200,{ok:true}); }
-  if(is('/notifications/delivery-log')&&method==='GET') return json(res,200,[]);
-  if(match('/notifications/digest/:cadence')&&method==='POST') return json(res,200,{sent:false,reason:'empty'});
+  if(is('/notifications/read-all')&&method==='PATCH'){ visibleNotifications(req).forEach(n=>n.isRead=true); saveDb(); return json(res,200,{ok:true}); }
+  if(is('/notifications/delivery-log')&&method==='GET'){
+    return json(res,200,(DB.notificationDeliveries??[]).filter(r=>r.userId===authUser.id).slice(0,50));
+  }
+  const digestM=match('/notifications/digest/:cadence');
+  if(digestM&&method==='POST'){
+    const cad=digestM[0];
+    if(!['DAILY','WEEKLY'].includes(cad)) return json(res,400,{message:'دورهٔ خلاصه باید DAILY یا WEEKLY باشد.'});
+    const prefs=notifPrefsOf(authUser);
+    if(!prefs.digestEnabled||!prefs.emailEnabled) return json(res,200,{sent:false,reason:'digest-disabled'});
+    if(!authUser.email) return json(res,200,{sent:false,reason:'no-email'});
+    const windowMs=cad==='DAILY'?24*3600000:7*86400000;
+    const items=visibleNotifications(req).filter(n=>!n.isRead&&(Date.now()-new Date(n.createdAt).getTime())<=windowMs);
+    if(!items.length) return json(res,200,{sent:false,reason:'empty'});
+    notifDelivery({userId:authUser.id,channel:'EMAIL',provider:'digest',title:cad==='DAILY'?'خلاصهٔ روزانهٔ اعلان‌ها':'خلاصهٔ هفتگی اعلان‌ها',count:items.length,accepted:true});
+    saveDb(); audit(req,'SEND','NotificationDigest',cad,'OK',{meta:{count:items.length}});
+    return json(res,200,{sent:true,count:items.length,cadence:cad});
+  }
 
   /* ------------------------------ analytics ------------------------------ */
   /* موتور واقعی Analytics (پاریتی AnalyticsService): scope سازمانی، پنجرهٔ ۳۰روزه،
@@ -11890,6 +11921,21 @@ const server=http.createServer(async(req,res)=>{
     saveDb(); audit(req,'REVOKE','PushSubscription',row.id,'OK',{});
     return json(res,200,{id:row.id,revokedAt:row.revokedAt,consent:row.consent,message:'رضایت اعلان لغو شد — دیگر پیامی برای این اشتراک ارسال نمی‌شود.'});
   }
+  /* اعلان آزمایشی به خودِ کاربر (بدون مجوز ویژه): فقط اشتراک‌های فعال خودش را
+     می‌سنجد و هم‌زمان یک اعلان درون‌برنامه‌ای می‌سازد — اعتبارسنجی مسیر دریافت */
+  if(is('/notifications/push/test')&&method==='POST'){
+    const mine=(DB.pushSubscriptions??[]).filter(s=>s.userId===authUser.id&&s.active!==false&&!s.revokedAt&&s.consent==='GRANTED');
+    if(!mine.length) return json(res,409,{message:'اشتراک فعالی برای این حساب ندارید — ابتدا اعلان مرورگر را فعال و این دستگاه را مشترک کنید.'});
+    const title='اعلان آزمایشی SRIP';
+    const body='این پیام برای آزمایش مسیر دریافت اعلان این دستگاه ارسال شد.';
+    const tn=DEMO_USER_IDS.has(authUser.id)?'demo':(authUser.isOwner?'real':'personal');
+    const notifRow={id:`n-${Date.now()}-${String(Math.random()).slice(2,6)}`,userId:authUser.id,organizationId:null,tenant:tn,title,body,type:'SYSTEM',priority:'information',isRead:false,read:false,channel:'PUSH',createdAt:nowIso()};
+    NOTIFICATIONS.unshift(notifRow);
+    for(const s of mine) DB.pushPending.push({id:phase3RandId('pp'),subscriptionId:s.id,userId:s.userId,organizationId:s.organizationId,title,body,topic:'GENERAL',notificationId:notifRow.id,createdAt:nowIso(),deliveredAt:null});
+    notifDelivery({userId:authUser.id,channel:'PUSH',provider:'test',title,count:mine.length,accepted:true});
+    saveDb(); audit(req,'TEST','PushNotification',authUser.id,'OK',{meta:{sent:mine.length}});
+    return json(res,200,{sent:mine.length,message:`اعلان آزمایشی برای ${faN(mine.length)} اشتراک فعال صف شد و هم‌زمان در فهرست اعلان‌ها ثبت شد.`});
+  }
   if(is('/notifications/push/dispatch')&&method==='POST'){
     if(!hasPerm('publics.write')) return json(res,403,{message:'شما مجوز ارسال اعلان پوش (publics.write) را ندارید.'});
     const b=await readBody(req);
@@ -11898,6 +11944,7 @@ const server=http.createServer(async(req,res)=>{
     const orgId=String(b.organizationId??'')||(primaryOrgId(authUser)??visibleOrgIds(req)[0]??null);
     if(!orgId||!visibleOrgIds(req).includes(orgId)) return json(res,403,{message:'این حساب در محدودهٔ شما نیست.'});
     const sent=pushNotify(orgId,title,String(b.body??''),String(b.topic??'GENERAL'));
+    notifDelivery({userId:authUser.id,organizationId:orgId,channel:'PUSH',provider:'web-push',title,count:sent,accepted:sent>0});
     saveDb(); audit(req,'DISPATCH','PushNotification',orgId??'-','OK',{meta:{sent,title:title.slice(0,60)}});
     return json(res,200,{organizationId:orgId,sent,
       message:sent?`اعلان برای ${faN(sent)} اشتراک فعال صف شد.`:'اشتراک فعالی برای این حساب نیست — ابتدا رضایت اعلان و اشتراک لازم است.'});
@@ -11913,9 +11960,8 @@ const server=http.createServer(async(req,res)=>{
     if(!row) return json(res,404,{message:'پیام یافت نشد.'});
     if(row.userId!==authUser.id) return json(res,403,{message:'این پیام متعلق به شما نیست.'});
     row.deliveredAt=nowIso();
-    if(row.notificationId){ const nn=NOTIFICATIONS.find(x=>x.id===row.notificationId); if(nn){ nn.isRead=true; nn.read=true; } }
     saveDb();
-    return json(res,200,{id:row.id,deliveredAt:row.deliveredAt,notificationMarkedRead:!!row.notificationId});
+    return json(res,200,{id:row.id,deliveredAt:row.deliveredAt});
   }
 
   /* ── آیتم ۲۲: دستیار پرسش‌وپاسخ طبیعی روی گراف ── */
