@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect,useMemo,useState } from 'react';
 import { api } from '../_lib/api';
 import { ErrorCard, PageHeader, Skeleton, StatusBadge } from '../_components/page-ui';
+import IntelHub, { RecSubTabs } from '../_components/intel-hub';
 import { suggestGlobal } from '../_lib/connections';
 import {
   ThumbsUp, Sparkles, CheckCircle2, XCircle, Clock, UserCheck, PartyPopper, RefreshCw,
@@ -147,6 +148,8 @@ const evText = (k: string, v: any): string => {
         </>
       }
     />
+    <IntelHub />
+    <RecSubTabs />
     <ErrorCard message={error}/>
 
     {suggestions.length>0 && (

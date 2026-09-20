@@ -785,4 +785,8 @@ export const EN_DICT_A: Record<string, string> = {
   'خواندن همه': 'Mark all as read',
   'خوانده‌نشده': 'Unread',
   'خودِ شرکت': 'Own company',
+  'خودِ شرکت در مرکز؛ کلیک روی هر سازمان = زیرمجموعه‌ها و روابط آن': 'Your own company at the center; click any organization for its subsidiaries and relationships',
+  'خیر': 'No',
+  'دائمی (تا لغو)': 'Permanent (until revoked)',
+  'داخلی': 'Internal',
 };

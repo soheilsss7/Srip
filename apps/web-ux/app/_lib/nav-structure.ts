@@ -40,7 +40,6 @@ export const NAV_ZONES: readonly NavZone[] = lt([
   [t('مخاطب‌ها'), t('سازمان‌ها و افراد کلیدی'), [
     ['/organizations', t('سازمان‌ها'), 'organization.read'],
     ['/people', t('اشخاص'), 'person.read'],
-    ['/enrichment', t('غنی‌سازی منابع رسمی'), 'organization.read'],
     ['/directory', t('دیتابیس روابط بیرونی'), 'organization.read'],
   ]],
   [t('روابط'), t('وضعیت پیوندها و شبکه'), [
@@ -61,11 +60,12 @@ export const NAV_ZONES: readonly NavZone[] = lt([
     ['/opportunities', t('فرصت‌ها'), 'opportunity.read'],
     ['/requirements', t('نیازمندی‌ها'), 'project.read'],
   ]],
-  [t('هوش'), t('دستیار، بریف و تحلیل‌ها'), [
+  [t('هوش'), t('دستیار، پیشنهادها و تحلیل‌ها'), [ /* ۸ آیتم — در سقف قانون Miller */
     ['/alerts', t('هشدارها'), 'dashboard.read'],
     ['/intelligence', t('هوشمندی و توصیه‌ها'), 'analytics.read'],
     ['/board', t('هیئت‌مدیره'), 'analytics.read'],
     ['/ai', t('دستیار هوشمند'), 'ai.query'],
+    ['/enrichment', t('غنی‌سازی منابع رسمی'), 'organization.read'],
     ['/strategy', t('تحلیل راهبردی'), 'strategy.read'],
     ['/mcp', t('سرور MCP'), 'analytics.read'],
     ['/qbr', t('بریف فصلی (QBR)'), 'analytics.read'],
@@ -195,6 +195,7 @@ export const GLOSS: Record<string, string> = lt({
   '/alerts': t('همهٔ هشدارهای فعال سیستم در یک نگاه — فیلترپذیر بر اساس ماژول و شدت'),
   '/notifications': t('اعلان‌ها، ترجیحات دریافت و وضعیت اعلان این دستگاه'),
   '/intelligence': t('سیگنال‌های ریسک، فرصت‌های در جریان و پیشنهاد رشد'),
+  '/enrichment': t('پیشنهاد تکمیل پروفایل سازمان‌های شخص ثالث از منابع رسمی — با شفافیت منبع و تأیید انسانی'),
   '/board': t('گزارش هیئت‌مدیره: بازده سرمایهٔ رابطه، سرمایه، سلامت پرتفوی و ریسک تک‌نقطه'),
   '/meetings': t('جلسات برنامه‌ریزی‌شده با ثبت دستور و خلاصه'),
   '/calendar': t('نمای تقویمی جلسات در محدودهٔ شما'),

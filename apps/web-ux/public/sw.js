@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.20.03';
+const DEMO_MOCK_VERSION = '2026.09.20.04';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -3853,7 +3853,29 @@ function verifyJwt(token) {
 }
 function hashPassword(pw, salt) { return 'h$' + salt + '$' + String(pw); }
 function verifyPassword(pw, salt, hash) { return hashPassword(pw, salt) === hash; }
-function saveDb() {}
+const SW_DB_CACHE = 'srip-sw-db';
+const SW_DB_KEY = '/__srip-db-v2.json';
+let __dbDirty = false;
+function saveDb() { __dbDirty = true; }
+async function __flushDbSave() {
+  if (!__dbDirty) return;
+  __dbDirty = false;
+  try {
+    const cache = await caches.open(SW_DB_CACHE);
+    await cache.put(SW_DB_KEY, new Response(JSON.stringify(DB)));
+  } catch (e) {}
+}
+async function __loadDbFromStorage() {
+  try {
+    const cache = await caches.open(SW_DB_CACHE);
+    const hit = await cache.match(SW_DB_KEY);
+    if (hit) {
+      const d = JSON.parse(await hit.text());
+      if (d && d.version === 2) return d;
+    }
+  } catch (e) {}
+  return null;
+}
 
 /* ─────────────────────────────  معیارهای ارزیابی (آینۀ کاتالوگ API) ─────────────────────────────
    کاتالوگ معیارها در `scripts/criteria-data.json` نگهداری می‌شود که با
@@ -13316,6 +13338,7 @@ async function __handler(req, res) {
       .filter(s=>!orgFilter||s.orgId===orgFilter)
       .sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
     return json(res,200,{items:rows.map(s=>({...s,sourceNameFa:phase3EnrichSourceFa(s.sourceId),confidenceFa:PHASE3_CONFIDENCE_FA[s.confidence]??s.confidence,
+      currentValue:(((DB.enrichmentApplied??{})[s.orgId]??{})[s.field]??{})?.value ?? (orgById(s.orgId)??{})[s.field] ?? null,
       applied:((DB.enrichmentApplied??{})[s.orgId]??{})[s.field]??null})),total:rows.length});
   }
   const enrichSug=match('/enrichment/suggestions/:id/:action');
@@ -13648,8 +13671,13 @@ async function __handler(req, res) {
   } catch(e){ try { if(!res.headersSent) json(res,500,{message:'خطای داخلی سرور: '+String(e?.message??e)}); else res.end(); } catch {} }
 }
 
-loadDb();
-USERS = DB.users;
+let __dbReady = (async () => {
+  const stored = await __loadDbFromStorage();
+  if (stored) DB = stored; /* بازیافت نوشته‌های کاربر (غنی‌سازی، پیشنهادها و …) */
+  loadDb(); /* ادغام seedهای تازه با دادهٔ ذخیره‌شده */
+  USERS = DB.users;
+  await __flushDbSave();
+})();
 
 /* ------------- Service Worker glue (static demo) + فاز ۳/۲۱: Push + آفلاین ------------- */
 const RUNTIME_CACHE = 'srip-runtime-v3';
@@ -13706,6 +13734,7 @@ self.addEventListener('fetch', (event) => {
   }
 });
 async function __swHandle(request) {
+  await __dbReady; /* DB باید پیش از پاسخ، از حافظهٔ پایدار بازیافت شود */
   const url = new URL(request.url);
   let path = url.pathname.replace(/\/+$/, '') || '/';
   const apiIdx = path.indexOf('/api/v1');
@@ -13723,6 +13752,7 @@ async function __swHandle(request) {
   };
   try { await __handler(req, res); }
   catch (e) { __status = 500; __body = JSON.stringify({ message: 'mock error: ' + String((e && e.message) || e) }); }
+  await __flushDbSave(); /* نوشته‌ها پیش از تحویل پاسخ، پایدار می‌شوند */
   const headersOut = { ...__headers };
   if (__body && !headersOut['Content-Type']) headersOut['Content-Type'] = 'application/json; charset=utf-8';
   return new Response(__body, { status: __status, headers: headersOut });

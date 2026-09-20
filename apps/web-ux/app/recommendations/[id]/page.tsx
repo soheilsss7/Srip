@@ -4,6 +4,7 @@ import {use,useCallback,useEffect,useState} from 'react';
 import {api} from '../../_lib/api';
 import {fa} from '../../_lib/fa';
 import {Badge,ErrorCard,Loading,Modal,PageHeader} from '../../_components/page-ui';
+import IntelHub, { RecSubTabs } from '../../_components/intel-hub';
 import { JalaliDateField } from '../../_components/jalali-date-field';
 
 export default function Page({params}:{params:Promise<{id:string}>}){
@@ -22,6 +23,8 @@ const [title,setTitle]=useState(''),[rationale,setRationale]=useState(''),[confi
 
  return <main className="feature-page">
   <PageHeader eyebrow="پیشنهاد" title={r?.title??'پیشنهاد'} description={`شناسهٔ پیشنهاد ${id.replace(/^rec-/, '')}`} actions={<div className="toolbar"><Link className="secondary-action" href="/recommendations">بازگشت</Link><button className="secondary-action" onClick={load} disabled={!!busy}>بازخوانی</button></div>}/>
+    <IntelHub />
+    <RecSubTabs />
   <ErrorCard message={error}/>
   {!r&&!error?<Loading/>:r&&<>
    <section className="panel">

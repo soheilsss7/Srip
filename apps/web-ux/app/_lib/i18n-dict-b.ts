@@ -1,9 +1,5 @@
 /* دیکشنری انگلیسی فاز ۴/۲۳ — بخش 2 از 3 (تولیدشده توسط scripts/_i18n-gen-dict.py) */
 export const EN_DICT_B: Record<string, string> = {
-  'خودِ شرکت در مرکز؛ کلیک روی هر سازمان = زیرمجموعه‌ها و روابط آن': 'Your own company at the center; click any organization for its subsidiaries and relationships',
-  'خیر': 'No',
-  'دائمی (تا لغو)': 'Permanent (until revoked)',
-  'داخلی': 'Internal',
   'داده تازه‌سازی می‌شود': 'Data refreshes',
   'داده فقط از API مجاز سرور خوانده می‌شود.': 'Data is read only through the server\'s permitted API.',
   'داده و کیفیت': 'Data & quality',
@@ -785,4 +781,12 @@ export const EN_DICT_B: Record<string, string> = {
   'معلق': 'On hold',
   'معیارها': 'Criteria',
   'معیارهای ارزیابی': 'Assessment criteria',
+  'معیارهای پاسخ‌داده‌شده': 'Answered criteria',
+  'معیاری برای این نوع رکورد تعریف نشده است.': 'No criteria defined for this record type.',
+  'مقادیر موردنظر را اصلاح و ذخیره کنید.': 'Adjust the values and save.',
+  'مقدار': 'Value',
+  'مقصد': 'Target',
+  'مقصد مسیر': 'Path target',
+  'مقصد مسیر:': 'Path target:',
+  'مقصد — مقدار': 'Target — value',
 };

@@ -9,11 +9,12 @@ import { t } from '../_lib/i18n';
  */
 export type HubTab = { href: string; label: string; icon?: React.ReactNode };
 
-export default function HubTabs({ tabs, base }: { tabs: HubTab[]; base?: boolean }) {
+export default function HubTabs({ tabs, base, activeHref: override }: { tabs: HubTab[]; base?: boolean; activeHref?: string }) {
   const pathname = usePathname();
   // تب فعال = دقیق‌ترین تطابق؛ تا وقتی که مسیر با چند تب هم‌خوانی دارد
   // (مثل /data-management در برابر /data-management/import) فقط یک گزینه بالا بماند.
   const activeHref = (() => {
+    if (override) return override; // مثلاً زیرمجموعه‌ها: /enrichment زیر تب «پیشنهادها»
     let best = '';
     let bestLen = -1;
     for (const { href } of tabs) {

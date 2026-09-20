@@ -4,6 +4,7 @@ import {useEffect,useState,useCallback} from 'react';
 import {apiGet} from '../_lib/api';
 import {fa} from '../_lib/fa';
 import {ErrorCard, PageHeader, SectionCard, Skeleton, StatCard, StatusBadge} from '../_components/page-ui';
+import IntelHub from '../_components/intel-hub';
 import {
   CalendarDays, Target, ShieldCheck, Zap, HeartPulse, RefreshCw, Lightbulb, FileText, Sparkles, Link2, Clock
 } from 'lucide-react';
@@ -50,6 +51,7 @@ export default function Page(){
           </>
         }
       />
+      <IntelHub />
       <ErrorCard message={e}/>
 
       {loading&&!r ? (

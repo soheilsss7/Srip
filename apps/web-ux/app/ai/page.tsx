@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, apiGet } from '../_lib/api';
 import { fa } from '../_lib/fa';
 import { PageHeader, Segmented } from '../_components/page-ui';
+import IntelHub from '../_components/intel-hub';
 import {
   Sparkles, Search, CalendarCheck, FileText, ListChecks, ShieldCheck, AlertTriangle, Target,
   Lightbulb, Briefcase, Send, History, Cpu, Zap, Database, Clock, Wand2, CheckCircle2, Info,
@@ -192,6 +193,7 @@ export default function AI(){
           </>
         }
       />
+      <IntelHub />
 
       <div className="ai-layout">
         {/* ============ Sidebar: intents ============ */}

@@ -85,7 +85,7 @@ if (input) {
 /* ═══ ۲) غنی‌سازی → پروفایل سازمان ═══ */
 await page.goto(`${BASE}/enrichment`, { waitUntil: 'networkidle2', timeout: 60000 });
 await page.waitForSelector('text/صف تأیید انسانی', { timeout: 30000 });
-await clickByText(page, 'پویش منابع رسمی');
+await clickByText(page, 'پویش همهٔ منابع');
 await sleep(1500);
 const accepted = await clickByText(page, 'پذیرش');
 check('/enrichment: دکمهٔ پذیرش پیشنهاد کلیک شد', accepted === true);

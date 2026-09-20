@@ -99,11 +99,37 @@ const assert = (idx, what) => { if (idx < 0) throw new Error(`anchor not found: 
   );
 }
 
-/* 4) saveDb -> in-memory no-op */
+/* 4) saveDb -> persistent demo DB via Cache API (dirty-flag + flush per request)
+      — دادهٔ نوشته‌شدهٔ کاربر (پویش/پذیرش غنی‌سازی، پیشنهادها و …) بین
+        بازدیدها و ری‌استارت‌های Service Worker می‌ماند. */
 {
   const s = find('function saveDb() {');
   assert(s, 'saveDb fn');
-  lines.splice(s, 1, 'function saveDb() {}');
+  lines.splice(s, 1,
+    "const SW_DB_CACHE = 'srip-sw-db';",
+    "const SW_DB_KEY = '/__srip-db-v2.json';",
+    'let __dbDirty = false;',
+    'function saveDb() { __dbDirty = true; }',
+    'async function __flushDbSave() {',
+    '  if (!__dbDirty) return;',
+    '  __dbDirty = false;',
+    '  try {',
+    '    const cache = await caches.open(SW_DB_CACHE);',
+    '    await cache.put(SW_DB_KEY, new Response(JSON.stringify(DB)));',
+    '  } catch (e) {}',
+    '}',
+    'async function __loadDbFromStorage() {',
+    '  try {',
+    '    const cache = await caches.open(SW_DB_CACHE);',
+    '    const hit = await cache.match(SW_DB_KEY);',
+    '    if (hit) {',
+    '      const d = JSON.parse(await hit.text());',
+    '      if (d && d.version === 2) return d;',
+    '    }',
+    '  } catch (e) {}',
+    '  return null;',
+    '}',
+  );
 }
 
 /* 5) loadDb: drop fs persistence, keep in-memory seed */
@@ -149,8 +175,13 @@ const assert = (idx, what) => { if (idx < 0) throw new Error(`anchor not found: 
     ...(catchLine ? [catchLine] : []),
     '}',
     '',
-    'loadDb();',
-    'USERS = DB.users;',
+    'let __dbReady = (async () => {',
+    '  const stored = await __loadDbFromStorage();',
+    '  if (stored) DB = stored; /* بازیافت نوشته‌های کاربر (غنی‌سازی، پیشنهادها و …) */',
+    '  loadDb(); /* ادغام seedهای تازه با دادهٔ ذخیره‌شده */',
+    '  USERS = DB.users;',
+    '  await __flushDbSave();',
+    '})();',
     '',
     '/* ------------- Service Worker glue (static demo) + فاز ۳/۲۱: Push + آفلاین ------------- */',
     "const RUNTIME_CACHE = 'srip-runtime-v3';",
@@ -207,6 +238,7 @@ const assert = (idx, what) => { if (idx < 0) throw new Error(`anchor not found: 
     '  }',
     '});',
     'async function __swHandle(request) {',
+    '  await __dbReady; /* DB باید پیش از پاسخ، از حافظهٔ پایدار بازیافت شود */',
     '  const url = new URL(request.url);',
     "  let path = url.pathname.replace(/\\/+$/, '') || '/';",
     "  const apiIdx = path.indexOf('/api/v1');",
@@ -224,6 +256,7 @@ const assert = (idx, what) => { if (idx < 0) throw new Error(`anchor not found: 
     '  };',
     '  try { await __handler(req, res); }',
     '  catch (e) { __status = 500; __body = JSON.stringify({ message: \'mock error: \' + String((e && e.message) || e) }); }',
+    '  await __flushDbSave(); /* نوشته‌ها پیش از تحویل پاسخ، پایدار می‌شوند */',
     '  const headersOut = { ...__headers };',
     "  if (__body && !headersOut['Content-Type']) headersOut['Content-Type'] = 'application/json; charset=utf-8';",
     '  return new Response(__body, { status: __status, headers: headersOut });',

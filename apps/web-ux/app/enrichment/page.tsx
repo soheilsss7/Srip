@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, apiGet } from '../_lib/api';
 import { useWorkspace } from '../_components/workspace';
 import { Badge, ErrorCard, Loading, PageHeader, SectionCard, Segmented, StatCard } from '../_components/page-ui';
-import { Building2, CheckCircle2, Database, FileSearch, Landmark, RefreshCw, ShieldQuestion, XCircle } from 'lucide-react';
+import IntelHub, { RecSubTabs } from '../_components/intel-hub';
+import { Building2, CheckCircle2, Database, FileSearch, Landmark, RefreshCw, ScanSearch, ShieldQuestion, XCircle } from 'lucide-react';
 import { localeTag, t } from '../_lib/i18n';
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -15,7 +16,7 @@ import { localeTag, t } from '../_lib/i18n';
    ═══════════════════════════════════════════════════════════════════════════ */
 
 type Source = { id: string; kind: string; nameFa: string; fields: string[]; fieldsFa: string[]; cadenceFa: string; coverageFa: string; availableInScope: number; revealed: number; remaining: number };
-type Suggestion = { id: string; orgId: string; orgName: string; sourceId: string; sourceNameFa: string; field: string; fieldFa: string; proposedValue: string; confidence: string; confidenceFa: string; evidence: string; status: string; createdAt: string; applied?: { value: string; sourceNameFa: string; confidence: string; appliedAt: string } | null };
+type Suggestion = { id: string; orgId: string; orgName: string; sourceId: string; sourceNameFa: string; field: string; fieldFa: string; proposedValue: string; currentValue?: string | null; confidence: string; confidenceFa: string; evidence: string; status: string; createdAt: string; applied?: { value: string; sourceNameFa: string; confidence: string; appliedAt: string } | null };
 type Metrics = { totalSuggestions: number; accepted: number; rejected: number; pending: number; acceptanceRateFa: string | null; organizationsEnriched: number };
 
 const CONF_TONE: Record<string, 'success' | 'info' | 'warning'> = { HIGH: 'success', MEDIUM: 'info', LOW: 'warning' };
@@ -29,7 +30,7 @@ export default function EnrichmentPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [flash, setFlash] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState('');
   const [tab, setTab] = useState<'PENDING' | 'DECIDED'>('PENDING');
   const canWrite = can('organization.write');
 
@@ -47,23 +48,23 @@ export default function EnrichmentPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const scan = async () => {
-    setBusy(true); setError(''); setFlash('');
+  const scan = async (sourceId?: string) => {
+    setBusy(sourceId ?? 'ALL'); setError(''); setFlash('');
     try {
-      const r = await api<{ created: number; message: string }>('/enrichment/scan', { method: 'POST', body: '{}' });
+      const r = await api<{ created: number; message: string }>('/enrichment/scan', { method: 'POST', body: JSON.stringify(sourceId ? { sourceId } : {}) });
       setFlash(r.message);
       await load();
     } catch (e) { setError((e as Error).message); }
-    finally { setBusy(false); }
+    finally { setBusy(''); }
   };
   const decide = async (id: string, action: 'accept' | 'reject') => {
-    setBusy(true); setError(''); setFlash('');
+    setBusy(id); setError(''); setFlash('');
     try {
       const r = await api<{ fieldFa: string; orgName: string }>(`/enrichment/suggestions/${id}/${action}`, { method: 'POST', body: '{}' });
       setFlash(action === 'accept' ? `«${r.orgName} — ${r.fieldFa}${t('» با منبع و سطح اطمینان ثبت شد.')}` : t('پیشنهاد رد شد.'));
       await load();
     } catch (e) { setError((e as Error).message); }
-    finally { setBusy(false); }
+    finally { setBusy(''); }
   };
 
   const pending = items.filter(s => s.status === 'PENDING');
@@ -77,11 +78,13 @@ export default function EnrichmentPage() {
         title={t('غنی‌سازی از منابع رسمی')}
         description={t('دریافت دوره‌ای دادهٔ عمومی از منابع رسمی، تطبیق با سازمان‌های ردیابی‌شده و پیشنهاد تکمیل پروفایل با «منبع + سطح اطمینان» — اعمال فقط با تأیید انسانی. پیشنهادها فقط دربارهٔ سازمان‌های شخص ثالث‌اند، هرگز پروفایل خودتان.')}
         actions={canWrite ? (
-          <button className="btn btn-primary" disabled={busy} onClick={scan}>
-            <RefreshCw size={14} /> {busy ? t('در حال پویش…') : t('پویش منابع رسمی')}
+          <button className="btn btn-primary" disabled={!!busy} onClick={() => scan()}>
+            <RefreshCw size={14} /> {busy === 'ALL' ? t('در حال پویش…') : t('پویش همهٔ منابع')}
           </button>
         ) : undefined}
       />
+      <IntelHub />
+      <RecSubTabs />
       {error && <ErrorCard message={error} />}
       {flash && <div className="flash" role="status">{flash}</div>}
       {loading ? <Loading /> : (
@@ -96,20 +99,33 @@ export default function EnrichmentPage() {
           <SectionCard title={t('منابع رسمی')} icon={<Landmark size={16} />}
             description={isRealTenant ? t('پویش مرحله‌ای است — هر بار بخشی از منبع تازه بررسی می‌شود.') : t('پویش مرحله‌ای است — هر بار بخشی از منبع تازه بررسی می‌شود (بدون فراخوانی زنده در دمو).')}>
             <div className="p3-grid">
-              {sources.map(s => (
-                <div key={s.id} className="p3-src">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start' }}>
-                    <strong style={{ fontSize: 13 }}>{s.nameFa}</strong>
-                    <Badge tone="info">{fmtN(s.remaining)} مانده</Badge>
+              {sources.map(s => {
+                const total = Math.max(1, s.availableInScope);
+                const pct = Math.round((s.revealed / total) * 100);
+                return (
+                  <div key={s.id} className="p3-src">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start' }}>
+                      <strong style={{ fontSize: 13 }}>{s.nameFa}</strong>
+                      <Badge tone={s.remaining > 0 ? 'info' : 'neutral'}>{fmtN(s.remaining)} {t('مانده')}</Badge>
+                    </div>
+                    <p className="pp-muted" style={{ margin: '6px 0' }}>{s.coverageFa}</p>
+                    <div style={{ fontSize: 12, display: 'grid', gap: 3 }}>
+                      <span>{t('فیلدها')}: {s.fieldsFa.join(t('،'))}</span>
+                      <span>{t('دورهٔ به‌روزرسانی')}: {s.cadenceFa}</span>
+                      <span>{t('در محدودهٔ شما')}: {fmtN(s.availableInScope)} {t('رکورد')} ({fmtN(s.revealed)} {t('آشکارشده')})</span>
+                    </div>
+                    <div className="confidence-wrap" style={{ marginTop: 8 }} title={`${t('آشکارشده')}: ${fmtN(s.revealed)}/${fmtN(s.availableInScope)}`}>
+                      <div className="confidence-track"><span className="confidence-fill" style={{ width: `${pct}%` }} /></div>
+                      <span className="confidence-num">{fmtN(pct)}٪</span>
+                    </div>
+                    {canWrite && s.remaining > 0 && (
+                      <button className="btn btn-secondary btn-sm" style={{ marginTop: 8 }} disabled={!!busy} onClick={() => scan(s.id)}>
+                        <ScanSearch size={13} /> {busy === s.id ? t('در حال پویش…') : t('پویش این منبع')}
+                      </button>
+                    )}
                   </div>
-                  <p className="pp-muted" style={{ margin: '6px 0' }}>{s.coverageFa}</p>
-                  <div style={{ fontSize: 12, display: 'grid', gap: 3 }}>
-                    <span>فیلدها: {s.fieldsFa.join(t('،'))}</span>
-                    <span>دورهٔ به‌روزرسانی: {s.cadenceFa}</span>
-                    <span>در محدودهٔ شما: {fmtN(s.availableInScope)} رکورد ({fmtN(s.revealed)} آشکارشده)</span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </SectionCard>
 
@@ -119,7 +135,18 @@ export default function EnrichmentPage() {
               <Segmented options={[{ value: 'PENDING', label: t('در انتظار') }, { value: 'DECIDED', label: t('تعیین‌تکلیف‌شده') }]} value={tab} onChange={setTab} counts={{ PENDING: pending.length, DECIDED: decided.length }} />
             </div>
             {rows.length === 0 ? (
-              <p className="pp-muted">{tab === 'PENDING' ? t('پیشنهادی در انتظار نیست — «پویش منابع رسمی» را اجرا کنید.') : t('هنوز پیشنهادی تعیین تکلیف نشده است.')}</p>
+              <div className="empty-state-v4" style={{ padding: '18px 12px' }}>
+                <div className="empty-ico"><FileSearch size={22} /></div>
+                <strong>{tab === 'PENDING' ? t('پیشنهادی در انتظار نیست') : t('هنوز پیشنهادی تعیین تکلیف نشده است')}</strong>
+                <p className="pp-muted" style={{ margin: '6px 0 10px' }}>{tab === 'PENDING'
+                  ? t('«پویش همهٔ منابع» را اجرا کنید — یا از دکمهٔ پویش روی هر منبع، همان منبع را مرحله‌ای پیش ببرید.')
+                  : t('پیشنهادهای پذیرفته/ردشده پس از تعیین تکلیف اینجا می‌مانند.')}</p>
+                {tab === 'PENDING' && canWrite && sources.some(x => x.remaining > 0) && (
+                  <button className="btn btn-primary btn-sm" disabled={!!busy} onClick={() => scan()}>
+                    <RefreshCw size={13} /> {busy === 'ALL' ? t('در حال پویش…') : t('پویش همهٔ منابع')}
+                  </button>
+                )}
+              </div>
             ) : (
               <div className="p3-list">
                 {rows.map(s => (
@@ -132,13 +159,19 @@ export default function EnrichmentPage() {
                         <Badge tone={CONF_TONE[s.confidence] ?? 'neutral'}>اطمینان {s.confidenceFa}</Badge>
                         {s.status !== 'PENDING' && <Badge tone={s.status === 'ACCEPTED' ? 'success' : 'danger'}>{s.status === 'ACCEPTED' ? t('پذیرفته‌شده') : t('ردشده')}</Badge>}
                       </div>
-                      <div style={{ marginTop: 4, fontSize: 13 }}><span className="p3-value">{s.proposedValue}</span></div>
-                      <p className="pp-muted" style={{ margin: '4px 0 0', fontSize: 11.5 }}>منبع: {s.sourceNameFa} — {s.evidence}</p>
+                      <div style={{ marginTop: 4, fontSize: 13, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                        {s.status === 'PENDING' && s.currentValue != null && s.currentValue !== '' && (
+                          <span className="chip neutral" style={{ textDecoration: 'line-through', opacity: 0.7 }}>{s.currentValue}</span>
+                        )}
+                        {s.status === 'PENDING' && s.currentValue != null && s.currentValue !== '' && <span className="t-muted">←</span>}
+                        <span className="p3-value">{s.proposedValue}</span>
+                      </div>
+                      <p className="pp-muted" style={{ margin: '4px 0 0', fontSize: 11.5 }}>{t('منبع')}: {s.sourceNameFa} — {s.evidence}</p>
                     </div>
                     {s.status === 'PENDING' && canWrite && (
                       <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                        <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => decide(s.id, 'accept')}><CheckCircle2 size={13} /> {t('پذیرش')}</button>
-                        <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => decide(s.id, 'reject')}><XCircle size={13} /> {t('رد')}</button>
+                        <button className="btn btn-primary btn-sm" disabled={!!busy} onClick={() => decide(s.id, 'accept')}><CheckCircle2 size={13} /> {t('پذیرش')}</button>
+                        <button className="btn btn-secondary btn-sm" disabled={!!busy} onClick={() => decide(s.id, 'reject')}><XCircle size={13} /> {t('رد')}</button>
                       </div>
                     )}
                   </div>

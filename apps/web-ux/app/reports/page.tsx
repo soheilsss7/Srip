@@ -6,6 +6,7 @@ import { fa, labelKey, KEY_FA, STATUS_FA } from '../_lib/fa';
 import { clearStoredExportApproval, downloadReport, storedExportApprovalId } from '../_lib/report-export';
 import { useWorkspace } from '../_components/workspace';
 import { Badge, ErrorCard, Loading, PageHeader, SectionCard, StatCard } from '../_components/page-ui';
+import IntelHub from '../_components/intel-hub';
 import {
   AlertTriangle, Building2, CheckCircle2, Clock3, CloudDownload, Database, FileDown, FileJson2,
   FileSpreadsheet, FileText, FolderKanban, Globe2, HeartPulse, Link2, ListChecks, Network, RefreshCw,
@@ -311,6 +312,7 @@ export default function Reports() {
           </div>
         }
       />
+      <IntelHub />
 
       <section className="panel" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <label style={{ flex: '1 1 320px' }}>

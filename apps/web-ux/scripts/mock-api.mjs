@@ -19,7 +19,7 @@ const PORT = Number(process.env.MOCK_API_PORT || 4000);
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.20.03';
+const DEMO_MOCK_VERSION = '2026.09.20.04';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -11651,6 +11651,7 @@ const server=http.createServer(async(req,res)=>{
       .filter(s=>!orgFilter||s.orgId===orgFilter)
       .sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
     return json(res,200,{items:rows.map(s=>({...s,sourceNameFa:phase3EnrichSourceFa(s.sourceId),confidenceFa:PHASE3_CONFIDENCE_FA[s.confidence]??s.confidence,
+      currentValue:(((DB.enrichmentApplied??{})[s.orgId]??{})[s.field]??{})?.value ?? (orgById(s.orgId)??{})[s.field] ?? null,
       applied:((DB.enrichmentApplied??{})[s.orgId]??{})[s.field]??null})),total:rows.length});
   }
   const enrichSug=match('/enrichment/suggestions/:id/:action');
