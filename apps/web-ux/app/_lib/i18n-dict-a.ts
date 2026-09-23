@@ -801,4 +801,12 @@ export const EN_DICT_A: Record<string, string> = {
   'دادهٔ مبنایی': 'Master data',
   'داده‌ای برای این Scope در دسترس نیست.': 'No data available for this scope.',
   'داده‌ای برای این Scope وجود ندارد.': 'No data exists for this scope.',
+  'داده‌ای برای این تحلیل یافت نشد.': 'No data found for this analysis.',
+  'داده‌ای برای نمایش وجود ندارد.': 'Nothing to display.',
+  'داده‌ای ثبت نشده است.': 'Nothing recorded yet.',
+  'داده‌ای وجود ندارد.': 'No data.',
+  'داده‌شده': 'given',
+  'داده‌ها': 'Data',
+  'داده‌های اصلی': 'Master data',
+  'داده‌های اصلی پروفایل': 'Core profile data',
 };

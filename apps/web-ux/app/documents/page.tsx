@@ -15,7 +15,7 @@ import { Badge, Empty, ErrorCard, Loading, Modal, PageHeader, StatCard } from '.
 import HubTabs from '../_components/hub-tabs';
 import {
   ArrowUpRight, BookOpen, Bookmark, BookmarkCheck, Clock3, Eye, FileText,
-  Plus, RefreshCw, Save, Search, Sparkles, ThumbsUp, Trash2, X,
+  Plus, RefreshCw, Save, Search, Sparkles, ThumbsUp, Trash2, TrendingUp, X,
 } from 'lucide-react';
 
 const unwrap = (x: any): any[] => (Array.isArray(x) ? x : x?.items ?? x?.rows ?? x?.data ?? []);
@@ -63,6 +63,8 @@ export default function KnowledgeCenter() {
   const [readBusy, setReadBusy] = useState('');
   const [voteFlash, setVoteFlash] = useState('');
 
+  const [market, setMarket] = useState<any>(null);
+
   const [compose, setCompose] = useState<null | 'new' | string>(null);
   const [form, setForm] = useState({ title: '', excerpt: '', body: '', category: 'GETTING_STARTED', tags: '', families: '' });
   const [formError, setFormError] = useState('');
@@ -90,6 +92,7 @@ export default function KnowledgeCenter() {
     finally { setLoading(false); }
   }, [debouncedQ, cat, tag, mine]);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { api('/market-intel').then(setMarket).catch(() => setMarket(null)); }, []);
 
   async function openArticle(a: KbArticle) {
     setReadBusy(a.id); setError('');
@@ -197,6 +200,75 @@ export default function KnowledgeCenter() {
         <StatCard icon={<ThumbsUp size={16} />} iconClass="ic-green" label="رأی «مفید بود»" value={faNum(stats?.helpful)} sub="بازخورد خوانندگان" />
         <StatCard icon={<BookmarkCheck size={16} />} iconClass="ic-gold" label="بوک‌مارک من" value={faNum(stats?.bookmarks)} sub={stats?.mine ? `+${faNum(stats.mine)} نگارش شما` : 'برای دسترسی سریع'} />
       </div>
+
+      {/* بینش بازار — دادهٔ پژوهش‌های واردشده (ورود دادهٔ بیرونی) */}
+      <section className="panel" aria-label="بینش بازار">
+        <div className="panel-title">
+          <div>
+            <h2><TrendingUp size={15} /> بینش بازار</h2>
+            <p>{market?.records
+              ? `تحلیل تجمیعی پژوهش‌های بازار واردشده — ${faNum(market.records)} رکورد از ${faNum(market.imports?.length ?? 0)} فایل`
+              : 'دادهٔ پژوهش بازار (خروجی CSV/JSON پلتفرم‌های دیگر) اینجا وارد و تحلیل می‌شود.'}</p>
+          </div>
+          <Link className="btn btn-ghost btn-sm" href="/imports">ورود فایل پژوهش بازار ←</Link>
+        </div>
+        {!market?.records ? (
+          <p className="pp-muted" style={{ fontSize: 12 }}>
+            هنوز پژوهشی وارد نشده است. از «ورود دادهٔ بیرونی» فایل CSV یا JSON پژوهش بازار (تحلیل رقبا، سهم بازار و بخش‌ها) را بارگذاری کنید؛
+            پس از تأیید رکوردها، تحلیل همین‌جا و مقالهٔ هر فایل در دانشنامه ظاهر می‌شود.
+          </p>
+        ) : (
+          <>
+            <div className="kpi-grid" style={{ marginBottom: 10 }}>
+              <div className="kpi-card" style={{ margin: 0 }}><small>رکورد پژوهش</small><strong>{faNum(market.records)}</strong></div>
+              <div className="kpi-card" style={{ margin: 0 }}><small>پیوند با سازمان‌های شما</small><strong>{faNum(market.matchedOrgs)}</strong></div>
+              <div className="kpi-card" style={{ margin: 0 }}><small>بازیگر تازهٔ بازار</small><strong>{faNum(market.newPlayers)}</strong></div>
+              <div className="kpi-card" style={{ margin: 0 }}><small>بخش بازار</small><strong>{faNum(market.segments?.length)}</strong></div>
+            </div>
+            <div className="split-panels">
+              <div>
+                <b style={{ fontSize: 12 }}>بخش‌های بازار</b>
+                <div style={{ display: 'grid', gap: 7, marginTop: 8 }}>
+                  {(market.segments ?? []).slice(0, 6).map((g: any) => (
+                    <div key={g.segment} className="confidence-wrap">
+                      <span className="t-muted" style={{ fontSize: 11, fontWeight: 800, whiteSpace: 'nowrap', maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.segment}</span>
+                      <div className="confidence-track"><span className="confidence-fill" style={{ width: `${Math.min(100, Math.round((g.count / market.records) * 100))}%` }} /></div>
+                      <span className="confidence-num">{faNum(g.count)}{g.avgShare != null ? ` · ${faNum(g.avgShare)}٪` : ''}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <b style={{ fontSize: 12 }}>پیشتازان سهم بازار</b>
+                <div className="list" style={{ marginTop: 8 }}>
+                  {(market.topByShare ?? []).map((x: any, i: number) => (
+                    <div className="listRow" key={x.orgName + i}>
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        {x.orgId
+                          ? <Link className="t-primary" href={`/organizations/${x.orgId}`} style={{ fontSize: 12.5, fontWeight: 700 }}>{x.orgName}</Link>
+                          : <strong style={{ fontSize: 12.5 }}>{x.orgName}</strong>}
+                        {x.segment && <small style={{ display: 'block' }} className="t-muted">{x.segment}</small>}
+                      </span>
+                      {x.marketShare != null && <span className="chip warning">{faNum(x.marketShare)}٪</span>}
+                      {!x.orgId && <span className="chip neutral">بازیگر تازه</span>}
+                    </div>
+                  ))}
+                </div>
+                {(market.competitorMentions ?? []).length > 0 && (
+                  <div style={{ marginTop: 10 }}>
+                    <b style={{ fontSize: 12 }}>پرتکرارترین رقبای نام‌برده‌شده</b>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+                      {market.competitorMentions.map((c: any) => (
+                        <span key={c.name} className="chip neutral" title={`${faNum(c.count)} بار در پژوهش‌ها`}>{c.name} ({faNum(c.count)})</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </section>
 
       <section className="panel">
         <div className="panel-title">

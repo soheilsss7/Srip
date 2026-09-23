@@ -589,6 +589,30 @@ section('فاز ۳ — غنی‌سازی منابع رسمی، API عمومی + 
   const demoMet2 = await api('/enrichment/metrics', { token: dt });
   check('سنجهٔ دمو: صف خالی پس از تعیین تکلیف گروهی', demoMet2.status === 200 && demoMet2.body?.pending === 0 && demoMet2.body?.accepted >= 1, JSON.stringify(demoMet2.body));
 
+  /* ── ۱۸ج: ورود پژوهش بازار — فایل پلتفرم دیگر → بینش بازار + مرکز دانش ── */
+  const miSample = await api('/imports/sample?type=market-csv', { token: dt });
+  check('نمونهٔ پژوهش بازار', miSample.status === 200 && miSample.body?.content?.includes('سازمان'));
+  const miPost = await api('/imports', { method: 'POST', token: dt, body: { kind: 'market-csv', content: miSample.body.content, fileName: 'research-q2.csv' } });
+  check('بارگذاری فایل پژوهش → صف تأیید با تطبیق نام', miPost.status === 201 && miPost.body?.stats?.total === 7 && miPost.body?.stats?.mapped === 2, JSON.stringify(miPost.body?.stats));
+  const miBatch = await api(`/imports/${miPost.body.id}`, { token: dt });
+  check('ردیف‌های بازار با سهم/بخش/رقبا', miBatch.status === 200 && miBatch.body?.rows?.every(r => r.kind === 'MARKET' && r.marketShare != null && Array.isArray(r.competitors)) && miBatch.body.rows.some(r => r.exists));
+  const miBad = await api('/imports', { method: 'POST', token: dt, body: { kind: 'market-csv', content: 'a,b\n1,2' } });
+  check('هدر بدون ستون سازمان → 400', miBad.status === 400);
+  const miJson = await api('/imports', { method: 'POST', token: dt, body: { kind: 'market-csv', content: JSON.stringify([{ 'Company': 'هلدینگ تست بازار', 'Market Share': '45%' }]) } });
+  check('JSON با هدر انگلیسی → تجزیه و سهم ٪', miJson.status === 201 && miJson.body?.stats?.total === 1, JSON.stringify(miJson.body?.stats));
+  const mjBatch = await api(`/imports/${miJson.body.id}`, { token: dt });
+  await api(`/imports/${miJson.body.id}/rows/${mjBatch.body.rows[0].rid}`, { method: 'POST', token: dt, body: { decision: 'ACCEPT' } });
+  const mjCommit = await api(`/imports/${miJson.body.id}/commit`, { method: 'POST', token: dt, body: '{}' });
+  check('کامیت پژوهش → سند دانش + پیوند', mjCommit.status === 200 && mjCommit.body?.market?.records === 1 && mjCommit.body?.market?.knowledgeId, JSON.stringify(mjCommit.body?.market?.records));
+  const mi = await api('/market-intel', { token: dt });
+  check('بینش بازار: رکورد/سگمنت/رقبا/سند', mi.status === 200 && mi.body?.records >= 1 && Array.isArray(mi.body.segments) && Array.isArray(mi.body.competitorMentions) && mi.body.imports?.some(x => x.knowledgeId));
+  const kbMi = await api(`/knowledge/${mjCommit.body.market.knowledgeId}`, { token: dt });
+  check('سند پژوهش در مرکز دانش', kbMi.status === 200 && kbMi.body?.body?.includes('پژوهش بازار'));
+  const miCommitAll = await api(`/imports/${miPost.body.id}/commit`, { method: 'POST', token: dt, body: '{}' });
+  check('کامیت بدون تأیید → صفر رکورد', miCommitAll.status === 200 && miCommitAll.body?.market?.records === 0, JSON.stringify(miCommitAll.body?.market?.records));
+  const miReal = await api('/market-intel', { token: pt });
+  check('جداسازی مستأجر: بینش دمو برای پارس نامرئی', miReal.status === 200 && (miReal.body?.records ?? 0) === 0);
+
   /* ── ۱۹: کلید API عمومی ── */
   const kc = await api('/developer/keys', { method: 'POST', token: pt, body: { name: 'کلید آزمون خودکار', scopes: ['graph:read'] } });
   check('ساخت کلید → 201 (نمایش یک‌باره)', kc.status === 201 && String(kc.body?.key ?? '').startsWith('srip_ak_'));
