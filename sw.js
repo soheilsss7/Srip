@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.20.05';
+const DEMO_MOCK_VERSION = '2026.09.20.06';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -4547,6 +4547,83 @@ function parseEmailCsvContent(raw){
   }
   return out;
 }
+/* ── ورود پژوهش بازار (فاز ورود دادهٔ بیرونی): CSV/JSON با هدر انعطاف‌پذیر ── */
+const faDigits=(v)=>String(v??'').replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٬,]/g,'');
+const normFaName=(v)=>String(v??'').replace(/\u200c/g,' ').replace(/[يى]/g,'ی').replace(/ك/g,'ک').replace(/[«»"'\u061b;]/g,' ').replace(/\s+/g,' ').trim().toLowerCase();
+const parseMarketShare=(v)=>{
+  const n=Number(String(faDigits(v)).replace(/[%٪]\s*$/,'').replace(/\s/g,''));
+  return Number.isFinite(n)&&n>=0&&n<=100?Math.round(n*10)/10:null;
+};
+const MARKET_COL_ALIASES={
+  name:['organization','org','company','name','نام','شرکت','سازمان','نامشرکت','نامشرکت','player','actor'],
+  industry:['industry','sector','صنعت','بخش','حوزه','vertical'],
+  segment:['segment','marketsegment','بخشبازار','بخشبازار','دسته','سگمنت','سگمنت','cat','category'],
+  share:['marketshare','share','سهمبازار','سهمبازار','سهم'],
+  revenue:['revenue','turnover','درآمد','گردش','فروش','فروشسالانه','فروشسالانه'],
+  competitors:['competitors','rivals','رقبا','رقیب','competitor'],
+  website:['website','url','site','وبسایت','وبسایت','سایت','وب'],
+  notes:['notes','note','description','یادداشت','توضیح','توضیحات','ملاحظات','comment'],
+};
+const normHeader=(h)=>String(h??'').replace(/^\ufeff/,'').replace(/\u200c/g,'').replace(/[\s_\-.()]/g,'').replace(/[يى]/g,'ی').replace(/ك/g,'ک').toLowerCase();
+function parseMarketContent(raw){
+  const text=String(raw??'').replace(/^\ufeff/,'').trim();
+  if(!text) return {error:'فایل خالی است.'};
+  let objects=null;
+  if(text[0]==='['||text[0]==='{'){
+    try{
+      const j=JSON.parse(text);
+      const arr=Array.isArray(j)?j:(Array.isArray(j?.items)?j.items:(Array.isArray(j?.data)?j.data:(Array.isArray(j?.rows)?j.rows:null)));
+      if(!arr) return {error:'ساختار JSON پشتیبانی نمی‌شود — آرایه‌ای از رکوردها (یا items/data/rows) لازم است.'};
+      objects=arr.map(x=>(x&&typeof x==='object'&&!Array.isArray(x))?x:null);
+    }catch{ return {error:'JSON نامعتبر است.'}; }
+  }else{
+    const rows=[]; let field='',row=[],inQ=false; const t=text.replace(/\r\n/g,'\n');
+    for(let i=0;i<t.length;i++){ const ch=t[i];
+      if(inQ){ if(ch==='"'){ if(t[i+1]==='"'){field+='"';i++;} else inQ=false; } else field+=ch; }
+      else if(ch==='"') inQ=true;
+      else if(ch===','){ row.push(field); field=''; }
+      else if(ch==='\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+      else field+=ch; }
+    if(field||row.length){ row.push(field); rows.push(row); }
+    if(rows.length<2) return {error:'هدر و حداقل یک رکورد لازم است.'};
+    const head=rows[0].map(normHeader);
+    const colIndex={};
+    for(const [key,aliases] of Object.entries(MARKET_COL_ALIASES)){
+      colIndex[key]=head.findIndex(h=>aliases.some(a=>h===normHeader(a)));
+    }
+    if(colIndex.name<0) return {error:'ستون نام سازمان پیدا نشد — یکی از این ستون‌ها لازم است: سازمان/شرکت/Company/Organization.'};
+    objects=rows.slice(1).filter(r=>r&&r.length&&r.some(c=>String(c).trim())).map(r=>{
+      const o={};
+      for(const k of Object.keys(MARKET_COL_ALIASES)){ const i=colIndex[k]; o[k]=i>=0?String(r[i]??'').trim():''; }
+      return o;
+    });
+  }
+  /* نگاشت کلیدهای JSON به ستون‌های استاندارد (همان مترادف‌های CSV) */
+  const canonicalOf={};
+  for(const rawKey of new Set((objects??[]).flatMap(o=>o?Object.keys(o):[]))){
+    const h=normHeader(rawKey);
+    const hit=Object.entries(MARKET_COL_ALIASES).find(([,aliases])=>aliases.some(a=>h===normHeader(a)));
+    if(hit) canonicalOf[rawKey]=hit[0];
+  }
+  const out=[];
+  for(const raw of objects ?? []){
+    if(!raw) continue;
+    const o={};
+    for(const [k,v] of Object.entries(raw)) o[canonicalOf[k]??k]=v;
+    const orgName=String(o.name??'').trim();
+    if(!orgName) continue;
+    if(orgName.length>160) return {error:'نام سازمان بیش از حد بلند است.'};
+    const competitors=String(o.competitors??'').split(/[؛;,،\n|]/).map(x=>x.trim()).filter(Boolean).slice(0,12);
+    out.push({orgName,industry:String(o.industry??'').trim().slice(0,120)||null,
+      segment:String(o.segment??'').trim().slice(0,120)||null,
+      marketShare:parseMarketShare(o.share),revenue:String(o.revenue??'').trim().slice(0,120)||null,
+      competitors,website:String(o.website??'').trim().slice(0,200)||null,
+      notes:String(o.notes??'').trim().slice(0,500)||null});
+    if(out.length>=2000) break;
+  }
+  if(!out.length) return {error:'هیچ رکورد معتبری یافت نشد — ستون نام سازمان الزامی است.'};
+  return {rows:out};
+}
 const domainOfEmail=(em)=>String(em??'').split('@')[1]?.toLowerCase()??'';
 function importMapRow(kind,row,scopeIds){
   const emails=kind==='calendar-ics'
@@ -5137,6 +5214,8 @@ function seedPhase3Store(){
   if(!Array.isArray(DB.enrichmentSuggestions)) DB.enrichmentSuggestions=[];
   if(!DB.enrichmentApplied) DB.enrichmentApplied={};
   if(!DB.enrichmentCursor) DB.enrichmentCursor={};
+  if(!Array.isArray(DB.marketIntel)) DB.marketIntel=[];
+  if(!Array.isArray(DB.marketImports)) DB.marketImports=[];
   if(!Array.isArray(DB.apiKeys)) DB.apiKeys=[];
   if(!Array.isArray(DB.webhooks)) DB.webhooks=[];
   if(!Array.isArray(DB.webhookDeliveries)) DB.webhookDeliveries=[];
@@ -12763,6 +12842,19 @@ async function __handler(req, res) {
      ═══════════════════════════════════════════════════════════════════════ */
 
   /* ── آیتم ۱۱: ورود ساختاریافتهٔ ایمیل/تقویم (فایل‌محور، فقط متادیتا، تأیید انسانی) ── */
+  if(is('/imports/sample')&&method==='GET'&&q.get('type')==='market-csv'){
+    const csv='سازمان,صنعت,بخش بازار,سهم بازار,درآمد سالانه,رقبا,وب‌سایت,یادداشت\r\n'
+      +'شرکت پترو صنعت,پتروشیمی,پلیمرهای مهندسی,23,۲٬۸۰۰ میلیارد تومان,گروه صنعتی ماد؛ پتروشیمی ارگ,petrosanat.example,بازیگر قدیمی بازار با شبکهٔ توزیع قوی\r\n'
+      +'بانک ملّی پارس,بانکداری,تسهیلات خرد,17,۴٬۱۰۰ میلیارد تومان,بانک تجارت‌نو؛ پارسیان‌کارت,mellipars.example,کانال توزیع گسترده در شهرستان‌ها\r\n'
+      +'گروه صنعتی ماد,قطعه‌سازی,قطعات دقیق صنعتی,31,۵٬۶۰۰ میلیارد تومان,توربو دقیق کاوه؛ فن‌آوران پارس,madgroup.example,رهبر فناوری در قطعات توربین\r\n'
+      +'توربو دقیق کاوه,قطعه‌سازی,قطعات توربین گازی,12,۱٬۳۰۰ میلیارد تومان,گروه صنعتی ماد,turbokave.example,تمرکز بر بازار تعمیرات\r\n'
+      +'فن‌آوران داده‌کاوی صبا,نرم‌افزار,تحلیل دادهٔ صنعتی,9,۶۸۰ میلیارد تومان,داده‌گستر سپهر؛ هوش داده,sabadm.example,ورود تازه به بازار هوش مصنوعی صنعتی\r\n'
+      +'داده‌گستر سپهر,نرم‌افزار,پلتفرم‌های BI,15,۱٬۱۰۰ میلیارد تومان,فن‌آوران داده‌کاوی صبا,sepehrdg.example,پایگاه مشتری قوی در صنایع غذایی\r\n'
+      +'پتروشیمی ارگ,پتروشیمی,تولید محصولات پایه,28,۷٬۲۰۰ میلیارد تومان,شرکت پترو صنعت,argpetro.example,مزیت دسترسی به خوراک\r\n';
+    return json(res,200,{kind:'market-csv',count:7,content:csv,
+      governance:{fieldsCaptured:['نام سازمان','صنعت','بخش بازار','سهم بازار','درآمد','رقبا','وب‌سایت','یادداشت']},
+      note:'نمونهٔ پژوهش بازار — دو رکورد اول با سازمان‌های موجود شما تطبیق می‌شوند و بقیه بازیگران تازه‌اند.'});
+  }
   if(is('/imports/sample')&&method==='GET'){
     const kind=q.get('type')==='calendar-ics'?'calendar-ics':'email-csv';
     const count=Math.max(1,Math.min(1000,Number(q.get('count'))||25));
@@ -12801,11 +12893,36 @@ async function __handler(req, res) {
   }
   if(is('/imports')&&method==='POST'){
     const b=await readBody(req);
-    const kind=b.kind==='calendar-ics'?'calendar-ics':(b.kind==='email-csv'?'email-csv':null);
-    if(!kind) return json(res,400,{message:'نوع فایل باید calendar-ics یا email-csv باشد.'});
+    const kind=b.kind==='calendar-ics'?'calendar-ics':(b.kind==='email-csv'?'email-csv':(b.kind==='market-csv'?'market-csv':null));
+    if(!kind) return json(res,400,{message:'نوع فایل باید calendar-ics، email-csv یا market-csv باشد.'});
     const content=String(b.content??'');
     if(!content.trim()) return json(res,400,{message:'محتوای فایل خالی است.'});
     if(content.length>2_000_000) return json(res,400,{message:'فایل بزرگ‌تر از حد مجاز (۲ مگابایت) است — آن را بازه‌بندی کنید.'});
+    if(kind==='market-csv'){
+      /* ── ورود پژوهش بازار: تجزیهٔ CSV/JSON، تطبیق نام با سازمان‌های محدوده، صف تأیید انسانی ── */
+      if(!hasPerm('organization.write')) return json(res,403,{message:'شما مجوز «ویرایش سازمان‌ها» (organization.write) را ندارید.'});
+      const pm=parseMarketContent(content);
+      if(pm.error) return json(res,400,{message:pm.error});
+      const scopeIds=visibleOrgIds(req);
+      const byNorm=new Map(); for(const id of scopeIds){ const o=orgById(id); if(o) byNorm.set(normFaName(o.name),id); }
+      const rows=pm.rows.map((r,i)=>{
+        const mid=byNorm.get(normFaName(r.orgName))??null;
+        return {rid:`ir-${i+1}`,status:'PENDING',kind:'MARKET',at:nowIso(),subject:r.orgName,orgName:r.orgName,
+          industry:r.industry,segment:r.segment,marketShare:r.marketShare,revenue:r.revenue,
+          competitors:r.competitors,website:r.website,notes:r.notes,
+          matchedOrganizationIds:mid?[mid]:[],matchedPersonIds:[],relationshipId:null,
+          confidence:mid?0.95:0.7,unmatchedEmails:[],exists:!!mid};
+      });
+      const batch={id:`imp-${Date.now()}`,kind,createdAt:nowIso(),userId:authUser.id,organizationId:primaryOrgId(authUser)??scopeIds[0]??null,
+        status:'OPEN',rows,fileName:String(b.fileName??'').slice(0,120)||null,
+        stats:{total:rows.length,mapped:rows.filter(r=>r.exists).length,personMapped:0,unmatched:rows.filter(r=>!r.exists).length,
+          avgConfidence:rows.length?Number((rows.reduce((a,r)=>a+r.confidence,0)/rows.length).toFixed(2)):0},
+        governance:{bodyStored:true,fieldsCaptured:['نام سازمان','صنعت','بخش بازار','سهم بازار','درآمد','رقبا','وب‌سایت','یادداشت'],source:'market-research-import',humanConfirmation:'required'}};
+      DB.imports.unshift(batch);
+      saveDb(); audit(req,'CREATE','Import',batch.id,'OK',{meta:{kind,records:rows.length}});
+      return json(res,201,{id:batch.id,kind:batch.kind,stats:batch.stats,governance:batch.governance,
+        message:`${faN(rows.length)} بازیگر بازار تجزیه شد (${faN(batch.stats.mapped)} تطبیق‌شده با سازمان‌های شما). صف تأیید انسانی آماده است.`});
+    }
     const parsed=kind==='calendar-ics'?parseIcsContent(content):parseEmailCsvContent(content);
     if(parsed===null) return json(res,400,{message:'هدر CSV ناشناخته است — ستون‌های From/To/Date/Subject لازم است (خروجی Takeout/Outlook).'});
     if(!parsed.length) return json(res,400,{message:'هیچ رکورد معتبری در فایل یافت نشد.'});
@@ -12841,7 +12958,7 @@ async function __handler(req, res) {
     if(!['ACCEPT','EDIT','REJECT','PENDING'].includes(decision)) return json(res,400,{message:'تصمیم باید ACCEPT/EDIT/REJECT/PENDING باشد.'});
     if(decision==='EDIT'){
       const p=b.patch??{};
-      if(p.subject!=null) row.subject=String(p.subject).slice(0,200);
+      if(p.subject!=null){ row.subject=String(p.subject).slice(0,200); if(row.kind==='MARKET') row.orgName=row.subject; }
       if(p.organizationId!=null){ if(p.organizationId&&!inScope(req,p.organizationId)) return json(res,403,{message:'سازمان انتخابی خارج از محدوده است.'}); row.matchedOrganizationIds=p.organizationId?[String(p.organizationId)]:[]; }
       if(p.personId!=null){ if(p.personId&&!personById(p.personId)) return json(res,404,{message:'شخص یافت نشد.'}); row.matchedPersonIds=p.personId?[String(p.personId)]:[]; }
       if(p.relationshipId!=null){ const r=p.relationshipId?(RELS.find(x=>x.id===p.relationshipId)):null; if(p.relationshipId&&!r) return json(res,404,{message:'رابطه یافت نشد.'}); row.relationshipId=r?.id??null; }
@@ -12857,6 +12974,53 @@ async function __handler(req, res) {
     if(!batch) return json(res,404,{message:'دستهٔ ورود یافت نشد.'});
     if(!(visibleOrgIds(req).includes(batch.organizationId)||batch.userId===authUser.id)) return json(res,403,{message:'این دستهٔ ورود در محدودهٔ شما نیست.'});
     const scopeIds=visibleOrgIds(req);
+    /* ── کامیت پژوهش بازار: دادهٔ تأییدشده → بینش بازار + سند مرکز دانش + پیوند سازمان‌ها ── */
+    if(batch.kind==='market-csv'){
+      const acc=batch.rows.filter(r=>r.status==='ACCEPT'||r.status==='EDITED');
+      let matched=0,players=0;
+      for(const r of acc){
+        const orgId=r.matchedOrganizationIds.find(id=>scopeIds.includes(id))??null;
+        if(orgId) matched++; else players++;
+        DB.marketIntel.push({id:`mi-${Date.now().toString(36)}-${(DB.nextId=(DB.nextId??1)+1)}`,
+          orgId,orgName:r.orgName,industry:r.industry,segment:r.segment,marketShare:r.marketShare,
+          revenue:r.revenue,competitors:r.competitors??[],website:r.website,notes:r.notes,
+          importId:batch.id,organizationId:batch.organizationId,createdAt:nowIso(),by:authUser.id});
+        /* سازمان موجود: صنعت/وب‌سایتِ خالی تکمیل می‌شود (بدون بازنویسی دادهٔ دستی) */
+        if(orgId){ const o=orgById(orgId); if(o){ if(!o.industry&&r.industry) o.industry=r.industry; if(!o.website&&r.website) o.website=r.website; } }
+      }
+      const segMap=new Map();
+      for(const r of acc){ const k=r.segment??'نامشخص'; if(!segMap.has(k)) segMap.set(k,{segment:k,count:0,shareSum:0,shareN:0}); const g=segMap.get(k); g.count++; if(r.marketShare!=null){g.shareSum+=r.marketShare;g.shareN++;} }
+      const segments=[...segMap.values()].map(g=>({segment:g.segment,count:g.count,avgShare:g.shareN?Math.round(g.shareSum/g.shareN*10)/10:null})).sort((a,b)=>b.count-a.count);
+      const topByShare=acc.filter(r=>r.marketShare!=null).sort((a,b)=>(b.marketShare??0)-(a.marketShare??0)).slice(0,5)
+        .map(r=>({orgName:r.orgName,segment:r.segment??null,marketShare:r.marketShare,orgId:r.matchedOrganizationIds[0]??null}));
+      /* سند تحلیل بازار در مرکز دانش — دادهٔ واردشده بلافاصله قابل استفاده و قابل جست‌وجو می‌شود */
+      const art={id:`kb-mi-${Date.now()}`,slug:`market-${Date.now().toString(36)}`,
+        title:`پژوهش بازار: ${batch.fileName??faN(acc.length)+' بازیگر'} — ${faN(acc.length)} رکورد واردشده`,
+        excerpt:`${faN(matched)} رکورد به سازمان‌های موجود پیوند شد و ${faN(players)} بازیگر تازهٔ بازار شناسایی شد${segments.length?`؛ بزرگ‌ترین بخش: ${segments[0].segment}`:''}.`,
+        category:'ANALYTICS',tags:['پژوهش بازار','ورود داده','تحلیل بازار'],families:['STRATEGIC','VALUE'],
+        readMinutes:Math.max(2,Math.min(15,Math.ceil(acc.length/3))),
+        author:authUser?.email??authUser?.name??'کارشناس',
+        body:[`منبع: فایل ${batch.fileName??'پژوهش بازار'} · تاریخ ورود: ${new Date(batch.createdAt).toLocaleDateString('fa-IR')}`,
+          '—',
+          `بازیگران تأییدشده: ${faN(acc.length)} (${faN(matched)} پیوندخورده با سازمان‌های شما، ${faN(players)} بازیگر تازه).`,
+          ...(segments.length?['','بخش‌های بازار: '+segments.map(g=>`${g.segment} (${faN(g.count)} بازیگر${g.avgShare!=null?`، میانگین سهم ${faN(g.avgShare)}٪`:''})`).join('؛ ')]:[]),
+          ...(topByShare.length?['','بیشترین سهم بازار: '+topByShare.map(x=>`${x.orgName}${x.marketShare!=null?` ${faN(x.marketShare)}٪`:''}`).join('، ')]:[]),
+          ...(acc.some(r=>(r.competitors??[]).length)?['','رقبای نام‌برده‌شده: '+[...new Set(acc.flatMap(r=>r.competitors??[]))].slice(0,15).join('، ')]:[]),
+          '—',
+          'دادهٔ خام این پژوهش در «بینش بازار» (مرکز دانش) به‌صورت تجمیعی و ردیابی‌شده با منبع در دسترس است؛ رکوردهای تأییدشده هرگز بدون ذکر منبع وارد نمی‌شوند.'].join('\n'),
+        updatedAt:nowIso(),views:0,helpful:0,notHelpful:0,bookmarks:[]};
+      DB.knowledge=[...DB.knowledge.filter(x=>x.id!==art.id),art];
+      DB.marketImports.unshift({id:batch.id,fileName:batch.fileName,records:acc.length,matched,players,segments:segments.map(x=>x.segment),knowledgeId:art.id,createdAt:nowIso(),by:authUser?.email??null});
+      if(DB.marketImports.length>50) DB.marketImports.length=50;
+      batch.status='COMMITTED'; batch.committedAt=nowIso();
+      batch.commitResult={created:acc.length,proposedEdges:0,market:{matched,players,knowledgeId:art.id}};
+      batch.rows=batch.rows.map(r=>acc.some(a=>a.rid===r.rid)?{...r,status:'COMMITTED'}:r);
+      saveDb(); audit(req,'COMMIT','MarketImport',batch.id,'OK',{meta:{records:acc.length,matched,players}});
+      await autoRunWorkflows('MarketImport',batch.id,'MARKET_IMPORT_COMPLETED',{import:{id:batch.id,records:acc.length,matched,players}},`market-import:${batch.id}`);
+      return json(res,200,{created:acc.map(r=>({rid:r.rid})),proposedEdges:[],
+        market:{records:acc.length,matched,players,segments,topByShare,knowledgeId:art.id},
+        message:`${faN(acc.length)} رکورد پژوهش بازار ثبت شد — ${faN(matched)} پیوند سازمان، ${faN(players)} بازیگر تازه و سند تحلیل در مرکز دانش ساخته شد.`});
+    }
     const toCreate=batch.rows.filter(r=>r.status==='ACCEPT'||r.status==='EDITED');
     const created=[]; const proposedEdges=[];
     for(const r of toCreate){
@@ -12884,6 +13048,27 @@ async function __handler(req, res) {
     await autoRunWorkflows('Import',batch.id,'IMPORT_COMPLETED',{import:{id:batch.id,kind:batch.kind,created:created.length,proposedEdges:proposedEdges.length}},`import-commit:${batch.id}`);
     return json(res,200,{created:created,proposedEdges,
       governance:{bodyStored:false,note:'فقط متادیتای تأییدشده ثبت شد؛ بدنهٔ پیام هرگز ذخیره نشده است.'}});
+  }
+
+  /* ── بینش بازار: جمع‌بندی پژوهش‌های واردشده (ورود دادهٔ بیرونی) ── */
+  if(is('/market-intel')&&method==='GET'){
+    if(!hasPerm('organization.read')) return json(res,403,{message:'شما مجوز «مشاهده سازمان‌ها» (organization.read) را ندارید.'});
+    const scopeIds=visibleOrgIds(req);
+    const rows=(DB.marketIntel??[]).filter(x=>x.organizationId&&scopeIds.includes(x.organizationId));
+    const segMap=new Map();
+    for(const r of rows){ const k=r.segment??'نامشخص'; if(!segMap.has(k)) segMap.set(k,{segment:k,count:0,shareSum:0,shareN:0,players:new Set()}); const g=segMap.get(k); g.count++; g.players.add(r.orgName); if(r.marketShare!=null){g.shareSum+=r.marketShare;g.shareN++;} }
+    const segments=[...segMap.values()].map(g=>({segment:g.segment,count:g.count,players:g.players.size,avgShare:g.shareN?Math.round(g.shareSum/g.shareN*10)/10:null})).sort((a,b)=>b.count-a.count);
+    const compMap=new Map();
+    for(const r of rows) for(const c of (r.competitors??[])) compMap.set(c,(compMap.get(c)??0)+1);
+    const competitorMentions=[...compMap.entries()].map(([name,count])=>({name,count})).sort((a,b)=>b.count-a.count).slice(0,8);
+    const topByShare=rows.filter(r=>r.marketShare!=null).sort((a,b)=>(b.marketShare??0)-(a.marketShare??0)).slice(0,6)
+      .map(r=>({orgName:r.orgName,segment:r.segment??null,marketShare:r.marketShare,orgId:r.orgId,matched:!!r.orgId}));
+    const imports=(DB.marketImports??[]).filter(x=>rows.some(r=>r.importId===x.id));
+    return json(res,200,{records:rows.length,matchedOrgs:rows.filter(r=>r.orgId).length,newPlayers:rows.filter(r=>!r.orgId).length,
+      segments,competitorMentions,topByShare,
+      imports:imports.map(x=>({id:x.id,fileName:x.fileName,records:x.records,matched:x.matched,players:x.players,createdAt:x.createdAt,knowledgeId:x.knowledgeId})),
+      lastImportAt:imports[0]?.createdAt??null,
+      note:'دادهٔ پژوهش بازار فقط با تأیید انسانی وارد می‌شود؛ هر رکورد منبع (فایل/دستهٔ ورود) و تاریخ دارد.'});
   }
 
   /* ── آیتم ۱۲: GIS — نقشهٔ جغرافیایی ذینفعان (کاشی آفلاین، لایه‌بندی، خروجی تصویر سمت کاربر) ── */
