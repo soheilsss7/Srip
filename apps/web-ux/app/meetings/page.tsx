@@ -354,8 +354,8 @@ export default function MeetingsPage(){
                   <Share2 size={12}/> {brief.relationship.name}
                 </Link>
               )}
-              {brief.cadence&&brief.cadence.status==='CRITICAL'&&<span className="chip danger">کیدنس شکسته: {fmtNum(brief.cadence.daysSinceLastInteraction)} روز</span>}
-              {brief.cadence&&brief.cadence.status==='WARN'&&<span className="chip warning">کیدنس عقب‌افتاده: {fmtNum(brief.cadence.daysSinceLastInteraction)} روز</span>}
+              {brief.cadence&&brief.cadence.status==='CRITICAL'&&<span className="chip danger">آهنگ ارتباط از دست رفته: {fmtNum(brief.cadence.daysSinceLastInteraction)} روز</span>}
+              {brief.cadence&&brief.cadence.status==='WARN'&&<span className="chip warning">آهنگ ارتباط عقب‌افتاده: {fmtNum(brief.cadence.daysSinceLastInteraction)} روز</span>}
               {brief.concentration&&<span className="chip warning">تمرکز {fmtNum(brief.concentration.topShare)}٪ روی {brief.concentration.topName??'—'}</span>}
             </div>
             {brief.relationship&&(

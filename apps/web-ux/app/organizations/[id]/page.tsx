@@ -104,7 +104,7 @@ function OrgSelfCard({ orgId, allOrgs, onSaved }: { orgId: string; allOrgs: any[
     >
       <div className="stat-grid">
         <StatCard icon={<Layers size={16} />} iconClass="ic-blue" label={t('الگوی شروع')} value={tplFa} sub={self?.effective ? `${fmtNum(self.effective.active)} ${t('گروه فعال در نقشه')}` : undefined} />
-        <StatCard icon={<Radar size={16} />} iconClass="ic-teal" label={t('پوشش عموم‌ها')} value={covPct == null ? '—' : `${fmtNum(covPct)}٪`} sub={cov.groupsExpected ? `${fmtNum(cov.groupsCovered ?? 0)} ${t('از')} ${fmtNum(cov.groupsExpected)} ${t('گروه')}` : undefined} />
+        <StatCard icon={<Radar size={16} />} iconClass="ic-teal" label={t('پوشش عموم‌ها')} value={covPct == null ? '—' : `${fmtNum(covPct)}${t('٪')}`} sub={cov.groupsExpected ? `${fmtNum(cov.groupsCovered ?? 0)} ${t('از')} ${fmtNum(cov.groupsExpected)} ${t('گروه')}` : undefined} />
         <StatCard icon={<Users2 size={16} />} iconClass="ic-purple" label={t('اعضای نقشه')} value={fmtNum(cov.members ?? 0)} sub={cov.keyPlayers ? `${fmtNum(cov.keyPlayers)} ${t('بازیگر کلیدی')}` : undefined} />
       </div>
       {canWrite ? (

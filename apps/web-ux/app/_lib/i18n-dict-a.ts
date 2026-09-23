@@ -817,4 +817,7 @@ export const EN_DICT_A: Record<string, string> = {
   'دانش': 'Knowledge',
   'دانشگاهی و پژوهشی': 'Academic & research',
   'در انتظار': 'Pending',
+  'در انتظار این اقدام': 'Waiting on this action',
+  'در انتظار تحویل': 'Awaiting delivery',
+  'در بارگذاری این بخش خطایی رخ داد.': 'Something went wrong while loading this section.',
 };

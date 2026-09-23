@@ -21,7 +21,7 @@ type Metrics = { totalSuggestions: number; accepted: number; rejected: number; p
 type OrgRow = { orgId: string; orgName: string; available: number; pending: number; accepted: number; rejected: number; applied: number; coverage: number; fields: { field: string; fieldFa: string; sourceNameFa: string }[] };
 
 const CONF_TONE: Record<string, 'success' | 'info' | 'warning'> = { HIGH: 'success', MEDIUM: 'info', LOW: 'warning' };
-const CONF_FA: Record<string, string> = { HIGH: 'بالا', MEDIUM: 'متوسط', LOW: 'کم' };
+const CONF_FA: Record<string, string> = { HIGH: t('بالا'), MEDIUM: t('متوسط'), LOW: t('کم') };
 const fmtN = (v: unknown) => (v === null || v === undefined || v === '') ? '—' : new Intl.NumberFormat(localeTag()).format(Number(v));
 const fmtDate = (iso?: string | null) => iso ? new Date(iso).toLocaleDateString(localeTag()) : '';
 
@@ -280,7 +280,7 @@ export default function EnrichmentPage() {
                       return (
                         <tr key={o.orgId}>
                           <td><Link className="t-primary" href={`/organizations/${o.orgId}`} style={{ fontWeight: 700 }}>{o.orgName}</Link>
-                            <div className="t-muted" style={{ fontSize: 10.5 }}>{o.fields.map(f => f.fieldFa).join('، ')}</div>
+                            <div className="t-muted" style={{ fontSize: 10.5 }}>{o.fields.map(f => f.fieldFa).join(t('،'))}</div>
                           </td>
                           <td><strong>{fmtN(o.available)}</strong></td>
                           <td>{o.pending > 0 ? <Badge tone="warning">{fmtN(o.pending)}</Badge> : <span className="t-muted">—</span>}</td>

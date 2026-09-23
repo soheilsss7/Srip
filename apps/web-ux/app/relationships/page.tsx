@@ -507,8 +507,8 @@ export default function RelationshipsPage() {
                         <td>
                           <div className="t-muted">{timeAgo(r.lastInteractionAt)}</div>
                           {r.cadence && (
-                            <span className={`cell-count ${r.cadence.status === 'CRITICAL' ? 'danger' : r.cadence.status === 'WARN' ? 'warning' : 'info'}`} title={`${t('هدف کیدنس: هر')} ${fmtNum(r.cadence.cadenceDays)} ${t('روز')}`}>
-                              <CalendarClock size={11} /> {r.cadence.status === 'FRESH' ? `${t('در کیدنس')}` : r.cadence.status === 'WARN' ? `${fmtNum(r.cadence.overdueDays)} ${t('روز عقب')}` : `${t('شکسته')}`}
+                            <span className={`cell-count ${r.cadence.status === 'CRITICAL' ? 'danger' : r.cadence.status === 'WARN' ? 'warning' : 'info'}`} title={`${t('هدف آهنگ ارتباط: هر')} ${fmtNum(r.cadence.cadenceDays)} ${t('روز')}`}>
+                              <CalendarClock size={11} /> {r.cadence.status === 'FRESH' ? `${t('در آهنگ ارتباط')}` : r.cadence.status === 'WARN' ? `${fmtNum(r.cadence.overdueDays)} ${t('روز عقب')}` : `${t('شکسته')}`}
                             </span>
                           )}
                         </td>

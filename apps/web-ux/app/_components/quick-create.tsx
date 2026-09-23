@@ -25,9 +25,12 @@ type Entity = { key: string; label: string; endpoint: string; sections: Section[
 
 /* ─── enum های استاندارد (همسان با صفحات اصلی و mock) ─── */
 const ORG_TYPES: Opt[] = lt([
-  { value:'HOLDING', label:t('هلدینگ') }, { value:'SUBSIDIARY', label:t('زیرمجموعه') }, { value:'CUSTOMER', label:t('مشتری') },
-  { value:'PARTNER', label:t('شریک') }, { value:'BANK', label:t('بانک') }, { value:'GOVERNMENT', label:t('دولتی') },
-  { value:'INVESTOR', label:t('سرمایه‌گذار') }, { value:'SUPPLIER', label:t('تأمین‌کننده') }, { value:'OTHER', label:t('سایر') },
+  { value:'HOLDING', label:t('هلدینگ') }, { value:'SUBSIDIARY', label:t('شرکت تابعه') }, { value:'CUSTOMER', label:t('مشتری') },
+  { value:'SUPPLIER', label:t('تأمین‌کننده') }, { value:'PARTNER', label:t('شریک راهبردی') }, { value:'COMPETITOR', label:t('رقیب') },
+  { value:'INVESTOR', label:t('سرمایه‌گذار') }, { value:'BANK', label:t('بانک و مؤسسهٔ مالی') },
+  { value:'GOVERNMENT', label:t('نهاد دولتی و تنظیم‌گر') }, { value:'ACADEMIC', label:t('دانشگاه و پژوهش') },
+  { value:'MEDIA', label:t('رسانه') }, { value:'ASSOCIATION', label:t('اتاق و انجمن صنفی') },
+  { value:'ECOSYSTEM', label:t('اکوسیستم فناوری و صنعت') }, { value:'OTHER', label:t('سایر') },
 ]);
 const REL_TYPES: Opt[] = lt([
   { value:'STRATEGIC_PARTNERSHIP', label:t('مشارکت راهبردی') }, { value:'BANKING', label:t('بانکی') }, { value:'CUSTOMER', label:t('مشتری') },

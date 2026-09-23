@@ -375,7 +375,7 @@ export default function Reports() {
                       </li>
                     ))}
                   </ul>
-                ) : <p className="criteria-saved">کیدنس همهٔ روابط برقرار است.</p>}
+                ) : <p className="criteria-saved">آهنگ ارتباط همهٔ روابط برقرار است.</p>}
                 <h4 style={{ fontSize: 12.5, margin: '10px 0 6px', display: 'flex', gap: 5, alignItems: 'center' }}><ListChecks size={13} /> عقب‌افتاده‌ها</h4>
                 {(periodic.sections?.overdueCommitments?.length || periodic.sections?.overdueActions?.length) ? (
                   <ul style={{ margin: 0, paddingInlineStart: 16, display: 'grid', gap: 4 }}>

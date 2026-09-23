@@ -106,8 +106,8 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                 {STATUS_OPTIONS.map(s => <option key={s} value={s}>{fa(s)}</option>)}
               </select>
             </label>
-            <label className="inline-label">کیدنس (هر چند روز)
-              <select value={r?.cadence?.cadenceDays ?? 30} disabled={!!busy} onChange={e => doIt('cadence', () => api(`/relationships/${id}`, { method: 'PATCH', body: JSON.stringify({ cadenceDays: Number(e.target.value) }) }), t('کیدنس رابطه به‌روزرسانی شد.'))}>
+            <label className="inline-label">{t('آهنگ ارتباط (هر چند روز یک‌بار)')}
+              <select value={r?.cadence?.cadenceDays ?? 30} disabled={!!busy} onChange={e => doIt('cadence', () => api(`/relationships/${id}`, { method: 'PATCH', body: JSON.stringify({ cadenceDays: Number(e.target.value) }) }), t('آهنگ ارتباط رابطه به‌روزرسانی شد.'))}>
                 {[14, 21, 30, 45, 60, 90].map(d => <option key={d} value={d}>{d} روز</option>)}
               </select>
             </label>
@@ -135,7 +135,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
       {info && <div className="success-card" role="status">{info}</div>}
       {r?.cadence && r.cadence.status !== 'FRESH' && (
         <div className="info-card" style={{ background: r.cadence.status === 'CRITICAL' ? 'color-mix(in srgb, var(--srip-danger) 10%, transparent)' : undefined, borderColor: r.cadence.status === 'CRITICAL' ? 'color-mix(in srgb, var(--srip-danger) 32%, transparent)' : undefined, color: r.cadence.status === 'CRITICAL' ? 'var(--srip-danger)' : undefined }} role="status">
-          {r.cadence.status === 'CRITICAL' ? t('کیدنس رابطه شکسته است') : t('کیدنس رابطه عقب افتاده است')} — آخرین تعامل {fmtNum(r.cadence.daysSinceLastInteraction)} روز پیش؛ هدف {fmtNum(r.cadence.cadenceDays)} روز. یک تعامل معنادار ثبت کنید یا مهلت را تغییر دهید.
+          {r.cadence.status === 'CRITICAL' ? t('آهنگ ارتباط رابطه از دست رفته است') : t('آهنگ ارتباط رابطه عقب افتاده است')} — آخرین تعامل {fmtNum(r.cadence.daysSinceLastInteraction)} روز پیش؛ هدف {fmtNum(r.cadence.cadenceDays)} روز. یک تعامل معنادار ثبت کنید یا مهلت را تغییر دهید.
         </div>
       )}
 
@@ -151,7 +151,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
               <Badge tone={r?.marketKind==='NON_MARKET' ? 'info' : r?.marketKind==='HYBRID' ? 'warning' : 'success'}>{fa(r?.marketKind ?? 'MARKET')}</Badge>
             </div>
             {(r?.marketKind==='NON_MARKET' || r?.riskScore>=40) && (r?.cadence?.status==='CRITICAL' || r?.healthScore<55) && (
-              <div className="wf-alert" style={{marginTop:8}}><Siren size={13}/> هشدار بازار: {r?.marketKind==='NON_MARKET' ? t('اختلال در این گرهٔ غیربازاری می‌تواند دسترسی کل سگمنت را مسدود کند.') : t('رابطهٔ بازاری در معرض ریسک — کیدنس یا سلامت نیازمند اقدام فوری است.')}</div>
+              <div className="wf-alert" style={{marginTop:8}}><Siren size={13}/> هشدار بازار: {r?.marketKind==='NON_MARKET' ? t('اختلال در این گرهٔ غیربازاری می‌تواند دسترسی کل سگمنت را مسدود کند.') : t('رابطهٔ بازاری در معرض ریسک — آهنگ ارتباط یا سلامت نیازمند اقدام فوری است.')}</div>
             )}
             <div className="toolbar" style={{flexWrap:'wrap', gap:8, marginTop:10}}>
               <label className="inline-label">جنسیت بازار

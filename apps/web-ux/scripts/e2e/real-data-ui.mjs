@@ -46,6 +46,19 @@ try {
   ok('لیست سازمان‌ها: پارس انرژی (زیرمجموعه)', bodyTxt.includes('پارس انرژی'));
   ok('جداسازی مستأجر: دنیای دمو (هلدینگ آریا) دیده نمی‌شود', !bodyTxt.includes('هلدینگ آریا') && !bodyTxt.includes('آریا فناوری'));
 
+  /* انواع سازمان از نظر نقش ارتباطی — دادهٔ واقعی درست تایپ شده باشد */
+  const typeInfo = await page.evaluate(() => ({
+    chips: [...document.querySelectorAll('.chip, .badge, tbody tr td')].map(x => (x.textContent ?? '').trim()),
+    options: [...document.querySelectorAll('select option')].map(o => (o.textContent ?? '').trim()),
+  }));
+  const allTxt = typeInfo.chips.join(' | ');
+  ok('نوع سازمان: فیلتر نقش‌محور کامل (شریک راهبردی/رقیب/دانشگاه و پژوهش/اتاق و انجمن صنفی)', ['شریک راهبردی', 'رقیب', 'دانشگاه و پژوهش', 'اتاق و انجمن صنفی'].every(l => typeInfo.options.includes(l) || allTxt.includes(l)));
+  ok('نوع سازمان: «دانشگاه و پژوهش» روی دانشگاه‌ها (نه دولتی)', allTxt.includes('دانشگاه و پژوهش'));
+  ok('نوع سازمان: «اتاق و انجمن صنفی» روی اتاق/انجمن‌ها (نه شریک)', allTxt.includes('اتاق و انجمن صنفی'));
+  ok('نوع سازمان: «اکوسیستم فناوری و صنعت» روی شرکت‌های اکوسیستم', allTxt.includes('اکوسیستم فناوری و صنعت'));
+  const orgHtml = await page.evaluate(() => document.body.innerHTML);
+  ok('نوع سازمان: برچسب‌های قدیمی غلط حذف شدند (شریکِ تنها/دولتیِ دانشگاه)', !/>(?:شریک|دولتی)</.test(orgHtml));
+
   // 3) عموم‌ها: انتخاب هلدینگ پارس → نقشهٔ واقعی سند
   await page.goto(`${BASE}/publics`, { waitUntil: 'networkidle0', timeout: 90000 });
   await new Promise(r => setTimeout(r, 2500));
@@ -131,6 +144,12 @@ try {
   await page2.waitForFunction(() => !location.pathname.endsWith('/login'), { timeout: 60000 }).catch(() => {});
   await new Promise(r => setTimeout(r, 2500));
   ok('ورود pars (مشتری) → پیشخوان', await page2.evaluate(() => !location.pathname.endsWith('/login') && !!sessionStorage.getItem('srip_access_token')), 'url=' + page2.url());
+
+  /* واژهٔ درست «آهنگ ارتباط» جای «کیدنس» — صفحهٔ روابط مشتری پارس */
+  await page2.goto(`${BASE}/relationships`, { waitUntil: 'networkidle0', timeout: 90000 });
+  await new Promise(r => setTimeout(r, 3500));
+  const relTxt = await page2.evaluate(() => document.body.textContent ?? '');
+  ok('واژه‌ها: «آهنگ ارتباط» به‌جای «کیدنس»', relTxt.includes('آهنگ ارتباط') && !relTxt.includes('کیدنس'));
 
   await page2.goto(`${BASE}/organizations`, { waitUntil: 'networkidle0', timeout: 90000 });
   await new Promise(r => setTimeout(r, 2500));

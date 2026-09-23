@@ -12,15 +12,19 @@ type Org = { criteria?:Criteria; id:string; name:string; type:string; industry?:
 type Rel = { id:string; sourceOrganizationId?:string|null; targetOrganizationId?:string|null; status?:string|null; healthScore?:number|null; riskScore?:number|null; strategicScore?:number|null; nextActionAt?:string|null; relationshipType?:string|null };
 type Interaction = { id:string; organizationId?:string|null; occurredAt?:string|null };
 
+/* انواع سازمان از نظر نقش در شبکهٔ ارتباط (چارچوب ذی‌نفعان: بازاری/غیربازاری + ساختاری) */
 const TYPE_LABELS: Record<string,string> = lt({
-  HOLDING:t('هلدینگ'), SUBSIDIARY:t('زیرمجموعه'), CUSTOMER:t('مشتری'), PARTNER:t('شریک'), BANK:t('بانک'),
-  GOVERNMENT:t('دولتی'), INVESTOR:t('سرمایه‌گذار'), SUPPLIER:t('تأمین‌کننده'), OTHER:t('سایر'),
+  HOLDING:t('هلدینگ'), SUBSIDIARY:t('شرکت تابعه'), CUSTOMER:t('مشتری'), SUPPLIER:t('تأمین‌کننده'),
+  PARTNER:t('شریک راهبردی'), COMPETITOR:t('رقیب'), INVESTOR:t('سرمایه‌گذار'), BANK:t('بانک و مؤسسهٔ مالی'),
+  GOVERNMENT:t('نهاد دولتی و تنظیم‌گر'), ACADEMIC:t('دانشگاه و پژوهش'), MEDIA:t('رسانه'),
+  ASSOCIATION:t('اتاق و انجمن صنفی'), ECOSYSTEM:t('اکوسیستم فناوری و صنعت'), OTHER:t('سایر'),
 });
 const TYPE_TONES: Record<string,string> = {
-  HOLDING:'purple', SUBSIDIARY:'info', CUSTOMER:'success', PARTNER:'info', BANK:'warning',
-  GOVERNMENT:'neutral', INVESTOR:'warning', SUPPLIER:'neutral', OTHER:'neutral',
+  HOLDING:'purple', SUBSIDIARY:'info', CUSTOMER:'success', SUPPLIER:'neutral', PARTNER:'info',
+  COMPETITOR:'danger', INVESTOR:'warning', BANK:'warning', GOVERNMENT:'neutral', ACADEMIC:'success',
+  MEDIA:'purple', ASSOCIATION:'info', ECOSYSTEM:'info', OTHER:'neutral',
 };
-const ORG_TYPES = ['HOLDING','SUBSIDIARY','CUSTOMER','PARTNER','BANK','GOVERNMENT','INVESTOR','SUPPLIER','OTHER'];
+const ORG_TYPES = ['HOLDING','SUBSIDIARY','CUSTOMER','SUPPLIER','PARTNER','COMPETITOR','INVESTOR','BANK','GOVERNMENT','ACADEMIC','MEDIA','ASSOCIATION','ECOSYSTEM','OTHER'];
 const SORTS = [
   { value:'name', label:t('نام سازمان') },
   { value:'health', label:t('وضعیت رابطه (ضعیف‌ترین اول)') },
