@@ -809,4 +809,12 @@ export const EN_DICT_A: Record<string, string> = {
   'داده‌ها': 'Data',
   'داده‌های اصلی': 'Master data',
   'داده‌های اصلی پروفایل': 'Core profile data',
+  'داده‌های فعلی': 'Current data',
+  'داده‌های مبنایی': 'Master data',
+  'داشبورد': 'Dashboard',
+  'داشبورد فرماندهی': 'Command dashboard',
+  'دامنهٔ وب یکسان': 'Duplicate web domain',
+  'دانش': 'Knowledge',
+  'دانشگاهی و پژوهشی': 'Academic & research',
+  'در انتظار': 'Pending',
 };

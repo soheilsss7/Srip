@@ -273,7 +273,8 @@ export default function Page() {
   const [hoverEdge, setHoverEdge] = useState<string | null>(null);
   const [renderCounts, setRenderCounts] = useState({ nodes: 0, edges: 0 });
   const [showLegend, setShowLegend] = useState(true);
-  const [variant, setVariant] = useState<'nested' | 'classic'>('nested'); /* چیدمان گراف: مرحله‌ای (drill-down) | کلاسیک */
+  const [showOrphans, setShowOrphans] = useState(false); /* نمایش سازمان‌های بدون رابطه به‌صورت دسته‌های جمع‌شده */
+  const [netSearch, setNetSearch] = useState(''); /* جستجوی گره در گراف */
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [graphFs, setGraphFs] = useState(false);
   // تمام‌صفحهٔ گراف: Esc می‌بندد و اسکرول پشت آن قفل می‌شود
@@ -592,6 +593,31 @@ export default function Page() {
   }, []);
 
   const orgNodes = graph ? graph.nodes.filter((n) => n.type === 'organization') : [];
+  /* سازمان‌های بدون هیچ رابطهٔ ثبت‌شده — به‌صورت دسته‌های جمع‌شده نمایش داده می‌شوند */
+  const orphanCount = useMemo(() => {
+    if (!graph) return 0;
+    const d = new Set<string>();
+    for (const e of graph.edges) { d.add(e.source); d.add(e.target); }
+    return graph.nodes.filter((n) => n.type === 'organization' && !d.has(n.id)).length;
+  }, [graph]);
+  /* نتایج جستجو در گراف — هالهٔ آبی می‌گیرند؛ «پیدا کن» اولین نتیجه را مرکز نما می‌کند */
+  const searchMatchIds = useMemo(() => {
+    const q = netSearch.trim().toLowerCase();
+    if (!graph || q.length < 2) return null;
+    const s2 = new Set<string>();
+    for (const n of graph.nodes) {
+      if ((nodeDisplayName(n) ?? '').toLowerCase().includes(q)) s2.add(n.id);
+    }
+    return s2.size ? s2 : null;
+  }, [graph, netSearch]);
+  const goSearch = () => {
+    const q = netSearch.trim().toLowerCase();
+    if (!graph || !q) return;
+    const hit = graph.nodes.find((n) => (nodeDisplayName(n) ?? '').toLowerCase().includes(q)) ?? null;
+    if (!hit) { log(t('نتیجه‌ای در گراف یافت نشد')); return; }
+    graphHandle.current?.flyTo(hit.id);
+    log(`${t('نتیجهٔ جستجو در مرکز نما:')} ${nodeDisplayName(hit)}`);
+  };
 
   // ---- Priorities (top real risk edges) ----
   const riskPriorities = useMemo(
@@ -1016,25 +1042,47 @@ export default function Page() {
         <div className="net-graph-shell">
           <div className="net-graph-head">
             <div>
-              <h2>{t('شبکهٔ خوشه‌ای ارتباطات')}</h2>
+              <h2>{t('گراف ارتباطات')}</h2>
               <div className="counts">
-                <b>{fmtNum(renderCounts.nodes)}</b> {t('گره نمایش داده شده ·')} <b>{fmtNum(renderCounts.edges)}</b> پیوند
+                <b>{fmtNum(renderCounts.nodes)}</b> {t('گره نمایش داده شده ·')} <b>{fmtNum(renderCounts.edges)}</b> {t('پیوند')}
+                {orphanCount > 0 && (
+                  <>
+                    {' · '}
+                    <button
+                      className={`net-orphan-toggle ${showOrphans ? 'on' : ''}`}
+                      onClick={() => setShowOrphans((v) => !v)}
+                      title={showOrphans ? t('نهادهای بدون رابطهٔ ثبت‌شده در پایین گراف جمع شده‌اند — کلیک = پنهان‌سازی') : t('نمایش سازمان‌های بدون رابطهٔ ثبت‌شده، دسته‌بندی‌شده بر حسب دستهٔ عموم‌ها')}
+                    >
+                      {fmtNum(orphanCount)} {t('سازمان بدون رابطهٔ ثبت‌شده')} {showOrphans ? '−' : '+'}
+                    </button>
+                  </>
+                )}
                 {orphanEdges > 0 ? <span style={{ color: 'var(--srip-danger)' }}> · {fmtNum(orphanEdges)} پیوندِ نامرتبط حذف شد</span> : null}
               </div>
             </div>
             <div className="net-graph-toolbar">
-              <span className="net-pinch-hint" title={t('چیدمان گراف: مرحله‌ای (شبکهٔ شرکت → مرحله به مرحله) یا کلاسیک (همهٔ سازمان‌ها)')}><Layers size={12}/> {t('چیدمان:')}</span>
-              <button className={`net-btn ${variant === 'nested' ? 'primary' : ''}`} onClick={() => { setVariant('nested'); log(t('چیدمان مرحله‌ای')); }} title={t('خودِ شرکت در مرکز؛ کلیک روی هر سازمان = زیرمجموعه‌ها و روابط آن')}>{t('مرحله‌ای')}</button>
-              <button className={`net-btn ${variant === 'classic' ? 'primary' : ''}`} onClick={() => { setVariant('classic'); log(t('چیدمان کلاسیک')); }} title={t('همهٔ سازمان‌ها به‌صورت خوشه‌ای کامل')}>{t('کلاسیک')}</button>
+              <input
+                className="net-search"
+                type="search"
+                value={netSearch}
+                onChange={(e) => setNetSearch(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') goSearch(); }}
+                placeholder={t('جستجوی سازمان یا شخص…')}
+                aria-label={t('جستجو در گراف')}
+              />
+              <button className="net-btn" onClick={goSearch} disabled={!graph || !netSearch.trim()} title={t('اولین نتیجه را در مرکز نما بیاور')}>{t('پیدا کن')}</button>
+              <button className={`net-btn ${showOrphans ? 'primary' : ''}`} onClick={() => setShowOrphans((v) => !v)} disabled={!graph || orphanCount === 0}
+                title={t('سازمان‌های بدون رابطهٔ ثبت‌شده را به‌صورت دسته‌های جمع‌شده نشان بده (کلیک روی هر دسته = باز شدن اعضا)')}>
+                {t('نهادهای بدون رابطه')}
+              </button>
               <button className="net-btn" onClick={() => graphHandle.current?.fit()} disabled={!graph} title={t('متناسب با نما')}><Maximize size={12}/> {t('متناسب')}</button>
-              <button className="net-btn" onClick={() => graphHandle.current?.reset()} disabled={!graph} title={t('بازنشانی')}>{t('بازنشانی')}</button>
-              <button className="net-btn" onClick={() => graphHandle.current?.zoomBy(1.35)} disabled={!graph} title={t('بزرگ‌نمایی')} aria-label={t('بزرگ‌نمایی')}>+</button>
-              <button className="net-btn" onClick={() => graphHandle.current?.zoomBy(0.74)} disabled={!graph} title={t('کوچک‌نمایی')} aria-label={t('کوچک‌نمایی')}>−</button>
-              <span className="net-pinch-hint" title={t('روی موبایل با دو انگشت زوم کنید؛ دوباره‌لمس روی زمینه هم بزرگ‌نمایی می‌کند')}><Maximize size={12} /> دو انگشت = زوم</span>
+              <button className="net-btn" onClick={() => graphHandle.current?.reset()} disabled={!graph} title={t('بازنشانی نما و چیدمان دستی')}>{t('بازنشانی')}</button>
+              <button className="net-btn" onClick={() => graphHandle.current?.zoomBy(1.35)} disabled={!graph} title={t('بزرگ‌نمایی (روی موبایل: دو انگشت)')} aria-label={t('بزرگ‌نمایی')}>+</button>
+              <button className="net-btn" onClick={() => graphHandle.current?.zoomBy(0.74)} disabled={!graph} title={t('کوچک‌نمایی (روی موبایل: دو انگشت)')} aria-label={t('کوچک‌نمایی')}>−</button>
               <button className="net-btn" onClick={() => setShowLegend(!showLegend)} title={t('نمایش/عدم نمایش راهنما')}>{t('راهنما')}</button>
               {focus ? <button className="net-btn" onClick={clearFocus} title={t('بازگشت به نمای کلی')}>{t('پاک‌کردن تمرکز')}</button> : null}
               <button className="net-btn primary" onClick={() => setGraphFs(true)} disabled={!graph} title={t('نمایش تمام‌صفحهٔ گراف')}><Maximize2 size={13}/> {t('تمام صفحه')}</button>
-              <PresentationMode graph={graph} currentFocus={focus} currentVariant={variant} canWrite={canWriteNetwork} />
+              <PresentationMode graph={graph} currentFocus={focus} currentVariant="nested" canWrite={canWriteNetwork} />
             </div>
           </div>
 
@@ -1169,7 +1217,8 @@ export default function Page() {
               <NetworkGraph
                 ref={graphHandle}
                 graph={graphProp}
-                variant={variant}
+                searchMatchIds={searchMatchIds}
+                showOrphans={showOrphans}
                 selectedNodeId={selected?.id ?? null}
                 selectedEdgeId={selectedEdgeId}
                 focusNodeId={focus || null}
@@ -1206,14 +1255,12 @@ export default function Page() {
           {/* Legend */}
           {showLegend && (
             <div className="net-legend">
-              {variant === 'nested' ? (
-                <div>
-                  <strong>{t('چیدمان مرحله‌ای (مرحله به مرحله)')}</strong>{' '}
-                  <span className="lg">{t('مرکز: خودِ شرکت · راست: زیرمجموعه‌ها و هلدینگ‌های بزرگ · چپ: روابط مستقیم')}</span>
-                  <span className="lg">خط‌های قرمز بالا: عموم‌های بدون رابطهٔ مستقیم — رنگ نقطه = دسته؛ چیپ پایین = فهرست کامل دسته</span>
-                  <span className="lg">کلیک روی سازمان = ورود به شبکهٔ آن (زیرمجموعه‌ها یک‌سو، روابط سوی دیگر) · دابل‌کلیک = صفحهٔ سازمان</span>
-                </div>
-              ) : null}
+              <div>
+                <strong>{t('چگونه بخوانم؟')}</strong>{' '}
+                <span className="lg">{t('مرکز: گره کانونی (پیش‌فرض خودِ شرکت) · هر حلقه = یک پله فاصله · اندازهٔ گره = تعداد ارتباطات')}</span>
+                <span className="lg">{t('کلیک = جزئیات و برجسته‌سازی همسایه‌ها · دابل‌کلیک = صفحهٔ سازمان · کشیدن گره = چیدن دستی · چرخ موس = زوم')}</span>
+                <span className="lg">{t('سازمان‌های بدون رابطهٔ ثبت‌شده با «نهادهای بدون رابطه» به‌صورت دسته‌های جمع‌شده می‌آیند؛ کلیک روی دسته = باز شدن اعضا')}</span>
+              </div>
               <div>
                 <strong>{t('گره‌ها')}</strong>{' '}
                 <span className="lg"><span className="sw" style={{ background: 'linear-gradient(135deg,#6C8FF7,#3B5BDB)', borderRadius: 4 }} />{t('سازمان')}</span>
@@ -1594,13 +1641,12 @@ export default function Page() {
                 <div className="net-fs-title">
                   <Network size={16} />
                   <div>
-                    <b>{t('شبکهٔ خوشه‌ای ارتباطات')}</b>
+                    <b>{t('گراف ارتباطات')}</b>
                     <span className="counts">{fmtNum(renderCounts.nodes)} گره · {fmtNum(renderCounts.edges)} پیوند</span>
                   </div>
                 </div>
                 <div className="net-graph-toolbar">
-                  <button className={`net-btn ${variant === 'nested' ? 'primary' : ''}`} onClick={() => { setVariant('nested'); log(t('چیدمان مرحله‌ای')); }}>{t('مرحله‌ای')}</button>
-                  <button className={`net-btn ${variant === 'classic' ? 'primary' : ''}`} onClick={() => { setVariant('classic'); log(t('چیدمان کلاسیک')); }}>{t('کلاسیک')}</button>
+                  <button className={`net-btn ${showOrphans ? 'primary' : ''}`} onClick={() => setShowOrphans((v) => !v)} disabled={!graph || orphanCount === 0} title={t('سازمان‌های بدون رابطهٔ ثبت‌شده را به‌صورت دسته‌های جمع‌شده نشان بده')}>{t('نهادهای بدون رابطه')}</button>
                   <button className="net-btn" onClick={() => graphHandle.current?.fit()} title={t('متناسب با نما')}><Maximize size={12}/> {t('متناسب')}</button>
                   <button className="net-btn" onClick={() => graphHandle.current?.reset()} title={t('بازنشانی')}>{t('بازنشانی')}</button>
                   <button className="net-btn" onClick={() => graphHandle.current?.zoomBy(1.35)} title={t('بزرگ‌نمایی')} aria-label={t('بزرگ‌نمایی')}>+</button>
@@ -1616,7 +1662,8 @@ export default function Page() {
 <NetworkGraph
                                   ref={graphHandle}
                                   graph={graphProp}
-                                  variant={variant}
+                                  searchMatchIds={searchMatchIds}
+                                  showOrphans={showOrphans}
                                   selectedNodeId={selected?.id ?? null}
                                   selectedEdgeId={selectedEdgeId}
                                   focusNodeId={focus || null}

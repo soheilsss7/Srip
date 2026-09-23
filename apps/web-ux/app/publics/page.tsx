@@ -851,6 +851,19 @@ export default function PublicsPage() {
         }
       />
 
+      {/* خلاصهٔ خودشناسی سازمان — موضوع مأموریت و بازبینی؛ ویرایش در صفحهٔ سازمان */}
+      {selfRow && !loading && (
+        <div className="pubs-self-summary" data-self-summary="true">
+          <span className="ps-label">خودشناسی:</span>
+          <strong>{selfRow.self?.missionTopic || 'مأموریت ثبت نشده'}</strong>
+          {selfRow.template?.fa ? <span className="ps-sep">·</span> : null}
+          {selfRow.template?.fa ? <span>{selfRow.template.fa}</span> : null}
+          <span className="ps-sep">·</span>
+          <span>بازبینی هر {new Intl.NumberFormat('fa-IR').format(selfRow.self?.reviewIntervalDays ?? 90)} روز</span>
+          <a className="ps-edit" href={`/organizations/${(selfRow.orgId ?? orgId ?? '').replace(/^org:/, '')}`}>ویرایش در صفحهٔ سازمان ←</a>
+        </div>
+      )}
+
       {flash && <div className="notice success" role="status">{flash}</div>}
       {error && <ErrorCard message={error} />}
       {loading && <Loading label="در حال بارگذاری نقشهٔ عموم‌ها…" />}

@@ -900,7 +900,26 @@ textarea{resize:vertical}
 
 .net-graph-zone{position:relative;background:var(--bg-canvas);aspect-ratio:800/400;min-height:330px;overflow:hidden}
 .net-graph-zone::before{content:'';position:absolute;inset:0;background-image:radial-gradient(var(--card-border-strong) 1px,transparent 1px);background-size:22px 22px;opacity:.5;pointer-events:none}
+.pubs-self-summary{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0 0;font-size:12px;color:var(--text-secondary);
+  background:var(--card-bg);border:1px solid var(--card-border);border-radius:10px;padding:9px 13px}
+.pubs-self-summary .ps-label{font-weight:800;color:var(--text-muted)}
+.pubs-self-summary strong{color:var(--text-primary)}
+.pubs-self-summary .ps-sep{color:var(--card-border-strong)}
+.pubs-self-summary .ps-edit{margin-inline-start:auto;font-size:11.5px;font-weight:700;color:var(--srip-accent-text,#4338CA);text-decoration:none}
+.pubs-self-summary .ps-edit:hover{text-decoration:underline}
+
 .net-hover-line{font-size:11.5px;color:var(--text-muted);padding:9px 16px;border-top:1px solid var(--card-border);min-height:36px;line-height:1.8}
+/* جستجوی گراف + کلید سازمان‌های بدون رابطه */
+.net-search{min-height:33px;border:1px solid var(--card-border-strong);border-radius:9px;background:var(--card-bg);
+  color:var(--text-primary);font-size:12px;padding:0 10px;min-width:170px;outline:none}
+.net-search:focus{border-color:var(--srip-accent)}
+.net-orphan-toggle{border:none;background:none;color:var(--srip-accent-text,#4338CA);font-weight:800;font-size:11.5px;
+  cursor:pointer;padding:0;border-bottom:1px dashed var(--srip-accent-text,#4338CA)}
+.net-orphan-toggle:hover{opacity:.8}
+.net-orphan-toggle.on{color:var(--srip-success,#0E9F6E);border-bottom-color:var(--srip-success,#0E9F6E)}
+/* مسیر سازمانی روی گراف — خط کهربایی متحرک */
+.net-edge-path{animation:net-dash .9s linear infinite}
+@keyframes net-dash{to{stroke-dashoffset:-15}}
 
 /* ابزار مسیر */
 .net-path-tool{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:11px 16px;

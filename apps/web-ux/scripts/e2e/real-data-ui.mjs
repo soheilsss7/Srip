@@ -51,7 +51,7 @@ try {
   await new Promise(r => setTimeout(r, 2500));
   // انتخاب سازمان پارس از منوی سازمان
   const switched = await page.evaluate(() => {
-    const sel = document.querySelector('select');
+    const sel = document.querySelector('select[aria-label="سازمان"]');
     if (!sel) return false;
     const opt = [...sel.options].find(o => (o.textContent ?? '').includes('هلدینگ پارس'));
     if (!opt) return false;
@@ -63,8 +63,8 @@ try {
   await new Promise(r => setTimeout(r, 3000));
   const pubTxt = await page.evaluate(() => document.body.textContent ?? '');
   ok('هدف: «مرجعیت هوش مصنوعی کشور»', await page.evaluate(() => {
-    const inp = [...document.querySelectorAll('input')].find(i => (i.value ?? '').includes('مرجعیت هوش مصنوعی کشور'));
-    return !!inp;
+    const sum = document.querySelector('[data-self-summary]');
+    return !!sum && (sum.textContent ?? '').includes('مرجعیت هوش مصنوعی کشور');
   }));
   ok('قالب: هلدینگ و سرمایه‌گذاری چندبخشی', pubTxt.includes('هلدینگ و سرمایه‌گذاری چندبخشی'));
   ok('۶ دستهٔ عموم در جدول', await page.evaluate(() => {
@@ -87,6 +87,7 @@ try {
   // 5) شبکه: گراف شامل پارس + نهادها + یال‌های ساختاری
   await page.goto(`${BASE}/network`, { waitUntil: 'networkidle0', timeout: 90000 });
   await new Promise(r => setTimeout(r, 5000));
+  /* گراف بازسازی‌شده: نمای پیش‌فرض فقط ساختار واقعی؛ عموم‌های سند در دسته‌های جمع‌شده */
   const netInfo = await page.evaluate(() => {
     const svg = document.querySelector('.net-graph-zone svg');
     const labels = svg ? [...svg.querySelectorAll('text')].map(t => t.textContent ?? '') : [];
@@ -94,23 +95,24 @@ try {
     return {
       hasPars: all.includes('هلدینگ پارس'),
       hasEgoX: all.includes('شرکت x'),
-      redCount: svg ? svg.querySelectorAll('[data-redline]').length : 0,
-      sectorChips: svg ? svg.querySelectorAll('[data-sector]').length : 0,
-      textCount: labels.filter(t => t.trim().length > 2).length,
+      nodes: svg ? svg.querySelectorAll('g[data-node]').length : 0,
+      stacks: svg ? svg.querySelectorAll('g[data-stack]').length : 0,
+      orphanToggle: document.querySelector('.net-orphan-toggle')?.textContent ?? '',
     };
   });
   ok('گراف شبکه: هلدینگ پارس حاضر است', netInfo.hasPars);
   ok('گراف شبکه: خودِ شرکت (شرکت x) در مرکز', netInfo.hasEgoX);
-  ok('گراف شبکه: عموم‌های سند به‌صورت خط قرمز', netInfo.redCount >= 60, 'red=' + netInfo.redCount);
-  ok('گراف شبکه: چیپ دسته‌های عموم', netInfo.sectorChips >= 4, 'chips=' + netInfo.sectorChips);
-  /* نهادهای عموم سند: نامشان در پنل دستهٔ «نهادی» */
-  await page.evaluate(() => {
-    const g = document.querySelector('[data-sector="INSTITUTIONAL"]');
-    g?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-  });
-  await new Promise(r => setTimeout(r, 900));
-  const panelTxt = await page.evaluate(() => document.querySelector('[data-tray-panel]')?.textContent ?? '');
-  ok('گراف شبکه: نهادهای عموم سند (پنل دسته)', panelTxt.includes('شورای ملی') || panelTxt.includes('وزارت') || panelTxt.includes('معاونت'), panelTxt.slice(0, 50));
+  ok('گراف شبکه: نمای تمیز — ۱۴ گره (نه ۸۱ حباب پراکنده)', netInfo.nodes === 14, 'n=' + netInfo.nodes);
+  ok('گراف شبکه: شمار «۶۷ سازمان بدون رابطه» پیشنهاد نمایش', netInfo.orphanToggle.includes('۶۷'), netInfo.orphanToggle.trim());
+  await page.evaluate(() => { [...document.querySelectorAll('.net-graph-toolbar .net-btn')].find(b => (b.textContent ?? '').includes('نهادهای بدون رابطه'))?.click(); });
+  await new Promise(r => setTimeout(r, 2200));
+  const stacksInfo = await page.evaluate(() => [...document.querySelectorAll('g[data-stack]')].map(g => (g.textContent ?? '').trim()));
+  ok('گراف شبکه: دسته‌های جمع‌شدهٔ عموم (۴ دسته)', stacksInfo.length === 4 && stacksInfo.some(x => x.includes('نهادی')) && stacksInfo.some(x => x.includes('رسانه') || x.includes('اکوسیستم')), JSON.stringify(stacksInfo));
+  /* نهادهای عموم سند: باز کردن دستهٔ «نهادی» → نام نهادها با برچسب */
+  await page.evaluate(() => document.querySelector('g[data-stack="INSTITUTIONAL"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  await new Promise(r => setTimeout(r, 1600));
+  const panelTxt = await page.evaluate(() => [...document.querySelectorAll('g[data-node]')].map(g => g.textContent ?? '').join(' | '));
+  ok('گراف شبکه: نهادهای عموم سند (اعضای دستهٔ نهادی)', panelTxt.includes('شورای ملی') || panelTxt.includes('وزارت') || panelTxt.includes('معاونت'), panelTxt.slice(0, 50));
   /* رنگ‌بندی دسته‌های عموم روی نهادهای سند (pubCatOfOrg از sourceId) */
   const colored = await page.evaluate(() => {
     const raw = document.querySelector('[data-categorized-count]')?.textContent ?? '0';
@@ -140,8 +142,8 @@ try {
   await page2.goto(`${BASE}/publics`, { waitUntil: 'networkidle0', timeout: 90000 });
   await new Promise(r => setTimeout(r, 3000));
   ok('مشتری پارس: نقشهٔ عموم‌های خودش (هدف «مرجعیت هوش مصنوعی کشور»)', await page2.evaluate(() => {
-    const inp = [...document.querySelectorAll('input')].find(i => (i.value ?? '').includes('مرجعیت هوش مصنوعی کشور'));
-    return !!inp;
+    const sum = document.querySelector('[data-self-summary]');
+    return !!sum && (sum.textContent ?? '').includes('مرجعیت هوش مصنوعی کشور');
   }));
   await page2.close();
 

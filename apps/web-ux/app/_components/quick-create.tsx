@@ -335,7 +335,7 @@ export function QuickCreate({open,onClose}:{open:boolean;onClose:()=>void}){
           </div>
         </div>
       ))}
-      <button className="primary-action" disabled={busy}>{busy?t('در حال ثبت…'):t('ایجاد')+entity.label}</button>
+      <button className="primary-action" disabled={busy}>{busy ? t('در حال ثبت…') : `${t('ایجاد')} ${entity.label}`}</button>
     </form>
     {msg&&<div className={msg.ok?'status-message ok':'status-message err'} role="status">{msg.text}</div>}
    </section>

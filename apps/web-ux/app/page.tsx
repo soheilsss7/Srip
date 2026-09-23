@@ -114,6 +114,14 @@ export default function Dashboard() {
     try { if (!localStorage.getItem('srip2_tour_done')) setTour(1); } catch {}
   }, [loading]);
   const finishTour = () => { try { localStorage.setItem('srip2_tour_done', '1'); } catch {} setTour(0); };
+  /* بستن تور با Esc — بدون آن، لایهٔ تمام‌صفحهٔ تور دکمه‌های سربرگ (مثل تغییر زبان) را می‌پوشاند */
+  useEffect(() => {
+    if (tour <= 0) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') finishTour(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tour > 0]);
 
   useEffect(() => {
     let alive = true;
@@ -571,7 +579,13 @@ export default function Dashboard() {
         </div>
       </section>
       {tour > 0 && (
-        <div className="tour-overlay" role="dialog" aria-modal="true" aria-label={t('تور خوش‌آمد')}>
+        <div
+          className="tour-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t('تور خوش‌آمد')}
+          onClick={(e) => { if (e.target === e.currentTarget) finishTour(); /* کلیک روی پس‌زمینهٔ تیره = بستن */ }}
+        >
           <div className="tour-card">
             <span className="tour-step">گام {tour} از ۳</span>
             {tour === 1 && (<>

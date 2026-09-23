@@ -44,14 +44,14 @@ export interface GGraph {
 
 /* P3: رنگ دسته‌های عموم‌ها — هم‌راستا با PUBLICS-MASTER-PLAN (۶ دسته) */
 export const PUBLIC_CATEGORY_ORDER = ['INTERNAL', 'INSTITUTIONAL', 'ACADEMIC', 'ECONOMIC', 'MEDIA', 'ECOSYSTEM'] as const;
-export const PUBLIC_CATEGORY_META: Record<string, { fa: string; color: string }> = {
+export const PUBLIC_CATEGORY_META: Record<string, { fa: string; color: string }> = lt({
   INTERNAL:      { fa: t('داخلی'),                       color: '#2457D6' },
   INSTITUTIONAL: { fa: t('نهادی و حاکمیتی'),              color: '#7A5AF8' },
   ACADEMIC:      { fa: t('علمی، دانشگاهی و پژوهشی'),     color: '#0E9F6E' },
   ECONOMIC:      { fa: t('اقتصادی و سرمایه‌گذاری'),      color: '#B45309' },
   MEDIA:         { fa: t('رسانه‌ای و عمومی'),             color: '#DC2626' },
   ECOSYSTEM:     { fa: t('اکوسیستم فناوری و صنعت'),      color: '#0891B2' },
-};
+});
 export const EGO_COLOR = '#D97706';
 export const EGO_FA = t('خودِ شرکت');
 export function nodeCategoryColor(n: GNode): string | null {
