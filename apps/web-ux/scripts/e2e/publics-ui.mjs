@@ -75,6 +75,14 @@ try {
   await new Promise(r => setTimeout(r, 900));
   ok('ماتریس: عنوان بخش', await waitForText('ماتریس نفوذ × حمایت'));
   ok('ماتریس: نقطه‌های اعضا روی نمودار', await page.evaluate(() => document.querySelectorAll('[role="application"] button').length >= 5), 'dots=' + await page.evaluate(() => document.querySelectorAll('[role="application"] button').length));
+  ok('ماتریس: کارت‌های راهنمای ناحیه (متحدان کلیدی/قدرتمندان محتاط)', await waitForText('متحدان کلیدی') && await waitForText('قدرتمندان محتاط'));
+  ok('ماتریس: برچسب محورهای حمایت و نفوذ', await waitForText('حمایت (علاقه)') && await waitForText('نفوذ (قدرت)'));
+  ok('ماتریس: آستانهٔ نواحی = همان موتور (۶۰)', await page.evaluate(() => (document.body.textContent ?? '').includes('آستانه')));
+  ok('ماتریس: علائم اختصاری اعضا داخل نقطه‌ها', await page.evaluate(() => {
+    const dots = [...document.querySelectorAll('[role="application"] button')];
+    return dots.length >= 5 && dots.every(b => (b.textContent ?? '').trim().length > 0);
+  }));
+  ok('ماتریس: شمار اعضای هر ناحیه روی بوم', await page.evaluate(() => [...document.querySelectorAll('[role="application"] span')].some(x => /عضو|·\s*\d+/.test(x.textContent ?? '')) || (document.body.textContent ?? '').includes('عضو ·')));
 
   // 3) شناسنامهٔ سازمان در پروفایل خود سازمان
   await page.goto(`${BASE}/organizations/org-1`, { waitUntil: 'networkidle0', timeout: 60000 });
@@ -88,7 +96,11 @@ try {
   // 4) members tab
   await clickByText('button[role="tab"]', 'اعضا و ارزیابی');
   await new Promise(r => setTimeout(r, 800));
-  ok('matrix', await page.evaluate(() => (document.body.textContent ?? '').includes('ماتریس قدرت')));
+  ok('members: خلاصهٔ تحلیل مواضع (به‌جای ماتریس تکراری)', await waitForText('خلاصهٔ تحلیل مواضع'));
+  ok('members: نقشهٔ ۲×۲ نواحی با شمار', await page.evaluate(() => (document.body.textContent ?? '').includes('متحدان کلیدی') && (document.body.textContent ?? '').includes('ناظران')));
+  ok('members: دکمهٔ پرش به ماتریس کامل', await page.evaluate(() => [...document.querySelectorAll('button')].some(b => (b.textContent ?? '').includes('ماتریس کامل نفوذ × حمایت'))));
+  ok('members: ستون قابل مرتب‌سازی نفوذ/حمایت', await page.evaluate(() => [...document.querySelectorAll('th button')].some(b => (b.textContent ?? '').includes('نفوذ / حمایت'))));
+  ok('members: نوار سنجهٔ نفوذ/حمایت در جدول', await page.evaluate(() => (document.body.textContent ?? '').includes('نفوذ') && (document.body.textContent ?? '').includes('حمایت')));
   const memberRows0 = await page.evaluate(() => document.querySelectorAll('.table-wrap tbody tr').length);
   ok('seed members 14', memberRows0 === 14, 'rows=' + memberRows0);
 

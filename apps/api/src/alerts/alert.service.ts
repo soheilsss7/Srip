@@ -12,7 +12,7 @@ import { AuditService } from '../audit/audit.service';
    INTEGRATION-PLAN.md فاز ۳ — هیچ آستانه‌ای تغییر نکرده):
 
    RELATIONSHIP: سلامت < ۵۵ → WARNING · ریسک ≥ ۴۰ → CRITICAL ·
-                 کیدنس شکسته (بدون تعامل بیش از cadence+۲۰ روز) → CRITICAL/WARNING
+                 آهنگ ارتباط از دست رفته (بدون تعامل بیش از cadence+۲۰ روز) → CRITICAL/WARNING
    ACTION/COMMITMENT: overdue → CRITICAL · dueSoon (≤۷ روز) → WARNING
    (تشخیص‌گرهای PUBLICS/MEETING/WORKFLOW/DATA_QUALITY/SECURITY/MONITORING
    در Sprint 2 به همین سرویس اضافه می‌شوند — فقط detector جدید، بدون UI جدید.)
@@ -121,14 +121,14 @@ export class AlertService {
         if (stale > cadence + 20) {
           created.push({
             module: AlertModuleEnum.RELATIONSHIP, severity: AlertSeverity.CRITICAL, entityType: 'RELATIONSHIP', entityId: rel.id,
-            title: `کیدنس شکسته: ${label}`,
+            title: `آهنگ ارتباط از دست رفته: ${label}`,
             reason: `${stale} روز بدون تعامل (هدف ${cadence} روز).`,
             actionLabel: 'ثبت تعامل', actionUrl: `/relationships/${rel.id}`,
           });
         } else if (stale > cadence) {
           created.push({
             module: AlertModuleEnum.RELATIONSHIP, severity: AlertSeverity.WARNING, entityType: 'RELATIONSHIP', entityId: rel.id,
-            title: `کیدنس عقب‌افتاده: ${label}`,
+            title: `آهنگ ارتباط عقب‌افتاده: ${label}`,
             reason: `${stale} روز بدون تعامل (هدف ${cadence} روز).`,
             actionLabel: 'ثبت تعامل', actionUrl: `/relationships/${rel.id}`,
           });

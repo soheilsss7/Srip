@@ -19,7 +19,7 @@ const PORT = Number(process.env.MOCK_API_PORT || 4000);
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.24.01';
+const DEMO_MOCK_VERSION = '2026.09.24.03';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -183,7 +183,7 @@ let RELS = [
     marketKind:'HYBRID', isMarketEntry:false, marketSegment:'درون‌هلدینگی — حوزهٔ کاری',
   })),
 ];
-/* کیدنس دمو بر اساس نوع رابطه (P0-4) */
+/* آهنگ ارتباط دمو بر اساس نوع رابطه (P0-4) */
 [['r-1',30],['r-2',30],['r-3',45],['r-4',30],['r-5',60],['r-6',30]].forEach(([id,cd])=>{const r=RELS.find(v=>v.id===id); if(r) r.cadenceDays=cd;});
 /* فاز ۲ (ADR-0006): اعتماد و تعامل — دو فاکتور باقی‌ماندهٔ فرمول امتیاز مرکب (additive) */
 [['r-1',74,68],['r-2',58,61],['r-3',66,55],['r-4',42,38],['r-5',80,72],['r-6',88,84],['r-7',52,47],['r-8',64,58]].forEach(([id,tr,en])=>{const r=RELS.find(v=>v.id===id); if(r){ r.trustScore??=tr; r.engagementScore??=en; }});
@@ -355,7 +355,7 @@ const REF_REQUEST_STATUS_LIST=['REQUESTED','RESPONDED_YES','RESPONDED_NO','NO_RE
 const REF_OUTCOME_LIST=['MEET_BOOKED','NO_REPLY','DECLINED','منفی_FIT'];
 /* --------------------- منبع فرصت (P0-5) --------------------- */
 const OPPORTUNITY_SOURCE_LIST=['REFERRAL','EXISTING_RELATIONSHIP','EVENT','COLD'];
-/* کیدنس هدف بر اساس نوع رابطه (P0-4): چند روز یک بار باید تعامل معنادار ثبت شود */
+/* آهنگ ارتباط هدف بر اساس نوع رابطه (P0-4): چند روز یک بار باید تعامل معنادار ثبت شود */
 const CADENCE_DEFAULT={STRATEGIC_PARTNERSHIP:30,BANKING:30,CUSTOMER:45,SUPPLY:30,INVESTMENT:60,PARENT_SUBSIDIARY:30,OTHER:60};
 function relCadence(r){
   const cadenceDays=r.cadenceDays??CADENCE_DEFAULT[r.relationshipType]??60;
@@ -367,7 +367,7 @@ function relCadence(r){
 }
 
 const orgById=(id)=>ORGS.find(o=>o.id===id);
-/* P0-1 دقت: ثبت/ویرایش تعامل باید روی رابطهٔ پیوند اثر بگذارد تا کیدنس واقعی شود. */
+/* P0-1 دقت: ثبت/ویرایش تعامل باید روی رابطهٔ پیوند اثر بگذارد تا آهنگ ارتباط واقعی شود. */
 function applyInteractionToRel(rel, x){
   if(!rel) return;
   const at=x.occurredAt??nowIso();
@@ -429,7 +429,7 @@ function relationshipAlertItems(req){
     }
     if(r.marketKind==='HYBRID' && (r.healthScore??100) < 50) alerts.push({id:`a-${r.id}-hyb`, relationshipId:r.id, tone:'warning', kind:'HYBRID_RISK', title:'رابطهٔ دوگانه ناپایدار', body:`«${name}» (هیبرید — هم بازار، هم نهاد) نیازمند مراقبت دوگانه است.`, marketKind:r.marketKind, health:r.healthScore});
     if(daysStale > cad && r.status==='ACTIVE' && !alerts.some(a=>a.relationshipId===r.id && a.kind.includes('STALE'))){
-      alerts.push({id:`a-${r.id}-cad`, relationshipId:r.id, tone: daysStale>cad+20?'danger':'warning', kind:'CADENCE_BREAK', title:'کیدنس شکسته', body:`«${name}» ${faN(daysStale)} روز بدون تعامل (هدف ${faN(cad)} روز).`, daysStale, cadence:cad, marketKind:r.marketKind, segment:r.marketSegment});
+      alerts.push({id:`a-${r.id}-cad`, relationshipId:r.id, tone: daysStale>cad+20?'danger':'warning', kind:'CADENCE_BREAK', title:'آهنگ ارتباط از دست رفته', body:`«${name}» ${faN(daysStale)} روز بدون تعامل (هدف ${faN(cad)} روز).`, daysStale, cadence:cad, marketKind:r.marketKind, segment:r.marketSegment});
     }
   }
   const segments = [...new Set(rels.filter(r=>r.marketKind==='MARKET').map(r=>r.marketSegment).filter(Boolean))];
@@ -558,8 +558,8 @@ function riskDrivers(req, r){
   if(r.status==='WATCH') push('warning','تحت نظر (WATCH)','وضعیت رابطه توسط مالک/مدیر روابط به نظارت فعال درآمده است.');
   {
     const cad=relCadence(r);
-    if(cad.status==='CRITICAL') push('critical','کیدنس رابطه شکسته',`آخرین تعامل ${cad.daysSinceLastInteraction} روز پیش؛ هدف ${cad.cadenceDays} روز — بیش از ۲ برابر عقب است.`);
-    else if(cad.status==='WARN') push('warning','کیدنس رابطه عقب افتاده',`آخرین تعامل ${cad.daysSinceLastInteraction} روز پیش؛ هدف ${cad.cadenceDays} روز است.`);
+    if(cad.status==='CRITICAL') push('critical','آهنگ ارتباط رابطه از دست رفته',`آخرین تعامل ${cad.daysSinceLastInteraction} روز پیش؛ هدف ${cad.cadenceDays} روز — بیش از ۲ برابر عقب است.`);
+    else if(cad.status==='WARN') push('warning','آهنگ ارتباط رابطه عقب افتاده',`آخرین تعامل ${cad.daysSinceLastInteraction} روز پیش؛ هدف ${cad.cadenceDays} روز است.`);
   }
   if(r.nextActionAt&&new Date(r.nextActionAt).getTime()<now) push('warning','قدمِ برنامه‌ریزی‌شده عقب افتاده',`قدم بعدی برای ${faDate(r.nextActionAt)} تعیین شده و هنوز انجام نشده است.`);
   const openActs=scopedActions(req).filter(a=>a.relationshipId===r.id&&['OPEN','IN_PROGRESS','BLOCKED'].includes(a.status));
@@ -1140,7 +1140,7 @@ function networkColumns(req){
 /* ============================== P2 — هوشمندی ============================== */
 /* --------------------------------------------------------------------------
    P2-1 NBA: صف «قدم بعدی» — باید الان/امروز/این هفته + کانال + بازده + چرا
-   خانوادهٔ اولویت‌ها: موعدگذشته → ریسک بدون پوشش → کیدنس → فرصت بزرگ → برنامه
+   خانوادهٔ اولویت‌ها: موعدگذشته → ریسک بدون پوشش → آهنگ ارتباط → فرصت بزرگ → برنامه
    -------------------------------------------------------------------------- */
 const PRIO_FA={LOW:'کم',MEDIUM:'متوسط',HIGH:'بالا',CRITICAL:'بحرانی'};
 const NBA_URGENCY={NOW:'باید الان',TODAY:'امروز',WEEK:'این هفته'};
@@ -1183,12 +1183,12 @@ function nbaView(req){
       urgency:'NOW',channel:'MEETING',expectedValue:relOpps.reduce((s,o)=>s+evOf(o),0),
       why:[`ریسک ${r.riskScore} · سلامت ${r.healthScore} · تاب‌آوری ${r.resilienceScore}`,r.status==='WATCH'?'رابطه در وضعیت «تحت نظر»':'فرصت‌های باز این رابطه در معرض ریسک‌اند']});
   });
-  /* ۳) کیدنس عقب/شکسته */
+  /* ۳) آهنگ ارتباط عقب/شکسته */
   rels.forEach(r=>{ const cad=relCadence(r); if(cad.status==='FRESH')return;
     add({key:`cad-${r.id}`,id:`nba-cad-${r.id}`,kind:'CADENCE',refId:r.id,relationshipId:r.id,relationshipName:relName(r.id),
-      title:`تعامل با ${relName(r.id)??r.id}`,text:`آخرین تعامل ${cad.daysSinceLastInteraction} روز پیش ثبت شده؛ هدف کیدنس ${cad.cadenceDays} روز است`,
+      title:`تعامل با ${relName(r.id)??r.id}`,text:`آخرین تعامل ${cad.daysSinceLastInteraction} روز پیش ثبت شده؛ هدف آهنگ ارتباط ${cad.cadenceDays} روز است`,
       urgency:cad.status==='CRITICAL'?'TODAY':'WEEK',channel:'EMAIL',expectedValue:null,
-      why:[`${cad.daysSinceLastInteraction} روز سکوت`,cad.status==='CRITICAL'?'کیدنس شکسته':'کیدنس عقب افتاده']});
+      why:[`${cad.daysSinceLastInteraction} روز سکوت`,cad.status==='CRITICAL'?'آهنگ ارتباط از دست رفته':'آهنگ ارتباط عقب افتاده']});
   });
   /* ۴) فرصت‌های بزرگ — گام بعدی */
   opps.sort((a,b)=>evOf(b)-evOf(a)).slice(0,3).forEach(o=>{
@@ -1417,13 +1417,13 @@ function benchmarkView(req){
     const pct=peers.length?Math.round(peers.filter(v=>v<=(r.healthScore??0)).length/peers.length*100):null;
     const recs=[];
     const cad=relCadence(r);
-    if(cad.status==='CRITICAL') recs.push({key:'CADENCE',text:`کیدنس تعامل قطع شده (${cad.daysSinceLastInteraction} روز؛ هدف ${cad.cadenceDays}) — جلسهٔ احیا پیشنهاد می‌شود`});
-    else if(cad.status==='WARN') recs.push({key:'CADENCE',text:`کیدنس عقب افتاده (${cad.daysSinceLastInteraction} روز؛ هدف ${cad.cadenceDays}) — زمان‌بندی تعامل بعدی را قطعی کنید`});
+    if(cad.status==='CRITICAL') recs.push({key:'CADENCE',text:`آهنگ ارتباط قطع شده (${cad.daysSinceLastInteraction} روز؛ هدف ${cad.cadenceDays}) — جلسهٔ احیا پیشنهاد می‌شود`});
+    else if(cad.status==='WARN') recs.push({key:'CADENCE',text:`آهنگ ارتباط عقب افتاده (${cad.daysSinceLastInteraction} روز؛ هدف ${cad.cadenceDays}) — زمان‌بندی تعامل بعدی را قطعی کنید`});
     if(med!=null&&gap<=-10) recs.push({key:'BELOW_MEDIAN',text:`سلامت ${Math.abs(gap)} واحد زیر میانهٔ دستهٔ «${REL_CLASS_LABELS[cls]}» — بازبینی برنامهٔ رابطه`});
     const conc=interactionConcentration(r.id);
     if(conc.total>=3&&conc.topShare>=70) recs.push({key:'CONCENTRATION',text:`${conc.topShare}٪ تعاملات فقط از طریق «${conc.top?.name??'—'}» — نقطهٔ تماس دوم بسازید`});
     if((r.resilienceScore??0)<50) recs.push({key:'RESILIENCE',text:'تاب‌آوری زیر ۵۰ — وابستگی‌های تک‌منبعی را متنوع کنید'});
-    if(!recs.length) recs.push({key:'ON_PAR',text:'هم‌تراز میانهٔ دسته — تداوم کیدنس فعلی کافی است'});
+    if(!recs.length) recs.push({key:'ON_PAR',text:'هم‌تراز میانهٔ دسته — تداوم آهنگ ارتباط فعلی کافی است'});
     rows.push({relationshipId:r.id,
       relationshipName:`${orgById(r.sourceOrganizationId)?.name??'—'} ↔ ${orgById(r.targetOrganizationId)?.name??'—'}`,
       classKey:cls,classLabel:REL_CLASS_LABELS[cls],
@@ -1464,8 +1464,8 @@ function meetingBriefView(m){
     if(selfOrg) publicsCriticalGaps=pubGaps(selfOrg).gaps.filter(g=>g.severity==='CRITICAL').slice(0,3);
   }catch{ publicsCriticalGaps=[]; }
   const recommendations=[];
-  if(cad&&cad.status==='CRITICAL') recommendations.push('کیدنس رابطه شکسته است — جلسه را با مرور شفاف وضعیت آغاز کنید و برنامهٔ جبرانی بدهید');
-  if(cad&&cad.status==='WARN') recommendations.push('کیدنس عقب افتاده — در جلسه روی زمان‌بندی تعامل بعدی توافق قطعی بگیرید');
+  if(cad&&cad.status==='CRITICAL') recommendations.push('آهنگ ارتباط رابطه از دست رفته است — جلسه را با مرور شفاف وضعیت آغاز کنید و برنامهٔ جبرانی بدهید');
+  if(cad&&cad.status==='WARN') recommendations.push('آهنگ ارتباط عقب افتاده — در جلسه روی زمان‌بندی تعامل بعدی توافق قطعی بگیرید');
   if(conc&&conc.total>=3&&conc.topShare>=70) recommendations.push(`رابطه متکی به «${conc.top?.name??'—'}» است (${conc.topShare}٪ تعاملات) — معرفی همکار دوم را هدف جلسه کنید`);
   if(participants.some(p=>p.champion)) recommendations.push('حامی (champion) در این جلسه حاضر است — از او برای یک تعهد مشخص دعوت کنید');
   if(openCommitments.length) recommendations.push(`${openCommitments.length} تعهد باز از جلسات پیشین — ابتدا وضعیت آن‌ها را پیگیری کنید`);
@@ -3186,7 +3186,7 @@ function qbrBriefFor(req,orgId){
   if(toneCount(menCur,'NEGATIVE')>0) recommendations.push('پاسخ رسمی به پوشش رسانه‌ای منفی و ثبت آن در کارت پوشش.');
   if(subsWin.length&&!slaBreaches.length) recommendations.push('حفظ روند پاسخ‌گویی پورتال عمومی در چارچوب SLA.');
   if(slaBreaches.length) recommendations.push(`بازگرداندن ${faN(slaBreaches.length)} پیام پورتال به داخل مهلت SLA.`);
-  if(actsCur.length<actsPrev.length) recommendations.push('افزایش کیدنس تعاملات — تعداد تعاملات این فصل کمتر از فصل قبل است.');
+  if(actsCur.length<actsPrev.length) recommendations.push('افزایش آهنگ تعاملات — تعداد تعاملات این فصل کمتر از فصل قبل است.');
   if(!recommendations.length) recommendations.push('روند فصل پایدار است — تمرکز بر تعالی رابطه‌های پرارزش و ثبت تعاملات.');
   return {
     organizationId:orgId,organizationName:org?org.name:orgId,engine:'deterministic',
@@ -7763,8 +7763,8 @@ const server=http.createServer(async(req,res)=>{
       if(r.status==='WATCH') evidence.push({type:'RELATIONSHIP_WATCH',refId:r.id,title:'رابطه در وضعیت «تحت نظر» قرار دارد',at:null});
       if(r.healthScore<45) evidence.push({type:'سلامت پایین',refId:r.id,title:`سلامت رابطه ${r.healthScore} از ۱۰۰ — زیر آستانهٔ ۴۵`,at:null});
       const cad=relCadence(r);
-      if(cad.status==='CRITICAL') evidence.push({type:'CADENCE_BREACH',refId:r.id,title:`کیدنس شکسته: آخرین تعامل ${cad.daysSinceLastInteraction} روز پیش (هدف ${cad.cadenceDays})`,at:r.lastInteractionAt});
-      else if(cad.status==='WARN') evidence.push({type:'CADENCE_BREACH',refId:r.id,title:`کیدنس عقب افتاده: آخرین تعامل ${cad.daysSinceLastInteraction} روز پیش (هدف ${cad.cadenceDays})`,at:r.lastInteractionAt});
+      if(cad.status==='CRITICAL') evidence.push({type:'CADENCE_BREACH',refId:r.id,title:`آهنگ ارتباط از دست رفته: آخرین تعامل ${cad.daysSinceLastInteraction} روز پیش (هدف ${cad.cadenceDays})`,at:r.lastInteractionAt});
+      else if(cad.status==='WARN') evidence.push({type:'CADENCE_BREACH',refId:r.id,title:`آهنگ ارتباط عقب افتاده: آخرین تعامل ${cad.daysSinceLastInteraction} روز پیش (هدف ${cad.cadenceDays})`,at:r.lastInteractionAt});
       /* مسترپلن فاز ۱/۲: تمرکز رابطه در یک نفر (Introhive) */
       const concEv=interactionConcentration(r.id);
       if(concEv.total>=3&&concEv.topShare>=70) evidence.push({type:'CONCENTRATION',refId:r.id,title:`تمرکز رابطه: ${concEv.topShare}٪ تعاملات از طریق «${concEv.top?.name??'—'}»`,at:null});
@@ -7813,7 +7813,7 @@ const server=http.createServer(async(req,res)=>{
       if((r.healthScore??0)<60) gaps.push({type:'سلامت پایین',title:`سلامت ${r.healthScore} زیر آستانهٔ ۶۰`});
       if(openComs.some(c=>c.status==='OVERDUE')) gaps.push({type:'OVERDUE_COMMITMENT',title:'تعهد عقب‌افتاده دارد'});
       const cad=relCadence(r);
-      if(cad.status!=='FRESH') gaps.push(cad.status==='CRITICAL'?{type:'CADENCE_BREAK',title:`کیدنس شکسته: ${cad.daysSinceLastInteraction} روز (هدف ${cad.cadenceDays})`}:{type:'CADENCE_WARN',title:`کیدنس عقب افتاده: ${cad.daysSinceLastInteraction} روز (هدف ${cad.cadenceDays})`});
+      if(cad.status!=='FRESH') gaps.push(cad.status==='CRITICAL'?{type:'CADENCE_BREAK',title:`آهنگ ارتباط از دست رفته: ${cad.daysSinceLastInteraction} روز (هدف ${cad.cadenceDays})`}:{type:'CADENCE_WARN',title:`آهنگ ارتباط عقب افتاده: ${cad.daysSinceLastInteraction} روز (هدف ${cad.cadenceDays})`});
       return {id:r.id,name:relName(r),status:r.status,strategicScore:r.strategicScore,healthScore:r.healthScore,
         criteria:safeCriteriaLite('RELATIONSHIP',r.id),
         resilienceScore:r.resilienceScore,riskScore:r.riskScore,opportunityScore:r.opportunityScore,
@@ -8572,7 +8572,7 @@ const server=http.createServer(async(req,res)=>{
     const r=RELS.find(x=>x.id===relPatch[0]);
     if(!r) return json(res,404,{message:'رابطه یافت نشد'});
     const b=await readBody(req);
-    if(b.cadenceDays!==undefined){const cd=Number(b.cadenceDays); if(!Number.isFinite(cd)||cd<7||cd>365) return json(res,400,{message:'کیدنس باید بین ۷ تا ۳۶۵ روز باشد.'}); r.cadenceDays=Math.round(cd); delete b.cadenceDays;}
+    if(b.cadenceDays!==undefined){const cd=Number(b.cadenceDays); if(!Number.isFinite(cd)||cd<7||cd>365) return json(res,400,{message:'آهنگ ارتباط باید بین ۷ تا ۳۶۵ روز باشد.'}); r.cadenceDays=Math.round(cd); delete b.cadenceDays;}
     if(b.marketKind!==undefined){ const mk=String(b.marketKind).trim().toUpperCase(); if(!['MARKET','NON_MARKET','HYBRID'].includes(mk)) return json(res,400,{message:'marketKind باید MARKET/NON_MARKET/HYBRID باشد.'}); b.marketKind=mk; }
     if(b.marketSegment!==undefined){ b.marketSegment = typeof b.marketSegment==='string' ? String(b.marketSegment).trim().slice(0,120) || null : null; }
     if(b.isMarketEntry!==undefined) b.isMarketEntry=!!b.isMarketEntry;

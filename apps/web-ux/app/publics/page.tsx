@@ -100,7 +100,7 @@ const CAT_COLORS: Record<string, string> = {
   MEDIA: '#dc2626', ECOSYSTEM: '#16a34a',
 };
 const STANCE_TONE: Record<string, 'success' | 'info' | 'warning' | 'danger' | 'neutral'> = {
-  KEY_PLAYER: 'danger', INFLUENCER: 'warning', SUPPORTER: 'info', OBSERVER: 'neutral',
+  KEY_PLAYER: 'success', INFLUENCER: 'warning', SUPPORTER: 'info', OBSERVER: 'neutral',
 };
 const STAGE_TONE: Record<string, 'success' | 'info' | 'warning' | 'danger' | 'neutral'> = {
   ACTIVE: 'success', AWARE: 'info', LATENT: 'warning', NON_PUBLIC: 'neutral',
@@ -127,15 +127,48 @@ const clamp = (v: number) => Math.max(0, Math.min(100, v));
    + تاریخچهٔ موضع با علت‌یابی (الگوی Squivr/ArcSight)
    ═══════════════════════════════════════════════════════════════════════ */
 const STANCE_RANK: Record<string, number> = { OBSERVER: 0, SUPPORTER: 1, INFLUENCER: 2, KEY_PLAYER: 3 };
+/* پالت معنایی نواحی: متحدِ پرنفوذ = سبز · قدرتمندِ کم‌حمایت = کهربایی · حامیِ کم‌نفوذ = آبی · ناظر = خاکستری */
 const STANCE_DOT_COLOR: Record<string, string> = {
-  KEY_PLAYER: '#dc2626', INFLUENCER: '#d97706', SUPPORTER: '#16a34a', OBSERVER: '#94a3b8',
+  KEY_PLAYER: '#16a34a', INFLUENCER: '#d97706', SUPPORTER: '#2563eb', OBSERVER: '#94a3b8',
+};
+const STANCE_FA: Record<string, string> = {
+  KEY_PLAYER: 'بازیگر کلیدی', INFLUENCER: 'تأثیرگذار', SUPPORTER: 'حامی', OBSERVER: 'ناظر',
+};
+/* نواحی ماتریس با همان آستانهٔ موتور ارزیابی (۶۰/۶۰) — رنگ هر نقطه همیشه با ناحیه‌اش می‌خواند */
+const ZONE_TH = 60;
+const ZONES: Array<{ id: string; pos: 'tr' | 'tl' | 'br' | 'bl'; title: string; action: string }> = [
+  { id: 'KEY_PLAYER', pos: 'tr', title: 'متحدان کلیدی', action: 'مدیریت نزدیک — تعامل منظم و مشارکت در تصمیم' },
+  { id: 'INFLUENCER', pos: 'tl', title: 'قدرتمندان محتاط', action: 'راضی نگه‌داشتن — بدون اتلاف منابع' },
+  { id: 'SUPPORTER', pos: 'br', title: 'حامیان عملیاتی', action: 'مطلع نگه‌داشتن و توانمندسازی' },
+  { id: 'OBSERVER', pos: 'bl', title: 'ناظران', action: 'پایش دوره‌ای با حداقل هزینه' },
+];
+const zoneBoxStyle = (pos: 'tr' | 'tl' | 'br' | 'bl') => {
+  const L = ZONE_TH, R = 100 - ZONE_TH;
+  if (pos === 'tr') return { left: `${L}%`, top: 0, width: `${R}%`, height: `${R}%` };
+  if (pos === 'tl') return { left: 0, top: 0, width: `${L}%`, height: `${R}%` };
+  if (pos === 'br') return { left: `${L}%`, top: `${R}%`, width: `${R}%`, height: `${L}%` };
+  return { left: 0, top: `${R}%`, width: `${L}%`, height: `${L}%` };
+};
+const zoneLabelStyle = (pos: 'tr' | 'tl' | 'br' | 'bl'): Record<string, string | number> => {
+  if (pos === 'tr') return { top: 6, right: 8 };
+  if (pos === 'tl') return { top: 6, left: 8 };
+  if (pos === 'br') return { bottom: 18, right: 8 };
+  return { bottom: 18, left: 8 };
+};
+const memberInitials = (m: MemberView) => {
+  const name = (m.sourceName ?? m.id ?? '').replace(/[()«»]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!name) return '·';
+  const words = name.split(' ').filter(w => w.length > 1);
+  if (!words.length) return name.slice(0, 2);
+  if (words.length === 1) return words[0].slice(0, 2);
+  return `${words[0][0]}${words[1][0]}`;
 };
 const STANCE_CAUSES: Array<[string, string]> = [
   ['INTERACTION', 'تعامل مستقیم ما'], ['THIRD_PARTY', 'تأثیر شخص سوم'], ['POLICY', 'تغییر سیاست/تنظیم‌گری'],
   ['MARKET', 'تحول بازار'], ['COMPETITOR', 'اقدام رقیب'], ['INTERNAL', 'تحول درون سازمان آنها'],
   ['MEDIA', 'پوشش رسانه‌ای'], ['OTHER', 'سایر'],
 ];
-const stanceOfPI = (p: number, i: number) => (p >= 60 && i >= 60) ? 'KEY_PLAYER' : p >= 60 ? 'INFLUENCER' : i >= 60 ? 'SUPPORTER' : 'OBSERVER';
+const stanceOfPI = (p: number, i: number) => (p >= ZONE_TH && i >= ZONE_TH) ? 'KEY_PLAYER' : p >= ZONE_TH ? 'INFLUENCER' : i >= ZONE_TH ? 'SUPPORTER' : 'OBSERVER';
 const causeLabel = (c: string) => STANCE_CAUSES.find(x => x[0] === c)?.[1] ?? c;
 const isDecliningMember = (m: MemberView) => {
   const h = m.stanceHistory ?? [];
@@ -144,17 +177,19 @@ const isDecliningMember = (m: MemberView) => {
   return (STANCE_RANK[last.toStance] ?? 0) < (STANCE_RANK[last.fromStance] ?? 0);
 };
 
-function MatrixTab({ members, canWrite, onSave, onNotify }: {
+function MatrixTab({ members, canWrite, onSave, onNotify, openAssess }: {
   members: MemberView[];
   canWrite: boolean;
   onSave: (m: MemberView, power: number, interest: number, cause?: string, causeNote?: string) => Promise<boolean>;
   onNotify: (msg: string) => void;
+  openAssess: (m: MemberView) => void;
 }) {
   const [cat, setCat] = useState('');
   const [declining, setDeclining] = useState(false);
   const [selId, setSelId] = useState('');
   const [pos, setPos] = useState<Record<string, { p: number; i: number }>>({});
   const [dragId, setDragId] = useState('');
+  const [hoverId, setHoverId] = useState('');
   const [pending, setPending] = useState<{ m: MemberView; p: number; i: number } | null>(null);
   const [cause, setCause] = useState('INTERACTION');
   const [causeNote, setCauseNote] = useState('');
@@ -166,6 +201,9 @@ function MatrixTab({ members, canWrite, onSave, onNotify }: {
   const shown = members.filter(m => (!cat || m.categoryId === cat) && (!declining || isDecliningMember(m)));
   const getPI = (m: MemberView) => pos[m.id] ?? { p: m.power ?? 50, i: m.interest ?? 50 };
   const sel = members.find(m => m.id === selId) ?? null;
+  const focus = shown.find(m => m.id === (hoverId || selId)) ?? null;
+  const fpi = focus ? getPI(focus) : null;
+  const zoneMembers = (z: string) => shown.filter(m => stanceOfPI(getPI(m).p, getPI(m).i) === z);
 
   const apply = async (m: MemberView, p: number, i: number, c?: string, note?: string) => {
     setBusy(true);
@@ -183,13 +221,14 @@ function MatrixTab({ members, canWrite, onSave, onNotify }: {
     if (!box) return null;
     return { i: clamp(Math.round((clientX - box.left) / box.width * 100)), p: clamp(Math.round((1 - (clientY - box.top) / box.height) * 100)) };
   };
+  const TICKS = [0, 20, 40, 60, 80, 100];
 
   return (
     <div className="stack" style={{ gap: 14 }}>
       <SectionCard
         title="ماتریس نفوذ × حمایت"
         icon={<Target size={15} />}
-        description="جابه‌جایی نقطه‌ها با درگ (یا اسلایدر در جزئیات) — موضع از جایگاه نقطه به‌صورت خودکار محاسبه می‌شود؛ تغییر مووضع بدون ثبت «علت» پذیرفته نمی‌شود."
+        description="جابه‌جایی نقطه‌ها با درگ یا اسلایدر — مرز نواحی همان آستانهٔ موتور ارزیابی (۶۰) است و رنگ هر نقطه با ناحیه‌اش می‌خواند؛ تغییر موضع بدون ثبت «علت» پذیرفته نمی‌شود."
         actions={
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
             <select aria-label="فیلتر دسته" value={cat} onChange={e => setCat(e.target.value)}>
@@ -203,78 +242,145 @@ function MatrixTab({ members, canWrite, onSave, onNotify }: {
           </div>
         }
       >
-        <div style={{ display: 'grid', gap: 10 }}>
-          <div
-            ref={boxRef}
-            role="application"
-            aria-label="ماتریس نفوذ و حمایت — محور افقی: حمایت (علاقه)؛ محور عمودی: نفوذ (قدرت)"
-            style={{
-              position: 'relative', height: 320, border: '1px solid var(--border,#e2e8f0)', borderRadius: 12,
-              background:
-                'linear-gradient(to left, transparent 49.7%, var(--border,#e2e8f0) 49.7%, var(--border,#e2e8f0) 50.3%, transparent 50.3%),' +
-                'linear-gradient(to top, transparent 49.7%, var(--border,#e2e8f0) 49.7%, var(--border,#e2e8f0) 50.3%, transparent 50.3%),' +
-                'linear-gradient(to top, color-mix(in srgb, var(--red,#dc2626) 7%, transparent), color-mix(in srgb, var(--red,#dc2626) 2%, transparent))',
-              touchAction: 'none', userSelect: 'none',
-            }}
-            onPointerMove={e => {
-              if (!dragId) return;
-              const pi = ptToPI(e.clientX, e.clientY);
-              if (pi) setPos(pp => ({ ...pp, [dragId]: pi }));
-            }}
-            onPointerUp={e => {
-              if (!dragId) return;
-              const m = members.find(x => x.id === dragId);
-              const pi = ptToPI(e.clientX, e.clientY) ?? getPI(m ?? ({ id: dragId } as MemberView));
-              setDragId('');
-              if (m) finalize(m, pi.p, pi.i);
-            }}
-            onPointerLeave={() => setDragId('')}
-          >
-            <span style={{ position: 'absolute', top: 6, insetInlineEnd: 8, fontSize: 10.5, fontWeight: 800, color: 'var(--red,#dc2626)' }}>حامیِ پرنفوذ</span>
-            <span style={{ position: 'absolute', top: 6, insetInlineStart: 8, fontSize: 10.5, fontWeight: 800, color: 'var(--muted,#64748b)' }}>پرانفوذِ کم‌حمایت</span>
-            <span style={{ position: 'absolute', bottom: 6, insetInlineEnd: 8, fontSize: 10.5, fontWeight: 800, color: 'var(--green,#16a34a)' }}>حامیِ کم‌نفوذ</span>
-            <span style={{ position: 'absolute', bottom: 6, insetInlineStart: 8, fontSize: 10.5, fontWeight: 800, color: 'var(--muted,#64748b)' }}>ناظر</span>
-            <span style={{ position: 'absolute', bottom: -22, insetInlineEnd: '50%', transform: 'translateX(50%)', fontSize: 10, color: 'var(--muted,#64748b)' }}>حمایت (علاقه) ←</span>
-            <span style={{ position: 'absolute', top: '50%', insetInlineStart: -6, transform: 'translateY(-50%) rotate(90deg)', fontSize: 10, color: 'var(--muted,#64748b)', transformOrigin: 'center' }}>نفوذ (قدرت)</span>
-            {shown.map(m => {
-              const pi = getPI(m);
-              const isSel = m.id === selId;
+        <div style={{ display: 'grid', gap: 12 }}>
+          {/* ── بوم ماتریس ── */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-secondary)' }}>نفوذ (قدرت) ↑</span>
+              <span className="t-muted" style={{ fontSize: 10.5 }}>مقیاس هر محور: ۰ تا ۱۰۰ · آستانهٔ ناحیه‌ها: {fmtNum(ZONE_TH)}</span>
+            </div>
+            <div
+              ref={boxRef}
+              role="application"
+              aria-label="ماتریس نفوذ و حمایت — محور افقی: حمایت (علاقه)؛ محور عمودی: نفوذ (قدرت)"
+              style={{
+                position: 'relative', height: 'clamp(300px, 46vw, 430px)', border: '1px solid var(--border,#e2e8f0)', borderRadius: 12,
+                background: 'var(--card-bg,#fff)', overflow: 'hidden',
+                touchAction: 'none', userSelect: 'none',
+              }}
+              onPointerMove={e => {
+                if (!dragId) return;
+                const pi = ptToPI(e.clientX, e.clientY);
+                if (pi) setPos(pp => ({ ...pp, [dragId]: pi }));
+              }}
+              onPointerUp={e => {
+                if (!dragId) return;
+                const m = members.find(x => x.id === dragId);
+                const pi = ptToPI(e.clientX, e.clientY) ?? getPI(m ?? ({ id: dragId } as MemberView));
+                setDragId('');
+                if (m) finalize(m, pi.p, pi.i);
+              }}
+              onPointerLeave={() => setDragId('')}
+            >
+              {/* نواحی رنگی — مرز روی آستانهٔ ۶۰ (همان موتور ارزیابی) */}
+              {ZONES.map(z => (
+                <div key={z.id} aria-hidden style={{ position: 'absolute', ...zoneBoxStyle(z.pos), background: `color-mix(in srgb, ${STANCE_DOT_COLOR[z.id]} 6%, transparent)` }} />
+              ))}
+              {/* خطوط راهنمای کم‌رنگ ۲۰/۴۰/۸۰ */}
+              {[20, 40, 80].map(v => (
+                <div key={`gv-${v}`} aria-hidden style={{ position: 'absolute', left: `${v}%`, top: 0, bottom: 0, borderLeft: '1px dashed color-mix(in srgb, var(--border,#e2e8f0) 70%, transparent)' }} />
+              ))}
+              {[20, 40, 80].map(v => (
+                <div key={`gh-${v}`} aria-hidden style={{ position: 'absolute', top: `${100 - v}%`, left: 0, right: 0, borderTop: '1px dashed color-mix(in srgb, var(--border,#e2e8f0) 70%, transparent)' }} />
+              ))}
+              {/* مرز نواحی (آستانهٔ ۶۰) */}
+              <div aria-hidden style={{ position: 'absolute', left: `${ZONE_TH}%`, top: 0, bottom: 0, borderLeft: '2px solid color-mix(in srgb, var(--border,#94a3b8) 80%, transparent)' }} />
+              <div aria-hidden style={{ position: 'absolute', top: `${100 - ZONE_TH}%`, left: 0, right: 0, borderTop: '2px solid color-mix(in srgb, var(--border,#94a3b8) 80%, transparent)' }} />
+              {/* درجه‌بندی محور حمایت (پایین) */}
+              {TICKS.map(v => (
+                <span key={`t-b-${v}`} aria-hidden style={{ position: 'absolute', bottom: 2, left: `${v}%`, transform: v === 0 ? 'none' : v === 100 ? 'translateX(-100%)' : 'translateX(-50%)', fontSize: 9, fontWeight: 700, color: 'var(--text-muted,#94a3b8)' }}>{fmtNum(v)}</span>
+              ))}
+              {/* درجه‌بندی محور نفوذ (چپ) */}
+              {TICKS.map(v => (
+                <span key={`t-l-${v}`} aria-hidden style={{ position: 'absolute', left: 3, top: `${100 - v}%`, transform: v === 0 ? 'none' : v === 100 ? 'translateY(-100%)' : 'translateY(-50%)', fontSize: 9, fontWeight: 700, color: 'var(--text-muted,#94a3b8)' }}>{fmtNum(v)}</span>
+              ))}
+              {/* برچسب نواحی + شمار اعضای هر ناحیه */}
+              {ZONES.map(z => (
+                <span key={`zl-${z.id}`} style={{ position: 'absolute', ...zoneLabelStyle(z.pos), display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 7px', borderRadius: 99, background: 'color-mix(in srgb, var(--card-bg,#fff) 82%, transparent)', border: `1px solid color-mix(in srgb, ${STANCE_DOT_COLOR[z.id]} 35%, transparent)`, fontSize: 10, fontWeight: 800, color: STANCE_DOT_COLOR[z.id], pointerEvents: 'none' }}>
+                  {z.title} · {fmtNum(zoneMembers(z.id).length)}
+                </span>
+              ))}
+              {/* نشانگر متقاطع عضو کانونی */}
+              {fpi && focus && (
+                <>
+                  <div aria-hidden style={{ position: 'absolute', left: `${fpi.i}%`, top: 0, bottom: 0, borderLeft: '1px dashed color-mix(in srgb, var(--border,#475569) 55%, transparent)', zIndex: 2 }} />
+                  <div aria-hidden style={{ position: 'absolute', top: `${100 - fpi.p}%`, left: 0, right: 0, borderTop: '1px dashed color-mix(in srgb, var(--border,#475569) 55%, transparent)', zIndex: 2 }} />
+                  <div style={{ position: 'absolute', left: `min(max(${fpi.i}%, 90px), calc(100% - 90px))`, top: `max(${100 - fpi.p}%, 26px)`, transform: 'translate(-50%, -130%)', zIndex: 3, pointerEvents: 'none', whiteSpace: 'nowrap', fontSize: 10.5, fontWeight: 700, padding: '3px 8px', borderRadius: 8, background: 'var(--card-bg,#fff)', border: '1px solid var(--border,#cbd5e1)', boxShadow: '0 2px 10px rgba(15,23,42,.14)' }}>
+                    {focus.sourceName ?? focus.id} — نفوذ {fmtNum(fpi.p)} · حمایت {fmtNum(fpi.i)}
+                  </div>
+                </>
+              )}
+              {/* نقطه‌های اعضا — علائم اختصاری داخل نقطه */}
+              {shown.map(m => {
+                const pi = getPI(m);
+                const isSel = m.id === selId;
+                const isFocus = m.id === (hoverId || selId);
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    aria-label={`${m.sourceName ?? m.id} — نفوذ ${fmtNum(pi.p)}، حمایت ${fmtNum(pi.i)}، موضع ${m.stanceFa ?? m.stance}`}
+                    title={`${m.sourceName ?? m.id} — نفوذ ${fmtNum(pi.p)} / حمایت ${fmtNum(pi.i)} (${m.stanceFa ?? m.stance})`}
+                    onPointerDown={e => {
+                      e.preventDefault();
+                      (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+                      setSelId(m.id);
+                      setDragId(m.id);
+                    }}
+                    onPointerEnter={() => setHoverId(m.id)}
+                    onPointerLeave={() => setHoverId('')}
+                    onClick={() => setSelId(m.id)}
+                    style={{
+                      position: 'absolute', left: `${pi.i}%`, bottom: `${pi.p}%`,
+                      width: isFocus ? 26 : 20, height: isFocus ? 26 : 20, borderRadius: '50%',
+                      transform: 'translate(-50%, 50%)', border: isSel ? '3px solid #0f172a' : '2px solid rgba(255,255,255,.9)',
+                      background: STANCE_DOT_COLOR[m.stance] ?? '#94a3b8', color: '#fff',
+                      fontSize: 9, fontWeight: 800, lineHeight: 1, display: 'grid', placeItems: 'center', padding: 0,
+                      cursor: canWrite ? 'grab' : 'pointer', zIndex: isFocus ? 5 : 4,
+                      boxShadow: isFocus ? '0 0 0 5px color-mix(in srgb, currentColor 18%, transparent), 0 3px 10px rgba(15,23,42,.25)' : '0 2px 6px rgba(15,23,42,.22)',
+                      transition: dragId === m.id ? 'none' : 'left .15s, bottom .15s, width .12s, height .12s',
+                    }}
+                  >{memberInitials(m)}</button>
+                );
+              })}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 4 }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-secondary)' }}>حمایت (علاقه) →</span>
+            </div>
+          </div>
+
+          {/* ── راهنمای نواحی: عنوان ناحیه، شمار، اقدام راهبردی و اعضای برجسته ── */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(215px, 1fr))', gap: 8 }}>
+            {ZONES.map(z => {
+              const zm = zoneMembers(z.id).sort((a, b) => (b.power ?? 0) - (a.power ?? 0));
+              const pct = shown.length ? Math.round(zm.length / shown.length * 100) : 0;
               return (
-                <button
-                  key={m.id}
-                  type="button"
-                  aria-label={`${m.sourceName ?? m.id} — نفوذ ${fmtNum(pi.p)}، حمایت ${fmtNum(pi.i)}، موضع ${m.stanceFa ?? m.stance}`}
-                  title={`${m.sourceName ?? m.id} — نفوذ ${fmtNum(pi.p)} / حمایت ${fmtNum(pi.i)} (${m.stanceFa ?? m.stance})`}
-                  onPointerDown={e => {
-                    e.preventDefault();
-                    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
-                    setSelId(m.id);
-                    setDragId(m.id);
-                  }}
-                  onClick={() => setSelId(m.id)}
-                  style={{
-                    position: 'absolute', left: `${pi.i}%`, bottom: `${pi.p}%`,
-                    width: isSel ? 18 : 13, height: isSel ? 18 : 13, borderRadius: '50%',
-                    transform: 'translate(-50%, 50%)', border: isSel ? '3px solid #0f172a' : '2px solid rgba(255,255,255,.85)',
-                    background: STANCE_DOT_COLOR[m.stance] ?? '#94a3b8', cursor: canWrite ? 'grab' : 'pointer',
-                    padding: 0, boxShadow: isSel ? '0 0 0 4px rgba(15,23,42,.15)' : undefined, transition: dragId === m.id ? 'none' : 'left .15s, bottom .15s',
-                  }}
-                />
+                <div key={`zc-${z.id}`} className="panel" style={{ margin: 0, padding: '10px 12px', borderInlineStart: `3px solid ${STANCE_DOT_COLOR[z.id]}` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
+                    <b style={{ fontSize: 12.5, color: STANCE_DOT_COLOR[z.id] }}>{z.title}</b>
+                    <span className="chip neutral" title={`${fmtNum(zm.length)} از ${fmtNum(shown.length)} عضو`}>{fmtNum(zm.length)} عضو · {fmtNum(pct)}٪</span>
+                  </div>
+                  <div className="t-muted" style={{ fontSize: 10.5, marginTop: 2 }}>{z.action}</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 7 }}>
+                    {zm.slice(0, 3).map(m => (
+                      <button key={`zc-m-${m.id}`} type="button" className="chip neutral" style={{ border: 'none', cursor: 'pointer', fontSize: 10.5 }}
+                        onClick={() => { setCat(''); setSelId(m.id); }} title={`${m.sourceName ?? m.id} — نفوذ ${fmtNum(getPI(m).p)} / حمایت ${fmtNum(getPI(m).i)}`}>
+                        {m.sourceName ?? m.id}
+                      </button>
+                    ))}
+                    {zm.length > 3 && <span className="chip neutral" style={{ fontSize: 10.5 }}>+{fmtNum(zm.length - 3)} دیگر</span>}
+                    {!zm.length && <span className="t-muted" style={{ fontSize: 10.5 }}>عضوی در این ناحیه نیست</span>}
+                  </div>
+                </div>
               );
             })}
-          </div>
-          <div className="chip-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-            {Object.entries(STANCE_DOT_COLOR).map(([k, c]) => (
-              <span key={k} className="chip neutral"><span style={{ width: 9, height: 9, borderRadius: '50%', background: c, display: 'inline-block' }} /> {STANCE_TONE[k] ? (members.find(m => m.stance === k)?.stanceFa ?? k) : k}</span>
-            ))}
-            <span className="chip neutral">{fmtNum(shown.length)} عضو روی ماتریس</span>
           </div>
 
           {pending && (
             <div className="notice" role="dialog" aria-label="ثبت علت تغییر موضع" style={{ border: '1px solid var(--gold,#f59e0b)', background: 'color-mix(in srgb, var(--gold,#f59e0b) 8%, transparent)' }}>
               <b>علت تغییر موضع «{pending.m.sourceName ?? pending.m.id}» را ثبت کنید</b>
               <p style={{ fontSize: 12, margin: '6px 0' }}>
-                {pending.m.stanceFa ?? pending.m.stance} → {fmtNum(pending.p)}٪ نفوذ / {fmtNum(pending.i)}٪ حمایت (موضع جدید)
+                {pending.m.stanceFa ?? pending.m.stance} ({STANCE_FA[stanceOfPI(pending.m.power ?? 50, pending.m.interest ?? 50)] ?? '—'}) → {STANCE_FA[stanceOfPI(pending.p, pending.i)] ?? '—'} با {fmtNum(pending.p)}٪ نفوذ / {fmtNum(pending.i)}٪ حمایت
               </p>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
                 <div className="field" style={{ margin: 0 }}>
@@ -296,15 +402,35 @@ function MatrixTab({ members, canWrite, onSave, onNotify }: {
             </div>
           )}
 
+          {/* ── پنل جزئیات عضو انتخاب‌شده ── */}
           {sel && (
             <div className="panel" style={{ margin: 0 }}>
               <div className="panel-title">
                 <div>
                   <h3 style={{ fontSize: 14 }}>{sel.sourceName ?? sel.id}</h3>
-                  <p style={{ fontSize: 12 }}>{sel.groupFa ?? '—'} {sel.categoryFa ? `· ${sel.categoryFa}` : ''} · ارزیابی: {fmtDT(sel.assessedAt)}</p>
+                  <p style={{ fontSize: 12 }}>{sel.groupFa ?? '—'} {sel.categoryFa ? `· ${sel.categoryFa}` : ''} · ارزیابی: {fmtDT(sel.assessedAt)}{sel.kanal ? ` · کانال: ${sel.kanal}` : ''}</p>
                 </div>
-                <Badge tone={STANCE_TONE[sel.stance] ?? 'neutral'}>{sel.stanceFa ?? sel.stance}</Badge>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <Badge tone={STANCE_TONE[sel.stance] ?? 'neutral'}>{sel.stanceFa ?? sel.stance}</Badge>
+                  <span className="chip neutral" style={{ fontSize: 10.5 }}>{ZONES.find(z => z.id === stanceOfPI(getPI(sel).p, getPI(sel).i))?.title ?? '—'}</span>
+                </div>
               </div>
+
+              {/* سنجه‌های نفوذ/حمایت — نوار درجه‌بندی‌شده */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, margin: '10px 0' }}>
+                {([['نفوذ (قدرت)', getPI(sel).p, '#0f172a'], ['حمایت (علاقه)', getPI(sel).i, '#2563eb']] as const).map(([label, val, color]) => (
+                  <div key={label}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5 }}>
+                      <span>{label}</span><b>{fmtNum(val)} <span className="t-muted" style={{ fontWeight: 400 }}>از ۱۰۰</span></b>
+                    </div>
+                    <div style={{ height: 9, borderRadius: 99, background: 'color-mix(in srgb, var(--border,#e2e8f0) 55%, transparent)', overflow: 'hidden', marginTop: 4, position: 'relative' }}>
+                      <div style={{ height: '100%', width: `${clamp(val)}%`, background: color, borderRadius: 99, transition: 'width .2s' }} />
+                      <div aria-hidden style={{ position: 'absolute', left: `${ZONE_TH}%`, top: -2, bottom: -2, borderLeft: '2px dashed rgba(71,85,105,.45)' }} title={`آستانهٔ ناحیه: ${fmtNum(ZONE_TH)}`} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
               {canWrite && (
                 <div style={{ display: 'grid', gap: 8, margin: '10px 0' }}>
                   <label style={{ fontSize: 12, display: 'grid', gap: 4 }}>
@@ -317,14 +443,18 @@ function MatrixTab({ members, canWrite, onSave, onNotify }: {
                     <input type="range" min={0} max={100} value={getPI(sel).i} aria-label="حمایت"
                       onChange={e => setPos(pp => ({ ...pp, [sel.id]: { ...getPI(sel), i: Number(e.target.value) } }))} />
                   </label>
-                  <div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     <button className="btn btn-secondary btn-sm" disabled={busy}
                       onClick={() => finalize(sel, getPI(sel).p, getPI(sel).i)}>
                       <SlidersHorizontal size={13} /> ذخیرهٔ جایگاه
                     </button>
+                    <button className="btn btn-sm" onClick={() => openAssess(sel)} title="ارزیابی کامل: مرحله، پیوند و یادداشت">
+                      <ClipboardList size={13} /> ارزیابی کامل
+                    </button>
                   </div>
                 </div>
               )}
+
               <div>
                 <h4 style={{ fontSize: 12.5, display: 'flex', gap: 5, alignItems: 'center', margin: '8px 0 6px' }}><History size={13} /> خط زمان موضع و علل</h4>
                 {!(sel.stanceHistory ?? []).length ? (
@@ -340,7 +470,7 @@ function MatrixTab({ members, canWrite, onSave, onNotify }: {
                             {down ? 'نزول' : 'صعود'}
                           </span>
                           <span style={{ flex: 1, minWidth: 0, fontSize: 12.5 }}>
-                            <b>{fmtDT(h.at)}</b> — {h.fromStance} به {h.toStance}
+                            <b>{fmtDT(h.at)}</b> — {STANCE_FA[h.fromStance] ?? h.fromStance} به {STANCE_FA[h.toStance] ?? h.toStance}
                             <span className="chip neutral" style={{ marginInlineStart: 6 }}>علت: {causeLabel(h.cause)}</span>
                             {h.source === 'MATRIX' && <span className="chip neutral" style={{ marginInlineStart: 6 }}>ماتریس</span>}
                             {h.causeNote ? <small style={{ display: 'block', marginTop: 3 }}>{h.causeNote}</small> : null}
@@ -462,6 +592,9 @@ export default function PublicsPage() {
   const [gCat, setGCat] = useState('');
   const [gSrc, setGSrc] = useState('');
   const [gQ, setGQ] = useState('');
+  /* مرتب‌سازی و فیلتر جدول اعضا */
+  const [mSort, setMSort] = useState<{ key: 'power' | 'interest' | 'reviewDue' | ''; dir: 1 | -1 }>({ key: '', dir: -1 });
+  const [overdueOnly, setOverdueOnly] = useState(false);
 
   /* مسترپلن فاز ۲/۱۴+۱۶: پوشش رسانه‌ای + نظرسنجی ذینفعان */
   const [mediaCovOrg, setMediaCovOrg] = useState('');
@@ -545,9 +678,25 @@ export default function PublicsPage() {
       (!fCat || m.categoryId === fCat) &&
       (!fStance || m.stance === fStance) &&
       (!fStage || m.stage === fStage) &&
+      (!overdueOnly || (!!m.reviewDue && new Date(m.reviewDue).getTime() < Date.now())) &&
       (!needle || [m.groupFa, m.sourceName, m.categoryFa, m.sourceLabel].some(v => v && String(v).includes(needle))),
     );
-  }, [members, fCat, fStance, fStage, q]);
+  }, [members, fCat, fStance, fStage, q, overdueOnly]);
+
+  const overdueCount = useMemo(() => members.filter(m => !!m.reviewDue && new Date(m.reviewDue).getTime() < Date.now()).length, [members]);
+  const avgPower = members.length ? Math.round(members.reduce((s2, m) => s2 + (m.power ?? 0), 0) / members.length) : 0;
+  const avgInterest = members.length ? Math.round(members.reduce((s2, m) => s2 + (m.interest ?? 0), 0) / members.length) : 0;
+  const sortedMembers = useMemo(() => {
+    const key = mSort.key as 'power' | 'interest' | 'reviewDue' | null;
+    if (!key) return filteredMembers;
+    const arr = [...filteredMembers];
+    arr.sort((a, b) => {
+      const av = a[key] ?? 0;
+      const bv = b[key] ?? 0;
+      return (av > bv ? 1 : av < bv ? -1 : 0) * mSort.dir;
+    });
+    return arr;
+  }, [filteredMembers, mSort]);
 
   /* ---------- group manager ---------- */
   const filteredGroups = useMemo(() => {
@@ -883,23 +1032,59 @@ export default function PublicsPage() {
             <div className="stack" style={{ gap: 14 }}>
               <div className="stat-grid">
                 <StatCard icon={<Users2 size={16} />} iconClass="ic-blue" label="اعضای نقشه" value={fmtNum(members.length)} />
-                <StatCard icon={<Target size={16} />} iconClass="ic-red" label="بازیگر کلیدی" value={fmtNum(members.filter(m => m.stance === 'KEY_PLAYER').length)} />
-                <StatCard icon={<Eye size={16} />} iconClass="ic-teal" label="فعال" value={fmtNum(members.filter(m => m.stage === 'ACTIVE').length)} />
-                <StatCard icon={<Heart size={16} />} iconClass="ic-purple" label="حامی" value={fmtNum(members.filter(m => m.stance === 'SUPPORTER').length)} />
+                <StatCard icon={<Target size={16} />} iconClass="ic-red" label="بازیگر کلیدی" value={fmtNum(members.filter(m => m.stance === 'KEY_PLAYER').length)} sub="متحدان پرنفوذ" />
+                <StatCard icon={<AlertTriangle size={16} />} iconClass="ic-orange" label="نیازمند بازبینی" value={fmtNum(overdueCount)} sub="سررسید گذشته" />
+                <StatCard icon={<Radar size={16} />} iconClass="ic-teal" label="میانگین نفوذ / حمایت" value={`${fmtNum(avgPower)} / ${fmtNum(avgInterest)}`} sub={`آستانهٔ ناحیه: ${fmtNum(ZONE_TH)}`} />
               </div>
 
               <SectionCard
-                title="ماتریس قدرت × علاقه"
-                icon={<SlidersHorizontal size={15} />}
-                description="هر نقطه یک عضو است و رنگ آن، دسته را نشان می‌دهد. برای ارزیابی، روی نقطه کلیک کنید. هدف: قرارگیری بازیگران کلیدی در ربع بالا-راست (قدرت و علاقهٔ بالا)."
+                title="خلاصهٔ تحلیل مواضع"
+                icon={<Grid3x3 size={15} />}
+                description="توزیع اعضا در نواحی ماتریس نفوذ × حمایت — مرز نواحی همان آستانهٔ موتور ارزیابی (۶۰) است."
+                actions={<button className="btn btn-secondary btn-sm" onClick={() => setTab('matrix')}><Target size={13} /> ماتریس کامل نفوذ × حمایت</button>}
               >
-                <Matrix members={members} catOf={catOf} openAssess={openAssess} canWrite={canWrite} />
+                <div style={{ display: 'grid', gap: 12 }}>
+                  {/* نوار توزیع مواضع */}
+                  <div>
+                    <div style={{ display: 'flex', height: 26, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border,#e2e8f0)', background: 'var(--card-bg,#fff)' }} role="img" aria-label="نوار توزیع مواضع اعضا">
+                      {ZONES.map(z => {
+                        const n = members.filter(m => m.stance === z.id).length;
+                        if (!n) return null;
+                        const pct = members.length ? Math.round(n / members.length * 100) : 0;
+                        return (
+                          <div key={`db-${z.id}`} title={`${z.title}: ${fmtNum(n)} عضو (${fmtNum(pct)}٪)`} style={{ width: `${pct}%`, background: STANCE_DOT_COLOR[z.id], display: 'grid', placeItems: 'center', color: '#fff', fontSize: 10.5, fontWeight: 800, minWidth: 4 }}>
+                            {pct >= 10 ? fmtNum(n) : ''}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                      {ZONES.map(z => (
+                        <span key={`dl-${z.id}`} className="chip neutral"><span style={{ width: 9, height: 9, borderRadius: '50%', background: STANCE_DOT_COLOR[z.id], display: 'inline-block' }} /> {z.title} ({STANCE_FA[z.id]}): {fmtNum(members.filter(m => m.stance === z.id).length)}</span>
+                      ))}
+                    </div>
+                  </div>
+                  {/* نقشهٔ ۲×۲ نواحی — کلیک = رفتن به ماتریس */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
+                    {ZONES.map(z => {
+                      const n = members.filter(m => m.stance === z.id).length;
+                      return (
+                        <button key={`zm-${z.id}`} type="button" onClick={() => setTab('matrix')} title={`${z.action} — مشاهده در ماتریس`}
+                          style={{ textAlign: 'start', cursor: 'pointer', padding: '9px 11px', borderRadius: 10, display: 'grid', gap: 2, border: `1px solid color-mix(in srgb, ${STANCE_DOT_COLOR[z.id]} 30%, transparent)`, background: `color-mix(in srgb, ${STANCE_DOT_COLOR[z.id]} 6%, transparent)` }}>
+                          <span style={{ fontSize: 11, fontWeight: 800, color: STANCE_DOT_COLOR[z.id] }}>{z.title} — {STANCE_FA[z.id]}</span>
+                          <span style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.2 }}>{fmtNum(n)}<span className="t-muted" style={{ fontSize: 11, fontWeight: 400 }}> عضو</span></span>
+                          <span className="t-muted" style={{ fontSize: 10.5 }}>{z.action}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </SectionCard>
 
               <SectionCard
                 title="اعضای نقشه"
                 icon={<Users2 size={15} />}
-                description={`${fmtNum(filteredMembers.length)} از ${fmtNum(members.length)} عضو`}
+                description={`${fmtNum(filteredMembers.length)} از ${fmtNum(members.length)} عضو — مرتب‌سازی با کلیک روی سرستون نفوذ، حمایت یا بازبینی`}
                 actions={canWrite && <button className="btn btn-primary" onClick={() => openAdd()}><Plus size={14} /> افزودن عضو</button>}
               >
                 <Toolbar search={q} onSearch={setQ} searchPlaceholder="جستجوی گروه/منبع…">
@@ -915,37 +1100,87 @@ export default function PublicsPage() {
                     <option value="">همهٔ مراحل</option>
                     {Object.entries(catalog?.stages ?? {}).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select>
+                  <button className={`chip ${overdueOnly ? 'danger' : 'neutral'}`} style={{ border: 'none', cursor: 'pointer' }} onClick={() => setOverdueOnly(v => !v)} title="فقط اعضایی که بازبینی‌شان سررسید گذشته است">
+                    <AlertTriangle size={12} /> نیازمند بازبینی{overdueCount ? ` (${fmtNum(overdueCount)})` : ''}
+                  </button>
                   {canWrite && <button className="btn" onClick={() => openAdd()}><Plus size={14} /> عضو جدید</button>}
                 </Toolbar>
                 <div className="table-wrap">
                   <table>
                     <thead>
-                      <tr><th>گروه عموم</th><th>دسته</th><th>منبع</th><th>پیوند</th><th>مرحله</th><th>موضع</th><th>قدرت/علاقه</th><th>بازبینی</th>{canWrite && <th />}</tr>
+                      <tr>
+                        <th>عضو و کانال</th>
+                        <th>گروه و دسته</th>
+                        <th>موضع</th>
+                        <th>
+                          <button type="button" onClick={() => setMSort(s => ({ key: 'power', dir: s.key === 'power' && s.dir === -1 ? 1 : -1 }))} title="مرتب‌سازی بر پایهٔ نفوذ" style={{ all: 'unset', cursor: 'pointer', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                            نفوذ / حمایت{mSort.key === 'power' ? (mSort.dir === -1 ? ' ↓' : ' ↑') : ' ↕'}
+                          </button>
+                        </th>
+                        <th>مرحله</th>
+                        <th>پیوند</th>
+                        <th>
+                          <button type="button" onClick={() => setMSort(s => ({ key: 'reviewDue', dir: s.key === 'reviewDue' && s.dir === -1 ? 1 : -1 }))} title="مرتب‌سازی بر پایهٔ سررسید بازبینی" style={{ all: 'unset', cursor: 'pointer', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                            بازبینی{mSort.key === 'reviewDue' ? (mSort.dir === -1 ? ' ↓' : ' ↑') : ' ↕'}
+                          </button>
+                        </th>
+                        {canWrite && <th />}
+                      </tr>
                     </thead>
                     <tbody>
-                      {filteredMembers.map(m => (
-                        <tr key={m.id}>
-                          <td><b style={{ fontSize: 12 }}>{m.groupFa ?? m.groupId}</b>{m.kanal && <div className="t-muted" style={{ fontSize: 10.5 }}>{m.kanal}</div>}</td>
-                          <td><StatusBadge tone="neutral">{CAT_ICONS[m.categoryId ?? '']}{m.categoryFa ?? m.categoryId}</StatusBadge></td>
-                          <td><div style={{ fontSize: 12 }}>{m.sourceName ?? m.sourceId}</div><div className="t-muted" style={{ fontSize: 10.5 }}>{m.sourceLabel ?? m.sourceType}</div></td>
-                          <td><Badge tone="info">{m.linkageFa ?? m.linkage}</Badge></td>
-                          <td><Badge tone={STAGE_TONE[m.stage] ?? 'neutral'}>{m.stageFa ?? m.stage}</Badge></td>
-                          <td><Badge tone={STANCE_TONE[m.stance] ?? 'neutral'}>{m.stanceFa ?? m.stance}</Badge></td>
-                          <td><b>{fmtNum(m.power)}</b><span className="t-muted"> / </span><b>{fmtNum(m.interest)}</b>{m.signals != null && <div className="t-muted" style={{ fontSize: 10.5 }}>{fmtNum(m.signals)} سیگنال ۹۰ روز اخیر</div>}</td>
-                          <td className="t-muted" style={{ fontSize: 11 }}>{fmtDT(m.reviewDue)}</td>
-                          {canWrite && (
+                      {sortedMembers.map(m => {
+                        const overdue = !!m.reviewDue && new Date(m.reviewDue).getTime() < Date.now();
+                        return (
+                          <tr key={m.id}>
                             <td>
-                              <div style={{ display: 'flex', gap: 4 }}>
-                                <button className="btn icon-only" title="ارزیابی و به‌روزرسانی" onClick={() => openAssess(m)}><SlidersHorizontal size={13} /></button>
-                                <button className="btn icon-only" title="ارسال نظرسنجی (لینک عمومی)" disabled={busy === `svy-${m.id}`} onClick={() => createSurvey(m)}><ClipboardList size={13} /></button>
-                                <button className="btn icon-only danger" title="حذف" disabled={busy === `del-${m.id}`} onClick={() => removeMember(m)}><Trash2 size={13} /></button>
-                              </div>
+                              <button type="button" className="t-primary" style={{ all: 'unset', cursor: 'pointer', fontWeight: 700, fontSize: 12 }} title="ارزیابی و به‌روزرسانی عضو" onClick={() => openAssess(m)}>{m.sourceName ?? m.sourceId}</button>
+                              <div className="t-muted" style={{ fontSize: 10.5 }}>{m.sourceLabel ?? SOURCE_LABELS[m.sourceType] ?? m.sourceType}</div>
+                              {m.kanal && <div className="t-muted" style={{ fontSize: 10.5 }}>{m.kanal}</div>}
                             </td>
-                          )}
-                        </tr>
-                      ))}
-                      {!filteredMembers.length && (
-                        <tr><td colSpan={canWrite ? 9 : 8}><div className="empty-state-v4" style={{ padding: 18 }}><p>عضوی با این فیلترها یافت نشد؛ از دکمهٔ «افزودن عضو» استفاده کنید.</p></div></td></tr>
+                            <td>
+                              <b style={{ fontSize: 12 }}>{m.groupFa ?? m.groupId}</b>
+                              <div style={{ marginTop: 3 }}><StatusBadge tone="neutral">{CAT_ICONS[m.categoryId ?? '']}{m.categoryFa ?? m.categoryId}</StatusBadge></div>
+                            </td>
+                            <td><Badge tone={STANCE_TONE[m.stance] ?? 'neutral'}>{m.stanceFa ?? m.stance}</Badge></td>
+                            <td>
+                              <div style={{ minWidth: 118, display: 'grid', gap: 3 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
+                                  <span className="t-muted" style={{ width: 36, flex: 'none' }}>نفوذ</span>
+                                  <span style={{ flex: 1, height: 6, borderRadius: 99, background: 'color-mix(in srgb, var(--border,#e2e8f0) 55%, transparent)', overflow: 'hidden', display: 'block' }}>
+                                    <span style={{ display: 'block', height: '100%', width: `${clamp(m.power)}%`, background: '#0f172a', opacity: .78, borderRadius: 99 }} />
+                                  </span>
+                                  <b style={{ minWidth: 20, textAlign: 'end' }}>{fmtNum(m.power)}</b>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
+                                  <span className="t-muted" style={{ width: 36, flex: 'none' }}>حمایت</span>
+                                  <span style={{ flex: 1, height: 6, borderRadius: 99, background: 'color-mix(in srgb, var(--border,#e2e8f0) 55%, transparent)', overflow: 'hidden', display: 'block' }}>
+                                    <span style={{ display: 'block', height: '100%', width: `${clamp(m.interest)}%`, background: '#2563eb', opacity: .85, borderRadius: 99 }} />
+                                  </span>
+                                  <b style={{ minWidth: 20, textAlign: 'end' }}>{fmtNum(m.interest)}</b>
+                                </div>
+                              </div>
+                              {m.signals != null && <div className="t-muted" style={{ fontSize: 10.5 }}>{fmtNum(m.signals)} سیگنال ۹۰ روز اخیر</div>}
+                            </td>
+                            <td><Badge tone={STAGE_TONE[m.stage] ?? 'neutral'}>{m.stageFa ?? m.stage}</Badge></td>
+                            <td><Badge tone="info">{m.linkageFa ?? m.linkage}</Badge></td>
+                            <td>
+                              <span className="t-muted" style={{ fontSize: 11 }}>{fmtDT(m.reviewDue)}</span>
+                              {overdue && <div><span className="chip danger" style={{ fontSize: 10 }}>سررسید گذشته</span></div>}
+                            </td>
+                            {canWrite && (
+                              <td>
+                                <div style={{ display: 'flex', gap: 4 }}>
+                                  <button className="btn icon-only" title="ارزیابی و به‌روزرسانی" onClick={() => openAssess(m)}><SlidersHorizontal size={13} /></button>
+                                  <button className="btn icon-only" title="ارسال نظرسنجی (لینک عمومی)" disabled={busy === `svy-${m.id}`} onClick={() => createSurvey(m)}><ClipboardList size={13} /></button>
+                                  <button className="btn icon-only danger" title="حذف" disabled={busy === `del-${m.id}`} onClick={() => removeMember(m)}><Trash2 size={13} /></button>
+                                </div>
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
+                      {!sortedMembers.length && (
+                        <tr><td colSpan={canWrite ? 8 : 7}><div className="empty-state-v4" style={{ padding: 18 }}><p>عضوی با این فیلترها یافت نشد؛ از دکمهٔ «افزودن عضو» استفاده کنید.</p></div></td></tr>
                       )}
                     </tbody>
                   </table>
@@ -1020,7 +1255,7 @@ export default function PublicsPage() {
           {/* ---------------- پوشش ---------------- */}
           {/* ---------------- ماتریس نفوذ×حمایت ---------------- */}
           {tab === 'matrix' && (
-            <MatrixTab members={members} canWrite={canWrite} onSave={saveMatrix} onNotify={notify} />
+            <MatrixTab members={members} canWrite={canWrite} onSave={saveMatrix} onNotify={notify} openAssess={openAssess} />
           )}
 
           {/* ---------------- پوشش (هیت‌مپ) — آمار + هیت‌مپ + دسته‌ها ---------------- */}
@@ -1465,53 +1700,3 @@ function ClockIcon() {
 }
 
 /* ماتریس قدرت × علاقه */
-function Matrix({ members, catOf, openAssess, canWrite }: {
-  members: MemberView[]; catOf: (id?: string | null) => string; openAssess: (m: MemberView) => void; canWrite: boolean;
-}) {
-  const W = 100, H = 62; // درصدی
-  return (
-    <div>
-      <div style={{ position: 'relative', width: '100%', height: 320, background: 'var(--card-bg-soft)', borderRadius: 12, border: '1px solid var(--card-border-strong)', overflow: 'hidden' }}>
-        {/* quadrants */}
-        {[
-          { x: 50, y: 0, w: 50, h: 31, label: 'بازیگر کلیدی', color: 'var(--srip-danger)', bg: 'color-mix(in srgb, var(--srip-danger) 6%, transparent)' },
-          { x: 0, y: 0, w: 50, h: 31, label: 'تأثیرگذار', color: 'var(--srip-amber)', bg: 'color-mix(in srgb, var(--srip-amber) 6%, transparent)' },
-          { x: 50, y: 31, w: 50, h: 31, label: 'حامی', color: 'var(--srip-accent)', bg: 'color-mix(in srgb, var(--srip-accent) 6%, transparent)' },
-          { x: 0, y: 31, w: 50, h: 31, label: 'ناظر', color: 'var(--text-muted)', bg: 'transparent' },
-        ].map((q, i) => (
-          <div key={i} style={{ position: 'absolute', left: `${q.x}%`, top: `${q.y / H * 100}%`, width: `${q.w}%`, height: `${q.h / H * 100}%`, background: q.bg, border: '1px dashed color-mix(in srgb, var(--card-border-strong) 80%, transparent)', display: 'grid', placeItems: 'center' }}>
-            <span style={{ fontSize: 11, fontWeight: 800, color: q.color, opacity: .85 }}>{q.label}</span>
-          </div>
-        ))}
-        {/* axes */}
-        <div style={{ position: 'absolute', insetInlineStart: 0, top: '50%', width: '100%', borderTop: '1px solid var(--card-border-strong)' }} />
-        <div style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', borderInlineStart: '1px solid var(--card-border-strong)' }} />
-        {/* dots */}
-        {members.map(m => (
-          <button
-            key={m.id} type="button"
-            title={`${m.groupFa ?? m.groupId} — قدرت ${m.power}/علاقه ${m.interest} · ${m.stageFa ?? m.stage} · ${m.stanceFa ?? m.stance}`}
-            onClick={() => canWrite && openAssess(m)}
-            style={{
-              position: 'absolute',
-              left: `${clamp(m.interest) / 100 * W}%`,
-              top: `${(H - clamp(m.power) / 100 * H) / H * 100}%`,
-              transform: 'translate(-50%, -50%)',
-              width: 12, height: 12, borderRadius: '50%',
-              background: CAT_COLORS[m.categoryId ?? ''] ?? 'var(--srip-accent)',
-              border: '2px solid var(--card-bg)', cursor: canWrite ? 'pointer' : 'default',
-              boxShadow: '0 1px 4px rgba(0,0,0,.25)',
-            }}
-          />
-        ))}
-        <div style={{ position: 'absolute', top: 6, insetInlineStart: 10, fontSize: 10.5, fontWeight: 700, color: 'var(--text-secondary)' }}>قدرت ↑</div>
-        <div style={{ position: 'absolute', bottom: 6, insetInlineEnd: 10, fontSize: 10.5, fontWeight: 700, color: 'var(--text-secondary)' }}>علاقه ←</div>
-      </div>
-      <div className="chip-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-        {Object.keys(CAT_COLORS).map(c => (
-          <span key={c} className="chip neutral"><span style={{ width: 8, height: 8, borderRadius: '50%', background: CAT_COLORS[c] }} />{catOf(c)}</span>
-        ))}
-      </div>
-    </div>
-  );
-}
