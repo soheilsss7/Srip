@@ -74,13 +74,21 @@ try {
   await clickByText('button[role="tab"]', 'ماتریس نفوذ×حمایت');
   await new Promise(r => setTimeout(r, 900));
   ok('ماتریس: عنوان بخش', await waitForText('ماتریس نفوذ × حمایت'));
-  ok('ماتریس: نقطه‌های اعضا روی نمودار', await page.evaluate(() => document.querySelectorAll('[role="application"] button').length >= 5), 'dots=' + await page.evaluate(() => document.querySelectorAll('[role="application"] button').length));
+  ok('ماتریس: نقطه‌های اعضا روی نمودار', await page.evaluate(() => document.querySelectorAll('[role="application"] [data-member-dot]').length >= 5), 'dots=' + await page.evaluate(() => document.querySelectorAll('[role="application"] [data-member-dot]').length));
+  ok('ماتریس: نقطه‌ها دایرهٔ کامل SVG هستند (نه بیضی)', await page.evaluate(() => document.querySelectorAll('[role="application"] circle').length >= 5 && document.querySelectorAll('[role="application"] ellipse').length === 0));
   ok('ماتریس: کارت‌های راهنمای ناحیه (متحدان کلیدی/قدرتمندان محتاط)', await waitForText('متحدان کلیدی') && await waitForText('قدرتمندان محتاط'));
   ok('ماتریس: برچسب محورهای حمایت و نفوذ', await waitForText('حمایت (علاقه)') && await waitForText('نفوذ (قدرت)'));
   ok('ماتریس: آستانهٔ نواحی = همان موتور (۶۰)', await page.evaluate(() => (document.body.textContent ?? '').includes('آستانه')));
-  ok('ماتریس: علائم اختصاری اعضا داخل نقطه‌ها', await page.evaluate(() => {
-    const dots = [...document.querySelectorAll('[role="application"] button')];
-    return dots.length >= 5 && dots.every(b => (b.textContent ?? '').trim().length > 0);
+  ok('ماتریس: برچسب نام اعضا کنار نقطه‌ها', await page.evaluate(() => {
+    const labels = [...document.querySelectorAll('[role="application"] svg text')].filter(t => ((t.textContent ?? '').trim().length > 3));
+    return labels.length >= 5;
+  }));
+  await page.hover('[role="application"] [data-member-dot]');
+  await new Promise(r => setTimeout(r, 500));
+  ok('ماتریس: کارت شناور با هاور روی نقطه', await page.evaluate(() => {
+    const box = document.querySelector('[role="application"]');
+    const card = [...(box?.querySelectorAll('div') ?? [])].find(x => (x.textContent ?? '').includes('کلیک = انتخاب'));
+    return !!card && (card?.textContent ?? '').includes('نفوذ') && (card?.textContent ?? '').includes('حمایت');
   }));
   ok('ماتریس: شمار اعضای هر ناحیه روی بوم', await page.evaluate(() => [...document.querySelectorAll('[role="application"] span')].some(x => /عضو|·\s*\d+/.test(x.textContent ?? '')) || (document.body.textContent ?? '').includes('عضو ·')));
 

@@ -142,27 +142,7 @@ const ZONES: Array<{ id: string; pos: 'tr' | 'tl' | 'br' | 'bl'; title: string; 
   { id: 'SUPPORTER', pos: 'br', title: 'حامیان عملیاتی', action: 'مطلع نگه‌داشتن و توانمندسازی' },
   { id: 'OBSERVER', pos: 'bl', title: 'ناظران', action: 'پایش دوره‌ای با حداقل هزینه' },
 ];
-const zoneBoxStyle = (pos: 'tr' | 'tl' | 'br' | 'bl') => {
-  const L = ZONE_TH, R = 100 - ZONE_TH;
-  if (pos === 'tr') return { left: `${L}%`, top: 0, width: `${R}%`, height: `${R}%` };
-  if (pos === 'tl') return { left: 0, top: 0, width: `${L}%`, height: `${R}%` };
-  if (pos === 'br') return { left: `${L}%`, top: `${R}%`, width: `${R}%`, height: `${L}%` };
-  return { left: 0, top: `${R}%`, width: `${L}%`, height: `${L}%` };
-};
-const zoneLabelStyle = (pos: 'tr' | 'tl' | 'br' | 'bl'): Record<string, string | number> => {
-  if (pos === 'tr') return { top: 6, right: 8 };
-  if (pos === 'tl') return { top: 6, left: 8 };
-  if (pos === 'br') return { bottom: 18, right: 8 };
-  return { bottom: 18, left: 8 };
-};
-const memberInitials = (m: MemberView) => {
-  const name = (m.sourceName ?? m.id ?? '').replace(/[()«»]/g, ' ').replace(/\s+/g, ' ').trim();
-  if (!name) return '·';
-  const words = name.split(' ').filter(w => w.length > 1);
-  if (!words.length) return name.slice(0, 2);
-  if (words.length === 1) return words[0].slice(0, 2);
-  return `${words[0][0]}${words[1][0]}`;
-};
+
 const STANCE_CAUSES: Array<[string, string]> = [
   ['INTERACTION', 'تعامل مستقیم ما'], ['THIRD_PARTY', 'تأثیر شخص سوم'], ['POLICY', 'تغییر سیاست/تنظیم‌گری'],
   ['MARKET', 'تحول بازار'], ['COMPETITOR', 'اقدام رقیب'], ['INTERNAL', 'تحول درون سازمان آنها'],
@@ -204,6 +184,39 @@ function MatrixTab({ members, canWrite, onSave, onNotify, openAssess }: {
   const focus = shown.find(m => m.id === (hoverId || selId)) ?? null;
   const fpi = focus ? getPI(focus) : null;
   const zoneMembers = (z: string) => shown.filter(m => stanceOfPI(getPI(m).p, getPI(m).i) === z);
+  /* چیدمان ضدتداخل: نقطه‌های هم‌مکان با دافعهٔ ملایم جدا می‌شوند و خط راهنما موقعیت واقعی را نشان می‌دهد */
+  const layoutKey = shown.map(m => { const pi = getPI(m); return `${m.id}:${Math.round(pi.p)},${Math.round(pi.i)}`; }).join('|');
+  const layout = useMemo(() => {
+    const pts: Record<string, { x: number; y: number; tx: number; ty: number }> = {};
+    for (const m of shown) {
+      const pi = getPI(m);
+      pts[m.id] = { x: clamp(pi.i) * 1.6, y: 100 - clamp(pi.p), tx: clamp(pi.i) * 1.6, ty: 100 - clamp(pi.p) };
+    }
+    const arr = Object.values(pts);
+    const MIN = 5.6;
+    for (let it = 0; it < 14; it++) {
+      for (let a = 0; a < arr.length; a++) for (let b = a + 1; b < arr.length; b++) {
+        const A = arr[a], B = arr[b];
+        let dx = B.x - A.x, dy = B.y - A.y;
+        let d = Math.hypot(dx, dy);
+        if (d < 0.01) { dx = 0.6; dy = -0.6; d = 0.85; }
+        if (d < MIN) {
+          const push = (MIN - d) / 2 / d;
+          A.x -= dx * push; A.y -= dy * push;
+          B.x += dx * push; B.y += dy * push;
+        }
+      }
+      for (const q of arr) { q.x = Math.max(3, Math.min(157, q.x)); q.y = Math.max(3.5, Math.min(96.5, q.y)); }
+    }
+    return pts;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layoutKey]);
+  const shortName = (m: MemberView) => {
+    const n = (m.sourceName ?? m.id).replace(/[()«»]/g, ' ').replace(/\s+/g, ' ').trim();
+    const w = n.split(' ').filter(Boolean);
+    return (w.length <= 4 ? n : w.slice(0, 4).join(' ')).slice(0, 24);
+  };
+  const fL = focus ? layout[focus.id] : null;
 
   const apply = async (m: MemberView, p: number, i: number, c?: string, note?: string) => {
     setBusy(true);
@@ -254,14 +267,10 @@ function MatrixTab({ members, canWrite, onSave, onNotify, openAssess }: {
               role="application"
               aria-label="ماتریس نفوذ و حمایت — محور افقی: حمایت (علاقه)؛ محور عمودی: نفوذ (قدرت)"
               style={{
-                position: 'relative', height: 'clamp(300px, 46vw, 430px)', border: '1px solid var(--border,#e2e8f0)', borderRadius: 12,
+                position: 'relative', width: '100%', aspectRatio: '8 / 5', maxWidth: '100%',
+                border: '1px solid var(--border,#e2e8f0)', borderRadius: 14,
                 background: 'var(--card-bg,#fff)', overflow: 'hidden',
-                touchAction: 'none', userSelect: 'none',
-              }}
-              onPointerMove={e => {
-                if (!dragId) return;
-                const pi = ptToPI(e.clientX, e.clientY);
-                if (pi) setPos(pp => ({ ...pp, [dragId]: pi }));
+                touchAction: 'none', userSelect: 'none', cursor: dragId ? 'grabbing' : undefined,
               }}
               onPointerUp={e => {
                 if (!dragId) return;
@@ -272,81 +281,160 @@ function MatrixTab({ members, canWrite, onSave, onNotify, openAssess }: {
               }}
               onPointerLeave={() => setDragId('')}
             >
-              {/* نواحی رنگی — مرز روی آستانهٔ ۶۰ (همان موتور ارزیابی) */}
-              {ZONES.map(z => (
-                <div key={z.id} aria-hidden style={{ position: 'absolute', ...zoneBoxStyle(z.pos), background: `color-mix(in srgb, ${STANCE_DOT_COLOR[z.id]} 6%, transparent)` }} />
-              ))}
-              {/* خطوط راهنمای کم‌رنگ ۲۰/۴۰/۸۰ */}
-              {[20, 40, 80].map(v => (
-                <div key={`gv-${v}`} aria-hidden style={{ position: 'absolute', left: `${v}%`, top: 0, bottom: 0, borderLeft: '1px dashed color-mix(in srgb, var(--border,#e2e8f0) 70%, transparent)' }} />
-              ))}
-              {[20, 40, 80].map(v => (
-                <div key={`gh-${v}`} aria-hidden style={{ position: 'absolute', top: `${100 - v}%`, left: 0, right: 0, borderTop: '1px dashed color-mix(in srgb, var(--border,#e2e8f0) 70%, transparent)' }} />
-              ))}
-              {/* مرز نواحی (آستانهٔ ۶۰) */}
-              <div aria-hidden style={{ position: 'absolute', left: `${ZONE_TH}%`, top: 0, bottom: 0, borderLeft: '2px solid color-mix(in srgb, var(--border,#94a3b8) 80%, transparent)' }} />
-              <div aria-hidden style={{ position: 'absolute', top: `${100 - ZONE_TH}%`, left: 0, right: 0, borderTop: '2px solid color-mix(in srgb, var(--border,#94a3b8) 80%, transparent)' }} />
-              {/* درجه‌بندی محور حمایت (پایین) */}
-              {TICKS.map(v => (
-                <span key={`t-b-${v}`} aria-hidden style={{ position: 'absolute', bottom: 2, left: `${v}%`, transform: v === 0 ? 'none' : v === 100 ? 'translateX(-100%)' : 'translateX(-50%)', fontSize: 9, fontWeight: 700, color: 'var(--text-muted,#94a3b8)' }}>{fmtNum(v)}</span>
-              ))}
-              {/* درجه‌بندی محور نفوذ (چپ) */}
-              {TICKS.map(v => (
-                <span key={`t-l-${v}`} aria-hidden style={{ position: 'absolute', left: 3, top: `${100 - v}%`, transform: v === 0 ? 'none' : v === 100 ? 'translateY(-100%)' : 'translateY(-50%)', fontSize: 9, fontWeight: 700, color: 'var(--text-muted,#94a3b8)' }}>{fmtNum(v)}</span>
-              ))}
-              {/* برچسب نواحی + شمار اعضای هر ناحیه */}
-              {ZONES.map(z => (
-                <span key={`zl-${z.id}`} style={{ position: 'absolute', ...zoneLabelStyle(z.pos), display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 7px', borderRadius: 99, background: 'color-mix(in srgb, var(--card-bg,#fff) 82%, transparent)', border: `1px solid color-mix(in srgb, ${STANCE_DOT_COLOR[z.id]} 35%, transparent)`, fontSize: 10, fontWeight: 800, color: STANCE_DOT_COLOR[z.id], pointerEvents: 'none' }}>
-                  {z.title} · {fmtNum(zoneMembers(z.id).length)}
-                </span>
-              ))}
-              {/* نشانگر متقاطع عضو کانونی */}
-              {fpi && focus && (
-                <>
-                  <div aria-hidden style={{ position: 'absolute', left: `${fpi.i}%`, top: 0, bottom: 0, borderLeft: '1px dashed color-mix(in srgb, var(--border,#475569) 55%, transparent)', zIndex: 2 }} />
-                  <div aria-hidden style={{ position: 'absolute', top: `${100 - fpi.p}%`, left: 0, right: 0, borderTop: '1px dashed color-mix(in srgb, var(--border,#475569) 55%, transparent)', zIndex: 2 }} />
-                  <div style={{ position: 'absolute', left: `min(max(${fpi.i}%, 90px), calc(100% - 90px))`, top: `max(${100 - fpi.p}%, 26px)`, transform: 'translate(-50%, -130%)', zIndex: 3, pointerEvents: 'none', whiteSpace: 'nowrap', fontSize: 10.5, fontWeight: 700, padding: '3px 8px', borderRadius: 8, background: 'var(--card-bg,#fff)', border: '1px solid var(--border,#cbd5e1)', boxShadow: '0 2px 10px rgba(15,23,42,.14)' }}>
-                    {focus.sourceName ?? focus.id} — نفوذ {fmtNum(fpi.p)} · حمایت {fmtNum(fpi.i)}
+              <style>{'@media (max-width: 700px) { .mx-dot-label, .mx-tick { display: none } }'}</style>
+              <svg
+                viewBox="0 0 160 100"
+                preserveAspectRatio="xMidYMid meet"
+                style={{ width: '100%', height: '100%', display: 'block' }}
+                onPointerMove={e => {
+                  if (!dragId) return;
+                  const pi = ptToPI(e.clientX, e.clientY);
+                  if (pi) setPos(pp => ({ ...pp, [dragId]: pi }));
+                }}
+              >
+                <defs>
+                  <pattern id="mx-dots-grid" width="8" height="5" patternUnits="userSpaceOnUse">
+                    <circle cx="8" cy="5" r="0.45" fill="#94a3b8" opacity="0.38" />
+                  </pattern>
+                  <filter id="mx-dot-shadow" x="-80%" y="-80%" width="260%" height="260%">
+                    <feDropShadow dx="0" dy="0.45" stdDeviation="0.65" floodColor="#0f172a" floodOpacity="0.32" />
+                  </filter>
+                </defs>
+
+                {/* پس‌زمینهٔ ناحیه‌ها — مرز روی آستانهٔ ۶۰ (همان موتور ارزیابی) */}
+                <rect x="96" y="0" width="64" height="40" fill="rgba(22,163,74,0.075)" />
+                <rect x="0" y="0" width="96" height="40" fill="rgba(217,119,6,0.05)" />
+                <rect x="96" y="40" width="64" height="60" fill="rgba(37,99,235,0.05)" />
+                <rect x="0" y="40" width="96" height="60" fill="rgba(100,116,139,0.04)" />
+                {/* شبکهٔ نقطه‌چین */}
+                <rect x="0" y="0" width="160" height="100" fill="url(#mx-dots-grid)" />
+
+                {/* مرز نواحی */}
+                <line x1="96" y1="0" x2="96" y2="100" stroke="#64748b" strokeWidth="0.5" strokeDasharray="2 1.5" opacity="0.8" />
+                <line x1="0" y1="40" x2="160" y2="40" stroke="#64748b" strokeWidth="0.5" strokeDasharray="2 1.5" opacity="0.8" />
+                <text x="97.6" y="8.6" fontSize="1.9" fontWeight="700" fill="#64748b" stroke="#fff" strokeWidth="0.7" paintOrder="stroke">آستانهٔ {fmtNum(ZONE_TH)}</text>
+
+                {/* درجه‌بندی محورها */}
+                {TICKS.map(v => (
+                  <text key={`tb-${v}`} className="mx-tick" x={v * 1.6} y="98.9" textAnchor="middle" fontSize="1.8" fontWeight="700" fill="#94a3b8">{fmtNum(v)}</text>
+                ))}
+                {TICKS.map(v => (
+                  <text key={`tl-${v}`} className="mx-tick" x="1.4" y={98.8 - v * 0.98} textAnchor="start" fontSize="1.8" fontWeight="700" fill="#94a3b8">{fmtNum(v)}</text>
+                ))}
+
+                {/* عنوان نواحی + شمار اعضا */}
+                <text x="157.4" y="5" textAnchor="end" fontSize="2.3" fontWeight="800" fill={STANCE_DOT_COLOR.KEY_PLAYER} stroke="#fff" strokeWidth="0.8" paintOrder="stroke">متحدان کلیدی · {fmtNum(zoneMembers('KEY_PLAYER').length)}</text>
+                <text x="2.6" y="5" textAnchor="start" fontSize="2.3" fontWeight="800" fill={STANCE_DOT_COLOR.INFLUENCER} stroke="#fff" strokeWidth="0.8" paintOrder="stroke">قدرتمندان محتاط · {fmtNum(zoneMembers('INFLUENCER').length)}</text>
+                <text x="157.4" y="96.4" textAnchor="end" fontSize="2.3" fontWeight="800" fill={STANCE_DOT_COLOR.SUPPORTER} stroke="#fff" strokeWidth="0.8" paintOrder="stroke">حامیان عملیاتی · {fmtNum(zoneMembers('SUPPORTER').length)}</text>
+                <text x="2.6" y="96.4" textAnchor="start" fontSize="2.3" fontWeight="800" fill={STANCE_DOT_COLOR.OBSERVER} stroke="#fff" strokeWidth="0.8" paintOrder="stroke">ناظران · {fmtNum(zoneMembers('OBSERVER').length)}</text>
+
+                {/* خط راهنما از موقعیت واقعی به نقطهٔ جابه‌جاشده ( ضدتداخل) */}
+                {shown.map(m => {
+                  const L = layout[m.id];
+                  const d = Math.hypot(L.x - L.tx, L.y - L.ty);
+                  if (d < 1) return null;
+                  return <line key={`ll-${m.id}`} x1={L.tx} y1={L.ty} x2={L.x} y2={L.y} stroke="#94a3b8" strokeWidth="0.28" strokeDasharray="0.9 0.7" opacity="0.8" />;
+                })}
+
+                {/* خط‌کش متقاطع عضو کانونی */}
+                {fL && (
+                  <>
+                    <line x1={fL.x} y1="0" x2={fL.x} y2="100" stroke="#475569" strokeWidth="0.3" strokeDasharray="1.3 1.1" opacity="0.55" />
+                    <line x1="0" y1={fL.y} x2="160" y2={fL.y} stroke="#475569" strokeWidth="0.3" strokeDasharray="1.3 1.1" opacity="0.55" />
+                  </>
+                )}
+
+                {/* نقطهٔ اعضا — دایرهٔ کامل SVG با برچسب نام */}
+                {shown.map(m => {
+                  const L = layout[m.id];
+                  const pi = getPI(m);
+                  const isSel = m.id === selId;
+                  const isFocus = m.id === (hoverId || selId);
+                  const r = isFocus ? 2.9 : 2.2;
+                  const labelBelow = L.y < 9;
+                  return (
+                    <g
+                      key={m.id}
+                      data-member-dot
+                      transform={`translate(${L.x} ${L.y})`}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`${m.sourceName ?? m.id} — نفوذ ${fmtNum(pi.p)}، حمایت ${fmtNum(pi.i)}، موضع ${m.stanceFa ?? m.stance}`}
+                      onPointerDown={e => {
+                        e.preventDefault();
+                        (e.currentTarget as SVGElement).setPointerCapture?.(e.pointerId);
+                        setSelId(m.id);
+                        setDragId(m.id);
+                      }}
+                      onPointerEnter={() => setHoverId(m.id)}
+                      onPointerLeave={() => setHoverId('')}
+                      onClick={() => setSelId(m.id)}
+                      style={{ cursor: canWrite ? 'grab' : 'pointer', outline: 'none' }}
+                    >
+                      <circle r="4.8" fill="transparent" />
+                      <circle r={r} fill={STANCE_DOT_COLOR[m.stance] ?? '#94a3b8'} stroke="#fff" strokeWidth="0.38" filter="url(#mx-dot-shadow)" style={{ transition: 'r .15s' }} />
+                      {isSel && <circle r="3.6" fill="none" stroke="#0f172a" strokeWidth="0.32" opacity="0.85" />}
+                      <text
+                        className="mx-dot-label"
+                        y={labelBelow ? 5.4 : -4.2}
+                        textAnchor="middle"
+                        fontSize="2.1"
+                        fontWeight="700"
+                        fill="#0f172a"
+                        stroke="#fff"
+                        strokeWidth="0.75"
+                        paintOrder="stroke"
+                        style={{ pointerEvents: 'none' }}
+                      >{shortName(m)}</text>
+                    </g>
+                  );
+                })}
+              </svg>
+
+              {/* کارت شناور عضو کانونی */}
+              {focus && fL && (
+                <div
+                  style={{
+                    position: 'absolute', zIndex: 20, pointerEvents: 'none',
+                    left: `${Math.min(Math.max(fL.x / 160 * 100, 16), 84)}%`,
+                    top: fL.y < 18 ? `calc(${fL.y / 100 * 100}% + 14px)` : `${fL.y / 100 * 100}%`,
+                    transform: fL.y < 18 ? 'translate(-50%, 0)' : 'translate(-50%, -118%)',
+                    minWidth: 190, maxWidth: 250, padding: '8px 10px', borderRadius: 10,
+                    background: 'var(--card-bg,#fff)', border: '1px solid var(--border,#cbd5e1)',
+                    boxShadow: '0 6px 22px rgba(15,23,42,.16)',
+                  }}
+                >
+                  <b style={{ fontSize: 12 }}>{focus.sourceName ?? focus.id}</b>
+                  <div className="t-muted" style={{ fontSize: 10.5 }}>{focus.groupFa ?? '—'}{focus.categoryFa ? ` · ${focus.categoryFa}` : ''}</div>
+                  <div style={{ display: 'flex', gap: 5, alignItems: 'center', marginTop: 5 }}>
+                    <span className="chip" style={{ fontSize: 10, padding: '1px 7px', color: STANCE_DOT_COLOR[focus.stance], background: `color-mix(in srgb, ${STANCE_DOT_COLOR[focus.stance]} 12%, transparent)`, border: `1px solid color-mix(in srgb, ${STANCE_DOT_COLOR[focus.stance]} 35%, transparent)` }}>{focus.stanceFa ?? focus.stance}</span>
+                    <span className="t-muted" style={{ fontSize: 10 }}>{ZONES.find(z => z.id === stanceOfPI(getPI(focus).p, getPI(focus).i))?.title}</span>
                   </div>
-                </>
+                  <div style={{ display: 'grid', gap: 3, marginTop: 6 }}>
+                    {([['نفوذ', getPI(focus).p, '#0f172a'], ['حمایت', getPI(focus).i, '#2563eb']] as const).map(([lb, val, color]) => (
+                      <div key={lb} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10 }}>
+                        <span className="t-muted" style={{ width: 30, flex: 'none' }}>{lb}</span>
+                        <span style={{ flex: 1, height: 5, borderRadius: 99, background: 'color-mix(in srgb, var(--border,#e2e8f0) 60%, transparent)', overflow: 'hidden' }}>
+                          <span style={{ display: 'block', height: '100%', width: `${clamp(val)}%`, background: color, borderRadius: 99 }} />
+                        </span>
+                        <b style={{ minWidth: 16, textAlign: 'end' }}>{fmtNum(val)}</b>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="t-muted" style={{ fontSize: 9.5, marginTop: 5 }}>کلیک = انتخاب · درگ = جابه‌جایی و ارزیابی</div>
+                </div>
               )}
-              {/* نقطه‌های اعضا — علائم اختصاری داخل نقطه */}
-              {shown.map(m => {
-                const pi = getPI(m);
-                const isSel = m.id === selId;
-                const isFocus = m.id === (hoverId || selId);
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    aria-label={`${m.sourceName ?? m.id} — نفوذ ${fmtNum(pi.p)}، حمایت ${fmtNum(pi.i)}، موضع ${m.stanceFa ?? m.stance}`}
-                    title={`${m.sourceName ?? m.id} — نفوذ ${fmtNum(pi.p)} / حمایت ${fmtNum(pi.i)} (${m.stanceFa ?? m.stance})`}
-                    onPointerDown={e => {
-                      e.preventDefault();
-                      (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
-                      setSelId(m.id);
-                      setDragId(m.id);
-                    }}
-                    onPointerEnter={() => setHoverId(m.id)}
-                    onPointerLeave={() => setHoverId('')}
-                    onClick={() => setSelId(m.id)}
-                    style={{
-                      position: 'absolute', left: `${pi.i}%`, bottom: `${pi.p}%`,
-                      width: isFocus ? 26 : 20, height: isFocus ? 26 : 20, borderRadius: '50%',
-                      transform: 'translate(-50%, 50%)', border: isSel ? '3px solid #0f172a' : '2px solid rgba(255,255,255,.9)',
-                      background: STANCE_DOT_COLOR[m.stance] ?? '#94a3b8', color: '#fff',
-                      fontSize: 9, fontWeight: 800, lineHeight: 1, display: 'grid', placeItems: 'center', padding: 0,
-                      cursor: canWrite ? 'grab' : 'pointer', zIndex: isFocus ? 5 : 4,
-                      boxShadow: isFocus ? '0 0 0 5px color-mix(in srgb, currentColor 18%, transparent), 0 3px 10px rgba(15,23,42,.25)' : '0 2px 6px rgba(15,23,42,.22)',
-                      transition: dragId === m.id ? 'none' : 'left .15s, bottom .15s, width .12s, height .12s',
-                    }}
-                  >{memberInitials(m)}</button>
-                );
-              })}
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', marginTop: 4 }}>
               <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-secondary)' }}>حمایت (علاقه) →</span>
             </div>
+          </div>
+
+          <div className="chip-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+            {Object.entries(STANCE_DOT_COLOR).map(([k, c]) => (
+              <span key={k} className="chip neutral"><span style={{ width: 9, height: 9, borderRadius: '50%', background: c, display: 'inline-block' }} /> {STANCE_TONE[k] ? (members.find(m => m.stance === k)?.stanceFa ?? k) : k}</span>
+            ))}
+            <span className="chip neutral">{fmtNum(shown.length)} عضو روی ماتریس</span>
           </div>
 
           {/* ── راهنمای نواحی: عنوان ناحیه، شمار، اقدام راهبردی و اعضای برجسته ── */}
