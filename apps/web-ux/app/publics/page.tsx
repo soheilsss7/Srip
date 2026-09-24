@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import { api, apiBlob, unwrapList } from '../_lib/api';
 import { useWorkspace } from '../_components/workspace';
 import { Badge, ErrorCard, Loading, Modal, PageHeader, SectionCard, StatCard, StatusBadge, Toolbar } from '../_components/page-ui';
@@ -148,6 +148,9 @@ const STANCE_CAUSES: Array<[string, string]> = [
   ['MARKET', 'تحول بازار'], ['COMPETITOR', 'اقدام رقیب'], ['INTERNAL', 'تحول درون سازمان آنها'],
   ['MEDIA', 'پوشش رسانه‌ای'], ['OTHER', 'سایر'],
 ];
+const ZONE_ICON: Record<string, ComponentType<{ size?: number }>> = {
+  KEY_PLAYER: Target, INFLUENCER: Power, SUPPORTER: Heart, OBSERVER: Eye,
+};
 const stanceOfPI = (p: number, i: number) => (p >= ZONE_TH && i >= ZONE_TH) ? 'KEY_PLAYER' : p >= ZONE_TH ? 'INFLUENCER' : i >= ZONE_TH ? 'SUPPORTER' : 'OBSERVER';
 const causeLabel = (c: string) => STANCE_CAUSES.find(x => x[0] === c)?.[1] ?? c;
 const isDecliningMember = (m: MemberView) => {
@@ -268,8 +271,10 @@ function MatrixTab({ members, canWrite, onSave, onNotify, openAssess }: {
               aria-label="ماتریس نفوذ و حمایت — محور افقی: حمایت (علاقه)؛ محور عمودی: نفوذ (قدرت)"
               style={{
                 position: 'relative', width: '100%', aspectRatio: '8 / 5', maxWidth: '100%',
-                border: '1px solid var(--border,#e2e8f0)', borderRadius: 14,
-                background: 'var(--card-bg,#fff)', overflow: 'hidden',
+                border: '1px solid color-mix(in srgb, var(--border,#e2e8f0) 85%, transparent)', borderRadius: 14,
+                background: 'linear-gradient(180deg, var(--card-bg,#fff) 0%, color-mix(in srgb, #f1f5f9 45%, var(--card-bg,#fff)) 100%)',
+                boxShadow: 'inset 0 0 0 1px rgba(15,23,42,.02), 0 1px 3px rgba(15,23,42,.05)',
+                overflow: 'hidden',
                 touchAction: 'none', userSelect: 'none', cursor: dragId ? 'grabbing' : undefined,
               }}
               onPointerUp={e => {
@@ -293,65 +298,110 @@ function MatrixTab({ members, canWrite, onSave, onNotify, openAssess }: {
                 }}
               >
                 <defs>
-                  <pattern id="mx-dots-grid" width="8" height="5" patternUnits="userSpaceOnUse">
-                    <circle cx="8" cy="5" r="0.45" fill="#94a3b8" opacity="0.38" />
+                  <pattern id="mx-grid" width="8" height="5" patternUnits="userSpaceOnUse">
+                    <circle cx="8" cy="5" r="0.4" fill="#94a3b8" opacity="0.26" />
                   </pattern>
-                  <filter id="mx-dot-shadow" x="-80%" y="-80%" width="260%" height="260%">
-                    <feDropShadow dx="0" dy="0.45" stdDeviation="0.65" floodColor="#0f172a" floodOpacity="0.32" />
+                  <filter id="mx-shadow" x="-90%" y="-90%" width="280%" height="280%">
+                    <feDropShadow dx="0" dy="0.4" stdDeviation="0.5" floodColor="#0f172a" floodOpacity="0.3" />
                   </filter>
+                  {/* شست گرادیانی نواحی — اوج رنگ در گوشهٔ آرمانی هر ناحیه */}
+                  <linearGradient id="mx-zg-tr" x1="0" y1="1" x2="1" y2="0">
+                    <stop offset="0" stopColor="#16a34a" stopOpacity="0.02" /><stop offset="1" stopColor="#16a34a" stopOpacity="0.15" />
+                  </linearGradient>
+                  <linearGradient id="mx-zg-tl" x1="1" y1="1" x2="0" y2="0">
+                    <stop offset="0" stopColor="#d97706" stopOpacity="0.02" /><stop offset="1" stopColor="#d97706" stopOpacity="0.11" />
+                  </linearGradient>
+                  <linearGradient id="mx-zg-br" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stopColor="#2563eb" stopOpacity="0.02" /><stop offset="1" stopColor="#2563eb" stopOpacity="0.1" />
+                  </linearGradient>
+                  <linearGradient id="mx-zg-bl" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stopColor="#64748b" stopOpacity="0.02" /><stop offset="1" stopColor="#64748b" stopOpacity="0.055" />
+                  </linearGradient>
                 </defs>
 
-                {/* پس‌زمینهٔ ناحیه‌ها — مرز روی آستانهٔ ۶۰ (همان موتور ارزیابی) */}
-                <rect x="96" y="0" width="64" height="40" fill="rgba(22,163,74,0.075)" />
-                <rect x="0" y="0" width="96" height="40" fill="rgba(217,119,6,0.05)" />
-                <rect x="96" y="40" width="64" height="60" fill="rgba(37,99,235,0.05)" />
-                <rect x="0" y="40" width="96" height="60" fill="rgba(100,116,139,0.04)" />
-                {/* شبکهٔ نقطه‌چین */}
-                <rect x="0" y="0" width="160" height="100" fill="url(#mx-dots-grid)" />
+                {/* پس‌زمینهٔ نواحی — مرز روی آستانهٔ ۶۰ (همان موتور ارزیابی) */}
+                <rect x="96" y="0" width="64" height="40" fill="url(#mx-zg-tr)" />
+                <rect x="0" y="0" width="96" height="40" fill="url(#mx-zg-tl)" />
+                <rect x="96" y="40" width="64" height="60" fill="url(#mx-zg-br)" />
+                <rect x="0" y="40" width="96" height="60" fill="url(#mx-zg-bl)" />
+                <rect x="0" y="0" width="160" height="100" fill="url(#mx-grid)" />
 
                 {/* مرز نواحی */}
-                <line x1="96" y1="0" x2="96" y2="100" stroke="#64748b" strokeWidth="0.5" strokeDasharray="2 1.5" opacity="0.8" />
-                <line x1="0" y1="40" x2="160" y2="40" stroke="#64748b" strokeWidth="0.5" strokeDasharray="2 1.5" opacity="0.8" />
-                <text x="97.6" y="8.6" fontSize="1.9" fontWeight="700" fill="#64748b" stroke="#fff" strokeWidth="0.7" paintOrder="stroke">آستانهٔ {fmtNum(ZONE_TH)}</text>
+                <line x1="96" y1="0" x2="96" y2="100" stroke="#64748b" strokeWidth="0.5" strokeDasharray="2 1.4" opacity="0.75" />
+                <line x1="0" y1="40" x2="160" y2="40" stroke="#64748b" strokeWidth="0.5" strokeDasharray="2 1.4" opacity="0.75" />
 
                 {/* درجه‌بندی محورها */}
                 {TICKS.map(v => (
-                  <text key={`tb-${v}`} className="mx-tick" x={v * 1.6} y="98.9" textAnchor="middle" fontSize="1.8" fontWeight="700" fill="#94a3b8">{fmtNum(v)}</text>
+                  <text key={`tb-${v}`} className="mx-tick" x={v === 0 ? 0.6 : v === 100 ? 159.4 : v * 1.6} y="98.9"
+                    textAnchor={v === 0 ? 'start' : v === 100 ? 'end' : 'middle'} fontSize="1.8" fontWeight="700" fill="#94a3b8">{fmtNum(v)}</text>
                 ))}
                 {TICKS.map(v => (
-                  <text key={`tl-${v}`} className="mx-tick" x="1.4" y={98.8 - v * 0.98} textAnchor="start" fontSize="1.8" fontWeight="700" fill="#94a3b8">{fmtNum(v)}</text>
+                  <text key={`tl-${v}`} className="mx-tick" x="1.3" y={98.8 - v * 0.98} textAnchor="start" fontSize="1.8" fontWeight="700" fill="#94a3b8">{fmtNum(v)}</text>
                 ))}
 
-                {/* عنوان نواحی + شمار اعضا */}
-                <text x="157.4" y="5" textAnchor="end" fontSize="2.3" fontWeight="800" fill={STANCE_DOT_COLOR.KEY_PLAYER} stroke="#fff" strokeWidth="0.8" paintOrder="stroke">متحدان کلیدی · {fmtNum(zoneMembers('KEY_PLAYER').length)}</text>
-                <text x="2.6" y="5" textAnchor="start" fontSize="2.3" fontWeight="800" fill={STANCE_DOT_COLOR.INFLUENCER} stroke="#fff" strokeWidth="0.8" paintOrder="stroke">قدرتمندان محتاط · {fmtNum(zoneMembers('INFLUENCER').length)}</text>
-                <text x="157.4" y="96.4" textAnchor="end" fontSize="2.3" fontWeight="800" fill={STANCE_DOT_COLOR.SUPPORTER} stroke="#fff" strokeWidth="0.8" paintOrder="stroke">حامیان عملیاتی · {fmtNum(zoneMembers('SUPPORTER').length)}</text>
-                <text x="2.6" y="96.4" textAnchor="start" fontSize="2.3" fontWeight="800" fill={STANCE_DOT_COLOR.OBSERVER} stroke="#fff" strokeWidth="0.8" paintOrder="stroke">ناظران · {fmtNum(zoneMembers('OBSERVER').length)}</text>
+                {/* قرص «آستانهٔ ۶۰» روی مرز */}
+                {(() => {
+                  const t = `آستانهٔ ${fmtNum(ZONE_TH)}`;
+                  const w = t.length * 1.04 + 2.6;
+                  return (
+                    <g>
+                      <rect x={96 - w / 2} y="1.9" width={w} height="4.3" rx="2.15" fill="#fff" fillOpacity="0.95" stroke="#94a3b8" strokeOpacity="0.55" strokeWidth="0.28" />
+                      <text x="96" y="4.95" textAnchor="middle" fontSize="1.95" fontWeight="800" fill="#475569">{t}</text>
+                    </g>
+                  );
+                })()}
 
-                {/* خط راهنما از موقعیت واقعی به نقطهٔ جابه‌جاشده ( ضدتداخل) */}
+                {/* سربرگ نواحی: قرص سفید + دایرهٔ رنگی + شمار */}
+                {ZONES.map(z => {
+                  const count = fmtNum(zoneMembers(z.id).length);
+                  const color = STANCE_DOT_COLOR[z.id];
+                  const wName = z.title.length * 1.08 + 3.1;
+                  const wCount = count.length * 1.35 + 2.2;
+                  const W = wName + wCount;
+                  const top = z.pos === 'tr' || z.pos === 'tl';
+                  const right = z.pos === 'tr' || z.pos === 'br';
+                  const x = right ? 157.6 - W : 2.4;
+                  const y = top ? 1.9 : 93.6;
+                  return (
+                    <g key={`zh-${z.id}`} style={{ pointerEvents: 'none' }}>
+                      <rect x={x} y={y} width={W} height="4.5" rx="2.25" fill="#fff" fillOpacity="0.96" stroke={color} strokeOpacity="0.45" strokeWidth="0.3" />
+                      <circle cx={x + 2.6} cy={y + 2.25} r="0.95" fill={color} />
+                      <text x={x + 4.3} y={y + 3.1} fontSize="2.1" fontWeight="800" fill={color}>{z.title}</text>
+                      <text x={x + W - 1.9} y={y + 3.1} textAnchor="end" fontSize="2.1" fontWeight="800" fill="#0f172a">{count}</text>
+                    </g>
+                  );
+                })}
+
+                {/* خط راهنما از موقعیت واقعی به نقطهٔ جابه‌جاشده (ضدتداخل) */}
                 {shown.map(m => {
                   const L = layout[m.id];
                   const d = Math.hypot(L.x - L.tx, L.y - L.ty);
                   if (d < 1) return null;
-                  return <line key={`ll-${m.id}`} x1={L.tx} y1={L.ty} x2={L.x} y2={L.y} stroke="#94a3b8" strokeWidth="0.28" strokeDasharray="0.9 0.7" opacity="0.8" />;
+                  return <line key={`ll-${m.id}`} x1={L.tx} y1={L.ty} x2={L.x} y2={L.y} stroke="#94a3b8" strokeWidth="0.26" strokeDasharray="0.9 0.7" opacity="0.65" />;
                 })}
 
                 {/* خط‌کش متقاطع عضو کانونی */}
                 {fL && (
                   <>
-                    <line x1={fL.x} y1="0" x2={fL.x} y2="100" stroke="#475569" strokeWidth="0.3" strokeDasharray="1.3 1.1" opacity="0.55" />
-                    <line x1="0" y1={fL.y} x2="160" y2={fL.y} stroke="#475569" strokeWidth="0.3" strokeDasharray="1.3 1.1" opacity="0.55" />
+                    <line x1={fL.x} y1="0" x2={fL.x} y2="100" stroke="#475569" strokeWidth="0.3" strokeDasharray="1.3 1.1" opacity="0.5" />
+                    <line x1="0" y1={fL.y} x2="160" y2={fL.y} stroke="#475569" strokeWidth="0.3" strokeDasharray="1.3 1.1" opacity="0.5" />
                   </>
                 )}
 
-                {/* نقطهٔ اعضا — دایرهٔ کامل SVG با برچسب نام */}
+                {/* نقطهٔ اعضا — اندازه بر پایهٔ نفوذ + هالهٔ رنگی + ضربان بازیگران کلیدی + قرص نام */}
                 {shown.map(m => {
                   const L = layout[m.id];
                   const pi = getPI(m);
                   const isSel = m.id === selId;
                   const isFocus = m.id === (hoverId || selId);
-                  const r = isFocus ? 2.9 : 2.2;
-                  const labelBelow = L.y < 9;
+                  const color = STANCE_DOT_COLOR[m.stance] ?? '#94a3b8';
+                  const r = 1.9 + (clamp(pi.p) / 100) * 1.5 + (isFocus ? 0.65 : 0);
+                  const label = shortName(m);
+                  const lw = Math.min(label.length * 1.08 + 2.7, 46);
+                  const lx = Math.max(1.2, Math.min(158.8 - lw, L.x - lw / 2));
+                  const aboveY = L.y - r - 1.3 - 4.1;
+                  const belowY = L.y + r + 1.3;
+                  const ly = aboveY < 1 ? Math.min(belowY, 94.6) : aboveY;
                   return (
                     <g
                       key={m.id}
@@ -371,21 +421,16 @@ function MatrixTab({ members, canWrite, onSave, onNotify, openAssess }: {
                       onClick={() => setSelId(m.id)}
                       style={{ cursor: canWrite ? 'grab' : 'pointer', outline: 'none' }}
                     >
-                      <circle r="4.8" fill="transparent" />
-                      <circle r={r} fill={STANCE_DOT_COLOR[m.stance] ?? '#94a3b8'} stroke="#fff" strokeWidth="0.38" filter="url(#mx-dot-shadow)" style={{ transition: 'r .15s' }} />
-                      {isSel && <circle r="3.6" fill="none" stroke="#0f172a" strokeWidth="0.32" opacity="0.85" />}
-                      <text
-                        className="mx-dot-label"
-                        y={labelBelow ? 5.4 : -4.2}
-                        textAnchor="middle"
-                        fontSize="2.1"
-                        fontWeight="700"
-                        fill="#0f172a"
-                        stroke="#fff"
-                        strokeWidth="0.75"
-                        paintOrder="stroke"
-                        style={{ pointerEvents: 'none' }}
-                      >{shortName(m)}</text>
+                      <circle r="5.2" fill="transparent" />
+                      <circle r={r + 1.55} fill={color} opacity={isFocus ? 0.3 : 0.16}>
+                        {m.stance === 'KEY_PLAYER' && !isFocus ? (<animate attributeName="opacity" values="0.24;0.07;0.24" dur="2.6s" repeatCount="indefinite" />) : null}
+                      </circle>
+                      <circle r={r} fill={color} stroke="#fff" strokeWidth="0.42" filter="url(#mx-shadow)" style={{ transition: 'r .15s' }} />
+                      {isSel && <circle r={r + 0.85} fill="none" stroke="#0f172a" strokeWidth="0.32" opacity="0.8" strokeDasharray="0.9 0.6" />}
+                      <g className="mx-dot-label" style={{ pointerEvents: 'none' }}>
+                        <rect x={lx - L.x} y={ly - L.y} width={lw} height="4.1" rx="2.05" fill="#fff" fillOpacity="0.96" stroke="#e2e8f0" strokeWidth="0.26" />
+                        <text x={lx - L.x + lw / 2} y={ly - L.y + 2.85} textAnchor="middle" fontSize="2.05" fontWeight="700" fill="#0f172a">{label}</text>
+                      </g>
                     </g>
                   );
                 })}
@@ -1153,14 +1198,22 @@ export default function PublicsPage() {
                     </div>
                   </div>
                   {/* نقشهٔ ۲×۲ نواحی — کلیک = رفتن به ماتریس */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
+                  <style>{'.zone-card{transition:transform .16s ease,box-shadow .16s ease}.zone-card:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(15,23,42,.12)}'}</style>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
                     {ZONES.map(z => {
                       const n = members.filter(m => m.stance === z.id).length;
+                      const color = STANCE_DOT_COLOR[z.id];
+                      const Icon = ZONE_ICON[z.id];
+                      const pct = members.length ? Math.round(n / members.length * 100) : 0;
                       return (
-                        <button key={`zm-${z.id}`} type="button" onClick={() => setTab('matrix')} title={`${z.action} — مشاهده در ماتریس`}
-                          style={{ textAlign: 'start', cursor: 'pointer', padding: '9px 11px', borderRadius: 10, display: 'grid', gap: 2, border: `1px solid color-mix(in srgb, ${STANCE_DOT_COLOR[z.id]} 30%, transparent)`, background: `color-mix(in srgb, ${STANCE_DOT_COLOR[z.id]} 6%, transparent)` }}>
-                          <span style={{ fontSize: 11, fontWeight: 800, color: STANCE_DOT_COLOR[z.id] }}>{z.title} — {STANCE_FA[z.id]}</span>
-                          <span style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.2 }}>{fmtNum(n)}<span className="t-muted" style={{ fontSize: 11, fontWeight: 400 }}> عضو</span></span>
+                        <button key={`zm-${z.id}`} type="button" className="zone-card" onClick={() => setTab('matrix')} title={`${z.action} — مشاهده در ماتریس`}
+                          style={{ textAlign: 'start', cursor: 'pointer', padding: '12px 13px', borderRadius: 12, display: 'grid', gap: 3, position: 'relative', overflow: 'hidden', border: `1px solid color-mix(in srgb, ${color} 40%, transparent)`, background: `linear-gradient(135deg, color-mix(in srgb, ${color} 14%, transparent), color-mix(in srgb, ${color} 4%, transparent))` }}>
+                          <span style={{ position: 'absolute', insetInlineEnd: -14, top: -14, width: 54, height: 54, borderRadius: '50%', background: `color-mix(in srgb, ${color} 13%, transparent)`, pointerEvents: 'none' }} aria-hidden />
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 800, color }}>
+                            {Icon ? <Icon size={13} /> : null}{z.title}
+                            <span style={{ marginInlineStart: 'auto', fontSize: 10, fontWeight: 800, padding: '1px 8px', borderRadius: 99, background: 'var(--card-bg,#fff)', border: `1px solid color-mix(in srgb, ${color} 35%, transparent)`, color }}>{fmtNum(n)} · {fmtNum(pct)}٪</span>
+                          </span>
+                          <span style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.15 }}>{fmtNum(n)}<span className="t-muted" style={{ fontSize: 11, fontWeight: 400 }}> عضو ({STANCE_FA[z.id]})</span></span>
                           <span className="t-muted" style={{ fontSize: 10.5 }}>{z.action}</span>
                         </button>
                       );
