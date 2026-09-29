@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.29.01';
+const DEMO_MOCK_VERSION = '2026.09.30.01';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -2428,7 +2428,7 @@ const SEED_USERS = {
   'client@arya-tech.ir': {
     id:'u-2', email:'client@arya-tech.ir', username:'client', name:'سارا محمدی', password:'123456',
     memberships:[{id:'mb-2',organizationId:'org-2',organizationName:'آریا فناوری',role:'RELATIONSHIP_MANAGER',department:'فروش',dataScope:'ORGANIZATION',accessScope:'ORGANIZATION',isPrimary:true}],
-    permissions:['dashboard.read','program.read','organization.read','person.read','relationship.read','meeting.read','interaction.read','action.read','commitment.read','project.read','opportunity.read','network.read','ai.query','ai.executive_brief','recommendation.read','report.read','مجوز خروجی گزارش','approval.request','approval.read','search.read','notification.read','document.read','calendar.read','help.read','privacy.read','privacy.access','privacy.export','privacy.erase','enterprise.read','feature_flag.read','analytics.read','analytics.write'],
+    permissions:['dashboard.read','program.read','partnership.read','organization.read','person.read','relationship.read','meeting.read','interaction.read','action.read','commitment.read','project.read','opportunity.read','network.read','ai.query','ai.executive_brief','recommendation.read','report.read','مجوز خروجی گزارش','approval.request','approval.read','search.read','notification.read','document.read','calendar.read','help.read','privacy.read','privacy.access','privacy.export','privacy.erase','enterprise.read','feature_flag.read','analytics.read','analytics.write'],
     accessibleOrganizationIds:['org-2'],
     isOwner:false,
     isActive:true,
@@ -5332,8 +5332,8 @@ function audit(req, action, entity, entityId, outcome = 'OK', meta = {}) {
 
 /* --------------------------- admin: RBAC catalog & access recompute ----- */
 const ROLE_LABELS_ADMIN={SUPER_ADMIN:'مدیر کل سیستم',HOLDING_ADMIN:'مدیر هلدینگ',HOLDING_EXECUTIVE:'مدیر ارشد هلدینگ',SUBSIDIARY_ADMIN:'مدیر شرکت',SUBSIDIARY_EXECUTIVE:'مدیر ارشد شرکت',RELATIONSHIP_MANAGER:'مدیر روابط',PROJECT_MANAGER:'مدیر پروژه',ANALYST:'تحلیلگر',STANDARD_USER:'کاربر استاندارد',READ_ONLY:'فقط خواندنی'};
-const R_READ=['dashboard.read','publics.read','strategy.read','organization.read','person.read','relationship.read','network.read','interaction.read','meeting.read','action.read','commitment.read','project.read','opportunity.read','recommendation.read','report.read','document.read','notification.read','search.read','calendar.read','help.read','user.read','session.read','analytics.read','ai.query','ai.executive_brief','program.read'];
-const R_WRITE=['strategy.write','publics.write','person.write','relationship.write','interaction.write','meeting.write','action.write','commitment.write','project.write','opportunity.write','recommendation.تأیید','document.write','data.manage','program.write'];
+const R_READ=['dashboard.read','publics.read','strategy.read','organization.read','person.read','relationship.read','network.read','interaction.read','meeting.read','action.read','commitment.read','project.read','opportunity.read','recommendation.read','report.read','document.read','notification.read','search.read','calendar.read','help.read','user.read','session.read','analytics.read','ai.query','ai.executive_brief','program.read','partnership.read'];
+const R_WRITE=['strategy.write','publics.write','person.write','relationship.write','interaction.write','meeting.write','action.write','commitment.write','project.write','opportunity.write','recommendation.تأیید','document.write','data.manage','program.write','partnership.write'];
 const R_READONLY_PERMS=R_READ.filter(p=>!['ai.query','ai.executive_brief','analytics.read','recommendation.read'].includes(p));
 const ROLE_CATALOG=[
   {key:'SUPER_ADMIN',name:ROLE_LABELS_ADMIN.SUPER_ADMIN,description:'مالک سامانه — دسترسی کامل، غیرقابل واگذاری.',holding:true,perms:['*']},
@@ -5363,7 +5363,7 @@ const P_DEFS=[
   ['Work','project.read','مشاهده پروژه‌ها'],['Work','project.write','مدیریت پروژه'],
   ['Work','opportunity.read','مشاهده فرصت‌ها'],['Work','opportunity.write','ثبت و تغییر فرصت'],
   ['Work','approval.read','مشاهده تأییدها'],['Work','workflow.read','مشاهده گردش کارها'],
-  ['Work','program.read','مشاهده حاکمیت برنامه'],['Work','program.write','ثبت ریسک و به‌روزرسانی آمادگی'],
+  ['Work','program.read','مشاهده حاکمیت برنامه'],['Work','program.write','ثبت ریسک و به‌روزرسانی آمادگی'],['Work','partnership.read','مشاهده مشارکت‌ها'],['Work','partnership.write','ثبت و تغییر مشارکت'],
   ['Publics','publics.read','مشاهده عموم‌ها'],['Publics','publics.write','مدیریت عموم‌ها'],
   ['Strategy','strategy.read','مشاهده تحلیل راهبردی'],['Strategy','strategy.write','مدیریت تحلیل راهبردی'],
   ['Intelligence','analytics.read','تحلیل و هوشمندی'],['Intelligence','analytics.write','ثبت رویداد و نتیجهٔ سنجش'],['Intelligence','ai.query','پرس‌وجوی هوشمند'],['Intelligence','ai.executive_brief','گزارش راهبردی هوش مصنوعی'],
@@ -8056,7 +8056,7 @@ function programKpisFor(req){
   const policyNotes=docs.filter(d=>String(d.name).includes('یادداشت سیاستی')&&inMonth(d.createdAt));
   const annualDocs=docs.filter(d=>String(d.name).includes('گزارش سالانه'));
   const mediaMentions=(DB.mediaMentions??[]).filter(m=>inMonth(m.publishedAt)&&(m.matchedOrganizationIds??[]).some(id=>orgIds.includes(id)));
-  const partnerRels=rels.filter(r=>r.relationshipType==='STRATEGIC_PARTNERSHIP');
+  const partnershipRows=partnershipsFor(req); /* گام ۲.۲ — منبع زندهٔ kpi-7 */
   const people=scopedPeople(req).filter(p=>p.status!=='INACTIVE');
   const sys=DB.auditSystems??[];
   const sysNonKeep=sys.filter(x=>x.migration!=='KEEP');
@@ -8071,7 +8071,7 @@ function programKpisFor(req){
     {id:'kpi-4',category:'دارایی و رسانه',title:'انتشار رسانه تخصصی',owner:'مدیر روابط عمومی',period:'ماهانه از ماه ۵',target:'۲۰ خروجی در ماه',source:'عموم‌ها — بازنمایی رسانه‌ای ثبت‌شدهٔ ماه جاری',value:mediaMentions.length,unit:'count',targetValue:20},
     {id:'kpi-5',category:'دارایی و رسانه',title:'وب‌سایت مرجع و پروفایل شرکتی',owner:'مدیر محصول',period:'ماه ۸',target:'انتشار عمومی هر دو دارایی',source:'لایهٔ آمادگی سازمانی — وضعیت اقلام «وب‌سایت» و «پروفایل شرکت»',value:assetPublished,unit:'count',targetValue:2},
     {id:'kpi-6',category:'دارایی و رسانه',title:'گزارش سالانه هوش مصنوعی',owner:'مدیر اندیشکده و پژوهش',period:'ماه ۱۱',target:'انتشار',source:'مرکز دانش — اسناد «گزارش سالانه»',value:annualDocs.length,unit:'count',targetValue:1},
-    {id:'kpi-7',category:'بازار و اکوسیستم',title:'شبکهٔ مشارکت',owner:'مدیر توسعه کسب‌وکار',period:'ماه ۱۲',target:'۲۵ تفاهم‌نامهٔ فعال',source:'روابط فعال از نوع مشارکت راهبردی (تا راه‌اندازی ماژول مشارکت‌ها — گام ۲.۲)',value:partnerRels.length,unit:'count',targetValue:25},
+    {id:'kpi-7',category:'بازار و اکوسیستم',title:'شبکهٔ مشارکت',owner:'مدیر توسعه کسب‌وکار',period:'ماه ۱۲',target:'۲۵ تفاهم‌نامهٔ فعال',source:'ماژول مشارکت‌ها — تفاهم‌نامه‌های فعال (مرحلهٔ تفاهم‌نامه یا فعال)',value:partnershipActiveMou(partnershipRows).length,unit:'count',targetValue:25},
     {id:'kpi-8',category:'سازمان و زیرساخت',title:'تکمیل ساختار ۲۵ نفره',owner:'مدیر منابع انسانی',period:'ماه ۷',target:'۲۵ نفر فعال',source:'اشخاص فعال در محدودهٔ شما',value:people.length,unit:'count',targetValue:25},
     {id:'kpi-9',category:'سازمان و زیرساخت',title:'انتقال داده‌ها به SRIP',owner:'مدیر محصول',period:'ماه ۷',target:'خاموش‌سازی کامل سامانه‌های قدیمی',source:'ممیزی سامانه‌ها — سهم انتقال/خاموش‌سازیِ تکمیل‌شده',value:sysDone,unit:'count',targetValue:sysNonKeep.length||1},
     {id:'kpi-10',category:'سازمان و زیرساخت',title:'گزارش ماهانه به مدیریت هلدینگ',owner:'دستیار مدیرعامل',period:'پایان هر ماه',target:'تحویل به‌موقع ۱۲ گزارش',source:'گزارش ماهانه — ثبت انتشار',value:monthlyReports,unit:'count',targetValue:12},
@@ -8099,6 +8099,61 @@ function programAuditsFor(req){
     channelsTotal:channels.length,channelsOrphan:channels.filter(c=>String(c.owner).includes('نامشخص')).length,
   }};
 }
+
+/* ═══════════════ گام ۲.۲ مسترپلن — ماژول مشارکت (Partnership) ═══════════════
+   الزام سند: شریک، نوع همکاری، وضعیت، قرارداد، تعهدات، پیگیری (بخش ۱۹ — چهار
+   ماژول SRIP) + شبکهٔ مشارکت با هدف «۲۵ تفاهم‌نامهٔ فعال» (پیوست الف، پروژهٔ ۱۵)
+   + «ثبت وضعیت مذاکره تا فعال‌سازی مشارکت» (قلم پیگیری ۱۱ — مالک: مدیر توسعه
+   کسب‌وکار). خط لولهٔ چهارسطحی: مذاکره → تفاهم‌نامه → فعال → پایان. */
+const PARTNERSHIP_ORG_ID='org-1'; /* دادهٔ دمو؛ مستأجر واقعی رکورد خودش را می‌سازد */
+const PARTNERSHIP_STAGES=['NEGOTIATION','MOU','ACTIVE','ENDED'];
+const PARTNERSHIP_STAGE_FA={NEGOTIATION:'مذاکره',MOU:'تفاهم‌نامه',ACTIVE:'فعال',ENDED:'پایان'};
+const PARTNERSHIP_TYPES=['راهبردی','پژوهشی','محتوایی','رویدادی','فناوری','رسانه‌ای'];
+const PARTNERSHIP_TARGET=25; /* «۲۵ تفاهم‌نامهٔ فعال» — هدف شبکهٔ مشارکت ماه ۱۲ */
+const partnershipActiveMou=(rows)=>rows.filter(x=>['MOU','ACTIVE'].includes(x.stage));
+const partnershipReviewDue=(x)=>x.stage!=='ENDED'&&x.reviewAt&&new Date(x.reviewAt)<=new Date(Date.now()+30*86400000);
+function ensurePartnershipSeed(){
+  if((DB.partnerships??[]).some(x=>x.organizationId===PARTNERSHIP_ORG_ID)) return;
+  const ago=(d)=>new Date(Date.now()-d*86400000).toISOString();
+  const in90=(d)=>new Date(Date.now()+d*86400000).toISOString();
+  DB.partnerships=[
+    {id:'pt-1',organizationId:PARTNERSHIP_ORG_ID,partnerOrgId:'org-4',type:'راهبردی',stage:'ACTIVE',ownerRole:'مدیر توسعه کسب‌وکار',ourCommitments:'هم‌تولیدی محتوای صنعتی و معرفی متقابل در رویدادها',theirCommitments:'دسترسی به شبکهٔ تأمین و معرفی به شرکت‌های گروه',contractName:'قرارداد همکاری راهبردی پترو صنعت',contractSignedAt:ago(120),relationshipId:'r-1',opportunityId:'o-3',reviewAt:in90(45),createdAt:ago(150),updatedAt:ago(20),notes:'ستون اصلی شبکهٔ مشارکت؛ بازبینی فصلی با مدیرعامل پترو صنعت.'},
+    {id:'pt-2',organizationId:PARTNERSHIP_ORG_ID,partnerOrgId:'org-3',type:'راهبردی',stage:'ACTIVE',ownerRole:'مدیرعامل',ourCommitments:'تأمین داده و تحلیل بانکداری شرکتی',theirCommitments:'خط اعتباری و معرفی مشتریان سازمانی',contractName:'قرارداد همکاری بانکی',contractSignedAt:ago(200),relationshipId:'r-2',opportunityId:'o-1',reviewAt:in90(75),createdAt:ago(230),updatedAt:ago(35),notes:''},
+    {id:'pt-3',organizationId:PARTNERSHIP_ORG_ID,partnerOrgId:'org-9',type:'پژوهشی',stage:'ACTIVE',ownerRole:'مدیر اندیشکده و پژوهش',ourCommitments:'تأمین دادهٔ صنعتی و نگارش مشترک',theirCommitments:'داوری علمی و دسترسی به آزمایشگاه داده',contractName:'تفاهم‌نامه پژوهشی مشترک',contractSignedAt:ago(90),relationshipId:null,opportunityId:null,reviewAt:in90(60),createdAt:ago(110),updatedAt:ago(10),notes:'خروجی: دو یادداشت سیاستی مشترک در سال.'},
+    {id:'pt-4',organizationId:PARTNERSHIP_ORG_ID,partnerOrgId:'org-10',type:'رویدادی',stage:'ACTIVE',ownerRole:'مدیر رویداد',ourCommitments:'برگزاری میزگرد تخصصی مشترک',theirCommitments:'حضور اعضا و اطلاع‌رسانی رسمی',contractName:'تفاهم‌نامه رویدادی اتاق بازرگانی',contractSignedAt:ago(60),relationshipId:null,opportunityId:null,reviewAt:in90(30),createdAt:ago(75),updatedAt:ago(15),notes:''},
+    {id:'pt-5',organizationId:PARTNERSHIP_ORG_ID,partnerOrgId:'org-7',type:'راهبردی',stage:'MOU',ownerRole:'مدیرعامل',ourCommitments:'ارائهٔ گزارش‌های تحلیلی سالانه',theirCommitments:'هم‌سرمایه‌گذاری در محصولات داده‌محور',contractName:'تفاهم‌نامه هم‌سرمایه‌گذاری',contractSignedAt:ago(40),relationshipId:null,opportunityId:null,reviewAt:in90(20),createdAt:ago(55),updatedAt:ago(5),notes:'در آستانهٔ تبدیل به قرارداد اجرایی.'},
+    {id:'pt-6',organizationId:PARTNERSHIP_ORG_ID,partnerOrgId:'org-8',type:'پژوهشی',stage:'MOU',ownerRole:'مدیر اندیشکده و پژوهش',ourCommitments:'پایش داده‌های استانی و گزارش فصلی',theirCommitments:'داده‌های رسمی و بازخورد سیاستی',contractName:'تفاهم‌نامه پژوهشی استانداری',contractSignedAt:ago(25),relationshipId:null,opportunityId:null,reviewAt:in90(50),createdAt:ago(35),updatedAt:ago(8),notes:''},
+    {id:'pt-7',organizationId:PARTNERSHIP_ORG_ID,partnerOrgId:'org-6',type:'فناوری',stage:'NEGOTIATION',ownerRole:'مدیر توسعه کسب‌وکار',ourCommitments:'پیشنهاد اشتراک دادهٔ قطعات',theirCommitments:'تخفیف زنجیرهٔ تأمین برای مشتریان مشترک',contractName:null,contractSignedAt:null,relationshipId:'r-4',opportunityId:null,reviewAt:in90(15),createdAt:ago(28),updatedAt:ago(3),notes:'مذاکرهٔ اولیه؛ پروپوزال در بایگانی SRIP.'},
+    {id:'pt-8',organizationId:PARTNERSHIP_ORG_ID,partnerOrgId:'org-12',type:'محتوایی',stage:'NEGOTIATION',ownerRole:'مدیر محتوا',ourCommitments:'تولید مجموعه‌دادهٔ نوآوری',theirCommitments:'حمایت مالی انتشار',contractName:null,contractSignedAt:null,relationshipId:null,opportunityId:null,reviewAt:in90(10),createdAt:ago(18),updatedAt:ago(2),notes:''},
+    {id:'pt-9',organizationId:PARTNERSHIP_ORG_ID,partnerOrgId:'org-5',type:'رویدادی',stage:'ENDED',ownerRole:'مدیر رویداد',ourCommitments:'برگزاری وبینار مشترک',theirCommitments:'معرفی به شبکهٔ پیمانکاران',contractName:'قرارداد وبینار مشترک',contractSignedAt:ago(300),relationshipId:'r-3',opportunityId:'o-2',reviewAt:ago(10),createdAt:ago(320),updatedAt:ago(10),notes:'پایان موفق؛ امکان تمدید در برنامهٔ سال دوم.'},
+  ];
+}
+function partnershipsFor(req){
+  ensurePartnershipSeed();
+  const ids=visibleOrgIds(req);
+  return (DB.partnerships??[]).filter(x=>ids.includes(x.organizationId));
+}
+function partnershipView(x){
+  const org=ORGS.find(o=>o.id===x.partnerOrgId);
+  const rel=x.relationshipId?RELS.find(r=>r.id===x.relationshipId):null;
+  const opp=x.opportunityId?OPPORTUNITIES.find(o=>o.id===x.opportunityId):null;
+  return {...x,partnerName:org?.name??x.partnerOrgId,partnerType:org?.type??null,
+    stageFa:PARTNERSHIP_STAGE_FA[x.stage],relationshipType:rel?.relationshipType??null,
+    relationshipLabel:rel?`${ORGS.find(o=>o.id===rel.sourceOrganizationId)?.name??'?'} ↔ ${ORGS.find(o=>o.id===rel.targetOrganizationId)?.name??'?'}`:null,
+    opportunityName:opp?.name??null,activeMou:['MOU','ACTIVE'].includes(x.stage),reviewDue:partnershipReviewDue(x)};
+}
+function partnershipSummary(rows){
+  const byStage=Object.fromEntries(PARTNERSHIP_STAGES.map(st=>[st,rows.filter(x=>x.stage===st).length]));
+  const activeMou=partnershipActiveMou(rows).length;
+  const byType=PARTNERSHIP_TYPES.filter(t=>rows.some(x=>x.type===t)).map(t=>({type:t,count:rows.filter(x=>x.type===t).length}));
+  return {total:rows.length,byStage,activeMou,target:PARTNERSHIP_TARGET,
+    progress:PARTNERSHIP_TARGET?Math.round(activeMou/PARTNERSHIP_TARGET*100):0,byType,
+    linkedRelationship:rows.filter(x=>x.relationshipId).length,
+    linkedOpportunity:rows.filter(x=>x.opportunityId).length,
+    withContract:rows.filter(x=>x.contractName).length,
+    reviewsDue:rows.filter(partnershipReviewDue).length};
+}
+
 
 async function __handler(req, res) {
   try {
@@ -14177,6 +14232,75 @@ async function __handler(req, res) {
     if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
     return json(res,200,{...programAuditsFor(req),
       rule:'ممیزی ارزیابی صادقانه از وضعیت موجود است؛ خروجی آن ورودی مستقیم بازسازی نقش‌ها و برنامهٔ انتقال داده است (بخش ۲۰/۲۱ سند).'});
+  }
+
+  /* ─────────────── گام ۲.۲ مسترپلن — ماژول مشارکت (/partnerships) ──────────
+     خط لولهٔ چهارسطحی مذاکره → تفاهم‌نامه → فعال → پایان؛ قاعدهٔ سند:
+     فعال‌سازی مشارکت بدون قرارداد ثبت نمی‌شود (فرم ۱۱ — مذاکره تا فعال‌سازی). */
+  if(is('/partnerships')&&method==='GET'){
+    if(!hasPerm('partnership.read')) return json(res,403,{message:'شما مجوز «مشاهده مشارکت‌ها» (partnership.read) را ندارید.'});
+    const rows=partnershipsFor(req);
+    const stage=String(q.get('stage')??'').toUpperCase();
+    const filtered=stage&&PARTNERSHIP_STAGE_FA[stage]?rows.filter(x=>x.stage===stage):rows;
+    return json(res,200,{items:filtered.map(partnershipView),summary:partnershipSummary(rows),
+      stages:PARTNERSHIP_STAGES.map(st=>({key:st,label:PARTNERSHIP_STAGE_FA[st]})),
+      types:PARTNERSHIP_TYPES,roles:PROGRAM_ROLES,
+      rule:'فعال‌سازی مشارکت بدون قرارداد ثبت نمی‌شود (فرم ۱۱ سند — مذاکره تا فعال‌سازی).',generatedAt:nowIso()});
+  }
+  if(is('/partnerships')&&method==='POST'){
+    if(!hasPerm('partnership.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر مشارکت» (partnership.write) را ندارید.'});
+    ensurePartnershipSeed();
+    const b=await readBody(req);
+    const partnerOrgId=String(b.partnerOrgId??'').trim();
+    if(!partnerOrgId) return json(res,400,{message:'شرکای همکاری را انتخاب کنید.'});
+    if(!ORGS.some(o=>o.id===partnerOrgId)) return json(res,400,{message:'سازمان شریک یافت نشد؛ از فهرست سازمان‌ها انتخاب کنید.'});
+    const type=String(b.type??'').trim();
+    if(!PARTNERSHIP_TYPES.includes(type)) return json(res,400,{message:'نوع همکاری باید یکی از مقادیر مجاز باشد.'});
+    const ownerRole=String(b.ownerRole??'').trim();
+    if(!ownerRole) return json(res,400,{message:'مشارکت بدون مالک ثبت نمی‌شود (ماژول SRIP — بخش ۱۹ سند).'});
+    if(!PROGRAM_ROLES.includes(ownerRole)) return json(res,400,{message:'مالک مشارکت باید یکی از نقش‌های چارت برنامه باشد.'});
+    const relId=String(b.relationshipId??'').trim()||null;
+    if(relId&&!RELS.some(r=>r.id===relId)) return json(res,400,{message:'رابطهٔ انتخاب‌شده یافت نشد.'});
+    const oppId=String(b.opportunityId??'').trim()||null;
+    if(oppId&&!OPPORTUNITIES.some(o=>o.id===oppId)) return json(res,400,{message:'فرصت انتخاب‌شده یافت نشد.'});
+    const contractName=String(b.contractName??'').trim()||null;
+    const stage='NEGOTIATION'; /* هر مشارکت تازه از مذاکره آغاز می‌شود (فرم ۱۱) */
+    const row={id:`pt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`,
+      organizationId:primaryOrgId(authUser)??visibleOrgIds(req)[0]??PARTNERSHIP_ORG_ID,
+      partnerOrgId,type,stage,ownerRole,
+      ourCommitments:String(b.ourCommitments??'').trim(),theirCommitments:String(b.theirCommitments??'').trim(),
+      contractName,contractSignedAt:contractName?nowIso():null,
+      relationshipId:relId,opportunityId:oppId,
+      reviewAt:new Date(Date.now()+90*86400000).toISOString(),
+      createdAt:nowIso(),updatedAt:nowIso(),notes:String(b.notes??'').trim()};
+    DB.partnerships.unshift(row); saveDb();
+    audit(req,'CREATE','Partnership',row.id,'OK',{partner:row.partnerOrgId,type:row.type,ownerRole});
+    return json(res,201,partnershipView(row));
+  }
+  const pId=match('/partnerships/:id');
+  if(pId&&method==='PATCH'){
+    if(!hasPerm('partnership.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر مشارکت» (partnership.write) را ندارید.'});
+    ensurePartnershipSeed();
+    const row=(DB.partnerships??[]).find(x=>x.id===pId[0]);
+    if(!row||!visibleOrgIds(req).includes(row.organizationId)) return json(res,404,{message:'مشارکت یافت نشد یا خارج از محدودهٔ شماست.'});
+    const b=await readBody(req);
+    if(b.partnerOrgId!=null){const v=String(b.partnerOrgId).trim(); if(!ORGS.some(o=>o.id===v)) return json(res,400,{message:'سازمان شریک یافت نشد.'}); row.partnerOrgId=v;}
+    if(b.type!=null){const v=String(b.type).trim(); if(!PARTNERSHIP_TYPES.includes(v)) return json(res,400,{message:'نوع همکاری باید یکی از مقادیر مجاز باشد.'}); row.type=v;}
+    if(b.ownerRole!=null){const v=String(b.ownerRole).trim(); if(!v) return json(res,400,{message:'مشارکت بدون مالک ثبت نمی‌شود (ماژول SRIP — بخش ۱۹ سند).'}); if(!PROGRAM_ROLES.includes(v)) return json(res,400,{message:'مالک مشارکت باید یکی از نقش‌های چارت برنامه باشد.'}); row.ownerRole=v;}
+    if(b.relationshipId!=null){const v=String(b.relationshipId).trim()||null; if(v&&!RELS.some(r=>r.id===v)) return json(res,400,{message:'رابطهٔ انتخاب‌شده یافت نشد.'}); row.relationshipId=v;}
+    if(b.opportunityId!=null){const v=String(b.opportunityId).trim()||null; if(v&&!OPPORTUNITIES.some(o=>o.id===v)) return json(res,400,{message:'فرصت انتخاب‌شده یافت نشد.'}); row.opportunityId=v;}
+    if(b.contractName!=null){const v=String(b.contractName).trim()||null; row.contractName=v; row.contractSignedAt=v?(row.contractSignedAt??nowIso()):null;}
+    if(b.stage!=null){
+      const v=String(b.stage).toUpperCase();
+      if(!PARTNERSHIP_STAGE_FA[v]) return json(res,400,{message:'مرحلهٔ مشارکت باید مذاکره، تفاهم‌نامه، فعال یا پایان باشد.'});
+      if(v==='ACTIVE'&&!row.contractName) return json(res,400,{message:'فعال‌سازی مشارکت بدون قرارداد ثبت نمی‌شود (فرم ۱۱ سند — مذاکره تا فعال‌سازی).'});
+      row.stage=v;
+    }
+    for(const k of ['ourCommitments','theirCommitments','notes']) if(b[k]!=null) row[k]=String(b[k]).trim();
+    if(b.reviewAt!=null) row.reviewAt=String(b.reviewAt);
+    row.updatedAt=nowIso(); saveDb();
+    audit(req,'UPDATE','Partnership',row.id,'OK',{stage:row.stage});
+    return json(res,200,partnershipView(row));
   }
 
   /* ── آیتم ۲۱: Web Push (رضایت اعلان ملزم؛ انتقال دمو = polling) ── */
