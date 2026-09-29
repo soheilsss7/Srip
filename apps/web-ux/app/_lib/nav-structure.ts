@@ -51,7 +51,8 @@ export const NAV_ZONES: readonly NavZone[] = lt([
     ['/gis', t('نقشهٔ ذینفعان'), 'organization.read'],
     ['/portal', t('پورتال عمومی'), 'publics.read'],
   ]],
-  [t('کار و اجرا'), t('جلسه‌ها، قول‌ها و پروژه‌ها'), [ /* ۷ آیتم — مرز قانون Miller؛ آیتم هشتم = شکستن به دو Workspace */
+  [t('کار و اجرا'), t('حاکمیت، جلسه‌ها و پروژه‌ها'), [ /* ۸ آیتم — سقف قانون Miller (گام ۲.۱ مسترپلن)؛ آیتم نهم = شکستن به دو Workspace */
+    ['/program', t('حاکمیت برنامه'), 'program.read'],
     ['/meetings', t('جلسات'), 'meeting.read'],
     ['/calendar', t('تقویم'), 'meeting.read'],
     ['/actions', t('اقدامات'), 'action.read'],
@@ -149,7 +150,7 @@ export const NAV_PERMISSION_MAP: Record<string, string> = {
   '/workflows': 'workflow.read', '/publics': 'publics.read', '/strategy': 'strategy.read',
   '/gis': 'organization.read', '/portal': 'publics.read', '/mcp': 'analytics.read', '/imports': 'interaction.write',
   '/enrichment': 'organization.read', '/developers': 'integration.read', '/qbr': 'analytics.read',
-  '/notifications': 'dashboard.read',
+  '/notifications': 'dashboard.read', '/program': 'program.read',
 };
 
 /** نگاشت مسیرهای مرکز سیستم → مجوز (عمق دسترسی مدیریتی، جداست از سایدبار) */
@@ -198,6 +199,7 @@ export const GLOSS: Record<string, string> = lt({
   '/enrichment': t('پیشنهاد تکمیل پروفایل سازمان‌های شخص ثالث از منابع رسمی — با شفافیت منبع و تأیید انسانی'),
   '/board': t('گزارش هیئت‌مدیره: بازده سرمایهٔ رابطه، سرمایه، سلامت پرتفوی و ریسک تک‌نقطه'),
   '/imports': t('ورود فایل‌محور داده‌های پلتفرم‌های دیگر: تقویم/ایمیل به تعامل و پژوهش بازار به بینش قابل استفاده'),
+  '/program': t('حاکمیت برنامه: شاخص‌های مالک‌دار، ریسک‌ها، نمرهٔ آمادگی شش‌لایه و ممیزی سه‌گانه — یک نگاه برای وضعیت کل برنامه'),
   '/meetings': t('جلسات برنامه‌ریزی‌شده با ثبت دستور و خلاصه'),
   '/calendar': t('نمای تقویمی جلسات در محدودهٔ شما'),
   '/actions': t('کارهایی که کسی قول داده تا موعد معین انجام دهد'),

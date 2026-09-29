@@ -1,0 +1,557 @@
+'use client';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useWorkspace } from '../_components/workspace';
+import { api } from '../_lib/api';
+import { faNum, faFullDate } from '../_lib/jalali';
+import { t } from '../_lib/i18n';
+import {
+  Badge, ErrorCard, Loading, Modal, PageHeader, SectionCard, Segmented, StatCard, StatusBadge, EmptyV4,
+} from '../_components/page-ui';
+import {
+  Activity, AlertTriangle, ArrowLeft, CheckCircle2, ClipboardList, Gauge, GitBranch,
+  LayoutDashboard, ListChecks, Plus, RefreshCw, ShieldAlert, Target, TrendingUp, X,
+} from 'lucide-react';
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   گام ۲.۱ مسترپلن — هاب «حاکمیت برنامه»
+   شاخص‌های مالک‌دار (فرم ۱۷ / جدول بخش ۲۶) · ریجستری ریسک (فرم ۱۶ / بخش ۲۵)
+   نمرهٔ آمادگی شش‌لایهٔ وزن‌دار (بخش ۱۲/۱۳) · ممیزی سه‌گانه (بخش ۲۰/۲۱)
+   قاعدهٔ ثابت سند: مقدار هر شاخص از دادهٔ زندهٔ ماژول‌ها محاسبه می‌شود؛
+   عدد دستی وارد داشبورد نمی‌شود و ریسک بدون مالک ثبت نمی‌گردد.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+const LEVEL_FA: Record<string, string> = { LOW: t('پایین'), MEDIUM: t('متوسط'), HIGH: t('بالا') };
+const LEVEL_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> = { LOW: 'success', MEDIUM: 'warning', HIGH: 'danger' };
+const RISK_STATUS_FA: Record<string, string> = { OPEN: t('باز'), IN_PROGRESS: t('در اقدام'), CLOSED: t('بسته') };
+const RISK_STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = { OPEN: 'danger', IN_PROGRESS: 'warning', CLOSED: 'success' };
+const GRADE_FA: Record<string, string> = { HIGH: t('درجه بالا'), MEDIUM: t('درجه متوسط'), LOW: t('درجه پایین') };
+const GRADE_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> = { HIGH: 'danger', MEDIUM: 'warning', LOW: 'neutral' };
+const KPI_STATUS_FA: Record<string, string> = { ON_TARGET: t('در هدف'), NEAR: t('نزدیک هدف'), OFF_TARGET: t('خارج از هدف') };
+const KPI_STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> = { ON_TARGET: 'success', NEAR: 'warning', OFF_TARGET: 'danger' };
+const ITEM_STATUS_FA: Record<string, string> = { NOT_STARTED: t('شروع‌نشده'), IN_PROGRESS: t('در جریان'), ACCEPTED: t('پذیرفته‌شده') };
+const ITEM_STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> = { NOT_STARTED: 'neutral', IN_PROGRESS: 'warning', ACCEPTED: 'success' };
+const MIGRATION_FA: Record<string, string> = { KEEP: t('نگهداری'), MIGRATE: t('انتقال'), SHUTDOWN: t('خاموش‌سازی') };
+const MIGRATION_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = { KEEP: 'info', MIGRATE: 'warning', SHUTDOWN: 'danger' };
+const PRIORITY_FA: Record<string, string> = { KEEP: t('حفظ'), REDEFINE: t('بازتعریف'), HIRE: t('جذب') };
+const CHANNEL_ACTION_FA: Record<string, string> = { ASSIGN_OWNER: t('واگذاری به مالک'), TRANSFER: t('انتقال'), SHUTDOWN: t('خاموش‌سازی') };
+const SEASON_STATE_FA: Record<string, string> = { PASSED: t('دروازه پاس شد'), IN_PROGRESS: t('در جریان'), PENDING: t('در انتظار') };
+const SEASON_STATE_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = { PASSED: 'success', IN_PROGRESS: 'warning', PENDING: 'neutral' };
+const AUDIT_TABS: Array<[string, string]> = [
+  ['people', t('افراد')], ['systems', t('سامانه‌ها')], ['channels', t('کانال‌ها')],
+];
+
+const faDate = (iso?: string | null) => (iso ? faFullDate(new Date(iso)) : '—');
+
+export default function ProgramPage() {
+  const { can } = useWorkspace();
+  const writable = can('program.write');
+  const [tab, setTab] = useState('overview');
+  const [data, setData] = useState<Record<string, any>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  /* ریسک: فیلترها + مودال‌ها */
+  const [riskFilter, setRiskFilter] = useState<{ status: string; grade: string }>({ status: '', grade: '' });
+  const [riskDetail, setRiskDetail] = useState<any | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [form, setForm] = useState({ title: '', probability: 'MEDIUM', impact: 'MEDIUM', preventive: '', reactive: '', ownerRole: '', notes: '' });
+  const [formError, setFormError] = useState('');
+  const [auditTab, setAuditTab] = useState('people');
+  const [auditDetail, setAuditDetail] = useState<any | null>(null);
+
+  const load = useCallback(async (which: string) => {
+    setLoading(true); setError('');
+    try {
+      const path = which === 'overview' ? '/program/overview'
+        : which === 'kpis' ? '/program/kpis'
+          : which === 'risks' ? `/program/risks${riskFilter.status || riskFilter.grade ? `?${new URLSearchParams({ ...(riskFilter.status ? { status: riskFilter.status } : {}), ...(riskFilter.grade ? { grade: riskFilter.grade } : {}) }).toString()}` : ''}`
+            : which === 'readiness' ? '/program/readiness' : '/program/audits';
+      const result = await api<any>(path);
+      setData((prev: Record<string, any>) => ({ ...prev, [which]: result }));
+    } catch (x) { setError((x as Error).message); }
+    finally { setLoading(false); }
+  }, [riskFilter]);
+
+  useEffect(() => { load(tab); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [tab]);
+
+  /* تغییر فیلتر ریسک (وضعیت/درجه) → بازخوانی همان تب */
+  useEffect(() => { if (tab === 'risks') load('risks'); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [riskFilter]);
+
+  const refresh = () => load(tab);
+
+  const reloadRisks = () => { load('risks'); load('overview'); };
+
+  const submitRisk = async () => {
+    setFormError(''); setBusy(true);
+    try {
+      await api('/program/risks', { method: 'POST', body: JSON.stringify(form) });
+      setCreateOpen(false);
+      setForm({ title: '', probability: 'MEDIUM', impact: 'MEDIUM', preventive: '', reactive: '', ownerRole: '', notes: '' });
+      reloadRisks();
+    } catch (x) { setFormError((x as Error).message); }
+    finally { setBusy(false); }
+  };
+
+  const setRiskStatus = async (id: string, status: string) => {
+    setBusy(true);
+    try { await api(`/program/risks/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) }); reloadRisks(); if (riskDetail) setRiskDetail({ ...riskDetail, status }); }
+    finally { setBusy(false); }
+  };
+
+  const cycleReadinessItem = async (layerKey: string, item: any) => {
+    if (!writable) return;
+    const next = item.status === 'NOT_STARTED' ? 'IN_PROGRESS' : item.status === 'IN_PROGRESS' ? 'ACCEPTED' : 'NOT_STARTED';
+    setBusy(true);
+    try { await api(`/program/readiness/${layerKey}/items/${item.key}`, { method: 'PATCH', body: JSON.stringify({ status: next }) }); load('readiness'); load('overview'); }
+    catch (x) { setError((x as Error).message); }
+    finally { setBusy(false); }
+  };
+
+  const d = data[tab];
+  const overview = data.overview;
+  const kpis = data.kpis;
+  const risks = data.risks;
+  const readiness = data.readiness;
+  const audits = data.audit; /* کلید ذخیره‌سازی = مقدار تب ('audit') */
+
+  const tabs = useMemo(() => ([
+    { value: 'overview', label: t('نمای کلی') },
+    { value: 'kpis', label: t('شاخص‌ها') },
+    { value: 'risks', label: t('ریسک‌ها') },
+    { value: 'readiness', label: t('آمادگی بازار') },
+    { value: 'audit', label: t('ممیزی سه‌گانه') },
+  ]), []);
+
+  const tabCounts: Record<string, number | undefined> = {
+    kpis: kpis?.total, risks: risks?.items?.length, audit: audits ? audits.people.length + audits.systems.length + audits.channels.length : undefined,
+  };
+
+  return (
+    <main className="feature-page">
+      <PageHeader
+        title={t('حاکمیت برنامه')}
+        description={t('شاخص‌های مالک‌دار، ریجستری ریسک، نمرهٔ آمادگی شش‌لایه و ممیزی سه‌گانه — همه از دادهٔ زندهٔ سامانه محاسبه می‌شود، بدون عدد دستی.')}
+        actions={<div className="heading-tools">
+          <button className="srip-button" onClick={refresh} disabled={loading}><RefreshCw size={14} className={loading ? 'spin' : ''} /> {t('بازخوانی')}</button>
+        </div>}
+      />
+      <ErrorCard message={error} />
+      {loading && !d ? <Loading /> : null}
+
+      <Segmented options={tabs} value={tab} onChange={setTab} counts={tabCounts as any} />
+
+      {/* ═══════════ تب نمای کلی — وضعیت فصل‌ها و دروازه‌ها ═══════════ */}
+      {tab === 'overview' && overview && (
+        <>
+          <div className="stat-grid">
+            <StatCard icon={<Gauge size={18} />} label={t('نمرهٔ آمادگی (میانگین وزنی شش لایه)')} value={`${faNum(overview.readiness.total)}٪`} iconClass="ic-blue"
+              sub={t('دروازهٔ فصل جاری: آستانهٔ ') + faNum(overview.readiness.seasons.find((s: any) => s.current)?.threshold ?? '—') + '٪'} />
+            <StatCard icon={<Target size={18} />} label={t('شاخص‌ها در هدف')} value={`${faNum(overview.kpis.onTarget)} ${t('از')} ${faNum(overview.kpis.total)}`} iconClass="ic-teal"
+              sub={`${t('نزدیک هدف')}: ${faNum(overview.kpis.near)} · ${t('خارج از هدف')}: ${faNum(overview.kpis.off)}`} />
+            <StatCard icon={<ShieldAlert size={18} />} label={t('ریسک‌های درجهٔ بالا (باز)')} value={faNum(overview.risks.highOpen)} iconClass="ic-red"
+              sub={t('طبق سند، وضعیت این ریسک‌ها در گزارش ماهانه به مدیریت هلدینگ ارائه می‌شود')} />
+            <StatCard icon={<GitBranch size={18} />} label={t('انتقال سامانه‌ها')} value={`${faNum(overview.audits.migrationDone)} ${t('از')} ${faNum(overview.audits.migrationTotal)}`} iconClass="ic-gold"
+              sub={t('سامانه‌های در صف انتقال یا خاموش‌سازی که تکمیل شده‌اند')} />
+          </div>
+
+          <SectionCard title={t('فصل‌های برنامه و دروازهٔ عبور')} icon={<ListChecks size={17} />}
+            description={t('بدون رسیدن به آستانهٔ مصوب هر فصل، ورود به فاز بعدی برنامه تصویب نمی‌شود.')}>
+            <div className="season-row">
+              {overview.readiness.seasons.map((s: any) => (
+                <div key={s.season} className={`season-card ${s.state === 'PASSED' ? 'passed' : s.current ? 'current' : ''}`}>
+                  <div className="season-head">
+                    <b>{t('فصل')} {faNum(s.season)} — {s.title}</b>
+                    <StatusBadge tone={SEASON_STATE_TONE[s.state]}>{SEASON_STATE_FA[s.state]}</StatusBadge>
+                  </div>
+                  <div className="season-meta">{s.months}</div>
+                  <div className="season-score">
+                    <span>{t('نمره')}: <b>{s.score == null ? '—' : `${faNum(s.score)}٪`}</b></span>
+                    <span>{t('آستانه')}: <b>{faNum(s.threshold)}٪</b></span>
+                  </div>
+                  <div className="prog-bar season-bar"><div className="prog-fill" style={{ width: `${Math.min(100, s.score ?? 0)}%` }} /></div>
+                </div>
+              ))}
+            </div>
+            <div className="trend-row" aria-label={t('روند فصلی نمرهٔ آمادگی')}>
+              {overview.readiness.trend.map((h: any, i: number) => (
+                <div key={i} className="trend-col" title={`${h.label}: ${faNum(h.score)}٪`}>
+                  <div className="trend-bar-wrap"><div className={`trend-bar ${h.current ? 'current' : ''}`} style={{ height: `${Math.max(6, h.score)}%` }} /></div>
+                  <span className="trend-label">{h.label}</span>
+                  <span className="trend-value">{faNum(h.score)}٪</span>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+
+          <div className="two-col-grid">
+            <SectionCard title={t('ریسک‌های درجهٔ بالا')} icon={<AlertTriangle size={17} />}
+              actions={<button className="srip-button" onClick={() => setTab('risks')}><ArrowLeft size={14} /> {t('مدیریت ریسک‌ها')}</button>}>
+              {overview.risks.high.length ? (
+                <div className="mini-list">
+                  {overview.risks.high.map((r: any) => (
+                    <div key={r.id} className="mini-row">
+                      <span className="t-primary">{r.title}</span>
+                      <span className="t-muted">{t('مالک')}: {r.ownerRole}</span>
+                      <StatusBadge tone="danger">{LEVEL_FA[r.probability]} × {LEVEL_FA[r.impact]}</StatusBadge>
+                    </div>
+                  ))}
+                </div>
+              ) : <EmptyV4 icon={<CheckCircle2 size={22} />} title={t('ریسک درجهٔ بالایی باز نیست')}
+                description={t('فهرست ریسک در آغاز هر فصل بازبینی می‌شود؛ ریسک تازه را از تب «ریسک‌ها» ثبت کنید.')} />}
+            </SectionCard>
+            <SectionCard title={t('شاخص‌های کلیدی')} icon={<LayoutDashboard size={17} />}
+              actions={<button className="srip-button" onClick={() => setTab('kpis')}><ArrowLeft size={14} /> {t('همهٔ شاخص‌ها')}</button>}>
+              <div className="mini-list">
+                {overview.kpis.items.slice(0, 4).map((k: any) => (
+                  <div key={k.id} className="mini-row">
+                    <span className="t-primary">{k.title}</span>
+                    <span className="t-muted">{k.valueLabel}</span>
+                    <StatusBadge tone={KPI_STATUS_TONE[k.status]}>{KPI_STATUS_FA[k.status]}</StatusBadge>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+          </div>
+        </>
+      )}
+
+      {/* ═══════════ تب شاخص‌ها — فرم ۱۷ / جدول بخش ۲۶ سند ═══════════ */}
+      {tab === 'kpis' && kpis && (
+        <>
+          <div className="note-strip">{t('قاعدهٔ سند: هر شاخص مالک، هدف عددی و دورهٔ سنجش مشخص دارد و از دادهٔ ثبت‌شده در سامانه محاسبه می‌شود — عدد دستی وارد داشبورد نمی‌شود.')}</div>
+          <SectionCard title={t('شاخص‌های برنامه')} icon={<Target size={17} />}
+            description={`${faNum(kpis.total)} ${t('شاخص در پنج دسته')} · ${t('در هدف')}: ${faNum(kpis.summary.onTarget)} · ${t('نزدیک')}: ${faNum(kpis.summary.near)} · ${t('خارج از هدف')}: ${faNum(kpis.summary.off)}`}>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>{t('شاخص')}</th><th>{t('مالک')}</th><th>{t('دورهٔ سنجش')}</th><th>{t('هدف')}</th>
+                    <th>{t('مقدار جاری')}</th><th>{t('وضعیت')}</th><th>{t('منبع محاسبه')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {kpis.items.map((k: any) => (
+                    <tr key={k.id}>
+                      <td>
+                        <div className="t-primary">{k.title}</div>
+                        <div className="t-muted" style={{ fontSize: 11 }}>{k.category}</div>
+                      </td>
+                      <td>{k.owner}</td>
+                      <td>{k.period}</td>
+                      <td>{k.target}</td>
+                      <td>
+                        <div style={{ minWidth: 110 }}>
+                          <b>{k.valueLabel}</b>
+                          <div className="prog-bar season-bar"><div className={`prog-fill ${k.status === 'OFF_TARGET' ? 'bad' : ''}`} style={{ width: `${Math.min(100, k.percent)}%` }} /></div>
+                        </div>
+                      </td>
+                      <td><StatusBadge tone={KPI_STATUS_TONE[k.status]}>{KPI_STATUS_FA[k.status]}</StatusBadge></td>
+                      <td className="t-muted" style={{ fontSize: 11 }}>{k.source}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </SectionCard>
+        </>
+      )}
+
+      {/* ═══════════ تب ریسک‌ها — فرم ۱۶ / بخش ۲۵ سند ═══════════ */}
+      {tab === 'risks' && risks && (
+        <>
+          {(risks.summary.highOpen > 0) && (
+            <div className="alert-banner warn">
+              <ShieldAlert size={18} />
+              <div>{t('ریسک‌های درجهٔ بالای باز')}: <b>{faNum(risks.summary.highOpen)}</b> — {t('وضعیت آن‌ها در گزارش ماهانه به مدیریت هلدینگ ارائه می‌شود.')}</div>
+            </div>
+          )}
+          <SectionCard title={t('ماتریس احتمال × اثر')} icon={<Activity size={17} />}
+            description={t('سلول‌ها شمار ریسک‌های باز (غیر بسته) هستند؛ کلیک روی سلول، همان درجه را فیلتر می‌کند.')}>
+            <div className="risk-matrix" role="table" aria-label={t('ماتریس احتمال و اثر')}>
+              <div className="rm-corner" />
+              {[...'HIGH,MEDIUM,LOW'].reverse().map(imp => <div key={`h-${imp}`} className="rm-head">{t('اثر')} {LEVEL_FA[imp]}</div>)}
+              {['HIGH', 'MEDIUM', 'LOW'].map(prob => (
+                <div key={prob} className="rm-row">
+                  <div className="rm-head">{t('احتمال')} {LEVEL_FA[prob]}</div>
+                  {['LOW', 'MEDIUM', 'HIGH'].map(imp => {
+                    const cell = (risks.matrix ?? []).flat().find((c: any) => c.probability === prob && c.impact === imp);
+                    /* درجهٔ سلول = همان قاعدهٔ سرور: امتیاز احتمال×اثر (۶+ = درجه بالا) */
+                    const LV: Record<string, number> = { LOW: 1, MEDIUM: 2, HIGH: 3 };
+                    const score = LV[prob] * LV[imp];
+                    const grade = score >= 6 ? 'HIGH' : score >= 3 ? 'MEDIUM' : 'LOW';
+                    const cls = grade === 'HIGH' ? 'high' : grade === 'MEDIUM' ? 'mid' : 'low';
+                    return (
+                      <button key={`${prob}-${imp}`} className={`rm-cell ${cls} ${cell?.count ? 'has' : ''}`} disabled={!cell?.count}
+                        onClick={() => setRiskFilter(f => (f.grade === grade ? { status: f.status, grade: '' } : { status: f.status, grade }))}
+                        title={`${LEVEL_FA[prob]} × ${LEVEL_FA[imp]}: ${faNum(cell?.count ?? 0)}`}>
+                        {faNum(cell?.count ?? 0)}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+            <div className="chip-row" style={{ marginTop: 10 }}>
+              <button className={`chip ${!riskFilter.status && !riskFilter.grade ? 'purple' : 'neutral'}`} onClick={() => setRiskFilter({ status: '', grade: '' })}>{t('همه')} ({faNum(risks.items.length)})</button>
+              {Object.entries(RISK_STATUS_FA).map(([k, label]) => (
+                <button key={k} className={`chip ${riskFilter.status === k ? 'purple' : 'neutral'}`}
+                  onClick={() => setRiskFilter(f => ({ ...f, status: f.status === k ? '' : k }))}>{label}</button>
+              ))}
+              <span style={{ flex: 1 }} />
+              {Object.entries(GRADE_FA).map(([k, label]) => (
+                <button key={k} className={`chip ${riskFilter.grade === k ? 'purple' : 'neutral'}`}
+                  onClick={() => setRiskFilter(f => ({ ...f, grade: f.grade === k ? '' : k }))}>{label}</button>
+              ))}
+            </div>
+          </SectionCard>
+
+          <SectionCard title={t('ریجستری ریسک')} icon={<ClipboardList size={17} />}
+            description={t('هر ریسک با چهار قلم بنیادی ثبت می‌شود: احتمال، اثر، پاسخ (پیشگیرانه و واکنشی) و مالک.')}
+            actions={writable && (
+              <button className="srip-button primary" onClick={() => { setFormError(''); setCreateOpen(true); }}><Plus size={14} /> {t('ریسک جدید')}</button>
+            )}>
+            {risks.items.length ? (
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr><th>{t('ریسک')}</th><th>{t('احتمال')}</th><th>{t('اثر')}</th><th>{t('درجه')}</th><th>{t('مالک')}</th><th>{t('وضعیت')}</th><th>{t('بازبینی')}</th></tr>
+                  </thead>
+                  <tbody>
+                    {risks.items.map((r: any) => (
+                      <tr key={r.id} className="row-click" onClick={() => setRiskDetail(r)}>
+                        <td className="t-primary">{r.title}</td>
+                        <td><StatusBadge tone={LEVEL_TONE[r.probability]}>{r.probabilityFa}</StatusBadge></td>
+                        <td><StatusBadge tone={LEVEL_TONE[r.impact]}>{r.impactFa}</StatusBadge></td>
+                        <td><StatusBadge tone={GRADE_TONE[r.grade]}>{r.gradeFa}</StatusBadge></td>
+                        <td>{r.ownerRole}</td>
+                        <td><StatusBadge tone={RISK_STATUS_TONE[r.status]}>{r.statusFa}</StatusBadge></td>
+                        <td className="t-muted" style={{ fontSize: 11 }}>{faDate(r.reviewAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <EmptyV4 icon={<ShieldAlert size={22} />} title={t('ریسکی ثبت نشده است')}
+                description={t('فهرست ریسک در آغاز هر فصل بازبینی می‌شود؛ با «ریسک جدید» نخستین ریسک را با چهار قلم بنیادی ثبت کنید.')} />
+            )}
+          </SectionCard>
+        </>
+      )}
+
+      {/* ═══════════ تب آمادگی — شش لایهٔ وزن‌دار بخش ۱۲/۱۳ ═══════════ */}
+      {tab === 'readiness' && readiness && (
+        <>
+          <div className="stat-grid">
+            <StatCard icon={<Gauge size={18} />} label={t('نمرهٔ آمادگی کل')} value={`${faNum(readiness.total)}٪`} iconClass="ic-blue"
+              sub={t('میانگین وزنی شش لایه — هر فصل در داشبورد محاسبه و گزارش می‌شود')} />
+            <StatCard icon={<ListChecks size={18} />} label={t('دروازهٔ فصل جاری')} value={(() => {
+              const cur = readiness.seasons.find((s: any) => s.current);
+              return cur ? `${t('فصل')} ${faNum(cur.season)} — ${faNum(cur.threshold)}٪` : '—';
+            })()} iconClass="ic-gold"
+              sub={(() => {
+                const cur = readiness.seasons.find((s: any) => s.current);
+                if (!cur) return t('برنامه در فصل تحویل است.');
+                return cur.score >= cur.threshold ? t('آستانه پاس شد — آمادهٔ تصویب ورود به فاز بعد') : t('هنوز به آستانه نرسیده — اقلام پذیرفته‌شده را بیشتر کنید');
+              })()} />
+          </div>
+          <div className="note-strip">{t('نمرهٔ هر لایه از وضعیت اقلام آن محاسبه می‌شود (پذیرفته‌شده = ۱۰۰، در جریان = ۵۰). لایهٔ «رابطه» مستقیم از دادهٔ زندهٔ روابط و فرصت‌های سامانه محاسبه می‌شود و قابل ثبت دستی نیست.')}{writable ? t(' برای به‌روزرسانی، روی وضعیت هر قلم کلیک کنید.') : ''}</div>
+          <div className="readiness-layers">
+            {readiness.layers.map((L: any) => (
+              <SectionCard key={L.key} title={L.label} icon={<TrendingUp size={16} />}
+                description={`${t('وزن')} ${faNum(L.weight)}٪ · ${t('معیار پذیرش')}: ${L.criterion}`}>
+                <div className="layer-score-row">
+                  <b>{faNum(L.score)}٪</b>
+                  <div className="prog-bar season-bar"><div className={`prog-fill ${L.score < 50 ? 'bad' : ''}`} style={{ width: `${Math.min(100, L.score)}%` }} /></div>
+                </div>
+                <div className="layer-items">
+                  {L.items.map((it: any) => (
+                    <div key={it.key} className="layer-item">
+                      {L.computed ? (
+                        <>
+                          <span className="t-primary">{it.label}</span>
+                          <span className="t-muted">{t('از دادهٔ زنده')}: {faNum(it.percent)}٪</span>
+                        </>
+                      ) : (
+                        <button className={`layer-status ${it.status} ${writable ? 'clickable' : ''}`} disabled={!writable || busy}
+                          onClick={() => cycleReadinessItem(L.key, it)}
+                          title={writable ? t('کلیک: تغییر وضعیت (شروع‌نشده → در جریان → پذیرفته‌شده)') : t('برای تغییر وضعیت به مجوز برنامه نیاز دارید')}>
+                          <span className="t-primary">{it.label}</span>
+                          <StatusBadge tone={ITEM_STATUS_TONE[it.status]}>{ITEM_STATUS_FA[it.status]}</StatusBadge>
+                        </button>
+                      )}
+                      {it.evidence ? <span className="t-muted evi">{it.evidence}</span> : null}
+                    </div>
+                  ))}
+                </div>
+              </SectionCard>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* ═══════════ تب ممیزی — سه‌گانهٔ بخش ۲۰/۲۱ سند ═══════════ */}
+      {tab === 'audit' && audits && (
+        <>
+          <div className="note-strip">{t('ممیزی، ارزیابی صادقانه از وضعیت موجود است — نه ارزیابی عملکرد اشخاص. خروجی آن، ورودی مستقیم بازسازی نقش‌ها و برنامهٔ انتقال داده و جایگزینی سامانه‌ها و کانال‌هاست.')}</div>
+          <SectionCard title={t('ممیزی سه‌گانه')} icon={<ClipboardList size={17} />}
+            description={t('برای جزئیات کامل هر قلم، روی ردیف کلیک کنید.')}>
+            <Segmented options={AUDIT_TABS.map(([v, l]) => ({ value: v, label: l }))} value={auditTab} onChange={setAuditTab}
+              counts={{ people: audits.people.length, systems: audits.systems.length, channels: audits.channels.length } as any} />
+            <div className="chip-row" style={{ margin: '10px 0' }}>
+              {auditTab === 'people' && <>
+                <span className="chip neutral">{t('کل')}: {faNum(audits.summary.peopleTotal)}</span>
+                <span className="chip info">{t('حفظ')}: {faNum(audits.summary.peopleKeep)}</span>
+                <span className="chip warning">{t('بازتعریف')}: {faNum(audits.summary.peopleRedefine)}</span>
+                <span className="chip success">{t('جذب')}: {faNum(audits.summary.peopleHire)}</span>
+              </>}
+              {auditTab === 'systems' && <>
+                <span className="chip neutral">{t('کل')}: {faNum(audits.summary.systemsTotal)}</span>
+                <span className="chip info">{t('نگهداری')}: {faNum(audits.summary.systemsKeep)}</span>
+                <span className="chip warning">{t('انتقال')}: {faNum(audits.summary.systemsMigrate)}</span>
+                <span className="chip danger">{t('خاموش‌سازی')}: {faNum(audits.summary.systemsShutdown)}</span>
+                <span className="chip success">{t('تکمیل‌شده')}: {faNum(audits.summary.migrationDone)} {t('از')} {faNum(audits.summary.migrationTotal)}</span>
+              </>}
+              {auditTab === 'channels' && <>
+                <span className="chip neutral">{t('کل')}: {faNum(audits.summary.channelsTotal)}</span>
+                <span className="chip danger">{t('بی‌مالک')}: {faNum(audits.summary.channelsOrphan)}</span>
+                <span className="chip warning">{t('کانال بی‌مالک یا رهاشده، یا به مالک مشخص واگذار یا خاموش می‌شود.')}</span>
+              </>}
+            </div>
+            {auditTab === 'people' && (audits.people.length ? (
+              <div className="table-wrap"><table>
+                <thead><tr><th>{t('نقش')}</th><th>{t('شرح واقعی وظایف')}</th><th>{t('مدیر مستقیم')}</th><th>{t('ریسک وابستگی')}</th><th>{t('اولویت')}</th></tr></thead>
+                <tbody>{audits.people.map((r: any) => (
+                  <tr key={r.id} className="row-click" onClick={() => setAuditDetail({ kind: 'people', row: r })}>
+                    <td className="t-primary">{r.role}</td><td>{r.duties}</td><td>{r.manager}</td>
+                    <td><StatusBadge tone={LEVEL_TONE[r.dependencyRisk] ?? 'neutral'}>{LEVEL_FA[r.dependencyRisk] ?? '—'}</StatusBadge></td>
+                    <td><StatusBadge tone={r.priority === 'KEEP' ? 'success' : r.priority === 'REDEFINE' ? 'warning' : 'info'}>{PRIORITY_FA[r.priority]}</StatusBadge></td>
+                  </tr>))}</tbody>
+              </table></div>
+            ) : <EmptyV4 icon={<ClipboardList size={22} />} title={t('ممیزی افراد ثبت نشده است')} description={t('ممیزی در ماه نخست برنامه آغاز می‌شود تا هیچ تصمیم ساختاری بدون دادهٔ ممیزی گرفته نشود.')} />)}
+            {auditTab === 'systems' && (audits.systems.length ? (
+              <div className="table-wrap"><table>
+                <thead><tr><th>{t('سامانه')}</th><th>{t('مالک فعلی')}</th><th>{t('حساسیت داده')}</th><th>{t('وضعیت در برنامهٔ انتقال')}</th><th>{t('پیشرفت')}</th></tr></thead>
+                <tbody>{audits.systems.map((r: any) => (
+                  <tr key={r.id} className="row-click" onClick={() => setAuditDetail({ kind: 'systems', row: r })}>
+                    <td className="t-primary">{r.name}</td><td>{r.owner}</td>
+                    <td>{r.sensitivity === 'CONFIDENTIAL' ? t('حساس') : r.sensitivity === 'MIXED' ? t('مختلط') : r.sensitivity === 'INTERNAL' ? t('داخلی') : t('عمومی')}</td>
+                    <td><StatusBadge tone={MIGRATION_TONE[r.migration]}>{MIGRATION_FA[r.migration]}</StatusBadge></td>
+                    <td>{r.migration === 'KEEP' ? '—' : r.migrationStatus === 'DONE' ? <StatusBadge tone="success">{t('انجام شد')}</StatusBadge>
+                      : r.migrationStatus === 'IN_PROGRESS' ? <StatusBadge tone="warning">{t('در جریان')}</StatusBadge>
+                        : <StatusBadge tone="neutral">{t('شروع نشده')}</StatusBadge>}</td>
+                  </tr>))}</tbody>
+              </table></div>
+            ) : <EmptyV4 icon={<ClipboardList size={22} />} title={t('ممیزی سامانه‌ها ثبت نشده است')} description={t('همهٔ ابزارهای فعال — از صفحات گسترده تا گروه‌های پیام‌رسان — فهرست و تعیین تکلیف می‌شوند.')} />)}
+            {auditTab === 'channels' && (audits.channels.length ? (
+              <div className="table-wrap"><table>
+                <thead><tr><th>{t('کانال')}</th><th>{t('نشانی')}</th><th>{t('مالک')}</th><th>{t('آخرین فعالیت')}</th><th>{t('اقدام پیشنهادی')}</th></tr></thead>
+                <tbody>{audits.channels.map((r: any) => (
+                  <tr key={r.id} className="row-click" onClick={() => setAuditDetail({ kind: 'channels', row: r })}>
+                    <td className="t-primary">{r.name}</td><td className="t-muted">{r.address}</td><td>{r.owner}</td>
+                    <td>{r.lastActivity}</td>
+                    <td><StatusBadge tone={r.action === 'SHUTDOWN' ? 'danger' : r.action === 'TRANSFER' ? 'warning' : 'info'}>{CHANNEL_ACTION_FA[r.action]}</StatusBadge></td>
+                  </tr>))}</tbody>
+              </table></div>
+            ) : <EmptyV4 icon={<ClipboardList size={22} />} title={t('ممیزی کانال‌ها ثبت نشده است')} description={t('تمام کانال‌های ارتباطی فعال — وب‌سایت‌ها، شبکه‌های اجتماعی و خبرنامه‌ها — بررسی می‌شوند.')} />)}
+          </SectionCard>
+        </>
+      )}
+
+      {/* ═══════════ مودال: جزئیات ریسک ═══════════ */}
+      <Modal open={!!riskDetail} title={riskDetail?.title ?? ''} onClose={() => setRiskDetail(null)}
+        description={`${t('احتمال')}: ${riskDetail ? LEVEL_FA[riskDetail.probability] : ''} · ${t('اثر')}: ${riskDetail ? LEVEL_FA[riskDetail.impact] : ''} · ${t('مالک')}: ${riskDetail?.ownerRole ?? ''}`}
+        footer={writable && riskDetail && riskDetail.status !== 'CLOSED' ? (
+          <button className="srip-button" disabled={busy} onClick={() => setRiskStatus(riskDetail.id, 'CLOSED')}><CheckCircle2 size={14} /> {t('بستن ریسک')}</button>
+        ) : null}>
+        {riskDetail && (
+          <div className="detail-grid">
+            <div><b>{t('پاسخ پیشگیرانه')}</b><p>{riskDetail.preventive || '—'}</p></div>
+            <div><b>{t('پاسخ واکنشی')}</b><p>{riskDetail.reactive || '—'}</p></div>
+            <div><b>{t('وضعیت')}</b><p><StatusBadge tone={RISK_STATUS_TONE[riskDetail.status]}>{RISK_STATUS_FA[riskDetail.status]}</StatusBadge></p></div>
+            <div><b>{t('تاریخ بازبینی بعدی')}</b><p>{faDate(riskDetail.reviewAt)}</p></div>
+            {riskDetail.notes ? <div><b>{t('یادداشت')}</b><p>{riskDetail.notes}</p></div> : null}
+          </div>
+        )}
+      </Modal>
+
+      {/* ═══════════ مودال: ریسک جدید (فرم ۱۶) ═══════════ */}
+      <Modal open={createOpen} title={t('ثبت ریسک جدید')} onClose={() => setCreateOpen(false)}
+        description={t('ریسک بدون مالک ثبت نمی‌شود — مالک یکی از نقش‌های چارت برنامه است.')}
+        footer={<>
+          <button className="srip-button" onClick={() => setCreateOpen(false)}><X size={14} /> {t('انصراف')}</button>
+          <button type="submit" form="risk-create-form" className="srip-button primary" disabled={busy}>{busy ? t('در حال ذخیره…') : t('ثبت ریسک')}</button>
+        </>}>
+        <form id="risk-create-form" className="form-grid" onSubmit={(e) => { e.preventDefault(); submitRisk(); }}>
+          <label className="field">
+            <span>{t('عنوان ریسک')}</span>
+            <input value={form.title} onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))} required minLength={3} placeholder={t('مثلاً: تأخیر در تأیید برندبوک')} />
+          </label>
+          <div className="field-pair">
+            <label className="field">
+              <span>{t('احتمال')}</span>
+              <select value={form.probability} onChange={(e) => setForm(f => ({ ...f, probability: e.target.value }))}>
+                {Object.entries(LEVEL_FA).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+              </select>
+            </label>
+            <label className="field">
+              <span>{t('اثر')}</span>
+              <select value={form.impact} onChange={(e) => setForm(f => ({ ...f, impact: e.target.value }))}>
+                {Object.entries(LEVEL_FA).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+              </select>
+            </label>
+          </div>
+          <label className="field">
+            <span>{t('مالک ریسک')} *</span>
+            <select value={form.ownerRole} onChange={(e) => setForm(f => ({ ...f, ownerRole: e.target.value }))} required>
+              <option value="">{t('انتخاب کنید…')}</option>
+              {(risks?.roles ?? []).map((r: string) => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </label>
+          <label className="field">
+            <span>{t('پاسخ پیشگیرانه')}</span>
+            <input value={form.preventive} onChange={(e) => setForm(f => ({ ...f, preventive: e.target.value }))} placeholder={t('برای جلوگیری از وقوع…')} />
+          </label>
+          <label className="field">
+            <span>{t('پاسخ واکنشی')}</span>
+            <input value={form.reactive} onChange={(e) => setForm(f => ({ ...f, reactive: e.target.value }))} placeholder={t('اگر رخ داد…')} />
+          </label>
+          {formError ? <div className="alert-banner danger" role="alert"><AlertTriangle size={16} /><span>{formError}</span></div> : null}
+        </form>
+      </Modal>
+
+      {/* ═══════════ مودال: جزئیات قلم ممیزی ═══════════ */}
+      <Modal open={!!auditDetail} title={auditDetail?.kind === 'systems' ? auditDetail?.row?.name : auditDetail?.kind === 'channels' ? auditDetail?.row?.name : auditDetail?.row?.role ?? ''} onClose={() => setAuditDetail(null)}>
+        {auditDetail && (
+          <div className="detail-grid">
+            {auditDetail.kind === 'people' && <>
+              <div><b>{t('شرح واقعی وظایف')}</b><p>{auditDetail.row.duties}</p></div>
+              <div><b>{t('مدیر مستقیم')}</b><p>{auditDetail.row.manager}</p></div>
+              <div><b>{t('ظرفیت زمانی آزاد')}</b><p>{auditDetail.row.capacity === 'HIGH' ? t('زیاد') : auditDetail.row.capacity === 'MEDIUM' ? t('متوسط') : auditDetail.row.capacity === 'LOW' ? t('کم') : '—'}</p></div>
+              <div><b>{t('برنامهٔ جانشین‌پروری')}</b><p>{auditDetail.row.successor}</p></div>
+              <div><b>{t('اولویت حفظ یا بازتعریف')}</b><p>{PRIORITY_FA[auditDetail.row.priority]}</p></div>
+              <div><b>{t('یادداشت ممیزی')}</b><p>{auditDetail.row.note}</p></div>
+            </>}
+            {auditDetail.kind === 'systems' && <>
+              <div><b>{t('مالک و مسئول فعلی')}</b><p>{auditDetail.row.owner}</p></div>
+              <div><b>{t('داده‌های نگهداری‌شده و حجم')}</b><p>{auditDetail.row.data}</p></div>
+              <div><b>{t('نسخهٔ پشتیبان')}</b><p>{auditDetail.row.backup}</p></div>
+              <div><b>{t('هم‌پوشانی با سایر ابزارها')}</b><p>{auditDetail.row.overlap}</p></div>
+              <div><b>{t('وضعیت در برنامهٔ انتقال')}</b><p><StatusBadge tone={MIGRATION_TONE[auditDetail.row.migration]}>{MIGRATION_FA[auditDetail.row.migration]}</StatusBadge></p></div>
+              <div><b>{t('یادداشت ممیزی')}</b><p>{auditDetail.row.note}</p></div>
+            </>}
+            {auditDetail.kind === 'channels' && <>
+              <div><b>{t('نشانی')}</b><p>{auditDetail.row.address}</p></div>
+              <div><b>{t('مالک و مدیر دسترسی')}</b><p>{auditDetail.row.owner}</p></div>
+              <div><b>{t('آخرین فعالیت')}</b><p>{auditDetail.row.lastActivity}</p></div>
+              <div><b>{t('انطباق با هویت بصری')}</b><p>{auditDetail.row.brand}</p></div>
+              <div><b>{t('اقدام پیشنهادی')}</b><p><StatusBadge tone={auditDetail.row.action === 'SHUTDOWN' ? 'danger' : 'warning'}>{CHANNEL_ACTION_FA[auditDetail.row.action]}</StatusBadge></p></div>
+              <div><b>{t('یادداشت ممیزی')}</b><p>{auditDetail.row.note}</p></div>
+            </>}
+          </div>
+        )}
+      </Modal>
+    </main>
+  );
+}

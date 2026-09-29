@@ -544,3 +544,67 @@ html,body{overflow-x:clip;max-width:100%}
 .dashboard-page{gap:20px}
 .dash-grid-top,.dash-grid-mid,.dash-grid-bottom{gap:18px}
 .dash-panel{padding:22px;gap:18px}
+
+/* ==========================================================================
+   گام ۲.۱ مسترپلن — حاکمیت برنامه (/program)
+   ========================================================================== */
+.note-strip{font-size:12px;color:var(--text-muted);background:var(--card-bg-soft);border:1px solid var(--card-border);
+  border-radius:var(--radius-md);padding:10px 14px;line-height:1.8}
+.two-col-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+.season-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.season-card{border:1px solid var(--card-border);border-radius:var(--radius-md);padding:13px 14px;display:flex;flex-direction:column;gap:8px;background:var(--card-bg)}
+.season-card.passed{border-color:color-mix(in srgb,#16a34a 35%,transparent)}
+.season-card.current{border-color:color-mix(in srgb,var(--srip-accent) 45%,transparent);box-shadow:var(--shadow-sm)}
+.season-head{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px}
+.season-meta{font-size:11px;color:var(--text-muted)}
+.season-score{display:flex;justify-content:space-between;font-size:11.5px;color:var(--text-muted)}
+.season-bar{width:100%}
+.trend-row{display:flex;gap:14px;align-items:flex-end;padding:6px 4px 0}
+.trend-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.trend-bar-wrap{height:74px;display:flex;align-items:flex-end;width:100%}
+.trend-bar{width:70%;max-width:56px;min-height:6px;border-radius:8px 8px 3px 3px;
+  background:color-mix(in srgb,var(--srip-accent) 55%,transparent)}
+.trend-bar.current{background:var(--srip-accent);box-shadow:var(--shadow-sm)}
+.trend-label{font-size:10.5px;color:var(--text-muted)}
+.trend-value{font-size:12px;font-weight:800}
+.mini-list{display:flex;flex-direction:column;gap:8px}
+.mini-row{display:flex;align-items:center;gap:10px;justify-content:space-between;border:1px solid var(--card-border);
+  border-radius:var(--radius-md);padding:9px 12px;font-size:12px;flex-wrap:wrap}
+.mini-row .t-primary{flex:1;min-width:140px}
+.risk-matrix{display:grid;grid-template-columns:110px repeat(3,1fr);gap:6px;max-width:560px}
+.rm-head{font-size:11px;color:var(--text-muted);display:flex;align-items:center;justify-content:center;text-align:center}
+.rm-cell{min-height:52px;border-radius:var(--radius-md);border:1.5px dashed var(--card-border-strong);background:var(--card-bg-soft);
+  font-size:16px;font-weight:800;color:var(--text-muted);cursor:default;display:grid;place-items:center;font-family:inherit}
+.rm-cell.low.has{border-style:solid;border-color:color-mix(in srgb,#16a34a 30%,transparent);color:#15803d;cursor:pointer}
+.rm-cell.mid.has{border-style:solid;border-color:color-mix(in srgb,#d97706 40%,transparent);color:#b45309;background:color-mix(in srgb,#f59e0b 7%,var(--card-bg));cursor:pointer}
+.rm-cell.high.has{border-style:solid;border-color:color-mix(in srgb,#dc2626 40%,transparent);color:#b91c1c;background:color-mix(in srgb,#ef4444 8%,var(--card-bg));cursor:pointer}
+.readiness-layers{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+.layer-score-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.layer-score-row b{font-size:16px}
+.layer-score-row .prog-bar{flex:1}
+.layer-items{display:flex;flex-direction:column;gap:6px}
+.layer-item{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.layer-item .evi{font-size:10.5px}
+.layer-status{display:flex;align-items:center;justify-content:space-between;gap:10px;flex:1;min-width:0;
+  border:1px solid var(--card-border);border-radius:var(--radius-md);padding:8px 11px;background:var(--card-bg);
+  font-family:inherit;font-size:12px;text-align:right;width:100%}
+.layer-status.clickable{cursor:pointer;transition:border-color .12s ease}
+.layer-status.clickable:hover{border-color:var(--srip-accent)}
+.layer-status.ACCEPTED{border-color:color-mix(in srgb,#16a34a 30%,transparent)}
+.layer-status.IN_PROGRESS{border-color:color-mix(in srgb,#d97706 35%,transparent)}
+.row-click{cursor:pointer}
+.program-form .field>span:first-child,.form-grid .field>span:first-child{font-size:12px;font-weight:800;color:var(--text-secondary)}
+.prog-fill.bad{background:#dc2626}
+html[data-theme="dark"] .rm-cell.low.has{color:#4ade80}
+html[data-theme="dark"] .rm-cell.mid.has{color:#fbbf24}
+html[data-theme="dark"] .rm-cell.high.has{color:#f87171}
+.field-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:900px){
+  .season-row{grid-template-columns:1fr 1fr}
+  .two-col-grid,.readiness-layers{grid-template-columns:1fr}
+  .risk-matrix{grid-template-columns:84px repeat(3,1fr)}
+}
+@media (max-width:520px){
+  .season-row{grid-template-columns:1fr}
+  .field-pair{grid-template-columns:1fr}
+}

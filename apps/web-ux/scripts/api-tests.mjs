@@ -914,6 +914,93 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
   check('نهاد ناموجود → 404', nf.status === 404);
 }
 
+/* ═══ گام ۲.۱ مسترپلن — حاکمیت برنامه (بخش ۱۲/۱۳/۲۰/۲۱/۲۵/۲۶ سند) ═══ */
+{
+  const dl = await login('demo');
+  const dt = dl.body?.accessToken;
+  /* نمای کلی — همهٔ اجزا از دادهٔ زنده */
+  const ov = await api('/program/overview', { token: dt });
+  check('نمای کلی: نمرهٔ آمادگی + فصل‌ها + دروازه', ov.status === 200 && typeof ov.body?.readiness?.total === 'number'
+    && Array.isArray(ov.body?.readiness?.seasons) && ov.body.readiness.seasons.length === 4
+    && ov.body.readiness.seasons.every(x => typeof x.threshold === 'number'));
+  check('نمای کلی: خلاصهٔ شاخص‌ها و ریسک و ممیزی', ov.status === 200 && ov.body?.kpis?.total === 10
+    && typeof ov.body?.risks?.highOpen === 'number' && typeof ov.body?.audits?.migrationDone === 'number');
+  /* شاخص‌ها — فرم ۱۷: هر شاخص مالک/هدف/دوره/منبع محاسبه دارد */
+  const kp = await api('/program/kpis', { token: dt });
+  check('شاخص‌ها: ۱۰ شاخص جدول بخش ۲۶ سند', kp.status === 200 && kp.body?.items?.length === 10);
+  check('شاخص‌ها: هر شاخص مالک و هدف و دوره و منبع محاسبه دارد (فرم ۱۷)',
+    kp.body.items.every(k => k.owner && k.target && k.period && k.source && typeof k.percent === 'number'));
+  check('شاخص‌ها: مقدار محاسبه‌شده نه دستی — وضعیت سه‌حالته',
+    kp.body.items.every(k => ['ON_TARGET', 'NEAR', 'OFF_TARGET'].includes(k.status)) && kp.body.items.every(k => k.valueLabel));
+  const kpi8 = kp.body.items.find(k => k.id === 'kpi-8');
+  const ppl = await api('/people', { token: dt });
+  const pplList = Array.isArray(ppl.body) ? ppl.body : ppl.body?.items ?? [];
+  check('شاخص ساختار ۲۵ نفره از دادهٔ اشخاص محاسبه می‌شود (نه عدد دستی)',
+    kpi8 && pplList.length > 0 && kpi8.value === pplList.filter(p => p.status !== 'INACTIVE').length);
+  /* ریسک‌ها — فرم ۱۶ */
+  const rk = await api('/program/risks', { token: dt });
+  check('ریسک‌ها: ۹ ریسک بذری سند + خلاصه و ماتریس', rk.status === 200 && rk.body?.items?.length >= 9
+    && rk.body.summary && Array.isArray(rk.body.matrix) && rk.body.matrix.length === 3);
+  check('ریسک‌ها: هر ریسک چهار قلم بنیادی دارد', rk.body.items.every(r => r.probability && r.impact && r.ownerRole
+    && (r.preventive || r.reactive)));
+  check('ریسک‌ها: درجه از احتمال×اثر (متوسط×بالا = درجه بالا)',
+    rk.body.items.filter(r => r.probability === 'MEDIUM' && r.impact === 'HIGH').every(r => r.grade === 'HIGH'));
+  const rNo = await api('/program/risks', { method: 'POST', token: dt, body: { title: 'ریسک بدون مالک تست', probability: 'HIGH', impact: 'HIGH' } });
+  check('ثبت ریسک بدون مالک → ۴۰۰ (قاعدهٔ سند)', rNo.status === 400 && String(rNo.body?.message).includes('بدون مالک'));
+  const rBad = await api('/program/risks', { method: 'POST', token: dt, body: { title: 'ریسک تست', probability: 'HIGH', impact: 'HIGH', ownerRole: 'نقش ساختگی' } });
+  check('مالک باید یکی از ۲۲ نقش چارت باشد → ۴۰۰', rBad.status === 400);
+  const rOk = await api('/program/risks', { method: 'POST', token: dt, body: { title: 'ریسک تست خودکار باتری', probability: 'LOW', impact: 'LOW', ownerRole: 'مدیر پروژه', preventive: 'پیشگیری تست', reactive: 'واکنش تست' } });
+  check('ثبت ریسک با چهار قلم → ۲۰۱ + درجه پایین', rOk.status === 201 && rOk.body?.grade === 'LOW' && rOk.body?.ownerRole === 'مدیر پروژه');
+  const rPatch = await api(`/program/risks/${rOk.body?.id}`, { method: 'PATCH', token: dt, body: { status: 'CLOSED' } });
+  check('بستن ریسک → ۲۰۰', rPatch.status === 200 && rPatch.body?.status === 'CLOSED');
+  const r404 = await api('/program/risks/risk-none', { method: 'PATCH', token: dt, body: { status: 'CLOSED' } });
+  check('ریسک ناموجود → ۴۰۴', r404.status === 404);
+  /* آمادگی — شش لایهٔ وزن‌دار + لایهٔ رابطه از دادهٔ زنده */
+  const rd = await api('/program/readiness', { token: dt });
+  check('آمادگی: شش لایه با وزن (مجموع ۱۰۰)', rd.status === 200 && rd.body?.layers?.length === 6
+    && rd.body.layers.reduce((s, L) => s + L.weight, 0) === 100);
+  check('آمادگی: نمرهٔ کل = میانگین وزنی لایه‌ها',
+    Math.abs(rd.body.total - Math.round(rd.body.layers.reduce((s, L) => s + L.weight * L.score, 0) / 100)) <= 1);
+  const relLayer = rd.body.layers.find(L => L.key === 'rel');
+  check('لایهٔ «رابطه» از دادهٔ زنده محاسبه می‌شود (درصد هر قلم)',
+    relLayer.computed === true && relLayer.items.every(i => typeof i.percent === 'number'));
+  const rItemBad = await api('/program/readiness/rel/items/stakeholders', { method: 'PATCH', token: dt, body: { status: 'ACCEPTED' } });
+  check('قلم لایهٔ محاسبه‌شده قابل ثبت دستی نیست → ۴۰۰', rItemBad.status === 400);
+  const rItem = await api('/program/readiness/brand/items/brand-photos', { method: 'PATCH', token: dt, body: { status: 'ACCEPTED', evidence: 'تست باتری' } });
+  check('به‌روزرسانی وضعیت قلم آمادگی → ۲۰۰ + بازمحاسبه', rItem.status === 200 && rItem.body?.layers?.length === 6
+    && rItem.body.layers.find(L => L.key === 'brand').items.find(i => i.key === 'brand-photos').status === 'ACCEPTED');
+  const rItemBack = await api('/program/readiness/brand/items/brand-photos', { method: 'PATCH', token: dt, body: { status: 'IN_PROGRESS', evidence: '' } });
+  check('بازگرداندن وضعیت قلم (پاک‌سازی تست) → ۲۰۰', rItemBack.status === 200);
+  /* ممیزی سه‌گانه */
+  const au = await api('/program/audits', { token: dt });
+  check('ممیزی: سه‌گانهٔ افراد/سامانه‌ها/کانال‌ها + خلاصهٔ انتقال',
+    au.status === 200 && au.body?.people?.length >= 5 && au.body?.systems?.length >= 5 && au.body?.channels?.length >= 4
+    && au.body.summary.migrationDone >= 1 && au.body.summary.migrationTotal >= au.body.summary.migrationDone);
+  check('ممیزی: هر سامانه وضعیت پیشنهادی (نگهداری/انتقال/خاموش‌سازی) دارد',
+    au.body.systems.every(x => ['KEEP', 'MIGRATE', 'SHUTDOWN'].includes(x.migration)));
+  /* شاخص ۹ (انتقال داده) و ممیزی هم‌منبع‌اند */
+  const kpi9 = (await api('/program/kpis', { token: dt })).body.items.find(k => k.id === 'kpi-9');
+  check('شاخص انتقال داده از ممیزی سامانه‌ها محاسبه می‌شود',
+    kpi9 && kpi9.value === au.body.summary.migrationDone && kpi9.targetValue === au.body.summary.migrationTotal);
+  /* مجوز: نقش‌های خواندنی program.read دارند؛ ثبت ریسک program.write می‌خواهد */
+  const cl = await login('client');
+  const ct = cl.body?.accessToken;
+  const meC = await api('/auth/me', { token: ct });
+  check('کاربر نقش‌محور → مجوز program.read (دیدن حاکمیت برنامه)', meC.status === 200
+    && (meC.body?.permissions ?? []).includes('program.read'));
+  const noWrite = await api('/program/risks', { method: 'POST', token: ct, body: { title: 'ریسک بدون مجوز', probability: 'LOW', impact: 'LOW', ownerRole: 'مدیرعامل' } });
+  check('ثبت ریسک بدون program.write → ۴۰۳', noWrite.status === 403);
+  /* مستأجر واقعی: دادهٔ برنامهٔ دمو دیده نمی‌شود (جداسازی) */
+  const pl2 = await login('pars');
+  const pt2 = pl2.body?.accessToken;
+  if (pt2) {
+    const pR = await api('/program/risks', { token: pt2 });
+    check('مستأجر پارس → ریسک دیده نمی‌شود (جداسازی داده)', pR.status === 200 && pR.body.items.length === 0);
+    const pRd = await api('/program/readiness', { token: pt2 });
+    check('مستأجر پارس → لایه‌ها خالی ولی ساختار کامل', pRd.status === 200 && pRd.body.layers.length === 6);
+  }
+}
+
 /* ============================ SUMMARY ============================ */
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);

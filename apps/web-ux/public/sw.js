@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.24.06';
+const DEMO_MOCK_VERSION = '2026.09.29.01';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -2428,7 +2428,7 @@ const SEED_USERS = {
   'client@arya-tech.ir': {
     id:'u-2', email:'client@arya-tech.ir', username:'client', name:'سارا محمدی', password:'123456',
     memberships:[{id:'mb-2',organizationId:'org-2',organizationName:'آریا فناوری',role:'RELATIONSHIP_MANAGER',department:'فروش',dataScope:'ORGANIZATION',accessScope:'ORGANIZATION',isPrimary:true}],
-    permissions:['dashboard.read','organization.read','person.read','relationship.read','meeting.read','interaction.read','action.read','commitment.read','project.read','opportunity.read','network.read','ai.query','ai.executive_brief','recommendation.read','report.read','مجوز خروجی گزارش','approval.request','approval.read','search.read','notification.read','document.read','calendar.read','help.read','privacy.read','privacy.access','privacy.export','privacy.erase','enterprise.read','feature_flag.read','analytics.read','analytics.write'],
+    permissions:['dashboard.read','program.read','organization.read','person.read','relationship.read','meeting.read','interaction.read','action.read','commitment.read','project.read','opportunity.read','network.read','ai.query','ai.executive_brief','recommendation.read','report.read','مجوز خروجی گزارش','approval.request','approval.read','search.read','notification.read','document.read','calendar.read','help.read','privacy.read','privacy.access','privacy.export','privacy.erase','enterprise.read','feature_flag.read','analytics.read','analytics.write'],
     accessibleOrganizationIds:['org-2'],
     isOwner:false,
     isActive:true,
@@ -5332,8 +5332,8 @@ function audit(req, action, entity, entityId, outcome = 'OK', meta = {}) {
 
 /* --------------------------- admin: RBAC catalog & access recompute ----- */
 const ROLE_LABELS_ADMIN={SUPER_ADMIN:'مدیر کل سیستم',HOLDING_ADMIN:'مدیر هلدینگ',HOLDING_EXECUTIVE:'مدیر ارشد هلدینگ',SUBSIDIARY_ADMIN:'مدیر شرکت',SUBSIDIARY_EXECUTIVE:'مدیر ارشد شرکت',RELATIONSHIP_MANAGER:'مدیر روابط',PROJECT_MANAGER:'مدیر پروژه',ANALYST:'تحلیلگر',STANDARD_USER:'کاربر استاندارد',READ_ONLY:'فقط خواندنی'};
-const R_READ=['dashboard.read','publics.read','strategy.read','organization.read','person.read','relationship.read','network.read','interaction.read','meeting.read','action.read','commitment.read','project.read','opportunity.read','recommendation.read','report.read','document.read','notification.read','search.read','calendar.read','help.read','user.read','session.read','analytics.read','ai.query','ai.executive_brief'];
-const R_WRITE=['strategy.write','publics.write','person.write','relationship.write','interaction.write','meeting.write','action.write','commitment.write','project.write','opportunity.write','recommendation.تأیید','document.write','data.manage'];
+const R_READ=['dashboard.read','publics.read','strategy.read','organization.read','person.read','relationship.read','network.read','interaction.read','meeting.read','action.read','commitment.read','project.read','opportunity.read','recommendation.read','report.read','document.read','notification.read','search.read','calendar.read','help.read','user.read','session.read','analytics.read','ai.query','ai.executive_brief','program.read'];
+const R_WRITE=['strategy.write','publics.write','person.write','relationship.write','interaction.write','meeting.write','action.write','commitment.write','project.write','opportunity.write','recommendation.تأیید','document.write','data.manage','program.write'];
 const R_READONLY_PERMS=R_READ.filter(p=>!['ai.query','ai.executive_brief','analytics.read','recommendation.read'].includes(p));
 const ROLE_CATALOG=[
   {key:'SUPER_ADMIN',name:ROLE_LABELS_ADMIN.SUPER_ADMIN,description:'مالک سامانه — دسترسی کامل، غیرقابل واگذاری.',holding:true,perms:['*']},
@@ -5363,6 +5363,7 @@ const P_DEFS=[
   ['Work','project.read','مشاهده پروژه‌ها'],['Work','project.write','مدیریت پروژه'],
   ['Work','opportunity.read','مشاهده فرصت‌ها'],['Work','opportunity.write','ثبت و تغییر فرصت'],
   ['Work','approval.read','مشاهده تأییدها'],['Work','workflow.read','مشاهده گردش کارها'],
+  ['Work','program.read','مشاهده حاکمیت برنامه'],['Work','program.write','ثبت ریسک و به‌روزرسانی آمادگی'],
   ['Publics','publics.read','مشاهده عموم‌ها'],['Publics','publics.write','مدیریت عموم‌ها'],
   ['Strategy','strategy.read','مشاهده تحلیل راهبردی'],['Strategy','strategy.write','مدیریت تحلیل راهبردی'],
   ['Intelligence','analytics.read','تحلیل و هوشمندی'],['Intelligence','analytics.write','ثبت رویداد و نتیجهٔ سنجش'],['Intelligence','ai.query','پرس‌وجوی هوشمند'],['Intelligence','ai.executive_brief','گزارش راهبردی هوش مصنوعی'],
@@ -7865,6 +7866,239 @@ const json = (res, code, data) => {
 let __bodyText = '';
 const readBody = () => Promise.resolve(__bodyText ? JSON.parse(__bodyText) : {});
 const nowIso=()=>new Date().toISOString();
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   گام ۲.۱ مسترپلن — «حاکمیت برنامه» (سند عملیاتی هلدینگ پارس نسخهٔ ۳)
+   بخش ۱۲/۱۳: آمادگی شش‌لایهٔ وزن‌دار + دروازهٔ فصل · بخش ۲۰/۲۱: ممیزی سه‌گانه
+   بخش ۲۵/فرم ۱۶: ریجستری ریسک (ریسک بدون مالک ثبت نمی‌شود)
+   بخش ۲۶/فرم ۱۷: شاخص‌های مالک‌دار — «عدد دستی وارد داشبورد نمی‌شود»؛ هر شاخص
+   از دادهٔ زندهٔ ماژول‌ها محاسبه می‌شود.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const PROGRAM_ORG_ID='org-1'; /* دادهٔ برنامهٔ هلدینگ دمو؛ مستأجر واقعی دادهٔ خودش را می‌سازد */
+const PROGRAM_ROLES=['مدیرعامل','دستیار مدیرعامل','مدیر عملیات','مدیر منابع انسانی','مدیر مالی','مدیر استراتژی','مدیر حساب','مدیر توسعه کسب‌وکار','مدیر پروژه','مدیر محتوا','مدیر محصول','اسکرام مستر','مدیر روابط عمومی','مدیر هنری','مدیر اندیشکده و پژوهش','مدیر رویداد','تحلیلگر تحقیقات بازار','کارشناس رسانه و روابط عمومی','کارشناس تعاملات','طراح گرافیک','توسعه‌دهنده','کارشناس اداری و امور دفتر'];
+const RISK_LEVEL_FA={LOW:'پایین',MEDIUM:'متوسط',HIGH:'بالا'};
+const RISK_STATUS_FA={OPEN:'باز',IN_PROGRESS:'در اقدام',CLOSED:'بسته'};
+const RISK_LEVEL_SCORE={LOW:1,MEDIUM:2,HIGH:3};
+const riskGrade=(r)=>{const s=(RISK_LEVEL_SCORE[r.probability]??1)*(RISK_LEVEL_SCORE[r.impact]??1);return s>=6?'HIGH':(s>=3?'MEDIUM':'LOW');};
+const RISK_GRADE_FA={HIGH:'درجه بالا',MEDIUM:'درجه متوسط',LOW:'درجه پایین'};
+/* دروازهٔ فصل: بدون رسیدن به آستانهٔ مصوب، ورود به فاز بعدی تصویب نمی‌شود (سند ۱۳.۱) */
+const PROGRAM_SEASONS=[
+  {season:1,title:'شناخت',months:'ماه ۱ تا ۳',threshold:30},
+  {season:2,title:'آماده‌سازی',months:'ماه ۴ تا ۶',threshold:45},
+  {season:3,title:'اجرا',months:'ماه ۷ تا ۹',threshold:60},
+  {season:4,title:'تحویل',months:'ماه ۱۰ تا ۱۲',threshold:75},
+];
+
+/* قالب ساختاری شش لایه از جدول بخش ۱۲ سند (با وضعیت پیشرفت هلدینگ دمو به‌عنوان بذر) */
+const PROGRAM_READINESS_TEMPLATE=[
+  {key:'brand',label:'آمادگی برند',weight:15,criterion:'اجرا بدون نیاز به طراح اصلی؛ تأیید هیئت‌مدیره',items:[
+    {key:'brand-book',label:'برندبوک و راهنمای هویت بصری',status:'ACCEPTED',evidence:'مصوب هیئت‌مدیره'},
+    {key:'brand-identity',label:'هویت بصری (لوگو، پالت، تایپوگرافی)',status:'ACCEPTED',evidence:''},
+    {key:'brand-photos',label:'تصویر رسمی مدیران',status:'IN_PROGRESS',evidence:''},
+    {key:'brand-template',label:'قالب یکدست ارائه',status:'IN_PROGRESS',evidence:''}]},
+  {key:'org',label:'آمادگی سازمانی',weight:15,criterion:'تحویل کامل مالکیت و دسترسی',items:[
+    {key:'org-website',label:'وب‌سایت',status:'IN_PROGRESS',evidence:''},
+    {key:'org-profile',label:'پروفایل شرکت',status:'ACCEPTED',evidence:'نزدیک به انتشار'},
+    {key:'org-catalog',label:'کاتالوگ',status:'NOT_STARTED',evidence:''},
+    {key:'org-factsheet',label:'فکت‌شیت',status:'NOT_STARTED',evidence:''},
+    {key:'org-folder',label:'پوشهٔ ارائه',status:'IN_PROGRESS',evidence:''}]},
+  {key:'rel',label:'آمادگی رابطه',weight:20,criterion:'ثبت کامل در SRIP با مالک',computed:true,items:[
+    {key:'stakeholders',label:'نقشهٔ ذی‌نفعان'},
+    {key:'partners',label:'نقشهٔ شرکا'},
+    {key:'investors',label:'نقشهٔ سرمایه‌گذاران'},
+    {key:'oppbank',label:'بانک فرصت‌ها'}]},
+  {key:'content',label:'آمادگی محتوا',weight:15,criterion:'اعتبارسنجی برای اقلام پژوهشی',items:[
+    {key:'content-reports',label:'گزارش‌ها',status:'ACCEPTED',evidence:'گزارش محیط‌شناسی'},
+    {key:'content-whitepaper',label:'وایت‌پیپرها',status:'IN_PROGRESS',evidence:''},
+    {key:'content-cases',label:'مطالعات موردی',status:'NOT_STARTED',evidence:''},
+    {key:'content-articles',label:'مقالات تخصصی',status:'IN_PROGRESS',evidence:''},
+    {key:'content-video',label:'دارایی‌های ویدئویی',status:'NOT_STARTED',evidence:''}]},
+  {key:'comms',label:'آمادگی ارتباط',weight:10,criterion:'اجرای آزمایشی موفق',items:[
+    {key:'comms-architecture',label:'معماری پیام‌رسانی',status:'ACCEPTED',evidence:'سه‌سطحی مصوب'},
+    {key:'comms-faq',label:'پرسش‌های متداول',status:'IN_PROGRESS',evidence:''},
+    {key:'comms-talk',label:'نکات کلیدی سخنرانی مدیران',status:'NOT_STARTED',evidence:''},
+    {key:'comms-script',label:'اسکریپت ارائه',status:'IN_PROGRESS',evidence:''}]},
+  {key:'market',label:'آمادگی بازار',weight:25,criterion:'تصویب نقشهٔ ترتیب ورود',items:[
+    {key:'market-targets',label:'بازارهای هدف',status:'ACCEPTED',evidence:'شش بازار اولویت‌دار'},
+    {key:'market-audience',label:'مخاطبان هدف',status:'ACCEPTED',evidence:''},
+    {key:'market-opps',label:'فرصت‌های اولویت‌دار',status:'IN_PROGRESS',evidence:''},
+    {key:'market-message',label:'پیام متناسب',status:'IN_PROGRESS',evidence:''},
+    {key:'market-route',label:'مسیر ارتباط',status:'NOT_STARTED',evidence:''}]},
+];
+
+/* لایه‌های در محدودهٔ کاربر — مستأجر تازه قالب خام (همهٔ اقلام شروع‌نشده) می‌بیند، نه دادهٔ دمو */
+function programLayersFor(req){
+  const ids=visibleOrgIds(req);
+  const owned=(DB.readinessLayers??[]).filter(L=>ids.includes(L.organizationId));
+  if(owned.length) return owned;
+  return PROGRAM_READINESS_TEMPLATE.map(L=>({...L,items:L.items.map(i=>({...i,...(L.computed?{}:{status:'NOT_STARTED',evidence:''})}))}));
+}
+/* مادی‌کردن قالب برای سازمان کاربر (پیش از اولین نوشتن) */
+function ensureProgramLayersFor(req,authUser){
+  const ids=visibleOrgIds(req);
+  const owned=(DB.readinessLayers??[]).filter(L=>ids.includes(L.organizationId));
+  if(owned.length) return owned;
+  const org=primaryOrgId(authUser)??ids[0]??PROGRAM_ORG_ID;
+  const rows=PROGRAM_READINESS_TEMPLATE.map(L=>({...L,items:L.items.map(i=>({...i})),organizationId:org}));
+  DB.readinessLayers=[...(DB.readinessLayers??[]),...rows];
+  return rows;
+}
+
+function ensureProgramSeed(){
+  const ago=(d)=>new Date(Date.now()-d*86400000).toISOString();
+  const in90=(d)=>new Date(Date.now()+d*86400000).toISOString();
+  /* ── ریجستری ریسک — ۹ ریسک فهرست سند (بخش ۲۵) ── */
+  if(!Array.isArray(DB.risks)||!DB.risks.length){DB.risks=[
+    {id:'risk-1',organizationId:PROGRAM_ORG_ID,title:'خروج ناگهانی فرد کلیدی',probability:'MEDIUM',impact:'HIGH',preventive:'برنامهٔ جانشین‌پروری در ممیزی افراد؛ مستندسازی دانش',reactive:'پیشنهاد رقابتی مطابق بازار',ownerRole:'مدیرعامل',status:'IN_PROGRESS',createdAt:ago(45),reviewAt:in90(12),notes:''},
+    {id:'risk-2',organizationId:PROGRAM_ORG_ID,title:'همکاری‌نکردن زیرمجموعه در ارائه داده',probability:'MEDIUM',impact:'HIGH',preventive:'حمایت رسمی مدیریت هلدینگ؛ شروع از زیرمجموعه‌های هم‌راستا',reactive:'ثبت موانع در گزارش ماهانه',ownerRole:'مدیر استراتژی',status:'OPEN',createdAt:ago(45),reviewAt:in90(12),notes:''},
+    {id:'risk-3',organizationId:PROGRAM_ORG_ID,title:'بحران رسانه‌ای یا برداشت منفی از خروجی‌ها',probability:'LOW',impact:'HIGH',preventive:'خط‌مشی انتشار و تأیید سه‌مرحله‌ای',reactive:'پروتکل پاسخ‌گویی بیست‌وچهار ساعته',ownerRole:'مدیر روابط عمومی',status:'OPEN',createdAt:ago(40),reviewAt:in90(20),notes:''},
+    {id:'risk-4',organizationId:PROGRAM_ORG_ID,title:'تأخیر در انتقال سامانه‌ها و داده‌ها',probability:'MEDIUM',impact:'MEDIUM',preventive:'اجرای موازی محدود',reactive:'آموزش کوتاه کاربران',ownerRole:'مدیر محصول',status:'IN_PROGRESS',createdAt:ago(38),reviewAt:in90(30),notes:''},
+    {id:'risk-5',organizationId:PROGRAM_ORG_ID,title:'از دست رفتن داده در جریان انتقال',probability:'LOW',impact:'HIGH',preventive:'نسخهٔ پشتیبان معتبر پیش از هر انتقال؛ تطبیق رکورد به رکورد',reactive:'سی روز نگهداری سامانهٔ قدیمی',ownerRole:'مدیر محصول',status:'OPEN',createdAt:ago(38),reviewAt:in90(30),notes:''},
+    {id:'risk-6',organizationId:PROGRAM_ORG_ID,title:'تأخیر در استخدام نقش‌های تخصصی',probability:'MEDIUM',impact:'MEDIUM',preventive:'بانک استعداد از ماه نخست',reactive:'جذب با پیشنهاد رقابتی؛ برون‌سپاری موقت تولید',ownerRole:'مدیر پروژه',status:'OPEN',createdAt:ago(30),reviewAt:in90(8),notes:''},
+    {id:'risk-7',organizationId:PROGRAM_ORG_ID,title:'خزش محدوده و درخواست‌های بیرون از برنامه',probability:'HIGH',impact:'MEDIUM',preventive:'قاعدهٔ کنترل محدوده',reactive:'هر درخواست جدید فقط از طریق تغییر رسمی برنامه',ownerRole:'مدیر پروژه',status:'OPEN',createdAt:ago(30),reviewAt:in90(8),notes:''},
+    {id:'risk-8',organizationId:PROGRAM_ORG_ID,title:'پیشی‌گرفتن رقبا در انتشار مرجعیت',probability:'MEDIUM',impact:'MEDIUM',preventive:'تقویم انتشار پیوسته؛ تقدم گزارش سالانه',reactive:'پایش ماهانهٔ رقبا',ownerRole:'مدیر اندیشکده و پژوهش',status:'IN_PROGRESS',createdAt:ago(20),reviewAt:in90(15),notes:''},
+    {id:'risk-9',organizationId:PROGRAM_ORG_ID,title:'تغییر اولویت مدیریت هلدینگ در میانهٔ برنامه',probability:'LOW',impact:'HIGH',preventive:'گزارش ماهانهٔ شفاف؛ بازنگری فصلی با صورت‌جلسه',reactive:'حفظ هستهٔ ثابت برنامه',ownerRole:'مدیرعامل',status:'CLOSED',createdAt:ago(60),reviewAt:in90(40),notes:'در بازنگری فصل گذشته بسته شد.'},
+  ];}
+  /* ── آمادگی شش‌لایه — اجزا و معیار پذیرش از جدول بخش ۱۲ سند؛ وزن‌ها بر پایهٔ
+        تأکید سند (بازار = مهم‌ترین محصول؛ رابطه = دادهٔ زندهٔ SRIP).
+        ساختار = قالب مشترک سند؛ وضعیت اقلام per-organization ذخیره می‌شود. ── */
+  /* وضعیت اقلام per-organization ذخیره می‌شود؛ ساختار از قالب مشترک سند */
+  if(!(DB.readinessLayers??[]).some(L=>L.organizationId===PROGRAM_ORG_ID)){
+    DB.readinessLayers=[...PROGRAM_READINESS_TEMPLATE.map(L=>({...L,items:L.items.map(i=>({...i})),organizationId:PROGRAM_ORG_ID})),...(DB.readinessLayers??[])];
+  }
+
+  if(!(DB.readinessHistory??[]).some(h=>h.organizationId===PROGRAM_ORG_ID)){DB.readinessHistory=[
+    {organizationId:PROGRAM_ORG_ID,season:1,label:'فصل یک',score:32},{organizationId:PROGRAM_ORG_ID,season:2,label:'فصل دو',score:47}];}
+  /* ── ممیزی سه‌گانه (بخش ۲۰/۲۱) — وضعیت پیشنهادی هر قلم ── */
+  if(!Array.isArray(DB.auditPeople)||!DB.auditPeople.length){DB.auditPeople=[
+    {id:'ap-1',organizationId:PROGRAM_ORG_ID,role:'مدیر روابط عمومی',duties:'رسانه، بیانیه‌ها و رویداد',manager:'مدیرعامل',capacity:'HIGH',dependencyRisk:'LOW',successor:'دارد',priority:'KEEP',note:'نقطهٔ اتکای ارتباط بیرونی هلدینگ'},
+    {id:'ap-2',organizationId:PROGRAM_ORG_ID,role:'کارشناس رسانه و روابط عمومی',duties:'پایش رسانه و تولید محتوا',manager:'مدیر روابط عمومی',capacity:'MEDIUM',dependencyRisk:'MEDIUM',successor:'ندارد',priority:'KEEP',note:'نیازمند جانشین‌پروری'},
+    {id:'ap-3',organizationId:PROGRAM_ORG_ID,role:'مدیر هنری',duties:'هویت بصری و نظارت بر تولید',manager:'مدیر محتوا',capacity:'LOW',dependencyRisk:'MEDIUM',successor:'ندارد',priority:'REDEFINE',note:'پیشنهاد: ادغام در تیم محتوا'},
+    {id:'ap-4',organizationId:PROGRAM_ORG_ID,role:'توسعه‌دهنده',duties:'نگهداری وب‌سایت و سامانه‌ها',manager:'مدیر محصول',capacity:'HIGH',dependencyRisk:'HIGH',successor:'ندارد',priority:'KEEP',note:'دانش سامانه متمرکز روی یک نفر'},
+    {id:'ap-5',organizationId:PROGRAM_ORG_ID,role:'تحلیلگر تحقیقات بازار',duties:'—',manager:'مدیر توسعه کسب‌وکار',capacity:'—',dependencyRisk:'—',successor:'—',priority:'HIRE',note:'جایگاه خالی — جذب در ماه ۳'},
+  ];}
+  if(!Array.isArray(DB.auditSystems)||!DB.auditSystems.length){DB.auditSystems=[
+    {id:'as-1',organizationId:PROGRAM_ORG_ID,name:'اکسل روابط رسانه‌ای',owner:'کارشناس رسانه و روابط عمومی',data:'حدود ۸۰۰ ردیف مخاطبان',sensitivity:'PUBLIC',backup:'هفتگی دستی',overlap:'SRIP — روابط',migration:'MIGRATE',migrationStatus:'DONE',note:'رکوردها تطبیق و منتقل شد'},
+    {id:'as-2',organizationId:PROGRAM_ORG_ID,name:'CRM قدیمی فروش',owner:'مدیر حساب',data:'حدود ۳هزار شرکت',sensitivity:'CONFIDENTIAL',backup:'ماهانه',overlap:'SRIP — سازمان‌ها',migration:'SHUTDOWN',migrationStatus:'DONE',note:'خروجی کامل گرفته شد'},
+    {id:'as-3',organizationId:PROGRAM_ORG_ID,name:'درایو مشترک اسناد',owner:'دستیار مدیرعامل',data:'حدود ۱۲۰ گیگابایت',sensitivity:'MIXED',backup:'روزانهٔ خودکار',overlap:'کم',migration:'KEEP',migrationStatus:null,note:'نقطهٔ اشتراک رسمی باقی می‌ماند'},
+    {id:'as-4',organizationId:PROGRAM_ORG_ID,name:'گروه پیام‌رسان هماهنگی مدیران',owner:'دستیار مدیرعامل',data:'تصمیم‌ها و ابلاغ‌ها',sensitivity:'INTERNAL',backup:'ندارد',overlap:'SRIP — تعاملات',migration:'MIGRATE',migrationStatus:'IN_PROGRESS',note:'تصمیم‌های کاری به تعاملات SRIP منتقل می‌شود'},
+    {id:'as-5',organizationId:PROGRAM_ORG_ID,name:'دفترچهٔ ثبت رویداد',owner:'مدیر رویداد',data:'رویدادهای سالانه',sensitivity:'PUBLIC',backup:'ندارد',overlap:'SRIP — تقویم',migration:'SHUTDOWN',migrationStatus:'NOT_STARTED',note:'پس از راه‌اندازی تقویم رویداد خاموش می‌شود'},
+  ];}
+  if(!Array.isArray(DB.auditChannels)||!DB.auditChannels.length){DB.auditChannels=[
+    {id:'ac-1',organizationId:PROGRAM_ORG_ID,name:'وب‌سایت قدیمی هلدینگ',address:'pars-old.example',owner:'نامشخص',lastActivity:'۶ ماه پیش',brand:'غیرمنطبق',action:'TRANSFER',note:'محتوا به وب‌سایت مرجع جدید منتقل شود'},
+    {id:'ac-2',organizationId:PROGRAM_ORG_ID,name:'صفحهٔ لینکدین',address:'linkedin.com/company/pars',owner:'کارشناس رسانه و روابط عمومی',lastActivity:'هفتهٔ گذشته',brand:'منطبق',action:'ASSIGN_OWNER',note:'مالک مشخص و تقویم انتشار'},
+    {id:'ac-3',organizationId:PROGRAM_ORG_ID,name:'اینستاگرام',address:'instagram.com/pars',owner:'نامشخص',lastActivity:'۸ ماه پیش',brand:'غیرمنطبق',action:'SHUTDOWN',note:'بی‌مالک و رهاشده — خاموش‌سازی'},
+    {id:'ac-4',organizationId:PROGRAM_ORG_ID,name:'خبرنامهٔ ایمیلی',address:'—',owner:'مدیر محتوا',lastActivity:'۲ ماه پیش',brand:'بخشی منطبق',action:'TRANSFER',note:'انتقال به سکوی جدید'},
+  ];}
+  /* گزارش ماهانهٔ منتشرشده (شاخص ۱۰) — دو ماه اول */
+  if(!Array.isArray(DB.programMonthlyReports)||!DB.programMonthlyReports.length){DB.programMonthlyReports=[
+    {id:'pmr-1',organizationId:PROGRAM_ORG_ID,label:'مرداد ۱۴۰۵',publishedAt:ago(55)},{id:'pmr-2',organizationId:PROGRAM_ORG_ID,label:'شهریور ۱۴۰۵',publishedAt:ago(25)}];}
+  /* یادداشت‌های سیاستی اندیشکده (شاخص ۲) — به‌عنوان سند سازمانی برنامه */
+  if(!Array.isArray(DB.documents)) DB.documents=seedDocuments();
+  for(const d of [
+    {id:'doc-prog-1',name:'یادداشت سیاستی — چشم‌انداز انرژی پاک هلدینگ.pdf',days:22},
+    {id:'doc-prog-2',name:'یادداشت سیاستی — نقشهٔ راه شهر هوشمند.pdf',days:8}]){
+    if(!DB.documents.some(x=>x.id===d.id)) DB.documents.push({id:d.id,name:d.name,mimeType:'application/pdf',sizeBytes:402000,classification:'INTERNAL',uploadedBy:'demo@srip.local',organizationId:PROGRAM_ORG_ID,scanStatus:'CLEAN',indexStatus:'INDEXED',createdAt:ago(d.days)});
+  }
+}
+
+/* نمرهٔ آمادگی — میانگین وزنی شش لایه؛ لایهٔ «رابطه» از دادهٔ زنده محاسبه می‌شود */
+function programReadinessFor(req){
+  ensureProgramSeed();
+  const orgIds=visibleOrgIds(req);
+  const orgs=ORGS.filter(o=>orgIds.includes(o.id));
+  const rels=scopedRels(req).filter(r=>r.status==='ACTIVE');
+  const opps=scopedOpps(req).filter(o=>!o.deletedAt&&!['WON','LOST'].includes(o.status));
+  const withRel=new Set(); rels.forEach(r=>{withRel.add(r.sourceOrganizationId);withRel.add(r.targetOrganizationId);});
+  const pct=(n,d)=>d?Math.round(n/d*100):0;
+  const computed={
+    stakeholders:pct(orgs.filter(o=>withRel.has(o.id)).length,orgs.length),
+    partners:pct(orgs.filter(o=>o.type==='ECOSYSTEM'&&withRel.has(o.id)).length,orgs.filter(o=>o.type==='ECOSYSTEM').length),
+    investors:pct(orgs.filter(o=>o.type==='INVESTOR'&&withRel.has(o.id)).length,orgs.filter(o=>o.type==='INVESTOR').length),
+    oppbank:Math.min(100,Math.round(opps.length/8*100)),
+  };
+  const ST={ACCEPTED:100,IN_PROGRESS:50,NOT_STARTED:0};
+  const layers=programLayersFor(req).map(L=>{
+    const items=L.items.map(i=>L.computed?{...i,percent:computed[i.key]??0,computed:true}:{...i,computed:false});
+    const score=L.computed
+      ?Math.round(items.reduce((s,i)=>s+(i.percent??0),0)/items.length)
+      :Math.round(items.reduce((s,i)=>s+(ST[i.status]??0),0)/items.length);
+    return {key:L.key,label:L.label,weight:L.weight,criterion:L.criterion,computed:!!L.computed,items,score};
+  });
+  const total=Math.round(layers.reduce((s,L)=>s+L.weight*L.score,0)/layers.reduce((s,L)=>s+L.weight,0));
+  const history=(DB.readinessHistory??[]).filter(h=>orgIds.includes(h.organizationId));
+  const seasons=PROGRAM_SEASONS.map(S=>{
+    const hist=history.find(h=>h.season===S.season);
+    const isCurrent=S.season===history.length+1;
+    const score=hist?hist.score:(isCurrent?total:null);
+    const state=score==null?'PENDING':(score>=S.threshold?'PASSED':'IN_PROGRESS');
+    return {...S,score,state,current:isCurrent};
+  });
+  const trend=[...history.map(h=>({label:h.label,score:h.score})),{label:'فصل '+(['','یک','دو','سه','چهار'][history.length+1]||'جاری'),score:total,current:true}];
+  return {layers,total,seasons,trend};
+}
+
+/* شاخص‌های مالک‌دار (جدول بخش ۲۶ سند) — مقدار هر شاخص از ماژول مربوطه محاسبه می‌شود */
+function programKpisFor(req){
+  ensureProgramSeed();
+  const orgIds=visibleOrgIds(req);
+  const orgs=ORGS.filter(o=>orgIds.includes(o.id));
+  const rels=scopedRels(req).filter(r=>r.status==='ACTIVE');
+  const opps=scopedOpps(req).filter(o=>!o.deletedAt&&!['WON','LOST'].includes(o.status));
+  const now=new Date();
+  const inMonth=(iso)=>{try{const d=new Date(iso);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}catch{return false;}};
+  const family=orgs.filter(o=>['HOLDING','SUBSIDIARY'].includes(o.type));
+  const famComplete=family.length?Math.round(family.reduce((s,o)=>{
+    const p=DQ_ORG_PROFILE[o.id]??{};
+    const filled=['industry','country'].filter(k=>o[k]).length+['website','email','phone','registrationId'].filter(k=>p[k]).length;
+    return s+filled/6;},0)/family.length*100):0;
+  const docs=(DB.documents??[]).filter(d=>d.organizationId&&orgIds.includes(d.organizationId));
+  const policyNotes=docs.filter(d=>String(d.name).includes('یادداشت سیاستی')&&inMonth(d.createdAt));
+  const annualDocs=docs.filter(d=>String(d.name).includes('گزارش سالانه'));
+  const mediaMentions=(DB.mediaMentions??[]).filter(m=>inMonth(m.publishedAt)&&(m.matchedOrganizationIds??[]).some(id=>orgIds.includes(id)));
+  const partnerRels=rels.filter(r=>r.relationshipType==='STRATEGIC_PARTNERSHIP');
+  const people=scopedPeople(req).filter(p=>p.status!=='INACTIVE');
+  const sys=DB.auditSystems??[];
+  const sysNonKeep=sys.filter(x=>x.migration!=='KEEP');
+  const sysDone=sysNonKeep.filter(x=>x.migrationStatus==='DONE').length;
+  const monthlyReports=(DB.programMonthlyReports??[]).filter(r=>orgIds.includes(r.organizationId)).length;
+  const orgLayer=programLayersFor(req).find(L=>L.key==='org');
+  const assetPublished=['وب‌سایت','پروفایل شرکت'].filter(a=>(orgLayer?.items??[]).some(i=>i.label===a&&i.status==='ACCEPTED')).length;
+  const items=[
+    {id:'kpi-1',category:'شناخت و دانش',title:'تکمیل پرونده شناخت هلدینگ و دوازده زیرمجموعه',owner:'مدیر استراتژی',period:'ماه ۳',target:'تکمیل ۱۰۰٪ بخش‌ها',source:'کمال پروفایل خانوادهٔ هلدینگ (صنعت، کشور، وب‌سایت، ایمیل، تلفن، شناسهٔ ثبت)',value:famComplete,unit:'percent'},
+    {id:'kpi-2',category:'شناخت و دانش',title:'خروجی پژوهشی اندیشکده',owner:'مدیر اندیشکده و پژوهش',period:'ماهانه از ماه ۵',target:'دست‌کم یک یادداشت سیاستی در ماه',source:'مرکز دانش — یادداشت‌های سیاستی ماه جاری',value:policyNotes.length,unit:'count',targetValue:1},
+    {id:'kpi-3',category:'شناخت و دانش',title:'شاخص مرجعیت هوش مصنوعی (نمرهٔ مرکب نُه مؤلفه)',owner:'مدیر اندیشکده و پژوهش',period:'ماه ۱۲',target:'رسیدن از ۵۵ به ۹۰',source:'خط پایهٔ سند — پایش زنده در تب «مرجعیت AI» (گام ۲.۳)',value:55,unit:'score',targetValue:90},
+    {id:'kpi-4',category:'دارایی و رسانه',title:'انتشار رسانه تخصصی',owner:'مدیر روابط عمومی',period:'ماهانه از ماه ۵',target:'۲۰ خروجی در ماه',source:'عموم‌ها — بازنمایی رسانه‌ای ثبت‌شدهٔ ماه جاری',value:mediaMentions.length,unit:'count',targetValue:20},
+    {id:'kpi-5',category:'دارایی و رسانه',title:'وب‌سایت مرجع و پروفایل شرکتی',owner:'مدیر محصول',period:'ماه ۸',target:'انتشار عمومی هر دو دارایی',source:'لایهٔ آمادگی سازمانی — وضعیت اقلام «وب‌سایت» و «پروفایل شرکت»',value:assetPublished,unit:'count',targetValue:2},
+    {id:'kpi-6',category:'دارایی و رسانه',title:'گزارش سالانه هوش مصنوعی',owner:'مدیر اندیشکده و پژوهش',period:'ماه ۱۱',target:'انتشار',source:'مرکز دانش — اسناد «گزارش سالانه»',value:annualDocs.length,unit:'count',targetValue:1},
+    {id:'kpi-7',category:'بازار و اکوسیستم',title:'شبکهٔ مشارکت',owner:'مدیر توسعه کسب‌وکار',period:'ماه ۱۲',target:'۲۵ تفاهم‌نامهٔ فعال',source:'روابط فعال از نوع مشارکت راهبردی (تا راه‌اندازی ماژول مشارکت‌ها — گام ۲.۲)',value:partnerRels.length,unit:'count',targetValue:25},
+    {id:'kpi-8',category:'سازمان و زیرساخت',title:'تکمیل ساختار ۲۵ نفره',owner:'مدیر منابع انسانی',period:'ماه ۷',target:'۲۵ نفر فعال',source:'اشخاص فعال در محدودهٔ شما',value:people.length,unit:'count',targetValue:25},
+    {id:'kpi-9',category:'سازمان و زیرساخت',title:'انتقال داده‌ها به SRIP',owner:'مدیر محصول',period:'ماه ۷',target:'خاموش‌سازی کامل سامانه‌های قدیمی',source:'ممیزی سامانه‌ها — سهم انتقال/خاموش‌سازیِ تکمیل‌شده',value:sysDone,unit:'count',targetValue:sysNonKeep.length||1},
+    {id:'kpi-10',category:'سازمان و زیرساخت',title:'گزارش ماهانه به مدیریت هلدینگ',owner:'دستیار مدیرعامل',period:'پایان هر ماه',target:'تحویل به‌موقع ۱۲ گزارش',source:'گزارش ماهانه — ثبت انتشار',value:monthlyReports,unit:'count',targetValue:12},
+  ];
+  return items.map(k=>{
+    const percent=k.unit==='percent'?Math.round(k.value):Math.round(k.value/(k.targetValue||1)*100);
+    const valueLabel=k.unit==='percent'?`${percent}٪`:`${k.value} از ${k.targetValue}`;
+    return {...k,percent,valueLabel,status:percent>=100?'ON_TARGET':(percent>=70?'NEAR':'OFF_TARGET')};
+  });
+}
+
+/* ممیزی سه‌گانه — دادهٔ ممیزی متعلق به سازمان برنامه است و بیرون از محدوده دیده نمی‌شود */
+function programAuditsFor(req){
+  ensureProgramSeed();
+  const ids=visibleOrgIds(req);
+  const vis=(rows)=>(rows??[]).filter(r=>ids.includes(r.organizationId));
+  const people=vis(DB.auditPeople),systems=vis(DB.auditSystems),channels=vis(DB.auditChannels);
+  const nonKeep=systems.filter(x=>x.migration!=='KEEP');
+  return {people,systems,channels,summary:{
+    peopleTotal:people.length,peopleKeep:people.filter(r=>r.priority==='KEEP').length,
+    peopleRedefine:people.filter(r=>r.priority==='REDEFINE').length,peopleHire:people.filter(r=>r.priority==='HIRE').length,
+    systemsTotal:systems.length,systemsKeep:systems.filter(x=>x.migration==='KEEP').length,
+    systemsMigrate:systems.filter(x=>x.migration==='MIGRATE').length,systemsShutdown:systems.filter(x=>x.migration==='SHUTDOWN').length,
+    migrationDone:nonKeep.filter(x=>x.migrationStatus==='DONE').length,migrationTotal:nonKeep.length,
+    channelsTotal:channels.length,channelsOrphan:channels.filter(c=>String(c.owner).includes('نامشخص')).length,
+  }};
+}
 
 async function __handler(req, res) {
   try {
@@ -13824,6 +14058,125 @@ async function __handler(req, res) {
     const quarter=Math.floor(Date.now()/(PHASE3_QBR_WINDOW_DAYS*86400000));
     await autoRunWorkflows('Qbr',qbrOrg[0],'QBR_GENERATED',{qbr:{organizationId:qbrOrg[0],headline:brief.headline}},`qbr:${qbrOrg[0]}:${quarter}`);
     return json(res,200,brief);
+  }
+
+  /* ─────────────── گام ۲.۱ مسترپلن — حاکمیت برنامه (/program) ─────────────── */
+  if(is('/program/overview')&&method==='GET'){
+    if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
+    const readiness=programReadinessFor(req);
+    const kpis=programKpisFor(req);
+    ensureProgramSeed();
+    const ids=visibleOrgIds(req);
+    const risks=(DB.risks??[]).filter(r=>ids.includes(r.organizationId));
+    const openHigh=risks.filter(r=>r.status!=='CLOSED'&&riskGrade(r)==='HIGH');
+    const audits=programAuditsFor(req);
+    return json(res,200,{
+      readiness:{total:readiness.total,seasons:readiness.seasons,trend:readiness.trend,
+        layers:readiness.layers.map(L=>({key:L.key,label:L.label,weight:L.weight,score:L.score}))},
+      kpis:{total:kpis.length,onTarget:kpis.filter(k=>k.status==='ON_TARGET').length,
+        near:kpis.filter(k=>k.status==='NEAR').length,off:kpis.filter(k=>k.status==='OFF_TARGET').length,
+        items:kpis.map(k=>({id:k.id,title:k.title,category:k.category,owner:k.owner,valueLabel:k.valueLabel,percent:k.percent,status:k.status,source:k.source,target:k.target,period:k.period}))},
+      risks:{open:risks.filter(r=>r.status==='OPEN').length,inProgress:risks.filter(r=>r.status==='IN_PROGRESS').length,
+        closed:risks.filter(r=>r.status==='CLOSED').length,highOpen:openHigh.length,
+        high:openHigh.map(r=>({id:r.id,title:r.title,ownerRole:r.ownerRole,probability:r.probability,impact:r.impact}))},
+      audits:audits.summary,
+      generatedAt:nowIso(),
+    });
+  }
+  if(is('/program/kpis')&&method==='GET'){
+    if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
+    const items=programKpisFor(req);
+    return json(res,200,{items,total:items.length,
+      summary:{onTarget:items.filter(k=>k.status==='ON_TARGET').length,near:items.filter(k=>k.status==='NEAR').length,off:items.filter(k=>k.status==='OFF_TARGET').length},
+      rule:'هر شاخص از دادهٔ ثبت‌شده در سامانه محاسبه می‌شود؛ عدد دستی وارد داشبورد نمی‌شود (بخش ۲۶ سند).',
+      generatedAt:nowIso()});
+  }
+  if(is('/program/risks')&&method==='GET'){
+    if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
+    ensureProgramSeed();
+    const ids=visibleOrgIds(req);
+    let items=(DB.risks??[]).filter(r=>ids.includes(r.organizationId));
+    const stF=q.get('status'); if(stF&&['OPEN','IN_PROGRESS','CLOSED'].includes(stF)) items=items.filter(r=>r.status===stF);
+    const grF=q.get('grade'); if(grF&&['HIGH','MEDIUM','LOW'].includes(grF)) items=items.filter(r=>riskGrade(r)===grF);
+    const matrix=['LOW','MEDIUM','HIGH'].map(p=>['LOW','MEDIUM','HIGH'].map(i=>({
+      probability:p,impact:i,count:(DB.risks??[]).filter(r=>ids.includes(r.organizationId)&&r.probability===p&&r.impact===i&&r.status!=='CLOSED').length})));
+    const all=(DB.risks??[]).filter(r=>ids.includes(r.organizationId));
+    return json(res,200,{items:items.map(r=>({...r,grade:riskGrade(r),gradeFa:RISK_GRADE_FA[riskGrade(r)],
+        probabilityFa:RISK_LEVEL_FA[r.probability],impactFa:RISK_LEVEL_FA[r.impact],statusFa:RISK_STATUS_FA[r.status]}))
+        .sort((a,b)=>(RISK_LEVEL_SCORE[b.probability]*RISK_LEVEL_SCORE[b.impact])-(RISK_LEVEL_SCORE[a.probability]*RISK_LEVEL_SCORE[a.impact])),
+      matrix,
+      summary:{open:all.filter(r=>r.status==='OPEN').length,inProgress:all.filter(r=>r.status==='IN_PROGRESS').length,
+        closed:all.filter(r=>r.status==='CLOSED').length,
+        highOpen:all.filter(r=>r.status!=='CLOSED'&&riskGrade(r)==='HIGH').length},
+      roles:PROGRAM_ROLES,levels:RISK_LEVEL_FA,statuses:RISK_STATUS_FA,
+      rule:'هر ریسک با چهار قلم بنیادی ثبت می‌شود و ریسک بدون مالک، ثبت‌شده محسوب نمی‌گردد (بخش ۲۵ سند).'});
+  }
+  if(is('/program/risks')&&method==='POST'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    ensureProgramSeed();
+    const b=await readBody(req);
+    const title=String(b.title??'').trim();
+    if(title.length<3) return json(res,400,{message:'عنوان ریسک را بنویسید (حداقل ۳ نویسه).'});
+    const probability=String(b.probability??'').toUpperCase(),impact=String(b.impact??'').toUpperCase();
+    if(!RISK_LEVEL_FA[probability]||!RISK_LEVEL_FA[impact]) return json(res,400,{message:'احتمال و اثر هرکدام باید یکی از مقادیر پایین/متوسط/بالا باشد.'});
+    const ownerRole=String(b.ownerRole??'').trim();
+    if(!ownerRole) return json(res,400,{message:'ریسک بدون مالک ثبت نمی‌شود (بخش ۲۵ سند).'});
+    if(!PROGRAM_ROLES.includes(ownerRole)) return json(res,400,{message:'مالک ریسک باید یکی از نقش‌های چارت برنامه باشد.'});
+    const row={id:`risk-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`,
+      organizationId:primaryOrgId(authUser)??visibleOrgIds(req)[0]??PROGRAM_ORG_ID,
+      title,probability,impact,
+      preventive:String(b.preventive??'').trim(),reactive:String(b.reactive??'').trim(),
+      ownerRole,status:'OPEN',createdAt:nowIso(),
+      reviewAt:new Date(Date.now()+90*86400000).toISOString(),notes:String(b.notes??'').trim()};
+    DB.risks.unshift(row); saveDb();
+    audit(req,'CREATE','Risk',row.id,'OK',{title:row.title,ownerRole});
+    return json(res,201,{...row,grade:riskGrade(row),gradeFa:RISK_GRADE_FA[riskGrade(row)]});
+  }
+  const riskId=match('/program/risks/:id');
+  if(riskId&&method==='PATCH'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    ensureProgramSeed();
+    const row=(DB.risks??[]).find(r=>r.id===riskId[0]);
+    if(!row||!visibleOrgIds(req).includes(row.organizationId)) return json(res,404,{message:'ریسک یافت نشد یا خارج از محدودهٔ شماست.'});
+    const b=await readBody(req);
+    if(b.title!=null){const t=String(b.title).trim(); if(t.length<3) return json(res,400,{message:'عنوان ریسک را بنویسید (حداقل ۳ نویسه).'}); row.title=t;}
+    if(b.probability!=null){const p=String(b.probability).toUpperCase(); if(!RISK_LEVEL_FA[p]) return json(res,400,{message:'احتمال باید پایین/متوسط/بالا باشد.'}); row.probability=p;}
+    if(b.impact!=null){const i=String(b.impact).toUpperCase(); if(!RISK_LEVEL_FA[i]) return json(res,400,{message:'اثر باید پایین/متوسط/بالا باشد.'}); row.impact=i;}
+    if(b.ownerRole!=null){const o=String(b.ownerRole).trim(); if(!o) return json(res,400,{message:'ریسک بدون مالک ثبت نمی‌شود (بخش ۲۵ سند).'}); if(!PROGRAM_ROLES.includes(o)) return json(res,400,{message:'مالک ریسک باید یکی از نقش‌های چارت برنامه باشد.'}); row.ownerRole=o;}
+    if(b.status!=null){const st=String(b.status).toUpperCase(); if(!RISK_STATUS_FA[st]) return json(res,400,{message:'وضعیت باید باز/در اقدام/بسته باشد.'}); row.status=st;}
+    for(const k of ['preventive','reactive','notes']) if(b[k]!=null) row[k]=String(b[k]).trim();
+    if(b.reviewAt!=null) row.reviewAt=String(b.reviewAt);
+    saveDb();
+    audit(req,'UPDATE','Risk',row.id,'OK',{status:row.status});
+    return json(res,200,{...row,grade:riskGrade(row),gradeFa:RISK_GRADE_FA[riskGrade(row)]});
+  }
+  if(is('/program/readiness')&&method==='GET'){
+    if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
+    return json(res,200,{...programReadinessFor(req),
+      rule:'نمرهٔ آمادگی میانگین وزنی نمرهٔ شش لایه است؛ بدون رسیدن به آستانهٔ مصوب هر فصل، ورود به فاز بعدی تصویب نمی‌شود (بخش ۱۳.۱ سند).',
+      generatedAt:nowIso()});
+  }
+  const rItem=match('/program/readiness/:layerKey/items/:itemId');
+  if(rItem&&method==='PATCH'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    ensureProgramSeed();
+    const layer=ensureProgramLayersFor(req,authUser).find(L=>L.key===rItem[0]);
+    const item=layer?.items.find(i=>i.key===rItem[1]);
+    if(!layer||!item) return json(res,404,{message:'قلم آمادگی یافت نشد.'});
+    if(layer.computed) return json(res,400,{message:'نمرهٔ لایهٔ «رابطه» از دادهٔ زندهٔ روابط و فرصت‌ها محاسبه می‌شود و قابل ثبت دستی نیست.'});
+    const b=await readBody(req);
+    const st=String(b.status??'').toUpperCase();
+    if(!['NOT_STARTED','IN_PROGRESS','ACCEPTED'].includes(st)) return json(res,400,{message:'وضعیت قلم باید شروع‌نشده/در جریان/پذیرفته‌شده باشد.'});
+    item.status=st;
+    if(b.evidence!=null) item.evidence=String(b.evidence).trim().slice(0,200);
+    saveDb();
+    audit(req,'UPDATE','ReadinessItem',`${layer.key}.${item.key}`,'OK',{status:st});
+    return json(res,200,{...programReadinessFor(req),updated:{layer:layer.key,item:item.key,status:st}});
+  }
+  if(is('/program/audits')&&method==='GET'){
+    if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
+    return json(res,200,{...programAuditsFor(req),
+      rule:'ممیزی ارزیابی صادقانه از وضعیت موجود است؛ خروجی آن ورودی مستقیم بازسازی نقش‌ها و برنامهٔ انتقال داده است (بخش ۲۰/۲۱ سند).'});
   }
 
   /* ── آیتم ۲۱: Web Push (رضایت اعلان ملزم؛ انتقال دمو = polling) ── */
