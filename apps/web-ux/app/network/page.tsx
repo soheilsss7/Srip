@@ -710,7 +710,7 @@ export default function Page() {
       {loading ? <Loading /> : null}
 
       {/* Header */}
-      <section className="net-head">
+      <header className="net-head">
         <div>
           <h1>{t('شبکهٔ روابط')}</h1>
           <p className="subtitle">
@@ -741,7 +741,7 @@ export default function Page() {
             </button>
           ))}
         </div>
-      </section>
+      </header>
 
       {/* منوی داخلی صفحه (v6) — صفحه را کوتاه و قابل‌پیمایش می‌کند */}
       <nav className="net-nav" role="tablist" aria-label={t('بخش‌های صفحهٔ شبکه روابط')}>

@@ -9,7 +9,7 @@ export const pageIds: Record<string, string[]> = {
   actions: ["a-1","a-2","a-3","a-4","a-5","a-6"],
   commitments: ["c-1","c-2","c-3","c-4","c-5","c-6"],
   projects: ["pr-1","pr-2","pr-3"],
-  opportunities: ["o-1","o-2","o-3","o-4"],
+  opportunities: ["o-1","o-2","o-3","o-4","o-5","o-6","o-7","o-8","o-9"],
   interactions: ["i-1","i-2","i-3","i-4","i-5","i-6","i-7","i-8","i-9","i-10","i-11","i-12","i-13"],
   notifications: ["n-1","n-2","n-3"],
   recommendations: ["rec-1","rec-2","rec-3","rec-4","rec-5"],

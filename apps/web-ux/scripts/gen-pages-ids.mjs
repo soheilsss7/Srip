@@ -38,6 +38,17 @@ for (const [key, anchor] of ARRAYS) {
   if (key === 'relationships' && /id:\s*`r-pars-\$\{/.test(block)) {
     for (let i = 1; i <= 12; i++) ids.push(`r-pars-${String(i).padStart(2, '0')}`);
   }
+  /* رکوردهای الحاقی بعد از آرایهٔ اصلی (مثل فرصت‌های تاریخی o-5..o-9 که با
+     OPPORTUNITIES.push(...) اضافه می‌شوند) هم باید صفحهٔ استاتیک داشته باشند —
+     وگرنه لینک جزئیاتشان در دموی استاتیک ۴۰۴ می‌شود. */
+  const pushAnchor = anchor.replace(/^let /, '') + '.push(';
+  let pi = src.indexOf(pushAnchor);
+  while (pi >= 0) {
+    const pe = src.indexOf('\n);', pi);
+    if (pe < 0) break;
+    for (const m of src.slice(pi, pe).matchAll(/id:\s*'([^']+)'/g)) ids.push(m[1]);
+    pi = src.indexOf(pushAnchor, pe);
+  }
   out[key] = [...new Set(ids)];
 }
 
