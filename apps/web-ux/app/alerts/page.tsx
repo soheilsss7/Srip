@@ -135,7 +135,7 @@ export default function AlertsPage() {
             <div className="empty-state-v4">
               <div className="empty-ico"><Inbox size={24} /></div>
               <strong>هشدار فعالی در این فیلتر نیست</strong>
-              <p>یا همه را بسته‌اید یا دادهٔ شما سالم است. تشخیص‌ها هر بازخوانی دوباره از دادهٔ واقعی ساخته می‌شوند.</p>
+              <p>یا همه را بسته‌اید یا دادهٔ شما سالم است. فیلتر «همه» را در پالایش بالا انتخاب کنید تا ماژول‌های دیگر را ببینید؛ تشخیص‌ها هر بازخوانی دوباره از دادهٔ واقعی ساخته می‌شوند.</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>

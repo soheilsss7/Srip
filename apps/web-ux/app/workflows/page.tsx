@@ -451,7 +451,7 @@ export default function WorkflowsPage({ initialTab = 'workflows' }: { initialTab
         <div className="empty-state-v4">
           <div className="empty-ico"><Workflow size={26} /></div>
           <strong>این بخش فقط برای مالک سامانه است</strong>
-          <p>طراحی و اجرای گردش کار به مجوز workflow.write/execute نیاز دارد.</p>
+          <p>طراحی و اجرای گردش کار به مجوز مالک سامانه نیاز دارد؛ برای دسترسی، از مالک بخواهید در «مدیریت ← کاربران» نقش شما را ارتقا دهد.</p>
         </div>
       </main>
     );

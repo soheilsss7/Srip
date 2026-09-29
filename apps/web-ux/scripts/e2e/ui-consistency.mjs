@@ -93,6 +93,30 @@ try {
     const title = await page.evaluate(() => (document.querySelector('.page-heading h1, header h1')?.textContent ?? '').trim());
     ok(`هم‌خوانی عنوان/ناوبری: ${navLabel}`, title.includes(navLabel), `عنوان=«${title}»`);
   }
+
+  /* حالت خالی (گام ۱.۲) — در صفحات جستجودار، عبارت بی‌نتیجه باید حالت خالیِ
+     دارای «راهنمای گام بعدی» نشان دهد (توضیح ≥۲۰ نویسه یا دکمه/پیوند اقدام). */
+  const emptyBad = [], emptyChecked = [];
+  for (const [path] of PAGES) {
+    await page.goto(`${BASE}${path}`, { waitUntil: 'networkidle0', timeout: 90000 }).catch(() => {});
+    await new Promise(r => setTimeout(r, 900));
+    const hasSearch = await page.evaluate(() =>
+      !!document.querySelector('.toolbar-search input, input[type="search"], input[placeholder*="جستجو"], input[aria-label*="جستجو"]'));
+    if (!hasSearch) continue;
+    emptyChecked.push(path);
+    await page.type('.toolbar-search input, input[type="search"], input[placeholder*="جستجو"], input[aria-label*="جستجو"]', 'ززززقق');
+    /* شبکهٔ روابط جستجو را با Enter اعمال می‌کند (درخواست سرور)؛ در صفحات فیلترِ درون‌صفحه‌ای بی‌اثر است */
+    await page.keyboard.press('Enter');
+    await new Promise(r => setTimeout(r, 1500));
+    const res = await page.evaluate(() => {
+      const es = document.querySelector('.empty-state-v4, .empty-people, .srip-empty');
+      if (!es) return { shown: false };
+      const hint = [...es.querySelectorAll('p')].map(p => p.textContent.trim()).join(' ');
+      return { shown: true, guided: !!es.querySelector('button, a') || hint.length >= 20, hint: hint.slice(0, 60) };
+    });
+    if (!res.shown || !res.guided) emptyBad.push(`${path}${res.shown ? ' (بدون راهنما)' : ' (حالت خالی نشان نداد)'}`);
+  }
+  ok(`حالت خالیِ صفحات جستجودار راهنمای گام بعدی دارد (${emptyChecked.length} صفحه)`, emptyBad.length === 0, emptyBad.join('، '));
 } catch (e) {
   console.error('UI-CONSISTENCY ERROR:', e.message);
   fail++;

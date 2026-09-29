@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../_lib/api';
 import { useWorkspace } from '../_components/workspace';
 import {
-  Badge, ErrorCard, Modal, PageHeader, StatCard, Toolbar,
+  Badge, ErrorCard, Loading, Modal, PageHeader, StatCard, Toolbar,
 } from '../_components/page-ui';
 import {
   RefreshCw, Search, Plus, X, CheckCircle2, Target, ListChecks, CircleDot,
@@ -419,7 +419,7 @@ export default function RequirementsPage() {
         footer={<button type="button" className="btn btn-secondary" onClick={() => { setMatch(null); setMatchReq(null); }}><X size={14} /> بستن</button>}
       >
         {matchLoading ? (
-          <div className="empty-state-v4"><RefreshCw size={20} className="spin" /><strong>محاسبهٔ مسیرها روی گراف روابط…</strong></div>
+          <Loading label="محاسبهٔ مسیرها روی گراف روابط…" />
         ) : match ? (
           <div style={{ display: 'grid', gap: 12 }}>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>

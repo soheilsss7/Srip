@@ -1201,7 +1201,7 @@ export default function PublicsPage() {
                         </tr>
                       ))}
                       {!filteredGroups.length && (
-                        <tr><td colSpan={canWrite ? 6 : 5}><div className="empty-state-v4" style={{ padding: 18 }}><p>گروهی با این فیلترها یافت نشد.</p></div></td></tr>
+                        <tr><td colSpan={canWrite ? 6 : 5}><div className="empty-state-v4" style={{ padding: 18 }}><p>گروهی با این فیلترها یافت نشد؛ فیلتر یا عبارت جستجو را تغییر دهید یا با «گروه جدید» گروه دلخواه خود را بسازید.</p></div></td></tr>
                       )}
                     </tbody>
                   </table>
@@ -1325,7 +1325,7 @@ export default function PublicsPage() {
                       )}
                     </div>
                   ))}
-                  {!gaps?.gaps?.length && <div className="empty-state-v4" style={{ padding: 18 }}><p className="t-muted">نقشهٔ عموم‌ها شکافی ندارد.</p></div>}
+                  {!gaps?.gaps?.length && <div className="empty-state-v4" style={{ padding: 18 }}><p className="t-muted">نقشهٔ عموم‌ها شکافی ندارد؛ برای پایش پیوسته، بازبینی دوره‌ای پوشش را در تقویم برنامه‌ریزی کنید.</p></div>}
                 </div>
               </SectionCard>
             </div>
@@ -1462,7 +1462,7 @@ export default function PublicsPage() {
                           <td className="t-muted" style={{ fontSize: 11 }}>{m.country ?? '—'}</td>
                         </tr>
                       ))}
-                      {!media.length && <tr><td colSpan={4}><div className="empty-state-v4" style={{ padding: 14 }}><p>هنوز رسانه‌ای ثبت نشده است.</p></div></td></tr>}
+                      {!media.length && <tr><td colSpan={4}><div className="empty-state-v4" style={{ padding: 14 }}><p>هنوز رسانه‌ای ثبت نشده است؛ با «رسانهٔ جدید» نخستین رسانهٔ مرتبط با عموم‌های خود را ثبت کنید.</p></div></td></tr>}
                     </tbody>
                   </table>
                 </div>

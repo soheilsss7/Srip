@@ -1,5 +1,5 @@
 'use client';
-import { ShieldCheck, Network, Lightbulb, AlertTriangle, Zap, Maximize, Maximize2, X, Target, Clock, Layers, UserPlus, BrainCircuit } from 'lucide-react';
+import { ShieldCheck, Network, Lightbulb, AlertTriangle, Zap, Maximize, Maximize2, X, Target, Clock, Layers, UserPlus, BrainCircuit, SearchX } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -1212,6 +1212,13 @@ export default function Page() {
           <div className="net-graph-zone">
             {graphFs ? (
               <div className="net-zone-fs-hold"><Maximize2 size={18}/> {t('گراف در نمای تمام‌صفحه باز است — برای بازگشت دکمهٔ «بستن» یا Esc را بزنید.')}</div>
+            ) : graph && !graph.nodes.length ? (
+              /* نتیجهٔ جستجو/فیلتری که گراف را خالی کرده — بازخورد صریح به‌جای بوم خالی */
+              <div className="empty-state-v4" style={{ margin: 'auto' }}>
+                <div className="empty-ico"><SearchX size={24}/></div>
+                <strong>{t('گره‌ای با این جستجو یا فیلترها یافت نشد')}</strong>
+                <p>{t('عبارت جستجو یا فیلترها را پاک کنید و دوباره «جستجو» را بزنید؛ برای بازگشت سریع، «همه» را در فیلتر وضعیت انتخاب کنید.')}</p>
+              </div>
             ) : (
             <GraphBoundary>
               <NetworkGraph

@@ -457,7 +457,7 @@ export default function Dashboard() {
               {Object.entries(sri).map(([k, v]) => <Score key={k} value={v as number} label={SRI_LABELS[k] ?? k} />)}
             </div>
           ) : (
-            <EmptyState title={t('دادهٔ شاخص راهبردی در دسترس نیست')} />
+            <EmptyState title={t('دادهٔ شاخص راهبردی در دسترس نیست')} description={t('پس از امتیازدهی راهبردی به روابط، این شاخص محاسبه و اینجا نمایش داده می‌شود.')} />
           )}
           <div className="mini-metrics">
             <div><span>{t('تاب‌آوری رابطه')}</span><strong>{fmtNum(network?.relationshipResilienceScore)}</strong></div>
