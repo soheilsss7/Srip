@@ -70,27 +70,41 @@ try {
   ok('بدون تب تکراری «پوشش» (ادغام در هیت‌مپ)', await page.evaluate(() => ![...document.querySelectorAll('button[role="tab"]')].some(b => (b.textContent ?? '').trim() === 'پوشش')));
   ok('تب پوشش (هیت‌مپ) موجود', await page.evaluate(() => [...document.querySelectorAll('button[role="tab"]')].some(b => (b.textContent ?? '').includes('پوشش (هیت‌مپ)'))));
 
-  // 2b) ماتریس نفوذ×حمایت — تب رندر می‌شود و نقطه‌ها روی ماتریس‌اند
+  // 2b) ماتریس نفوذ×حمایت — مدل تابلو: چهار ستون ناحیه + کارت اعضا + درگ بین ستون‌ها
   await clickByText('button[role="tab"]', 'ماتریس نفوذ×حمایت');
   await new Promise(r => setTimeout(r, 900));
-  ok('ماتریس: عنوان بخش', await waitForText('ماتریس نفوذ × حمایت'));
-  ok('ماتریس: نقطه‌های اعضا روی نمودار', await page.evaluate(() => document.querySelectorAll('[role="application"] [data-member-dot]').length >= 5), 'dots=' + await page.evaluate(() => document.querySelectorAll('[role="application"] [data-member-dot]').length));
-  ok('ماتریس: نقطه‌ها دایرهٔ کامل SVG هستند (نه بیضی)', await page.evaluate(() => document.querySelectorAll('[role="application"] circle').length >= 5 && document.querySelectorAll('[role="application"] ellipse').length === 0));
-  ok('ماتریس: کارت‌های راهنمای ناحیه (متحدان کلیدی/قدرتمندان محتاط)', await waitForText('متحدان کلیدی') && await waitForText('قدرتمندان محتاط'));
-  ok('ماتریس: برچسب محورهای حمایت و نفوذ', await waitForText('حمایت (علاقه)') && await waitForText('نفوذ (قدرت)'));
-  ok('ماتریس: آستانهٔ نواحی = همان موتور (۶۰)', await page.evaluate(() => (document.body.textContent ?? '').includes('آستانه')));
-  ok('ماتریس: برچسب نام اعضا کنار نقطه‌ها', await page.evaluate(() => {
-    const labels = [...document.querySelectorAll('[role="application"] svg text')].filter(t => ((t.textContent ?? '').trim().length > 3));
-    return labels.length >= 5;
-  }));
-  await page.hover('[role="application"] [data-member-dot]');
-  await new Promise(r => setTimeout(r, 500));
-  ok('ماتریس: کارت شناور با هاور روی نقطه', await page.evaluate(() => {
-    const box = document.querySelector('[role="application"]');
-    const card = [...(box?.querySelectorAll('div') ?? [])].find(x => (x.textContent ?? '').includes('کلیک = انتخاب'));
-    return !!card && (card?.textContent ?? '').includes('نفوذ') && (card?.textContent ?? '').includes('حمایت');
-  }));
-  ok('ماتریس: شمار اعضای هر ناحیه روی بوم', await page.evaluate(() => [...document.querySelectorAll('[role="application"] span')].some(x => /عضو|·\s*\d+/.test(x.textContent ?? '')) || (document.body.textContent ?? '').includes('عضو ·')));
+  ok('ماتریس: عنوان بخش (تابلوی نواحی)', await waitForText('تابلوی نواحی نفوذ × حمایت'));
+  ok('ماتریس: چهار ستون ناحیه', await page.evaluate(() => document.querySelectorAll('[data-zone]').length === 4), 'zones=' + await page.evaluate(() => document.querySelectorAll('[data-zone]').length));
+  ok('ماتریس: کارت‌های اعضا در ستون‌ها', await page.evaluate(() => document.querySelectorAll('[data-member-card]').length >= 5), 'cards=' + await page.evaluate(() => document.querySelectorAll('[data-member-card]').length));
+  ok('ماتریس: سربرگ نواحی (متحدان کلیدی/قدرتمندان محتاط)', await waitForText('متحدان کلیدی') && await waitForText('قدرتمندان محتاط'));
+  ok('ماتریس: نوار سنجهٔ نفوذ/حمایت در کارت‌ها', await page.evaluate(() => (document.body.textContent ?? '').includes('نفوذ') && (document.body.textContent ?? '').includes('حمایت')));
+  ok('ماتریس: راهنمای آستانهٔ ۶۰ موتور ارزیابی', await page.evaluate(() => (document.body.textContent ?? '').includes('آستانهٔ')));
+  ok('ماتریس: راهنمای کشیدن کارت (تغییر موضع)', await page.evaluate(() => (document.body.textContent ?? '').includes('کشیدن کارت')));
+  ok('ماتریس: نام واقعی اعضا در کارت‌ها', await page.evaluate(() => (document.body.textContent ?? '').includes('اتاق بازرگانی تهران') || (document.body.textContent ?? '').includes('شورای ملی راهبری')));
+  // کلیک روی کارت → پنل جزئیات و خط زمان
+  await page.evaluate(() => { const c = document.querySelector('[data-member-card]'); if (c) c.click(); });
+  await new Promise(r => setTimeout(r, 700));
+  ok('ماتریس: کلیک کارت → پنل جزئیات و خط زمان', await waitForText('خط زمان موضع'));
+  // درگ کارت به ستون دیگر → دیالوگ ثبت علت
+  const dragOK = await page.evaluate(async () => {
+    const card = document.querySelector('[data-member-card]');
+    const zone = [...document.querySelectorAll('[data-zone]')].find(z => z.getAttribute('data-zone') !== (card?.closest('[data-zone]')?.getAttribute('data-zone') ?? ''));
+    if (!card || !zone) return false;
+    const cz = card.getBoundingClientRect(), zz = zone.getBoundingClientRect();
+    const x0 = cz.left + cz.width / 2, y0 = cz.top + cz.height / 2;
+    const x1 = zz.left + zz.width / 2, y1 = zz.top + Math.min(zz.height - 10, 40);
+    card.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: x0, clientY: y0, pointerId: 7 }));
+    for (let k = 1; k <= 6; k++) {
+      card.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: x0 + (x1 - x0) * k / 6, clientY: y0 + (y1 - y0) * k / 6, pointerId: 7 }));
+      await new Promise(r => setTimeout(r, 30));
+    }
+    card.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: x1, clientY: y1, pointerId: 7 }));
+    await new Promise(r => setTimeout(r, 700));
+    return (document.body.textContent ?? '').includes('علت تغییر موضع');
+  });
+  ok('ماتریس: درگ کارت به ناحیهٔ دیگر → ثبت علت', dragOK);
+  await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => (x.textContent ?? '').includes('انصراف')); if (b) b.click(); });
+  await new Promise(r => setTimeout(r, 400));
 
   // 3) شناسنامهٔ سازمان در پروفایل خود سازمان
   await page.goto(`${BASE}/organizations/org-1`, { waitUntil: 'networkidle0', timeout: 60000 });

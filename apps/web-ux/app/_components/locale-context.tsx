@@ -42,6 +42,8 @@ export function LocaleBootstrap() {
   return null;
 }
 
+const HIDE_LOCALE_TOGGLE = true; /* موقتاً فقط فارسی */
+
 export function LocaleToggle({ compact = false }: { compact?: boolean }) {
   const [locale, setLocal] = useState<'fa' | 'en'>(() => (isEn() ? 'en' : 'fa'));
   const [busy, setBusy] = useState(false);
@@ -51,6 +53,8 @@ export function LocaleToggle({ compact = false }: { compact?: boolean }) {
     setLocale(next); /* ذخیره در localStorage — سپس بارگذاری مجدد برای ارزیابی تازهٔ همهٔ ماژول‌ها */
     window.location.reload();
   };
+  /* موقتاً مخفی — به درخواست کاربر فعلاً فقط فارسی؛ برای بازگرداندن، این return null را حذف کنید */
+  if (HIDE_LOCALE_TOGGLE) return null;
   return (
     <button
       className="icon-btn locale-btn"

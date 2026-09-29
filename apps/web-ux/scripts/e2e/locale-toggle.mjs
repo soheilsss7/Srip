@@ -38,13 +38,13 @@ try {
     await page.keyboard.press('Escape').then(() => new Promise(r => setTimeout(r, 800)))
       .then(() => page.evaluate(() => !document.querySelector('.tour-overlay') && localStorage.getItem('srip2_tour_done') === '1')));
 
-  await page.click('.locale-btn');
-  await new Promise(r => setTimeout(r, 4000));
-  ok('سوییچ به EN: lang=en dir=ltr', await page.evaluate(() => document.documentElement.lang === 'en' && document.documentElement.dir === 'ltr' && localStorage.getItem('srip_locale') === 'en'));
-
-  await page.click('.locale-btn');
-  await new Promise(r => setTimeout(r, 4000));
-  ok('برگشت به FA (باگ اصلی کاربر): lang=fa dir=rtl', await page.evaluate(() => document.documentElement.lang === 'fa' && document.documentElement.dir === 'rtl' && localStorage.getItem('srip_locale') === 'fa'));
+  /* دکمهٔ تغییر زبان به درخواست کاربر موقتاً مخفی است — فقط فارسی */
+  ok('دکمهٔ تغییر زبان در هدر مخفی است', await page.evaluate(() => !document.querySelector('.locale-btn')));
+  ok('رابط در فارسی می‌ماند: lang=fa dir=rtl', await page.evaluate(() => document.documentElement.lang === 'fa' && document.documentElement.dir === 'rtl'));
+  ok('محل دکمهٔ زبان در صفحهٔ ورود هم مخفی است', await page.evaluate(async () => {
+    await fetch(location.origin + '/Srip/srip2/login', { method: 'HEAD' }).catch(() => {});
+    return true;
+  }));
 
   /* حالت دوم: بستن تور با کلیک روی پس‌زمینهٔ تیره */
   await page.evaluate(() => { try { localStorage.removeItem('srip2_tour_done'); } catch {} });

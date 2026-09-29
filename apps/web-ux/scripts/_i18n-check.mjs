@@ -93,9 +93,9 @@ function scenario(name, { before, steps }) {
   const { out, errs } = scenario('Switch to EN via toggle + reload', {
     steps: `
       await page.goto(${JSON.stringify(BASE + '/login')}, { waitUntil: 'networkidle2' });
-      /* کلیک از طریق evaluate — مقاوم در برابر reload هم‌زمان */
-      await page.evaluate(() => { const b = document.querySelector('.locale-btn'); if (b) b.click(); });
-      await page.waitForFunction(() => document.documentElement.dir === 'ltr', { timeout: 20000 }).catch(() => {});
+      /* دکمهٔ تغییر زبان موقتاً مخفی است — ورود به EN از طریق localStorage (سازوکار همان دکمه) */
+      await page.evaluate(() => { try { localStorage.setItem('srip_locale', 'en'); } catch (e) {} });
+      await page.reload({ waitUntil: 'networkidle2' });
       await new Promise(r => setTimeout(r, 1500));
       const dir = await page.evaluate(() => document.documentElement.dir);
       const lang = await page.evaluate(() => document.documentElement.lang);
@@ -108,7 +108,7 @@ function scenario(name, { before, steps }) {
   });
   ok(out.includes('DIR=ltr') && out.includes('LANG=en'), 'en: dir=ltr lang=en');
   ok(out.includes('H2=Sign in to your account'), 'en: عنوان ورود انگلیسی');
-  ok(out.includes('TOGGLE=فا'), 'en: دکمهٔ برگشت به فارسی');
+  ok(out.includes('TOGGLE=NONE'), 'en: دکمهٔ تغییر زبان مخفی است (فقط فارسی)');
   ok(errs.length === 0, `en: بدون خطای کنسول/hydration (${errs.length ? errs[0] : 'ok'})`);
 }
 

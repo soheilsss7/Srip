@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.24.05';
+const DEMO_MOCK_VERSION = '2026.09.24.06';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -7898,7 +7898,7 @@ async function __handler(req, res) {
   const scopeOrgIds=visibleOrgIds(req);
 
   const is=(p)=>path===`${V1}${p}`;
-  const match=(p)=>{ const m=path.match(new RegExp(`^${V1}${p.replace(/:[^/]+/g,'([^/]+)')}$`)); return m?m.slice(1):null; };
+  const match=(p)=>{ const m=path.match(new RegExp(`^${V1}${p.replace(/:[^/]+/g,'([^/]+)')}$`)); return m?m.slice(1).map(seg=>{ try { return decodeURIComponent(seg); } catch { return seg; } }):null; };
 
   /* ------------------------------ auth ------------------------------ */
   if(is('/auth/login') && method==='POST'){

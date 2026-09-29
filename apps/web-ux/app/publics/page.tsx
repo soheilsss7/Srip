@@ -170,56 +170,19 @@ function MatrixTab({ members, canWrite, onSave, onNotify, openAssess }: {
   const [cat, setCat] = useState('');
   const [declining, setDeclining] = useState(false);
   const [selId, setSelId] = useState('');
-  const [pos, setPos] = useState<Record<string, { p: number; i: number }>>({});
   const [dragId, setDragId] = useState('');
-  const [hoverId, setHoverId] = useState('');
+  const [overZone, setOverZone] = useState('');
+  const overZoneRef = useRef('');
+  const dragMoved = useRef(false);
   const [pending, setPending] = useState<{ m: MemberView; p: number; i: number } | null>(null);
   const [cause, setCause] = useState('INTERACTION');
   const [causeNote, setCauseNote] = useState('');
   const [busy, setBusy] = useState(false);
-  const boxRef = useRef<HTMLDivElement | null>(null);
 
   const cats = [...new Set(members.map(m => m.categoryId).filter(Boolean))] as string[];
   const catFa = (c: string) => members.find(m => m.categoryId === c)?.categoryFa ?? c;
   const shown = members.filter(m => (!cat || m.categoryId === cat) && (!declining || isDecliningMember(m)));
-  const getPI = (m: MemberView) => pos[m.id] ?? { p: m.power ?? 50, i: m.interest ?? 50 };
   const sel = members.find(m => m.id === selId) ?? null;
-  const focus = shown.find(m => m.id === (hoverId || selId)) ?? null;
-  const fpi = focus ? getPI(focus) : null;
-  const zoneMembers = (z: string) => shown.filter(m => stanceOfPI(getPI(m).p, getPI(m).i) === z);
-  /* چیدمان ضدتداخل: نقطه‌های هم‌مکان با دافعهٔ ملایم جدا می‌شوند و خط راهنما موقعیت واقعی را نشان می‌دهد */
-  const layoutKey = shown.map(m => { const pi = getPI(m); return `${m.id}:${Math.round(pi.p)},${Math.round(pi.i)}`; }).join('|');
-  const layout = useMemo(() => {
-    const pts: Record<string, { x: number; y: number; tx: number; ty: number }> = {};
-    for (const m of shown) {
-      const pi = getPI(m);
-      pts[m.id] = { x: clamp(pi.i) * 1.6, y: 100 - clamp(pi.p), tx: clamp(pi.i) * 1.6, ty: 100 - clamp(pi.p) };
-    }
-    const arr = Object.values(pts);
-    const MIN = 5.6;
-    for (let it = 0; it < 14; it++) {
-      for (let a = 0; a < arr.length; a++) for (let b = a + 1; b < arr.length; b++) {
-        const A = arr[a], B = arr[b];
-        let dx = B.x - A.x, dy = B.y - A.y;
-        let d = Math.hypot(dx, dy);
-        if (d < 0.01) { dx = 0.6; dy = -0.6; d = 0.85; }
-        if (d < MIN) {
-          const push = (MIN - d) / 2 / d;
-          A.x -= dx * push; A.y -= dy * push;
-          B.x += dx * push; B.y += dy * push;
-        }
-      }
-      for (const q of arr) { q.x = Math.max(3, Math.min(157, q.x)); q.y = Math.max(3.5, Math.min(96.5, q.y)); }
-    }
-    return pts;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layoutKey]);
-  const shortName = (m: MemberView) => {
-    const n = (m.sourceName ?? m.id).replace(/[()«»]/g, ' ').replace(/\s+/g, ' ').trim();
-    const w = n.split(' ').filter(Boolean);
-    return (w.length <= 4 ? n : w.slice(0, 4).join(' ')).slice(0, 24);
-  };
-  const fL = focus ? layout[focus.id] : null;
 
   const apply = async (m: MemberView, p: number, i: number, c?: string, note?: string) => {
     setBusy(true);
@@ -227,24 +190,50 @@ function MatrixTab({ members, canWrite, onSave, onNotify, openAssess }: {
     setBusy(false);
     return ok;
   };
-  const finalize = (m: MemberView, p: number, i: number) => {
-    if (!canWrite) { onNotify('برای جابه‌جایی نقطه‌ها مجوز «مدیریت عموم‌ها» لازم است.'); return; }
+  /* رهاکردن کارت در ناحیهٔ دیگر: مختصات حفظ می‌شود و فقط سمتِ ناحیهٔ جدید تنظیم می‌شود (فراتر/پایین‌تر از آستانه) */
+  const piForZone = (m: MemberView, zone: string): { p: number; i: number } => {
+    const p = m.power ?? 50, i = m.interest ?? 50;
+    if (zone === 'KEY_PLAYER') return { p: Math.max(p, ZONE_TH + 5), i: Math.max(i, ZONE_TH + 5) };
+    if (zone === 'INFLUENCER') return { p: Math.max(p, ZONE_TH + 5), i: Math.min(i, ZONE_TH - 5) };
+    if (zone === 'SUPPORTER') return { p: Math.min(p, ZONE_TH - 5), i: Math.max(i, ZONE_TH + 5) };
+    return { p: Math.min(p, ZONE_TH - 5), i: Math.min(i, ZONE_TH - 5) };
+  };
+  const finalizeDrop = (m: MemberView, zone: string) => {
+    if (!canWrite) { onNotify('برای جابه‌جایی کارت‌ها مجوز «مدیریت عموم‌ها» لازم است.'); return; }
+    const { p, i } = piForZone(m, zone);
     if (stanceOfPI(p, i) !== m.stance) { setPending({ m, p, i }); setCause('INTERACTION'); setCauseNote(''); }
     else void apply(m, p, i);
   };
-  const ptToPI = (clientX: number, clientY: number) => {
-    const box = boxRef.current?.getBoundingClientRect();
-    if (!box) return null;
-    return { i: clamp(Math.round((clientX - box.left) / box.width * 100)), p: clamp(Math.round((1 - (clientY - box.top) / box.height) * 100)) };
+
+  const onCardPointerDown = (e: React.PointerEvent, m: MemberView) => {
+    setSelId(m.id);
+    if (!canWrite) return;
+    dragMoved.current = false;
+    setDragId(m.id);
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
   };
-  const TICKS = [0, 20, 40, 60, 80, 100];
+  const onCardPointerMove = (e: React.PointerEvent) => {
+    if (!dragId) return;
+    dragMoved.current = true;
+    const el = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-zone]');
+    const z = el?.getAttribute('data-zone') ?? '';
+    if (z !== overZoneRef.current) { overZoneRef.current = z; setOverZone(z); }
+  };
+  const onCardPointerUp = (e: React.PointerEvent, m: MemberView) => {
+    if (!dragId) return;
+    const zone = overZoneRef.current;
+    setDragId('');
+    overZoneRef.current = '';
+    setOverZone('');
+    if (dragMoved.current && zone && zone !== m.stance) finalizeDrop(m, zone);
+  };
 
   return (
     <div className="stack" style={{ gap: 14 }}>
       <SectionCard
-        title="ماتریس نفوذ × حمایت"
-        icon={<Target size={15} />}
-        description="جابه‌جایی نقطه‌ها با درگ یا اسلایدر — مرز نواحی همان آستانهٔ موتور ارزیابی (۶۰) است و رنگ هر نقطه با ناحیه‌اش می‌خواند؛ تغییر موضع بدون ثبت «علت» پذیرفته نمی‌شود."
+        title="تابلوی نواحی نفوذ × حمایت"
+        icon={<Grid3x3 size={15} />}
+        description={`هر ستون یک ناحیه است (مرز نواحی = آستانهٔ ${fmtNum(ZONE_TH)} موتور ارزیابی) — کلیک روی کارت: جزئیات و خط زمان · کشیدن کارت به ستون دیگر: تغییر موضع با ثبت علت.`}
         actions={
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
             <select aria-label="فیلتر دسته" value={cat} onChange={e => setCat(e.target.value)}>
@@ -258,366 +247,194 @@ function MatrixTab({ members, canWrite, onSave, onNotify, openAssess }: {
           </div>
         }
       >
-        <div style={{ display: 'grid', gap: 12 }}>
-          {/* ── بوم ماتریس ── */}
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-              <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-secondary)' }}>نفوذ (قدرت) ↑</span>
-              <span className="t-muted" style={{ fontSize: 10.5 }}>مقیاس هر محور: ۰ تا ۱۰۰ · آستانهٔ ناحیه‌ها: {fmtNum(ZONE_TH)}</span>
-            </div>
-            <div
-              ref={boxRef}
-              role="application"
-              aria-label="ماتریس نفوذ و حمایت — محور افقی: حمایت (علاقه)؛ محور عمودی: نفوذ (قدرت)"
-              style={{
-                position: 'relative', width: '100%', aspectRatio: '8 / 5', maxWidth: '100%',
-                border: '1px solid color-mix(in srgb, var(--border,#e2e8f0) 85%, transparent)', borderRadius: 14,
-                background: 'linear-gradient(180deg, var(--card-bg,#fff) 0%, color-mix(in srgb, #f1f5f9 45%, var(--card-bg,#fff)) 100%)',
-                boxShadow: 'inset 0 0 0 1px rgba(15,23,42,.02), 0 1px 3px rgba(15,23,42,.05)',
-                overflow: 'hidden',
-                touchAction: 'none', userSelect: 'none', cursor: dragId ? 'grabbing' : undefined,
-              }}
-              onPointerUp={e => {
-                if (!dragId) return;
-                const m = members.find(x => x.id === dragId);
-                const pi = ptToPI(e.clientX, e.clientY) ?? getPI(m ?? ({ id: dragId } as MemberView));
-                setDragId('');
-                if (m) finalize(m, pi.p, pi.i);
-              }}
-              onPointerLeave={() => setDragId('')}
-            >
-              <style>{'@media (max-width: 700px) { .mx-dot-label, .mx-tick { display: none } }'}</style>
-              <svg
-                viewBox="0 0 160 100"
-                preserveAspectRatio="xMidYMid meet"
-                style={{ width: '100%', height: '100%', display: 'block' }}
-                onPointerMove={e => {
-                  if (!dragId) return;
-                  const pi = ptToPI(e.clientX, e.clientY);
-                  if (pi) setPos(pp => ({ ...pp, [dragId]: pi }));
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(238px, 1fr))', gap: 10, alignItems: 'start' }}>
+          {ZONES.map(z => {
+            const color = STANCE_DOT_COLOR[z.id];
+            const Icon = ZONE_ICON[z.id];
+            const zm = shown.filter(m => m.stance === z.id).sort((a, b) => (b.power ?? 0) - (a.power ?? 0));
+            const isOver = !!dragId && overZone === z.id;
+            const isSrc = !!dragId && zm.some(m => m.id === dragId);
+            return (
+              <div
+                key={z.id}
+                data-zone={z.id}
+                aria-label={`ناحیهٔ ${z.title}`}
+                style={{
+                  borderRadius: 12, minHeight: 132, padding: 10, display: 'flex', flexDirection: 'column', gap: 8,
+                  border: `1.5px ${isOver ? 'solid' : 'solid'} ${isOver ? color : `color-mix(in srgb, ${color} 32%, transparent)`}`,
+                  background: isOver
+                    ? `color-mix(in srgb, ${color} 12%, transparent)`
+                    : `linear-gradient(180deg, color-mix(in srgb, ${color} 8%, transparent), color-mix(in srgb, ${color} 2%, transparent) 130px)`,
+                  boxShadow: isOver ? `0 0 0 3px color-mix(in srgb, ${color} 20%, transparent)` : undefined,
+                  opacity: isSrc ? 0.75 : 1,
+                  transition: 'border-color .15s, background .15s, box-shadow .15s',
+                  touchAction: canWrite ? 'none' : undefined,
                 }}
               >
-                <defs>
-                  <pattern id="mx-grid" width="8" height="5" patternUnits="userSpaceOnUse">
-                    <circle cx="8" cy="5" r="0.4" fill="#94a3b8" opacity="0.26" />
-                  </pattern>
-                  <filter id="mx-shadow" x="-90%" y="-90%" width="280%" height="280%">
-                    <feDropShadow dx="0" dy="0.4" stdDeviation="0.5" floodColor="#0f172a" floodOpacity="0.3" />
-                  </filter>
-                  {/* شست گرادیانی نواحی — اوج رنگ در گوشهٔ آرمانی هر ناحیه */}
-                  <linearGradient id="mx-zg-tr" x1="0" y1="1" x2="1" y2="0">
-                    <stop offset="0" stopColor="#16a34a" stopOpacity="0.02" /><stop offset="1" stopColor="#16a34a" stopOpacity="0.15" />
-                  </linearGradient>
-                  <linearGradient id="mx-zg-tl" x1="1" y1="1" x2="0" y2="0">
-                    <stop offset="0" stopColor="#d97706" stopOpacity="0.02" /><stop offset="1" stopColor="#d97706" stopOpacity="0.11" />
-                  </linearGradient>
-                  <linearGradient id="mx-zg-br" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0" stopColor="#2563eb" stopOpacity="0.02" /><stop offset="1" stopColor="#2563eb" stopOpacity="0.1" />
-                  </linearGradient>
-                  <linearGradient id="mx-zg-bl" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0" stopColor="#64748b" stopOpacity="0.02" /><stop offset="1" stopColor="#64748b" stopOpacity="0.055" />
-                  </linearGradient>
-                </defs>
-
-                {/* پس‌زمینهٔ نواحی — مرز روی آستانهٔ ۶۰ (همان موتور ارزیابی) */}
-                <rect x="96" y="0" width="64" height="40" fill="url(#mx-zg-tr)" />
-                <rect x="0" y="0" width="96" height="40" fill="url(#mx-zg-tl)" />
-                <rect x="96" y="40" width="64" height="60" fill="url(#mx-zg-br)" />
-                <rect x="0" y="40" width="96" height="60" fill="url(#mx-zg-bl)" />
-                <rect x="0" y="0" width="160" height="100" fill="url(#mx-grid)" />
-
-                {/* مرز نواحی */}
-                <line x1="96" y1="0" x2="96" y2="100" stroke="#64748b" strokeWidth="0.5" strokeDasharray="2 1.4" opacity="0.75" />
-                <line x1="0" y1="40" x2="160" y2="40" stroke="#64748b" strokeWidth="0.5" strokeDasharray="2 1.4" opacity="0.75" />
-
-                {/* درجه‌بندی محورها */}
-                {TICKS.map(v => (
-                  <text key={`tb-${v}`} className="mx-tick" x={v === 0 ? 0.6 : v === 100 ? 159.4 : v * 1.6} y="98.9"
-                    textAnchor={v === 0 ? 'start' : v === 100 ? 'end' : 'middle'} fontSize="1.8" fontWeight="700" fill="#94a3b8">{fmtNum(v)}</text>
-                ))}
-                {TICKS.map(v => (
-                  <text key={`tl-${v}`} className="mx-tick" x="1.3" y={98.8 - v * 0.98} textAnchor="start" fontSize="1.8" fontWeight="700" fill="#94a3b8">{fmtNum(v)}</text>
-                ))}
-
-                {/* قرص «آستانهٔ ۶۰» روی مرز */}
-                {(() => {
-                  const t = `آستانهٔ ${fmtNum(ZONE_TH)}`;
-                  const w = t.length * 1.04 + 2.6;
-                  return (
-                    <g>
-                      <rect x={96 - w / 2} y="1.9" width={w} height="4.3" rx="2.15" fill="#fff" fillOpacity="0.95" stroke="#94a3b8" strokeOpacity="0.55" strokeWidth="0.28" />
-                      <text x="96" y="4.95" textAnchor="middle" fontSize="1.95" fontWeight="800" fill="#475569">{t}</text>
-                    </g>
-                  );
-                })()}
-
-                {/* سربرگ نواحی: قرص سفید + دایرهٔ رنگی + شمار */}
-                {ZONES.map(z => {
-                  const count = fmtNum(zoneMembers(z.id).length);
-                  const color = STANCE_DOT_COLOR[z.id];
-                  const wName = z.title.length * 1.08 + 3.1;
-                  const wCount = count.length * 1.35 + 2.2;
-                  const W = wName + wCount;
-                  const top = z.pos === 'tr' || z.pos === 'tl';
-                  const right = z.pos === 'tr' || z.pos === 'br';
-                  const x = right ? 157.6 - W : 2.4;
-                  const y = top ? 1.9 : 93.6;
-                  return (
-                    <g key={`zh-${z.id}`} style={{ pointerEvents: 'none' }}>
-                      <rect x={x} y={y} width={W} height="4.5" rx="2.25" fill="#fff" fillOpacity="0.96" stroke={color} strokeOpacity="0.45" strokeWidth="0.3" />
-                      <circle cx={x + 2.6} cy={y + 2.25} r="0.95" fill={color} />
-                      <text x={x + 4.3} y={y + 3.1} fontSize="2.1" fontWeight="800" fill={color}>{z.title}</text>
-                      <text x={x + W - 1.9} y={y + 3.1} textAnchor="end" fontSize="2.1" fontWeight="800" fill="#0f172a">{count}</text>
-                    </g>
-                  );
-                })}
-
-                {/* خط راهنما از موقعیت واقعی به نقطهٔ جابه‌جاشده (ضدتداخل) */}
-                {shown.map(m => {
-                  const L = layout[m.id];
-                  const d = Math.hypot(L.x - L.tx, L.y - L.ty);
-                  if (d < 1) return null;
-                  return <line key={`ll-${m.id}`} x1={L.tx} y1={L.ty} x2={L.x} y2={L.y} stroke="#94a3b8" strokeWidth="0.26" strokeDasharray="0.9 0.7" opacity="0.65" />;
-                })}
-
-                {/* خط‌کش متقاطع عضو کانونی */}
-                {fL && (
-                  <>
-                    <line x1={fL.x} y1="0" x2={fL.x} y2="100" stroke="#475569" strokeWidth="0.3" strokeDasharray="1.3 1.1" opacity="0.5" />
-                    <line x1="0" y1={fL.y} x2="160" y2={fL.y} stroke="#475569" strokeWidth="0.3" strokeDasharray="1.3 1.1" opacity="0.5" />
-                  </>
-                )}
-
-                {/* نقطهٔ اعضا — اندازه بر پایهٔ نفوذ + هالهٔ رنگی + ضربان بازیگران کلیدی + قرص نام */}
-                {shown.map(m => {
-                  const L = layout[m.id];
-                  const pi = getPI(m);
-                  const isSel = m.id === selId;
-                  const isFocus = m.id === (hoverId || selId);
-                  const color = STANCE_DOT_COLOR[m.stance] ?? '#94a3b8';
-                  const r = 1.9 + (clamp(pi.p) / 100) * 1.5 + (isFocus ? 0.65 : 0);
-                  const label = shortName(m);
-                  const lw = Math.min(label.length * 1.08 + 2.7, 46);
-                  const lx = Math.max(1.2, Math.min(158.8 - lw, L.x - lw / 2));
-                  const aboveY = L.y - r - 1.3 - 4.1;
-                  const belowY = L.y + r + 1.3;
-                  const ly = aboveY < 1 ? Math.min(belowY, 94.6) : aboveY;
-                  return (
-                    <g
-                      key={m.id}
-                      data-member-dot
-                      transform={`translate(${L.x} ${L.y})`}
-                      tabIndex={0}
-                      role="button"
-                      aria-label={`${m.sourceName ?? m.id} — نفوذ ${fmtNum(pi.p)}، حمایت ${fmtNum(pi.i)}، موضع ${m.stanceFa ?? m.stance}`}
-                      onPointerDown={e => {
-                        e.preventDefault();
-                        (e.currentTarget as SVGElement).setPointerCapture?.(e.pointerId);
-                        setSelId(m.id);
-                        setDragId(m.id);
-                      }}
-                      onPointerEnter={() => setHoverId(m.id)}
-                      onPointerLeave={() => setHoverId('')}
-                      onClick={() => setSelId(m.id)}
-                      style={{ cursor: canWrite ? 'grab' : 'pointer', outline: 'none' }}
-                    >
-                      <circle r="5.2" fill="transparent" />
-                      <circle r={r + 1.55} fill={color} opacity={isFocus ? 0.3 : 0.16}>
-                        {m.stance === 'KEY_PLAYER' && !isFocus ? (<animate attributeName="opacity" values="0.24;0.07;0.24" dur="2.6s" repeatCount="indefinite" />) : null}
-                      </circle>
-                      <circle r={r} fill={color} stroke="#fff" strokeWidth="0.42" filter="url(#mx-shadow)" style={{ transition: 'r .15s' }} />
-                      {isSel && <circle r={r + 0.85} fill="none" stroke="#0f172a" strokeWidth="0.32" opacity="0.8" strokeDasharray="0.9 0.6" />}
-                      <g className="mx-dot-label" style={{ pointerEvents: 'none' }}>
-                        <rect x={lx - L.x} y={ly - L.y} width={lw} height="4.1" rx="2.05" fill="#fff" fillOpacity="0.96" stroke="#e2e8f0" strokeWidth="0.26" />
-                        <text x={lx - L.x + lw / 2} y={ly - L.y + 2.85} textAnchor="middle" fontSize="2.05" fontWeight="700" fill="#0f172a">{label}</text>
-                      </g>
-                    </g>
-                  );
-                })}
-              </svg>
-
-              {/* کارت شناور عضو کانونی */}
-              {focus && fL && (
-                <div
-                  style={{
-                    position: 'absolute', zIndex: 20, pointerEvents: 'none',
-                    left: `${Math.min(Math.max(fL.x / 160 * 100, 16), 84)}%`,
-                    top: fL.y < 18 ? `calc(${fL.y / 100 * 100}% + 14px)` : `${fL.y / 100 * 100}%`,
-                    transform: fL.y < 18 ? 'translate(-50%, 0)' : 'translate(-50%, -118%)',
-                    minWidth: 190, maxWidth: 250, padding: '8px 10px', borderRadius: 10,
-                    background: 'var(--card-bg,#fff)', border: '1px solid var(--border,#cbd5e1)',
-                    boxShadow: '0 6px 22px rgba(15,23,42,.16)',
-                  }}
-                >
-                  <b style={{ fontSize: 12 }}>{focus.sourceName ?? focus.id}</b>
-                  <div className="t-muted" style={{ fontSize: 10.5 }}>{focus.groupFa ?? '—'}{focus.categoryFa ? ` · ${focus.categoryFa}` : ''}</div>
-                  <div style={{ display: 'flex', gap: 5, alignItems: 'center', marginTop: 5 }}>
-                    <span className="chip" style={{ fontSize: 10, padding: '1px 7px', color: STANCE_DOT_COLOR[focus.stance], background: `color-mix(in srgb, ${STANCE_DOT_COLOR[focus.stance]} 12%, transparent)`, border: `1px solid color-mix(in srgb, ${STANCE_DOT_COLOR[focus.stance]} 35%, transparent)` }}>{focus.stanceFa ?? focus.stance}</span>
-                    <span className="t-muted" style={{ fontSize: 10 }}>{ZONES.find(z => z.id === stanceOfPI(getPI(focus).p, getPI(focus).i))?.title}</span>
-                  </div>
-                  <div style={{ display: 'grid', gap: 3, marginTop: 6 }}>
-                    {([['نفوذ', getPI(focus).p, '#0f172a'], ['حمایت', getPI(focus).i, '#2563eb']] as const).map(([lb, val, color]) => (
-                      <div key={lb} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10 }}>
-                        <span className="t-muted" style={{ width: 30, flex: 'none' }}>{lb}</span>
-                        <span style={{ flex: 1, height: 5, borderRadius: 99, background: 'color-mix(in srgb, var(--border,#e2e8f0) 60%, transparent)', overflow: 'hidden' }}>
-                          <span style={{ display: 'block', height: '100%', width: `${clamp(val)}%`, background: color, borderRadius: 99 }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <span style={{ width: 27, height: 27, borderRadius: 8, display: 'grid', placeItems: 'center', flex: 'none', background: `color-mix(in srgb, ${color} 16%, transparent)`, color }}>
+                    {Icon ? <Icon size={14} /> : null}
+                  </span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: 'block', fontSize: 12, fontWeight: 800, color }}>{z.title}</span>
+                    <span className="t-muted" style={{ display: 'block', fontSize: 9.5, lineHeight: 1.5 }}>{z.action}</span>
+                  </span>
+                  <span className="chip neutral" style={{ fontSize: 12, fontWeight: 800, padding: '2px 10px' }}>{fmtNum(zm.length)}</span>
+                </div>
+                <div style={{ display: 'grid', gap: 6 }}>
+                  {zm.map(m => {
+                    const overdue = !!m.reviewDue && new Date(m.reviewDue).getTime() < Date.now();
+                    const isSel = m.id === selId;
+                    const isDrag = dragId === m.id;
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        data-member-card
+                        aria-label={`${m.sourceName ?? m.id} — نفوذ ${fmtNum(m.power)}، حمایت ${fmtNum(m.interest)}، موضع ${m.stanceFa ?? m.stance}`}
+                        title={`${m.sourceName ?? m.id} — نفوذ ${fmtNum(m.power)} / حمایت ${fmtNum(m.interest)} · ${z.title}`}
+                        onPointerDown={e => onCardPointerDown(e, m)}
+                        onPointerMove={onCardPointerMove}
+                        onPointerUp={e => onCardPointerUp(e, m)}
+                        onClick={() => setSelId(m.id)}
+                        style={{
+                          textAlign: 'start', cursor: canWrite ? 'grab' : 'pointer', touchAction: 'none',
+                          borderRadius: 10, border: '1px solid var(--border,#e2e8f0)', borderInlineStart: `3px solid ${color}`,
+                          background: 'var(--card-bg,#fff)', padding: '8px 9px', display: 'grid', gap: 5,
+                          opacity: isDrag ? 0.55 : 1,
+                          boxShadow: isSel ? '0 0 0 2px color-mix(in srgb, #0f172a 28%, transparent)' : '0 1px 2px rgba(15,23,42,.05)',
+                          transition: 'box-shadow .15s, opacity .15s',
+                        }}
+                      >
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, fontWeight: 700, color: 'var(--text-primary,#0f172a)' }}>
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, flex: 'none' }} />
+                          <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.sourceName ?? m.id}</span>
+                          {overdue && <AlertTriangle size={11} style={{ color: '#d97706', flex: 'none' }} aria-label="بازبینی سررسید گذشته" />}
                         </span>
-                        <b style={{ minWidth: 16, textAlign: 'end' }}>{fmtNum(val)}</b>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="t-muted" style={{ fontSize: 9.5, marginTop: 5 }}>کلیک = انتخاب · درگ = جابه‌جایی و ارزیابی</div>
-                </div>
-              )}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 4 }}>
-              <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-secondary)' }}>حمایت (علاقه) →</span>
-            </div>
-          </div>
-
-          <div className="chip-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-            {Object.entries(STANCE_DOT_COLOR).map(([k, c]) => (
-              <span key={k} className="chip neutral"><span style={{ width: 9, height: 9, borderRadius: '50%', background: c, display: 'inline-block' }} /> {STANCE_TONE[k] ? (members.find(m => m.stance === k)?.stanceFa ?? k) : k}</span>
-            ))}
-            <span className="chip neutral">{fmtNum(shown.length)} عضو روی ماتریس</span>
-          </div>
-
-          {/* ── راهنمای نواحی: عنوان ناحیه، شمار، اقدام راهبردی و اعضای برجسته ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(215px, 1fr))', gap: 8 }}>
-            {ZONES.map(z => {
-              const zm = zoneMembers(z.id).sort((a, b) => (b.power ?? 0) - (a.power ?? 0));
-              const pct = shown.length ? Math.round(zm.length / shown.length * 100) : 0;
-              return (
-                <div key={`zc-${z.id}`} className="panel" style={{ margin: 0, padding: '10px 12px', borderInlineStart: `3px solid ${STANCE_DOT_COLOR[z.id]}` }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
-                    <b style={{ fontSize: 12.5, color: STANCE_DOT_COLOR[z.id] }}>{z.title}</b>
-                    <span className="chip neutral" title={`${fmtNum(zm.length)} از ${fmtNum(shown.length)} عضو`}>{fmtNum(zm.length)} عضو · {fmtNum(pct)}٪</span>
-                  </div>
-                  <div className="t-muted" style={{ fontSize: 10.5, marginTop: 2 }}>{z.action}</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 7 }}>
-                    {zm.slice(0, 3).map(m => (
-                      <button key={`zc-m-${m.id}`} type="button" className="chip neutral" style={{ border: 'none', cursor: 'pointer', fontSize: 10.5 }}
-                        onClick={() => { setCat(''); setSelId(m.id); }} title={`${m.sourceName ?? m.id} — نفوذ ${fmtNum(getPI(m).p)} / حمایت ${fmtNum(getPI(m).i)}`}>
-                        {m.sourceName ?? m.id}
+                        <span className="t-muted" style={{ fontSize: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.groupFa ?? '—'}</span>
+                        <span style={{ display: 'grid', gap: 3 }}>
+                          {([['نفوذ', m.power, '#0f172a'], ['حمایت', m.interest, '#2563eb']] as const).map(([lb, val, c]) => (
+                            <span key={lb} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 9.5 }}>
+                              <span className="t-muted" style={{ width: 26, flex: 'none' }}>{lb}</span>
+                              <span style={{ flex: 1, height: 5, borderRadius: 99, background: 'color-mix(in srgb, var(--border,#e2e8f0) 55%, transparent)', overflow: 'hidden', display: 'block' }}>
+                                <span style={{ display: 'block', height: '100%', width: `${clamp(val)}%`, background: c, opacity: 0.85, borderRadius: 99 }} />
+                              </span>
+                              <b style={{ minWidth: 14, textAlign: 'end' }}>{fmtNum(val)}</b>
+                            </span>
+                          ))}
+                        </span>
+                        <span className="t-muted" style={{ fontSize: 9, display: 'flex', justifyContent: 'space-between', gap: 4 }}>
+                          <span>بازبینی {fmtDT(m.reviewDue)}</span>
+                          {m.signals != null && <span>{fmtNum(m.signals)} سیگنال</span>}
+                        </span>
                       </button>
-                    ))}
-                    {zm.length > 3 && <span className="chip neutral" style={{ fontSize: 10.5 }}>+{fmtNum(zm.length - 3)} دیگر</span>}
-                    {!zm.length && <span className="t-muted" style={{ fontSize: 10.5 }}>عضوی در این ناحیه نیست</span>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {pending && (
-            <div className="notice" role="dialog" aria-label="ثبت علت تغییر موضع" style={{ border: '1px solid var(--gold,#f59e0b)', background: 'color-mix(in srgb, var(--gold,#f59e0b) 8%, transparent)' }}>
-              <b>علت تغییر موضع «{pending.m.sourceName ?? pending.m.id}» را ثبت کنید</b>
-              <p style={{ fontSize: 12, margin: '6px 0' }}>
-                {pending.m.stanceFa ?? pending.m.stance} ({STANCE_FA[stanceOfPI(pending.m.power ?? 50, pending.m.interest ?? 50)] ?? '—'}) → {STANCE_FA[stanceOfPI(pending.p, pending.i)] ?? '—'} با {fmtNum(pending.p)}٪ نفوذ / {fmtNum(pending.i)}٪ حمایت
-              </p>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                <div className="field" style={{ margin: 0 }}>
-                  <label className="field-label" htmlFor="mx-cause">علت</label>
-                  <select id="mx-cause" value={cause} onChange={e => setCause(e.target.value)}>
-                    {STANCE_CAUSES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                  </select>
-                </div>
-                <div className="field" style={{ margin: 0, flex: '1 1 220px' }}>
-                  <label className="field-label" htmlFor="mx-cause-note">یادداشت علت</label>
-                  <input id="mx-cause-note" value={causeNote} onChange={e => setCauseNote(e.target.value)} placeholder="چه اتفاقی این تغییر را درگیرد؟" />
-                </div>
-                <button className="btn btn-primary" disabled={busy} onClick={async () => {
-                  const ok = await apply(pending.m, pending.p, pending.i, cause, causeNote.trim() || undefined);
-                  if (ok) setPending(null);
-                }}><CheckCircle2 size={14} /> ثبت موضع جدید</button>
-                <button className="btn btn-ghost" onClick={() => setPending(null)}>انصراف</button>
-              </div>
-            </div>
-          )}
-
-          {/* ── پنل جزئیات عضو انتخاب‌شده ── */}
-          {sel && (
-            <div className="panel" style={{ margin: 0 }}>
-              <div className="panel-title">
-                <div>
-                  <h3 style={{ fontSize: 14 }}>{sel.sourceName ?? sel.id}</h3>
-                  <p style={{ fontSize: 12 }}>{sel.groupFa ?? '—'} {sel.categoryFa ? `· ${sel.categoryFa}` : ''} · ارزیابی: {fmtDT(sel.assessedAt)}{sel.kanal ? ` · کانال: ${sel.kanal}` : ''}</p>
-                </div>
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <Badge tone={STANCE_TONE[sel.stance] ?? 'neutral'}>{sel.stanceFa ?? sel.stance}</Badge>
-                  <span className="chip neutral" style={{ fontSize: 10.5 }}>{ZONES.find(z => z.id === stanceOfPI(getPI(sel).p, getPI(sel).i))?.title ?? '—'}</span>
-                </div>
-              </div>
-
-              {/* سنجه‌های نفوذ/حمایت — نوار درجه‌بندی‌شده */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, margin: '10px 0' }}>
-                {([['نفوذ (قدرت)', getPI(sel).p, '#0f172a'], ['حمایت (علاقه)', getPI(sel).i, '#2563eb']] as const).map(([label, val, color]) => (
-                  <div key={label}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5 }}>
-                      <span>{label}</span><b>{fmtNum(val)} <span className="t-muted" style={{ fontWeight: 400 }}>از ۱۰۰</span></b>
+                    );
+                  })}
+                  {!zm.length && (
+                    <div className="t-muted" style={{ fontSize: 10.5, textAlign: 'center', padding: '12px 4px', border: `1.5px dashed color-mix(in srgb, ${color} 30%, transparent)`, borderRadius: 10 }}>
+                      عضوی در این ناحیه نیست{canWrite ? ' — کارت را اینجا رها کنید' : ''}
                     </div>
-                    <div style={{ height: 9, borderRadius: 99, background: 'color-mix(in srgb, var(--border,#e2e8f0) 55%, transparent)', overflow: 'hidden', marginTop: 4, position: 'relative' }}>
-                      <div style={{ height: '100%', width: `${clamp(val)}%`, background: color, borderRadius: 99, transition: 'width .2s' }} />
-                      <div aria-hidden style={{ position: 'absolute', left: `${ZONE_TH}%`, top: -2, bottom: -2, borderLeft: '2px dashed rgba(71,85,105,.45)' }} title={`آستانهٔ ناحیه: ${fmtNum(ZONE_TH)}`} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {canWrite && (
-                <div style={{ display: 'grid', gap: 8, margin: '10px 0' }}>
-                  <label style={{ fontSize: 12, display: 'grid', gap: 4 }}>
-                    نفوذ (قدرت): <b>{fmtNum(getPI(sel).p)}</b>
-                    <input type="range" min={0} max={100} value={getPI(sel).p} aria-label="نفوذ"
-                      onChange={e => setPos(pp => ({ ...pp, [sel.id]: { ...getPI(sel), p: Number(e.target.value) } }))} />
-                  </label>
-                  <label style={{ fontSize: 12, display: 'grid', gap: 4 }}>
-                    حمایت (علاقه): <b>{fmtNum(getPI(sel).i)}</b>
-                    <input type="range" min={0} max={100} value={getPI(sel).i} aria-label="حمایت"
-                      onChange={e => setPos(pp => ({ ...pp, [sel.id]: { ...getPI(sel), i: Number(e.target.value) } }))} />
-                  </label>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    <button className="btn btn-secondary btn-sm" disabled={busy}
-                      onClick={() => finalize(sel, getPI(sel).p, getPI(sel).i)}>
-                      <SlidersHorizontal size={13} /> ذخیرهٔ جایگاه
-                    </button>
-                    <button className="btn btn-sm" onClick={() => openAssess(sel)} title="ارزیابی کامل: مرحله، پیوند و یادداشت">
-                      <ClipboardList size={13} /> ارزیابی کامل
-                    </button>
-                  </div>
+                  )}
                 </div>
-              )}
-
-              <div>
-                <h4 style={{ fontSize: 12.5, display: 'flex', gap: 5, alignItems: 'center', margin: '8px 0 6px' }}><History size={13} /> خط زمان موضع و علل</h4>
-                {!(sel.stanceHistory ?? []).length ? (
-                  <p className="criteria-saved">تغییری ثبت نشده است — با اولین جابه‌جایی، علت آن در همین خط زمان ثبت می‌شود.</p>
-                ) : (
-                  <ul className="list" style={{ margin: 0 }}>
-                    {[...(sel.stanceHistory ?? [])].reverse().map((h, idx) => {
-                      const down = (STANCE_RANK[h.toStance] ?? 0) < (STANCE_RANK[h.fromStance] ?? 0);
-                      return (
-                        <li className="listRow" key={idx} style={{ alignItems: 'flex-start' }}>
-                          <span className={`chip ${down ? 'danger' : 'success'}`}>
-                            <TrendingDown size={11} style={{ transform: down ? undefined : 'rotate(180deg)' }} />
-                            {down ? 'نزول' : 'صعود'}
-                          </span>
-                          <span style={{ flex: 1, minWidth: 0, fontSize: 12.5 }}>
-                            <b>{fmtDT(h.at)}</b> — {STANCE_FA[h.fromStance] ?? h.fromStance} به {STANCE_FA[h.toStance] ?? h.toStance}
-                            <span className="chip neutral" style={{ marginInlineStart: 6 }}>علت: {causeLabel(h.cause)}</span>
-                            {h.source === 'MATRIX' && <span className="chip neutral" style={{ marginInlineStart: 6 }}>ماتریس</span>}
-                            {h.causeNote ? <small style={{ display: 'block', marginTop: 3 }}>{h.causeNote}</small> : null}
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
               </div>
-            </div>
-          )}
+            );
+          })}
+        </div>
+        <div className="t-muted" style={{ fontSize: 10.5, marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+          <span className="chip neutral"><span style={{ width: 9, height: 9, borderRadius: '50%', background: STANCE_DOT_COLOR.KEY_PLAYER, display: 'inline-block' }} /> متحدان کلیدی</span>
+          <span className="chip neutral"><span style={{ width: 9, height: 9, borderRadius: '50%', background: STANCE_DOT_COLOR.INFLUENCER, display: 'inline-block' }} /> قدرتمندان محتاط</span>
+          <span className="chip neutral"><span style={{ width: 9, height: 9, borderRadius: '50%', background: STANCE_DOT_COLOR.SUPPORTER, display: 'inline-block' }} /> حامیان عملیاتی</span>
+          <span className="chip neutral"><span style={{ width: 9, height: 9, borderRadius: '50%', background: STANCE_DOT_COLOR.OBSERVER, display: 'inline-block' }} /> ناظران</span>
+          <span>{fmtNum(shown.length)} عضو روی تابلو</span>
         </div>
       </SectionCard>
+
+      {pending && (
+        <div className="notice" role="dialog" aria-label="ثبت علت تغییر موضع" style={{ border: '1px solid var(--gold,#f59e0b)', background: 'color-mix(in srgb, var(--gold,#f59e0b) 8%, transparent)' }}>
+          <b>علت تغییر موضع «{pending.m.sourceName ?? pending.m.id}» را ثبت کنید</b>
+          <p style={{ fontSize: 12, margin: '6px 0' }}>
+            {pending.m.stanceFa ?? pending.m.stance} → {STANCE_FA[stanceOfPI(pending.p, pending.i)] ?? '—'} با {fmtNum(pending.p)}٪ نفوذ / {fmtNum(pending.i)}٪ حمایت (ناحیهٔ جدید)
+          </p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div className="field" style={{ margin: 0 }}>
+              <label className="field-label" htmlFor="mx-cause">علت</label>
+              <select id="mx-cause" value={cause} onChange={e => setCause(e.target.value)}>
+                {STANCE_CAUSES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            </div>
+            <div className="field" style={{ margin: 0, flex: '1 1 220px' }}>
+              <label className="field-label" htmlFor="mx-cause-note">یادداشت علت</label>
+              <input id="mx-cause-note" value={causeNote} onChange={e => setCauseNote(e.target.value)} placeholder="چه اتفاقی این تغییر را درگیرد؟" />
+            </div>
+            <button className="btn btn-primary" disabled={busy} onClick={async () => {
+              const ok = await apply(pending.m, pending.p, pending.i, cause, causeNote.trim() || undefined);
+              if (ok) setPending(null);
+            }}><CheckCircle2 size={14} /> ثبت موضع جدید</button>
+            <button className="btn btn-ghost" onClick={() => setPending(null)}>انصراف</button>
+          </div>
+        </div>
+      )}
+
+      {sel && (
+        <div className="panel" style={{ margin: 0 }}>
+          <div className="panel-title">
+            <div>
+              <h3 style={{ fontSize: 14 }}>{sel.sourceName ?? sel.id}</h3>
+              <p style={{ fontSize: 12 }}>{sel.groupFa ?? '—'} {sel.categoryFa ? `· ${sel.categoryFa}` : ''} · ارزیابی: {fmtDT(sel.assessedAt)}{sel.kanal ? ` · کانال: ${sel.kanal}` : ''}</p>
+            </div>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+              <Badge tone={STANCE_TONE[sel.stance] ?? 'neutral'}>{sel.stanceFa ?? sel.stance}</Badge>
+              <span className="chip neutral" style={{ fontSize: 10.5 }}>{ZONES.find(z => z.id === sel.stance)?.title ?? '—'}</span>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, margin: '10px 0' }}>
+            {([['نفوذ (قدرت)', sel.power, '#0f172a'], ['حمایت (علاقه)', sel.interest, '#2563eb']] as const).map(([label, val, color]) => (
+              <div key={label}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5 }}>
+                  <span>{label}</span><b>{fmtNum(val)} <span className="t-muted" style={{ fontWeight: 400 }}>از ۱۰۰</span></b>
+                </div>
+                <div style={{ height: 9, borderRadius: 99, background: 'color-mix(in srgb, var(--border,#e2e8f0) 55%, transparent)', overflow: 'hidden', marginTop: 4, position: 'relative' }}>
+                  <div style={{ height: '100%', width: `${clamp(val)}%`, background: color, borderRadius: 99 }} />
+                  <div aria-hidden style={{ position: 'absolute', left: `${ZONE_TH}%`, top: -2, bottom: -2, borderLeft: '2px dashed rgba(71,85,105,.45)' }} title={`آستانهٔ ناحیه: ${fmtNum(ZONE_TH)}`} />
+                </div>
+              </div>
+            ))}
+          </div>
+          {canWrite && (
+            <div style={{ margin: '10px 0' }}>
+              <button className="btn btn-secondary btn-sm" onClick={() => openAssess(sel)}>
+                <ClipboardList size={13} /> ارزیابی کامل (مرحله، پیوند، مقادیر دقیق)
+              </button>
+            </div>
+          )}
+          <div>
+            <h4 style={{ fontSize: 12.5, display: 'flex', gap: 5, alignItems: 'center', margin: '8px 0 6px' }}><History size={13} /> خط زمان موضع و علل</h4>
+            {!(sel.stanceHistory ?? []).length ? (
+              <p className="criteria-saved">تغییری ثبت نشده است — با کشیدن کارت به ناحیهٔ دیگر، علت آن در همین خط زمان ثبت می‌شود.</p>
+            ) : (
+              <ul className="list" style={{ margin: 0 }}>
+                {[...(sel.stanceHistory ?? [])].reverse().map((h, idx) => {
+                  const down = (STANCE_RANK[h.toStance] ?? 0) < (STANCE_RANK[h.fromStance] ?? 0);
+                  return (
+                    <li className="listRow" key={idx} style={{ alignItems: 'flex-start' }}>
+                      <span className={`chip ${down ? 'danger' : 'success'}`}>
+                        <TrendingDown size={11} style={{ transform: down ? undefined : 'rotate(180deg)' }} />
+                        {down ? 'نزول' : 'صعود'}
+                      </span>
+                      <span style={{ flex: 1, minWidth: 0, fontSize: 12.5 }}>
+                        <b>{fmtDT(h.at)}</b> — {STANCE_FA[h.fromStance] ?? h.fromStance} به {STANCE_FA[h.toStance] ?? h.toStance}
+                        <span className="chip neutral" style={{ marginInlineStart: 6 }}>علت: {causeLabel(h.cause)}</span>
+                        {h.source === 'MATRIX' && <span className="chip neutral" style={{ marginInlineStart: 6 }}>تابلو</span>}
+                        {h.causeNote ? <small style={{ display: 'block', marginTop: 3 }}>{h.causeNote}</small> : null}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
