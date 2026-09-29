@@ -20,6 +20,7 @@ const PAGES = [
   ['/organizations', 'سازمان‌ها'], ['/people', 'اشخاص'], ['/directory', 'دیتابیس روابط بیرونی'],
   ['/relationships', 'روابط'], ['/network', 'شبکهٔ روابط'], ['/publics', 'عموم‌ها'], ['/interactions', 'تعاملات'], ['/referrals', 'معرفی‌ها'],
   ['/program', 'حاکمیت برنامه'],
+  ['/partnerships', 'مشارکت'],
   ['/meetings', 'جلسات'], ['/calendar', 'تقویم'], ['/actions', 'اقدامات'], ['/commitments', 'تعهدات'], ['/projects', 'پروژه‌ها'], ['/opportunities', 'فرصت‌ها'], ['/requirements', 'نیازمندی‌ها'],
   ['/alerts', 'هشدارها'], ['/intelligence', 'هوشمندی و توصیه‌ها'], ['/board', 'هیئت‌مدیره'], ['/enrichment', 'غنی‌سازی منابع رسمی'], ['/strategy', 'تحلیل راهبردی'], ['/qbr', 'بریف فصلی (QBR)'],
   ['/workflows', 'گردش کار و تأییدها'], ['/documents', 'مرکز دانش'], ['/data-management', 'داده و کیفیت'], ['/imports', 'ورود دادهٔ بیرونی'], ['/settings', 'تنظیمات من'],
@@ -88,7 +89,7 @@ try {
 
   /* هم‌خوانی عنوان صفحه و ناوبری — نمونه‌های کلیدی */
   await page.setViewport({ width: 1280, height: 900 });
-  for (const [path, navLabel] of [['/relationships', 'روابط'], ['/publics', 'عموم'], ['/opportunities', 'فرصت'], ['/calendar', 'تقویم'], ['/program', 'حاکمیت']]) {
+  for (const [path, navLabel] of [['/relationships', 'روابط'], ['/publics', 'عموم'], ['/opportunities', 'فرصت'], ['/calendar', 'تقویم'], ['/program', 'حاکمیت'], ['/partnerships', 'مشارکت']]) {
     await page.goto(`${BASE}${path}`, { waitUntil: 'networkidle0', timeout: 90000 }).catch(() => {});
     await new Promise(r => setTimeout(r, 900));
     const title = await page.evaluate(() => (document.querySelector('.page-heading h1, header h1')?.textContent ?? '').trim());

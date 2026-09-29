@@ -1001,6 +1001,86 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
   }
 }
 
+/* ═════════════════ گام ۲.۲ — ماژول مشارکت (/partnerships) ═════════════════ */
+{
+  const dl = await login('demo');
+  const dt = dl.body?.accessToken;
+  const cl = await login('client');
+  const ct = cl.body?.accessToken;
+
+  const meC = await api('/auth/me', { token: ct });
+  check('کاربر نقش‌محور → مجوز partnership.read', meC.status === 200
+    && (meC.body?.permissions ?? []).includes('partnership.read'));
+
+  const noPerm = await api('/partnerships', { token: ct, method: 'POST', body: { partnerOrgId: 'org-4', type: 'راهبردی', ownerRole: 'مدیرعامل' } });
+  check('ثبت مشارکت بدون partnership.write → ۴۰۳', noPerm.status === 403);
+
+  const L = await api('/partnerships', { token: dt });
+  check('فهرست مشارکت‌ها: ۹ بذر دمو', L.status === 200 && L.body.items.length === 9, `n=${L.body?.items?.length}`);
+  const stages = L.body.stages.map(x => x.key);
+  check('خط لولهٔ چهارسطحی مذاکره/تفاهم‌نامه/فعال/پایان',
+    JSON.stringify(stages) === JSON.stringify(['NEGOTIATION', 'MOU', 'ACTIVE', 'ENDED']));
+  const sm = L.body.summary;
+  check('خلاصه: شمار مراحل = مجموع رکوردها', sm.byStage.NEGOTIATION + sm.byStage.MOU + sm.byStage.ACTIVE + sm.byStage.ENDED === sm.total);
+  check('تفاهم‌نامه‌های فعال = تفاهم‌نامه + فعال', sm.activeMou === sm.byStage.MOU + sm.byStage.ACTIVE, `activeMou=${sm.activeMou}`);
+  check('هدف شبکهٔ مشارکت = ۲۵ (پیوست الف سند)', sm.target === 25);
+  check('پیشرفت = نسبت به هدف (٪)', sm.progress === Math.round(sm.activeMou / 25 * 100), `progress=${sm.progress}`);
+  check('اتصال به روابط و فرصت‌ها شمارش می‌شود', sm.linkedRelationship >= 3 && sm.linkedOpportunity >= 2);
+  const first = L.body.items[0];
+  check('نمای رکورد: نام شریک + برچسب فارسی مرحله', !!first.partnerName && !!first.stageFa && !!first.type);
+  check('رکورد متصل: برچسب رابطه و نام فرصت از دادهٔ زنده',
+    L.body.items.some(x => x.relationshipLabel && x.opportunityName));
+
+  const st = await api('/partnerships?stage=ACTIVE', { token: dt });
+  check('فیلتر مرحله (?stage=ACTIVE)', st.status === 200 && st.body.items.length === sm.byStage.ACTIVE
+    && st.body.items.every(x => x.stage === 'ACTIVE'));
+
+  /* قواعد ثبت (فرم ۱۱ سند) */
+  const noOwner = await api('/partnerships', { method: 'POST', token: dt, body: { partnerOrgId: 'org-4', type: 'راهبردی' } });
+  check('ثبت بدون مالک → ۴۰۰ «مشارکت بدون مالک ثبت نمی‌شود»', noOwner.status === 400 && String(noOwner.body?.message).includes('بدون مالک'));
+  const noPartner = await api('/partnerships', { method: 'POST', token: dt, body: { type: 'راهبردی', ownerRole: 'مدیرعامل' } });
+  check('ثبت بدون شریک → ۴۰۰', noPartner.status === 400);
+  const badPartner = await api('/partnerships', { method: 'POST', token: dt, body: { partnerOrgId: 'org-999', type: 'راهبردی', ownerRole: 'مدیرعامل' } });
+  check('شریک ناموجود → ۴۰۰', badPartner.status === 400);
+  const badType = await api('/partnerships', { method: 'POST', token: dt, body: { partnerOrgId: 'org-4', type: 'هرچی', ownerRole: 'مدیرعامل' } });
+  check('نوع همکاری نامعتبر → ۴۰۰', badType.status === 400);
+  const badRel = await api('/partnerships', { method: 'POST', token: dt, body: { partnerOrgId: 'org-4', type: 'راهبردی', ownerRole: 'مدیرعامل', relationshipId: 'r-999' } });
+  check('رابطهٔ ناموجود → ۴۰۰', badRel.status === 400);
+
+  const created = await api('/partnerships', { method: 'POST', token: dt, body: { partnerOrgId: 'org-11', type: 'پژوهشی', ownerRole: 'مدیر توسعه کسب‌وکار', ourCommitments: 'تحلیل دادهٔ بازار سرمایه' } });
+  check('ثبت معتبر → ۲۰۱ و آغاز از مرحلهٔ مذاکره', created.status === 201 && created.body.stage === 'NEGOTIATION' && created.body.partnerName === 'سازمان بورس و اوراق بهادار');
+  const pid = created.body?.id;
+
+  if (pid) {
+    const actBad = await api(`/partnerships/${pid}`, { method: 'PATCH', token: dt, body: { stage: 'ACTIVE' } });
+    check('فعال‌سازی بدون قرارداد → ۴۰۰ (فرم ۱۱ سند)', actBad.status === 400 && String(actBad.body?.message).includes('قرارداد'));
+    const badStage = await api(`/partnerships/${pid}`, { method: 'PATCH', token: dt, body: { stage: 'DRAFT' } });
+    check('مرحلهٔ نامعتبر → ۴۰۰', badStage.status === 400);
+    const withContract = await api(`/partnerships/${pid}`, { method: 'PATCH', token: dt, body: { contractName: 'تفاهم‌نامهٔ پژوهشی بورس' } });
+    check('پیوست قرارداد → ۲۰۰ + تاریخ امضا', withContract.status === 200 && !!withContract.body.contractSignedAt);
+    const activated = await api(`/partnerships/${pid}`, { method: 'PATCH', token: dt, body: { stage: 'ACTIVE' } });
+    check('فعال‌سازی با قرارداد → ۲۰۰', activated.status === 200 && activated.body.stage === 'ACTIVE' && activated.body.activeMou === true);
+    const gone = await api('/partnerships/pt-none', { method: 'PATCH', token: dt, body: { stage: 'ACTIVE' } });
+    check('شناسهٔ غایب → ۴۰۴', gone.status === 404);
+  }
+
+  /* سیم‌کشی kpi-7 به ماژول مشارکت‌ها (گام ۲.۲) */
+  const kpis = await api('/program/kpis', { token: dt });
+  const k7 = kpis.body.items.find(k => k.id === 'kpi-7');
+  const fresh = await api('/partnerships', { token: dt });
+  check('kpi-7 «شبکهٔ مشارکت» از ماژول مشارکت‌ها محاسبه می‌شود',
+    k7.source.includes('ماژول مشارکت‌ها') && k7.value === fresh.body.summary.activeMou && k7.targetValue === 25,
+    `value=${k7.value} activeMou=${fresh.body?.summary?.activeMou}`);
+
+  /* مستأجر واقعی: مشارکت دیده نمی‌شود (جداسازی داده) */
+  const pl2 = await login('pars');
+  const pt2 = pl2.body?.accessToken;
+  if (pt2) {
+    const pL2 = await api('/partnerships', { token: pt2 });
+    check('مستأجر پارس → مشارکت دمو دیده نمی‌شود (جداسازی داده)', pL2.status === 200 && pL2.body.items.length === 0 && pL2.body.summary.total === 0);
+  }
+}
+
 /* ============================ SUMMARY ============================ */
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);

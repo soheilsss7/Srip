@@ -608,3 +608,51 @@ html[data-theme="dark"] .rm-cell.high.has{color:#f87171}
   .season-row{grid-template-columns:1fr}
   .field-pair{grid-template-columns:1fr}
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   گام ۲.۲ مسترپلن — ماژول مشارکت‌ها (/partnerships)
+   خط لولهٔ چهارسطحی مذاکره → تفاهم‌نامه → فعال → پایان (تابلو پهنای برابر)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.pp-board{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;align-items:start}
+.pp-col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.pp-col-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:2px 4px 4px}
+.pp-col-title{font-size:12.5px;font-weight:800;display:flex;align-items:center;gap:7px;white-space:nowrap}
+.pp-dot{width:9px;height:9px;border-radius:999px;flex:0 0 auto}
+.pp-dot.negotiation{background:color-mix(in srgb,var(--text-muted) 55%,transparent)}
+.pp-dot.mou{background:#2563eb}
+.pp-dot.active{background:#16a34a}
+.pp-dot.ended{background:color-mix(in srgb,var(--text-muted) 35%,transparent)}
+.pp-col-empty{padding:14px 6px;text-align:center;color:var(--text-muted);font-size:12px;
+  border:1px dashed color-mix(in srgb,var(--card-border) 80%,transparent);border-radius:var(--radius-lg)}
+.pp-card{display:flex;flex-direction:column;gap:9px;width:100%;text-align:right;font:inherit;color:inherit;
+  background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius-lg);
+  padding:12px 13px;cursor:pointer;transition:border-color .12s ease,box-shadow .12s ease}
+.pp-card:hover{border-color:var(--srip-accent);box-shadow:var(--shadow-sm)}
+.pp-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.pp-name{font-weight:800;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pp-meta{display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--text-muted);min-width:0}
+.pp-meta .pp-contract{display:flex;align-items:center;gap:5px;min-width:0}
+.pp-meta .pp-contract>svg{flex:0 0 auto}
+.pp-links{display:flex;flex-wrap:wrap;gap:6px}
+.pp-link{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:var(--srip-accent);
+  background:color-mix(in srgb,var(--srip-accent) 9%,transparent);border-radius:999px;padding:3px 9px}
+.pp-link:hover{background:color-mix(in srgb,var(--srip-accent) 16%,transparent)}
+.pp-stage-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:4px}
+.pp-stage-chip{font:inherit;font-size:11.5px;font-weight:800;padding:5px 12px;border-radius:999px;cursor:pointer;
+  border:1px solid var(--card-border);background:var(--card-bg);color:var(--text-secondary)}
+.pp-stage-chip:hover:not(:disabled){border-color:var(--srip-accent);color:var(--srip-accent)}
+.pp-stage-chip.current{background:var(--srip-accent);border-color:var(--srip-accent);color:#fff;cursor:default}
+.pp-stage-chip:disabled{opacity:.75}
+.pp-contract-form{display:flex;gap:8px;margin-top:12px}
+.pp-contract-form input{flex:1;min-width:0}
+@media (max-width:900px){
+  .pp-board{grid-template-columns:1fr 1fr}
+  .pp-contract-form{flex-direction:column}
+}
+@media (max-width:520px){
+  .pp-board{grid-template-columns:1fr}
+}
+html[data-theme="dark"] .pp-dot.mou{background:#60a5fa}
+html[data-theme="dark"] .pp-dot.active{background:#4ade80}
+html[data-theme="dark"] .pp-link{color:#7dd3fc;background:color-mix(in srgb,#7dd3fc 12%,transparent)}
+html[data-theme="dark"] .pp-stage-chip.current{background:#0ea5e9;border-color:#0ea5e9}

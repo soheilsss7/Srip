@@ -42,8 +42,9 @@ export const NAV_ZONES: readonly NavZone[] = lt([
     ['/people', t('اشخاص'), 'person.read'],
     ['/directory', t('دیتابیس روابط بیرونی'), 'organization.read'],
   ]],
-  [t('روابط'), t('وضعیت پیوندها و شبکه'), [
+  [t('روابط'), t('وضعیت پیوندها و شبکه'), [ /* ۸ آیتم — سقف قانون Miller (گام ۲.۲ مسترپلن)؛ آیتم نهم = شکستن به دو Workspace */
     ['/relationships', t('روابط'), 'relationship.read'],
+    ['/partnerships', t('مشارکت‌ها'), 'partnership.read'],
     ['/network', t('شبکهٔ روابط'), 'network.read'],
     ['/publics', t('عموم‌ها'), 'publics.read'],
     ['/interactions', t('تعاملات'), 'interaction.read'],
@@ -139,7 +140,7 @@ export const MOBILE_TABS: readonly NavItem[] = lt([
 /** نگاشت متمرکز مسیر → مجوز دیدن (برای واژه‌نامه/Command Palette/کاهش فرسایش) */
 export const NAV_PERMISSION_MAP: Record<string, string> = {
   '/': 'dashboard.read', '/organizations': 'organization.read', '/people': 'person.read',
-  '/relationships': 'relationship.read', '/network': 'network.read', '/interactions': 'interaction.read',
+  '/relationships': 'relationship.read', '/partnerships': 'partnership.read', '/network': 'network.read', '/interactions': 'interaction.read',
   '/referrals': 'relationship.read', '/intelligence': 'analytics.read', '/board': 'analytics.read',
   '/alerts': 'dashboard.read', '/meetings': 'meeting.read', '/calendar': 'meeting.read',
   '/actions': 'action.read', '/commitments': 'commitment.read', '/projects': 'project.read',
