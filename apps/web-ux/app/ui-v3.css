@@ -71,7 +71,7 @@ body{
 ::selection{background:color-mix(in srgb,var(--srip-accent) 22%,transparent)}
 *{scrollbar-width:thin;scrollbar-color:var(--scrollbar,color-mix(in srgb,var(--text-muted) 45%,transparent)) transparent}
 ::-webkit-scrollbar{width:9px;height:9px}
-::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--text-muted) 40%,transparent);border-radius:99px;border:2px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--text-muted) 40%,transparent);border-radius:999px;border:2px solid transparent;background-clip:content-box}
 ::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--text-muted) 65%,transparent);background-clip:content-box;border:2px solid transparent}
 ::-webkit-scrollbar-track{background:transparent}
 
@@ -214,13 +214,13 @@ input:focus,select:focus,textarea:focus{
 @keyframes skeletonShine{to{background-position:-200% 0}}
 
 /* جدول‌ها */
-.table-wrap{border-radius:18px;overflow:auto;-webkit-overflow-scrolling:touch}
+.table-wrap{border-radius:var(--radius-lg);overflow:auto;-webkit-overflow-scrolling:touch}
 .table-wrap th{
   background:color-mix(in srgb,var(--text-muted) 6%,transparent);
   font-size:10px;font-weight:800;color:var(--text-secondary);letter-spacing:.01em;
   padding:11px 14px;border-bottom:1px solid var(--card-border-strong);
 }
-.table-wrap td{padding:12px 14px;font-size:12px}
+.table-wrap td{padding:12px 14px;font-size:12.5px;line-height:1.55}
 .table-wrap tbody tr{transition:background .1s ease}
 .table-wrap tbody tr:hover{background:color-mix(in srgb,var(--srip-accent) 4%,transparent)}
 .table-wrap tbody tr:last-child td{border-bottom:0}
@@ -527,3 +527,20 @@ html,body{overflow-x:clip;max-width:100%}
 .p3-table th{text-align:right;font-size:11px;color:#64748b;padding:7px 9px;border-bottom:1px solid #e2e8f0;white-space:nowrap;}
 .p3-table td{padding:8px 9px;border-bottom:1px solid #f1f5f9;vertical-align:top;}
 .p3-table tr:last-child td{border-bottom:none;}
+
+/* ==========================================================================
+   گام ۱.۳ مسترپلن — پاس یکنواخت توکن‌های طراحی
+   شعاع/سایه/فاصلهٔ عمودی/جدول‌ها را با مقیاس توکن هم‌تراز می‌کند؛ بدون
+   تغییر ساختار DOM. مقادیر پراکندهٔ قبلی: شبکه ۱۲/۱۴، کارت‌ها ۱۴/۱۸.
+   ========================================================================== */
+/* فاصلهٔ عمودی بخش‌ها — همهٔ صفحات روی ۱۸px */
+.net-page{gap:18px}
+
+/* شعاع سطوح کارت‌مانند — همه روی شعاع استاندارد کارت (--radius-lg) */
+.modal-card,.dict-card,.tour-card,.notification-drawer,.jalali-pop,.net-fs-canvas,
+.tag-card,.kb-card,.onboarding-strip,.criteria-manual,.nudge-banner,.auth-feature{border-radius:var(--radius-lg)}
+
+/* تراکم کمتر داشبورد — نفس‌گیری بیشتر بین بخش‌ها */
+.dashboard-page{gap:20px}
+.dash-grid-top,.dash-grid-mid,.dash-grid-bottom{gap:18px}
+.dash-panel{padding:22px;gap:18px}
