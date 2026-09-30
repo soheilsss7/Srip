@@ -95,6 +95,30 @@ try {
   ok('شاخص‌ها: نشان وضعیت سه‌حالته روی ردیف‌ها', kpis.badges >= 10, `badges=${kpis.badges}`);
   ok('شاخص‌ها: قاعدهٔ «عدد دستی وارد داشبورد نمی‌شود» در صفحه', kpis.rule);
 
+  /* فرم ۱۷: ثبت شاخص جدید با سنجهٔ محاسبهٔ پلتفرم */
+  await page.evaluate(() => { [...document.querySelectorAll('button')].find(b => (b.textContent ?? '').includes('ثبت شاخص'))?.click(); });
+  await new Promise(r => setTimeout(r, 1500));
+  const kpiModal = await page.evaluate(() => ({
+    open: !!document.querySelector('.modal-card'),
+    hasMetric: !!document.querySelector('.modal-card select'),
+    opts: [...(document.querySelectorAll('.modal-card select option') ?? [])].map(o => o.textContent).length,
+  }));
+  ok('فرم ۱۷: مودال ثبت شاخص با فهرست سنجه‌های محاسبه', kpiModal.open && kpiModal.hasMetric && kpiModal.opts >= 8, JSON.stringify(kpiModal));
+  await page.type('.modal-card input', 'شاخص تست باتری UI');
+  const ownerInp = await page.evaluateHandle(() => [...document.querySelectorAll('.modal-card input')][1]);
+  await ownerInp.asElement().type('مدیر تست');
+  await page.type('.modal-card input[type=number]', '30');
+  const metricSel = await page.evaluateHandle(() => document.querySelector('.modal-card select'));
+  await metricSel.asElement().select('active-people');
+  await new Promise(r => setTimeout(r, 400));
+  await page.evaluate(() => { const f = document.querySelector('#kpi-create-form'); if (f) f.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+  await new Promise(r => setTimeout(r, 1800));
+  const kpiRow = await page.evaluate(() => ({
+    closed: !document.querySelector('.modal-card'),
+    found: [...document.querySelectorAll('.table-wrap tbody tr')].some(r => (r.textContent ?? '').includes('شاخص تست باتری UI')),
+  }));
+  ok('فرم ۱۷: ثبت شاخص → ردیف جدید با مقدار محاسبه‌شده', kpiRow.closed && kpiRow.found, JSON.stringify(kpiRow));
+
   /* ── ۵) ریسک‌ها: بنر + ماتریس + جدول + مودال ── */
   await page.evaluate(() => { [...document.querySelectorAll('.segmented button')].find(b => (b.textContent ?? '').includes('ریسک‌ها'))?.click(); });
   await new Promise(r => setTimeout(r, 1200));

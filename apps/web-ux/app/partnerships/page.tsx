@@ -132,8 +132,8 @@ export default function PartnershipsPage() {
         <>
           <div className="stat-grid">
             <StatCard icon={<Target size={18} />} iconClass="ic-teal" label={t('تفاهم‌نامه‌های فعال')}
-              value={`${faNum(summary.activeMou)} ${t('از')} ${faNum(summary.target)}`}
-              sub={t('هدف شبکهٔ مشارکت — ماه ۱۲ سند')} />
+              value={summary.target ? `${faNum(summary.activeMou)} ${t('از')} ${faNum(summary.target)}` : faNum(summary.activeMou)}
+              sub={summary.target ? t('هدف ثبت‌شده در تنظیمات برنامهٔ سازمان') : t('هدف مشارکت در تنظیمات برنامه ثبت نشده است')} />
             <StatCard icon={<Handshake size={18} />} iconClass="ic-blue" label={t('در مذاکره')}
               value={faNum(summary.byStage?.NEGOTIATION ?? 0)} sub={t('در آستانهٔ تفاهم‌نامه')} />
             <StatCard icon={<CalendarClock size={18} />} iconClass="ic-gold" label={t('بازبینی نزدیک')}

@@ -991,7 +991,7 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
   const noWrite = await api('/program/risks', { method: 'POST', token: ct, body: { title: 'ریسک بدون مجوز', probability: 'LOW', impact: 'LOW', ownerRole: 'مدیرعامل' } });
   check('ثبت ریسک بدون program.write → ۴۰۳', noWrite.status === 403);
   /* مستأجر واقعی: دادهٔ برنامهٔ دمو دیده نمی‌شود (جداسازی) */
-  const pl2 = await login('pars');
+  const pl2 = await login('pars', 'pars1234');
   const pt2 = pl2.body?.accessToken;
   if (pt2) {
     const pR = await api('/program/risks', { token: pt2 });
@@ -1073,12 +1073,77 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
     `value=${k7.value} activeMou=${fresh.body?.summary?.activeMou}`);
 
   /* مستأجر واقعی: مشارکت دیده نمی‌شود (جداسازی داده) */
-  const pl2 = await login('pars');
+  const pl2 = await login('pars', 'pars1234');
   const pt2 = pl2.body?.accessToken;
   if (pt2) {
     const pL2 = await api('/partnerships', { token: pt2 });
     check('مستأجر پارس → مشارکت دمو دیده نمی‌شود (جداسازی داده)', pL2.status === 200 && pL2.body.items.length === 0 && pL2.body.summary.total === 0);
   }
+}
+
+/* ═════════════════ گام ۲.۲.۱ — تنظیمات برنامه per-tenant ═════════════════ */
+{
+  const dl = await login('demo');
+  const dt = dl.body?.accessToken;
+
+  /* تنظیمات دمو = برنامهٔ سند (چارت ۲۲ نقشی، ۴ فصل، هدف ۲۵) */
+  const st = await api('/program/settings', { token: dt });
+  check('تنظیمات دمو: چارت ۲۲ نقشی + ۴ فصل با آستانه + هدف ۲۵', st.status === 200
+    && st.body.roles.length === 22 && st.body.seasons.length === 4
+    && st.body.partnershipTarget === 25
+    && st.body.seasons.every(x => typeof x.threshold === 'number'));
+  check('فهرست سنجه‌های محاسبهٔ پلتفرم ارائه می‌شود', (st.body.metrics ?? []).length >= 10
+    && st.body.metrics.every(m => m.key && m.label && m.unit));
+
+  /* ثبت شاخص (فرم ۱۷) — تعریف دادهٔ سازمان، مقدار از سنجهٔ زنده */
+  const kBad = await api('/program/kpis', { method: 'POST', token: dt, body: { title: 'شاخص بد', owner: 'x', metric: 'nope', targetValue: 5 } });
+  check('ثبت شاخص با سنجهٔ نامعتبر → ۴۰۰', kBad.status === 400);
+  const kNoOwner = await api('/program/kpis', { method: 'POST', token: dt, body: { title: 'شاخص بدون مالک', metric: 'active-people', targetValue: 10 } });
+  check('ثبت شاخص بدون مالک → ۴۰۰ (فرم ۱۷)', kNoOwner.status === 400 && String(kNoOwner.body?.message).includes('بدون مالک'));
+  const kCreated = await api('/program/kpis', { method: 'POST', token: dt, body: { title: 'شاخص تست باتری', owner: 'مدیر تست', metric: 'active-people', targetValue: 30, category: 'تست', period: 'ماهانه', target: '۳۰ نفر' } });
+  check('ثبت شاخص معتبر → ۲۰۱ با منبع سنجه', kCreated.status === 201 && kCreated.body.source.includes('افراد فعال'));
+  if (kCreated.status === 201) {
+    const kList = await api('/program/kpis', { token: dt });
+    const mine = kList.body.items.find(k => k.id === kCreated.body.id);
+    check('شاخص ثبت‌شده از دادهٔ زنده محاسبه می‌شود (عدد دستی ممنوع)', !!mine && mine.value > 0 && mine.percent >= 0
+      && ['ON_TARGET', 'NEAR', 'OFF_TARGET'].includes(mine.status));
+    const kDel = await api(`/program/kpis/${kCreated.body.id}`, { method: 'DELETE', token: dt });
+    const kAfter = await api('/program/kpis', { token: dt });
+    check('حذف شاخص → ۲۰۰ و از فهرست خارج می‌شود', kDel.status === 200
+      && !kAfter.body.items.some(k => k.id === kCreated.body.id));
+  }
+
+  /* ویرایش تنظیمات: نقش تازه در چارت → مالکِ همان نقش پذیرفته می‌شود */
+  const pSet = await api('/program/settings', { method: 'PATCH', token: dt, body: { roles: [...st.body.roles, 'نقش تست باتری'] } });
+  check('افزودن نقش به چارت سازمان → ۲۰۰', pSet.status === 200 && pSet.body.roles.includes('نقش تست باتری'));
+  const rNewRole = await api('/program/risks', { method: 'POST', token: dt, body: { title: 'ریسک با نقش تازه', probability: 'LOW', impact: 'LOW', ownerRole: 'نقش تست باتری' } });
+  check('مالکِ نقشِ تازه‌اضافه‌شده پذیرفته می‌شود', rNewRole.status === 201);
+  const pBad = await api('/program/settings', { method: 'PATCH', token: dt, body: { seasons: [{ season: 0, title: 'خارج', threshold: 130 }] } });
+  check('فصل نامعتبر (شماره/آستانه) → ۴۰۰', pBad.status === 400);
+  const tBad = await api('/program/settings', { method: 'PATCH', token: dt, body: { partnershipTarget: -2 } });
+  check('هدف مشارکت منفی → ۴۰۰', tBad.status === 400);
+
+  /* مستأجر واقعی: تنظیمات خالی، شاخص خالی، هدف مشارکت تهی — برنامهٔ سند دیده نمی‌شود */
+  const pl2 = await login('pars', 'pars1234');
+  const pt2 = pl2.body?.accessToken;
+  if (pt2) {
+    const st2 = await api('/program/settings', { token: pt2 });
+    check('مستأجر پارس → تنظیمات خالی (چارت/فصل/هدف ندارند)', st2.status === 200
+      && st2.body.roles.length === 0 && st2.body.seasons.length === 0 && st2.body.partnershipTarget === null);
+    const k2 = await api('/program/kpis', { token: pt2 });
+    check('مستأجر پارس → هیچ شاخصی تعریف نشده', k2.status === 200 && k2.body.items.length === 0 && k2.body.total === 0);
+    const pp2 = await api('/partnerships', { token: pt2 });
+    check('مستأجر پارس → هدف مشارکت تهی و پیشرفت نامشخص', pp2.status === 200
+      && pp2.body.summary.target === null && pp2.body.summary.progress === null);
+    const rFree = await api('/program/risks', { method: 'POST', token: pt2, body: { title: 'ریسک مستأجر بدون چارت', probability: 'LOW', impact: 'LOW', ownerRole: 'هر نقشی' } });
+    check('چارت خالی → مالک آزاد پذیرفته می‌شود (قاعدهٔ «بدون مالک» همچنان برقرار)', rFree.status === 201);
+  }
+
+  /* بدون مجوز: settings فقط program.write می‌پذیرد */
+  const cl = await login('client');
+  const ct = cl.body?.accessToken;
+  const noPerm = await api('/program/settings', { method: 'PATCH', token: ct, body: { partnershipTarget: 5 } });
+  check('ویرایش تنظیمات بدون program.write → ۴۰۳', noPerm.status === 403);
 }
 
 /* ============================ SUMMARY ============================ */

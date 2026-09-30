@@ -60,6 +60,12 @@ export default function ProgramPage() {
   const [auditTab, setAuditTab] = useState('people');
   const [auditDetail, setAuditDetail] = useState<any | null>(null);
 
+  /* شاخص: ثبت فرم ۱۷ — تعریف شاخص دادهٔ سازمان است و به سنجهٔ محاسبهٔ پلتفرم bind می‌شود */
+  const [kpiCreateOpen, setKpiCreateOpen] = useState(false);
+  const [kpiFormError, setKpiFormError] = useState('');
+  const [metrics, setMetrics] = useState<any[]>([]);
+  const [kpiForm, setKpiForm] = useState({ title: '', category: '', owner: '', period: '', target: '', metric: '', targetValue: '' });
+
   const load = useCallback(async (which: string) => {
     setLoading(true); setError('');
     try {
@@ -105,6 +111,28 @@ export default function ProgramPage() {
     setBusy(true);
     try { await api(`/program/readiness/${layerKey}/items/${item.key}`, { method: 'PATCH', body: JSON.stringify({ status: next }) }); load('readiness'); load('overview'); }
     catch (x) { setError((x as Error).message); }
+    finally { setBusy(false); }
+  };
+
+  const openKpiCreate = async () => {
+    setKpiCreateOpen(true); setKpiFormError('');
+    if (!metrics.length) {
+      try {
+        const r = await api<any>('/program/settings');
+        /* سنجهٔ «خط پایهٔ اعلامی» فقط برای دادهٔ بذری است؛ در فرم ارائه نمی‌شود */
+        setMetrics((r.metrics ?? []).filter((m: any) => m.key !== 'declared-baseline'));
+      } catch { /* اعتبارسنجی سرور راهنما می‌دهد */ }
+    }
+  };
+
+  const submitKpi = async () => {
+    setKpiFormError(''); setBusy(true);
+    try {
+      await api('/program/kpis', { method: 'POST', body: JSON.stringify({ ...kpiForm, targetValue: Number(kpiForm.targetValue) }) });
+      setKpiCreateOpen(false);
+      setKpiForm({ title: '', category: '', owner: '', period: '', target: '', metric: '', targetValue: '' });
+      load('kpis'); load('overview');
+    } catch (x) { setKpiFormError((x as Error).message); }
     finally { setBusy(false); }
   };
 
@@ -157,6 +185,10 @@ export default function ProgramPage() {
 
           <SectionCard title={t('فصل‌های برنامه و دروازهٔ عبور')} icon={<ListChecks size={17} />}
             description={t('بدون رسیدن به آستانهٔ مصوب هر فصل، ورود به فاز بعدی برنامه تصویب نمی‌شود.')}>
+            {overview.readiness.seasons.length ? null : (
+              <EmptyV4 icon={<ListChecks size={30} />} title={t('فصل‌های برنامه تعریف نشده است')}
+                description={t('فصل‌ها و آستانه‌های دروازه در تنظیمات برنامهٔ سازمان شما ثبت نشده است.')} />
+            )}
             <div className="season-row">
               {overview.readiness.seasons.map((s: any) => (
                 <div key={s.season} className={`season-card ${s.state === 'PASSED' ? 'passed' : s.current ? 'current' : ''}`}>
@@ -221,7 +253,15 @@ export default function ProgramPage() {
         <>
           <div className="note-strip">{t('قاعدهٔ سند: هر شاخص مالک، هدف عددی و دورهٔ سنجش مشخص دارد و از دادهٔ ثبت‌شده در سامانه محاسبه می‌شود — عدد دستی وارد داشبورد نمی‌شود.')}</div>
           <SectionCard title={t('شاخص‌های برنامه')} icon={<Target size={17} />}
-            description={`${faNum(kpis.total)} ${t('شاخص در پنج دسته')} · ${t('در هدف')}: ${faNum(kpis.summary.onTarget)} · ${t('نزدیک')}: ${faNum(kpis.summary.near)} · ${t('خارج از هدف')}: ${faNum(kpis.summary.off)}`}>
+            description={`${faNum(kpis.total)} ${t('شاخص در پنج دسته')} · ${t('در هدف')}: ${faNum(kpis.summary.onTarget)} · ${t('نزدیک')}: ${faNum(kpis.summary.near)} · ${t('خارج از هدف')}: ${faNum(kpis.summary.off)}`}
+            actions={writable ? (
+              <button className="srip-button primary" onClick={openKpiCreate}><Plus size={14} /> {t('ثبت شاخص')}</button>
+            ) : undefined}>
+            {!kpis.items.length ? (
+              <EmptyV4 icon={<Target size={30} />} title={t('هنوز شاخصی ثبت نشده است')}
+                description={t('شاخص‌های برنامهٔ سازمان خود را با مالک، هدف و سنجهٔ محاسبه ثبت کنید؛ مقدار هر شاخص از دادهٔ زندهٔ سامانه محاسبه می‌شود.')}
+                action={writable ? <button className="srip-button primary" onClick={openKpiCreate}><Plus size={14} /> {t('ثبت شاخص')}</button> : undefined} />
+            ) : (
             <div className="table-wrap">
               <table>
                 <thead>
@@ -253,6 +293,7 @@ export default function ProgramPage() {
                 </tbody>
               </table>
             </div>
+            )}
           </SectionCard>
         </>
       )}
@@ -352,6 +393,7 @@ export default function ProgramPage() {
             })()} iconClass="ic-gold"
               sub={(() => {
                 const cur = readiness.seasons.find((s: any) => s.current);
+                if (!readiness.seasons.length) return t('فصل‌های برنامه در تنظیمات سازمان تعریف نشده است');
                 if (!cur) return t('برنامه در فصل تحویل است.');
                 return cur.score >= cur.threshold ? t('آستانه پاس شد — آمادهٔ تصویب ورود به فاز بعد') : t('هنوز به آستانه نرسیده — اقلام پذیرفته‌شده را بیشتر کنید');
               })()} />
@@ -504,10 +546,15 @@ export default function ProgramPage() {
           </div>
           <label className="field">
             <span>{t('مالک ریسک')} *</span>
-            <select value={form.ownerRole} onChange={(e) => setForm(f => ({ ...f, ownerRole: e.target.value }))} required>
-              <option value="">{t('انتخاب کنید…')}</option>
-              {(risks?.roles ?? []).map((r: string) => <option key={r} value={r}>{r}</option>)}
-            </select>
+            {(risks?.roles ?? []).length ? (
+              <select value={form.ownerRole} onChange={(e) => setForm(f => ({ ...f, ownerRole: e.target.value }))} required>
+                <option value="">{t('انتخاب کنید…')}</option>
+                {(risks?.roles ?? []).map((r: string) => <option key={r} value={r}>{r}</option>)}
+              </select>
+            ) : (
+              <input value={form.ownerRole} onChange={(e) => setForm(f => ({ ...f, ownerRole: e.target.value }))} required
+                placeholder={t('نقش مالک — چارت سازمان در تنظیمات برنامه تعریف نشده')} />
+            )}
           </label>
           <label className="field">
             <span>{t('پاسخ پیشگیرانه')}</span>
@@ -518,6 +565,53 @@ export default function ProgramPage() {
             <input value={form.reactive} onChange={(e) => setForm(f => ({ ...f, reactive: e.target.value }))} placeholder={t('اگر رخ داد…')} />
           </label>
           {formError ? <div className="alert-banner danger" role="alert"><AlertTriangle size={16} /><span>{formError}</span></div> : null}
+        </form>
+      </Modal>
+
+      {/* ═══════════ مودال: ثبت شاخص (فرم ۱۷) ═══════════ */}
+      <Modal open={kpiCreateOpen} title={t('ثبت شاخص')} onClose={() => setKpiCreateOpen(false)}
+        description={t('شاخص‌های برنامهٔ سازمان خود را با مالک، هدف و سنجهٔ محاسبه ثبت کنید؛ مقدار هر شاخص از دادهٔ زندهٔ سامانه محاسبه می‌شود.')}>
+        <form id="kpi-create-form" className="form-grid" onSubmit={(e) => { e.preventDefault(); submitKpi(); }}>
+          <label className="field">
+            <span>{t('عنوان شاخص')} *</span>
+            <input value={kpiForm.title} onChange={(e) => setKpiForm(f => ({ ...f, title: e.target.value }))} required minLength={3} />
+          </label>
+          <div className="field-pair">
+            <label className="field">
+              <span>{t('مالک')} *</span>
+              <input value={kpiForm.owner} onChange={(e) => setKpiForm(f => ({ ...f, owner: e.target.value }))} required />
+            </label>
+            <label className="field">
+              <span>{t('دسته')}</span>
+              <input value={kpiForm.category} onChange={(e) => setKpiForm(f => ({ ...f, category: e.target.value }))} placeholder={t('عمومی')} />
+            </label>
+          </div>
+          <div className="field-pair">
+            <label className="field">
+              <span>{t('دورهٔ سنجش')}</span>
+              <input value={kpiForm.period} onChange={(e) => setKpiForm(f => ({ ...f, period: e.target.value }))} placeholder={t('ماهانه')} />
+            </label>
+            <label className="field">
+              <span>{t('هدف عددی')} *</span>
+              <input type="number" min={1} value={kpiForm.targetValue} onChange={(e) => setKpiForm(f => ({ ...f, targetValue: e.target.value }))} required />
+            </label>
+          </div>
+          <label className="field">
+            <span>{t('سنجهٔ محاسبه')} *</span>
+            <select value={kpiForm.metric} onChange={(e) => setKpiForm(f => ({ ...f, metric: e.target.value }))} required>
+              <option value="">{t('انتخاب کنید…')}</option>
+              {metrics.map((m: any) => <option key={m.key} value={m.key}>{m.label}</option>)}
+            </select>
+          </label>
+          <label className="field">
+            <span>{t('هدف')}</span>
+            <input value={kpiForm.target} onChange={(e) => setKpiForm(f => ({ ...f, target: e.target.value }))} placeholder={t('توصیف کوتاه هدف')} />
+          </label>
+          {kpiFormError ? <div className="alert-banner danger" role="alert"><AlertTriangle size={16} /><span>{kpiFormError}</span></div> : null}
+          <div className="modal-actions" style={{ display: 'flex', gap: 8, justifyContent: 'flex-start' }}>
+            <button type="button" className="srip-button" onClick={() => setKpiCreateOpen(false)}><X size={14} /> {t('انصراف')}</button>
+            <button type="submit" className="srip-button primary" disabled={busy}>{busy ? t('در حال ذخیره…') : t('ثبت شاخص')}</button>
+          </div>
         </form>
       </Modal>
 

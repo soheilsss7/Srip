@@ -19,7 +19,7 @@ const PORT = Number(process.env.MOCK_API_PORT || 4000);
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.30.01';
+const DEMO_MOCK_VERSION = '2026.09.30.02';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -6188,19 +6188,70 @@ const nowIso=()=>new Date().toISOString();
    از دادهٔ زندهٔ ماژول‌ها محاسبه می‌شود.
    ═══════════════════════════════════════════════════════════════════════════ */
 const PROGRAM_ORG_ID='org-1'; /* دادهٔ برنامهٔ هلدینگ دمو؛ مستأجر واقعی دادهٔ خودش را می‌سازد */
-const PROGRAM_ROLES=['مدیرعامل','دستیار مدیرعامل','مدیر عملیات','مدیر منابع انسانی','مدیر مالی','مدیر استراتژی','مدیر حساب','مدیر توسعه کسب‌وکار','مدیر پروژه','مدیر محتوا','مدیر محصول','اسکرام مستر','مدیر روابط عمومی','مدیر هنری','مدیر اندیشکده و پژوهش','مدیر رویداد','تحلیلگر تحقیقات بازار','کارشناس رسانه و روابط عمومی','کارشناس تعاملات','طراح گرافیک','توسعه‌دهنده','کارشناس اداری و امور دفتر'];
 const RISK_LEVEL_FA={LOW:'پایین',MEDIUM:'متوسط',HIGH:'بالا'};
 const RISK_STATUS_FA={OPEN:'باز',IN_PROGRESS:'در اقدام',CLOSED:'بسته'};
 const RISK_LEVEL_SCORE={LOW:1,MEDIUM:2,HIGH:3};
 const riskGrade=(r)=>{const s=(RISK_LEVEL_SCORE[r.probability]??1)*(RISK_LEVEL_SCORE[r.impact]??1);return s>=6?'HIGH':(s>=3?'MEDIUM':'LOW');};
 const RISK_GRADE_FA={HIGH:'درجه بالا',MEDIUM:'درجه متوسط',LOW:'درجه پایین'};
-/* دروازهٔ فصل: بدون رسیدن به آستانهٔ مصوب، ورود به فاز بعدی تصویب نمی‌شود (سند ۱۳.۱) */
-const PROGRAM_SEASONS=[
-  {season:1,title:'شناخت',months:'ماه ۱ تا ۳',threshold:30},
-  {season:2,title:'آماده‌سازی',months:'ماه ۴ تا ۶',threshold:45},
-  {season:3,title:'اجرا',months:'ماه ۷ تا ۹',threshold:60},
-  {season:4,title:'تحویل',months:'ماه ۱۰ تا ۱۲',threshold:75},
-];
+/* ═══ گام ۲.۲.۱ — تنظیمات برنامهٔ سازمان (per-tenant) ═══
+   نقش‌های چارت، فصل‌ها/آستانه‌های دروازه، هدف مشارکت و تعریف شاخص‌ها دادهٔ هر
+   سازمان‌اند؛ پلتفرم فقط سنجه‌های محاسبه (PROGRAM_METRICS) و چارچوب آمادگی
+   شش‌لایه را ارائه می‌کند. دموی org-1 = برنامهٔ سند؛ مستأجر واقعی با تنظیمات
+   خالی آغاز می‌کند و برنامهٔ خود را می‌سازد. */
+const PROGRAM_METRICS={
+  'profile-completeness':{label:'تکمیل پروفایل سازمان‌های هلدینگ/زیرمجموعه (٪)',unit:'percent',
+    compute:(c)=>c.famComplete},
+  'docs-month':{label:'اسناد ثبت‌شدهٔ ماه جاری با الگوی نام',unit:'count',
+    compute:(c)=>c.docs.filter(d=>String(d.name).includes(String(c.def.config?.pattern??''))&&c.inMonth(d.createdAt)).length},
+  'docs-total':{label:'اسناد موجود با الگوی نام',unit:'count',
+    compute:(c)=>c.docs.filter(d=>String(d.name).includes(String(c.def.config?.pattern??''))).length},
+  'media-mentions-month':{label:'بازنمایی رسانه‌ای ثبت‌شدهٔ ماه جاری',unit:'count',
+    compute:(c)=>c.mediaMentions.length},
+  'readiness-items-accepted':{label:'اقلام پذیرفته‌شدهٔ لایه‌های آمادگی (با برچسب)',unit:'count',
+    compute:(c)=>(c.def.config?.labels??[]).filter(a=>c.layers.some(L=>(L.items??[]).some(i=>i.label===a&&i.status==='ACCEPTED'))).length},
+  'active-mous':{label:'تفاهم‌نامه‌های فعال ماژول مشارکت (مرحلهٔ تفاهم‌نامه یا فعال)',unit:'count',
+    compute:(c)=>partnershipActiveMou(c.partnershipRows).length},
+  'active-people':{label:'افراد فعال در محدودهٔ شما',unit:'count',
+    compute:(c)=>c.people.length},
+  'migration-done':{label:'سامانه‌های انتقال/خاموش‌سازی تکمیل‌شده',unit:'count',
+    compute:(c)=>c.sysDone,target:(c)=>c.sysNonKeep.length||1},
+  'monthly-reports':{label:'گزارش‌های ماهانهٔ ثبت‌شده',unit:'count',
+    compute:(c)=>c.monthlyReports},
+  'declared-baseline':{label:'خط پایهٔ اعلامی سازمان (تا فعال‌شدن پایش زنده)',unit:'score',
+    compute:(c)=>Number(c.def.config?.value??0)},
+};
+/* تنظیمات برنامهٔ دمو (org-1) — دقیقاً برنامهٔ سند؛ چارت ۲۲ نقشی، چهار فصل با
+   آستانهٔ ۳۰/۴۵/۶۰/۷۵، هدف ۲۵ تفاهم‌نامه و ده شاخص بخش ۲۶ با سنجه‌های محاسبه */
+const programDemoSettings=()=>({organizationId:PROGRAM_ORG_ID,
+  roles:['مدیرعامل','دستیار مدیرعامل','مدیر عملیات','مدیر منابع انسانی','مدیر مالی','مدیر استراتژی','مدیر حساب','مدیر توسعه کسب‌وکار','مدیر پروژه','مدیر محتوا','مدیر محصول','اسکرام مستر','مدیر روابط عمومی','مدیر هنری','مدیر اندیشکده و پژوهش','مدیر رویداد','تحلیلگر تحقیقات بازار','کارشناس رسانه و روابط عمومی','کارشناس تعاملات','طراح گرافیک','توسعه‌دهنده','کارشناس اداری و امور دفتر'],
+  seasons:[
+    {season:1,title:'شناخت',months:'ماه ۱ تا ۳',threshold:30},
+    {season:2,title:'آماده‌سازی',months:'ماه ۴ تا ۶',threshold:45},
+    {season:3,title:'اجرا',months:'ماه ۷ تا ۹',threshold:60},
+    {season:4,title:'تحویل',months:'ماه ۱۰ تا ۱۲',threshold:75},
+  ],
+  partnershipTarget:25,
+  kpis:[
+    {id:'kpi-1',category:'شناخت و دانش',title:'تکمیل پرونده شناخت هلدینگ و دوازده زیرمجموعه',owner:'مدیر استراتژی',period:'ماه ۳',target:'تکمیل ۱۰۰٪ بخش‌ها',source:'کمال پروفایل خانوادهٔ هلدینگ (صنعت، کشور، وب‌سایت، ایمیل، تلفن، شناسهٔ ثبت)',metric:'profile-completeness',unit:'percent',targetValue:100,config:{}},
+    {id:'kpi-2',category:'شناخت و دانش',title:'خروجی پژوهشی اندیشکده',owner:'مدیر اندیشکده و پژوهش',period:'ماهانه از ماه ۵',target:'دست‌کم یک یادداشت سیاستی در ماه',source:'مرکز دانش — یادداشت‌های سیاستی ماه جاری',metric:'docs-month',unit:'count',targetValue:1,config:{pattern:'یادداشت سیاستی'}},
+    {id:'kpi-3',category:'شناخت و دانش',title:'شاخص مرجعیت هوش مصنوعی (نمرهٔ مرکب نُه مؤلفه)',owner:'مدیر اندیشکده و پژوهش',period:'ماه ۱۲',target:'رسیدن از ۵۵ به ۹۰',source:'خط پایهٔ اعلامی سازمان — پایش زندهٔ مؤلفه‌ها پس از تعریف هدف راهبردی',metric:'declared-baseline',unit:'score',targetValue:90,config:{value:55}},
+    {id:'kpi-4',category:'دارایی و رسانه',title:'انتشار رسانه تخصصی',owner:'مدیر روابط عمومی',period:'ماهانه از ماه ۵',target:'۲۰ خروجی در ماه',source:'عموم‌ها — بازنمایی رسانه‌ای ثبت‌شدهٔ ماه جاری',metric:'media-mentions-month',unit:'count',targetValue:20,config:{}},
+    {id:'kpi-5',category:'دارایی و رسانه',title:'وب‌سایت مرجع و پروفایل شرکتی',owner:'مدیر محصول',period:'ماه ۸',target:'انتشار عمومی هر دو دارایی',source:'لایهٔ آمادگی سازمانی — وضعیت اقلام «وب‌سایت» و «پروفایل شرکت»',metric:'readiness-items-accepted',unit:'count',targetValue:2,config:{labels:['وب‌سایت','پروفایل شرکت']}},
+    {id:'kpi-6',category:'دارایی و رسانه',title:'گزارش سالانه هوش مصنوعی',owner:'مدیر اندیشکده و پژوهش',period:'ماه ۱۱',target:'انتشار',source:'مرکز دانش — اسناد «گزارش سالانه»',metric:'docs-total',unit:'count',targetValue:1,config:{pattern:'گزارش سالانه'}},
+    {id:'kpi-7',category:'بازار و اکوسیستم',title:'شبکهٔ مشارکت',owner:'مدیر توسعه کسب‌وکار',period:'ماه ۱۲',target:'۲۵ تفاهم‌نامهٔ فعال',source:'ماژول مشارکت‌ها — تفاهم‌نامه‌های فعال (مرحلهٔ تفاهم‌نامه یا فعال)',metric:'active-mous',unit:'count',targetValue:25,config:{}},
+    {id:'kpi-8',category:'سازمان و زیرساخت',title:'تکمیل ساختار ۲۵ نفره',owner:'مدیر منابع انسانی',period:'ماه ۷',target:'۲۵ نفر فعال',source:'اشخاص فعال در محدودهٔ شما',metric:'active-people',unit:'count',targetValue:25,config:{}},
+    {id:'kpi-9',category:'سازمان و زیرساخت',title:'انتقال داده‌ها به SRIP',owner:'مدیر محصول',period:'ماه ۷',target:'خاموش‌سازی کامل سامانه‌های قدیمی',source:'ممیزی سامانه‌ها — سهم انتقال/خاموش‌سازیِ تکمیل‌شده',metric:'migration-done',unit:'count',targetValue:null,config:{}},
+    {id:'kpi-10',category:'سازمان و زیرساخت',title:'گزارش ماهانه به مدیریت هلدینگ',owner:'دستیار مدیرعامل',period:'پایان هر ماه',target:'تحویل به‌موقع ۱۲ گزارش',source:'گزارش ماهانه — ثبت انتشار',metric:'monthly-reports',unit:'count',targetValue:12,config:{}},
+  ]});
+function ensureProgramSettings(orgId){
+  if(!Array.isArray(DB.programSettings)) DB.programSettings=[];
+  if(!DB.programSettings.some(s=>s.organizationId===orgId)){
+    DB.programSettings.push(orgId===PROGRAM_ORG_ID?programDemoSettings()
+      :{organizationId:orgId,roles:[],seasons:[],partnershipTarget:null,kpis:[]});
+  }
+}
+function programSettingsOf(orgId){ensureProgramSettings(orgId);return DB.programSettings.find(s=>s.organizationId===orgId);}
+function programSettingsFor(req){return programSettingsOf(primaryOrgId(currentUser(req))??visibleOrgIds(req)[0]??PROGRAM_ORG_ID);}
 
 /* قالب ساختاری شش لایه از جدول بخش ۱۲ سند (با وضعیت پیشرفت هلدینگ دمو به‌عنوان بذر) */
 const PROGRAM_READINESS_TEMPLATE=[
@@ -6340,7 +6391,7 @@ function programReadinessFor(req){
   });
   const total=Math.round(layers.reduce((s,L)=>s+L.weight*L.score,0)/layers.reduce((s,L)=>s+L.weight,0));
   const history=(DB.readinessHistory??[]).filter(h=>orgIds.includes(h.organizationId));
-  const seasons=PROGRAM_SEASONS.map(S=>{
+  const seasons=(programSettingsFor(req).seasons??[]).map(S=>{
     const hist=history.find(h=>h.season===S.season);
     const isCurrent=S.season===history.length+1;
     const score=hist?hist.score:(isCurrent?total:null);
@@ -6352,12 +6403,12 @@ function programReadinessFor(req){
 }
 
 /* شاخص‌های مالک‌دار (جدول بخش ۲۶ سند) — مقدار هر شاخص از ماژول مربوطه محاسبه می‌شود */
+/* شاخص‌های برنامه — تعریف هر شاخص دادهٔ سازمان است (فرم ۱۷: مالک/هدف/دوره)؛
+   مقدار آن از سنجه‌های محاسبهٔ پلتفرم روی دادهٔ زنده به دست می‌آید (بدون عدد دستی). */
 function programKpisFor(req){
   ensureProgramSeed();
   const orgIds=visibleOrgIds(req);
   const orgs=ORGS.filter(o=>orgIds.includes(o.id));
-  const rels=scopedRels(req).filter(r=>r.status==='ACTIVE');
-  const opps=scopedOpps(req).filter(o=>!o.deletedAt&&!['WON','LOST'].includes(o.status));
   const now=new Date();
   const inMonth=(iso)=>{try{const d=new Date(iso);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}catch{return false;}};
   const family=orgs.filter(o=>['HOLDING','SUBSIDIARY'].includes(o.type));
@@ -6366,33 +6417,22 @@ function programKpisFor(req){
     const filled=['industry','country'].filter(k=>o[k]).length+['website','email','phone','registrationId'].filter(k=>p[k]).length;
     return s+filled/6;},0)/family.length*100):0;
   const docs=(DB.documents??[]).filter(d=>d.organizationId&&orgIds.includes(d.organizationId));
-  const policyNotes=docs.filter(d=>String(d.name).includes('یادداشت سیاستی')&&inMonth(d.createdAt));
-  const annualDocs=docs.filter(d=>String(d.name).includes('گزارش سالانه'));
   const mediaMentions=(DB.mediaMentions??[]).filter(m=>inMonth(m.publishedAt)&&(m.matchedOrganizationIds??[]).some(id=>orgIds.includes(id)));
-  const partnershipRows=partnershipsFor(req); /* گام ۲.۲ — منبع زندهٔ kpi-7 */
+  const partnershipRows=partnershipsFor(req);
   const people=scopedPeople(req).filter(p=>p.status!=='INACTIVE');
-  const sys=DB.auditSystems??[];
-  const sysNonKeep=sys.filter(x=>x.migration!=='KEEP');
+  const sysNonKeep=(DB.auditSystems??[]).filter(x=>orgIds.includes(x.organizationId)&&x.migration!=='KEEP');
   const sysDone=sysNonKeep.filter(x=>x.migrationStatus==='DONE').length;
   const monthlyReports=(DB.programMonthlyReports??[]).filter(r=>orgIds.includes(r.organizationId)).length;
-  const orgLayer=programLayersFor(req).find(L=>L.key==='org');
-  const assetPublished=['وب‌سایت','پروفایل شرکت'].filter(a=>(orgLayer?.items??[]).some(i=>i.label===a&&i.status==='ACCEPTED')).length;
-  const items=[
-    {id:'kpi-1',category:'شناخت و دانش',title:'تکمیل پرونده شناخت هلدینگ و دوازده زیرمجموعه',owner:'مدیر استراتژی',period:'ماه ۳',target:'تکمیل ۱۰۰٪ بخش‌ها',source:'کمال پروفایل خانوادهٔ هلدینگ (صنعت، کشور، وب‌سایت، ایمیل، تلفن، شناسهٔ ثبت)',value:famComplete,unit:'percent'},
-    {id:'kpi-2',category:'شناخت و دانش',title:'خروجی پژوهشی اندیشکده',owner:'مدیر اندیشکده و پژوهش',period:'ماهانه از ماه ۵',target:'دست‌کم یک یادداشت سیاستی در ماه',source:'مرکز دانش — یادداشت‌های سیاستی ماه جاری',value:policyNotes.length,unit:'count',targetValue:1},
-    {id:'kpi-3',category:'شناخت و دانش',title:'شاخص مرجعیت هوش مصنوعی (نمرهٔ مرکب نُه مؤلفه)',owner:'مدیر اندیشکده و پژوهش',period:'ماه ۱۲',target:'رسیدن از ۵۵ به ۹۰',source:'خط پایهٔ سند — پایش زنده در تب «مرجعیت AI» (گام ۲.۳)',value:55,unit:'score',targetValue:90},
-    {id:'kpi-4',category:'دارایی و رسانه',title:'انتشار رسانه تخصصی',owner:'مدیر روابط عمومی',period:'ماهانه از ماه ۵',target:'۲۰ خروجی در ماه',source:'عموم‌ها — بازنمایی رسانه‌ای ثبت‌شدهٔ ماه جاری',value:mediaMentions.length,unit:'count',targetValue:20},
-    {id:'kpi-5',category:'دارایی و رسانه',title:'وب‌سایت مرجع و پروفایل شرکتی',owner:'مدیر محصول',period:'ماه ۸',target:'انتشار عمومی هر دو دارایی',source:'لایهٔ آمادگی سازمانی — وضعیت اقلام «وب‌سایت» و «پروفایل شرکت»',value:assetPublished,unit:'count',targetValue:2},
-    {id:'kpi-6',category:'دارایی و رسانه',title:'گزارش سالانه هوش مصنوعی',owner:'مدیر اندیشکده و پژوهش',period:'ماه ۱۱',target:'انتشار',source:'مرکز دانش — اسناد «گزارش سالانه»',value:annualDocs.length,unit:'count',targetValue:1},
-    {id:'kpi-7',category:'بازار و اکوسیستم',title:'شبکهٔ مشارکت',owner:'مدیر توسعه کسب‌وکار',period:'ماه ۱۲',target:'۲۵ تفاهم‌نامهٔ فعال',source:'ماژول مشارکت‌ها — تفاهم‌نامه‌های فعال (مرحلهٔ تفاهم‌نامه یا فعال)',value:partnershipActiveMou(partnershipRows).length,unit:'count',targetValue:25},
-    {id:'kpi-8',category:'سازمان و زیرساخت',title:'تکمیل ساختار ۲۵ نفره',owner:'مدیر منابع انسانی',period:'ماه ۷',target:'۲۵ نفر فعال',source:'اشخاص فعال در محدودهٔ شما',value:people.length,unit:'count',targetValue:25},
-    {id:'kpi-9',category:'سازمان و زیرساخت',title:'انتقال داده‌ها به SRIP',owner:'مدیر محصول',period:'ماه ۷',target:'خاموش‌سازی کامل سامانه‌های قدیمی',source:'ممیزی سامانه‌ها — سهم انتقال/خاموش‌سازیِ تکمیل‌شده',value:sysDone,unit:'count',targetValue:sysNonKeep.length||1},
-    {id:'kpi-10',category:'سازمان و زیرساخت',title:'گزارش ماهانه به مدیریت هلدینگ',owner:'دستیار مدیرعامل',period:'پایان هر ماه',target:'تحویل به‌موقع ۱۲ گزارش',source:'گزارش ماهانه — ثبت انتشار',value:monthlyReports,unit:'count',targetValue:12},
-  ];
-  return items.map(k=>{
-    const percent=k.unit==='percent'?Math.round(k.value):Math.round(k.value/(k.targetValue||1)*100);
-    const valueLabel=k.unit==='percent'?`${percent}٪`:`${k.value} از ${k.targetValue}`;
-    return {...k,percent,valueLabel,status:percent>=100?'ON_TARGET':(percent>=70?'NEAR':'OFF_TARGET')};
+  const layers=programLayersFor(req);
+  const ctx={orgIds,docs,mediaMentions,partnershipRows,people,sysNonKeep,sysDone,monthlyReports,layers,inMonth,famComplete};
+  const defs=programSettingsFor(req).kpis??[];
+  return defs.map(def=>{
+    const M=PROGRAM_METRICS[def.metric];
+    const value=M?Math.round(M.compute({...ctx,def})):0;
+    const targetValue=M&&M.target?M.target(ctx):(def.targetValue??null);
+    const percent=def.unit==='percent'?Math.round(value):Math.round(value/(targetValue||1)*100);
+    const valueLabel=def.unit==='percent'?`${percent}٪`:`${value} از ${targetValue}`;
+    return {...def,value,targetValue,percent,valueLabel,status:percent>=100?'ON_TARGET':(percent>=70?'NEAR':'OFF_TARGET')};
   });
 }
 
@@ -6422,7 +6462,6 @@ const PARTNERSHIP_ORG_ID='org-1'; /* دادهٔ دمو؛ مستأجر واقعی
 const PARTNERSHIP_STAGES=['NEGOTIATION','MOU','ACTIVE','ENDED'];
 const PARTNERSHIP_STAGE_FA={NEGOTIATION:'مذاکره',MOU:'تفاهم‌نامه',ACTIVE:'فعال',ENDED:'پایان'};
 const PARTNERSHIP_TYPES=['راهبردی','پژوهشی','محتوایی','رویدادی','فناوری','رسانه‌ای'];
-const PARTNERSHIP_TARGET=25; /* «۲۵ تفاهم‌نامهٔ فعال» — هدف شبکهٔ مشارکت ماه ۱۲ */
 const partnershipActiveMou=(rows)=>rows.filter(x=>['MOU','ACTIVE'].includes(x.stage));
 const partnershipReviewDue=(x)=>x.stage!=='ENDED'&&x.reviewAt&&new Date(x.reviewAt)<=new Date(Date.now()+30*86400000);
 function ensurePartnershipSeed(){
@@ -6455,12 +6494,12 @@ function partnershipView(x){
     relationshipLabel:rel?`${ORGS.find(o=>o.id===rel.sourceOrganizationId)?.name??'?'} ↔ ${ORGS.find(o=>o.id===rel.targetOrganizationId)?.name??'?'}`:null,
     opportunityName:opp?.name??null,activeMou:['MOU','ACTIVE'].includes(x.stage),reviewDue:partnershipReviewDue(x)};
 }
-function partnershipSummary(rows){
+function partnershipSummary(rows,target=null){
   const byStage=Object.fromEntries(PARTNERSHIP_STAGES.map(st=>[st,rows.filter(x=>x.stage===st).length]));
   const activeMou=partnershipActiveMou(rows).length;
   const byType=PARTNERSHIP_TYPES.filter(t=>rows.some(x=>x.type===t)).map(t=>({type:t,count:rows.filter(x=>x.type===t).length}));
-  return {total:rows.length,byStage,activeMou,target:PARTNERSHIP_TARGET,
-    progress:PARTNERSHIP_TARGET?Math.round(activeMou/PARTNERSHIP_TARGET*100):0,byType,
+  return {total:rows.length,byStage,activeMou,target:target??null,
+    progress:target?Math.round(activeMou/target*100):null,byType,
     linkedRelationship:rows.filter(x=>x.relationshipId).length,
     linkedOpportunity:rows.filter(x=>x.opportunityId).length,
     withContract:rows.filter(x=>x.contractName).length,
@@ -12476,7 +12515,7 @@ const server=http.createServer(async(req,res)=>{
       summary:{open:all.filter(r=>r.status==='OPEN').length,inProgress:all.filter(r=>r.status==='IN_PROGRESS').length,
         closed:all.filter(r=>r.status==='CLOSED').length,
         highOpen:all.filter(r=>r.status!=='CLOSED'&&riskGrade(r)==='HIGH').length},
-      roles:PROGRAM_ROLES,levels:RISK_LEVEL_FA,statuses:RISK_STATUS_FA,
+      roles:programSettingsFor(req).roles,levels:RISK_LEVEL_FA,statuses:RISK_STATUS_FA,
       rule:'هر ریسک با چهار قلم بنیادی ثبت می‌شود و ریسک بدون مالک، ثبت‌شده محسوب نمی‌گردد (بخش ۲۵ سند).'});
   }
   if(is('/program/risks')&&method==='POST'){
@@ -12489,7 +12528,8 @@ const server=http.createServer(async(req,res)=>{
     if(!RISK_LEVEL_FA[probability]||!RISK_LEVEL_FA[impact]) return json(res,400,{message:'احتمال و اثر هرکدام باید یکی از مقادیر پایین/متوسط/بالا باشد.'});
     const ownerRole=String(b.ownerRole??'').trim();
     if(!ownerRole) return json(res,400,{message:'ریسک بدون مالک ثبت نمی‌شود (بخش ۲۵ سند).'});
-    if(!PROGRAM_ROLES.includes(ownerRole)) return json(res,400,{message:'مالک ریسک باید یکی از نقش‌های چارت برنامه باشد.'});
+    const riskChart=programSettingsFor(req).roles;
+    if(riskChart.length&&!riskChart.includes(ownerRole)) return json(res,400,{message:'مالک ریسک باید یکی از نقش‌های چارت سازمان شما باشد.'});
     const row={id:`risk-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`,
       organizationId:primaryOrgId(authUser)??visibleOrgIds(req)[0]??PROGRAM_ORG_ID,
       title,probability,impact,
@@ -12510,7 +12550,7 @@ const server=http.createServer(async(req,res)=>{
     if(b.title!=null){const t=String(b.title).trim(); if(t.length<3) return json(res,400,{message:'عنوان ریسک را بنویسید (حداقل ۳ نویسه).'}); row.title=t;}
     if(b.probability!=null){const p=String(b.probability).toUpperCase(); if(!RISK_LEVEL_FA[p]) return json(res,400,{message:'احتمال باید پایین/متوسط/بالا باشد.'}); row.probability=p;}
     if(b.impact!=null){const i=String(b.impact).toUpperCase(); if(!RISK_LEVEL_FA[i]) return json(res,400,{message:'اثر باید پایین/متوسط/بالا باشد.'}); row.impact=i;}
-    if(b.ownerRole!=null){const o=String(b.ownerRole).trim(); if(!o) return json(res,400,{message:'ریسک بدون مالک ثبت نمی‌شود (بخش ۲۵ سند).'}); if(!PROGRAM_ROLES.includes(o)) return json(res,400,{message:'مالک ریسک باید یکی از نقش‌های چارت برنامه باشد.'}); row.ownerRole=o;}
+    if(b.ownerRole!=null){const o=String(b.ownerRole).trim(); if(!o) return json(res,400,{message:'ریسک بدون مالک ثبت نمی‌شود (بخش ۲۵ سند).'}); const rChart=programSettingsOf(row.organizationId).roles; if(rChart.length&&!rChart.includes(o)) return json(res,400,{message:'مالک ریسک باید یکی از نقش‌های چارت سازمان شما باشد.'}); row.ownerRole=o;}
     if(b.status!=null){const st=String(b.status).toUpperCase(); if(!RISK_STATUS_FA[st]) return json(res,400,{message:'وضعیت باید باز/در اقدام/بسته باشد.'}); row.status=st;}
     for(const k of ['preventive','reactive','notes']) if(b[k]!=null) row[k]=String(b[k]).trim();
     if(b.reviewAt!=null) row.reviewAt=String(b.reviewAt);
@@ -12547,6 +12587,85 @@ const server=http.createServer(async(req,res)=>{
       rule:'ممیزی ارزیابی صادقانه از وضعیت موجود است؛ خروجی آن ورودی مستقیم بازسازی نقش‌ها و برنامهٔ انتقال داده است (بخش ۲۰/۲۱ سند).'});
   }
 
+  /* ─────────────── گام ۲.۲.۱ — تنظیمات برنامهٔ سازمان (per-tenant) ──────────
+     نقش‌های چارت، فصل‌ها/آستانه‌ها، هدف مشارکت و شاخص‌ها دادهٔ سازمان است. */
+  if(is('/program/settings')&&method==='GET'){
+    if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
+    const ps=programSettingsFor(req);
+    return json(res,200,{roles:ps.roles,seasons:ps.seasons,partnershipTarget:ps.partnershipTarget,
+      metrics:Object.entries(PROGRAM_METRICS).map(([key,M])=>({key,label:M.label,unit:M.unit})),
+      rule:'نقش‌ها، فصل‌ها، هدف مشارکت و شاخص‌های برنامه دادهٔ سازمان شماست؛ پلتفرم فقط سنجه‌های محاسبه را ارائه می‌کند.'});
+  }
+  if(is('/program/settings')&&method==='PATCH'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    const ps=programSettingsFor(req);
+    const b=await readBody(req);
+    if(b.roles!=null){
+      if(!Array.isArray(b.roles)) return json(res,400,{message:'فهرست نقش‌ها باید آرایه باشد.'});
+      const rr=b.roles.map(x=>String(x??'').trim()).filter(Boolean);
+      if(new Set(rr).size!==rr.length) return json(res,400,{message:'نقش‌های چارت نباید تکراری باشند.'});
+      ps.roles=rr;
+    }
+    if(b.seasons!=null){
+      if(!Array.isArray(b.seasons)) return json(res,400,{message:'فهرست فصل‌ها باید آرایه باشد.'});
+      for(const S of b.seasons){
+        const season=Number(S.season),threshold=Number(S.threshold);
+        if(!Number.isInteger(season)||season<1||season>12) return json(res,400,{message:'شمارهٔ فصل باید عددی بین ۱ تا ۱۲ باشد.'});
+        if(!String(S.title??'').trim()) return json(res,400,{message:'عنوان هر فصل لازم است.'});
+        if(!Number.isFinite(threshold)||threshold<0||threshold>100) return json(res,400,{message:'آستانهٔ هر فصل باید عددی بین ۰ تا ۱۰۰ باشد.'});
+      }
+      ps.seasons=b.seasons.map(S=>({season:Number(S.season),title:String(S.title).trim(),months:String(S.months??'').trim()||'—',threshold:Number(S.threshold)}));
+    }
+    if(b.partnershipTarget!==undefined){
+      const v=b.partnershipTarget===null?null:Number(b.partnershipTarget);
+      if(v!==null&&(!Number.isFinite(v)||v<1||v>100000)) return json(res,400,{message:'هدف مشارکت باید عددی مثبت یا تهی (null) باشد.'});
+      ps.partnershipTarget=v;
+    }
+    saveDb();
+    audit(req,'UPDATE','ProgramSettings',ps.organizationId,'OK',{});
+    return json(res,200,{...ps});
+  }
+  if(is('/program/kpis')&&method==='POST'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    const ps=programSettingsFor(req);
+    const b=await readBody(req);
+    const title=String(b.title??'').trim();
+    if(title.length<3) return json(res,400,{message:'عنوان شاخص را بنویسید (حداقل ۳ نویسه).'});
+    const owner=String(b.owner??'').trim();
+    if(!owner) return json(res,400,{message:'شاخص بدون مالک ثبت نمی‌شود (فرم ۱۷ سند).'});
+    const metric=String(b.metric??'').trim();
+    const M=PROGRAM_METRICS[metric];
+    if(!M) return json(res,400,{message:'سنجهٔ محاسبه معتبر نیست؛ از فهرست سنجه‌های پلتفرم انتخاب کنید.'});
+    const pattern=String(b.pattern??'').trim();
+    if((metric==='docs-month'||metric==='docs-total')&&!pattern) return json(res,400,{message:'این سنجه به الگوی نام اسناد نیاز دارد.'});
+    const targetValue=M.unit==='percent'?100:Number(b.targetValue);
+    if(!Number.isFinite(targetValue)||targetValue<1) return json(res,400,{message:'هدف عددی شاخص باید عددی مثبت باشد.'});
+    const config={};
+    if(metric==='docs-month'||metric==='docs-total') config.pattern=pattern;
+    if(metric==='declared-baseline'){
+      const base=Number(b.baseline);
+      if(!Number.isFinite(base)||base<0) return json(res,400,{message:'خط پایهٔ اعلامی باید عددی نامنفی باشد.'});
+      config.value=base;
+    }
+    const def={id:`kpi-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,
+      category:String(b.category??'').trim()||'عمومی',title,owner,
+      period:String(b.period??'').trim()||'—',target:String(b.target??'').trim()||'—',
+      metric,unit:M.unit,targetValue,config,source:M.label};
+    ps.kpis.push(def); saveDb();
+    audit(req,'CREATE','Kpi',def.id,'OK',{title:def.title,metric});
+    return json(res,201,def);
+  }
+  const kpiDel=match('/program/kpis/:id');
+  if(kpiDel&&method==='DELETE'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    const ps=programSettingsFor(req);
+    const i=ps.kpis.findIndex(k=>k.id===kpiDel[0]);
+    if(i<0) return json(res,404,{message:'شاخص یافت نشد.'});
+    const [gone]=ps.kpis.splice(i,1); saveDb();
+    audit(req,'DELETE','Kpi',gone.id,'OK',{title:gone.title});
+    return json(res,200,{ok:true,id:gone.id});
+  }
+
   /* ─────────────── گام ۲.۲ مسترپلن — ماژول مشارکت (/partnerships) ──────────
      خط لولهٔ چهارسطحی مذاکره → تفاهم‌نامه → فعال → پایان؛ قاعدهٔ سند:
      فعال‌سازی مشارکت بدون قرارداد ثبت نمی‌شود (فرم ۱۱ — مذاکره تا فعال‌سازی). */
@@ -12555,9 +12674,9 @@ const server=http.createServer(async(req,res)=>{
     const rows=partnershipsFor(req);
     const stage=String(q.get('stage')??'').toUpperCase();
     const filtered=stage&&PARTNERSHIP_STAGE_FA[stage]?rows.filter(x=>x.stage===stage):rows;
-    return json(res,200,{items:filtered.map(partnershipView),summary:partnershipSummary(rows),
+    return json(res,200,{items:filtered.map(partnershipView),summary:partnershipSummary(rows,programSettingsFor(req).partnershipTarget),
       stages:PARTNERSHIP_STAGES.map(st=>({key:st,label:PARTNERSHIP_STAGE_FA[st]})),
-      types:PARTNERSHIP_TYPES,roles:PROGRAM_ROLES,
+      types:PARTNERSHIP_TYPES,roles:programSettingsFor(req).roles,
       rule:'فعال‌سازی مشارکت بدون قرارداد ثبت نمی‌شود (فرم ۱۱ سند — مذاکره تا فعال‌سازی).',generatedAt:nowIso()});
   }
   if(is('/partnerships')&&method==='POST'){
@@ -12571,7 +12690,8 @@ const server=http.createServer(async(req,res)=>{
     if(!PARTNERSHIP_TYPES.includes(type)) return json(res,400,{message:'نوع همکاری باید یکی از مقادیر مجاز باشد.'});
     const ownerRole=String(b.ownerRole??'').trim();
     if(!ownerRole) return json(res,400,{message:'مشارکت بدون مالک ثبت نمی‌شود (ماژول SRIP — بخش ۱۹ سند).'});
-    if(!PROGRAM_ROLES.includes(ownerRole)) return json(res,400,{message:'مالک مشارکت باید یکی از نقش‌های چارت برنامه باشد.'});
+    const ppChart=programSettingsFor(req).roles;
+    if(ppChart.length&&!ppChart.includes(ownerRole)) return json(res,400,{message:'مالک مشارکت باید یکی از نقش‌های چارت سازمان شما باشد.'});
     const relId=String(b.relationshipId??'').trim()||null;
     if(relId&&!RELS.some(r=>r.id===relId)) return json(res,400,{message:'رابطهٔ انتخاب‌شده یافت نشد.'});
     const oppId=String(b.opportunityId??'').trim()||null;
@@ -12599,7 +12719,7 @@ const server=http.createServer(async(req,res)=>{
     const b=await readBody(req);
     if(b.partnerOrgId!=null){const v=String(b.partnerOrgId).trim(); if(!ORGS.some(o=>o.id===v)) return json(res,400,{message:'سازمان شریک یافت نشد.'}); row.partnerOrgId=v;}
     if(b.type!=null){const v=String(b.type).trim(); if(!PARTNERSHIP_TYPES.includes(v)) return json(res,400,{message:'نوع همکاری باید یکی از مقادیر مجاز باشد.'}); row.type=v;}
-    if(b.ownerRole!=null){const v=String(b.ownerRole).trim(); if(!v) return json(res,400,{message:'مشارکت بدون مالک ثبت نمی‌شود (ماژول SRIP — بخش ۱۹ سند).'}); if(!PROGRAM_ROLES.includes(v)) return json(res,400,{message:'مالک مشارکت باید یکی از نقش‌های چارت برنامه باشد.'}); row.ownerRole=v;}
+    if(b.ownerRole!=null){const v=String(b.ownerRole).trim(); if(!v) return json(res,400,{message:'مشارکت بدون مالک ثبت نمی‌شود (ماژول SRIP — بخش ۱۹ سند).'}); const pChart=programSettingsOf(row.organizationId).roles; if(pChart.length&&!pChart.includes(v)) return json(res,400,{message:'مالک مشارکت باید یکی از نقش‌های چارت سازمان شما باشد.'}); row.ownerRole=v;}
     if(b.relationshipId!=null){const v=String(b.relationshipId).trim()||null; if(v&&!RELS.some(r=>r.id===v)) return json(res,400,{message:'رابطهٔ انتخاب‌شده یافت نشد.'}); row.relationshipId=v;}
     if(b.opportunityId!=null){const v=String(b.opportunityId).trim()||null; if(v&&!OPPORTUNITIES.some(o=>o.id===v)) return json(res,400,{message:'فرصت انتخاب‌شده یافت نشد.'}); row.opportunityId=v;}
     if(b.contractName!=null){const v=String(b.contractName).trim()||null; row.contractName=v; row.contractSignedAt=v?(row.contractSignedAt??nowIso()):null;}
