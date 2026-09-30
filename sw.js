@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.30.03';
+const DEMO_MOCK_VERSION = '2026.09.30.04';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -8195,6 +8195,78 @@ function programKpisFor(req){
   });
 }
 
+/* ═══════════════ گام ۲.۴ — پروندهٔ رقیب ۷بُعدی (فرم ۶ سند) ═══════════════
+   تحلیل رقبا فراتر از فهرست نام‌هاست؛ هدف یافتن «شکاف جایگاه» است — جایی که
+   سازمان می‌تواند مرجع شود و دیگران نیستند. هر رقیب کلیدی پرونده‌ای با هفت بُعد
+   جایگاه‌یابی دارد: مرجعیت داده، عمق تحلیل، حضور رسانه‌ای، شبکه مشارکت، کیفیت
+   رویداد، مرجعیت سیاستی و دیده‌شدن در موتورهای هوش مصنوعی. خروجی = جدول
+   جایگاه‌یابی + ماتریس شکاف؛ سه حوزهٔ بیشترین شکاف = محور مرجعیت‌سازی.
+   ساختار = قابلیت پلتفرم؛ رقبا و نمرات = دادهٔ هر سازمان (دمو = برنامهٔ سند). */
+const COMPETITOR_ORG_ID='org-1';
+const COMPETITOR_DIMENSIONS=[
+  {key:'dataAuthority',label:'مرجعیت داده',tool:'برداشت اسنادی + مصاحبه'},
+  {key:'analysisDepth',label:'عمق تحلیل',tool:'برداشت اسنادی + مصاحبه'},
+  {key:'mediaPresence',label:'حضور رسانه‌ای',tool:'چک‌لیست دارایی ارتباطی'},
+  {key:'partnershipNetwork',label:'شبکه مشارکت',tool:'چک‌لیست دارایی ارتباطی'},
+  {key:'eventQuality',label:'کیفیت رویداد',tool:'چک‌لیست دارایی ارتباطی'},
+  {key:'policyAuthority',label:'مرجعیت سیاستی',tool:'برداشت اسنادی + مصاحبه'},
+  {key:'aiVisibility',label:'دیده‌شدن در موتورهای هوش مصنوعی',tool:'پایش ۲۵ پرامپت هدف راهبردی'},
+];
+const COMPETITOR_ASSETS=['وب‌سایت','رسانه تخصصی','گزارش تخصصی','حضور رویدادی'];
+function ensureCompetitorSeed(){
+  if((DB.competitors??[]).some(c=>c.organizationId===COMPETITOR_ORG_ID)) return;
+  const ago=(d)=>new Date(Date.now()-d*86400000).toISOString();
+  const in90=(d)=>new Date(Date.now()+d*86400000).toISOString();
+  const S=(d,a,m,p,e,po,ai)=>({dataAuthority:d,analysisDepth:a,mediaPresence:m,partnershipNetwork:p,eventQuality:e,policyAuthority:po,aiVisibility:ai});
+  DB.competitors=[
+    /* خودِ سازمان — مبنای سنجش شکاف جایگاه */
+    {id:'self',organizationId:COMPETITOR_ORG_ID,isSelf:true,name:'هلدینگ پارس (خودمان)',segment:'هلدینگ فناوری و داده',
+      notes:'خودارزیابی هفت‌بُعدی — مبنای ماتریس شکاف.',ownerRole:'مدیر استراتژی',
+      assets:['وب‌سایت','گزارش تخصصی'],scores:S(80,82,55,65,70,60,62),reviewAt:in90(30),createdAt:ago(40),updatedAt:ago(5)},
+    {id:'comp-1',organizationId:COMPETITOR_ORG_ID,isSelf:false,name:'اندیشکده داده‌پژوهان',segment:'اندیشکده پژوهشی',
+      notes:'عمق تحلیل قوی و گزارش‌های مرجع؛ در رویداد و شبکهٔ مشارکت ضعیف.',ownerRole:'مدیر استراتژی',
+      assets:['وب‌سایت','رسانه تخصصی','گزارش تخصصی'],scores:S(75,80,60,40,35,55,45),reviewAt:in90(20),createdAt:ago(40),updatedAt:ago(6)},
+    {id:'comp-2',organizationId:COMPETITOR_ORG_ID,isSelf:false,name:'رسانه تحلیل‌گر صنعت',segment:'رسانه تخصصی',
+      notes:'حضور رسانه‌ای گسترده اما بدون داده و مرجعیت سیاستی.',ownerRole:'مدیر روابط عمومی',
+      assets:['وب‌سایت','رسانه تخصصی'],scores:S(45,50,85,45,55,30,60),reviewAt:in90(25),createdAt:ago(40),updatedAt:ago(8)},
+    {id:'comp-3',organizationId:COMPETITOR_ORG_ID,isSelf:false,name:'مرکز مطالعات راهبردی صنعتی',segment:'مرکز مطالعات وابسته به صنعت',
+      notes:'شبکهٔ مشارکت و مرجعیت سیاستی قوی؛ خروجی رسانه‌ای کم.',ownerRole:'مدیرعامل',
+      assets:['وب‌سایت','گزارش تخصصی','حضور رویدادی'],scores:S(60,65,40,75,60,80,40),reviewAt:in90(40),createdAt:ago(40),updatedAt:ago(4)},
+  ];
+}
+function competitorsFor(req){
+  ensureCompetitorSeed();
+  const ids=visibleOrgIds(req);
+  return (DB.competitors??[]).filter(c=>ids.includes(c.organizationId));
+}
+function competitorGapMatrix(rows){
+  const self=rows.find(c=>c.isSelf);
+  const others=rows.filter(c=>!c.isSelf);
+  const dims=COMPETITOR_DIMENSIONS.map(D=>{
+    const selfScore=self?(Number(self.scores?.[D.key])||0):null;
+    const per=others.map(c=>({id:c.id,name:c.name,score:Number(c.scores?.[D.key])||0}));
+    const maxOther=per.length?Math.max(...per.map(p=>p.score)):null;
+    const gap=(selfScore!=null&&maxOther!=null)?selfScore-maxOther:null;
+    return {...D,selfScore,per,maxOther,gap,
+      position:gap==null?null:(gap>0?'LEAD':(gap<0?'LAG':'EVEN'))};
+  });
+  /* سه حوزهٔ دارای بیشترین شکاف مثبت = محور مرجعیت‌سازی (بخش ۹ سند) */
+  const topGaps=dims.filter(d=>d.gap!=null&&d.gap>0).sort((a,b)=>b.gap-a.gap).slice(0,3)
+    .map(d=>({key:d.key,label:d.label,gap:d.gap}));
+  const worstLag=dims.filter(d=>d.gap!=null&&d.gap<0).sort((a,b)=>a.gap-b.gap)[0]??null;
+  return {dims,topGaps,worstLag,selfName:self?.name??null};
+}
+function competitorView(c){
+  return {...c,dimensions:COMPETITOR_DIMENSIONS.map(D=>({key:D.key,label:D.label,tool:D.tool,score:Number(c.scores?.[D.key])||0}))};
+}
+function validateCompetitorScores(b){
+  for(const D of COMPETITOR_DIMENSIONS){
+    const v=Number(b?.scores?.[D.key]);
+    if(!Number.isFinite(v)||v<0||v>100) return `نمرهٔ «${D.label}» باید عددی بین ۰ تا ۱۰۰ باشد.`;
+  }
+  return null;
+}
+
 /* ممیزی سه‌گانه — دادهٔ ممیزی متعلق به سازمان برنامه است و بیرون از محدوده دیده نمی‌شود */
 function programAuditsFor(req){
   ensureProgramSeed();
@@ -14422,6 +14494,61 @@ async function __handler(req, res) {
     row.monitoring.unshift(mon); row.updatedAt=nowIso(); saveDb();
     audit(req,'CREATE','GoalMonitoring',row.id,'OK',{system:mon.system});
     return json(res,201,{...mon,goal:goalView(row)});
+  }
+
+  /* ─────────────── گام ۲.۴ — پروندهٔ رقیب ۷بُعدی (/intelligence/competitors) ────────── */
+  if(is('/intelligence/competitors')&&method==='GET'){
+    if(!hasPerm('analytics.read')) return json(res,403,{message:'شما مجوز «تحلیل‌ها» (analytics.read) را ندارید.'});
+    const rows=competitorsFor(req);
+    const matrix=competitorGapMatrix(rows);
+    return json(res,200,{items:rows.map(competitorView),dimensions:COMPETITOR_DIMENSIONS,assets:COMPETITOR_ASSETS,
+      matrix,topGaps:matrix.topGaps,
+      rule:'هدف، یافتن «شکاف جایگاه» است — جایی که سازمان می‌تواند مرجع شود و دیگران نیستند؛ سه حوزهٔ دارای بیشترین شکاف، محور مرجعیت‌سازی می‌شوند.',generatedAt:nowIso()});
+  }
+  if(is('/intelligence/competitors')&&method==='POST'){
+    if(!hasPerm('analytics.write')) return json(res,403,{message:'شما مجوز «ثبت رویداد و نتیجهٔ سنجش» (analytics.write) را ندارید.'});
+    ensureCompetitorSeed();
+    const b=await readBody(req);
+    const name=String(b.name??'').trim();
+    if(name.length<3) return json(res,400,{message:'نام رقیب را بنویسید (حداقل ۳ نویسه).'});
+    const seg=String(b.segment??'').trim();
+    if(!seg) return json(res,400,{message:'بخش/حوزهٔ رقیب را مشخص کنید.'});
+    const err=validateCompetitorScores(b);
+    if(err) return json(res,400,{message:err});
+    const assets=(Array.isArray(b.assets)?b.assets:[]).map(x=>String(x).trim()).filter(x=>COMPETITOR_ASSETS.includes(x));
+    const row={id:`comp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,
+      organizationId:primaryOrgId(authUser)??visibleOrgIds(req)[0]??COMPETITOR_ORG_ID,
+      isSelf:false,name,segment:seg,notes:String(b.notes??'').trim(),
+      ownerRole:String(b.ownerRole??'').trim(),assets,
+      scores:{...b.scores},reviewAt:new Date(Date.now()+90*86400000).toISOString(),
+      createdAt:nowIso(),updatedAt:nowIso()};
+    DB.competitors.push(row); saveDb();
+    audit(req,'CREATE','Competitor',row.id,'OK',{name:row.name});
+    return json(res,201,competitorView(row));
+  }
+  const compId=match('/intelligence/competitors/:id');
+  if(compId&&(method==='PATCH'||method==='DELETE')){
+    if(!hasPerm('analytics.write')) return json(res,403,{message:'شما مجوز «ثبت رویداد و نتیجهٔ سنجش» (analytics.write) را ندارید.'});
+    ensureCompetitorSeed();
+    const row=(DB.competitors??[]).find(c=>c.id===compId[0]);
+    if(!row||!visibleOrgIds(req).includes(row.organizationId)) return json(res,404,{message:'پروندهٔ رقیب یافت نشد یا خارج از محدودهٔ شماست.'});
+    if(method==='DELETE'){
+      if(row.isSelf) return json(res,400,{message:'پروفایل خودِ سازمان قابل حذف نیست — مبنای ماتریس شکاف است.'});
+      DB.competitors=DB.competitors.filter(c=>c.id!==row.id); saveDb();
+      audit(req,'DELETE','Competitor',row.id,'OK',{name:row.name});
+      return json(res,200,{ok:true,id:row.id});
+    }
+    const b=await readBody(req);
+    if(b.name!=null){const v=String(b.name).trim(); if(v.length<3) return json(res,400,{message:'نام رقیب را بنویسید (حداقل ۳ نویسه).'}); row.name=v;}
+    if(b.segment!=null){const v=String(b.segment).trim(); if(!v) return json(res,400,{message:'بخش/حوزهٔ رقیب را مشخص کنید.'}); row.segment=v;}
+    if(b.scores!=null){const merged={...row.scores,...b.scores}; const err=validateCompetitorScores({...row,scores:merged}); if(err) return json(res,400,{message:err}); row.scores=merged;}
+    if(b.assets!=null){const v=(Array.isArray(b.assets)?b.assets:[]).map(x=>String(x).trim()).filter(x=>COMPETITOR_ASSETS.includes(x)); row.assets=v;}
+    if(b.notes!=null) row.notes=String(b.notes).trim();
+    if(b.ownerRole!=null) row.ownerRole=String(b.ownerRole).trim();
+    if(b.reviewAt!=null) row.reviewAt=String(b.reviewAt);
+    row.updatedAt=nowIso(); saveDb();
+    audit(req,'UPDATE','Competitor',row.id,'OK',{});
+    return json(res,200,competitorView(row));
   }
 
   /* ─────────────── گام ۲.۲.۱ — تنظیمات برنامهٔ سازمان (per-tenant) ──────────
