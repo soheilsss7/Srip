@@ -12,6 +12,7 @@ import { lt, t } from '../_lib/i18n';
 
 export const INTEL_HUB_TABS = lt([
   { href: '/intelligence', label: t('هوش رابطه') },
+  { href: '/intelligence/competitors', label: t('رقبا') },
   { href: '/ai', label: t('دستیار هوشمند') },
   { href: '/recommendations', label: t('پیشنهادها') },
   { href: '/ai-executive-brief', label: t('بریف هفتگی') },
@@ -22,7 +23,8 @@ export const INTEL_HUB_TABS = lt([
 export default function IntelHub() {
   const pathname = usePathname();
   // غنی‌سازی منابع رسمی زیرمجموعهٔ «پیشنهادها»ست — تب مادرِ همان، فعال می‌ماند
-  const force = pathname === '/enrichment' ? '/recommendations' : undefined;
+  const force = pathname === '/enrichment' ? '/recommendations'
+    : pathname.startsWith('/intelligence/competitors') ? '/intelligence/competitors' : undefined;
   return <HubTabs base tabs={INTEL_HUB_TABS} activeHref={force} />;
 }
 

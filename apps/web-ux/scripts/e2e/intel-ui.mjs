@@ -91,10 +91,10 @@ try {
   ok('سایدبار: غنی‌سازی زیر زون هوش', sidebarZone.trim() === 'هوش', 'zone=' + sidebarZone);
 
   /* ── ۲) نوار تب هاب در همهٔ صفحات هوش ── */
-  const TABS = ['هوش رابطه', 'دستیار هوشمند', 'پیشنهادها', 'بریف هفتگی', 'گزارش‌ها'];
+  const TABS = ['هوش رابطه', 'رقبا', 'دستیار هوشمند', 'پیشنهادها', 'بریف هفتگی', 'گزارش‌ها'];
   const checkHub = async (name) => {
     const tabs = await hubTabs();
-    ok(`هاب در ${name}: هر ۵ تب حاضر`, tabs.length === 5 && TABS.every(t => tabs.some(x => x.includes(t))), JSON.stringify(tabs));
+    ok(`هاب در ${name}: هر ۶ تب حاضر`, tabs.length === 6 && TABS.every(t => tabs.some(x => x.includes(t))), JSON.stringify(tabs));
   };
   await checkHub('/intelligence');
 
@@ -230,13 +230,54 @@ try {
 
   // موبایل ۳۶۰×۷۶۰: نوار تب هاب بدون سرریز
   await page.setViewport({ width: 360, height: 760 });
+  /* ═══ گام ۲.۴ — رقبا و شکاف جایگاه ═══ */
+  await page.goto(`${BASE}/intelligence/competitors`, { waitUntil: 'networkidle0', timeout: 60000 });
+  await new Promise(r => setTimeout(r, 1800));
+  ok('رقبا: تب هاب «رقبا» فعال است', await clickByText('nav.tabs a', 'رقبا'));
+  const comp = await page.evaluate(() => ({
+    h1: (document.querySelector('.page-heading h1')?.textContent ?? ''),
+    statCards: document.querySelectorAll('.stat-grid .stat-card').length,
+    axes: document.querySelectorAll('.gap-axis').length,
+    profileRows: (document.querySelector('.table-wrap')?.querySelectorAll('tbody tr') ?? []).length,
+    dimCols: [...(document.querySelector('.table-wrap')?.querySelectorAll('thead th') ?? [])].map(x => x.textContent.trim()),
+    matrixRows: document.querySelectorAll('.comp-matrix tbody tr').length,
+    leadCells: document.querySelectorAll('.cm-cell.lead').length,
+    lagCells: document.querySelectorAll('.cm-cell.lag').length,
+  }));
+  ok('رقبا: هدر استاندارد و چهار کارت آمار', comp.h1.includes('شکاف جایگاه') && comp.statCards >= 4, comp.h1);
+  ok('رقبا: سه محور مرجعیت‌سازی', comp.axes === 3, `axes=${comp.axes}`);
+  ok('رقبا: جدول جایگاه‌یابی ۴ پرونده (خودمان + ۳ رقیب)', comp.profileRows === 4, `rows=${comp.profileRows}`);
+  ok('رقبا: هفت بُعد در سرستون‌ها', ['مرجعیت داده', 'عمق تحلیل', 'حضور رسانه‌ای', 'شبکه مشارکت', 'کیفیت رویداد', 'مرجعیت سیاستی', 'دیده‌شدن در موتورهای هوش مصنوعی'].every(d => comp.dimCols.some(c => c.includes(d))), JSON.stringify(comp.dimCols.slice(2, 9)));
+  ok('رقبا: ماتریس شکاف هفت‌سطری با سلول‌های رنگی', comp.matrixRows === 7 && comp.leadCells > 0 && comp.lagCells > 0, `rows=${comp.matrixRows} lead=${comp.leadCells} lag=${comp.lagCells}`);
+  /* مودال ثبت رقیب */
+  const opened = await clickByText('button', 'پروندهٔ رقیب جدید');
+  await new Promise(r => setTimeout(r, 800));
+  const formFields = await page.evaluate(() => ({
+    open: !!document.querySelector('.modal-card'),
+    inputs: document.querySelectorAll('.modal-card input[type=number]').length,
+    nameInp: !!document.querySelector('.modal-card input:not([type=number])'),
+  }));
+  ok('رقبا: مودال پروندهٔ رقیب با ۷ فیلد نمره', opened && formFields.open && formFields.inputs === 7 && formFields.nameInp, JSON.stringify(formFields));
+  await page.type('.modal-card input:not([type=number])', 'رقیب تست باتری');
+  const segInp = await page.evaluateHandle(() => [...document.querySelectorAll('.modal-card input:not([type=number])')][1]);
+  await segInp.asElement().type('تست');
+  for (const inp of await page.$$('.modal-card input[type=number]')) await inp.type('25');
+  await new Promise(r => setTimeout(r, 300));
+  await page.evaluate(() => { const f = document.querySelector('#competitor-form'); if (f) f.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+  await new Promise(r => setTimeout(r, 1800));
+  const created = await page.evaluate(() => ({
+    closed: !document.querySelector('.modal-card'),
+    found: [...(document.querySelector('.table-wrap')?.querySelectorAll('tbody tr') ?? [])].some(r => (r.textContent ?? '').includes('رقیب تست باتری')),
+  }));
+  ok('رقبا: ثبت پروندهٔ جدید → ردیف در جدول جایگاه‌یابی', created.closed && created.found, JSON.stringify(created));
+
   await page.goto(`${BASE}/intelligence`, { waitUntil: 'networkidle0', timeout: 60000 });
   await new Promise(r => setTimeout(r, 1500));
   const mob = await page.evaluate(() => ({
     overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     tabs: document.querySelectorAll('nav.tabs:not(.sub-tabs) a').length,
   }));
-  ok('موبایل: تب‌های هاب حاضر و بدون سرریز افقی', mob.tabs === 5 && mob.overflow <= 0, JSON.stringify(mob));
+  ok('موبایل: تب‌های هاب حاضر و بدون سرریز افقی', mob.tabs === 6 && mob.overflow <= 0, JSON.stringify(mob));
 } catch (e) {
   console.log('E2E ERROR:', e.message);
   fails++;

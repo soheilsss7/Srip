@@ -671,3 +671,28 @@ html[data-theme="dark"] .pp-stage-chip.current{background:#0ea5e9;border-color:#
 @media (max-width:520px){
   .prompt-cat-head{flex-direction:column;align-items:flex-start;gap:4px}
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   گام ۲.۴ — پروندهٔ رقیب ۷بُعدی (/intelligence/competitors)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.comp-score{display:flex;flex-direction:column;gap:4px;min-width:72px}
+.comp-bar{height:5px}
+.comp-self{background:color-mix(in srgb,var(--srip-accent) 5%,transparent)}
+.comp-matrix th:first-child,.comp-matrix td:first-child{min-width:150px}
+.cm-cell{text-align:center;font-weight:700}
+.cm-cell.lead{background:color-mix(in srgb,#16a34a 12%,transparent);color:#15803d}
+.cm-cell.lag{background:color-mix(in srgb,#dc2626 10%,transparent);color:#b91c1c}
+.gap-axes{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.gap-axis{display:flex;gap:10px;align-items:flex-start;border:1px solid color-mix(in srgb,#16a34a 35%,transparent);
+  background:color-mix(in srgb,#16a34a 7%,transparent);border-radius:var(--radius-lg);padding:10px 12px}
+.gap-axis-n{width:26px;height:26px;border-radius:999px;background:#16a34a;color:#fff;font-weight:800;
+  display:grid;place-items:center;font-size:13px;flex:0 0 auto}
+.gap-axis b{display:block;font-size:12.5px}
+.row-actions{display:flex;gap:5px}
+@media (max-width:900px){
+  .gap-axes{grid-template-columns:1fr}
+}
+html[data-theme="dark"] .cm-cell.lead{background:color-mix(in srgb,#4ade80 14%,transparent);color:#4ade80}
+html[data-theme="dark"] .cm-cell.lag{background:color-mix(in srgb,#f87171 12%,transparent);color:#f87171}
+html[data-theme="dark"] .gap-axis{border-color:color-mix(in srgb,#4ade80 30%,transparent);background:color-mix(in srgb,#4ade80 7%,transparent)}
+html[data-theme="dark"] .gap-axis-n{background:#16a34a}

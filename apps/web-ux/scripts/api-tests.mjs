@@ -1218,6 +1218,87 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
   check('ثبت هدف بدون program.write → ۴۰۳', noPerm.status === 403);
 }
 
+/* ═════════════════ گام ۲.۴ — پروندهٔ رقیب ۷بُعدی (فرم ۶ سند) ═════════════════ */
+{
+  const dl = await login('demo');
+  const dt = dl.body?.accessToken;
+
+  const L = await api('/intelligence/competitors', { token: dt });
+  check('فهرست رقبا: ۴ پروندهٔ دمو (خودمان + ۳ رقیب)', L.status === 200 && L.body.items.length === 4
+    && L.body.items.filter(x => x.isSelf).length === 1, `n=${L.body?.items?.length}`);
+  check('هفت بُعد جایگاه‌یابی با ابزار سنجش', L.body.dimensions.length === 7
+    && L.body.dimensions.every(d => d.label && d.tool));
+  check('ابزار سنجش «دیده‌شدن AI» = پایش ۲۵ پرامپت هدف راهبردی',
+    L.body.dimensions.find(d => d.key === 'aiVisibility')?.tool.includes('۲۵ پرامپت'));
+  const dim7 = L.body.dimensions.map(d => d.key).join(',');
+  check('ابعاد دقیقاً مطابق بخش ۹ سند', ['dataAuthority','analysisDepth','mediaPresence','partnershipNetwork','eventQuality','policyAuthority','aiVisibility'].join(',') === dim7);
+  const items = L.body.items;
+  check('هر پرونده: ۷ نمرهٔ ۰-۱۰۰ + دارایی‌های ارتباطی + بازبینی', items.every(c => c.dimensions.length === 7
+    && c.dimensions.every(d => d.score >= 0 && d.score <= 100) && Array.isArray(c.assets) && !!c.reviewAt));
+
+  /* ماتریس شکاف: gap = خود − بهترین رقیب؛ سه محور مرجعیت‌سازی */
+  const M = L.body.matrix;
+  check('ماتریس شکاف: هفت سطر با شکاف و موقعیت', M.dims.length === 7
+    && M.dims.every(d => typeof d.gap === 'number' && ['LEAD','LAG','EVEN'].includes(d.position)));
+  check('ماتریس: نمرهٔ هر رقیب در سطر بُعد موجود', M.dims.every(d => d.per.length === 3 && d.per.every(p => typeof p.score === 'number')));
+  const lead = M.dims.filter(d => d.position === 'LEAD').length;
+  const lag = M.dims.filter(d => d.position === 'LAG').length;
+  check('ماتریس: ترکیب پیشی/عقب معنادار (هر دو موجود)', lead >= 1 && lag >= 1, `lead=${lead} lag=${lag}`);
+  check('سه محور مرجعیت‌سازی = بزرگ‌ترین شکاف‌های مثبت مرتب',
+    L.body.topGaps.length === Math.min(3, lead) && L.body.topGaps.every((g, i) => i === 0 || L.body.topGaps[i - 1].gap >= g.gap) && L.body.topGaps.every(g => g.gap > 0));
+  check('بیشترین عقب‌ماندگی شناسایی می‌شود', M.worstLag && M.worstLag.gap < 0);
+
+  /* اعتبارسنجی فرم ۶ */
+  const noSeg = await api('/intelligence/competitors', { method: 'POST', token: dt, body: { name: 'رقیب تست', scores: { dataAuthority: 50, analysisDepth: 50, mediaPresence: 50, partnershipNetwork: 50, eventQuality: 50, policyAuthority: 50, aiVisibility: 50 } } });
+  check('ثبت بدون بخش/حوزه → ۴۰۰', noSeg.status === 400);
+  const badScore = await api('/intelligence/competitors', { method: 'POST', token: dt, body: { name: 'رقیب تست', segment: 'تست', scores: { dataAuthority: 150, analysisDepth: 50, mediaPresence: 50, partnershipNetwork: 50, eventQuality: 50, policyAuthority: 50, aiVisibility: 50 } } });
+  check('نمرهٔ ۱۵۰ → ۴۰۰ با نام بُعد در پیام', badScore.status === 400 && String(badScore.body?.message).includes('مرجعیت داده'));
+
+  const created = await api('/intelligence/competitors', { method: 'POST', token: dt, body: {
+    name: 'رقیب تست باتری', segment: 'تست', assets: ['وب‌سایت', 'دارایی ناموجود'],
+    scores: { dataAuthority: 30, analysisDepth: 30, mediaPresence: 30, partnershipNetwork: 30, eventQuality: 30, policyAuthority: 30, aiVisibility: 20 } } });
+  check('ثبت معتبر → ۲۰۱ و دارایی نامعتبر فیلتر می‌شود', created.status === 201
+    && JSON.stringify(created.body.assets) === JSON.stringify(['وب‌سایت']));
+  const cid = created.body?.id;
+
+  if (cid) {
+    const up = await api(`/intelligence/competitors/${cid}`, { method: 'PATCH', token: dt, body: { scores: { dataAuthority: 10 } } });
+    check('ویرایش نمره → ۲۰۰ و نمرهٔ دیگر حفظ می‌شود', up.status === 200 && up.body.dimensions.find(d => d.key === 'dataAuthority').score === 10
+      && up.body.dimensions.find(d => d.key === 'analysisDepth').score === 30);
+    const after = await api('/intelligence/competitors', { token: dt });
+    check('رقیب تازه در ماتریس شرکت می‌کند', after.body.matrix.dims[0].per.some(p => p.id === cid));
+    const del = await api(`/intelligence/competitors/${cid}`, { method: 'DELETE', token: dt });
+    const afterDel = await api('/intelligence/competitors', { token: dt });
+    check('حذف رقیب → ۲۰۰ و از فهرست خارج', del.status === 200 && !afterDel.body.items.some(x => x.id === cid));
+  }
+  const delSelf = await api('/intelligence/competitors/self', { method: 'DELETE', token: dt });
+  check('حذف پروفایل خودِ سازمان → ۴۰۰ (مبنای ماتریس)', delSelf.status === 400);
+  const gone = await api('/intelligence/competitors/comp-none', { method: 'PATCH', token: dt, body: { name: 'غایب' } });
+  check('شناسهٔ غایب → ۴۰۴', gone.status === 404);
+
+  /* مستأجر واقعی: رقیب دیده نمی‌شود؛ پروفایل خودش را می‌سازد */
+  const pl2 = await login('pars', 'pars1234');
+  const pt2 = pl2.body?.accessToken;
+  if (pt2) {
+    const empty = await api('/intelligence/competitors', { token: pt2 });
+    check('مستأجر پارس → رقبای دمو دیده نمی‌شود', empty.status === 200 && empty.body.items.length === 0);
+    const S = { dataAuthority: 40, analysisDepth: 40, mediaPresence: 20, partnershipNetwork: 10, eventQuality: 10, policyAuthority: 15, aiVisibility: 5 };
+    const mine = await api('/intelligence/competitors', { method: 'POST', token: pt2, body: { name: 'رقیب پارس', segment: 'تست', scores: S } });
+    check('مستأجر پارس → پروندهٔ رقیب خودش را ثبت می‌کند (۲۰۱)', mine.status === 201);
+    const self2 = await api('/intelligence/competitors', { method: 'POST', token: pt2, body: { name: 'پارس (خودمان)', segment: 'خود', scores: S } });
+    check('مستأجر پارس → پروفایل خودش را می‌سازد؛ بدون self ماتریس شکاف ندارد', self2.status === 201
+      && (await api('/intelligence/competitors', { token: pt2 })).body.matrix.topGaps.length === 0);
+  }
+
+  /* client (نقش مدیر روابط) analytics.write دارد → ثبت مجاز؛ سپس پاک‌سازی */
+  const cl = await login('client');
+  const ct = cl.body?.accessToken;
+  const clPost = await api('/intelligence/competitors', { method: 'POST', token: ct, body: {
+    name: 'رقیب کاربر نقش‌محور', segment: 'تست', scores: { dataAuthority: 10, analysisDepth: 10, mediaPresence: 10, partnershipNetwork: 10, eventQuality: 10, policyAuthority: 10, aiVisibility: 10 } } });
+  check('کاربر نقش‌محور با analytics.write → ثبت مجاز (۲۰۱)', clPost.status === 201);
+  if (clPost.status === 201) await api(`/intelligence/competitors/${clPost.body.id}`, { method: 'DELETE', token: ct });
+}
+
 /* ============================ SUMMARY ============================ */
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
