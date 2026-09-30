@@ -60,6 +60,18 @@ export default function ProgramPage() {
   const [auditTab, setAuditTab] = useState('people');
   const [auditDetail, setAuditDetail] = useState<any | null>(null);
 
+  /* اهداف راهبردی: مؤلفه‌های پایش‌شده + پایش ماهانه (گام ۲.۳) */
+  const [goalIdx, setGoalIdx] = useState(0);
+  const [goalCreateOpen, setGoalCreateOpen] = useState(false);
+  const [goalFormError, setGoalFormError] = useState('');
+  const [goalForm, setGoalForm] = useState({ title: '', owner: '', description: '' });
+  const [goalComps, setGoalComps] = useState([{ title: '', method: '', target6: '', target12: '', value: '', unit: 'count' }]);
+  const [compEdit, setCompEdit] = useState<any | null>(null);
+  const [compValue, setCompValue] = useState('');
+  const [monOpen, setMonOpen] = useState(false);
+  const [monError, setMonError] = useState('');
+  const [monForm, setMonForm] = useState({ system: '', referralRate: '', accuracy: '', probableSource: '', action: '' });
+
   /* شاخص: ثبت فرم ۱۷ — تعریف شاخص دادهٔ سازمان است و به سنجهٔ محاسبهٔ پلتفرم bind می‌شود */
   const [kpiCreateOpen, setKpiCreateOpen] = useState(false);
   const [kpiFormError, setKpiFormError] = useState('');
@@ -72,7 +84,8 @@ export default function ProgramPage() {
       const path = which === 'overview' ? '/program/overview'
         : which === 'kpis' ? '/program/kpis'
           : which === 'risks' ? `/program/risks${riskFilter.status || riskFilter.grade ? `?${new URLSearchParams({ ...(riskFilter.status ? { status: riskFilter.status } : {}), ...(riskFilter.grade ? { grade: riskFilter.grade } : {}) }).toString()}` : ''}`
-            : which === 'readiness' ? '/program/readiness' : '/program/audits';
+            : which === 'readiness' ? '/program/readiness'
+            : which === 'goals' ? '/program/goals' : '/program/audits';
       const result = await api<any>(path);
       setData((prev: Record<string, any>) => ({ ...prev, [which]: result }));
     } catch (x) { setError((x as Error).message); }
@@ -136,12 +149,55 @@ export default function ProgramPage() {
     finally { setBusy(false); }
   };
 
+  const openGoalCreate = () => {
+    setGoalCreateOpen(true); setGoalFormError('');
+    setGoalForm({ title: '', owner: '', description: '' });
+    setGoalComps([{ title: '', method: '', target6: '', target12: '', value: '', unit: 'count' }]);
+  };
+
+  const submitGoal = async () => {
+    setGoalFormError(''); setBusy(true);
+    try {
+      const components = goalComps
+        .filter((c: any) => c.title.trim() || c.method.trim() || c.target6 || c.target12)
+        .map((c: any) => ({ title: c.title, method: c.method, target6: Number(c.target6) || 0, target12: Number(c.target12) || 0, value: Number(c.value) || 0, unit: c.unit }));
+      await api('/program/goals', { method: 'POST', body: JSON.stringify({ ...goalForm, components }) });
+      setGoalCreateOpen(false);
+      load('goals');
+    } catch (x) { setGoalFormError((x as Error).message); }
+    finally { setBusy(false); }
+  };
+
+  const submitMonitoring = async () => {
+    setMonError(''); setBusy(true);
+    try {
+      const g = (data.goals?.items ?? [])[goalIdx];
+      await api(`/program/goals/${g.id}/monitoring`, { method: 'POST', body: JSON.stringify({ ...monForm, referralRate: Number(monForm.referralRate), accuracy: Number(monForm.accuracy) }) });
+      setMonOpen(false);
+      setMonForm({ system: '', referralRate: '', accuracy: '', probableSource: '', action: '' });
+      load('goals');
+    } catch (x) { setMonError((x as Error).message); }
+    finally { setBusy(false); }
+  };
+
+  const saveComponentValue = async () => {
+    setBusy(true);
+    try {
+      const g = (data.goals?.items ?? [])[goalIdx];
+      const updated = await api<any>(`/program/goals/${g.id}/components/${compEdit.id}`, { method: 'PATCH', body: JSON.stringify({ value: Number(compValue) }) });
+      setData((prev: Record<string, any>) => ({ ...prev, goals: { ...prev.goals, items: prev.goals.items.map((x: any, i: number) => i === goalIdx ? updated : x) } }));
+      setCompEdit(null);
+    } catch (x) { setError((x as Error).message); }
+    finally { setBusy(false); }
+  };
+
   const d = data[tab];
   const overview = data.overview;
   const kpis = data.kpis;
   const risks = data.risks;
   const readiness = data.readiness;
   const audits = data.audit; /* کلید ذخیره‌سازی = مقدار تب ('audit') */
+  const goals = data.goals;
 
   const tabs = useMemo(() => ([
     { value: 'overview', label: t('نمای کلی') },
@@ -149,6 +205,7 @@ export default function ProgramPage() {
     { value: 'risks', label: t('ریسک‌ها') },
     { value: 'readiness', label: t('آمادگی بازار') },
     { value: 'audit', label: t('ممیزی سه‌گانه') },
+    { value: 'goals', label: t('اهداف راهبردی') },
   ]), []);
 
   const tabCounts: Record<string, number | undefined> = {
@@ -501,6 +558,121 @@ export default function ProgramPage() {
         </>
       )}
 
+      {/* ═══════════ تب اهداف راهبردی — هر سازمان هدف خود را با مؤلفه‌ها و پایش تعریف می‌کند ═══════════ */}
+      {tab === 'goals' && goals && (
+        <>
+          {!goals.items.length ? (
+            <EmptyV4 icon={<Target size={30} />} title={t('هنوز هدف راهبردی ثبت نشده است')}
+              description={t('هدف راهبردی سازمان خود را با مؤلفه‌های سنجش‌پذیر و مایلستون‌های زمانی ثبت کنید؛ مقدار هر مؤلفه از نتیجهٔ پایش به دست می‌آید.')}
+              action={writable ? <button className="srip-button primary" onClick={openGoalCreate}><Plus size={14} /> {t('ثبت هدف')}</button> : undefined} />
+          ) : (() => {
+            const g = goals.items[Math.min(goalIdx, goals.items.length - 1)];
+            return (
+              <>
+                {goals.items.length > 1 ? (
+                  <Segmented options={goals.items.map((x: any, i: number) => ({ value: String(i), label: x.title }))} value={String(goalIdx)} onChange={(v: string) => setGoalIdx(Number(v))} />
+                ) : null}
+                <div className="stat-grid">
+                  <StatCard icon={<Gauge size={18} />} iconClass="ic-blue" label={t('نمرهٔ مرکب هدف (پیشرفت تا مایلستون آخر)')}
+                    value={`${faNum(g.composite ?? 0)}٪`} sub={t('میانگین درصد پیشرفت مؤلفه‌ها نسبت به هدف پایان دوره')} />
+                  <StatCard icon={<ListChecks size={18} />} iconClass="ic-teal" label={t('مؤلفه‌های سنجش‌پذیر')}
+                    value={faNum(g.components.length)} sub={t('هر مؤلفه روش سنجش و اهداف ماه ۶ و ۱۲ دارد')} />
+                  <StatCard icon={<ClipboardList size={18} />} iconClass="ic-gold" label={t('پرامپت‌های پایش')}
+                    value={faNum(g.promptCount)} sub={t('پایش ماهانه دیده‌شدگی در پاسخ سامانه‌های هوش مصنوعی')} />
+                  <StatCard icon={<Activity size={18} />} iconClass="ic-red" label={t('رکوردهای پایش')}
+                    value={faNum((g.monitoring ?? []).length)} sub={t('سامانه، ارجاع، دقت بازنمایی و اقدام اصلاحی')} />
+                </div>
+                <div className="note-strip"><Target size={15} /><span>{g.description} {goals.rule ?? ''}</span></div>
+
+                <SectionCard title={t('مؤلفه‌های هدف')} icon={<ListChecks size={17} />}
+                  description={`${t('مالک')}: ${g.owner}`}>
+                  <div className="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>#</th><th>{t('مؤلفه')}</th><th>{t('روش سنجش')}</th>
+                          <th>{t('هدف ماه ۶')}</th><th>{t('هدف ماه ۱۲')}</th><th>{t('مقدار جاری')}</th><th>{t('پیشرفت تا هدف')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {g.components.map((c: any) => (
+                          <tr key={c.id}>
+                            <td>{faNum(c.order)}</td>
+                            <td><div className="t-primary">{c.title}</div></td>
+                            <td className="t-muted" style={{ fontSize: 11 }}>{c.method}</td>
+                            <td>{faNum(c.target6)}{c.unit === 'percent' ? '٪' : ''}</td>
+                            <td>{faNum(c.target12)}{c.unit === 'percent' ? '٪' : ''}</td>
+                            <td>{writable ? (
+                              <button type="button" className="srip-button" style={{ padding: '3px 10px' }}
+                                onClick={() => { setCompEdit(c); setCompValue(String(c.value)); }}>
+                                {faNum(c.value)}{c.unit === 'percent' ? '٪' : ''} ✎
+                              </button>
+                            ) : <b>{faNum(c.value)}{c.unit === 'percent' ? '٪' : ''}</b>}</td>
+                            <td>
+                              <div style={{ minWidth: 90 }}>
+                                <b>{faNum(c.percent12)}٪</b>
+                                <div className="prog-bar season-bar"><div className={`prog-fill ${c.percent6 >= 100 ? '' : 'warn'}`} style={{ width: `${Math.min(100, c.percent12)}%` }} /></div>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </SectionCard>
+
+                <div className="two-col-grid">
+                  <SectionCard title={t('پرامپت‌های پایش')} icon={<ClipboardList size={17} />}
+                    description={t('هر ماه همهٔ پرسش‌ها در سامانه‌های هوش مصنوعی پرسیده و نتیجه ثبت می‌شود.')}>
+                    <div className="prompt-cats">
+                      {(g.prompts ?? []).map((cat: any) => (
+                        <div key={cat.id} className="prompt-cat">
+                          <div className="prompt-cat-head">
+                            <b>{cat.category}</b>
+                            <span className="chip">{faNum(cat.questions.length)}</span>
+                          </div>
+                          <ol className="prompt-list">
+                            {cat.questions.map((q: string) => <li key={q}>{q}</li>)}
+                          </ol>
+                        </div>
+                      ))}
+                    </div>
+                  </SectionCard>
+
+                  <SectionCard title={t('جدول پایش ماهانه')} icon={<Activity size={17} />}
+                    description={t('نتیجهٔ هر پایش با اقدام اصلاحی ثبت می‌شود.')}
+                    actions={writable ? (
+                      <button className="srip-button primary" onClick={() => { setMonOpen(true); setMonError(''); }}><Plus size={14} /> {t('ثبت پایش')}</button>
+                    ) : undefined}>
+                    {(g.monitoring ?? []).length ? (
+                      <div className="table-wrap">
+                        <table>
+                          <thead>
+                            <tr><th>{t('سامانه')}</th><th>{t('تاریخ')}</th><th>{t('ارجاع به ما')}</th><th>{t('دقت بازنمایی')}</th><th>{t('منبع احتمالی پاسخ')}</th><th>{t('اقدام اصلاحی')}</th></tr>
+                          </thead>
+                          <tbody>
+                            {g.monitoring.map((m: any) => (
+                              <tr key={m.id}>
+                                <td><div className="t-primary">{m.system}</div></td>
+                                <td>{faDate(m.checkedAt)}</td>
+                                <td><b>{faNum(m.referralRate)}٪</b></td>
+                                <td><b>{faNum(m.accuracy)}٪</b></td>
+                                <td className="t-muted" style={{ fontSize: 11 }}>{m.probableSource || '—'}</td>
+                                <td className="t-muted" style={{ fontSize: 11 }}>{m.action || '—'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : <EmptyV4 icon={<Activity size={26} />} title={t('هنوز پایشی ثبت نشده است')} />}
+                  </SectionCard>
+                </div>
+              </>
+            );
+          })()}
+        </>
+      )}
+
       {/* ═══════════ مودال: جزئیات ریسک ═══════════ */}
       <Modal open={!!riskDetail} title={riskDetail?.title ?? ''} onClose={() => setRiskDetail(null)}
         description={`${t('احتمال')}: ${riskDetail ? LEVEL_FA[riskDetail.probability] : ''} · ${t('اثر')}: ${riskDetail ? LEVEL_FA[riskDetail.impact] : ''} · ${t('مالک')}: ${riskDetail?.ownerRole ?? ''}`}
@@ -565,6 +737,111 @@ export default function ProgramPage() {
             <input value={form.reactive} onChange={(e) => setForm(f => ({ ...f, reactive: e.target.value }))} placeholder={t('اگر رخ داد…')} />
           </label>
           {formError ? <div className="alert-banner danger" role="alert"><AlertTriangle size={16} /><span>{formError}</span></div> : null}
+        </form>
+      </Modal>
+
+      {/* ═══════════ مودال: ثبت هدف راهبردی ═══════════ */}
+      <Modal open={goalCreateOpen} title={t('ثبت هدف راهبردی')} onClose={() => setGoalCreateOpen(false)}
+        description={t('هدف را با مؤلفه‌های سنجش‌پذیر ثبت کنید؛ مقدار هر مؤلفه از نتیجهٔ پایش به دست می‌آید، نه ورود دستی.')}>
+        <form id="goal-create-form" className="form-grid" onSubmit={(e) => { e.preventDefault(); submitGoal(); }}>
+          <label className="field">
+            <span>{t('عنوان هدف')} *</span>
+            <input value={goalForm.title} onChange={(e) => setGoalForm(f => ({ ...f, title: e.target.value }))} required minLength={3} />
+          </label>
+          <div className="field-pair">
+            <label className="field">
+              <span>{t('مالک')} *</span>
+              <input value={goalForm.owner} onChange={(e) => setGoalForm(f => ({ ...f, owner: e.target.value }))} required />
+            </label>
+            <label className="field">
+              <span>{t('توصیف هدف')}</span>
+              <input value={goalForm.description} onChange={(e) => setGoalForm(f => ({ ...f, description: e.target.value }))} />
+            </label>
+          </div>
+          {goalComps.map((c: any, i: number) => (
+            <div key={i} className="goal-comp-row">
+              <div className="field-pair">
+                <label className="field">
+                  <span>{`${t('مؤلفه')} ${faNum(i + 1)} — ${t('عنوان')}`}</span>
+                  <input value={c.title} onChange={(e) => setGoalComps((rows: any[]) => rows.map((r, j) => j === i ? { ...r, title: e.target.value } : r))} />
+                </label>
+                <label className="field">
+                  <span>{t('روش سنجش')}</span>
+                  <input value={c.method} onChange={(e) => setGoalComps((rows: any[]) => rows.map((r, j) => j === i ? { ...r, method: e.target.value } : r))} />
+                </label>
+              </div>
+              <div className="field-pair">
+                <label className="field">
+                  <span>{t('هدف ماه ۶')}</span>
+                  <input type="number" min={0} value={c.target6} onChange={(e) => setGoalComps((rows: any[]) => rows.map((r, j) => j === i ? { ...r, target6: e.target.value } : r))} />
+                </label>
+                <label className="field">
+                  <span>{t('هدف ماه ۱۲')} *</span>
+                  <input type="number" min={1} value={c.target12} onChange={(e) => setGoalComps((rows: any[]) => rows.map((r, j) => j === i ? { ...r, target12: e.target.value } : r))} />
+                </label>
+                <label className="field">
+                  <span>{t('مقدار اولیه')}</span>
+                  <input type="number" min={0} value={c.value} onChange={(e) => setGoalComps((rows: any[]) => rows.map((r, j) => j === i ? { ...r, value: e.target.value } : r))} />
+                </label>
+              </div>
+            </div>
+          ))}
+          <button type="button" className="srip-button" onClick={() => setGoalComps((rows: any[]) => [...rows, { title: '', method: '', target6: '', target12: '', value: '', unit: 'count' }])}>
+            <Plus size={14} /> {t('افزودن مؤلفه')}
+          </button>
+          {goalFormError ? <div className="alert-banner danger" role="alert"><AlertTriangle size={16} /><span>{goalFormError}</span></div> : null}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" className="srip-button" onClick={() => setGoalCreateOpen(false)}><X size={14} /> {t('انصراف')}</button>
+            <button type="submit" className="srip-button primary" disabled={busy}>{busy ? t('در حال ذخیره…') : t('ثبت هدف')}</button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ═══════════ مودال: ثبت نتیجهٔ پایش مؤلفه ═══════════ */}
+      <Modal open={!!compEdit} title={compEdit?.title ?? ''} onClose={() => setCompEdit(null)}
+        description={`${t('روش سنجش')}: ${compEdit?.method ?? ''}`}>
+        <label className="field">
+          <span>{t('مقدار پایش‌شده')}</span>
+          <input type="number" min={0} value={compValue} onChange={(e) => setCompValue(e.target.value)} autoFocus />
+        </label>
+        <div className="note-strip"><Activity size={15} /><span>{t('مقدار مؤلفه از نتیجهٔ پایش ثبت می‌شود؛ نمرهٔ مرکب هدف خودکار بازمحاسبه می‌شود.')}</span></div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+          <button type="button" className="srip-button" onClick={() => setCompEdit(null)}><X size={14} /> {t('انصراف')}</button>
+          <button type="button" className="srip-button primary" disabled={busy || compValue === ''} onClick={saveComponentValue}>{t('ذخیرهٔ مقدار')}</button>
+        </div>
+      </Modal>
+
+      {/* ═══════════ مودال: ثبت پایش ماهانه ═══════════ */}
+      <Modal open={monOpen} title={t('ثبت نتیجهٔ پایش')} onClose={() => setMonOpen(false)}
+        description={t('نتیجهٔ پرسش پرامپت‌ها در یک سامانهٔ هوش مصنوعی را ثبت کنید.')}>
+        <form id="monitoring-form" className="form-grid" onSubmit={(e) => { e.preventDefault(); submitMonitoring(); }}>
+          <label className="field">
+            <span>{t('نام سامانه')} *</span>
+            <input value={monForm.system} onChange={(e) => setMonForm(f => ({ ...f, system: e.target.value }))} required />
+          </label>
+          <div className="field-pair">
+            <label className="field">
+              <span>{t('میزان ارجاع (٪)')} *</span>
+              <input type="number" min={0} max={100} value={monForm.referralRate} onChange={(e) => setMonForm(f => ({ ...f, referralRate: e.target.value }))} required />
+            </label>
+            <label className="field">
+              <span>{t('دقت بازنمایی (٪)')} *</span>
+              <input type="number" min={0} max={100} value={monForm.accuracy} onChange={(e) => setMonForm(f => ({ ...f, accuracy: e.target.value }))} required />
+            </label>
+          </div>
+          <label className="field">
+            <span>{t('منبع احتمالی پاسخ')}</span>
+            <input value={monForm.probableSource} onChange={(e) => setMonForm(f => ({ ...f, probableSource: e.target.value }))} />
+          </label>
+          <label className="field">
+            <span>{t('اقدام اصلاحی')}</span>
+            <input value={monForm.action} onChange={(e) => setMonForm(f => ({ ...f, action: e.target.value }))} />
+          </label>
+          {monError ? <div className="alert-banner danger" role="alert"><AlertTriangle size={16} /><span>{monError}</span></div> : null}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" className="srip-button" onClick={() => setMonOpen(false)}><X size={14} /> {t('انصراف')}</button>
+            <button type="submit" className="srip-button primary" disabled={busy}>{busy ? t('در حال ذخیره…') : t('ثبت پایش')}</button>
+          </div>
         </form>
       </Modal>
 

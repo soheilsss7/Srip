@@ -19,7 +19,7 @@ const PORT = Number(process.env.MOCK_API_PORT || 4000);
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.30.02';
+const DEMO_MOCK_VERSION = '2026.09.30.03';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -6219,6 +6219,8 @@ const PROGRAM_METRICS={
     compute:(c)=>c.monthlyReports},
   'declared-baseline':{label:'خط پایهٔ اعلامی سازمان (تا فعال‌شدن پایش زنده)',unit:'score',
     compute:(c)=>Number(c.def.config?.value??0)},
+  'goal-composite':{label:'نمرهٔ مرکب هدف راهبردی سازمان (از مؤلفه‌های پایش‌شده)',unit:'score',
+    compute:(c)=>{const g=(c.goals??[]).find(x=>x.status==='ACTIVE'&&(x.components??[]).length);return g?goalComposite(g,'m12'):0;}},
 };
 /* تنظیمات برنامهٔ دمو (org-1) — دقیقاً برنامهٔ سند؛ چارت ۲۲ نقشی، چهار فصل با
    آستانهٔ ۳۰/۴۵/۶۰/۷۵، هدف ۲۵ تفاهم‌نامه و ده شاخص بخش ۲۶ با سنجه‌های محاسبه */
@@ -6234,7 +6236,7 @@ const programDemoSettings=()=>({organizationId:PROGRAM_ORG_ID,
   kpis:[
     {id:'kpi-1',category:'شناخت و دانش',title:'تکمیل پرونده شناخت هلدینگ و دوازده زیرمجموعه',owner:'مدیر استراتژی',period:'ماه ۳',target:'تکمیل ۱۰۰٪ بخش‌ها',source:'کمال پروفایل خانوادهٔ هلدینگ (صنعت، کشور، وب‌سایت، ایمیل، تلفن، شناسهٔ ثبت)',metric:'profile-completeness',unit:'percent',targetValue:100,config:{}},
     {id:'kpi-2',category:'شناخت و دانش',title:'خروجی پژوهشی اندیشکده',owner:'مدیر اندیشکده و پژوهش',period:'ماهانه از ماه ۵',target:'دست‌کم یک یادداشت سیاستی در ماه',source:'مرکز دانش — یادداشت‌های سیاستی ماه جاری',metric:'docs-month',unit:'count',targetValue:1,config:{pattern:'یادداشت سیاستی'}},
-    {id:'kpi-3',category:'شناخت و دانش',title:'شاخص مرجعیت هوش مصنوعی (نمرهٔ مرکب نُه مؤلفه)',owner:'مدیر اندیشکده و پژوهش',period:'ماه ۱۲',target:'رسیدن از ۵۵ به ۹۰',source:'خط پایهٔ اعلامی سازمان — پایش زندهٔ مؤلفه‌ها پس از تعریف هدف راهبردی',metric:'declared-baseline',unit:'score',targetValue:90,config:{value:55}},
+    {id:'kpi-3',category:'شناخت و دانش',title:'شاخص مرجعیت هوش مصنوعی (نمرهٔ مرکب نُه مؤلفه)',owner:'مدیر اندیشکده و پژوهش',period:'ماه ۱۲',target:'رسیدن از ۵۵ به ۹۰',source:'هدف راهبردی «مرجعیت هوش مصنوعی» — نمرهٔ مرکب نُه مؤلفهٔ پایش‌شده',metric:'goal-composite',unit:'score',targetValue:90,config:{}},
     {id:'kpi-4',category:'دارایی و رسانه',title:'انتشار رسانه تخصصی',owner:'مدیر روابط عمومی',period:'ماهانه از ماه ۵',target:'۲۰ خروجی در ماه',source:'عموم‌ها — بازنمایی رسانه‌ای ثبت‌شدهٔ ماه جاری',metric:'media-mentions-month',unit:'count',targetValue:20,config:{}},
     {id:'kpi-5',category:'دارایی و رسانه',title:'وب‌سایت مرجع و پروفایل شرکتی',owner:'مدیر محصول',period:'ماه ۸',target:'انتشار عمومی هر دو دارایی',source:'لایهٔ آمادگی سازمانی — وضعیت اقلام «وب‌سایت» و «پروفایل شرکت»',metric:'readiness-items-accepted',unit:'count',targetValue:2,config:{labels:['وب‌سایت','پروفایل شرکت']}},
     {id:'kpi-6',category:'دارایی و رسانه',title:'گزارش سالانه هوش مصنوعی',owner:'مدیر اندیشکده و پژوهش',period:'ماه ۱۱',target:'انتشار',source:'مرکز دانش — اسناد «گزارش سالانه»',metric:'docs-total',unit:'count',targetValue:1,config:{pattern:'گزارش سالانه'}},
@@ -6252,6 +6254,75 @@ function ensureProgramSettings(orgId){
 }
 function programSettingsOf(orgId){ensureProgramSettings(orgId);return DB.programSettings.find(s=>s.organizationId===orgId);}
 function programSettingsFor(req){return programSettingsOf(primaryOrgId(currentUser(req))??visibleOrgIds(req)[0]??PROGRAM_ORG_ID);}
+
+/* ═══════════════ گام ۲.۳ — اهداف راهبردی سازمان (per-tenant) ═══════════════
+   ساختار عمومی: هر سازمان اهداف خودش را با مؤلفه‌های سنجش‌پذیر، مایلستون‌های
+   زمانی و جلسات پایش تعریف می‌کند. دمو (org-1) = هدف «مرجعیت هوش مصنوعی پارس»
+   مطابق بخش ۱۸ سند: نُه مؤلفه با هدف ماه ۶/۱۲ + پایش ۲۵ پرامپت در سه دسته +
+   جدول پایش ماهانه. نمرهٔ مرکب = میانگین درصد پیشرفت مؤلفه‌ها نسبت به هدف مایلستون. */
+function ensureGoalsSeed(){
+  if((DB.goals??[]).some(g=>g.organizationId===PROGRAM_ORG_ID)) return;
+  const ago=(d)=>new Date(Date.now()-d*86400000).toISOString();
+  /* مقادیر جاری دمو = خط پایهٔ ۵۵ سند (میانگین پیشرفت نه مؤلفه) */
+  const C=(n,title,method,target6,target12,value,unit)=>({id:`gc-${n}`,order:n,title,method,target6,target12,value,unit});
+  DB.goals=[{id:'goal-ai-authority',organizationId:PROGRAM_ORG_ID,
+    title:'مرجعیت هوش مصنوعی پارس',owner:'مدیر اندیشکده و پژوهش',status:'ACTIVE',
+    description:'مرجعیت، ادعا نیست؛ جایگاهی است که با اعتبار منبع، کیفیت داده، تداوم حضور و استنادپذیری ساخته می‌شود و باید سنجیده شود. شاخص ترکیبی در نُه مؤلفه سنجیده می‌شود و پایش ماهانه ۲۵ پرامپت آن را تغذیه می‌کند.',
+    components:[
+      C(1,'تعداد منابع معتبر ارجاع‌دهنده','شمارش منابع مستقل معتبر',15,40,22,'count'),
+      C(2,'تعداد گزارش‌های مرجع منتشرشده','شمارش گزارش‌های اعتبارسنجی‌شده',4,10,6,'count'),
+      C(3,'تعداد ارجاعات دریافتی','پایش ارجاع در رسانه و وب',20,60,33,'count'),
+      C(4,'حضور در منابع دانشگاهی','شمارش ارجاع و همکاری علمی',2,8,4,'count'),
+      C(5,'حضور در رسانه تخصصی','شمارش مطلب و گفت‌وگو در رسانه معتبر',20,50,27,'count'),
+      C(6,'حضور مدیران در رویدادهای تخصصی','شمارش سخنرانی و پنل',6,18,10,'count'),
+      C(7,'میزان ارجاع در پاسخ سامانه‌های هوش مصنوعی','پایش ماهانه ۲۵ پرامپت',20,50,28,'percent'),
+      C(8,'دقت بازنمایی پارس در پاسخ‌های هوش مصنوعی','سنجش صحت اطلاعات ارائه‌شده',60,90,50,'percent'),
+      C(9,'کیفیت منابع ثالث ارجاع‌دهنده','ارزیابی اعتبار منابع ارجاع‌دهنده',50,75,42,'percent'),
+    ],
+    prompts:[
+      {id:'cat-1',category:'سؤالات عمومی حوزه هوش مصنوعی در ایران',questions:[
+        'بازیگران اصلی هوش مصنوعی در ایران کدام‌اند؟','کدام نهادها در توسعهٔ هوش مصنوعی ایران نقش دارند؟',
+        'وضعیت سرمایه‌گذاری هوش مصنوعی در ایران چگونه است؟','روندهای کلیدی هوش مصنوعی ایران در سال جاری چیست؟',
+        'کدام گزارش‌های معتبر دربارهٔ هوش مصنوعی ایران منتشر شده است؟','چالش‌های تنظیم‌گری هوش مصنوعی در ایران کدام‌اند؟',
+        'دانشگاه‌های پیشرو در پژوهش هوش مصنوعی ایران کدام‌اند؟','اکوسیستم استارتاپی هوش مصنوعی ایران چه وضعیتی دارد؟']},
+      {id:'cat-2',category:'سؤالات اختصاصی درباره پارس',questions:[
+        'هلدینگ پارس چیست و در چه حوزه‌هایی فعال است؟','نقش پارس در اکوسیستم هوش مصنوعی ایران چیست؟',
+        'کدام گزارش‌های معتبر به نام پارس منتشر شده است؟','مدیران کلیدی پارس چه کسانی‌اند و چه سوابقی دارند؟',
+        'پارس با کدام نهادها و دانشگاه‌ها همکاری دارد؟','رویدادهای پارس در حوزه هوش مصنوعی کدام‌اند؟',
+        'شرکت‌های زیرمجموعه پارس چه محصولاتی دارند؟','جایگاه پارس در سرمایه‌گذاری هوش مصنوعی ایران چیست؟',
+        'آیا پارس مرجع معتبر هوش مصنوعی در ایران محسوب می‌شود؟']},
+      {id:'cat-3',category:'سؤالات حوزه‌های خاص',questions:[
+        'وضعیت هوش مصنوعی در سلامت ایران چگونه است؟','هوش مصنوعی در صنعت ایران چه کاربردهایی دارد؟',
+        'هوش مصنوعی در کشاورزی ایران چه ظرفیت‌هایی دارد؟','وضعیت هوش مصنوعی در مالی و بانکداری ایران چگونه است؟',
+        'زیرساخت داده هوش مصنوعی در ایران چه وضعیتی دارد؟','استعدادها و نیروی متخصص هوش مصنوعی ایران چگونه توزیع شده‌اند؟',
+        'هوش مصنوعی مولد در ایران چه روندی دارد؟','حکمرانی داده در ایران چه الزاماتی دارد؟']},
+    ],
+    monitoring:[
+      {id:'mon-1',system:'سامانه گفت‌وگوی مولد الف',checkedAt:ago(25),referralRate:28,accuracy:50,probableSource:'وب‌سایت‌های خبری و چند گزارش صنعت',action:'انتشار صفحات مرجع موضوعی در وب‌سایت'},
+      {id:'mon-2',system:'موتور پاسخ هوشمند ب',checkedAt:ago(25),referralRate:24,accuracy:52,probableSource:'پرونده‌های رسانه‌ای و یادداشت‌های سیاستی',action:'افزایش استنادپذیری گزارش‌ها با ارجاع دقیق'},
+      {id:'mon-3',system:'دستیار جستجوی ج',checkedAt:ago(24),referralRate:31,accuracy:48,probableSource:'صفحات عمومی و پایگاه‌های خبری',action:'اصلاح داده‌های نادرست در صفحات مرجع'},
+    ],
+    createdAt:ago(90),updatedAt:ago(3)}];
+}
+function goalsFor(req){
+  ensureGoalsSeed();
+  const ids=visibleOrgIds(req);
+  return (DB.goals??[]).filter(g=>ids.includes(g.organizationId));
+}
+function goalComposite(g,milestone){
+  const target=milestone==='m6'?'target6':'target12';
+  const comps=g.components??[];
+  if(!comps.length) return null;
+  const percents=comps.map(c=>Math.min(100,Math.round((Number(c.value)||0)/((Number(c[target])||1))*100)));
+  return Math.round(percents.reduce((a,b)=>a+b,0)/percents.length);
+}
+function goalView(g){
+  return {...g,promptCount:(g.prompts??[]).reduce((n,p)=>n+p.questions.length,0),
+    composite:goalComposite(g,'m12'),compositeM6:goalComposite(g,'m6'),
+    components:(g.components??[]).map(c=>({...c,
+      percent12:Math.min(100,Math.round((Number(c.value)||0)/((Number(c.target12)||1))*100)),
+      percent6:Math.min(100,Math.round((Number(c.value)||0)/((Number(c.target6)||1))*100))}))};
+}
 
 /* قالب ساختاری شش لایه از جدول بخش ۱۲ سند (با وضعیت پیشرفت هلدینگ دمو به‌عنوان بذر) */
 const PROGRAM_READINESS_TEMPLATE=[
@@ -6424,7 +6495,8 @@ function programKpisFor(req){
   const sysDone=sysNonKeep.filter(x=>x.migrationStatus==='DONE').length;
   const monthlyReports=(DB.programMonthlyReports??[]).filter(r=>orgIds.includes(r.organizationId)).length;
   const layers=programLayersFor(req);
-  const ctx={orgIds,docs,mediaMentions,partnershipRows,people,sysNonKeep,sysDone,monthlyReports,layers,inMonth,famComplete};
+  const goals=goalsFor(req);
+  const ctx={orgIds,docs,mediaMentions,partnershipRows,people,sysNonKeep,sysDone,monthlyReports,layers,goals,inMonth,famComplete};
   const defs=programSettingsFor(req).kpis??[];
   return defs.map(def=>{
     const M=PROGRAM_METRICS[def.metric];
@@ -12585,6 +12657,84 @@ const server=http.createServer(async(req,res)=>{
     if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
     return json(res,200,{...programAuditsFor(req),
       rule:'ممیزی ارزیابی صادقانه از وضعیت موجود است؛ خروجی آن ورودی مستقیم بازسازی نقش‌ها و برنامهٔ انتقال داده است (بخش ۲۰/۲۱ سند).'});
+  }
+
+  /* ─────────────── گام ۲.۳ — اهداف راهبردی سازمان (/program/goals) ──────────
+     هر سازمان هدف خود را با مؤلفه‌های سنجش‌پذیر و پایش تعریف می‌کند؛ مقدار مؤلفه
+     از نتیجهٔ پایش ثبت می‌شود (دادهٔ بیرونی)، نه عدد دستی در داشبورد. */
+  if(is('/program/goals')&&method==='GET'){
+    if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
+    const rows=goalsFor(req);
+    return json(res,200,{items:rows.map(goalView),
+      rule:'نمرهٔ مرکب هر هدف از میانگین پیشرفت مؤلفه‌های پایش‌شده محاسبه می‌شود؛ مقدار مؤلفه از نتیجهٔ پایش ثبت می‌شود.',generatedAt:nowIso()});
+  }
+  if(is('/program/goals')&&method==='POST'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    const b=await readBody(req);
+    const title=String(b.title??'').trim();
+    if(title.length<3) return json(res,400,{message:'عنوان هدف را بنویسید (حداقل ۳ نویسه).'});
+    const owner=String(b.owner??'').trim();
+    if(!owner) return json(res,400,{message:'هدف بدون مالک ثبت نمی‌شود.'});
+    const comps=Array.isArray(b.components)?b.components:[];
+    for(const c of comps){
+      if(!String(c.title??'').trim()) return json(res,400,{message:'هر مؤلفه باید عنوان داشته باشد.'});
+      if(!String(c.method??'').trim()) return json(res,400,{message:'هر مؤلفه باید روش سنجش داشته باشد.'});
+      for(const k of ['target6','target12','value']){
+        const v=Number(c[k]);
+        if(!Number.isFinite(v)||v<0) return json(res,400,{message:'مقادیر مؤلفه باید عددی نامنفی باشد.'});
+      }
+      if(Number(c.target12)<=0) return json(res,400,{message:'هدف پایان دورهٔ هر مؤلفه باید عددی مثبت باشد.'});
+    }
+    const row={id:`goal-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,
+      organizationId:primaryOrgId(authUser)??visibleOrgIds(req)[0]??PROGRAM_ORG_ID,
+      title,owner,status:'ACTIVE',description:String(b.description??'').trim(),
+      components:comps.map((c,i)=>({id:`gc-${i+1}`,order:i+1,title:String(c.title).trim(),method:String(c.method).trim(),
+        target6:Number(c.target6),target12:Number(c.target12),value:Number(c.value)||0,
+        unit:['percent','score'].includes(c.unit)?c.unit:'count'})),
+      prompts:[],monitoring:[],createdAt:nowIso(),updatedAt:nowIso()};
+    DB.goals.unshift(row); saveDb();
+    audit(req,'CREATE','Goal',row.id,'OK',{title:row.title,components:row.components.length});
+    return json(res,201,goalView(row));
+  }
+  const goalId=match('/program/goals/:id');
+  if(goalId&&method==='GET'){
+    if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
+    const row=(DB.goals??[]).find(g=>g.id===goalId[0]);
+    if(!row||!visibleOrgIds(req).includes(row.organizationId)) return json(res,404,{message:'هدف یافت نشد یا خارج از محدودهٔ شماست.'});
+    return json(res,200,goalView(row));
+  }
+  const gComp=match('/program/goals/:id/components/:cid');
+  if(gComp&&method==='PATCH'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    const row=(DB.goals??[]).find(g=>g.id===gComp[0]);
+    if(!row||!visibleOrgIds(req).includes(row.organizationId)) return json(res,404,{message:'هدف یافت نشد یا خارج از محدودهٔ شماست.'});
+    const comp=(row.components??[]).find(c=>c.id===gComp[1]);
+    if(!comp) return json(res,404,{message:'مؤلفه یافت نشد.'});
+    const b=await readBody(req);
+    if(b.value!=null){const v=Number(b.value); if(!Number.isFinite(v)||v<0) return json(res,400,{message:'مقدار پایش باید عددی نامنفی باشد.'}); comp.value=v;}
+    if(b.title!=null){const v=String(b.title).trim(); if(!v) return json(res,400,{message:'عنوان مؤلفه لازم است.'}); comp.title=v;}
+    if(b.method!=null){const v=String(b.method).trim(); if(!v) return json(res,400,{message:'روش سنجش مؤلفه لازم است.'}); comp.method=v;}
+    for(const k of ['target6','target12']) if(b[k]!=null){const v=Number(b[k]); if(!Number.isFinite(v)||v<0) return json(res,400,{message:'هدف مؤلفه باید عددی نامنفی باشد.'}); comp[k]=v;}
+    row.updatedAt=nowIso(); saveDb();
+    audit(req,'UPDATE','GoalComponent',`${row.id}/${comp.id}`,'OK',{value:comp.value});
+    return json(res,200,goalView(row));
+  }
+  const gMon=match('/program/goals/:id/monitoring');
+  if(gMon&&method==='POST'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    const row=(DB.goals??[]).find(g=>g.id===gMon[0]);
+    if(!row||!visibleOrgIds(req).includes(row.organizationId)) return json(res,404,{message:'هدف یافت نشد یا خارج از محدودهٔ شماست.'});
+    const b=await readBody(req);
+    const system=String(b.system??'').trim();
+    if(!system) return json(res,400,{message:'نام سامانهٔ پایش‌شده لازم است.'});
+    const referralRate=Number(b.referralRate),accuracy=Number(b.accuracy);
+    if(!Number.isFinite(referralRate)||referralRate<0||referralRate>100) return json(res,400,{message:'میزان ارجاع باید درصدی بین ۰ تا ۱۰۰ باشد.'});
+    if(!Number.isFinite(accuracy)||accuracy<0||accuracy>100) return json(res,400,{message:'دقت بازنمایی باید درصدی بین ۰ تا ۱۰۰ باشد.'});
+    const mon={id:`mon-${Date.now().toString(36)}`,system,checkedAt:b.checkedAt?String(b.checkedAt):nowIso(),
+      referralRate,accuracy,probableSource:String(b.probableSource??'').trim(),action:String(b.action??'').trim()};
+    row.monitoring.unshift(mon); row.updatedAt=nowIso(); saveDb();
+    audit(req,'CREATE','GoalMonitoring',row.id,'OK',{system:mon.system});
+    return json(res,201,{...mon,goal:goalView(row)});
   }
 
   /* ─────────────── گام ۲.۲.۱ — تنظیمات برنامهٔ سازمان (per-tenant) ──────────

@@ -1146,6 +1146,78 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
   check('ویرایش تنظیمات بدون program.write → ۴۰۳', noPerm.status === 403);
 }
 
+/* ═════════════════ گام ۲.۳ — اهداف راهبردی سازمان (per-tenant) ═════════════════ */
+{
+  const dl = await login('demo');
+  const dt = dl.body?.accessToken;
+
+  const L = await api('/program/goals', { token: dt });
+  check('فهرست اهداف: دمو = هدف «مرجعیت هوش مصنوعی پارس»', L.status === 200 && L.body.items.length === 1
+    && L.body.items[0].title.includes('مرجعیت هوش مصنوعی'), JSON.stringify(L.body?.items?.map(g=>g.title)));
+  const g = L.body.items[0];
+  check('هدف دمو: نُه مؤلفه با روش سنجش و اهداف ماه ۶/۱۲', g.components.length === 9
+    && g.components.every(c => c.method && c.target6 > 0 && c.target12 > 0 && c.order >= 1));
+  check('هدف دمو: ۲۵ پرامپت پایش در سه دسته', g.promptCount === 25 && g.prompts.length === 3
+    && g.prompts.every(p => p.questions.length >= 8));
+  check('نمرهٔ مرکب هدف = ۵۵ (خط پایهٔ سند)', g.composite === 55, `composite=${g.composite}`);
+  check('پایش ماهانه: سه رکورد با ارجاع/دقت/اقدام', (g.monitoring ?? []).length === 3
+    && g.monitoring.every(m => m.system && typeof m.referralRate === 'number' && typeof m.accuracy === 'number'));
+  check('جدول ۲۵ پرامپت سند دقیقاً مطابق متن', g.prompts[0].questions.includes('بازیگران اصلی هوش مصنوعی در ایران کدام‌اند؟')
+    && g.prompts[1].questions.includes('آیا پارس مرجع معتبر هوش مصنوعی در ایران محسوب می‌شود؟')
+    && g.prompts[2].questions.includes('حکمرانی داده در ایران چه الزاماتی دارد؟'));
+
+  /* سیم‌کشی kpi-3 به نمرهٔ مرکب هدف */
+  const kpis = await api('/program/kpis', { token: dt });
+  const k3 = kpis.body.items.find(k => k.id === 'kpi-3');
+  check('kpi-3 از نمرهٔ مرکب هدف محاسبه می‌شود (زنده)', k3.value === g.composite && k3.metric === 'goal-composite' && k3.value === 55, `value=${k3.value}`);
+
+  /* جزئیات + 404 */
+  const one = await api(`/program/goals/${g.id}`, { token: dt });
+  check('جزئیات هدف با درصد پیشرفت هر مؤلفه', one.status === 200 && one.body.components.every(c => typeof c.percent12 === 'number'));
+  const gone = await api('/program/goals/none', { token: dt });
+  check('شناسهٔ غایب → ۴۰۴', gone.status === 404);
+
+  /* ویرایش مقدار مؤلفه — بازمحاسبهٔ نمرهٔ مرکب */
+  const c1 = g.components[0];
+  const badVal = await api(`/program/goals/${g.id}/components/${c1.id}`, { method: 'PATCH', token: dt, body: { value: -5 } });
+  check('مقدار منفی مؤلفه → ۴۰۰', badVal.status === 400);
+  const upVal = await api(`/program/goals/${g.id}/components/${c1.id}`, { method: 'PATCH', token: dt, body: { value: Number(c1.value) + 4 } });
+  check('ثبت مقدار پایش → ۲۰۰ و نمرهٔ مرکب بازمحاسبه می‌شود', upVal.status === 200 && upVal.body.composite !== g.composite);
+  await api(`/program/goals/${g.id}/components/${c1.id}`, { method: 'PATCH', token: dt, body: { value: c1.value } });
+
+  /* ثبت پایش — اعتبارسنجی درصدها */
+  const badMon = await api(`/program/goals/${g.id}/monitoring`, { method: 'POST', token: dt, body: { system: 'تست', referralRate: 150, accuracy: 50 } });
+  check('پایش با ارجاع ۱۵۰٪ → ۴۰۰', badMon.status === 400);
+  const mon = await api(`/program/goals/${g.id}/monitoring`, { method: 'POST', token: dt, body: { system: 'سامانه تست باتری', referralRate: 40, accuracy: 70, probableSource: 'تست', action: 'اصلاح صفحهٔ مرجع' } });
+  check('ثبت پایش معتبر → ۲۰۱', mon.status === 201 && mon.body.system === 'سامانه تست باتری');
+
+  /* ثبت هدف جدید — بدون مالک رد؛ مستأجر واقعی هدف خودش را می‌سازد */
+  const noOwner = await api('/program/goals', { method: 'POST', token: dt, body: { title: 'هدف بدون مالک', components: [{ title: 'الف', method: 'شمارش', target6: 1, target12: 2 }] } });
+  check('ثبت هدف بدون مالک → ۴۰۰', noOwner.status === 400);
+  const badComp = await api('/program/goals', { method: 'POST', token: dt, body: { title: 'هدف بد', owner: 'مدیر', components: [{ title: 'الف', method: 'شمارش', target6: 1, target12: 0 }] } });
+  check('مؤلفه با هدف پایان دورهٔ صفر → ۴۰۰', badComp.status === 400);
+
+  const pl2 = await login('pars', 'pars1234');
+  const pt2 = pl2.body?.accessToken;
+  if (pt2) {
+    const empty = await api('/program/goals', { token: pt2 });
+    check('مستأجر پارس → هدف دمو دیده نمی‌شود (جداسازی)', empty.status === 200 && empty.body.items.length === 0);
+    const mine = await api('/program/goals', { method: 'POST', token: pt2, body: { title: 'هدف پارس', owner: 'مدیرعامل پارس', description: 'تست', components: [
+      { title: 'مؤلفه الف', method: 'شمارش', target6: 3, target12: 10, value: 5, unit: 'count' },
+      { title: 'مؤلفه ب', method: 'درصد', target6: 30, target12: 80, value: 40, unit: 'percent' }] } });
+    check('مستأجر پارس → هدف خودش را می‌سازد (۲۰۱)', mine.status === 201 && mine.body.components.length === 2);
+    if (mine.status === 201) {
+      const k2 = await api('/program/kpis', { token: pt2 });
+      check('هدف ثبت‌شده مستأجر در فهرست اوست (نه دمو)', (await api('/program/goals', { token: pt2 })).body.items.length === 1);
+    }
+  }
+
+  const cl = await login('client');
+  const ct = cl.body?.accessToken;
+  const noPerm = await api('/program/goals', { method: 'POST', token: ct, body: { title: 'هدف بدون مجوز', owner: 'x', components: [] } });
+  check('ثبت هدف بدون program.write → ۴۰۳', noPerm.status === 403);
+}
+
 /* ============================ SUMMARY ============================ */
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);

@@ -63,8 +63,8 @@ try {
   const h1 = await page.evaluate(() => (document.querySelector('.page-heading h1')?.textContent ?? '').trim());
   ok('هدر استاندارد با عنوان «حاکمیت برنامه»', h1.includes('حاکمیت برنامه'), `h1=«${h1}»`);
   const tabs = await page.evaluate(() => [...document.querySelectorAll('.segmented button, [role=tablist] button')].map(b => (b.textContent ?? '').trim()));
-  ok('پنج تب هاب (نمای کلی/شاخص‌ها/ریسک‌ها/آمادگی/ممیزی)',
-    ['نمای کلی', 'شاخص‌ها', 'ریسک‌ها', 'آمادگی بازار', 'ممیزی سه‌گانه'].every(t => tabs.some(x => x.includes(t))), JSON.stringify(tabs.slice(0, 6)));
+  ok('شش تب هاب (نمای کلی/شاخص‌ها/ریسک‌ها/آمادگی/ممیزی/اهداف)',
+    ['نمای کلی', 'شاخص‌ها', 'ریسک‌ها', 'آمادگی بازار', 'ممیزی سه‌گانه', 'اهداف راهبردی'].every(t => tabs.some(x => x.includes(t))), JSON.stringify(tabs.slice(0, 7)));
 
   /* ── ۳) نمای کلی: کارت آمار + فصل‌ها + روند ── */
   const ov = await page.evaluate(() => ({
@@ -216,6 +216,50 @@ try {
   }));
   ok('ممیزی: مودال جزئیات کامل قلم', auModal.open && (auModal.text.includes('یادداشت ممیزی') || auModal.text.includes('مالک')), auModal.text.slice(0, 60));
   await page.keyboard.press('Escape');
+
+  /* ── تب اهداف راهبردی (گام ۲.۳) ── */
+  await page.evaluate(() => { [...document.querySelectorAll('.segmented button')].find(b => (b.textContent ?? '').includes('اهداف راهبردی'))?.click(); });
+  await new Promise(r => setTimeout(r, 1600));
+  const goal = await page.evaluate(() => ({
+    statCards: document.querySelectorAll('.stat-grid .stat-card').length,
+    composite: (document.querySelector('.stat-grid .stat-card')?.textContent ?? ''),
+    compRows: document.querySelector('.table-wrap')?.querySelectorAll('tbody tr').length ?? 0,
+    promptCats: document.querySelectorAll('.prompt-cat').length,
+    promptItems: document.querySelectorAll('.prompt-list li').length,
+    monRows: document.querySelectorAll('.section-card .table-wrap tbody tr').length,
+    desc: (document.querySelector('.note-strip')?.textContent ?? '').includes('مرجعیت'),
+  }));
+  ok('اهداف: کارت‌های آمار هدف (نمرهٔ مرکب/مؤلفه/پرامپت/پایش)', goal.statCards >= 4, `n=${goal.statCards}`);
+  ok('اهداف: نمرهٔ مرکب ۵۵ با رقم فارسی', /[۵]/.test(goal.composite), goal.composite.slice(0, 50));
+  ok('اهداف: جدول نُه مؤلفه با روش سنجش و اهداف ماه ۶/۱۲', goal.compRows === 9, `rows=${goal.compRows}`);
+  ok('اهداف: ۲۵ پرامپت در سه دسته', goal.promptCats === 3 && goal.promptItems === 25, `cats=${goal.promptCats} items=${goal.promptItems}`);
+  ok('اهداف: توصیف هدف راهبردی نمایش داده می‌شود', goal.desc);
+  /* ثبت پایش جدید → ردیف */
+  await page.evaluate(() => { [...document.querySelectorAll('button')].find(b => (b.textContent ?? '').includes('ثبت پایش'))?.click(); });
+  await new Promise(r => setTimeout(r, 700));
+  await page.type('.modal-card input', 'سامانه تست باتری UI');
+  await page.type('.modal-card input[type=number]', '40');
+  const accInp = await page.evaluateHandle(() => [...document.querySelectorAll('.modal-card input[type=number]')][1]);
+  await accInp.asElement().type('70');
+  await new Promise(r => setTimeout(r, 300));
+  await page.evaluate(() => { const f = document.querySelector('#monitoring-form'); if (f) f.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+  await new Promise(r => setTimeout(r, 1800));
+  const monSaved = await page.evaluate(() => ({
+    closed: !document.querySelector('.modal-card'),
+    found: [...document.querySelectorAll('.section-card .table-wrap tbody tr')].some(r => (r.textContent ?? '').includes('سامانه تست باتری UI')),
+  }));
+  ok('اهداف: ثبت پایش → ردیف جدید در جدول پایش', monSaved.closed && monSaved.found, JSON.stringify(monSaved));
+  /* ویرایش مقدار مؤلفه → نمرهٔ مرکب بازمحاسبه */
+  const compBefore = await page.evaluate(() => (document.querySelector('.stat-grid .stat-card')?.textContent ?? '').match(/[۰-۹]+/)?.[0] ?? '');
+  await page.evaluate(() => { [...document.querySelectorAll('.table-wrap tbody tr button')][0]?.click(); });
+  await new Promise(r => setTimeout(r, 700));
+  const compInp = await page.evaluateHandle(() => document.querySelector('.modal-card input[type=number]'));
+  await compInp.asElement().type('30');
+  await new Promise(r => setTimeout(r, 300));
+  await page.evaluate(() => { [...document.querySelectorAll('.modal-card button')].find(b => (b.textContent ?? '').includes('ذخیرهٔ مقدار'))?.click(); });
+  await new Promise(r => setTimeout(r, 1800));
+  const compAfter = await page.evaluate(() => (document.querySelector('.stat-grid .stat-card')?.textContent ?? '').match(/[۰-۹]+/)?.[0] ?? '');
+  ok('اهداف: ثبت مقدار پایش مؤلفه → نمرهٔ مرکب بازمحاسبه', compBefore !== compAfter && compAfter !== '', `قبل=${compBefore} بعد=${compAfter}`);
 
   /* ── ۸) بدون خطای کنسول در کل جریان ──
      استثنا: پاسخ ۴۰۰ تستِ منفیِ «ریسک بدون مالک» — عمداً توسط سرور رد می‌شود */
