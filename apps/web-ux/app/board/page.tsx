@@ -5,8 +5,8 @@ import { useWorkspace } from '../_components/workspace';
 import { api } from '../_lib/api';
 import { Badge, ErrorCard, Loading, PageHeader } from '../_components/page-ui';
 import {
-  Activity, ArrowDownRight, ArrowUpRight, Banknote, Gauge, Landmark, RefreshCw,
-  ShieldAlert, TrendingUp, FileText } from 'lucide-react';
+  Activity, ArrowDownRight, ArrowUpRight, Banknote, Gauge, Landmark, Presentation, RefreshCw,
+  ShieldAlert, TrendingUp, FileText, X } from 'lucide-react';
 import { localeTag, t } from '../_lib/i18n';
 
 /* ------------------------------------------------------------------ */
@@ -25,6 +25,14 @@ export default function Board() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  /* گام ۳.۱ — حالت ارائهٔ مدیریتی: تمام‌صفحه برای پروجکشن جلسهٔ هیئت‌مدیره */
+  const [present, setPresent] = useState(false);
+  useEffect(() => {
+    if (!present) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setPresent(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [present]);
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -45,6 +53,9 @@ export default function Board() {
         description={t('سرمایهٔ رابطه، بازده سرمایه، سلامت پرتفوی و ریسک تک‌نقطه — محاسبهٔ قطعی از دادهٔ همین محدودهٔ دسترسی')}
         actions={
           <div className="toolbar">
+            <button className="btn btn-primary" onClick={() => setPresent(true)}>
+              <Presentation size={15} /> {t('حالت ارائهٔ مدیریتی')}
+            </button>
             <Link className="btn btn-ghost" href="/qbr"><FileText size={14} /> {t('بریف فصلی (QBR)')}</Link>
             <Link className="btn btn-ghost" href="/intelligence"><Activity size={14} /> {t('هوشمندی')}</Link>
             <Link className="btn btn-ghost" href="/analytics"><TrendingUp size={14} /> {t('تحلیل محصول')}</Link>
@@ -176,6 +187,102 @@ export default function Board() {
           </p>
           )}
         </>
+      )}
+
+      {/* ═══ گام ۳.۱ — حالت ارائهٔ مدیریتی (تم board): کارت‌های بزرگ شاخص، فضای سفید،
+             روایت «یک نگاه» — همان دادهٔ /board/overview، چیدمان ارائه‌ای برای جلسهٔ هیئت‌مدیره ═══ */}
+      {present && d && (
+        <div className="board-present" role="dialog" aria-modal="true" aria-label={t('حالت ارائهٔ مدیریتی')}>
+          <header className="bp-head">
+            <div>
+              <small className="bp-eyebrow">{t('گزارش هیئت مدیره')} · {t(d.period)}</small>
+              <h1>{t('پرتفوی روابط — یک نگاه')}</h1>
+              <span className="bp-date">{t('تاریخ تولید')}: {new Intl.DateTimeFormat(localeTag(), { dateStyle: 'long' }).format(new Date(d.generatedAt ?? Date.now()))}</span>
+            </div>
+            <button className="btn btn-ghost bp-exit" onClick={() => setPresent(false)}>
+              <X size={14} /> {t('خروج از ارائه')} · Esc
+            </button>
+          </header>
+
+          <section className="bp-narrative">
+            <h2>{t('روایت یک نگاه')}</h2>
+            <p>{t('سرمایهٔ رابطهٔ پرتفوی {capital} است؛ میانگین سلامت {health} از ۱۰۰، با {healthy} رابطهٔ سالم در برابر {atRisk} رابطهٔ در معرض ریسک.')
+              .replace('{capital}', fmtNum(k?.portfolioCapital)).replace('{health}', fmtNum(k?.avgHealth))
+              .replace('{healthy}', fmtNum(k?.healthyCount)).replace('{atRisk}', fmtNum(k?.atRiskCount))}</p>
+            <p>{t('در {period}، درآمد برنده‌شده {won} برابر {roi}× هزینهٔ تلاش ({cost} واحد) بوده است؛ روند {up} رابطه صعودی و {down} رابطه نزولی است.')
+              .replace('{period}', t(d.period)).replace('{won}', fmtB(k?.wonValue)).replace('{roi}', fmtNum(k?.roi))
+              .replace('{cost}', fmtNum(k?.totalCost)).replace('{up}', fmtNum(k?.trendUp)).replace('{down}', fmtNum(k?.trendDown))}</p>
+            <p>{t('ریسک تک‌نقطه: {rev} درآمد در معرض {rels} رابطه و {ppl} شخص تک‌نقطه است — بزرگ‌ترین مورد: {top}.')
+              .replace('{rev}', fmtB(k?.revenueAtRisk)).replace('{rels}', fmtNum(k?.singlePointRelationships))
+              .replace('{ppl}', fmtNum(k?.singlePointPeople)).replace('{top}', d.topRisks?.[0]?.relationshipName ?? '—')}</p>
+          </section>
+
+          <section className="bp-cards">
+            <div className="bp-card">
+              <small>{t('سرمایهٔ رابطهٔ پرتفوی')}</small>
+              <strong>{fmtNum(k?.portfolioCapital)}</strong>
+              <span>{t('میانگین سلامت {health} از ۱۰۰').replace('{health}', fmtNum(k?.avgHealth))}</span>
+            </div>
+            <div className="bp-card">
+              <small>{t('بازده سرمایهٔ رابطه')}</small>
+              <strong>{fmtB(k?.wonValue)}</strong>
+              <span>{t('برابر {roi}× هزینهٔ تلاش ({cost} واحد)').replace('{roi}', fmtNum(k?.roi)).replace('{cost}', fmtNum(k?.totalCost))}</span>
+            </div>
+            <div className="bp-card">
+              <small>{t('سلامت پرتفوی')}</small>
+              <strong>{fmtNum(k?.healthyCount)} / {fmtNum(k?.atRiskCount)}</strong>
+              <span>{t('{strategic} رابطهٔ راهبردی · {up} صعودی / {down} نزولی')
+                .replace('{strategic}', fmtNum(k?.strategicCount)).replace('{up}', fmtNum(k?.trendUp)).replace('{down}', fmtNum(k?.trendDown))}</span>
+            </div>
+            <div className="bp-card bp-card-risk">
+              <small>{t('ریسک تک‌نقطه')}</small>
+              <strong>{fmtB(k?.revenueAtRisk)}</strong>
+              <span>{t('{rels} رابطه · {ppl} شخص تک‌نقطه')
+                .replace('{rels}', fmtNum(k?.singlePointRelationships)).replace('{ppl}', fmtNum(k?.singlePointPeople))}</span>
+            </div>
+          </section>
+
+          <div className="bp-grid">
+            <section className="bp-panel">
+              <h2>{t('ریسک تک‌نقطه — بزرگ‌ترین موارد')}</h2>
+              <div className="bp-risk-list">
+                {(d.topRisks ?? []).map((x: any) => (
+                  <div key={x.relationshipId} className="bp-risk">
+                    <b>{x.relationshipName}</b>
+                    <strong>{fmtB(x.revenueAtRisk)}</strong>
+                  </div>
+                ))}
+              </div>
+              {(d.singlePeople ?? []).length > 0 && (
+                <p className="bp-people">
+                  <b>{t('تک‌شخص‌ها')}:</b>{' '}
+                  {(d.singlePeople ?? []).map((p: any) => `${p.name} (${fmtB(p.revenueAtRisk)})`).join('، ')}
+                </p>
+              )}
+            </section>
+            <section className="bp-panel">
+              <h2>{t('بیشترین سرمایه / بیشترین ریسک')}</h2>
+              <div className="bp-duo">
+                <div>
+                  <b className="bp-col-t">{t('سرمایه')}</b>
+                  {(d.capitalTop ?? []).slice(0, 4).map((r: any) => (
+                    <div key={'c' + r.relationshipId} className="bp-li"><span>{r.name}</span><b>{fmtNum(r.capital)}</b></div>
+                  ))}
+                </div>
+                <div>
+                  <b className="bp-col-t">{t('ریسک')}</b>
+                  {(d.riskTop ?? []).slice(0, 4).map((r: any) => (
+                    <div key={'r' + r.relationshipId} className="bp-li"><span>{r.name}</span><b>{fmtNum(r.riskScore)}</b></div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          </div>
+
+          {!isRealTenant && (
+            <p className="bp-note">{t('برچسب دمو: اعداد از دادهٔ نمونهٔ همین سامانه محاسبه شده‌اند و برای گزارش‌برداری هیئت واقعی کافی نیستند (بند ۹ — ریسک‌ها و ملاحظات).')}</p>
+          )}
+        </div>
       )}
     </main>
   );
