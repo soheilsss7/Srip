@@ -19,7 +19,7 @@ const PORT = Number(process.env.MOCK_API_PORT || 4000);
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.09.30.04';
+const DEMO_MOCK_VERSION = '2026.10.01.01';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -6199,7 +6199,7 @@ const RISK_GRADE_FA={HIGH:'درجه بالا',MEDIUM:'درجه متوسط',LOW:'
    شش‌لایه را ارائه می‌کند. دموی org-1 = برنامهٔ سند؛ مستأجر واقعی با تنظیمات
    خالی آغاز می‌کند و برنامهٔ خود را می‌سازد. */
 const PROGRAM_METRICS={
-  'profile-completeness':{label:'تکمیل پروفایل سازمان‌های هلدینگ/زیرمجموعه (٪)',unit:'percent',
+  'profile-completeness':{label:'تکمیل پروندهٔ شناخت ۳۱بخشی خانوادهٔ هلدینگ (٪)',unit:'percent',
     compute:(c)=>c.famComplete},
   'docs-month':{label:'اسناد ثبت‌شدهٔ ماه جاری با الگوی نام',unit:'count',
     compute:(c)=>c.docs.filter(d=>String(d.name).includes(String(c.def.config?.pattern??''))&&c.inMonth(d.createdAt)).length},
@@ -6234,7 +6234,7 @@ const programDemoSettings=()=>({organizationId:PROGRAM_ORG_ID,
   ],
   partnershipTarget:25,
   kpis:[
-    {id:'kpi-1',category:'شناخت و دانش',title:'تکمیل پرونده شناخت هلدینگ و دوازده زیرمجموعه',owner:'مدیر استراتژی',period:'ماه ۳',target:'تکمیل ۱۰۰٪ بخش‌ها',source:'کمال پروفایل خانوادهٔ هلدینگ (صنعت، کشور، وب‌سایت، ایمیل، تلفن، شناسهٔ ثبت)',metric:'profile-completeness',unit:'percent',targetValue:100,config:{}},
+    {id:'kpi-1',category:'شناخت و دانش',title:'تکمیل پرونده شناخت هلدینگ و دوازده زیرمجموعه',owner:'مدیر استراتژی',period:'ماه ۳',target:'تکمیل ۱۰۰٪ بخش‌ها',source:'پروندهٔ شناخت ۳۱بخشی (فرم ۲ و ۳) — بخش‌های معتبر (داده + منبع) هلدینگ و زیرمجموعه‌ها',metric:'profile-completeness',unit:'percent',targetValue:100,config:{}},
     {id:'kpi-2',category:'شناخت و دانش',title:'خروجی پژوهشی اندیشکده',owner:'مدیر اندیشکده و پژوهش',period:'ماهانه از ماه ۵',target:'دست‌کم یک یادداشت سیاستی در ماه',source:'مرکز دانش — یادداشت‌های سیاستی ماه جاری',metric:'docs-month',unit:'count',targetValue:1,config:{pattern:'یادداشت سیاستی'}},
     {id:'kpi-3',category:'شناخت و دانش',title:'شاخص مرجعیت هوش مصنوعی (نمرهٔ مرکب نُه مؤلفه)',owner:'مدیر اندیشکده و پژوهش',period:'ماه ۱۲',target:'رسیدن از ۵۵ به ۹۰',source:'هدف راهبردی «مرجعیت هوش مصنوعی» — نمرهٔ مرکب نُه مؤلفهٔ پایش‌شده',metric:'goal-composite',unit:'score',targetValue:90,config:{}},
     {id:'kpi-4',category:'دارایی و رسانه',title:'انتشار رسانه تخصصی',owner:'مدیر روابط عمومی',period:'ماهانه از ماه ۵',target:'۲۰ خروجی در ماه',source:'عموم‌ها — بازنمایی رسانه‌ای ثبت‌شدهٔ ماه جاری',metric:'media-mentions-month',unit:'count',targetValue:20,config:{}},
@@ -6483,10 +6483,8 @@ function programKpisFor(req){
   const now=new Date();
   const inMonth=(iso)=>{try{const d=new Date(iso);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}catch{return false;}};
   const family=orgs.filter(o=>['HOLDING','SUBSIDIARY'].includes(o.type));
-  const famComplete=family.length?Math.round(family.reduce((s,o)=>{
-    const p=DQ_ORG_PROFILE[o.id]??{};
-    const filled=['industry','country'].filter(k=>o[k]).length+['website','email','phone','registrationId'].filter(k=>p[k]).length;
-    return s+filled/6;},0)/family.length*100):0;
+  /* گام ۲.۵ — سنجه از پروندهٔ شناخت ۳۱بخشی محاسبه می‌شود (بخش معتبر = داده + منبع) */
+  const famComplete=family.length?Math.round(family.reduce((s,o)=>s+knowledgeCoverageOf(o.id),0)/family.length):0;
   const docs=(DB.documents??[]).filter(d=>d.organizationId&&orgIds.includes(d.organizationId));
   const mediaMentions=(DB.mediaMentions??[]).filter(m=>inMonth(m.publishedAt)&&(m.matchedOrganizationIds??[]).some(id=>orgIds.includes(id)));
   const partnershipRows=partnershipsFor(req);
@@ -6578,6 +6576,184 @@ function validateCompetitorScores(b){
     if(!Number.isFinite(v)||v<0||v>100) return `نمرهٔ «${D.label}» باید عددی بین ۰ تا ۱۰۰ باشد.`;
   }
   return null;
+}
+
+/* ═══════════════ گام ۲.۵ — پروندهٔ شناخت ۳۱بخشی (بخش ۶/۷ سند؛ فرم ۲ و ۳) ═══════════════
+   شناخت مبنای تمام تصمیم‌های بعدی است و فراتر از پروفایل مالی به شناخت انسانی،
+   ساختاری و سازمانی گسترش می‌یابد. پروندهٔ استاندارد هر سازمان ۳۱ بخش دارد — از
+   هویت و ساختار حقوقی تا شبکهٔ ذی‌نفعان، دارایی‌های ارتباطی، مسائل و فرصت‌ها.
+   قواعد کیفیت داده (۷.۳ سند): هر بخش باید «منبع و تاریخ» داشته باشد و بخش بدون
+   منبع صریحاً «نامعتبر» ثبت می‌شود؛ دادهٔ خام و برداشت تحلیلی در دو ستون جدا
+   ثبت می‌شوند؛ هر پرونده حداکثر ۹۰ روز اعتبار دارد و پس از آن بازبینی می‌شود.
+   روش شناخت (۷.۲ سند) فرآیندی هفت‌مرحله‌ای است: اسناد → مصاحبه → برداشت میدانی
+   → اعتبارسنجی → تحلیل → تصویب → به‌روزرسانی فصلی.
+   ساختار = قابلیت پلتفرم؛ محتوای پرونده = دادهٔ هر سازمان (دمو = برنامهٔ سند). */
+const KNOWLEDGE_GROUPS=[
+  {key:'identity',label:'هویت و ساختار'},
+  {key:'market',label:'بازار و ذی‌نفعان'},
+  {key:'assets',label:'دارایی‌های ارتباطی'},
+  {key:'capacity',label:'ظرفیت‌ها'},
+  {key:'issues',label:'مسائل، فرصت‌ها و برنامهٔ همکاری'},
+];
+const KNOWLEDGE_SECTIONS=[
+  {key:'name',no:1,label:'نام',group:'identity'},
+  {key:'shareholders',no:2,label:'سهامداران',group:'identity'},
+  {key:'executives',no:3,label:'مدیران',group:'identity'},
+  {key:'activityScope',no:4,label:'حوزه فعالیت',group:'identity'},
+  {key:'products',no:5,label:'محصولات / خدمات',group:'identity'},
+  {key:'currentStatus',no:6,label:'وضعیت فعلی',group:'identity'},
+  {key:'targetMarket',no:7,label:'بازار هدف',group:'market'},
+  {key:'keyCustomers',no:8,label:'مشتریان اصلی',group:'market'},
+  {key:'keyPartners',no:9,label:'شرکای اصلی',group:'market'},
+  {key:'competitors',no:10,label:'رقبا',group:'market'},
+  {key:'strengths',no:11,label:'نقاط قوت',group:'market'},
+  {key:'weaknesses',no:12,label:'نقاط ضعف',group:'market'},
+  {key:'commAssets',no:13,label:'دارایی‌های ارتباطی',group:'assets'},
+  {key:'website',no:14,label:'وب‌سایت',group:'assets'},
+  {key:'socialNetworks',no:15,label:'شبکه‌های اجتماعی',group:'assets'},
+  {key:'catalog',no:16,label:'کاتالوگ',group:'assets'},
+  {key:'visualIdentity',no:17,label:'هویت بصری',group:'assets'},
+  {key:'media',no:18,label:'رسانه',group:'assets'},
+  {key:'expertCredibility',no:19,label:'اعتبار تخصصی',group:'capacity'},
+  {key:'executivePresence',no:20,label:'حضور مدیران',group:'capacity'},
+  {key:'scientificCapacity',no:21,label:'ظرفیت علمی',group:'capacity'},
+  {key:'investmentCapacity',no:22,label:'ظرفیت سرمایه‌گذاری',group:'capacity'},
+  {key:'marketDevCapacity',no:23,label:'ظرفیت توسعه بازار',group:'capacity'},
+  {key:'internalSystems',no:24,label:'وضعیت سیستم‌های داخلی',group:'capacity'},
+  {key:'structuralIssues',no:25,label:'مشکلات ساختاری',group:'issues'},
+  {key:'communicationIssues',no:26,label:'مشکلات ارتباطی',group:'issues'},
+  {key:'growthOpportunities',no:27,label:'فرصت‌های رشد',group:'issues'},
+  {key:'partnershipPriority',no:28,label:'اولویت همکاری',group:'issues'},
+  {key:'suggestedActions',no:29,label:'اقدامات پیشنهادی',group:'issues'},
+  {key:'internalOwner',no:30,label:'مسئول داخلی',group:'issues'},
+  {key:'readinessStatus',no:31,label:'وضعیت آماده‌سازی',group:'issues'},
+];
+const KNOWLEDGE_STAGES=[
+  {key:'docsReview',no:1,label:'بررسی اسناد و تکمیل بخش‌ها',duration:'۱۵ روز',output:'پیش‌نویس پرونده'},
+  {key:'interview',no:2,label:'مصاحبهٔ ساختاریافته با مدیران ارشد',duration:'۲۰ روز',output:'یادداشت مصاحبه'},
+  {key:'fieldSurvey',no:3,label:'برداشت میدانی دارایی‌های ارتباطی',duration:'۱۰ روز',output:'فهرست دارایی با نمره'},
+  {key:'validation',no:4,label:'اعتبارسنجی متقابل داده‌ها',duration:'۵ روز',output:'پروندهٔ اعتبارسنجی‌شده'},
+  {key:'analysis',no:5,label:'تحلیل و نتیجه‌گیری',duration:'۵ روز',output:'گزارش شناخت'},
+  {key:'boardApproval',no:6,label:'تصویب در هیئت‌مدیره',duration:'۵ روز',output:'پروندهٔ مصوب'},
+  {key:'quarterlyUpdate',no:7,label:'به‌روزرسانی فصلی',duration:'مستمر',output:'پروندهٔ به‌روز'},
+];
+const KNOWLEDGE_RULE='هیچ بخشی بدون منبع معتبر تکمیل نمی‌شود؛ بخش فاقد داده یا منبع، صریحاً «نامعتبر» ثبت می‌گردد. دادهٔ خام و برداشت تحلیلی در دو ستون جدا ثبت می‌شوند و هر پرونده حداکثر ۹۰ روز اعتبار دارد.';
+function knowledgeSectionStatus(sec){
+  const filled=!!String(sec?.data??'').trim();
+  const hasSource=!!String(sec?.source??'').trim();
+  return {filled,hasSource,status:filled&&hasSource?'VALID':'INVALID'};
+}
+function knowledgeProfileOf(orgId){
+  ensureKnowledgeSeed();
+  return (DB.knowledgeProfiles??[]).find(p=>p.organizationId===orgId)??null;
+}
+/* پوشش پرونده = سهم بخش‌های معتبر (داده + منبع) از ۳۱ بخش استاندارد */
+function knowledgeCoverageOf(orgId){
+  const p=knowledgeProfileOf(orgId);
+  if(!p) return 0;
+  const valid=KNOWLEDGE_SECTIONS.filter(s=>knowledgeSectionStatus((p.sections??{})[s.key]).status==='VALID').length;
+  return valid/KNOWLEDGE_SECTIONS.length*100;
+}
+function knowledgeView(p){
+  const sections=KNOWLEDGE_SECTIONS.map(s=>{
+    const raw=(p?.sections??{})[s.key]??{};
+    const st=knowledgeSectionStatus(raw);
+    return {key:s.key,no:s.no,label:s.label,group:s.group,
+      data:String(raw.data??''),interpretation:String(raw.interpretation??''),
+      source:String(raw.source??''),sourceDate:raw.sourceDate??null,updatedAt:raw.updatedAt??null,
+      filled:st.filled,status:st.status};
+  });
+  const valid=sections.filter(s=>s.status==='VALID').length;
+  const filled=sections.filter(s=>s.filled).length;
+  const stageIdx=KNOWLEDGE_STAGES.findIndex(x=>x.key===(p?.stage??KNOWLEDGE_STAGES[0].key));
+  const reviewedAt=p?.reviewedAt??null;
+  const expiresAt=reviewedAt?new Date(new Date(reviewedAt).getTime()+90*86400000).toISOString():null;
+  const daysLeft=expiresAt!=null?Math.ceil((new Date(expiresAt).getTime()-Date.now())/86400000):null;
+  const reviewState=reviewedAt==null?'UNREVIEWED':(daysLeft>=0?'VALID':'EXPIRED');
+  return {organizationId:p?.organizationId??null,
+    stage:KNOWLEDGE_STAGES[stageIdx>=0?stageIdx:0].key,
+    stageNo:KNOWLEDGE_STAGES[stageIdx>=0?stageIdx:0].no,
+    ownerRole:p?.ownerRole??'',reviewedAt,expiresAt,daysLeft,reviewState,
+    sections,groups:KNOWLEDGE_GROUPS,stages:KNOWLEDGE_STAGES,
+    stats:{total:sections.length,filled,valid,invalid:sections.length-valid,coverage:Math.round(valid/sections.length*100)},
+    rule:KNOWLEDGE_RULE};
+}
+function ensureKnowledgeSeed(){
+  if((DB.knowledgeProfiles??[]).some(p=>p.organizationId==='org-pars')) return;
+  const ago=(d)=>new Date(Date.now()-d*86400000).toISOString();
+  /* سکشن پر: دادهٔ خام + برداشت تحلیلی (دو ستون جدا) + منبع + تاریخ منبع */
+  const S=(data,interpretation,source,srcDaysAgo)=>({data,interpretation,source,sourceDate:ago(srcDaysAgo),updatedAt:ago(srcDaysAgo)});
+  const P=(organizationId,stage,ownerRole,reviewedDaysAgo,sections)=>({organizationId,stage,ownerRole,reviewedAt:reviewedDaysAgo==null?null:ago(reviewedDaysAgo),sections});
+  DB.knowledgeProfiles=[
+    /* هلدینگ پارس — فرم ۲ «شناخت هلدینگ»: ماه دوم برنامه، مرحلهٔ تحلیل؛ بازبینی ۳۲ روز پیش (اعتبار ۹۰روزه) */
+    P('org-pars','analysis','مدیر استراتژی',32,{
+      name:S('هلدینگ پارس؛ گروه چندبخشی با ۱۲ حوزهٔ کاری از انرژی تا محتوا.','برنامهٔ ۱۲ماهه بر همین ساختار ۱۲بخشی بنا شده است.','روزنامهٔ رسمی و اساس‌نامه',38),
+      shareholders:S('سهام نزد هیئت‌مدیره و خانوادهٔ مؤسس متمرکز است.','مالکیت متمرکز: تصمیم‌گیری سریع، ریسک وابستگی به افراد.','اساس‌نامه و صورت‌جلسات مجمع',40),
+      executives:S('هیئت‌مدیره + مدیرعامل؛ چارت هدف ۲۲ نقشی تدوین شده است.','چارت کامل در حاکمیت برنامه ثبت است؛ شکاف استخدام موجود است.','چارت سازمانی مصوب',35),
+      activityScope:S('دوازده حوزهٔ کاری: انرژی، آموزش، سلامت، داده، محتوا و…','هم‌پوشانی حوزه‌ها، فرصت هم‌افزایی و ریسک پراکندگی می‌دهد.','روزنامهٔ رسمی + مصاحبهٔ مدیران',33),
+      products:S('سبد محصول هر حوزه جداگانه تعریف شده است.','محصولات داده‌محور وجه تمایز خانواده است.','کاتالوگ حوزه‌ها',30),
+      currentStatus:S('مرحلهٔ تأسیس و استقرار؛ استخدام هستهٔ ده‌نفره در جریان.','برنامه طبق جدول زمانی فصل یک است.','گزارش ماهانهٔ داخلی',28),
+      targetMarket:S('بازار B2B صنایع داده‌محور و نهادهای تنظیم‌گر.','ورود از مسیر مرجعیت داده، نه رقابت قیمتی.','مطالعهٔ بازار + مصاحبه',32),
+      keyCustomers:S('مشتریان اصلی هنوز در حال شناسایی‌اند (نقشهٔ ذی‌نفعان).','پیش از فصل دو، فهرست نهایی نمی‌شود.','نقشهٔ ذی‌نفعان نسخهٔ ۱',25),
+      keyPartners:S('دانشگاه صنعتی شریف، اتاق بازرگانی و صندوق نوآوری در نقشهٔ ذی‌نفعان است.','روابط موجود نقطهٔ شروع شبکهٔ مشارکت است.','نقشهٔ ذی‌نفعان + Base روابط',25),
+      competitors:S('اندیشکده داده‌پژوهان، رسانه تحلیل‌گر صنعت و مرکز مطالعات راهبردی.','ماتریس شکاف هفت‌بُعدی در هاب هوشمندی ثبت است.','ماتریس رقبا (هوشمندی)',20),
+      strengths:S('تنوع حوزه‌ها و پشتوانهٔ سرمایه‌گذاری خانواده.','قوت واقعی پس از تثبیت ساختار محقق می‌شود.','مصاحبهٔ مدیران ارشد',30),
+      weaknesses:S('برند یکپارچه هنوز شکل نگرفته و سامانه‌ها پراکنده‌اند.','ریشهٔ هر دو: نبود مرکز هویت و دادهٔ مشترک.','ممیزی سامانه‌ها + مصاحبه',27),
+      commAssets:S('وب‌سایت خانواده و دو رسانهٔ تخصصی فعال است.','دارایی‌ها جزیره‌ای‌اند؛ تقویم انتشار واحد ندارند.','چک‌لیست دارایی ارتباطی',26),
+      website:S('وب‌سایت مرجع در حال طراحی است (هدف ماه ۸).','پیش‌نیاز شاخص مرجعیت داده است.','برنامهٔ دارایی و رسانه',24),
+      socialNetworks:S('حضور پراکنده در سه پلتفرم بدون توالی کانال.','معماری سه‌سطحی کانال‌ها تعریف شده؛ اجرا در فصل دو.','برداشت میدانی + برنامهٔ رسانه',22),
+      catalog:S('کاتالوگ واحد خانواده تدوین نشده است.','خروجی فصل دوم برنامه است.','مصاحبهٔ مدیران',30),
+      mediaPresence:S('بازنمایی رسانه‌ای ماهانه در پایش عموم‌ها ثبت می‌شود.','پایهٔ شاخص انتشار رسانه تخصصی همین داده است.','پایش رسانه (عموم‌ها)',18),
+      expertCredibility:S('اعتبار تخصصی حوزه‌ها نابرابر است؛ داده قوی‌ترین است.','محور مرجعیت‌سازی از شکاف رقبا انتخاب شد.','ماتریس رقبا + مصاحبه',20),
+      internalSystems:S('ممیزی سامانه‌ها انجام شده؛ برنامهٔ انتقال سامانه‌به‌سامانه ثبت است.','خاموش‌سازی سامانه‌های قدیمی هدف ماه ۷ است.','ممیزی سامانه‌ها (حاکمیت برنامه)',26),
+      /* بخش‌های پر اما بی‌منبع — صریحاً «نامعتبر» (قاعدهٔ ۷.۳ سند) */
+      structuralIssues:S('تصمیم‌گیری غیرمتمرکز در حوزه‌ها دیده می‌شود.','','',12),
+      suggestedActions:S('تشکیل کمیتهٔ دادهٔ خانواده پیشنهاد می‌شود.','','',10),
+    }),
+    /* پارس انرژی — فرم ۳ «شناخت زیرمجموعه»: مرحلهٔ مصاحبه */
+    P('org-pars-01','interview','مدیر استراتژی',null,{
+      name:S('پارس انرژی؛ حوزهٔ انرژی هلدینگ پارس.','نخستین زیرمجموعهٔ اولویت‌دار شناخت.','روزنامهٔ رسمی',35),
+      activityScope:S('تولید و خدمات انرژی‌های تجدیدپذیر.','هم‌راستا با محور مرجعیت داده.','مصاحبهٔ مدیران',20),
+      products:S('سه خط محصول خدماتی.','کاتالوگ تفصیلی در حال تدوین است.','کاتالوگ حوزه',18),
+      targetMarket:S('صنایع میان‌رده و نهادهای عمرانی.','ورود از مسیر پروژه‌های نمایشی.','مطالعهٔ بازار',16),
+      keyPartners:S('دو تأمین‌کنندهٔ فناوری خارجی در مذاکره.','پیش‌نیاز: تکمیل تفاهم‌نامه.','Base روابط',14),
+      competitors:S('سه بازیگر داخلی شناخته‌شده.','پروندهٔ رقیب تفصیلی ثبت نشده است.','برداشت اولیهٔ تیم',12),
+      /* بی‌منبع → نامعتبر */
+      strengths:S('تیم فنی جوان و انگیزهٔ بالا.','','',9),
+    }),
+    /* پارس آموزش — پروندهٔ منقضی‌شده برای نمایش قاعدهٔ ۹۰ روز (بازبینی ۱۰۰ روز پیش) */
+    P('org-pars-02','validation','مدیر استراتژی',100,{
+      name:S('پارس آموزش؛ حوزهٔ آموزش سازمانی و مهارت‌آموزی.','آموزش، زیرساختِ سرمایهٔ انسانی خانواده است.','روزنامهٔ رسمی',110),
+      activityScope:S('دوره‌های سازمانی، محتوای آموزشی و گواهی‌نامه.','خروجی آن ورودی سایر حوزه‌هاست.','اساس‌نامه + مصاحبه',105),
+      readinessStatus:S('در صف آمادگی بازار فصل دو.','نیازمند تکمیل پرونده پیش از ورود.','برنامهٔ فصل',95),
+    }),
+    /* دنیای دمو (هلدینگ آریا) — همان قابلیت برای حساب دمو */
+    P('org-1','fieldSurvey','مدیر استراتژی',20,{
+      name:S('هلدینگ آریا؛ هلدینگ مادر دنیای دمو.','ساختار سه‌سطحی با یک زیرمجموعهٔ فناوری.','روزنامهٔ رسمی دمو',30),
+      shareholders:S('سهام‌داران دمو با سهم اکثریت مدیرعامل.','ساختار ساده برای نمایش قابلیت.','اساس‌نامهٔ دمو',30),
+      executives:S('مدیرعامل + مدیر ارشد (مالک) + مدیر هلدینگ (ناظر).','نقش‌ها در حساب‌های دمو بازتاب دارد.','چارت دمو',28),
+      activityScope:S('هلدینگ مادر با سرمایه‌گذاری در فناوری.','تمرکز بر فناوری نرم‌افزاری.','روزنامهٔ رسمی دمو',30),
+      products:S('پرتفوی سرمایه‌گذاری نرم‌افزار.','خروجی اصلی: ارزش‌گذاری پرتفوی.','گزارش پرتفوی',26),
+      currentStatus:S('فعال با روابط جاری متنوع.','سلامت روابط در داشبورد ردیابی می‌شود.','داشبورد روابط',24),
+      targetMarket:S('بازار فناوری ایران.','B2B و نهادی.','مطالعهٔ دمو',22),
+      keyCustomers:S('گروه ساختمانی سدنا (مشتری فعال).','رابطهٔ فعال با امتیاز سلامت خوب.','Base روابط',22),
+      keyPartners:S('شرکت پترو صنعت (شریک راهبردی) و دانشگاه صنعتی شریف.','شبکهٔ غیربازاری در نقشهٔ عموم‌ها ثبت است.','Base روابط + عموم‌ها',22),
+      competitors:S('رقبای دمو در هاب هوشمندی پرونده دارند.','ماتریس شکاف از همین داده ساخته می‌شود.','هاب هوشمندی',20),
+      commAssets:S('وب‌سایت رسمی + پروفایل شرکتی.','دارایی‌های پایه برای نمایش آمادگی.','چک‌لیست دارایی',21),
+      website:S('وب‌سایت رسمی فعال است.','پایش در آمادگی بازار ثبت شده.','پروندهٔ دارایی',21),
+      expertCredibility:S('اعتبار تخصصی متوسط (خودارزیابی).','پایهٔ مقایسه با رقبا در ماتریس شکاف.','خودارزیابی ساختاریافته',21),
+      internalSystems:S('سامانه‌های دمو در ممیزی ثبت شده‌اند.','برنامهٔ انتقال در حاکمیت برنامه است.','ممیزی سامانه‌ها',21),
+      /* بی‌منبع → نامعتبر */
+      weaknesses:S('وابستگی به مشتری بزرگ.','','',11),
+    }),
+    /* آریا فناوری (زیرمجموعهٔ دمو) — آغاز پرونده */
+    P('org-2','docsReview','مدیر استراتژی',null,{
+      name:S('آریا فناوری؛ زیرمجموعهٔ نرم‌افزاری هلدینگ آریا.','واحد اجرایی فناوری خانواده.','روزنامهٔ رسمی دمو',28),
+      activityScope:S('توسعهٔ نرم‌افزار و داده.','هم‌راستا با محور مرجعیت داده.','اساس‌نامهٔ دمو',28),
+      products:S('پلتفرم‌های تحلیلی دمو.','در نمونه‌سازی اولیه.','کاتالوگ حوزه',15),
+      executives:S('مدیر روابط (حساب نقش‌محور) + تیم فنی.','دسترسی نقش‌محور در حساب دمو فعال است.','چارت دمو',12),
+    }),
+  ];
 }
 
 /* ممیزی سه‌گانه — دادهٔ ممیزی متعلق به سازمان برنامه است و بیرون از محدوده دیده نمی‌شود */
@@ -12862,6 +13038,77 @@ const server=http.createServer(async(req,res)=>{
     row.updatedAt=nowIso(); saveDb();
     audit(req,'UPDATE','Competitor',row.id,'OK',{});
     return json(res,200,competitorView(row));
+  }
+
+  /* ─────────────── گام ۲.۵ — پروندهٔ شناخت ۳۱بخشی (/organizations/:id/knowledge) ────────── */
+  const knlReview=match('/organizations/:id/knowledge/review');
+  if(knlReview&&method==='POST'){
+    if(!hasPerm('organization.write')) return json(res,403,{message:'شما مجوز «ثبت و ویرایش سازمان» (organization.write) را ندارید.'});
+    const o=ORGS.find(x=>x.id===knlReview[0]);
+    if(!o) return json(res,404,{message:'سازمان یافت نشد'});
+    if(!inScope(req,o.id)) return json(res,403,{message:'دسترسی به این سازمان مجاز نیست.'});
+    ensureKnowledgeSeed();
+    let p=(DB.knowledgeProfiles??[]).find(x=>x.organizationId===o.id);
+    if(!p){p={organizationId:o.id,stage:KNOWLEDGE_STAGES[0].key,ownerRole:'',reviewedAt:null,sections:{}};(DB.knowledgeProfiles??=[]).push(p);}
+    p.reviewedAt=nowIso(); /* تاریخ انقضا (۷.۳): حداکثر ۹۰ روز اعتبار */
+    saveDb();
+    audit(req,'UPDATE','KnowledgeProfile',o.id,'REVIEW',{});
+    return json(res,200,knowledgeView(p));
+  }
+  const knlSec=match('/organizations/:id/knowledge/sections/:key');
+  if(knlSec&&(method==='PATCH'||method==='PUT')){
+    if(!hasPerm('organization.write')) return json(res,403,{message:'شما مجوز «ثبت و ویرایش سازمان» (organization.write) را ندارید.'});
+    const o=ORGS.find(x=>x.id===knlSec[0]);
+    if(!o) return json(res,404,{message:'سازمان یافت نشد'});
+    if(!inScope(req,o.id)) return json(res,403,{message:'دسترسی به این سازمان مجاز نیست.'});
+    const S=KNOWLEDGE_SECTIONS.find(s=>s.key===knlSec[1]);
+    if(!S) return json(res,400,{message:'کلید بخش نامعتبر است — پروندهٔ شناخت ۳۱ بخش استاندارد دارد.'});
+    ensureKnowledgeSeed();
+    let p=(DB.knowledgeProfiles??[]).find(x=>x.organizationId===o.id);
+    if(!p){p={organizationId:o.id,stage:KNOWLEDGE_STAGES[0].key,ownerRole:'',reviewedAt:null,sections:{}};(DB.knowledgeProfiles??=[]).push(p);}
+    const b=await readBody(req);
+    const cur=p.sections[S.key]??{};
+    const next={...cur};
+    if(b.data!=null) next.data=String(b.data).trim();
+    if(b.interpretation!=null) next.interpretation=String(b.interpretation).trim();
+    if(b.source!=null) next.source=String(b.source).trim();
+    if(b.sourceDate!=null) next.sourceDate=String(b.sourceDate).trim()||null;
+    if(next.sourceDate&&new Date(next.sourceDate)>new Date()) return json(res,400,{message:'تاریخ منبع نمی‌تواند در آینده باشد.'});
+    next.updatedAt=nowIso();
+    p.sections[S.key]=next;
+    saveDb();
+    audit(req,'UPDATE','KnowledgeProfile',`${o.id}:${S.key}`,'OK',{section:S.label});
+    return json(res,200,knowledgeView(p));
+  }
+  const knlOrg=match('/organizations/:id/knowledge');
+  if(knlOrg&&method==='GET'){
+    if(!hasPerm('organization.read')) return json(res,403,{message:'شما مجوز «مشاهده سازمان‌ها» (organization.read) را ندارید.'});
+    const o=ORGS.find(x=>x.id===knlOrg[0]);
+    if(!o) return json(res,404,{message:'سازمان یافت نشد'});
+    if(!inScope(req,o.id)) return json(res,403,{message:'دسترسی به این سازمان مجاز نیست.'});
+    return json(res,200,knowledgeView(knowledgeProfileOf(o.id)));
+  }
+  if(knlOrg&&method==='PATCH'){
+    if(!hasPerm('organization.write')) return json(res,403,{message:'شما مجوز «ثبت و ویرایش سازمان» (organization.write) را ندارید.'});
+    const o=ORGS.find(x=>x.id===knlOrg[0]);
+    if(!o) return json(res,404,{message:'سازمان یافت نشد'});
+    if(!inScope(req,o.id)) return json(res,403,{message:'دسترسی به این سازمان مجاز نیست.'});
+    const b=await readBody(req);
+    ensureKnowledgeSeed();
+    let p=(DB.knowledgeProfiles??[]).find(x=>x.organizationId===o.id);
+    if(!p){p={organizationId:o.id,stage:KNOWLEDGE_STAGES[0].key,ownerRole:'',reviewedAt:null,sections:{}};(DB.knowledgeProfiles??=[]).push(p);}
+    if(b.ownerRole!=null) p.ownerRole=String(b.ownerRole).trim();
+    if(b.stage!=null){
+      const idx=KNOWLEDGE_STAGES.findIndex(x=>x.key===b.stage);
+      if(idx<0) return json(res,400,{message:'مرحلهٔ نامعتبر — روش شناخت هفت‌مرحله‌ای است.'});
+      const cur=Math.max(0,KNOWLEDGE_STAGES.findIndex(x=>x.key===p.stage));
+      if(idx>cur+1) return json(res,400,{message:'مراحل روش شناخت به‌ترتیب طی می‌شوند؛ پرش مجاز نیست.'});
+      if(idx<cur) return json(res,400,{message:'بازگشت به مرحلهٔ قبل مجاز نیست — اصلاح در همان مرحله انجام می‌شود.'});
+      p.stage=b.stage;
+    }
+    saveDb();
+    audit(req,'UPDATE','KnowledgeProfile',o.id,'OK',{});
+    return json(res,200,knowledgeView(p));
   }
 
   /* ─────────────── گام ۲.۲.۱ — تنظیمات برنامهٔ سازمان (per-tenant) ──────────

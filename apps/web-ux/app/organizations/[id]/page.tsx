@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { use, useCallback, useEffect, useMemo, useState } from 'react';
+import { use, useCallback, useEffect, useMemo, useState, Fragment } from 'react';
 import { api } from '../../_lib/api';
 import { useWorkspace } from '../../_components/workspace';
 import { fa } from '../../_lib/fa';
@@ -8,7 +8,7 @@ import { Badge, ErrorCard, Loading, Modal, PageHeader, SectionCard, StatCard } f
 import { EgoGraph, type EgoNode } from '../../_components/ego-graph';
 import { CriteriaBadge, CriteriaScoreCard, verdictTone, type Summary as CriteriaSummary } from '../../_components/criteria';
 import { suggestConnections } from '../../_lib/connections';
-import { Building2, Users, Share2, Link2, Sparkles, ArrowUpRight, CalendarDays, Network, HeartPulse, AlertTriangle, TrendingUp, Clock, ChevronLeft, Fingerprint, Layers, Radar, Users2, CheckCircle2 } from 'lucide-react';
+import { Building2, Users, Share2, Link2, Sparkles, ArrowUpRight, CalendarDays, Network, HeartPulse, AlertTriangle, TrendingUp, Clock, ChevronLeft, Fingerprint, Layers, Radar, Users2, CheckCircle2, BookOpenCheck, ShieldCheck, Pencil, RefreshCw, X } from 'lucide-react';
 import { localeTag, t } from '../../_lib/i18n';
 
 const arr = (x: any): any[] => Array.isArray(x) ? x : Array.isArray(x?.items) ? x.items : Array.isArray(x?.data) ? x.data : Array.isArray(x?.rows) ? x.rows : [];
@@ -164,6 +164,190 @@ function OrgSelfCard({ orgId, allOrgs, onSaved }: { orgId: string; allOrgs: any[
   );
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   گام ۲.۵ مسترپلن — پروندهٔ شناخت ۳۱بخشی (بخش ۶/۷ سند؛ فرم ۲ و ۳)
+   شناخت مبنای تمام تصمیم‌های بعدی است؛ پروندهٔ استاندارد هر سازمان ۳۱ بخش دارد.
+   قواعد کیفیت (۷.۳): هر بخش باید منبع و تاریخ داشته باشد — بخش بدون منبع
+   صریحاً «نامعتبر» ثبت می‌شود؛ دادهٔ خام و برداشت تحلیلی جدا ثبت می‌شوند و
+   هر پرونده حداکثر ۹۰ روز اعتبار دارد و پس از آن بازبینی می‌شود.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const KNL_STATUS_FA: Record<string, string> = { VALID: t('معتبر'), INVALID: t('نامعتبر') };
+const KNL_REVIEW_FA: Record<string, string> = { VALID: t('معتبر'), EXPIRED: t('منقضی — نیازمند بازبینی'), UNREVIEWED: t('اعتبارسنجی نشده') };
+/* کاتالوگ‌های ساختاری پلتفرم (بخش ۶/۷ سند) — ترجمهٔ سمت کلاینت مثل ابعاد ۲.۴ */
+const KNL_SECTION_FA: Record<string, string> = {
+  name: t('نام'), shareholders: t('سهامداران'), executives: t('مدیران'), activityScope: t('حوزه فعالیت'),
+  products: t('محصولات / خدمات'), currentStatus: t('وضعیت فعلی'), targetMarket: t('بازار هدف'),
+  keyCustomers: t('مشتریان اصلی'), keyPartners: t('شرکای اصلی'), competitors: t('رقبا'),
+  strengths: t('نقاط قوت'), weaknesses: t('نقاط ضعف'), commAssets: t('دارایی‌های ارتباطی'),
+  website: t('وب‌سایت'), socialNetworks: t('شبکه‌های اجتماعی'), catalog: t('کاتالوگ'),
+  visualIdentity: t('هویت بصری'), media: t('رسانه'), expertCredibility: t('اعتبار تخصصی'),
+  executivePresence: t('حضور مدیران'), scientificCapacity: t('ظرفیت علمی'),
+  investmentCapacity: t('ظرفیت سرمایه‌گذاری'), marketDevCapacity: t('ظرفیت توسعه بازار'),
+  internalSystems: t('وضعیت سیستم‌های داخلی'), structuralIssues: t('مشکلات ساختاری'),
+  communicationIssues: t('مشکلات ارتباطی'), growthOpportunities: t('فرصت‌های رشد'),
+  partnershipPriority: t('اولویت همکاری'), suggestedActions: t('اقدامات پیشنهادی'),
+  internalOwner: t('مسئول داخلی'), readinessStatus: t('وضعیت آماده‌سازی'),
+};
+const KNL_STAGE_FA: Record<string, string> = {
+  docsReview: t('بررسی اسناد و تکمیل بخش‌ها'), interview: t('مصاحبهٔ ساختاریافته با مدیران ارشد'),
+  fieldSurvey: t('برداشت میدانی دارایی‌های ارتباطی'), validation: t('اعتبارسنجی متقابل داده‌ها'),
+  analysis: t('تحلیل و نتیجه‌گیری'), boardApproval: t('تصویب در هیئت‌مدیره'),
+  quarterlyUpdate: t('به‌روزرسانی فصلی'),
+};
+const KNL_GROUP_FA: Record<string, string> = {
+  identity: t('هویت و ساختار'), market: t('بازار و ذی‌نفعان'), assets: t('دارایی‌های ارتباطی'),
+  capacity: t('ظرفیت‌ها'), issues: t('مسائل، فرصت‌ها و برنامهٔ همکاری'),
+};
+
+function OrgKnowledgeCard({ orgId }: { orgId: string }) {
+  const { can } = useWorkspace();
+  const writable = can('organization.write');
+  const [k, setK] = useState<any>(null);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [editKey, setEditKey] = useState<string | null>(null);
+  const [form, setForm] = useState({ data: '', interpretation: '', source: '', sourceDate: '' });
+
+  const load = useCallback(async () => {
+    try { setError(''); setK(await api(`/organizations/${orgId}/knowledge`)); }
+    catch (x: any) { setError(x?.message ?? String(x)); }
+  }, [orgId]);
+  useEffect(() => { load(); }, [load]);
+
+  if (!k && !error) return null;
+  const stats = k?.stats ?? { total: 31, valid: 0, filled: 0, invalid: 31, coverage: 0 };
+  const stageIdx = (k?.stages ?? []).findIndex((s: any) => s.key === k?.stage);
+  const nextStage = stageIdx >= 0 ? k.stages[stageIdx + 1] : null;
+
+  const openEdit = (sec: any) => {
+    setEditKey(sec.key);
+    setForm({ data: sec.data ?? '', interpretation: sec.interpretation ?? '', source: sec.source ?? '', sourceDate: sec.sourceDate ? String(sec.sourceDate).slice(0, 10) : '' });
+  };
+  const saveSection = async () => {
+    if (!editKey) return;
+    setBusy(true);
+    try {
+      await api(`/organizations/${orgId}/knowledge/sections/${editKey}`, { method: 'PATCH', body: JSON.stringify({ ...form, sourceDate: form.sourceDate || null }) });
+      setEditKey(null); await load();
+    } catch (x: any) { setError(x?.message ?? String(x)); } finally { setBusy(false); }
+  };
+  const doReview = async () => {
+    setBusy(true);
+    try { await api(`/organizations/${orgId}/knowledge/review`, { method: 'POST' }); await load(); }
+    catch (x: any) { setError(x?.message ?? String(x)); } finally { setBusy(false); }
+  };
+  const advanceStage = async () => {
+    if (!nextStage) return;
+    setBusy(true);
+    try { await api(`/organizations/${orgId}/knowledge`, { method: 'PATCH', body: JSON.stringify({ stage: nextStage.key }) }); await load(); }
+    catch (x: any) { setError(x?.message ?? String(x)); } finally { setBusy(false); }
+  };
+
+  const editSec = editKey ? k.sections.find((s: any) => s.key === editKey) : null;
+  const reviewTone: 'success' | 'danger' | 'neutral' = k?.reviewState === 'VALID' ? 'success' : k?.reviewState === 'EXPIRED' ? 'danger' : 'neutral';
+
+  return (
+    <SectionCard
+      title={t('پروندهٔ شناخت (۳۱ بخش)')}
+      icon={<BookOpenCheck size={16} />}
+      description={t('شناخت استاندارد این سازمان — هیچ بخشی بدون منبع معتبر تکمیل نمی‌شود؛ دادهٔ خام و برداشت تحلیلی جدا ثبت می‌شوند و پرونده حداکثر ۹۰ روز اعتبار دارد.')}
+      actions={
+        <div className="toolbar">
+          {writable && <button className="btn btn-ghost btn-sm" disabled={busy} onClick={doReview}><ShieldCheck size={13} /> {t('ثبت بازبینی (۹۰ روز)')}</button>}
+          {writable && nextStage && <button className="btn btn-ghost btn-sm" disabled={busy} onClick={advanceStage}>{t('تکمیل مرحلهٔ بعد')}</button>}
+          <button className="btn btn-ghost btn-sm" onClick={load}><RefreshCw size={13} className={busy ? 'spin' : ''} /> {t('بازخوانی')}</button>
+        </div>
+      }
+    >
+      {error && <ErrorCard message={error} />}
+      <div className="stat-grid">
+        <StatCard icon={<BookOpenCheck size={16} />} iconClass="ic-teal" label={t('بخش‌های معتبر')} value={`${fmtNum(stats.valid)} ${t('از')} ${fmtNum(stats.total)}`} sub={`${fmtNum(stats.filled)} ${t('بخش پرشده')} · ${fmtNum(stats.invalid)} ${t('نامعتبر')}`} />
+        <StatCard icon={<Layers size={16} />} iconClass="ic-blue" label={t('تکمیل پرونده')} value={`${fmtNum(stats.coverage)}${t('٪')}`} sub={t('معتبر = داده + منبع')} />
+        <StatCard icon={<ShieldCheck size={16} />} iconClass={k?.reviewState === 'EXPIRED' ? 'ic-red' : 'ic-purple'} label={t('اعتبار پرونده')} value={KNL_REVIEW_FA[k?.reviewState ?? 'UNREVIEWED']} sub={k?.daysLeft != null && k.daysLeft >= 0 ? `${fmtNum(k.daysLeft)} ${t('روز مانده تا بازبینی')}` : t('حداکثر ۹۰ روز پس از اعتبارسنجی')} />
+        <StatCard icon={<Clock size={16} />} iconClass="ic-teal" label={t('مرحلهٔ شناخت')} value={`${fmtNum(k?.stageNo ?? 1)} ${t('از')} ${fmtNum(7)}`} sub={KNL_STAGE_FA[k?.stage ?? 'docsReview'] ?? ''} />
+      </div>
+
+      {/* روش شناخت — هفت‌مرحله‌ای (۷.۲ سند) */}
+      <div className="knl-steps" aria-label={t('روش شناخت هفت‌مرحله‌ای')}>
+        {(k?.stages ?? []).map((s: any, i: number) => (
+          <span key={s.key} className={`knl-step ${i < stageIdx ? 'done' : ''} ${i === stageIdx ? 'current' : ''}`} title={`${s.duration} → ${s.output}`}>
+            <b>{fmtNum(s.no)}</b> {KNL_STAGE_FA[s.key] ?? s.label}
+          </span>
+        ))}
+      </div>
+
+      <div className="table-wrap">
+        <table className="knl-table">
+          <thead>
+            <tr>
+              <th>{t('ردیف')}</th>
+              <th>{t('بخش')}</th>
+              <th>{t('داده خام')}</th>
+              <th>{t('برداشت تحلیلی')}</th>
+              <th>{t('منبع')}</th>
+              <th>{t('تاریخ منبع')}</th>
+              <th>{t('وضعیت')}</th>
+              {writable && <th />}
+            </tr>
+          </thead>
+          <tbody>
+            {(k?.groups ?? []).map((g: any) => (
+              <Fragment key={g.key}>
+                <tr className="knl-group"><td colSpan={writable ? 8 : 7}>{KNL_GROUP_FA[g.key] ?? g.label}</td></tr>
+                {(k?.sections ?? []).filter((s: any) => s.group === g.key).map((s: any) => (
+                  <tr key={s.key} className={s.status === 'VALID' ? 'knl-valid' : 'knl-invalid'}>
+                    <td>{fmtNum(s.no)}</td>
+                    <td><strong>{KNL_SECTION_FA[s.key] ?? s.label}</strong></td>
+                    <td className="knl-data">{s.data || <span className="t-muted">—</span>}</td>
+                    <td className="knl-data">{s.interpretation || <span className="t-muted">—</span>}</td>
+                    <td>{s.source || <span className="t-muted">—</span>}</td>
+                    <td>{s.sourceDate ? fmtDate(s.sourceDate) : '—'}</td>
+                    <td><Badge tone={s.status === 'VALID' ? 'success' : 'danger'}>{KNL_STATUS_FA[s.status]}</Badge></td>
+                    {writable && (
+                      <td>
+                        <button type="button" className="srip-button" style={{ padding: '3px 9px' }} onClick={() => openEdit(s)}><Pencil size={13} /></button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="org-rel-note">{k?.rule}</p>
+
+      {writable && (
+        <Modal open={editKey != null} title={`${t('ثبت بخش پرونده')} — ${editSec ? (KNL_SECTION_FA[editSec.key] ?? editSec.label) : ''}`} onClose={() => setEditKey(null)}>
+          <form id="knowledge-form" className="form-grid" onSubmit={(e) => { e.preventDefault(); saveSection(); }}>
+            <div className="field full">
+              <label className="field-label">{t('داده خام')}</label>
+              <textarea rows={3} value={form.data} onChange={(e) => setForm(f => ({ ...f, data: e.target.value }))} placeholder={t('واقعیت ثبت‌شده — بدون تحلیل')} />
+            </div>
+            <div className="field full">
+              <label className="field-label">{t('برداشت تحلیلی')}</label>
+              <textarea rows={2} value={form.interpretation} onChange={(e) => setForm(f => ({ ...f, interpretation: e.target.value }))} placeholder={t('تفکیک داده از برداشت — تحلیل در ستون جدا')} />
+            </div>
+            <div className="field">
+              <label className="field-label">{t('منبع')}</label>
+              <input value={form.source} placeholder={t('مثلاً: روزنامهٔ رسمی، مصاحبهٔ مدیران')} onChange={(e) => setForm(f => ({ ...f, source: e.target.value }))} />
+            </div>
+            <div className="field">
+              <label className="field-label">{t('تاریخ منبع')}</label>
+              <input type="date" value={form.sourceDate} onChange={(e) => setForm(f => ({ ...f, sourceDate: e.target.value }))} />
+            </div>
+            <p className="field-hint full">{t('بدون منبع، بخش صریحاً «نامعتبر» ثبت می‌شود.')}</p>
+            <div className="form-actions">
+              <button type="button" className="srip-button" onClick={() => setEditKey(null)}><X size={14} /> {t('انصراف')}</button>
+              <button type="submit" className="srip-button primary" disabled={busy}>{busy ? t('در حال ذخیره…') : t('ذخیرهٔ بخش')}</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+    </SectionCard>
+  );
+}
+
 export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [o, setO] = useState<any>(null);
@@ -313,6 +497,9 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
 
           {/* شناسنامهٔ سازمان — الگو، مأموریت و ساختار (از عموم‌ها به اینجا منتقل شد) */}
           <OrgSelfCard orgId={id} allOrgs={allOrgs} onSaved={load} />
+
+          {/* پروندهٔ شناخت ۳۱بخشی — گام ۲.۵ (بخش ۶/۷ سند؛ فرم ۲ و ۳) */}
+          <OrgKnowledgeCard orgId={id} />
 
           {/* رابطه استاتوس — پاسخ به «وضعیت رابطه با این سازمان چیست؟» */}
           <section className="rel-status-card">

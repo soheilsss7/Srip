@@ -1299,7 +1299,102 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
   if (clPost.status === 201) await api(`/intelligence/competitors/${clPost.body.id}`, { method: 'DELETE', token: ct });
 }
 
-/* ============================ SUMMARY ============================ */
+/* ═════════════════ گام ۲.۵ — پروندهٔ شناخت ۳۱بخشی (فرم ۲ و ۳ سند) ═════════════════ */
+{
+  const dl = await login('demo');
+  const dt = dl.body?.accessToken;
+
+  const L = await api('/organizations/org-1/knowledge', { token: dt });
+  check('پروندهٔ شناخت: ۳۱ بخش استاندارد', L.status === 200 && L.body.sections.length === 31, `n=${L.body?.sections?.length}`);
+  check('شماره‌گذاری بخش‌ها ۱ تا ۳۱ پیوسته', L.body.sections.every((s, i) => s.no === i + 1));
+  const secLabels = L.body.sections.map(s => s.label).join('|');
+  check('بخش‌های سند: نام/سهامداران/…/وضعیت آماده‌سازی',
+    ['نام','سهامداران','مدیران','حوزه فعالیت','محصولات / خدمات','وضعیت فعلی','بازار هدف','مشتریان اصلی','شرکای اصلی','رقبا','نقاط قوت','نقاط ضعف','دارایی‌های ارتباطی','وب‌سایت','شبکه‌های اجتماعی','کاتالوگ','هویت بصری','رسانه','اعتبار تخصصی','حضور مدیران','ظرفیت علمی','ظرفیت سرمایه‌گذاری','ظرفیت توسعه بازار','وضعیت سیستم‌های داخلی','مشکلات ساختاری','مشکلات ارتباطی','فرصت‌های رشد','اولویت همکاری','اقدامات پیشنهادی','مسئول داخلی','وضعیت آماده‌سازی'].join('|') === secLabels);
+  check('روش شناخت هفت‌مرحله‌ای با خروجی هر مرحله', L.body.stages.length === 7
+    && L.body.stages.every(s => s.label && s.output && s.duration)
+    && L.body.stages[6].key === 'quarterlyUpdate');
+  check('گروه‌بندی پنج‌گانه همهٔ بخش‌ها را می‌پوشاند', L.body.groups.length === 5
+    && L.body.sections.every(s => L.body.groups.some(g => g.key === s.group)));
+
+  /* تفکیک داده از برداشت (۷.۳) */
+  const s0 = L.body.sections.find(s => s.key === 'name');
+  check('تفکیک داده خام از برداشت تحلیلی (دو ستون جدا)', !!s0.data && !!s0.interpretation && s0.data !== s0.interpretation);
+  /* منبع‌دار بودن (۷.۳): بخش پرِ بی‌منبع صریحاً «نامعتبر» */
+  const noSrc = L.body.sections.filter(s => s.status === 'INVALID' && s.filled);
+  const valid = L.body.sections.filter(s => s.status === 'VALID');
+  check('بخش پرِ بی‌منبع صریحاً «نامعتبر» است', noSrc.length >= 1 && noSrc.every(s => !s.source));
+  check('بخش معتبر = داده + منبع + تاریخ', valid.length >= 10 && valid.every(s => !!s.data && !!s.source));
+  check('آمار پوشش با سطرها سازگار است', L.body.stats.total === 31
+    && L.body.stats.valid === valid.length
+    && L.body.stats.valid + L.body.stats.invalid === 31
+    && L.body.stats.coverage === Math.round(valid.length / 31 * 100));
+  /* اعتبار ۹۰روزه (۷.۳) */
+  check('اعتبار پروندهٔ فعال: حداکثر ۹۰ روز', L.body.reviewState === 'VALID' && L.body.daysLeft != null && L.body.daysLeft > 0 && L.body.daysLeft <= 90);
+
+  /* ثبت/ویرایش بخش (فرم ۲ و ۳) */
+  const cleared = await api('/organizations/org-1/knowledge/sections/catalog', { method: 'PATCH', token: dt, body: { data: 'کاتالوگ واحد در تدوین', source: '' } });
+  check('ثبت بخش بدون منبع → پذیرفته اما «نامعتبر»', cleared.status === 200
+    && cleared.body.sections.find(s => s.key === 'catalog').status === 'INVALID');
+  const withSrc = await api('/organizations/org-1/knowledge/sections/catalog', { method: 'PATCH', token: dt, body: { source: 'مصاحبهٔ مدیران', sourceDate: new Date(Date.now() - 86400000).toISOString().slice(0, 10) } });
+  check('افزودن منبع → همان بخش «معتبر» می‌شود', withSrc.status === 200
+    && withSrc.body.sections.find(s => s.key === 'catalog').status === 'VALID');
+  const future = await api('/organizations/org-1/knowledge/sections/catalog', { method: 'PATCH', token: dt, body: { sourceDate: new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10) } });
+  check('تاریخ منبع در آینده → ۴۰۰', future.status === 400);
+  const badKey = await api('/organizations/org-1/knowledge/sections/notASection', { method: 'PATCH', token: dt, body: { data: 'x' } });
+  check('کلید بخش نامعتبر → ۴۰۰', badKey.status === 400);
+
+  /* بازبینی و مرحله‌ها */
+  const stageSkip = await api('/organizations/org-1/knowledge', { method: 'PATCH', token: dt, body: { stage: 'boardApproval' } });
+  check('پرش مرحله‌ای روش شناخت → ۴۰۰', stageSkip.status === 400 && String(stageSkip.body?.message).includes('پرش'));
+  const stageBack = await api('/organizations/org-1/knowledge', { method: 'PATCH', token: dt, body: { stage: 'docsReview' } });
+  check('بازگشت به مرحلهٔ قبل → ۴۰۰', stageBack.status === 400);
+  const stageNext = await api('/organizations/org-1/knowledge', { method: 'PATCH', token: dt, body: { stage: 'validation' } });
+  check('تکمیل مرحلهٔ بعد (برداشت میدانی → اعتبارسنجی) → ۲۰۰', stageNext.status === 200 && stageNext.body.stage === 'validation' && stageNext.body.stageNo === 4);
+  const rev = await api('/organizations/org-1/knowledge/review', { method: 'POST', token: dt });
+  check('ثبت بازبینی → اعتبار ۹۰ روزهٔ تازه', rev.status === 200 && rev.body.reviewState === 'VALID' && rev.body.daysLeft === 90);
+
+  /* RBAC و جداسازی */
+  const clTok = (await login('client')).body?.accessToken;
+  const noPerm = await api('/organizations/org-1/knowledge/sections/name', { method: 'PATCH', token: clTok, body: { data: 'x', source: 'y' } });
+  check('کاربر بدون organization.write → ۴۰۳', noPerm.status === 403);
+  const clView = await api('/organizations/org-2/knowledge', { token: clTok });
+  check('کاربر نقش‌محور: پروندهٔ سازمان خودش را می‌بیند', clView.status === 200 && clView.body.sections.length === 31);
+  const clFar = await api('/organizations/org-1/knowledge', { token: clTok });
+  check('کاربر نقش‌محور: پروندهٔ سازمان خارج از محدوده → ۴۰۳', clFar.status === 403);
+  const demoFar = await api('/organizations/org-pars/knowledge', { token: dt });
+  check('دنیای دمو → پروندهٔ پارس دیده نمی‌شود (۴۰۳)', demoFar.status === 403);
+  const goneOrg = await api('/organizations/org-none/knowledge', { token: dt });
+  check('سازمان غایب → ۴۰۴', goneOrg.status === 404);
+
+  /* مستأجر پارس: پروندهٔ هلدینگ (فرم ۲) + زیرمجموعه (فرم ۳) + پروندهٔ منقضی */
+  const pl = await login('pars', 'pars1234');
+  const pt = pl.body?.accessToken;
+  if (pt) {
+    const pars = await api('/organizations/org-pars/knowledge', { token: pt });
+    check('پارس: پروندهٔ هلدینگ در مرحلهٔ تحلیل با بخش‌های معتبر', pars.status === 200
+      && pars.body.stage === 'analysis' && pars.body.stats.valid >= 15);
+    check('پارس: مالک پرونده = مدیر استراتژی (فرم ۲ سند)', pars.body.ownerRole === 'مدیر استراتژی');
+    const edu = await api('/organizations/org-pars-02/knowledge', { token: pt });
+    check('پروندهٔ ۹۰روزه: بازبینی ۱۰۰ روز پیش → منقضی', edu.status === 200 && edu.body.reviewState === 'EXPIRED' && edu.body.daysLeft < 0);
+    const eduRev = await api('/organizations/org-pars-02/knowledge/review', { method: 'POST', token: pt });
+    check('بازبینی پروندهٔ منقضی → اعتبار تازه', eduRev.status === 200 && eduRev.body.reviewState === 'VALID');
+    const fresh = await api('/organizations/org-pars-05/knowledge', { token: pt });
+    check('زیرمجموعهٔ بدون پرونده → قالب خالی ۳۱ بخش (فرم ۳)', fresh.status === 200
+      && fresh.body.stats.valid === 0 && fresh.body.stage === 'docsReview' && fresh.body.sections.length === 31);
+    /* kpi-1 پارس: تنظیمات خالی → بدون شاخص؛ پوشش فقط داده است */
+    const mine = await api('/organizations/org-pars-01/knowledge/sections/weaknesses', { method: 'PATCH', token: pt, body: { data: 'وابستگی به یک مشتری کلیدی', source: 'مصاحبهٔ مدیران حوزه' } });
+    check('پارس: ثبت بخش زیرمجموعه → معتبر', mine.status === 200 && mine.body.sections.find(s => s.key === 'weaknesses').status === 'VALID');
+  }
+
+  /* سیم‌کشی kpi-1 به پوشش زندهٔ پرونده (بخش ۲۶ سند) */
+  const kp = await api('/program/kpis', { token: dt });
+  const k1 = kp.body?.items?.find(x => x.id === 'kpi-1') ?? kp.body?.find?.(x => x.id === 'kpi-1');
+  const o1 = await api('/organizations/org-1/knowledge', { token: dt });
+  const o2 = await api('/organizations/org-2/knowledge', { token: dt });
+  const expect = Math.round((o1.body.stats.valid / 31 + o2.body.stats.valid / 31) / 2 * 100);
+  check('kpi-1 از پوشش زندهٔ پروندهٔ شناخت محاسبه می‌شود', k1 && k1.value === expect
+    && String(k1.source).includes('پروندهٔ شناخت'), `value=${k1?.value} expected=${expect}`);
+}
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
 if (failures.length) { console.log(`  Failed: ${failures.join(' | ')}`); }

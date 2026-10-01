@@ -164,6 +164,74 @@ try {
     const sum = document.querySelector('[data-self-summary]');
     return !!sum && (sum.textContent ?? '').includes('مرجعیت هوش مصنوعی کشور');
   }));
+
+  /* ═══ گام ۲.۵ — پروندهٔ شناخت ۳۱بخشی در پروفایل سازمان (بخش ۶/۷ سند؛ فرم ۲ و ۳) ═══ */
+  await page2.goto(`${BASE}/organizations/org-pars`, { waitUntil: 'networkidle0', timeout: 90000 });
+  await new Promise(r => setTimeout(r, 3500));
+  const knl = await page2.evaluate(() => {
+    const rows = [...document.querySelectorAll('.knl-table tbody tr')];
+    return {
+      hasCard: !!document.querySelector('.knl-steps') && [...document.querySelectorAll('h2')].some(h => (h.textContent ?? '').includes('پروندهٔ شناخت')),
+      steps: document.querySelectorAll('.knl-step').length,
+      currentStep: (document.querySelector('.knl-step.current')?.textContent ?? '').trim(),
+      groups: document.querySelectorAll('.knl-table .knl-group').length,
+      sections: rows.filter(r => !r.classList.contains('knl-group')).length,
+      validRows: document.querySelectorAll('.knl-table tr.knl-valid').length,
+      invalidRows: document.querySelectorAll('.knl-table tr.knl-invalid').length,
+      heads: [...document.querySelectorAll('.knl-table thead th')].map(th => (th.textContent ?? '').trim()),
+      reviewBtn: [...document.querySelectorAll('button')].some(b => (b.textContent ?? '').includes('ثبت بازبینی (۹۰ روز)')),
+    };
+  });
+  ok('پروندهٔ شناخت: کارت ۳۱بخشی در پروفایل سازمان', knl.hasCard);
+  ok('روش شناخت هفت‌مرحله‌ای؛ مرحلهٔ جاری = تحلیل', knl.steps === 7 && knl.currentStep.includes('تحلیل'), knl.currentStep);
+  ok('۳۱ بخش استاندارد در ۵ گروه', knl.sections === 31 && knl.groups === 5, `sec=${knl.sections} grp=${knl.groups}`);
+  ok('هر دو وضعیت معتبر/نامعتبر دیده می‌شود', knl.validRows >= 10 && knl.invalidRows >= 1, `valid=${knl.validRows} invalid=${knl.invalidRows}`);
+  ok('ستون‌های جدا: داده خام / برداشت تحلیلی / منبع / تاریخ', ['داده خام', 'برداشت تحلیلی', 'منبع', 'تاریخ منبع'].every(h => knl.heads.includes(h)));
+  ok('دکمهٔ «ثبت بازبینی (۹۰ روز)» حاضر است', knl.reviewBtn);
+
+  /* مودال ثبت بخش (فرم ۲/۳): بدون منبع → نامعتبر؛ با منبع → معتبر */
+  const pencil = await page2.evaluateHandle(() => [...document.querySelectorAll('.knl-table tr.knl-invalid button')][0]);
+  await pencil.asElement().click();
+  await page2.waitForSelector('#knowledge-form', { timeout: 30000 });
+  const modalInfo = await page2.evaluate(() => ({
+    areas: document.querySelectorAll('#knowledge-form textarea').length,
+    src: [...document.querySelectorAll('#knowledge-form input')].filter(i => i.type !== 'date').length,
+    date: !!document.querySelector('#knowledge-form input[type=date]'),
+  }));
+  ok('مودال ثبت بخش: دو ستون جدا (داده/برداشت) + منبع + تاریخ', modalInfo.areas === 2 && modalInfo.src === 1 && modalInfo.date);
+  const dataArea = await page2.evaluateHandle(() => document.querySelectorAll('#knowledge-form textarea')[0]);
+  await dataArea.asElement().type(' — تکمیل باتری E2E بدون منبع');
+  await page2.evaluate(() => { (document.querySelector('#knowledge-form button[type=submit]') ?? {}).click?.(); });
+  await page2.waitForFunction(() => !document.querySelector('#knowledge-form'), { timeout: 30000 });
+  await new Promise(r => setTimeout(r, 2000));
+  const afterNoSrc = await page2.evaluate(() => ({
+    valid: document.querySelectorAll('.knl-table tr.knl-valid').length,
+    invalid: document.querySelectorAll('.knl-table tr.knl-invalid').length,
+  }));
+  ok('ذخیرهٔ بخش بدون منبع → صریحاً «نامعتبر» می‌ماند', afterNoSrc.valid === knl.validRows && afterNoSrc.invalid === knl.invalidRows,
+    `valid=${afterNoSrc.valid}`);
+
+  const pencil2 = await page2.evaluateHandle(() => [...document.querySelectorAll('.knl-table tr.knl-invalid button')][0]);
+  await pencil2.asElement().click();
+  await page2.waitForSelector('#knowledge-form', { timeout: 30000 });
+  const srcInput = await page2.evaluateHandle(() => [...document.querySelectorAll('#knowledge-form input')].filter(i => i.type !== 'date')[0]);
+  await srcInput.asElement().type('مصاحبهٔ باتری E2E');
+  await page2.evaluate(() => { (document.querySelector('#knowledge-form button[type=submit]') ?? {}).click?.(); });
+  await page2.waitForFunction(() => !document.querySelector('#knowledge-form'), { timeout: 30000 });
+  await new Promise(r => setTimeout(r, 2000));
+  const afterSrc = await page2.evaluate(() => ({
+    valid: document.querySelectorAll('.knl-table tr.knl-valid').length,
+    invalid: document.querySelectorAll('.knl-table tr.knl-invalid').length,
+  }));
+  ok('افزودن منبع → همان بخش «معتبر» می‌شود', afterSrc.valid === knl.validRows + 1 && afterSrc.invalid === knl.invalidRows - 1,
+    `valid=${afterSrc.valid}/${knl.validRows}`);
+
+  const revBtn = await page2.evaluateHandle(() => [...document.querySelectorAll('button')].find(b => (b.textContent ?? '').includes('ثبت بازبینی')));
+  await revBtn.asElement().click();
+  await new Promise(r => setTimeout(r, 2500));
+  const revTxt = await page2.evaluate(() => document.body.textContent ?? '');
+  ok('ثبت بازبینی → اعتبار ۹۰ روزهٔ تازه', revTxt.includes('۹۰ روز مانده تا بازبینی'));
+
   await page2.close();
 
   /* ═══ سناریوی ۳ (فقط بیلد استاتیک): ۴۰۴ ریشهٔ سایت نباید حلقهٔ ریدایرکت بسازد ═══
