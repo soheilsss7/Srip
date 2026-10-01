@@ -19,7 +19,7 @@ const PORT = Number(process.env.MOCK_API_PORT || 4000);
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.10.01.01';
+const DEMO_MOCK_VERSION = '2026.10.01.02';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -6756,6 +6756,129 @@ function ensureKnowledgeSeed(){
   ];
 }
 
+/* ═══════════════ گام ۲.۶ — معماری رویدادها + پروتکل بحران (بخش ۱۷ سند؛ فرم ۱۰ و ۱۱.۵) ═══════════════
+   رویدادها دو مسیر مستقل دارند: مسیر الف «تحت مالکیت» (سرمایه‌گذاری سنگین، شاخص
+   مرجعیت) و مسیر ب «حضور در رویداد بیرونی» (سرمایه‌گذاری سبک، شاخص شبکه‌سازی).
+   خروجی این محور، تدوین و نگهداری تقویم رویدادهای سالانه است که هر دو مسیر را
+   پوشش می‌دهد. هر رویداد با چک‌لیست هفت‌مرحله‌ای فرم ۱۰ کنترل می‌شود (۶۰/۳۰/۱۵/۱۰
+   روز قبل، روز رویداد، ۷۲ ساعت و ۷ روز پس از رویداد) و مراحل به‌ترتیب طی می‌شوند.
+   پروتکل ارتباط بحران (۱۱.۵): پیام‌های اولیه از پیش آماده، سخنگوی رسمی و جانشین،
+   زمان واکنش طلایی حداکثر ۲ ساعت؛ هر بحران رسانه‌ای با همین پروتکل و ثبت در SRIP
+   مدیریت می‌شود. تقویم = ساختار پلتفرم؛ رویدادها و بحران‌ها = دادهٔ هر سازمان. */
+const EVENT_PATHS=[
+  {key:'OWNED',label:'رویداد تحت مالکیت',metric:'شاخص مرجعیت',rule:'سرمایه‌گذاری سنگین — معتبرترین ابزار مرجعیت‌سازی'},
+  {key:'ATTEND',label:'حضور در رویداد بیرونی',metric:'شاخص شبکه‌سازی',rule:'سرمایه‌گذاری سبک — خروجی اصلی، دادهٔ رابطهٔ ثبت‌شده است'},
+];
+const EVENT_OWNED_KINDS=[
+  {key:'thinkTankRoundtable',label:'میزگرد اندیشکده',goal:'تولید پیشنهاد سیاستی و اعتبار علمی',scale:'۱۵ تا ۲۵ نفر',cadence:'فصلی'},
+  {key:'execRoundtable',label:'میزگرد اجرایی',goal:'گفت‌وگوی سطح بالا با تصمیم‌گیران بازار',scale:'۲۰ تا ۳۰ نفر',cadence:'فصلی'},
+  {key:'seasonalSpecialty',label:'رویداد تخصصی فصلی',goal:'تمرکز بر یک حوزهٔ کاربردی خاص',scale:'۵۰ تا ۱۰۰ نفر',cadence:'فصلی'},
+];
+const EVENT_ATTEND_TYPES=[
+  {key:'keynote',label:'سخنرانی در رویدادهای بیرونی',requirement:'راهنمای گفتار + تمرین'},
+  {key:'panel',label:'حضور در پنل‌های تخصصی',requirement:'کلیدواژه‌ها و مواضع مصوب'},
+  {key:'booth',label:'غرفه در نمایشگاه‌ها',requirement:'بسته معرفی + فرآیند ثبت تماس در SRIP'},
+  {key:'reportTalk',label:'ارائه گزارش در مجامع تخصصی',requirement:'نسخه چاپی و دیجیتال'},
+  {key:'execPresence',label:'حضور هدفمند مدیران',requirement:'تقویم حضور مدیر'},
+  {key:'networking',label:'شبکه‌سازی',requirement:'فهرست اهداف تماس'},
+  {key:'sidelineMeeting',label:'جلسات جانبی رویدادها',requirement:'بریف جلسه + پیگیری ۷۲ ساعته'},
+];
+/* چک‌لیست هفت‌مرحله‌ای فرم ۱۰ (۱۸.۳ سند) — موعد نسبی بر حسب روز نسبت به رویداد */
+const EVENT_STEPS=[
+  {key:'register',no:1,label:'ثبت رویداد در تقویم و ارزیابی ارزش حضور',offset:-60,when:'۶۰ روز قبل'},
+  {key:'decision',no:2,label:'تصمیم درباره نوع حضور با بریف رویداد',offset:-30,when:'۳۰ روز قبل'},
+  {key:'prepare',no:3,label:'آماده‌سازی بسته حضور، محتوا و تمرین سخنران',offset:-15,when:'۱۵ روز قبل'},
+  {key:'sideline',no:4,label:'هماهنگی جلسات جانبی پیش از رویداد',offset:-10,when:'۱۰ روز قبل'},
+  {key:'execute',no:5,label:'اجرا و ثبت تماس‌ها در SRIP',offset:0,when:'روز رویداد'},
+  {key:'followup',no:6,label:'پیگیری و ثبت فرصت‌ها',offset:3,when:'۷۲ ساعت پس از رویداد'},
+  {key:'report',no:7,label:'گزارش رویداد و سنجش تحقق اهداف',offset:7,when:'۷ روز پس از رویداد'},
+];
+const CRISIS_GOLDEN_HOURS=2;
+function eventStepsView(row){
+  const done=new Set(row.stepsDone??[]);
+  const firstPending=EVENT_STEPS.find(s=>!done.has(s.key));
+  return EVENT_STEPS.map(s=>{
+    const isDone=done.has(s.key);
+    const dueAt=new Date(new Date(row.eventAt).getTime()+s.offset*86400000).toISOString();
+    return {...s,dueAt,status:isDone?'DONE':(firstPending?.key===s.key?'CURRENT':'PENDING'),overdue:!isDone&&new Date(dueAt).getTime()<Date.now()};
+  });
+}
+function eventView(row){
+  const steps=eventStepsView(row);
+  const done=steps.filter(s=>s.status==='DONE').length;
+  const kindDef=EVENT_OWNED_KINDS.find(k=>k.key===row.kind);
+  const attendDef=EVENT_ATTEND_TYPES.find(k=>k.key===row.attendType);
+  return {...row,
+    kindLabel:kindDef?.label??null,kindGoal:kindDef?.goal??null,kindScale:kindDef?.scale??null,kindCadence:kindDef?.cadence??null,
+    attendLabel:attendDef?.label??null,attendRequirement:attendDef?.requirement??null,
+    steps,stepsDoneCount:done,stepsTotal:EVENT_STEPS.length,
+    currentStep:steps.find(s=>s.status==='CURRENT')?.key??null,overdueSteps:steps.filter(s=>s.overdue).length};
+}
+function ensureEventSeed(){
+  if((DB.events??[]).some(e=>e.organizationId==='org-pars')) return;
+  const ago=(d)=>new Date(Date.now()-d*86400000).toISOString();
+  const ahead=(d)=>new Date(Date.now()+d*86400000).toISOString();
+  const E=(path,title,eventAt,ownerRole,stepsDone,extra)=>({
+    id:`ev-${path==='OWNED'?'o':'a'}-${Math.random().toString(36).slice(2,7)}`,
+    organizationId:extra.org,path,title,eventAt,ownerRole,stepsDone,notes:extra.notes??'',
+    kind:extra.kind??null,attendType:extra.attendType??null,
+    createdAt:ago(30),updatedAt:ago(2)});
+  DB.events=[
+    /* مسیر الف — مالکیت (شاخص مرجعیت) */
+    E('OWNED','میزگرد داده و سیاست عمومی',ahead(45),'مدیر رویداد',['register','decision','prepare'],{org:'org-pars',kind:'thinkTankRoundtable',notes:'میزگرد اندیشکده — تولید پیشنهاد سیاستی داده.'}),
+    E('OWNED','میزگرد اجرایی تصمیم‌گیران بازار',ahead(80),'مدیر رویداد',['register'],{org:'org-pars',kind:'execRoundtable',notes:'گفت‌وگوی سطح بالا با تصمیم‌گیران.'}),
+    E('OWNED','رویداد تخصصی «داده در صنعت»',ahead(120),'مدیر رویداد',['register','decision'],{org:'org-pars',kind:'seasonalSpecialty',notes:'تمرکز بر یک حوزهٔ کاربردی خاص.'}),
+    /* مسیر ب — حضور بیرونی (شاخص شبکه‌سازی) */
+    E('ATTEND','سخنرانی در کنفرانس ملی هوش مصنوعی',ahead(20),'مدیر روابط عمومی',['register','decision','prepare','sideline'],{org:'org-pars',attendType:'keynote',notes:'نمایش مرجعیت — راهنمای گفتار و تمرین انجام شد.'}),
+    E('ATTEND','غرفه نمایشگاه فناوری و نوآوری',ahead(60),'مدیر توسعه کسب‌وکار',['register','decision'],{org:'org-pars',attendType:'booth',notes:'دیده‌شدن و ثبت تماس — بسته معرفی آماده است.'}),
+    /* دنیای دمو */
+    E('OWNED','جلسهٔ نمایشی مدیران دمو',ahead(30),'مدیر رویداد',['register','decision'],{org:'org-1',kind:'execRoundtable',notes:'رویداد دمو برای نمایش قابلیت.'}),
+    E('ATTEND','پنل اکوسیستم فناوری',ahead(15),'مدیر روابط عمومی',['register','decision','prepare'],{org:'org-1',attendType:'panel',notes:'حضور دمو با مواضع مصوب.'}),
+  ];
+}
+function eventsFor(req){
+  ensureEventSeed();
+  const ids=visibleOrgIds(req);
+  return (DB.events??[]).filter(e=>ids.includes(e.organizationId));
+}
+/* ═══ پروتکل ارتباط بحران (۱۱.۵ سند) ═══ */
+function ensureCrisisSeed(){
+  if((DB.crisisProtocols??[]).some(c=>c.organizationId==='org-pars')) return;
+  const ago=(d)=>new Date(Date.now()-d*86400000).toISOString();
+  const hrs=(h)=>new Date(Date.now()-h*3600000).toISOString();
+  const C=(organizationId,spokesperson,backup,messages,crises)=>({
+    organizationId,spokesperson,backup,goldenHours:CRISIS_GOLDEN_HOURS,
+    messages,crises,updatedAt:ago(10)});
+  DB.crisisProtocols=[
+    C('org-pars','مدیر روابط عمومی','مدیرعامل',
+      [
+        {id:'cm-1',title:'بحران کیفیت داده',text:'در حال بررسی دقیق گزارش مطرح‌شده هستیم؛ تا دو ساعت آینده یافته‌های اولیه را اعلام می‌کنیم.',updatedAt:ago(30)},
+        {id:'cm-2',title:'بحران رویداد عمومی',text:'رویداد مطرح‌شده را ثبت کرده‌ایم؛ موضع رسمی پس از جمع‌بندی تیم راهبری اعلام می‌شود.',updatedAt:ago(25)},
+      ],
+      [
+        {id:'cr-1',title:'گزارش نادرست رسانه‌ای دربارهٔ کیفیت داده',detectedAt:hrs(26),spokesperson:'مدیر روابط عمومی',firstResponseAt:hrs(24.5),status:'RESOLVED',resolvedAt:hrs(20),notes:'واکنش در زمان طلایی؛ تکذیبیه با ارجاع به دادهٔ مرجع.'},
+        {id:'cr-2',title:'شکایت مشتری در شبکه‌های اجتماعی',detectedAt:hrs(6),spokesperson:'مدیر روابط عمومی',firstResponseAt:hrs(3),status:'ACTIVE',resolvedAt:null,notes:'پاسخ اولیه دیرتر از زمان طلایی صادر شد؛ در پیگیری.'},
+      ]),
+    C('org-1','مدیر روابط عمومی دمو','مدیر هلدینگ (ناظر)',
+      [{id:'cm-3',title:'پیام اولیهٔ دمو',text:'متن از پیش آمادهٔ بحران دمو.',updatedAt:ago(12)}],
+      [{id:'cr-3',title:'بحران دمو',detectedAt:ago(3),spokesperson:'مدیر روابط عمومی دمو',firstResponseAt:ago(3),status:'RESOLVED',resolvedAt:ago(2),notes:'بحران نمونهٔ دنیای دمو.'}]),
+  ];
+}
+function crisisView(p){
+  const crises=(p?.crises??[]).map(c=>{
+    const reactionH=(c.firstResponseAt&&c.detectedAt)?(new Date(c.firstResponseAt)-new Date(c.detectedAt))/3600000:null;
+    return {...c,reactionHours:reactionH==null?null:Math.round(reactionH*10)/10,
+      withinGolden:reactionH!=null?reactionH<=CRISIS_GOLDEN_HOURS:null};
+  });
+  return {organizationId:p?.organizationId??null,spokesperson:p?.spokesperson??'',backup:p?.backup??'',
+    goldenHours:CRISIS_GOLDEN_HOURS,messages:p?.messages??[],crises,
+    rule:'پیام‌های اولیه از پیش آماده، سخنگوی رسمی و جانشین، و زمان واکنش طلایی حداکثر دو ساعت؛ هر بحران رسانه‌ای با همین پروتکل و ثبت رویداد در SRIP مدیریت می‌شود.'};
+}
+function crisisProtocolOf(orgId){
+  ensureCrisisSeed();
+  return (DB.crisisProtocols??[]).find(c=>c.organizationId===orgId)??null;
+}
+
 /* ممیزی سه‌گانه — دادهٔ ممیزی متعلق به سازمان برنامه است و بیرون از محدوده دیده نمی‌شود */
 function programAuditsFor(req){
   ensureProgramSeed();
@@ -13109,6 +13232,175 @@ const server=http.createServer(async(req,res)=>{
     saveDb();
     audit(req,'UPDATE','KnowledgeProfile',o.id,'OK',{});
     return json(res,200,knowledgeView(p));
+  }
+
+  /* ─────────────── گام ۲.۶ — معماری رویدادها + پروتکل بحران (/events · /crisis-protocol) ────────── */
+  if(is('/events')&&method==='GET'){
+    if(!hasPerm('calendar.read')) return json(res,403,{message:'شما مجوز «مشاهده تقویم» (calendar.read) را ندارید.'});
+    const rows=eventsFor(req);
+    return json(res,200,{items:rows.map(eventView),paths:EVENT_PATHS,ownedKinds:EVENT_OWNED_KINDS,attendTypes:EVENT_ATTEND_TYPES,steps:EVENT_STEPS,
+      rule:'رویداد در دو مسیر مستقل طراحی می‌شود: مالکیت (شاخص مرجعیت) و حضور بیرونی (شاخص شبکه‌سازی)؛ خروجی، تقویم رویدادهای سالانه است و هر رویداد با چک‌لیست هفت‌مرحله‌ای کنترل می‌شود.'});
+  }
+  if(is('/events')&&method==='POST'){
+    if(!hasPerm('publics.write')) return json(res,403,{message:'شما مجوز «ثبت و ویرایش عموم‌ها» (publics.write) را ندارید.'});
+    ensureEventSeed();
+    const b=await readBody(req);
+    const title=String(b.title??'').trim();
+    if(title.length<3) return json(res,400,{message:'عنوان رویداد را بنویسید (حداقل ۳ نویسه).'});
+    const path=String(b.path??'');
+    if(!EVENT_PATHS.some(p=>p.key===path)) return json(res,400,{message:'مسیر رویداد نامعتبر است — مالکیت یا حضور بیرونی.'});
+    const ownerRole=String(b.ownerRole??'').trim();
+    if(!ownerRole) return json(res,400,{message:'رویداد بدون مالک ثبت نمی‌شود — نقش مسئول را مشخص کنید.'});
+    const eventAt=new Date(b.eventAt??'');
+    if(Number.isNaN(eventAt.getTime())) return json(res,400,{message:'تاریخ رویداد معتبر نیست.'});
+    let kind=null,attendType=null;
+    if(path==='OWNED'){
+      kind=String(b.kind??'');
+      if(!EVENT_OWNED_KINDS.some(k=>k.key===kind)) return json(res,400,{message:'نوع رویداد مالکیتی را از فهرست استاندارد انتخاب کنید (میزگرد اندیشکده/اجرایی/رویداد تخصصی).'});
+    }else{
+      attendType=String(b.attendType??'');
+      if(!EVENT_ATTEND_TYPES.some(k=>k.key===attendType)) return json(res,400,{message:'نوع حضور بیرونی را از فهرست استاندارد انتخاب کنید.'});
+    }
+    const row={id:`ev-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,
+      organizationId:primaryOrgId(authUser)??visibleOrgIds(req)[0]??'org-1',
+      path,title,eventAt:eventAt.toISOString(),ownerRole,stepsDone:['register'],notes:String(b.notes??'').trim(),
+      kind,attendType,createdAt:nowIso(),updatedAt:nowIso()};
+    DB.events.push(row); saveDb();
+    audit(req,'CREATE','Event',row.id,'OK',{title:row.title});
+    return json(res,201,eventView(row));
+  }
+  const evId=match('/events/:id');
+  if(evId&&(method==='PATCH'||method==='DELETE')){
+    if(!hasPerm('publics.write')) return json(res,403,{message:'شما مجوز «ثبت و ویرایش عموم‌ها» (publics.write) را ندارید.'});
+    ensureEventSeed();
+    const row=(DB.events??[]).find(e=>e.id===evId[0]);
+    if(!row||!visibleOrgIds(req).includes(row.organizationId)) return json(res,404,{message:'رویداد یافت نشد یا خارج از محدودهٔ شماست.'});
+    if(method==='DELETE'){
+      DB.events=DB.events.filter(e=>e.id!==row.id); saveDb();
+      audit(req,'DELETE','Event',row.id,'OK',{title:row.title});
+      return json(res,200,{ok:true,id:row.id});
+    }
+    const b=await readBody(req);
+    if(b.title!=null){const v=String(b.title).trim(); if(v.length<3) return json(res,400,{message:'عنوان رویداد را بنویسید (حداقل ۳ نویسه).'}); row.title=v;}
+    if(b.ownerRole!=null){const v=String(b.ownerRole).trim(); if(!v) return json(res,400,{message:'رویداد بدون مالک ثبت نمی‌شود.'}); row.ownerRole=v;}
+    if(b.eventAt!=null){const d=new Date(b.eventAt); if(Number.isNaN(d.getTime())) return json(res,400,{message:'تاریخ رویداد معتبر نیست.'}); row.eventAt=d.toISOString();}
+    if(b.kind!=null){const v=String(b.kind); if(row.path==='OWNED'&&!EVENT_OWNED_KINDS.some(k=>k.key===v)) return json(res,400,{message:'نوع رویداد مالکیتی نامعتبر است.'}); if(row.path==='OWNED') row.kind=v;}
+    if(b.attendType!=null){const v=String(b.attendType); if(row.path==='ATTEND'&&!EVENT_ATTEND_TYPES.some(k=>k.key===v)) return json(res,400,{message:'نوع حضور بیرونی نامعتبر است.'}); if(row.path==='ATTEND') row.attendType=v;}
+    if(b.notes!=null) row.notes=String(b.notes).trim();
+    row.updatedAt=nowIso(); saveDb();
+    audit(req,'UPDATE','Event',row.id,'OK',{});
+    return json(res,200,eventView(row));
+  }
+  const evStep=match('/events/:id/steps/:key');
+  if(evStep&&method==='POST'){
+    if(!hasPerm('publics.write')) return json(res,403,{message:'شما مجوز «ثبت و ویرایش عموم‌ها» (publics.write) را ندارید.'});
+    ensureEventSeed();
+    const row=(DB.events??[]).find(e=>e.id===evStep[0]);
+    if(!row||!visibleOrgIds(req).includes(row.organizationId)) return json(res,404,{message:'رویداد یافت نشد یا خارج از محدودهٔ شماست.'});
+    const S=EVENT_STEPS.find(s=>s.key===evStep[1]);
+    if(!S) return json(res,400,{message:'مرحلهٔ نامعتبر — چک‌لیست رویداد هفت‌مرحله‌ای است.'});
+    const cur=EVENT_STEPS.filter(s=>(row.stepsDone??[]).includes(s.key)).map(s=>s.no);
+    const doneMax=cur.length?Math.max(...cur):0;
+    if(S.no<=doneMax) return json(res,400,{message:'این مرحله قبلاً تکمیل شده — بازگشت به مرحلهٔ قبل مجاز نیست.'});
+    if(S.no>doneMax+1) return json(res,400,{message:'مراحل چک‌لیست رویداد به‌ترتیب طی می‌شوند؛ پرش مجاز نیست.'});
+    row.stepsDone=[...(row.stepsDone??[]),S.key];
+    row.updatedAt=nowIso(); saveDb();
+    audit(req,'UPDATE','Event',row.id,'STEP_DONE',{step:S.key});
+    return json(res,200,eventView(row));
+  }
+
+  /* پروتکل ارتباط بحران (۱۱.۵ سند) */
+  if(is('/crisis-protocol')&&method==='GET'){
+    if(!hasPerm('calendar.read')) return json(res,403,{message:'شما مجوز «مشاهده تقویم» (calendar.read) را ندارید.'});
+    const orgId=primaryOrgId(authUser)??visibleOrgIds(req)[0];
+    ensureCrisisSeed();
+    const p=(DB.crisisProtocols??[]).find(c=>c.organizationId===orgId);
+    return json(res,200,crisisView(p??{organizationId:orgId,spokesperson:'',backup:'',messages:[],crises:[]}));
+  }
+  if(is('/crisis-protocol')&&method==='PATCH'){
+    if(!hasPerm('publics.write')) return json(res,403,{message:'شما مجوز «ثبت و ویرایش عموم‌ها» (publics.write) را ندارید.'});
+    const orgId=primaryOrgId(authUser)??visibleOrgIds(req)[0];
+    ensureCrisisSeed();
+    let p=(DB.crisisProtocols??[]).find(c=>c.organizationId===orgId);
+    if(!p){p={organizationId:orgId,spokesperson:'',backup:'',goldenHours:CRISIS_GOLDEN_HOURS,messages:[],crises:[],updatedAt:nowIso()};(DB.crisisProtocols??=[]).push(p);}
+    const b=await readBody(req);
+    const sp=String(b.spokesperson??p.spokesperson).trim();
+    const bk=String(b.backup??p.backup).trim();
+    if(!sp||!bk) return json(res,400,{message:'سخنگوی رسمی و جانشین هر دو لازم‌اند — بحران بدون سخنگو مدیریت نمی‌شود.'});
+    if(sp===bk) return json(res,400,{message:'جانشین سخنگو باید فرد متفاوتی باشد.'});
+    p.spokesperson=sp; p.backup=bk;
+    if(b.goldenHours!=null){const v=Number(b.goldenHours); if(!Number.isFinite(v)||v<=0) return json(res,400,{message:'زمان واکنش طلایی باید عدد مثبت (ساعت) باشد.'});}
+    p.updatedAt=nowIso(); saveDb();
+    audit(req,'UPDATE','CrisisProtocol',orgId,'OK',{});
+    return json(res,200,crisisView(p));
+  }
+  const crMsg=match('/crisis-protocol/messages');
+  if(crMsg&&method==='POST'){
+    if(!hasPerm('publics.write')) return json(res,403,{message:'شما مجوز «ثبت و ویرایش عموم‌ها» (publics.write) را ندارید.'});
+    const orgId=primaryOrgId(authUser)??visibleOrgIds(req)[0];
+    ensureCrisisSeed();
+    let p=(DB.crisisProtocols??[]).find(c=>c.organizationId===orgId);
+    if(!p) return json(res,400,{message:'ابتدا پروتکل بحران (سخنگو و جانشین) را تعیین کنید.'});
+    const b=await readBody(req);
+    const title=String(b.title??'').trim();
+    const text=String(b.text??'').trim();
+    if(title.length<3) return json(res,400,{message:'عنوان پیام اولیه را بنویسید (حداقل ۳ نویسه).'});
+    if(!text) return json(res,400,{message:'متن پیام اولیه را بنویسید — پیام از پیش آماده، جانِ پروتکل بحران است.'});
+    p.messages.push({id:`cm-${Date.now().toString(36)}`,title,text,updatedAt:nowIso()});
+    p.updatedAt=nowIso(); saveDb();
+    audit(req,'CREATE','CrisisMessage',orgId,'OK',{title});
+    return json(res,200,crisisView(p));
+  }
+  const crNew=match('/crisis-protocol/crises');
+  if(crNew&&method==='POST'){
+    if(!hasPerm('publics.write')) return json(res,403,{message:'شما مجوز «ثبت و ویرایش عموم‌ها» (publics.write) را ندارید.'});
+    const orgId=primaryOrgId(authUser)??visibleOrgIds(req)[0];
+    ensureCrisisSeed();
+    let p=(DB.crisisProtocols??[]).find(c=>c.organizationId===orgId);
+    if(!p) return json(res,400,{message:'ابتدا پروتکل بحران (سخنگو و جانشین) را تعیین کنید.'});
+    const b=await readBody(req);
+    const title=String(b.title??'').trim();
+    if(title.length<3) return json(res,400,{message:'عنوان بحران را بنویسید (حداقل ۳ نویسه).'});
+    const spokesperson=String(b.spokesperson??'').trim();
+    if(!spokesperson) return json(res,400,{message:'بحران بدون سخنگو ثبت نمی‌شود.'});
+    const detectedAt=new Date(b.detectedAt??nowIso());
+    if(Number.isNaN(detectedAt.getTime())) return json(res,400,{message:'زمان شناسایی بحران معتبر نیست.'});
+    let firstResponseAt=null;
+    if(b.firstResponseAt!=null&&String(b.firstResponseAt).trim()!==''){
+      firstResponseAt=new Date(b.firstResponseAt);
+      if(Number.isNaN(firstResponseAt.getTime())) return json(res,400,{message:'زمان پاسخ اولیه معتبر نیست.'});
+      if(firstResponseAt<detectedAt) return json(res,400,{message:'پاسخ اولیه نمی‌تواند پیش از شناسایی بحران باشد.'});
+    }
+    const row={id:`cr-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,4)}`,title,detectedAt:detectedAt.toISOString(),
+      spokesperson,firstResponseAt:firstResponseAt?firstResponseAt.toISOString():null,status:'ACTIVE',resolvedAt:null,notes:String(b.notes??'').trim()};
+    p.crises.push(row); p.updatedAt=nowIso(); saveDb();
+    audit(req,'CREATE','Crisis',orgId,'OK',{title:row.title});
+    return json(res,201,crisisView(p));
+  }
+  const crId=match('/crisis-protocol/crises/:id');
+  if(crId&&method==='PATCH'){
+    if(!hasPerm('publics.write')) return json(res,403,{message:'شما مجوز «ثبت و ویرایش عموم‌ها» (publics.write) را ندارید.'});
+    const orgId=primaryOrgId(authUser)??visibleOrgIds(req)[0];
+    const p=(DB.crisisProtocols??[]).find(c=>c.organizationId===orgId);
+    const row=p?.crises?.find(c=>c.id===crId[0]);
+    if(!p||!row) return json(res,404,{message:'بحران یافت نشد یا خارج از محدودهٔ شماست.'});
+    const b=await readBody(req);
+    if(b.firstResponseAt!=null&&String(b.firstResponseAt).trim()!==''){
+      const d=new Date(b.firstResponseAt);
+      if(Number.isNaN(d.getTime())) return json(res,400,{message:'زمان پاسخ اولیه معتبر نیست.'});
+      if(d<new Date(row.detectedAt)) return json(res,400,{message:'پاسخ اولیه نمی‌تواند پیش از شناسایی بحران باشد.'});
+      row.firstResponseAt=d.toISOString();
+    }
+    if(b.status!=null){
+      if(!['ACTIVE','RESOLVED'].includes(b.status)) return json(res,400,{message:'وضعیت بحران ACTIVE یا RESOLVED است.'});
+      if(b.status==='RESOLVED'){ if(!row.firstResponseAt) return json(res,400,{message:'بحران بدون پاسخ اولیه رفع‌شده ثبت نمی‌شود — نخست واکنش را ثبت کنید.'}); row.resolvedAt=nowIso(); }
+      else row.resolvedAt=null;
+      row.status=b.status;
+    }
+    if(b.notes!=null) row.notes=String(b.notes).trim();
+    p.updatedAt=nowIso(); saveDb();
+    audit(req,'UPDATE','Crisis',row.id,'OK',{});
+    return json(res,200,crisisView(p));
   }
 
   /* ─────────────── گام ۲.۲.۱ — تنظیمات برنامهٔ سازمان (per-tenant) ──────────

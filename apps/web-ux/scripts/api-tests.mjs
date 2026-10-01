@@ -163,7 +163,7 @@ section('چرخهٔ پیشنهاد هوشمند');
     check('اجرا بدون تأیید → 400', ex1.status === 400);
     const sn1 = await api(`/recommendations/${recC.id}/snooze`, { method: 'POST', token: T, body: { until: '2020-01-01T00:00:00.000Z' } });
     check('تعویق با تاریخ گذشته → 400', sn1.status === 400);
-    const sn2 = await api(`/recommendations/${recC.id}/snooze`, { method: 'POST', token: T, body: { until: '2026-10-01T00:00:00.000Z' } });
+    const sn2 = await api(`/recommendations/${recC.id}/snooze`, { method: 'POST', token: T, body: { until: new Date(Date.now() + 7 * 86400000).toISOString() } });
     check('تعویق با تاریخ آینده → 200', sn2.status === 200);
     const ap = await api(`/recommendations/${recA.id}/approve`, { method: 'POST', token: T });
     check('تأیید → 200', ap.status === 200);
@@ -1395,6 +1395,111 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
   check('kpi-1 از پوشش زندهٔ پروندهٔ شناخت محاسبه می‌شود', k1 && k1.value === expect
     && String(k1.source).includes('پروندهٔ شناخت'), `value=${k1?.value} expected=${expect}`);
 }
+/* ═════════════════ گام ۲.۶ — معماری رویدادها + پروتکل بحران (بخش ۱۷ سند؛ فرم ۱۰ و ۱۱.۵) ═════════════════ */
+{
+  const pl = await login('pars', 'pars1234');
+  const pt = pl.body?.accessToken;
+
+  const L = await api('/events', { token: pt });
+  check('تقویم رویدادها: دو مسیر مستقل با شاخص جدا', L.status === 200 && L.body.paths.length === 2
+    && L.body.paths.some(p => p.key === 'OWNED' && p.metric.includes('مرجعیت'))
+    && L.body.paths.some(p => p.key === 'ATTEND' && p.metric.includes('شبکه‌سازی')));
+  check('سه نوع رویداد مالکیتی جدول ۱۸.۱', L.body.ownedKinds.length === 3
+    && ['میزگرد اندیشکده', 'میزگرد اجرایی', 'رویداد تخصصی فصلی'].every(l => L.body.ownedKinds.some(k => k.label === l))
+    && L.body.ownedKinds.every(k => k.goal && k.scale && k.cadence));
+  check('هفت نوع حضور بیرونی با الزام پیش از حضور', L.body.attendTypes.length === 7
+    && L.body.attendTypes.every(a => a.requirement));
+  check('چک‌لیست هفت‌مرحله‌ای ۱۸.۳ با مواعد ۶۰/۳۰/۱۵/۱۰/روز/۷۲ساعت/۷روز', L.body.steps.length === 7
+    && [-60, -30, -15, -10, 0, 3, 7].every((o, i) => L.body.steps[i].offset === o)
+    && L.body.steps[5].when.includes('۷۲ ساعت') && L.body.steps[6].when.includes('۷ روز'));
+  const items = L.body.items;
+  check('بذر پارس: ۵ رویداد (۳ مالکیتی + ۲ حضور بیرونی)', items.length === 5
+    && items.filter(e => e.path === 'OWNED').length === 3 && items.filter(e => e.path === 'ATTEND').length === 2);
+  check('هر رویداد: چک‌لیست ۷مرحله‌ای با وضعیت و موعد', items.every(e => e.steps.length === 7
+    && e.steps.every(s => ['DONE', 'CURRENT', 'PENDING'].includes(s.status) && !!s.dueAt)));
+  check('موعد هر مرحله = تاریخ رویداد + افست', (() => { const e = items[0]; return e.steps.every(s =>
+    Math.abs(new Date(s.dueAt).getTime() - (new Date(e.eventAt).getTime() + s.offset * 86400000)) < 60000); })());
+  const ev = items.find(e => e.stepsDoneCount === 3);
+  check('مرحلهٔ جاری = اولین انجام‌نشده', !!ev && ev.steps.find(s => s.key === ev.currentStep).status === 'CURRENT'
+    && ev.steps.filter(s => s.status === 'DONE').length === 3);
+  const att = items.find(e => e.path === 'ATTEND' && e.attendType === 'keynote');
+  check('حضور بیرونی: نوع + الزام متناظر (سخنرانی → راهنمای گفتار و تمرین)', !!att
+    && att.attendLabel === 'سخنرانی در رویدادهای بیرونی' && att.attendRequirement === 'راهنمای گفتار + تمرین');
+
+  /* قواعد ثبت (فرم ۱۰ — رویداد بدون مالک ایجاد نمی‌شود) */
+  const noOwner = await api('/events', { method: 'POST', token: pt, body: { title: 'رویداد تست', path: 'OWNED', kind: 'execRoundtable', eventAt: '2026-12-01T09:00:00Z' } });
+  check('رویداد بدون مالک → ۴۰۰', noOwner.status === 400);
+  const badPath = await api('/events', { method: 'POST', token: pt, body: { title: 'رویداد تست', path: 'X', ownerRole: 'مدیر', eventAt: '2026-12-01T09:00:00Z' } });
+  check('مسیر نامعتبر → ۴۰۰', badPath.status === 400);
+  const badKind = await api('/events', { method: 'POST', token: pt, body: { title: 'رویداد تست', path: 'OWNED', kind: 'غیره', ownerRole: 'مدیر', eventAt: '2026-12-01T09:00:00Z' } });
+  check('نوع مالکیتی خارج از فهرست استاندارد → ۴۰۰', badKind.status === 400);
+  const created = await api('/events', { method: 'POST', token: pt, body: { title: 'رویداد تست باتری', path: 'ATTEND', attendType: 'booth', ownerRole: 'مدیر توسعه کسب‌وکار', eventAt: '2026-12-15T09:00:00Z' } });
+  check('ثبت معتبر → ۲۰۱ و مرحلهٔ ۱ (ثبت در تقویم) خودکار', created.status === 201
+    && created.body.stepsDoneCount === 1 && created.body.currentStep === 'decision');
+  const eid = created.body?.id;
+  if (eid) {
+    const jump = await api(`/events/${eid}/steps/report`, { method: 'POST', token: pt });
+    check('پرش مرحله‌ای چک‌لیست → ۴۰۰', jump.status === 400 && String(jump.body?.message).includes('پرش'));
+    const st2 = await api(`/events/${eid}/steps/decision`, { method: 'POST', token: pt });
+    check('تکمیل مرحلهٔ بعد → ۲۰۰', st2.status === 200 && st2.body.stepsDoneCount === 2 && st2.body.currentStep === 'prepare');
+    const back = await api(`/events/${eid}/steps/register`, { method: 'POST', token: pt });
+    check('بازگشت به مرحلهٔ قبل → ۴۰۰', back.status === 400);
+    const patched = await api(`/events/${eid}`, { method: 'PATCH', token: pt, body: { title: 'رویداد تست باتری ۲' } });
+    check('ویرایش رویداد → ۲۰۰', patched.status === 200 && patched.body.title.includes('۲'));
+    const del = await api(`/events/${eid}`, { method: 'DELETE', token: pt });
+    check('حذف رویداد → ۲۰۰', del.status === 200);
+  }
+
+  /* پروتکل ارتباط بحران (۱۱.۵ سند) */
+  const CP = await api('/crisis-protocol', { token: pt });
+  check('پروتکل بحران: سخنگو + جانشین + واکنش طلایی ۲ ساعت', CP.status === 200
+    && !!CP.body.spokesperson && !!CP.body.backup && CP.body.spokesperson !== CP.body.backup
+    && CP.body.goldenHours === 2);
+  check('پیام‌های اولیه از پیش آماده موجود', CP.body.messages.length >= 2
+    && CP.body.messages.every(m => m.title && m.text));
+  const crGold = CP.body.crises.find(c => c.withinGolden === true);
+  const crLate = CP.body.crises.find(c => c.withinGolden === false);
+  check('واکنش طلایی سنجیده می‌شود (هر دو حالت موجود)', !!crGold && !!crLate
+    && crGold.reactionHours <= 2 && crLate.reactionHours > 2);
+  const same = await api('/crisis-protocol', { method: 'PATCH', token: pt, body: { spokesperson: 'مدیرعامل', backup: 'مدیرعامل' } });
+  check('جانشین برابر سخنگو → ۴۰۰', same.status === 400);
+  const noSpk = await api('/crisis-protocol/crises', { method: 'POST', token: pt, body: { title: 'بحران بدون سخنگو' } });
+  check('بحران بدون سخنگو → ۴۰۰', noSpk.status === 400);
+  const det = new Date(Date.now() - 3 * 3600000).toISOString();
+  const early = new Date(Date.now() - 4 * 3600000).toISOString();
+  const before = await api('/crisis-protocol/crises', { method: 'POST', token: pt, body: { title: 'بحران پاسخ پیش از شناسایی', spokesperson: 'مدیر روابط عمومی', detectedAt: det, firstResponseAt: early } });
+  check('پاسخ پیش از شناسایی بحران → ۴۰۰', before.status === 400);
+  const resp = new Date(Date.now() - 1.5 * 3600000).toISOString();
+  const newCr = await api('/crisis-protocol/crises', { method: 'POST', token: pt, body: { title: 'بحران تست باتری', spokesperson: 'مدیر روابط عمومی', detectedAt: det, firstResponseAt: resp } });
+  check('ثبت بحران با واکنش ۱.۵ ساعت → در زمان طلایی', newCr.status === 201
+    && newCr.body.crises.some(c => c.title === 'بحران تست باتری' && c.withinGolden === true));
+  const cid = newCr.body?.crises?.find(c => c.title === 'بحران تست باتری')?.id;
+  if (cid) {
+    const resolved = await api(`/crisis-protocol/crises/${cid}`, { method: 'PATCH', token: pt, body: { status: 'RESOLVED' } });
+    check('رفع بحران پاسخ‌داده → ۲۰۰', resolved.status === 200
+      && resolved.body.crises.find(c => c.id === cid).status === 'RESOLVED');
+  }
+  const noRespCr = await api('/crisis-protocol/crises', { method: 'POST', token: pt, body: { title: 'بحران بدون پاسخ', spokesperson: 'مدیر روابط عمومی', detectedAt: det } });
+  const nid = noRespCr.body?.crises?.find(c => c.title === 'بحران بدون پاسخ')?.id;
+  if (nid) {
+    const badResolve = await api(`/crisis-protocol/crises/${nid}`, { method: 'PATCH', token: pt, body: { status: 'RESOLVED' } });
+    check('رفع بحران بدون پاسخ اولیه → ۴۰۰', badResolve.status === 400);
+  }
+
+  /* RBAC + جداسازی مستأجر */
+  const cl = await login('client');
+  const ct = cl.body?.accessToken;
+  const clView = await api('/events', { token: ct });
+  check('کاربر نقش‌محور با calendar.read → فهرست (خالی) سازمان خودش', clView.status === 200 && clView.body.items.length === 0);
+  const clPost = await api('/events', { method: 'POST', token: ct, body: { title: 'رویداد مشتری', path: 'OWNED', kind: 'execRoundtable', ownerRole: 'مدیر', eventAt: '2026-12-01T09:00:00Z' } });
+  check('کاربر بدون publics.write → ۴۰۳', clPost.status === 403);
+  const dl = await login('demo');
+  const dt = dl.body?.accessToken;
+  const demoEv = await api('/events', { token: dt });
+  check('دنیای دمو: فقط رویدادهای خودش؛ رویدادهای پارس دیده نمی‌شود', demoEv.status === 200
+    && demoEv.body.items.length === 2 && !demoEv.body.items.some(e => e.title.includes('میزگرد داده')));
+}
+
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
 if (failures.length) { console.log(`  Failed: ${failures.join(' | ')}`); }

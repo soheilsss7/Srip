@@ -724,3 +724,47 @@ html[data-theme="dark"] .knl-valid td:first-child{box-shadow:inset 3px 0 0 #4ade
   .knl-step{font-size:11px;padding:4px 10px}
   .knl-table .knl-data{max-width:180px}
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   گام ۲.۶ — رویدادها در تقویم + پروتکل بحران (/calendar)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.ev-dot.ev-owned{background:#7c3aed}
+.ev-dot.ev-attend{background:#0d9488}
+.cal-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--srip-text-muted)}
+.cal-legend .ev-dot{display:inline-block;width:8px;height:8px;border-radius:999px;margin-inline-end:5px;vertical-align:middle}
+.cal-ev-row{width:100%;text-align:right;background:none;border:none;padding:2px 4px;cursor:pointer;font:inherit;color:inherit}
+.ev-row .ev-progress{display:block;height:4px;border-radius:999px;background:color-mix(in srgb,var(--srip-text-muted) 15%,transparent);margin-top:5px;overflow:hidden}
+.ev-row .ev-progress i{display:block;height:100%;background:linear-gradient(90deg,#7c3aed,#0d9488)}
+.ev-steps-badge{display:inline-flex;align-items:center;gap:5px;font-weight:800;font-size:12.5px;color:var(--srip-text);flex:none}
+.ev-steps-badge em{color:#dc2626;display:inline-flex}
+.crisis-panel .crisis-roles{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px}
+.crisis-live{display:flex;align-items:center;gap:8px;border-color:color-mix(in srgb,#dc2626 40%,transparent);
+  background:color-mix(in srgb,#dc2626 8%,transparent);color:#b91c1c;font-weight:700}
+.crisis-row{align-items:center;gap:8px}
+.crisis-badges{display:flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.ev-checklist-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;font-size:12.5px}
+.ev-steps-list{list-style:none;display:flex;flex-direction:column;gap:7px;margin:8px 0 0;padding:0}
+.ev-step{display:flex;gap:10px;align-items:center;border:1px solid var(--srip-border);border-radius:var(--radius-lg);padding:8px 10px}
+.ev-step .ev-step-no{width:24px;height:24px;border-radius:999px;display:grid;place-items:center;flex:none;
+  background:color-mix(in srgb,var(--srip-text-muted) 15%,transparent);font-weight:800;font-size:12px}
+.ev-step b{display:block;font-size:12.5px}
+.ev-step small{color:var(--srip-text-muted)}
+.ev-step.done{border-color:color-mix(in srgb,#16a34a 30%,transparent)}
+.ev-step.done .ev-step-no{background:#16a34a;color:#fff}
+.ev-step.current{border-color:color-mix(in srgb,var(--srip-accent) 55%,transparent);
+  background:color-mix(in srgb,var(--srip-accent) 7%,transparent)}
+.ev-step.current .ev-step-no{background:var(--srip-accent);color:#fff}
+.ev-step.overdue{border-color:color-mix(in srgb,#dc2626 45%,transparent)}
+.ev-step.overdue small{color:#b91c1c;font-weight:700}
+.t-success{color:#16a34a}
+html[data-theme="dark"] .ev-row .ev-progress{background:color-mix(in srgb,#94a3b8 20%,transparent)}
+html[data-theme="dark"] .ev-step.done .ev-step-no{background:#16a34a}
+html[data-theme="dark"] .ev-steps-badge em{color:#f87171}
+html[data-theme="dark"] .crisis-live{color:#f87171;background:color-mix(in srgb,#f87171 10%,transparent);
+  border-color:color-mix(in srgb,#f87171 35%,transparent)}
+html[data-theme="dark"] .t-success{color:#4ade80}
+@media (max-width:720px){
+  .crisis-panel .crisis-roles{grid-template-columns:1fr}
+  .crisis-badges{justify-content:flex-start}
+  .ev-step{flex-wrap:wrap}
+}

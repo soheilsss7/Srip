@@ -232,6 +232,85 @@ try {
   const revTxt = await page2.evaluate(() => document.body.textContent ?? '');
   ok('ثبت بازبینی → اعتبار ۹۰ روزهٔ تازه', revTxt.includes('۹۰ روز مانده تا بازبینی'));
 
+  /* ═══ گام ۲.۶ — رویدادها در تقویم + پروتکل بحران (بخش ۱۷ سند؛ فرم ۱۰ و ۱۱.۵) ═══ */
+  await page2.goto(`${BASE}/calendar`, { waitUntil: 'networkidle0', timeout: 90000 });
+  await new Promise(r => setTimeout(r, 3500));
+  const cal = await page2.evaluate(() => ({
+    h1: (document.querySelector('.page-heading h1')?.textContent ?? '').trim(),
+    legend: document.querySelectorAll('.cal-legend span').length,
+    upcomingEvents: [...document.querySelectorAll('.list')].some(l => (l.textContent ?? '').includes('میزگرد داده و سیاست عمومی')),
+    evRows: [...document.querySelectorAll('.ev-row')].length,
+    crisisH2: [...document.querySelectorAll('h2')].some(h => (h.textContent ?? '').includes('پروتکل ارتباط بحران')),
+    spokesperson: (document.querySelector('.crisis-roles')?.textContent ?? ''),
+    goldenChips: [...document.querySelectorAll('.crisis-badges .srip-badge')].map(b => (b.textContent ?? '').trim()),
+    activeCrisis: !!document.querySelector('.crisis-live'),
+    newEventBtn: [...document.querySelectorAll('button')].some(b => (b.textContent ?? '').includes('رویداد جدید')),
+  }));
+  ok('تقویم: عنوان «تقویم جلسات و رویدادها»', cal.h1.includes('رویدادها'), cal.h1);
+  ok('تقویم: راهنمای دو مسیر رویداد (مالکیت/حضور)', cal.legend >= 2);
+  ok('تقویم: رویدادهای پیشِ رو با میزگرد بذر سند', cal.upcomingEvents && cal.evRows >= 4, `rows=${cal.evRows}`);
+  ok('پروتکل بحران: سخنگو + جانشین + طلایی', cal.crisisH2 && cal.spokesperson.includes('مدیر روابط عمومی') && cal.spokesperson.includes('مدیرعامل') && cal.spokesperson.includes('۲'));
+  ok('بحران‌ها: هر دو حالت واکنش (طلایی/دیرتر)', cal.goldenChips.some(c => c.includes('طلایی') && !c.includes('دیرتر')) && cal.goldenChips.some(c => c.includes('دیرتر از طلایی')), JSON.stringify(cal.goldenChips));
+  ok('بحران فعال: هشدار در جریان', cal.activeCrisis);
+  ok('دکمهٔ «رویداد جدید» (فرم ۱۰) حاضر است', cal.newEventBtn);
+
+  /* ثبت رویداد تازه از فرم ۱۰ → فهرست + چک‌لیست هفت‌مرحله‌ای */
+  const evTitle = `رویداد تست باتری ${Date.now().toString(36)}`;
+  const newBtn = await page2.evaluateHandle(() => [...document.querySelectorAll('button')].find(b => (b.textContent ?? '').includes('رویداد جدید')));
+  await newBtn.asElement().click();
+  await page2.waitForSelector('#event-form', { timeout: 30000 });
+  const formInfo = await page2.evaluate(() => ({
+    pathOpts: document.querySelectorAll('#event-form select')[0]?.options.length ?? 0,
+    kindOpts: document.querySelectorAll('#event-form select')[1]?.options.length ?? 0,
+    hint: (document.querySelector('#event-form .field-hint')?.textContent ?? ''),
+  }));
+  ok('فرم ۱۰: دو مسیر + انواع استاندارد + الزام', formInfo.pathOpts === 2 && formInfo.kindOpts >= 3, JSON.stringify(formInfo));
+  const titleInp = await page2.evaluateHandle(() => [...document.querySelectorAll('#event-form input')].filter(i => i.type === 'text' || !i.type)[0]);
+  await titleInp.asElement().type(evTitle);
+  await page2.evaluate(() => {
+    const f = document.querySelector('#event-form');
+    const dt = [...f.querySelectorAll('input[type=datetime-local]')][0];
+    const d = new Date(Date.now() + 75 * 86400000);
+    const pad = (n) => String(n).padStart(2, '0');
+    const v = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T10:00`;
+    /* دور زدن value-tracker ری‌اکت با ستتر بومی */
+    const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    set.call(dt, v);
+    dt.dispatchEvent(new Event('input', { bubbles: true }));
+    dt.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  const ownerInp = await page2.evaluateHandle(() => [...document.querySelectorAll('#event-form input')].filter(i => i.type === 'text' || !i.type)[1]);
+  await ownerInp.asElement().type('مدیر رویداد');
+  await page2.evaluate(() => { (document.querySelector('#event-form button[type=submit]') ?? {}).click?.(); });
+  await page2.waitForFunction(() => !document.querySelector('#event-form'), { timeout: 30000 });
+  await new Promise(r => setTimeout(r, 2500));
+  const created = await page2.evaluate((ttl) => ({
+    inList: [...document.querySelectorAll('.ev-row')].some(r => (r.textContent ?? '').includes(ttl)),
+    badge: [...document.querySelectorAll('.ev-row')].find(r => (r.textContent ?? '').includes(ttl))?.querySelector('.ev-steps-badge')?.textContent ?? '',
+  }), evTitle);
+  ok('ثبت رویداد → در «رویدادهای پیشِ رو» با ۱/۷', created.inList && created.badge.includes('۱'), `badge=${created.badge.trim()}`);
+
+  const rowBtn = await page2.evaluateHandle((ttl) => [...document.querySelectorAll('.ev-row')].find(r => (r.textContent ?? '').includes(ttl)), evTitle);
+  await rowBtn.asElement().click();
+  await page2.waitForSelector('.ev-checklist', { timeout: 30000 });
+  const chk = await page2.evaluate(() => ({
+    steps: document.querySelectorAll('.ev-steps-list .ev-step').length,
+    done: document.querySelectorAll('.ev-steps-list .ev-step.done').length,
+    current: (document.querySelector('.ev-steps-list .ev-step.current b')?.textContent ?? ''),
+    btns: [...document.querySelectorAll('.ev-checklist button')].some(b => (b.textContent ?? '').includes('تکمیل مرحله')),
+    dues: [...document.querySelectorAll('.ev-step small')].every(s => s.textContent.includes('موعد')),
+  }));
+  ok('چک‌لیست هفت‌مرحله‌ای: ۷ مرحله با موعد، مرحلهٔ ۱ انجام‌شده', chk.steps === 7 && chk.done === 1 && chk.current.includes('تصمیم') && chk.dues, `steps=${chk.steps} done=${chk.done}`);
+  ok('دکمهٔ «تکمیل مرحله» روی مرحلهٔ جاری', chk.btns);
+  const stepBtn = await page2.evaluateHandle(() => [...document.querySelectorAll('.ev-checklist button')].find(b => (b.textContent ?? '').includes('تکمیل مرحله')));
+  await stepBtn.asElement().click();
+  await new Promise(r => setTimeout(r, 2500));
+  const afterStep = await page2.evaluate(() => ({
+    done: document.querySelectorAll('.ev-steps-list .ev-step.done').length,
+    current: (document.querySelector('.ev-steps-list .ev-step.current b')?.textContent ?? ''),
+  }));
+  ok('تکمیل مرحله → ۲ انجام‌شده و مرحلهٔ بعدی جاری', afterStep.done === 2 && afterStep.current.includes('آماده‌سازی'), `done=${afterStep.done}`);
+
   await page2.close();
 
   /* ═══ سناریوی ۳ (فقط بیلد استاتیک): ۴۰۴ ریشهٔ سایت نباید حلقهٔ ریدایرکت بسازد ═══
