@@ -261,6 +261,113 @@ try {
   const compAfter = await page.evaluate(() => (document.querySelector('.stat-grid .stat-card')?.textContent ?? '').match(/[۰-۹]+/)?.[0] ?? '');
   ok('اهداف: ثبت مقدار پایش مؤلفه → نمرهٔ مرکب بازمحاسبه', compBefore !== compAfter && compAfter !== '', `قبل=${compBefore} بعد=${compAfter}`);
 
+
+  /* ── ۷.۵) گام ۲.۷ — گزارش ماهانهٔ استاندارد (فرم ۱۵) در /reports ── */
+  await page.goto(`${BASE}/reports`, { waitUntil: 'networkidle0', timeout: 90000 });
+  await new Promise(r => setTimeout(r, 3500));
+  const pmr0 = await page.evaluate(() => ({
+    hasPanel: [...document.querySelectorAll('h2, h3')].some(h => (h.textContent ?? '').includes('گزارش ماهانهٔ استاندارد (فرم ۱۵)')),
+    chips: [...document.querySelectorAll('.pmr-stats .chip')].map(c => (c.textContent ?? '').replace(/\s+/g, ' ').trim()),
+    rows: [...document.querySelectorAll('.pmr-row')].map(r => (r.textContent ?? '').replace(/\s+/g, ' ').trim()),
+    rule: (document.querySelector('.pmr-stats')?.parentElement?.textContent ?? '').includes('دو هفته'),
+  }));
+  ok('گزارش ماهانه: کارت فرم ۱۵ در صفحهٔ گزارش‌ها', pmr0.hasPanel);
+  ok('گزارش ماهانه: چیپ‌های آمار (۲ ارائه‌شده + ۱ پیش‌نویس + ۲ به‌موقع)',
+    pmr0.chips.some(c => c.includes('ارائه‌شده: ۲')) && pmr0.chips.some(c => c.includes('پیش‌نویس: ۱')) && pmr0.chips.some(c => c.includes('به‌موقع: ۲')), JSON.stringify(pmr0.chips));
+  ok('گزارش ماهانه: سه گزارش بذر (مرداد/شهریور/مهر) با مالک و مهلت',
+    pmr0.rows.length === 3 && pmr0.rows.every(r => r.includes('مدیر پروژه') && r.includes('مهلت')), JSON.stringify(pmr0.rows));
+
+  /* نمای کامل pmr-2 (شهریور) — قالب پنج‌بخشی + دادهٔ زنده + انحراف سه‌قلمی */
+  await (await page.evaluateHandle(() => [...document.querySelectorAll('.pmr-row')].find(r => (r.textContent ?? '').includes('شهریور')))).asElement().click();
+  await new Promise(r => setTimeout(r, 900));
+  const pmr2 = await page.evaluate(() => ({
+    secs: [...document.querySelectorAll('.pmr-detail .pmr-sec h4')].map(h => (h.textContent ?? '').trim()),
+    kpis: document.querySelectorAll('.pmr-kpi').length,
+    kpiTones: document.querySelectorAll('.pmr-kpi.danger, .pmr-kpi.warning, .pmr-kpi.success').length,
+    risks: [...document.querySelectorAll('.pmr-risk')].map(r => (r.textContent ?? '').replace(/\s+/g, ' ').trim()),
+    dev: (document.querySelector('.pmr-dev')?.textContent ?? '').replace(/\s+/g, ' ').trim(),
+    onTime: [...document.querySelectorAll('.pmr-row')].find(r => (r.textContent ?? '').includes('شهریور'))?.textContent.includes('به‌موقع'),
+    noSubmit: ![...document.querySelectorAll('.pmr-detail button')].some(b => (b.textContent ?? '').includes('ارائه به مدیریت هلدینگ')),
+  }));
+  ok('قالب فرم ۱۵: پنج بخش (خلاصه/شاخص‌های زنده/ریسک‌های زنده/انحراف/برنامهٔ ماه آینده)',
+    pmr2.secs.length === 5 && pmr2.secs[0].includes('خلاصهٔ مدیریتی') && pmr2.secs[1].includes('شاخص‌های کلیدی') && pmr2.secs[2].includes('ریسک‌های درجه بالا') && pmr2.secs[3].includes('انحراف') && pmr2.secs[4].includes('برنامهٔ ماه آینده'), JSON.stringify(pmr2.secs));
+  ok('شاخص‌های زندهٔ بخش ۲۶: همهٔ شاخص‌ها به‌صورت چیپ رنگی با مقدار محاسبه‌شده',
+    pmr2.kpis >= 10 && pmr2.kpiTones === pmr2.kpis, `kpis=${pmr2.kpis}`);
+  ok('ریسک‌های درجه بالای زنده: ۳ ریسک با مالک نقش', pmr2.risks.length === 3 && pmr2.risks.every(r => r.length > 8), JSON.stringify(pmr2.risks).slice(0, 90));
+  ok('انحراف شهریور با سه قلم (علت/اثر بر مسیر بحرانی/اقدام جبرانی)',
+    pmr2.dev.includes('وب‌سایت مرجع') && pmr2.dev.includes('علت') && pmr2.dev.includes('مسیر بحرانی') && pmr2.dev.includes('جبرانی'), pmr2.dev.slice(0, 80));
+  ok('گزارش ارائه‌شده به‌موقع است و دکمهٔ ارائه ندارد (قفل پس از ارائه)', pmr2.onTime && pmr2.noSubmit);
+
+  /* پیش‌نویس مهر: دکمهٔ ارائه حاضر است */
+  await (await page.evaluateHandle(() => [...document.querySelectorAll('.pmr-row')].find(r => (r.textContent ?? '').includes('مهر')))).asElement().click();
+  await new Promise(r => setTimeout(r, 900));
+  ok('پیش‌نویس مهر: دکمهٔ «ارائه به مدیریت هلدینگ» حاضر است (ولی کلیک نمی‌شود تا بذر بماند)',
+    await page.evaluate(() => [...document.querySelectorAll('.pmr-detail button')].some(b => (b.textContent ?? '').includes('ارائه به مدیریت هلدینگ'))));
+
+  /* ثبت گزارش تازه از فرم ۱۵ + چرخهٔ ارائه */
+  const e2eLbl = `گزارش تست باتری ${Date.now().toString(36)}`;
+  const e2eMonth = await page.evaluate(() => { const t = Date.now(); const m = t % 240; return `${2027 + Math.floor(m / 12)}-${String(1 + (m % 12)).padStart(2, '0')}`; });
+  await (await page.evaluateHandle(() => [...document.querySelectorAll('button')].find(b => (b.textContent ?? '').includes('گزارش ماهانهٔ تازه')))).asElement().click();
+  await page.waitForSelector('#monthly-report-form', { timeout: 30000 });
+  const form27 = await page.evaluate(() => ({
+    months: document.querySelectorAll('#monthly-report-form input[type=month]').length,
+    hints: (document.querySelector('#monthly-report-form .field-hint')?.textContent ?? ''),
+    devBtn: [...document.querySelectorAll('#monthly-report-form button')].some(b => (b.textContent ?? '').includes('انحراف زمانی')),
+  }));
+  ok('فرم ۱۵: ماه + راهنمای قاعدهٔ سه‌قلمی + افزودن انحراف', form27.months === 1 && form27.hints.includes('سه قلم') && form27.devBtn, JSON.stringify(form27).slice(0, 80));
+  await page.evaluate(({ lbl, mon }) => {
+    const f = document.querySelector('#monthly-report-form');
+    const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    const setTa = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+    const lab = [...f.querySelectorAll('input')].find(i => i.type === 'text' || !i.type);
+    set.call(lab, lbl); lab.dispatchEvent(new Event('input', { bubbles: true }));
+    const mon2 = f.querySelector('input[type=month]');
+    set.call(mon2, mon); mon2.dispatchEvent(new Event('input', { bubbles: true }));
+    const tas = [...f.querySelectorAll('textarea')];
+    setTa.call(tas[0], 'خلاصهٔ تست باتری: برنامه در مسیر است.'); tas[0].dispatchEvent(new Event('input', { bubbles: true }));
+    setTa.call(tas[1], 'برنامهٔ تست ماه آینده.'); tas[1].dispatchEvent(new Event('input', { bubbles: true }));
+  }, { lbl: e2eLbl, mon: e2eMonth });
+  /* یک انحراف کامل سه‌قلمی */
+  await page.evaluate(() => { [...document.querySelectorAll('#monthly-report-form button')].find(b => (b.textContent ?? '').includes('انحراف زمانی') && (b.textContent ?? '').includes('+'))?.click(); });
+  await new Promise(r => setTimeout(r, 400));
+  await page.evaluate(() => {
+    const f = document.querySelector('#monthly-report-form');
+    const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    const ins = [...f.querySelectorAll('.pmr-dev-form input')];
+    const vals = ['تست نقطهٔ عطف', 'تست علت تأخیر', 'تست اثر مسیر بحرانی', 'تست اقدام جبرانی'];
+    ins.forEach((inp, i) => { set.call(inp, vals[i]); inp.dispatchEvent(new Event('input', { bubbles: true })); });
+  });
+  await page.evaluate(() => { (document.querySelector('#monthly-report-form button[type=submit]') ?? {}).click?.(); });
+  await page.waitForFunction(() => !document.querySelector('#monthly-report-form'), { timeout: 30000 });
+  await new Promise(r => setTimeout(r, 2500));
+  const made = await page.evaluate((lbl) => {
+    const row = [...document.querySelectorAll('.pmr-row')].find(r => (r.textContent ?? '').includes(lbl));
+    return { found: !!row, draft: (row?.textContent ?? '').includes('پیش‌نویس') };
+  }, e2eLbl);
+  ok('ثبت گزارش تازه → پیش‌نویس در فهرست', made.found && made.draft, JSON.stringify(made));
+
+  /* ارائهٔ همان پیش‌نویس از رابط */
+  await (await page.evaluateHandle((lbl) => [...document.querySelectorAll('.pmr-row')].find(r => (r.textContent ?? '').includes(lbl)), e2eLbl)).asElement().click();
+  await new Promise(r => setTimeout(r, 900));
+  await page.evaluate(() => { [...document.querySelectorAll('.pmr-detail button')].find(b => (b.textContent ?? '').includes('ارائه به مدیریت هلدینگ'))?.click(); });
+  await new Promise(r => setTimeout(r, 3000));
+  const subm = await page.evaluate((lbl) => {
+    const row = [...document.querySelectorAll('.pmr-row')].find(r => (r.textContent ?? '').includes(lbl));
+    return { submitted: (row?.textContent ?? '').includes('ارائه‌شده'), onTime: (row?.textContent ?? '').includes('به‌موقع'), noBtn: ![...document.querySelectorAll('.pmr-detail button')].some(b => (b.textContent ?? '').includes('ارائه به مدیریت هلدینگ')) };
+  }, e2eLbl);
+  ok('ارائه از رابط → نشان «ارائه‌شده» + «به‌موقع» + قفل دکمه', subm.submitted && subm.onTime && subm.noBtn, JSON.stringify(subm));
+
+  /* موبایل: صفحهٔ گزارش‌ها بدون اسکرول افقی */
+  await page.setViewport({ width: 390, height: 844 });
+  await new Promise(r => setTimeout(r, 900));
+  ok('موبایل (۳۹۰): گزارش ماهانه بدون اسکرول افقی',
+    await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1));
+  await page.setViewport({ width: 1280, height: 900 });
+
+  /* بازگشت به هاب برنامه برای بخش‌های ۸ و ۹ */
+  await page.goto(`${BASE}/program`, { waitUntil: 'networkidle0', timeout: 90000 });
+  await new Promise(r => setTimeout(r, 2000));
+
   /* ── ۸) بدون خطای کنسول در کل جریان ──
      استثنا: پاسخ ۴۰۰ تستِ منفیِ «ریسک بدون مالک» — عمداً توسط سرور رد می‌شود */
   const realErrs = errs.filter(e => !e.includes('status of 400'));

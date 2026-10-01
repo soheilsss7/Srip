@@ -1,11 +1,12 @@
 'use client';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../_lib/api';
 import { fa, labelKey, KEY_FA, STATUS_FA } from '../_lib/fa';
+import { t } from '../_lib/i18n';
 import { clearStoredExportApproval, downloadReport, storedExportApprovalId } from '../_lib/report-export';
 import { useWorkspace } from '../_components/workspace';
-import { Badge, ErrorCard, Loading, PageHeader, SectionCard, StatCard } from '../_components/page-ui';
+import { Badge, ErrorCard, Loading, Modal, PageHeader, SectionCard, StatCard } from '../_components/page-ui';
 import IntelHub from '../_components/intel-hub';
 import {
   AlertTriangle, Building2, CheckCircle2, Clock3, CloudDownload, Database, FileDown, FileJson2,
@@ -143,6 +144,194 @@ function Stats({ map }: { map: Record<string, unknown> }) {
         <StatCard key={k} icon={SUMMARY_ICON[k] ?? <Database size={17} />} label={SUMMARY_ROW_FA[k] ?? colLabel(k)} value={fmtN(v)} />
       ))}
     </div>
+  );
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   گام ۲.۷ مسترپلن — گزارش ماهانهٔ استاندارد (فرم ۱۵؛ بخش ۲۶ سند)
+   قالب ثابت گزارش به مدیریت هلدینگ: خلاصهٔ مدیریتی + شاخص‌های کلیدی زندهٔ بخش ۲۶ +
+   ریسک‌های درجه بالای بخش ۲۵ + انحراف‌های زمانی بیش از دو هفته (با علت، اثر بر مسیر
+   بحرانی و اقدام جبرانی) + برنامهٔ ماه آینده. هر ماه فقط یک گزارش؛ سکوت درباره
+   انحراف، تخلف گزارش‌دهی است.
+   ═══════════════════════════════════════════════════════════════════════════ */
+/* توجه: t() باید در زمان رندر صدا زده شود (نه ثابت ماژول) تا زبان پویا اعمال شود */
+const pmrStatusFa = (s: string) => (s === 'SUBMITTED' ? t('ارائه‌شده') : t('پیش‌نویس'));
+const KPI_TONE: Record<string, 'success' | 'warning' | 'danger'> = { ON_TARGET: 'success', NEAR: 'warning', OFF_TARGET: 'danger' };
+
+function MonthlyReportCard() {
+  const { can } = useWorkspace();
+  const writable = can('program.write');
+  const [data, setData] = useState<any>(null);
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [selId, setSelId] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const nowD = new Date();
+  const monthNow = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, '0')}`;
+  const monthLabelFa = new Intl.DateTimeFormat('fa-IR', { month: 'long', year: 'numeric' }).format(nowD);
+  const emptyForm = { label: monthLabelFa, month: monthNow, summary: '', nextMonthPlan: '', deviations: [] as Array<{ milestone: string; cause: string; criticalPathImpact: string; mitigation: string }> };
+  const [form, setForm] = useState(emptyForm);
+
+  const load = useCallback(async () => {
+    try {
+      setErr('');
+      const d: any = await api('/program/monthly-reports');
+      setData(d);
+      if (d.items?.length && !d.items.some((r: any) => r.id === selId)) setSelId(d.items[0].id);
+    } catch (x: any) { setErr(x?.message ?? String(x)); }
+  }, [selId]);
+  useEffect(() => { load(); }, [load]);
+
+  if (!data && !err) return null;
+  const items: any[] = data?.items ?? [];
+  const sel = items.find(r => r.id === selId) ?? items[0] ?? null;
+  const stats = data?.stats ?? { total: 0, submitted: 0, draft: 0, onTime: 0 };
+
+  const saveReport = async () => {
+    setBusy(true);
+    try {
+      await api('/program/monthly-reports', { method: 'POST', body: JSON.stringify(form) });
+      setFormOpen(false); setForm(emptyForm); await load();
+    } catch (x: any) { setErr(x?.message ?? String(x)); } finally { setBusy(false); }
+  };
+  const submitReport = async (id: string) => {
+    setBusy(true);
+    try { await api(`/program/monthly-reports/${id}/submit`, { method: 'POST' }); await load(); }
+    catch (x: any) { setErr(x?.message ?? String(x)); } finally { setBusy(false); }
+  };
+  const setDev = (i: number, k: string, v: string) => setForm(f => ({ ...f, deviations: f.deviations.map((d, j) => (j === i ? { ...d, [k]: v } : d)) }));
+
+  return (
+    <SectionCard
+      title={t('گزارش ماهانهٔ استاندارد (فرم ۱۵)')}
+      icon={<FileText size={16} />}
+      description={t('قالب ثابت گزارش ماهانه به مدیریت هلدینگ — شاخص‌ها و ریسک‌های درجه بالا از داشبورد زنده برداشت می‌شوند؛ انحراف زمانی بیش از دو هفته باید با علت، اثر بر مسیر بحرانی و اقدام جبرانی توضیح داده شود.')}
+      actions={
+        <div className="toolbar">
+          {writable && <button className="btn btn-ghost btn-sm" onClick={() => { setForm(emptyForm); setFormOpen(true); }}>{t('گزارش ماهانهٔ تازه')}</button>}
+          <button className="btn btn-ghost btn-sm" onClick={load}><RefreshCw size={13} /> {t('بازخوانی')}</button>
+        </div>
+      }
+    >
+      {err && <ErrorCard message={err} />}
+      <div className="pmr-stats">
+        <span className="chip success">{t('ارائه‌شده')}: {fmtN(stats.submitted)}</span>
+        <span className="chip warning">{t('پیش‌نویس')}: {fmtN(stats.draft)}</span>
+        <span className="chip info">{t('به‌موقع')}: {fmtN(stats.onTime)}</span>
+        <span className="chip neutral">{t('هدف')}: {fmtN(12)} {t('گزارش در سال')}</span>
+      </div>
+
+      {items.length === 0 ? (
+        <p className="empty-state">{t('هنوز گزارش ماهانه‌ای ثبت نشده است — قالب ثابت فرم ۱۵ را از دکمهٔ «گزارش ماهانهٔ تازه» آغاز کنید.')}</p>
+      ) : (
+        <div className="pmr-layout">
+          <div className="pmr-list">
+            {items.map(r => (
+              <button type="button" key={r.id} className={`pmr-row ${sel?.id === r.id ? 'active' : ''}`} onClick={() => setSelId(r.id)}>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <strong>{r.label}</strong>
+                  <small>{r.ownerRole} · {t('مهلت')}: {fmtDT(r.dueAt)?.split('،')[0] ?? '—'}</small>
+                </span>
+                <span className="pmr-badges">
+                  <Badge tone={r.status === 'SUBMITTED' ? 'success' : 'warning'}>{pmrStatusFa(r.status)}</Badge>
+                  {r.onTime === true && <Badge tone="info">{t('به‌موقع')}</Badge>}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {sel && (
+            <div className="pmr-detail">
+              <div className="pmr-detail-head">
+                <h3>{sel.label}</h3>
+                <span>{sel.ownerRole}</span>
+                {sel.submittedAt && <small>{t('ارائه')}: {fmtDT(sel.submittedAt)}</small>}
+              </div>
+              <div className="pmr-sec">
+                <h4>{t('خلاصهٔ مدیریتی — وضعیت کلی ماه')}</h4>
+                <p>{sel.summary || '—'}</p>
+              </div>
+              <div className="pmr-sec">
+                <h4>{t('شاخص‌های کلیدی (بخش ۲۶)')} — {t('زنده')}</h4>
+                <div className="pmr-kpis">
+                  {(sel.live?.kpis ?? []).map((k: any) => (
+                    <span key={k.id} className={`pmr-kpi ${KPI_TONE[k.status] ?? ''}`}><b>{k.valueLabel}</b><small>{k.title}</small></span>
+                  ))}
+                </div>
+              </div>
+              <div className="pmr-sec">
+                <h4>{t('ریسک‌های درجه بالا (بخش ۲۵)')} — {t('زنده')}</h4>
+                {(sel.live?.highRisks ?? []).length === 0 ? <p className="empty-state">{t('ریسک درجه بالای بازی وجود ندارد.')}</p> : (
+                  <ul className="pmr-risks">
+                    {(sel.live?.highRisks ?? []).map((r: any) => <li key={r.id} className="pmr-risk"><AlertTriangle size={13} /> <b>{r.title}</b> <small>· {r.ownerRole}</small></li>)}
+                  </ul>
+                )}
+              </div>
+              <div className="pmr-sec">
+                <h4>{t('انحراف‌های زمانی بیش از دو هفته')}</h4>
+                {(sel.deviations ?? []).length === 0 ? <p className="t-muted">{t('انحراف زمانی بیش از دو هفته‌ای ثبت نشده است.')}</p> : (
+                  (sel.deviations ?? []).map((d: any) => (
+                    <div key={d.id} className="pmr-dev">
+                      <b>{d.milestone}</b>
+                      <small>{t('علت')}: {d.cause} · {t('اثر بر مسیر بحرانی')}: {d.criticalPathImpact} · {t('اقدام جبرانی')}: {d.mitigation}</small>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="pmr-sec">
+                <h4>{t('برنامهٔ ماه آینده')}</h4>
+                <p>{sel.nextMonthPlan || '—'}</p>
+              </div>
+              {writable && sel.status === 'DRAFT' && (
+                <div className="form-actions">
+                  <button type="button" className="btn btn-primary btn-sm pmr-submit" disabled={busy} onClick={() => submitReport(sel.id)}>{busy ? t('در حال ثبت…') : t('ارائه به مدیریت هلدینگ')}</button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      <Modal open={formOpen} title={t('گزارش ماهانهٔ تازه (فرم ۱۵)')} onClose={() => setFormOpen(false)}>
+        <form id="monthly-report-form" className="form-grid" onSubmit={(e) => { e.preventDefault(); saveReport(); }}>
+          <div className="field">
+            <label className="field-label">{t('نام ماه گزارش')}</label>
+            <input value={form.label} onChange={e => setForm(f => ({ ...f, label: e.target.value }))} />
+          </div>
+          <div className="field">
+            <label className="field-label">{t('ماه (میلادی)')}</label>
+            <input type="month" value={form.month} onChange={e => setForm(f => ({ ...f, month: e.target.value }))} />
+          </div>
+          <div className="field full">
+            <label className="field-label">{t('خلاصهٔ مدیریتی — وضعیت کلی ماه')}</label>
+            <textarea rows={3} required value={form.summary} onChange={e => setForm(f => ({ ...f, summary: e.target.value }))} />
+          </div>
+          <div className="field full">
+            <label className="field-label">{t('برنامهٔ ماه آینده')}</label>
+            <textarea rows={2} value={form.nextMonthPlan} onChange={e => setForm(f => ({ ...f, nextMonthPlan: e.target.value }))} />
+          </div>
+          <div className="field full">
+            <label className="field-label">{t('انحراف‌های زمانی بیش از دو هفته (اختیاری)')}</label>
+            {form.deviations.map((d, i) => (
+              <div className="pmr-dev-form" key={i}>
+                <input placeholder={t('نقطهٔ عطف')} value={d.milestone} onChange={e => setDev(i, 'milestone', e.target.value)} />
+                <input placeholder={t('علت')} value={d.cause} onChange={e => setDev(i, 'cause', e.target.value)} />
+                <input placeholder={t('اثر بر مسیر بحرانی')} value={d.criticalPathImpact} onChange={e => setDev(i, 'criticalPathImpact', e.target.value)} />
+                <input placeholder={t('اقدام جبرانی')} value={d.mitigation} onChange={e => setDev(i, 'mitigation', e.target.value)} />
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setForm(f => ({ ...f, deviations: f.deviations.filter((_, j) => j !== i) }))}><X size={13} /></button>
+              </div>
+            ))}
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setForm(f => ({ ...f, deviations: [...f.deviations, { milestone: '', cause: '', criticalPathImpact: '', mitigation: '' }] }))}>+ {t('انحراف زمانی')}</button>
+            <p className="field-hint">{t('هر انحراف باید با هر سه قلم توضیح داده شود: علت، اثر بر مسیر بحرانی و اقدام جبرانی — سکوت درباره انحراف، تخلف گزارش‌دهی است.')}</p>
+          </div>
+          <div className="form-actions">
+            <button type="button" className="srip-button" onClick={() => setFormOpen(false)}>{t('انصراف')}</button>
+            <button type="submit" className="srip-button primary" disabled={busy}>{busy ? t('در حال ذخیره…') : t('ثبت پیش‌نویس گزارش')}</button>
+          </div>
+        </form>
+      </Modal>
+    </SectionCard>
   );
 }
 
@@ -313,6 +502,9 @@ export default function Reports() {
         }
       />
       <IntelHub />
+
+      {/* گزارش ماهانهٔ استاندارد — گام ۲.۷ (فرم ۱۵ سند) */}
+      <MonthlyReportCard />
 
       <section className="panel" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <label style={{ flex: '1 1 320px' }}>

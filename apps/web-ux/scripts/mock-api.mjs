@@ -19,7 +19,7 @@ const PORT = Number(process.env.MOCK_API_PORT || 4000);
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.10.01.02';
+const DEMO_MOCK_VERSION = '2026.10.01.03';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -6215,7 +6215,7 @@ const PROGRAM_METRICS={
     compute:(c)=>c.people.length},
   'migration-done':{label:'سامانه‌های انتقال/خاموش‌سازی تکمیل‌شده',unit:'count',
     compute:(c)=>c.sysDone,target:(c)=>c.sysNonKeep.length||1},
-  'monthly-reports':{label:'گزارش‌های ماهانهٔ ثبت‌شده',unit:'count',
+  'monthly-reports':{label:'گزارش‌های ماهانهٔ ارائه‌شده به مدیریت هلدینگ',unit:'count',
     compute:(c)=>c.monthlyReports},
   'declared-baseline':{label:'خط پایهٔ اعلامی سازمان (تا فعال‌شدن پایش زنده)',unit:'score',
     compute:(c)=>Number(c.def.config?.value??0)},
@@ -6425,9 +6425,23 @@ function ensureProgramSeed(){
     {id:'ac-3',organizationId:PROGRAM_ORG_ID,name:'اینستاگرام',address:'instagram.com/pars',owner:'نامشخص',lastActivity:'۸ ماه پیش',brand:'غیرمنطبق',action:'SHUTDOWN',note:'بی‌مالک و رهاشده — خاموش‌سازی'},
     {id:'ac-4',organizationId:PROGRAM_ORG_ID,name:'خبرنامهٔ ایمیلی',address:'—',owner:'مدیر محتوا',lastActivity:'۲ ماه پیش',brand:'بخشی منطبق',action:'TRANSFER',note:'انتقال به سکوی جدید'},
   ];}
-  /* گزارش ماهانهٔ منتشرشده (شاخص ۱۰) — دو ماه اول */
+  /* گزارش ماهانهٔ استاندارد (فرم ۱۵؛ شاخص ۱۰) — دو ماه ارائه‌شده + پیش‌نویس ماه جاری
+     قالب ثابت: خلاصهٔ مدیریتی + شاخص‌های زندهٔ ۲۶ + ریسک‌های درجه بالای ۲۵ + انحراف‌های
+     زمانی بیش از دو هفته (با علت/اثر بر مسیر بحرانی/اقدام جبرانی) + برنامهٔ ماه آینده */
   if(!Array.isArray(DB.programMonthlyReports)||!DB.programMonthlyReports.length){DB.programMonthlyReports=[
-    {id:'pmr-1',organizationId:PROGRAM_ORG_ID,label:'مرداد ۱۴۰۵',publishedAt:ago(55)},{id:'pmr-2',organizationId:PROGRAM_ORG_ID,label:'شهریور ۱۴۰۵',publishedAt:ago(25)}];}
+    {id:'pmr-1',organizationId:PROGRAM_ORG_ID,month:'2026-08',label:'مرداد ۱۴۰۵',ownerRole:'مدیر پروژه',status:'SUBMITTED',
+      publishedAt:ago(55),submittedAt:ago(55),
+      summary:'ماه نخست استقرار: پروژه صفر بسته شد، هستهٔ ده‌نفره استخدام شد و ممیزی افراد/سامانه‌ها/کانال‌ها آغاز شد.',
+      deviations:[],nextMonthPlan:'تکمیل ممیزی سه‌گانه و آغاز پروندهٔ شناخت هلدینگ و زیرمجموعه‌ها.'},
+    {id:'pmr-2',organizationId:PROGRAM_ORG_ID,month:'2026-09',label:'شهریور ۱۴۰۵',ownerRole:'مدیر پروژه',status:'SUBMITTED',
+      publishedAt:ago(25),submittedAt:ago(25),
+      summary:'پروندهٔ شناخت هلدینگ در مرحلهٔ تحلیل؛ معماری ارتباطات تصویب شد و انتقال سامانه‌های اولویت‌دار آغاز شد.',
+      deviations:[{id:'dv-1',milestone:'راه‌اندازی وب‌سایت مرجع',cause:'تأخیر در تحویل طرح هویت بصری',criticalPathImpact:'فشار یک‌هفته‌ای بر هدف ماه ۸',mitigation:'تقسیم کار به دو فاز و افزودن طراح همکار'}],
+      nextMonthPlan:'تکمیل پروندهٔ شناخت زیرمجموعه‌های اولویت اول و شروع برند و هویت بصری.'},
+    {id:'pmr-3',organizationId:PROGRAM_ORG_ID,month:'2026-10',label:'مهر ۱۴۰۵',ownerRole:'مدیر پروژه',status:'DRAFT',
+      publishedAt:null,submittedAt:null,
+      summary:'پیش‌نویس ماه جاری: شاخص‌ها از داشبورد زنده برداشت می‌شوند؛ پس از جمع‌بندی ریسک‌ها ارائه می‌شود.',
+      deviations:[],nextMonthPlan:'بستن دروازهٔ فصل یک و آغاز آماده‌سازی بازار زیرمجموعهٔ اولویت اول.'}];}
   /* یادداشت‌های سیاستی اندیشکده (شاخص ۲) — به‌عنوان سند سازمانی برنامه */
   if(!Array.isArray(DB.documents)) DB.documents=seedDocuments();
   for(const d of [
@@ -6491,7 +6505,7 @@ function programKpisFor(req){
   const people=scopedPeople(req).filter(p=>p.status!=='INACTIVE');
   const sysNonKeep=(DB.auditSystems??[]).filter(x=>orgIds.includes(x.organizationId)&&x.migration!=='KEEP');
   const sysDone=sysNonKeep.filter(x=>x.migrationStatus==='DONE').length;
-  const monthlyReports=(DB.programMonthlyReports??[]).filter(r=>orgIds.includes(r.organizationId)).length;
+  const monthlyReports=(DB.programMonthlyReports??[]).filter(r=>orgIds.includes(r.organizationId)&&r.status==='SUBMITTED').length;
   const layers=programLayersFor(req);
   const goals=goalsFor(req);
   const ctx={orgIds,docs,mediaMentions,partnershipRows,people,sysNonKeep,sysDone,monthlyReports,layers,goals,inMonth,famComplete};
@@ -6877,6 +6891,64 @@ function crisisView(p){
 function crisisProtocolOf(orgId){
   ensureCrisisSeed();
   return (DB.crisisProtocols??[]).find(c=>c.organizationId===orgId)??null;
+}
+
+/* ═══════════════ گام ۲.۷ — گزارش ماهانهٔ استاندارد (فرم ۱۵؛ بخش ۲۶ سند) ═══════════════
+   قالب ثابت گزارش ماهانه به مدیریت هلدینگ: خلاصهٔ مدیریتی، شاخص‌های کلیدی (زنده از
+   بخش ۲۶)، ریسک‌های درجه بالا (زنده از بخش ۲۵)، انحراف‌های زمانی بیش از دو هفته و
+   برنامهٔ ماه آینده. هر انحراف باید با سه قلم توضیح داده شود: علت، اثر بر مسیر
+   بحرانی و اقدام جبرانی — سکوت درباره انحراف، خود تخلف گزارش‌دهی است. ارائه در
+   پایان هر ماه؛ مهلت هر گزارش = پنجم ماه بعد (شاخص ۱۰: تحویل به‌موقع ۱۲ گزارش). */
+const REPORT_TEMPLATE=[
+  {key:'summary',label:'خلاصهٔ مدیریتی — وضعیت کلی ماه',kind:'TEXT',required:true},
+  {key:'kpis',label:'شاخص‌های کلیدی (بخش ۲۶)',kind:'LIVE'},
+  {key:'highRisks',label:'ریسک‌های درجه بالا (بخش ۲۵)',kind:'LIVE'},
+  {key:'deviations',label:'انحراف‌های زمانی بیش از دو هفته',kind:'DEVIATIONS'},
+  {key:'nextMonthPlan',label:'برنامهٔ ماه آینده',kind:'TEXT'},
+];
+const MONTH_RE=/^\d{4}-(0[1-9]|1[0-2])$/;
+function monthDueAt(month){
+  /* پایان ماه گزارش + ۵ روز مهلت ارائه */
+  const [y,m]=month.split('-').map(Number);
+  return new Date(Date.UTC(y,m,5)).toISOString();
+}
+function validDeviation(d){
+  return !!d&&typeof d==='object'&&!!String(d.milestone??'').trim()&&!!String(d.cause??'').trim()
+    &&!!String(d.criticalPathImpact??'').trim()&&!!String(d.mitigation??'').trim();
+}
+const DEVIATION_RULE='انحراف زمانی بیش از دو هفته باید با هر سه قلم توضیح داده شود: علت، اثر بر مسیر بحرانی و اقدام جبرانی — سکوت درباره انحراف، تخلف گزارش‌دهی است.';
+function monthlyReportsFor(req){
+  ensureProgramSeed();
+  const ids=visibleOrgIds(req);
+  return (DB.programMonthlyReports??[]).filter(r=>ids.includes(r.organizationId));
+}
+function monthlyReportView(row,req){
+  const kpis=programKpisFor(req);
+  const ids=visibleOrgIds(req);
+  const highRisks=(DB.risks??[]).filter(r=>ids.includes(r.organizationId)&&r.status!=='CLOSED'&&riskGrade(r)==='HIGH')
+    .map(r=>({id:r.id,title:r.title,ownerRole:r.ownerRole}));
+  const submittedAt=row.submittedAt??null;
+  const onTime=submittedAt?new Date(submittedAt)<=new Date(monthDueAt(row.month)):null;
+  return {...row,
+    ownerRole:row.ownerRole||'مدیر پروژه',
+    statusFa:row.status==='SUBMITTED'?'ارائه‌شده':'پیش‌نویس',
+    dueAt:monthDueAt(row.month),submittedAt,onTime,
+    live:{
+      kpis:kpis.map(k=>({id:k.id,title:k.title,valueLabel:k.valueLabel,status:k.status})),
+      kpisSummary:{total:kpis.length,onTarget:kpis.filter(k=>k.status==='ON_TARGET').length,off:kpis.filter(k=>k.status==='OFF_TARGET').length},
+      highRisks},
+    template:REPORT_TEMPLATE};
+}
+function validateMonthlyReportBody(b){
+  const label=String(b.label??'').trim();
+  if(label.length<3) return {message:'عنوان گزارش (نام ماه) را بنویسید — حداقل ۳ نویسه.'};
+  const month=String(b.month??'').trim();
+  if(!MONTH_RE.test(month)) return {message:'ماه گزارش را به شکل YYYY-MM مشخص کنید.'};
+  const summary=String(b.summary??'').trim();
+  if(!summary) return {message:'خلاصهٔ مدیریتی خالی است — قالب ثابت گزارش با خلاصه آغاز می‌شود.'};
+  const devs=Array.isArray(b.deviations)?b.deviations:[];
+  for(const d of devs){ if(!validDeviation(d)) return {message:DEVIATION_RULE}; }
+  return null;
 }
 
 /* ممیزی سه‌گانه — دادهٔ ممیزی متعلق به سازمان برنامه است و بیرون از محدوده دیده نمی‌شود */
@@ -13401,6 +13473,79 @@ const server=http.createServer(async(req,res)=>{
     p.updatedAt=nowIso(); saveDb();
     audit(req,'UPDATE','Crisis',row.id,'OK',{});
     return json(res,200,crisisView(p));
+  }
+
+  /* ─────────────── گام ۲.۷ — گزارش ماهانهٔ استاندارد (فرم ۱۵؛ /program/monthly-reports) ────────── */
+  if(is('/program/monthly-reports')&&method==='GET'){
+    if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
+    const rows=monthlyReportsFor(req).sort((a,b)=>b.month.localeCompare(a.month));
+    const items=rows.map(r=>monthlyReportView(r,req));
+    return json(res,200,{items,template:REPORT_TEMPLATE,
+      stats:{total:items.length,submitted:items.filter(r=>r.status==='SUBMITTED').length,
+        draft:items.filter(r=>r.status==='DRAFT').length,
+        onTime:items.filter(r=>r.onTime===true).length},
+      ownerDefault:'مدیر پروژه',
+      rule:'قالب ثابت گزارش ماهانه به مدیریت هلدینگ (فرم ۱۵)؛ شاخص‌ها و ریسک‌های درجه بالا از داشبورد زنده برداشت می‌شوند و '+DEVIATION_RULE});
+  }
+  if(is('/program/monthly-reports')&&method==='POST'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    const b=await readBody(req);
+    const err=validateMonthlyReportBody(b);
+    if(err) return json(res,400,err);
+    const orgId=primaryOrgId(authUser)??visibleOrgIds(req)[0]??PROGRAM_ORG_ID;
+    if((DB.programMonthlyReports??[]).some(r=>r.organizationId===orgId&&r.month===String(b.month).trim()))
+      return json(res,400,{message:'برای این ماه قبلاً گزارش ثبت شده — هر ماه فقط یک گزارش استاندارد دارد.'});
+    const row={id:`pmr-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,
+      organizationId:orgId,month:String(b.month).trim(),label:String(b.label).trim(),
+      ownerRole:String(b.ownerRole??'').trim()||'مدیر پروژه',
+      status:'DRAFT',publishedAt:null,submittedAt:null,
+      summary:String(b.summary).trim(),
+      deviations:(Array.isArray(b.deviations)?b.deviations:[]).map((d,i)=>({id:`dv-${Date.now().toString(36)}-${i}`,milestone:String(d.milestone).trim(),cause:String(d.cause).trim(),criticalPathImpact:String(d.criticalPathImpact).trim(),mitigation:String(d.mitigation).trim()})),
+      nextMonthPlan:String(b.nextMonthPlan??'').trim(),
+      createdAt:nowIso(),updatedAt:nowIso()};
+    DB.programMonthlyReports.push(row); saveDb();
+    audit(req,'CREATE','MonthlyReport',row.id,'OK',{month:row.month});
+    return json(res,201,monthlyReportView(row,req));
+  }
+  const pmrSubmit=match('/program/monthly-reports/:id/submit');
+  if(pmrSubmit&&method==='POST'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    const row=monthlyReportsFor(req).find(r=>r.id===pmrSubmit[0]);
+    if(!row) return json(res,404,{message:'گزارش ماهانه یافت نشد یا خارج از محدودهٔ شماست.'});
+    if(row.status==='SUBMITTED') return json(res,400,{message:'این گزارش قبلاً به مدیریت هلدینگ ارائه شده است.'});
+    row.status='SUBMITTED'; row.submittedAt=nowIso(); row.publishedAt=nowIso(); row.updatedAt=nowIso();
+    saveDb();
+    audit(req,'UPDATE','MonthlyReport',row.id,'SUBMIT',{month:row.month});
+    return json(res,200,monthlyReportView(row,req));
+  }
+  const pmrId=match('/program/monthly-reports/:id');
+  if(pmrId&&method==='PATCH'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    const row=monthlyReportsFor(req).find(r=>r.id===pmrId[0]);
+    if(!row) return json(res,404,{message:'گزارش ماهانه یافت نشد یا خارج از محدودهٔ شماست.'});
+    if(row.status==='SUBMITTED') return json(res,400,{message:'گزارش ارائه‌شده قابل ویرایش نیست — ماه بعد را ثبت کنید.'});
+    const b=await readBody(req);
+    const merged={...row,...b};
+    const err=validateMonthlyReportBody(merged);
+    if(err) return json(res,400,err);
+    if((DB.programMonthlyReports??[]).some(r=>r.id!==row.id&&r.organizationId===row.organizationId&&r.month===merged.month))
+      return json(res,400,{message:'برای این ماه قبلاً گزارش ثبت شده — هر ماه فقط یک گزارش استاندارد دارد.'});
+    row.label=String(merged.label).trim(); row.month=String(merged.month).trim();
+    row.summary=String(merged.summary).trim(); row.nextMonthPlan=String(merged.nextMonthPlan??'').trim();
+    if(b.ownerRole!=null) row.ownerRole=String(b.ownerRole).trim()||'مدیر پروژه';
+    if(b.deviations!=null) row.deviations=(Array.isArray(b.deviations)?b.deviations:[]).map((d,i)=>({id:d.id??`dv-${Date.now().toString(36)}-${i}`,milestone:String(d.milestone).trim(),cause:String(d.cause).trim(),criticalPathImpact:String(d.criticalPathImpact).trim(),mitigation:String(d.mitigation).trim()}));
+    row.updatedAt=nowIso(); saveDb();
+    audit(req,'UPDATE','MonthlyReport',row.id,'OK',{});
+    return json(res,200,monthlyReportView(row,req));
+  }
+  if(pmrId&&method==='DELETE'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    const row=monthlyReportsFor(req).find(r=>r.id===pmrId[0]);
+    if(!row) return json(res,404,{message:'گزارش ماهانه یافت نشد یا خارج از محدودهٔ شماست.'});
+    if(row.status==='SUBMITTED') return json(res,400,{message:'گزارش ارائه‌شده قابل حذف نیست — سابقهٔ ارائه به مدیریت هلدینگ محفوظ است.'});
+    DB.programMonthlyReports=DB.programMonthlyReports.filter(r=>r.id!==row.id); saveDb();
+    audit(req,'DELETE','MonthlyReport',row.id,'OK',{month:row.month});
+    return json(res,200,{message:'پیش‌نویس گزارش ماهانه حذف شد.'});
   }
 
   /* ─────────────── گام ۲.۲.۱ — تنظیمات برنامهٔ سازمان (per-tenant) ──────────

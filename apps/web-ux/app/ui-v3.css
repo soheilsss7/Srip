@@ -768,3 +768,46 @@ html[data-theme="dark"] .t-success{color:#4ade80}
   .crisis-badges{justify-content:flex-start}
   .ev-step{flex-wrap:wrap}
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   گام ۲.۷ — گزارش ماهانهٔ استاندارد (فرم ۱۵؛ /reports)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.pmr-stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.pmr-layout{display:grid;grid-template-columns:280px 1fr;gap:14px}
+.pmr-list{display:flex;flex-direction:column;gap:7px}
+.pmr-row{display:flex;gap:8px;align-items:center;text-align:right;width:100%;
+  background:none;border:1px solid var(--srip-border);border-radius:var(--radius-lg);
+  padding:9px 11px;cursor:pointer;font:inherit;color:inherit}
+.pmr-row.active{border-color:color-mix(in srgb,var(--srip-accent) 55%,transparent);
+  background:color-mix(in srgb,var(--srip-accent) 7%,transparent)}
+.pmr-row strong{display:block;font-size:13px}
+.pmr-row small{color:var(--srip-text-muted)}
+.pmr-badges{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+.pmr-detail{border:1px solid var(--srip-border);border-radius:var(--radius-lg);padding:14px;display:flex;flex-direction:column;gap:12px}
+.pmr-detail-head{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.pmr-detail-head h3{margin:0;font-size:15px}
+.pmr-detail-head small{color:var(--srip-text-muted)}
+.pmr-sec h4{margin:0 0 6px;font-size:12.5px;color:var(--srip-text-muted);font-weight:800}
+.pmr-sec p{margin:0;font-size:13px}
+.pmr-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:7px}
+.pmr-kpi{display:flex;flex-direction:column;gap:2px;border:1px solid var(--srip-border);
+  border-radius:12px;padding:7px 9px;font-size:12.5px}
+.pmr-kpi b{font-size:13px}
+.pmr-kpi small{color:var(--srip-text-muted);font-size:11px}
+.pmr-kpi.success{border-color:color-mix(in srgb,#16a34a 30%,transparent)}
+.pmr-kpi.warning{border-color:color-mix(in srgb,#d97706 35%,transparent)}
+.pmr-kpi.danger{border-color:color-mix(in srgb,#dc2626 35%,transparent)}
+.pmr-risks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.pmr-risk{display:flex;gap:6px;align-items:center;font-size:13px;color:#b91c1c}
+.pmr-risk small{color:var(--srip-text-muted)}
+.pmr-dev{border:1px solid color-mix(in srgb,#d97706 30%,transparent);border-radius:12px;
+  padding:8px 10px;display:flex;flex-direction:column;gap:3px;margin-bottom:6px}
+.pmr-dev b{font-size:12.5px}
+.pmr-dev small{color:var(--srip-text-muted)}
+.pmr-dev-form{display:grid;grid-template-columns:repeat(4,1fr 28px);gap:5px;margin-bottom:6px;align-items:center}
+.pmr-dev-form input{min-width:0}
+html[data-theme="dark"] .pmr-risk{color:#f87171}
+@media (max-width:860px){
+  .pmr-layout{grid-template-columns:1fr}
+  .pmr-dev-form{grid-template-columns:1fr 28px}
+}

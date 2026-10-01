@@ -1500,6 +1500,84 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
     && demoEv.body.items.length === 2 && !demoEv.body.items.some(e => e.title.includes('میزگرد داده')));
 }
 
+
+/* ═════════════════ گام ۲.۷ — گزارش ماهانهٔ استاندارد (فرم ۱۵؛ بخش ۲۶ + ۲۵ + ۱۴۰۱ سند) ═════════════════ */
+section('گام ۲.۷ — گزارش ماهانهٔ استاندارد (فرم ۱۵)');
+{
+  const pl = await login(OWNER.email);
+  const pt = pl.body?.accessToken;
+
+  /* فهرست + قالب + آمار — با هر دو روش احراز هویتِ رایج باتری */
+  const list = await api('/program/monthly-reports', { token: pt });
+  check('GET /program/monthly-reports → 200 با ۳ گزارش بذر دمو', list.status === 200 && list.body.items.length === 3);
+  check('قالب ثابت فرم ۱۵ — پنج بخش: خلاصه/شاخص‌های زنده/ریسک‌های زنده/انحراف/برنامهٔ ماه آینده',
+    JSON.stringify(list.body.template.map(s => s.key)) === JSON.stringify(['summary', 'kpis', 'highRisks', 'deviations', 'nextMonthPlan']));
+  check('آمار: ۲ ارائه‌شده + ۱ پیش‌نویس + ۲ به‌موقع',
+    list.body.stats.submitted === 2 && list.body.stats.draft === 1 && list.body.stats.onTime === 2);
+  const pmr2 = list.body.items.find(r => r.id === 'pmr-2');
+  const pmr3 = list.body.items.find(r => r.id === 'pmr-3');
+  check('نمای گزارش: statusFa و مهلت (پنجم ماه بعد) و onTime',
+    pmr2.statusFa === 'ارائه‌شده' && pmr3.statusFa === 'پیش‌نویس' && pmr2.dueAt.startsWith('2026-10-05') && pmr2.onTime === true);
+  check('بخش زندهٔ شاخص‌ها از داشبورد (نه عدد دستی) — ۱۰ شاخص با مقدار و وضعیت',
+    (pmr2.live.kpis ?? []).length === 10 && pmr2.live.kpis.every(k => k.valueLabel && k.status));
+  check('بخش زندهٔ ریسک‌های درجه بالا — ۳ ریسک با مالک نقش',
+    (pmr2.live.highRisks ?? []).length === 3 && pmr2.live.highRisks.every(r => r.title && r.ownerRole));
+  check('انحراف ثبت‌شدهٔ pmr-2 با هر سه قلم (علت/اثر بر مسیر بحرانی/اقدام جبرانی)',
+    pmr2.deviations.length === 1 && !!(pmr2.deviations[0].cause && pmr2.deviations[0].criticalPathImpact && pmr2.deviations[0].mitigation));
+  check('قاعدهٔ انحراف در پاسخ سرور آمده است', String(list.body.rule).includes('دو هفته'));
+
+  /* اعتبارسنجی بدنه */
+  const noSummary = await api('/program/monthly-reports', { method: 'POST', token: pt, body: { label: 'آبان ۱۴۰۵', month: '2026-11' } });
+  check('بدون خلاصهٔ مدیریتی → ۴۰۰', noSummary.status === 400);
+  const dupMonth = await api('/program/monthly-reports', { method: 'POST', token: pt, body: { label: 'مهر تکراری', month: '2026-10', summary: 'تست' } });
+  check('ماه تکراری → ۴۰۰ (هر ماه فقط یک گزارش)', dupMonth.status === 400);
+  const badDev = await api('/program/monthly-reports', { method: 'POST', token: pt, body: { label: 'آبان ۱۴۰۵', month: '2026-11', summary: 'تست', deviations: [{ milestone: 'نقطهٔ عطف', cause: 'فقط علت' }] } });
+  check('انحراف ناقص (بدون اثر/اقدام جبرانی) → ۴۰۰', badDev.status === 400);
+  const noPerm = await api('/program/monthly-reports', { method: 'POST', token: (await login('client')).body?.accessToken, body: { label: 'گزارش مشتری', month: '2026-12', summary: 'تست' } });
+  check('کاربر بدون program.write → ۴۰۳', noPerm.status === 403);
+
+  /* چرخهٔ کامل: ثبت پیش‌نویس → ویرایش → ارائه → قفل */
+  const created = await api('/program/monthly-reports', { method: 'POST', token: pt, body: { label: 'آذر ۱۴۰۵ (تست باتری)', month: '2027-01', summary: 'پیش‌نویس اولیه', nextMonthPlan: 'برنامهٔ اولیه', deviations: [{ milestone: 'انتخاب پیمانکار سامانه', cause: 'تأخیر در ارسال پیشنهادها', criticalPathImpact: 'یک هفته تأخیر در فاز نصب', mitigation: 'تعیین مهلت سخت و تمدید قرارداد طراحی' }] } });
+  const nid = created.body?.id;
+  check('POST → 201 با وضعیت پیش‌نویس و انحراف سه‌قلمی', created.status === 201 && created.body.status === 'DRAFT' && created.body.deviations.length === 1 && created.body.onTime === null);
+  const patched = await api(`/program/monthly-reports/${nid}`, { method: 'PATCH', token: pt, body: { summary: 'خلاصهٔ نهایی ماه', nextMonthPlan: 'برنامهٔ نهایی ماه آینده' } });
+  check('PATCH پیش‌نویس → 200 با متن به‌روزشده', patched.status === 200 && patched.body.summary === 'خلاصهٔ نهایی ماه' && patched.body.nextMonthPlan === 'برنامهٔ نهایی ماه آینده');
+  const patchDevOnly = await api(`/program/monthly-reports/${nid}`, { method: 'PATCH', token: pt, body: { deviations: [{ milestone: 'ناقص', cause: 'ناقص' }] } });
+  check('PATCH با انحراف ناقص → ۴۰۰ (ادغام قبل از اعتبارسنجی)', patchDevOnly.status === 400);
+  const kpiBefore = (await api('/program/kpis', { token: pt })).body.items.find(k => k.id === 'kpi-10');
+  const submitted = await api(`/program/monthly-reports/${nid}/submit`, { method: 'POST', token: pt });
+  const kpiAfter = (await api('/program/kpis', { token: pt })).body.items.find(k => k.id === 'kpi-10');
+  check('POST /:id/submit → SUBMITTED + مهر ارائه + به‌موقع',
+    submitted.status === 200 && submitted.body.status === 'SUBMITTED' && !!submitted.body.submittedAt && submitted.body.onTime === true);
+  check('شاخص ۱۰ (۱۲ گزارش به‌موقع) فقط SUBMITTED را می‌شمارد', kpiBefore.value + 1 === kpiAfter.value);
+  const reSubmit = await api(`/program/monthly-reports/${nid}/submit`, { method: 'POST', token: pt });
+  check('ارائهٔ دوباره → ۴۰۰', reSubmit.status === 400);
+  const editLocked = await api(`/program/monthly-reports/${nid}`, { method: 'PATCH', token: pt, body: { summary: 'تغییر پس از ارائه' } });
+  check('ویرایش گزارش ارائه‌شده → ۴۰۰', editLocked.status === 400);
+  const del = await api(`/program/monthly-reports/${nid}`, { method: 'DELETE', token: pt });
+  check('حذف گزارش ارائه‌شده → ۴۰۰', del.status === 400);
+
+  /* حذف پیش‌نویس */
+  const draft = await api('/program/monthly-reports', { method: 'POST', token: pt, body: { label: 'بهمن ۱۴۰۵ (حذف)', month: '2027-02', summary: 'برای حذف' } });
+  const delDraft = await api(`/program/monthly-reports/${draft.body.id}`, { method: 'DELETE', token: pt });
+  check('حذف پیش‌نویس → ۲۰۰ و از فهرست خارج می‌شود', delDraft.status === 200
+    && !(await api('/program/monthly-reports', { token: pt })).body.items.some(r => r.id === draft.body.id));
+
+  /* جداسازی مستأجر: کاربر مشتری جهان دیگری است و گزارش هلدینگ دمو را نمی‌بیند */
+  const cl = await login('client');
+  const clList = await api('/program/monthly-reports', { token: cl.body?.accessToken });
+  check('کاربر مشتری → فهرست خالی (گزارش‌ها per-tenant هستند)', clList.status === 200 && clList.body.items.length === 0);
+  const clSubmit = await api('/program/monthly-reports/pmr-2/submit', { method: 'POST', token: cl.body?.accessToken });
+  check('کاربر مشتری بدون program.write → ۴۰۳', clSubmit.status === 403);
+  const parsTok = (await api('/auth/login', { method: 'POST', body: { email: 'pars', password: 'pars1234' } })).body?.accessToken;
+  const parsSubmit = await api('/program/monthly-reports/pmr-2/submit', { method: 'POST', token: parsTok });
+  check('کاربر pars با مجوز کامل → ارائهٔ گزارش سازمان دمو → ۴۰۴ (خارج از محدوده)', parsSubmit.status === 404);
+
+  /* کاربر pars (هلدینگ پارس) هم جهان دادهٔ خودش را می‌بیند، نه دمو */
+  const parsList = await api('/program/monthly-reports', { token: parsTok });
+  check('حساب pars → فهرست خالی (نه دادهٔ هلدینگ دمو)', parsList.status === 200 && parsList.body.items.length === 0);
+}
+
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
 if (failures.length) { console.log(`  Failed: ${failures.join(' | ')}`); }
