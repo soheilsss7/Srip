@@ -1742,6 +1742,52 @@ section('گام ۴.۳ — فرم ۶: رجیستری دارایی برند');
     && demoList.body.items.every((x) => x.id.startsWith('ba-d')));
 }
 
+/* ═════════════════ گام ۴.۴ — فرم ۱۴: تأیید هزینه پیش از تعهد (پیوست ب) ═════════════════ */
+section('گام ۴.۴ — فرم ۱۴: تأیید هزینه پیش از تعهد');
+{
+  const ptok = (await api('/auth/login', { method: 'POST', body: { email: 'pars', password: 'pars1234' } })).body?.accessToken;
+
+  const list = await api('/program/expenses', { token: ptok });
+  check('GET /program/expenses → چهار هزینهٔ بذر پارس', list.status === 200 && list.body.items.length === 4);
+  check('آمار گردش: ۲ در انتظار + ۱ تصویب‌شده + ۱ تعهد ثبت‌شده',
+    list.body.stats.pending === 2 && list.body.stats.approved === 1 && list.body.stats.committed === 1);
+  check('جمع تعهدات = مبلغ هزینهٔ تعهدشده (۲۵۰ میلیون)',
+    list.body.stats.committedAmount === 250000000);
+  check('تصویب‌کنندهٔ سند: مدیر مالی', list.body.approverRole === 'مدیر مالی');
+  check('قاعدهٔ فرم ۱۴ در پاسخ سرور: تعهد فقط پس از تصویب', String(list.body.rule).includes('تعهد فقط پس از تصویب'));
+
+  const noRequester = await api('/program/expenses', { method: 'POST', token: ptok, body: { title: 'هزینهٔ بی‌درخواست‌کننده', amount: 1000000, category: 'رویداد' } });
+  check('ثبت بدون درخواست‌کننده → ۴۰۰ (قاعدهٔ پیوست ب)', noRequester.status === 400 && noRequester.body.message.includes('بدون درخواست‌کننده'));
+  const badAmount = await api('/program/expenses', { method: 'POST', token: ptok, body: { title: 'هزینهٔ مبلغ صفر', amount: 0, category: 'رویداد', requesterRole: 'مدیر رویداد' } });
+  check('مبلغ صفر → ۴۰۰', badAmount.status === 400);
+  const negAmount = await api('/program/expenses', { method: 'POST', token: ptok, body: { title: 'هزینهٔ منفی', amount: -500, category: 'رویداد', requesterRole: 'مدیر رویداد' } });
+  check('مبلغ منفی → ۴۰۰', negAmount.status === 400);
+  const noCategory = await api('/program/expenses', { method: 'POST', token: ptok, body: { title: 'هزینهٔ بدون دسته', amount: 1000, requesterRole: 'مدیر رویداد' } });
+  check('ثبت بدون دستهٔ هزینه → ۴۰۰', noCategory.status === 400);
+  const noPerm = await api('/program/expenses', { method: 'POST', token: (await login('client')).body?.accessToken, body: { title: 'هزینهٔ مشتری', amount: 1000, category: 'رویداد', requesterRole: 'مدیر' } });
+  check('کاربر بدون program.write → ۴۰۳', noPerm.status === 403);
+
+  /* چرخهٔ کامل: ثبت → تلاش تعهد زودهنگام (۴۰۰) → تصویب → تعهد */
+  const created = await api('/program/expenses', { method: 'POST', token: ptok,
+    body: { title: 'هزینهٔ تست باتری ۴.۴', amount: 12000000, category: 'زیرساخت', requesterRole: 'مدیر محصول' } });
+  check('POST معتبر → 201 «در انتظار تصویب»', created.status === 201 && created.body.status === 'REQUESTED');
+  const commitEarly = await api(`/program/expenses/${created.body.id}/commit`, { method: 'POST', token: ptok });
+  check('تعهد پیش از تصویب → ۴۰۰ (قاعدهٔ اصلی فرم ۱۴)',
+    commitEarly.status === 400 && commitEarly.body.message.includes('پس از تصویب'));
+  const approved = await api(`/program/expenses/${created.body.id}/approve`, { method: 'POST', token: ptok });
+  check('تصویب → «تصویب‌شده» با مهر زمانی', approved.status === 200 && approved.body.status === 'APPROVED' && !!approved.body.approvedAt);
+  const approveAgain = await api(`/program/expenses/${created.body.id}/approve`, { method: 'POST', token: ptok });
+  check('تصویب دوباره → ۴۰۰', approveAgain.status === 400);
+  const committed = await api(`/program/expenses/${created.body.id}/commit`, { method: 'POST', token: ptok });
+  check('تعهد پس از تصویب → «تعهد ثبت‌شده»', committed.status === 200 && committed.body.status === 'COMMITTED' && !!committed.body.committedAt);
+  const commitAgain = await api(`/program/expenses/${created.body.id}/commit`, { method: 'POST', token: ptok });
+  check('تعهد دوباره → ۴۰۰', commitAgain.status === 400);
+
+  const demoList = await api('/program/expenses', { token: (await login(OWNER.email)).body?.accessToken });
+  check('دنیای دمو: فقط دو هزینهٔ بذر خودش (نه هزینه‌های پارس)', demoList.status === 200 && demoList.body.items.length === 2
+    && demoList.body.items.every((x) => x.id.startsWith('ex-d')));
+}
+
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
 if (failures.length) { console.log(`  Failed: ${failures.join(' | ')}`); }

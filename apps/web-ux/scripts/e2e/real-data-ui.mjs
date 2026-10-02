@@ -427,6 +427,80 @@ try {
   await page2.evaluate(() => { document.querySelector('.modal-close')?.click(); });
   await new Promise(r => setTimeout(r, 500));
 
+  /* ═══ گام ۴.۴ — فرم ۱۴: تأیید هزینه پیش از تعهد در نمای کلی /program ═══ */
+  await page2.goto(`${BASE}/program`, { waitUntil: 'networkidle0', timeout: 90000 });
+  await page2.waitForSelector('.expense-panel .expense-table', { timeout: 30000 });
+  await new Promise(r => setTimeout(r, 1200));
+  const ex0 = await page2.evaluate(() => ({
+    hasPanel: [...document.querySelectorAll('h2')].some(h => (h.textContent ?? '').includes('تأیید هزینه پیش از تعهد')),
+    rows: document.querySelectorAll('.expense-panel tbody tr').length,
+    chips: [...document.querySelectorAll('.expense-panel .chip-row .chip')].map(c => (c.textContent ?? '').replace(/\s+/g, ' ').trim()),
+    approveBtns: [...document.querySelectorAll('.expense-panel tbody button')].filter(b => (b.textContent ?? '').trim() === 'تصویب').length,
+    commitBtns: [...document.querySelectorAll('.expense-panel tbody button')].filter(b => (b.textContent ?? '').trim() === 'ثبت تعهد').length,
+    rule: (document.querySelector('.expense-panel .field-hint')?.textContent ?? '').includes('تعهد فقط پس از تصویب'),
+  }));
+  ok('فرم ۱۴: پنل تأیید هزینه با ۴ هزینهٔ بذر پارس', ex0.hasPanel && ex0.rows === 4, `rows=${ex0.rows}`);
+  ok('فرم ۱۴: آمار گردش (۲ در انتظار + ۱ تصویب‌شده + ۱ تعهد ثبت‌شده)',
+    ex0.chips.some(c => c.includes('در انتظار تصویب: ۲')) && ex0.chips.some(c => c.includes('تصویب‌شده: ۱')) && ex0.chips.some(c => c.includes('تعهد ثبت‌شده: ۱')), JSON.stringify(ex0.chips));
+  ok('فرم ۱۴: جمع تعهدات ۲۵۰ میلیون تومان + قاعدهٔ سند زیر جدول',
+    ex0.chips.some(c => c.includes('جمع تعهدات') && c.includes('۲۵۰')) && ex0.rule);
+  ok('فرم ۱۴: دکمه‌های اقدام — دو «تصویب» و یک «ثبت تعهد»', ex0.approveBtns === 2 && ex0.commitBtns === 1, `approve=${ex0.approveBtns} commit=${ex0.commitBtns}`);
+
+  /* گردش کامل از رابط: تصویب «اشتراک ابزار پایش رسانه» → ثبت تعهد */
+  await (await page2.evaluateHandle(() => [...document.querySelectorAll('.expense-panel tbody tr')].find(tr => (tr.textContent ?? '').includes('اشتراک سالانه'))
+    ?.querySelector('button'))).asElement().click();
+  await new Promise(r => setTimeout(r, 3000));
+  const ex1 = await page2.evaluate(() => {
+    const tr = [...document.querySelectorAll('.expense-panel tbody tr')].find(t => (t.textContent ?? '').includes('اشتراک سالانه'));
+    const tds = tr ? [...tr.querySelectorAll('td')] : [];
+    return { status: (tds[4]?.textContent ?? '').trim(), btn: (tr?.querySelector('button')?.textContent ?? '').trim() };
+  });
+  ok('فرم ۱۴: تصویب از رابط → «تصویب‌شده» با دکمهٔ «ثبت تعهد»', ex1.status.includes('تصویب‌شده') && ex1.btn === 'ثبت تعهد', JSON.stringify(ex1));
+  await (await page2.evaluateHandle(() => [...document.querySelectorAll('.expense-panel tbody tr')].find(tr => (tr.textContent ?? '').includes('اشتراک سالانه'))
+    ?.querySelector('button'))).asElement().click();
+  await new Promise(r => setTimeout(r, 3000));
+  const ex2 = await page2.evaluate(() => {
+    const tr = [...document.querySelectorAll('.expense-panel tbody tr')].find(t => (t.textContent ?? '').includes('اشتراک سالانه'));
+    const tds = tr ? [...tr.querySelectorAll('td')] : [];
+    const chips = [...document.querySelectorAll('.expense-panel .chip-row .chip')].map(c => (c.textContent ?? '').replace(/\s+/g, ' ').trim());
+    return { status: (tds[4]?.textContent ?? '').trim(), hasBtn: !!tr?.querySelector('button'),
+      total: chips.find(c => c.includes('جمع تعهدات')) ?? '' };
+  });
+  ok('فرم ۱۴: ثبت تعهد پس از تصویب → «تعهد ثبت‌شده» و رشد جمع تعهدات (۲۹۵ میلیون)',
+    ex2.status.includes('تعهد ثبت‌شده') && !ex2.hasBtn && ex2.total.includes('۲۹۵'), JSON.stringify(ex2).slice(0, 90));
+
+  /* ثبت درخواست تازه از فرم ۱۴ → ردیف پنجم */
+  await (await page2.evaluateHandle(() => [...document.querySelectorAll('.expense-panel button')].find(b => (b.textContent ?? '').includes('ثبت درخواست هزینه')))).asElement().click();
+  await page2.waitForSelector('#expense-form', { timeout: 30000 });
+  const exForm = await page2.evaluate(() => ({
+    inputs: document.querySelectorAll('#expense-form input').length,
+    selects: document.querySelectorAll('#expense-form select').length,
+    amountType: document.querySelector('#expense-form input[type=number]') != null,
+    ownerFree: !!document.querySelector('#expense-form input[placeholder*="نقش درخواست\u200cکننده"]') || document.querySelectorAll('#expense-form select').length >= 1,
+  }));
+  ok('فرم ۱۴: مودال درخواست با شرح/مبلغ عددی/دسته/درخواست‌کننده', exForm.inputs >= 3 && exForm.amountType && exForm.ownerFree, JSON.stringify(exForm));
+  const expTitle = `هزینهٔ تست باتری ${Date.now().toString(36)}`;
+  await page2.evaluate((name) => {
+    const setVal = (el, v) => { if (!el) return; const s = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set; s.call(el, v); el.dispatchEvent(new Event('input', { bubbles: true })); };
+    const inputs = [...document.querySelectorAll('#expense-form input')];
+    setVal(inputs.find(i => (i.placeholder ?? '').includes('میزگرد')), name);
+    setVal(inputs.find(i => i.type === 'number'), '5000000');
+    setVal(inputs.find(i => (i.placeholder ?? '').includes('رویداد، تولید')), 'زیرساخت');
+    setVal(inputs.find(i => (i.placeholder ?? '').includes('نقش درخواست')), 'مدیر محصول');
+  }, expTitle);
+  await page2.evaluate(() => { [...document.querySelectorAll('button')].find(b => (b.textContent ?? '').trim() === 'ثبت درخواست')?.click(); });
+  await new Promise(r => setTimeout(r, 3000));
+  const ex3 = await page2.evaluate((name) => {
+    const tr = [...document.querySelectorAll('.expense-panel tbody tr')].find(t => (t.textContent ?? '').includes(name));
+    const tds = tr ? [...tr.querySelectorAll('td')] : [];
+    return { rows: document.querySelectorAll('.expense-panel tbody tr').length, status: (tds[4]?.textContent ?? '').trim(),
+      hasApprove: (tr?.querySelector('button')?.textContent ?? '').trim() === 'تصویب', modalClosed: !document.querySelector('#expense-form') };
+  }, expTitle);
+  ok('فرم ۱۴: ثبت درخواست تازه → ردیف پنجم «در انتظار تصویب» با دکمهٔ تصویب',
+    ex3.rows === 5 && ex3.status.includes('در انتظار تصویب') && ex3.hasApprove && ex3.modalClosed, JSON.stringify(ex3).slice(0, 90));
+  await page2.evaluate(() => { document.querySelector('.modal-close')?.click(); });
+  await new Promise(r => setTimeout(r, 500));
+
   await page2.close();
 
   /* ═══ سناریوی ۳ (فقط بیلد استاتیک): ۴۰۴ ریشهٔ سایت نباید حلقهٔ ریدایرکت بسازد ═══

@@ -19,7 +19,7 @@ const PORT = Number(process.env.MOCK_API_PORT || 4000);
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.10.02.02';
+const DEMO_MOCK_VERSION = '2026.10.02.03';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -7028,6 +7028,52 @@ function validateBrandAssetBody(b,chart){
   return null;
 }
 
+/* ═══════════════ گام ۴.۴ — فرم ۱۴: تأیید هزینه پیش از تعهد (پیوست ب سند) ═══════════════
+   گردش تصویب هزینه پیش از تعهد: درخواست (شرح/مبلغ/دسته/درخواست‌کننده) → تصویب
+   مدیر مالی → ثبت تعهد. قاعدهٔ ثابت: تعهد فقط پس از تصویب قابل ثبت است؛
+   درخواست بدون درخواست‌کننده ثبت نمی‌شود (قاعدهٔ مالک پیوست ب). */
+const EXPENSE_STATUS_FA={REQUESTED:'در انتظار تصویب',APPROVED:'تصویب‌شده',COMMITTED:'تعهد ثبت‌شده'};
+const EXPENSE_APPROVER_ROLE='مدیر مالی';
+function ensureExpensesSeed(){
+  if((DB.programExpenses??[]).some(e=>e.organizationId==='org-pars')) return;
+  const ago=(d)=>new Date(Date.now()-d*86400000).toISOString();
+  const mk=(id,org,title,amount,category,requesterRole,status)=>{
+    const o={id,organizationId:org,title,amount,category,requesterRole,status,
+      requestedAt:ago(25),approvedAt:null,committedAt:null,createdAt:ago(25),updatedAt:ago(10)};
+    if(status!=='REQUESTED'){o.approvedAt=ago(14);o.updatedAt=ago(14);}
+    if(status==='COMMITTED'){o.committedAt=ago(7);o.updatedAt=ago(7);}
+    return o;};
+  DB.programExpenses=[
+    /* جهان واقعی پارس — هزینه‌های برنامهٔ فصل جاری */
+    mk('ex-1','org-pars','میزگرد داده و سیاست عمومی — بخش اجرایی',250000000,'رویداد','مدیر رویداد','COMMITTED'),
+    mk('ex-2','org-pars','تولید ویدئوی معرفی هلدینگ',180000000,'تولید محتوا','مدیر محتوا','APPROVED'),
+    mk('ex-3','org-pars','پنل پژوهشی بازارهای هدف',90000000,'پژوهش','مدیر اندیشکده و پژوهش','REQUESTED'),
+    mk('ex-4','org-pars','اشتراک سالانهٔ ابزار پایش رسانه',45000000,'زیرساخت','مدیر محصول','REQUESTED'),
+    /* دنیای دمو */
+    mk('ex-d1','org-1','رویداد معرفی دمو',50000000,'رویداد','مدیر رویداد','APPROVED'),
+    mk('ex-d2','org-1','تولید محتوای دمو',20000000,'تولید محتوا','مدیر محتوا','REQUESTED'),
+  ];
+}
+function expensesFor(req){
+  ensureExpensesSeed();
+  const ids=visibleOrgIds(req);
+  return (DB.programExpenses??[]).filter(e=>ids.includes(e.organizationId));
+}
+function expenseView(e){
+  return {...e,statusFa:EXPENSE_STATUS_FA[e.status]??e.status};
+}
+function validateExpenseBody(b,chart){
+  const title=String(b.title??'').trim();
+  if(title.length<3) return {message:'شرح هزینه را بنویسید (حداقل ۳ نویسه).'};
+  const amount=Number(b.amount);
+  if(!Number.isFinite(amount)||amount<=0) return {message:'مبلغ هزینه باید عددی بزرگ‌تر از صفر باشد.'};
+  if(String(b.category??'').trim().length<2) return {message:'دستهٔ هزینه را بنویسید (مثل: رویداد، تولید محتوا، پژوهش).'};
+  const requester=String(b.requesterRole??'').trim();
+  if(!requester) return {message:'درخواست هزینه بدون درخواست‌کننده ثبت نمی‌شود (فرم ۱۴ / پیوست ب سند).'};
+  if(chart.length&&!chart.includes(requester)) return {message:'درخواست‌کننده باید یکی از نقش‌های چارت سازمان شما باشد.'};
+  return null;
+}
+
 /* ═══════════════ گام ۲.۷ — گزارش ماهانهٔ استاندارد (فرم ۱۵؛ بخش ۲۶ سند) ═══════════════
    قالب ثابت گزارش ماهانه به مدیریت هلدینگ: خلاصهٔ مدیریتی، شاخص‌های کلیدی (زنده از
    بخش ۲۶)، ریسک‌های درجه بالا (زنده از بخش ۲۵)، انحراف‌های زمانی بیش از دو هفته و
@@ -13782,6 +13828,58 @@ const server=http.createServer(async(req,res)=>{
     row.updatedAt=nowIso(); saveDb();
     audit(req,'UPDATE','BrandAsset',row.id,'OK',{version:row.version,status:row.status});
     return json(res,200,brandAssetView(row));
+  }
+
+  /* ─────────────── گام ۴.۴ — فرم ۱۴: تأیید هزینه پیش از تعهد (/program/expenses) ────────── */
+  if(is('/program/expenses')&&method==='GET'){
+    if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
+    const items=expensesFor(req).map(expenseView)
+      .sort((a,b)=>String(b.requestedAt).localeCompare(String(a.requestedAt)));
+    const rows=expensesFor(req);
+    return json(res,200,{items,
+      stats:{total:rows.length,
+        pending:rows.filter(e=>e.status==='REQUESTED').length,
+        approved:rows.filter(e=>e.status==='APPROVED').length,
+        committed:rows.filter(e=>e.status==='COMMITTED').length,
+        pendingAmount:rows.filter(e=>e.status==='REQUESTED').reduce((s,e)=>s+e.amount,0),
+        committedAmount:rows.filter(e=>e.status==='COMMITTED').reduce((s,e)=>s+e.amount,0)},
+      roles:programSettingsFor(req).roles,approverRole:EXPENSE_APPROVER_ROLE,
+      rule:'هزینه پیش از تعهد تصویب می‌شود (فرم ۱۴ / پیوست ب): درخواست با شرح، مبلغ و دسته ثبت می‌شود، مدیر مالی تصویب می‌کند و تعهد فقط پس از تصویب قابل ثبت است.'});
+  }
+  if(is('/program/expenses')&&method==='POST'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    const b=await readBody(req);
+    const err=validateExpenseBody(b,programSettingsFor(req).roles);
+    if(err) return json(res,400,err);
+    const row={id:`ex-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,
+      organizationId:primaryOrgId(authUser)??visibleOrgIds(req)[0]??PROGRAM_ORG_ID,
+      title:String(b.title).trim(),amount:Math.round(Number(b.amount)),category:String(b.category).trim(),
+      requesterRole:String(b.requesterRole).trim(),status:'REQUESTED',
+      requestedAt:nowIso(),approvedAt:null,committedAt:null,createdAt:nowIso(),updatedAt:nowIso()};
+    DB.programExpenses.push(row); saveDb();
+    audit(req,'CREATE','Expense',row.id,'OK',{title:row.title.slice(0,60),amount:row.amount});
+    return json(res,201,expenseView(row));
+  }
+  const expApp=match('/program/expenses/:id/approve');
+  if(expApp&&method==='POST'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    const row=expensesFor(req).find(e=>e.id===expApp[0]);
+    if(!row) return json(res,404,{message:'درخواست هزینه یافت نشد یا خارج از محدودهٔ شماست.'});
+    if(row.status!=='REQUESTED') return json(res,400,{message:'این درخواست قبلاً تصویب شده یا تعهد آن ثبت شده است.'});
+    row.status='APPROVED'; row.approvedAt=nowIso(); row.updatedAt=nowIso(); saveDb();
+    audit(req,'UPDATE','Expense',row.id,'APPROVE',{amount:row.amount});
+    return json(res,200,expenseView(row));
+  }
+  const expCom=match('/program/expenses/:id/commit');
+  if(expCom&&method==='POST'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    const row=expensesFor(req).find(e=>e.id===expCom[0]);
+    if(!row) return json(res,404,{message:'درخواست هزینه یافت نشد یا خارج از محدودهٔ شماست.'});
+    if(row.status==='REQUESTED') return json(res,400,{message:'تعهد فقط پس از تصویب مدیر مالی قابل ثبت است (فرم ۱۴ / پیوست ب).'});
+    if(row.status==='COMMITTED') return json(res,400,{message:'تعهد این هزینه قبلاً ثبت شده است.'});
+    row.status='COMMITTED'; row.committedAt=nowIso(); row.updatedAt=nowIso(); saveDb();
+    audit(req,'UPDATE','Expense',row.id,'COMMIT',{amount:row.amount});
+    return json(res,200,expenseView(row));
   }
 
   /* ─────────────── گام ۲.۷ — گزارش ماهانهٔ استاندارد (فرم ۱۵؛ /program/monthly-reports) ────────── */

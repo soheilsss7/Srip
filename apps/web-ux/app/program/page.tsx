@@ -3,13 +3,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useWorkspace } from '../_components/workspace';
 import { api } from '../_lib/api';
 import { faNum, faFullDate } from '../_lib/jalali';
-import { lt, t } from '../_lib/i18n';
+import { localeTag, lt, t } from '../_lib/i18n';
 import {
   Badge, ErrorCard, Loading, Modal, PageHeader, SectionCard, Segmented, StatCard, StatusBadge, EmptyV4,
 } from '../_components/page-ui';
 import {
   Activity, AlertTriangle, ArrowLeft, CheckCircle2, ClipboardList, Gauge, GitBranch,
-  LayoutDashboard, ListChecks, Package, Plus, RefreshCw, ShieldAlert, Target, TrendingUp, X,
+  LayoutDashboard, ListChecks, Package, Plus, RefreshCw, ShieldAlert, Target, TrendingUp, Wallet, X,
 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -38,6 +38,11 @@ const CHANNEL_ACTION_FA = lt<Record<string, string>>({ ASSIGN_OWNER: t('واگذ
 const ASSET_STATUS_FA = lt<Record<string, string>>({ IN_PROGRESS: t('در تدوین'), ACTIVE: t('فعال — نسخهٔ جاری') });
 const ASSET_STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> = { IN_PROGRESS: 'warning', ACTIVE: 'success' };
 const ASSET_FORM_EMPTY = { name: '', version: '', ownerRole: '', location: '', status: 'IN_PROGRESS', reviewAt: '' };
+/* گام ۴.۴ — فرم ۱۴: گردش تصویب هزینه پیش از تعهد (نمای کلی) */
+const EXPENSE_STATUS_FA = lt<Record<string, string>>({ REQUESTED: t('در انتظار تصویب'), APPROVED: t('تصویب‌شده'), COMMITTED: t('تعهد ثبت‌شده') });
+const EXPENSE_STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = { REQUESTED: 'neutral', APPROVED: 'info', COMMITTED: 'success' };
+const EXPENSE_FORM_EMPTY = { title: '', amount: '', category: '', requesterRole: '' };
+const faMoney = (v: number | string) => new Intl.NumberFormat(localeTag()).format(Number(v) || 0);
 const SEASON_STATE_FA = lt<Record<string, string>>({ PASSED: t('دروازه پاس شد'), IN_PROGRESS: t('در جریان'), PENDING: t('در انتظار') });
 const SEASON_STATE_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = { PASSED: 'success', IN_PROGRESS: 'warning', PENDING: 'neutral' };
 const AUDIT_TABS = lt<Array<[string, string]>>([
@@ -87,6 +92,11 @@ export default function ProgramPage() {
   const [assetEdit, setAssetEdit] = useState<any | null>(null);
   const [assetFormError, setAssetFormError] = useState('');
   const [assetForm, setAssetForm] = useState(ASSET_FORM_EMPTY);
+  /* گام ۴.۴ — فرم ۱۴: تأیید هزینه پیش از تعهد (نمای کلی) */
+  const [expenses, setExpenses] = useState<any | null>(null);
+  const [expCreateOpen, setExpCreateOpen] = useState(false);
+  const [expFormError, setExpFormError] = useState('');
+  const [expForm, setExpForm] = useState(EXPENSE_FORM_EMPTY);
 
   const load = useCallback(async (which: string) => {
     setLoading(true); setError('');
@@ -109,6 +119,9 @@ export default function ProgramPage() {
   /* گام ۴.۳ — رجیستری دارایی برند جدا از نمرهٔ آمادگی بار می‌شود (فرم ۶ / پیوست ب) */
   const reloadAssets = useCallback(async () => { try { setAssets(await api<any>('/program/brand-assets')); } catch { /* در نبود مجوز، پنل مخفی می‌شود */ } }, []);
   useEffect(() => { if (tab === 'readiness') reloadAssets(); }, [tab, reloadAssets]);
+  /* گام ۴.۴ — گردش هزینه جدا از نمای کلی بار می‌شود (فرم ۱۴ / پیوست ب) */
+  const reloadExpenses = useCallback(async () => { try { setExpenses(await api<any>('/program/expenses')); } catch { /* در نبود مجوز، پنل مخفی می‌شود */ } }, []);
+  useEffect(() => { if (tab === 'overview') reloadExpenses(); }, [tab, reloadExpenses]);
 
   const refresh = () => load(tab);
 
@@ -192,6 +205,23 @@ export default function ProgramPage() {
       await api(`/program/brand-assets/${assetEdit.id}/review`, { method: 'POST' });
       setAssetEdit(null); await reloadAssets();
     } catch (x) { setAssetFormError((x as Error).message); }
+    finally { setBusy(false); }
+  };
+
+  /* گام ۴.۴ — فرم ۱۴: ثبت درخواست → تصویب مدیر مالی → ثبت تعهد */
+  const openExpCreate = () => { setExpCreateOpen(true); setExpFormError(''); setExpForm({ ...EXPENSE_FORM_EMPTY }); };
+  const submitExpense = async () => {
+    setExpFormError(''); setBusy(true);
+    try {
+      await api('/program/expenses', { method: 'POST', body: JSON.stringify({ ...expForm, amount: Number(expForm.amount) }) });
+      setExpCreateOpen(false); await reloadExpenses();
+    } catch (x) { setExpFormError((x as Error).message); }
+    finally { setBusy(false); }
+  };
+  const expenseAction = async (id: string, action: 'approve' | 'commit') => {
+    setError(''); setBusy(true);
+    try { await api(`/program/expenses/${id}/${action}`, { method: 'POST' }); await reloadExpenses(); }
+    catch (x) { setError((x as Error).message); }
     finally { setBusy(false); }
   };
 
@@ -348,6 +378,51 @@ export default function ProgramPage() {
               </div>
             </SectionCard>
           </div>
+
+          {/* ═══════════ فرم ۱۴ — تأیید هزینه پیش از تعهد (پیوست ب سند) ═══════════ */}
+          <SectionCard className="expense-panel" title={t('فرم ۱۴ — تأیید هزینه پیش از تعهد')} icon={<Wallet size={17} />}
+            description={t('هزینه پیش از تعهد تصویب می‌شود: درخواست با شرح، مبلغ و دسته ثبت می‌شود، مدیر مالی تصویب می‌کند و تعهد فقط پس از تصویب ثبت می‌شود.')}
+            actions={writable ? <button className="srip-button primary" onClick={openExpCreate}><Plus size={14} /> {t('ثبت درخواست هزینه')}</button> : undefined}>
+            {expenses ? (<>
+              <div className="chip-row" style={{ margin: '0 0 10px' }}>
+                <span className="chip neutral">{t('کل')}: {faNum(expenses.stats.total)}</span>
+                <span className="chip neutral">{t('در انتظار تصویب')}: {faNum(expenses.stats.pending)}</span>
+                <span className="chip info">{t('تصویب‌شده')}: {faNum(expenses.stats.approved)}</span>
+                <span className="chip success">{t('تعهد ثبت‌شده')}: {faNum(expenses.stats.committed)}</span>
+                <span className="chip gold">{t('جمع تعهدات')}: {faMoney(expenses.stats.committedAmount)} {t('تومان')}</span>
+              </div>
+              {expenses.items.length ? (
+                <div className="table-wrap"><table className="expense-table">
+                  <thead><tr>
+                    <th>{t('شرح هزینه')}</th><th>{t('مبلغ (تومان)')}</th><th>{t('دستهٔ هزینه')}</th>
+                    <th>{t('درخواست‌کننده')}</th><th>{t('وضعیت')}</th><th>{t('اقدام')}</th>
+                  </tr></thead>
+                  <tbody>
+                    {expenses.items.map((e: any) => (
+                      <tr key={e.id}>
+                        <td className="t-primary">{e.title}</td>
+                        <td><b>{faMoney(e.amount)}</b></td>
+                        <td><span className="chip">{e.category}</span></td>
+                        <td>{e.requesterRole}</td>
+                        <td><StatusBadge tone={EXPENSE_STATUS_TONE[e.status]}>{EXPENSE_STATUS_FA[e.status]}</StatusBadge></td>
+                        <td>{e.status === 'COMMITTED' ? <span className="t-muted">{faDate(e.committedAt)}</span>
+                          : !writable ? '—' : (
+                            <button type="button" className="srip-button" style={{ padding: '3px 10px' }} disabled={busy}
+                              onClick={() => expenseAction(e.id, e.status === 'REQUESTED' ? 'approve' : 'commit')}>
+                              {e.status === 'REQUESTED' ? t('تصویب') : t('ثبت تعهد')}
+                            </button>
+                          )}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table></div>
+              ) : (
+                <EmptyV4 icon={<Wallet size={22} />} title={t('هنوز درخواست هزینه‌ای ثبت نشده است')}
+                  description={t('هر هزینه پیش از تعهد تصویب می‌شود — از «ثبت درخواست هزینه» آغاز کنید.')} />
+              )}
+              <p className="field-hint">{t('هزینه پیش از تعهد تصویب می‌شود (فرم ۱۴ / پیوست ب): درخواست با شرح، مبلغ و دسته ثبت می‌شود، مدیر مالی تصویب می‌کند و تعهد فقط پس از تصویب قابل ثبت است.')}</p>
+            </>) : <Loading />}
+          </SectionCard>
         </>
       )}
 
@@ -1038,6 +1113,48 @@ export default function ProgramPage() {
           </div>
         )}
       </Modal>
+      {/* ═══════════ مودال: ثبت درخواست هزینه (فرم ۱۴ / پیوست ب) ═══════════ */}
+      <Modal open={expCreateOpen} title={t('ثبت درخواست هزینه (فرم ۱۴)')}
+        onClose={() => setExpCreateOpen(false)}
+        description={t('درخواست بدون درخواست‌کننده ثبت نمی‌شود؛ پس از ثبت، مدیر مالی تصویب می‌کند و تعهد فقط پس از تصویب قابل ثبت است.')}
+        footer={<>
+          <button className="srip-button" onClick={() => setExpCreateOpen(false)}><X size={14} /> {t('انصراف')}</button>
+          <button type="submit" form="expense-form" className="srip-button primary" disabled={busy}>{busy ? t('در حال ذخیره…') : t('ثبت درخواست')}</button>
+        </>}>
+        <form id="expense-form" className="form-grid" onSubmit={(e) => { e.preventDefault(); submitExpense(); }}>
+          <label className="field">
+            <span>{t('شرح هزینه')} *</span>
+            <input value={expForm.title} onChange={(e) => setExpForm(f => ({ ...f, title: e.target.value }))} required minLength={3}
+              placeholder={t('مثلاً: میزگرد داده و سیاست عمومی — بخش اجرایی')} />
+          </label>
+          <div className="field-pair">
+            <label className="field">
+              <span>{t('مبلغ (تومان)')} *</span>
+              <input type="number" min={1} step="any" value={expForm.amount} onChange={(e) => setExpForm(f => ({ ...f, amount: e.target.value }))} required
+                placeholder={t('مثلاً: ۲۵۰۰۰۰۰۰۰')} />
+            </label>
+            <label className="field">
+              <span>{t('دستهٔ هزینه')} *</span>
+              <input value={expForm.category} onChange={(e) => setExpForm(f => ({ ...f, category: e.target.value }))} required
+                placeholder={t('مثلاً: رویداد، تولید محتوا، پژوهش')} />
+            </label>
+          </div>
+          <label className="field">
+            <span>{t('درخواست‌کننده')} *</span>
+            {(expenses?.roles ?? []).length ? (
+              <select value={expForm.requesterRole} onChange={(e) => setExpForm(f => ({ ...f, requesterRole: e.target.value }))} required>
+                <option value="">{t('انتخاب کنید…')}</option>
+                {(expenses?.roles ?? []).map((r: string) => <option key={r} value={r}>{r}</option>)}
+              </select>
+            ) : (
+              <input value={expForm.requesterRole} onChange={(e) => setExpForm(f => ({ ...f, requesterRole: e.target.value }))} required
+                placeholder={t('نقش درخواست‌کننده — چارت سازمان در تنظیمات برنامه تعریف نشده')} />
+            )}
+          </label>
+          {expFormError ? <div className="alert-banner danger" role="alert"><AlertTriangle size={16} /><span>{expFormError}</span></div> : null}
+        </form>
+      </Modal>
+
       {/* ═══════════ مودال: ثبت/ویرایش دارایی برند (فرم ۶ / پیوست ب) ═══════════ */}
       <Modal open={assetCreateOpen || !!assetEdit}
         title={assetEdit ? t('ویرایش دارایی برند') : t('ثبت دارایی برند (فرم ۶)')}
