@@ -3,13 +3,13 @@ import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../_lib/api';
 import { fa, labelKey, KEY_FA, STATUS_FA } from '../_lib/fa';
-import { t } from '../_lib/i18n';
+import { localeTag, t } from '../_lib/i18n';
 import { clearStoredExportApproval, downloadReport, storedExportApprovalId } from '../_lib/report-export';
 import { useWorkspace } from '../_components/workspace';
 import { Badge, ErrorCard, Loading, Modal, PageHeader, SectionCard, StatCard } from '../_components/page-ui';
 import IntelHub from '../_components/intel-hub';
 import {
-  AlertTriangle, Building2, CheckCircle2, Clock3, CloudDownload, Database, FileDown, FileJson2,
+  AlertTriangle, Building2, CheckCircle2, ClipboardCheck, Clock3, CloudDownload, Database, FileDown, FileJson2,
   FileSpreadsheet, FileText, FolderKanban, Globe2, HeartPulse, Link2, ListChecks, Network, RefreshCw,
   Scale, Share2, ShieldCheck, Table2, Target, TrendingUp, Users, X,
 } from 'lucide-react';
@@ -26,12 +26,12 @@ const ORG_TYPE_FA: Record<string, string> = {
 };
 const DIR_FA: Record<string, string> = { OURS: 'ما به طرف مقابل', THEIRS: 'طرف مقابل به ما', BOTH: 'دوطرفه' };
 const MISC_FA: Record<string, string> = { ...ORG_TYPE_FA, ...DIR_FA, STRATEGIC_PARTNERSHIP: 'مشارکت راهبردی' };
-const fmtN = (v: unknown) => (v === null || v === undefined || v === '') ? '—' : new Intl.NumberFormat('fa-IR').format(Number(v));
+const fmtN = (v: unknown) => (v === null || v === undefined || v === '') ? '—' : new Intl.NumberFormat(localeTag()).format(Number(v));
 const fmtDT = (v: unknown) => {
   if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}T/.test(v)) return null;
   const d = new Date(v);
   if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleDateString('fa-IR', { year: 'numeric', month: 'long', day: 'numeric' }) + '، ' + d.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleDateString(localeTag(), { year: 'numeric', month: 'long', day: 'numeric' }) + '، ' + d.toLocaleTimeString(localeTag(), { hour: '2-digit', minute: '2-digit' });
 };
 function cell(key: string, v: unknown): string {
   if (v === null || v === undefined) return '—';
@@ -488,6 +488,123 @@ export default function Reports() {
 
   const scopeLabel = orgId ? (orgs.find(o => o.id === orgId)?.name ?? orgId) : `همهٔ محدودهٔ من (${orgs.length} سازمان)`;
 
+/* ═══ گام ۴.۵ — فرم ۱۸: صورت‌جلسهٔ تحویل برنامه به هلدینگ (بخش ۲۸.۱ سند؛ پیوست ب) ═══ */
+function DeliveryCard() {
+  const { can } = useWorkspace();
+  const writable = can('program.write');
+  const [data, setData] = useState<any>(null);
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [reps, setReps] = useState({ programRep: '', holdingRep: '' });
+
+  const load = useCallback(async () => {
+    try { setErr(''); setData(await api('/program/delivery')); } catch (x: any) { setErr(x?.message ?? String(x)); }
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  if (!data && !err) return null;
+
+  const deliverItem = async (key: string) => {
+    setBusy(true);
+    try { setData(await api(`/program/delivery/items/${key}`, { method: 'POST', body: JSON.stringify({}) })); }
+    catch (x: any) { setErr(x?.message ?? String(x)); }
+    finally { setBusy(false); }
+  };
+  const completeStep = async (key: string) => {
+    setBusy(true);
+    try { setData(await api(`/program/delivery/steps/${key}`, { method: 'POST' })); }
+    catch (x: any) { setErr(x?.message ?? String(x)); }
+    finally { setBusy(false); }
+  };
+  const sign = async () => {
+    setBusy(true);
+    try { setData(await api('/program/delivery/sign', { method: 'POST', body: JSON.stringify(reps) })); }
+    catch (x: any) { setErr(x?.message ?? String(x)); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <SectionCard
+      className="delivery-panel"
+      title={t('فرم ۱۸ — صورت‌جلسهٔ تحویل برنامه به هلدینگ')}
+      icon={<ClipboardCheck size={16} />}
+      description={t('فهرست پنج‌قلمی تحویل (بخش ۲۸.۱ سند) با شکل تحویل و گیرندهٔ هلدینگ، فرآیند هفت‌گام تحویل و امضای طرفین.')}
+      actions={<button className="btn btn-ghost btn-sm" onClick={load}><RefreshCw size={13} /> {t('بازخوانی')}</button>}
+    >
+      {err && <ErrorCard message={err} />}
+      {data && (<>
+        <div className="pmr-stats">
+          <span className={`chip ${data.allDelivered ? 'success' : 'warning'}`}>{t('اقلام تحویل‌شده')}: {fmtN(data.delivered)} {t('از')} {fmtN(data.totalItems)}</span>
+          <span className="chip neutral">{t('مراحل تحویل')}: {fmtN(data.doneSteps)} {t('از')} {fmtN(data.totalSteps)}</span>
+          {data.locked ? <span className="chip danger">{t('قفل — امضاشده')}</span> : null}
+        </div>
+
+        <div className="table-wrap"><table className="delivery-table">
+          <thead><tr>
+            <th>{t('قلم تحویل')}</th><th>{t('شکل تحویل')}</th><th>{t('گیرندهٔ هلدینگ')}</th>
+            <th>{t('وضعیت')}</th><th>{t('اقدام')}</th>
+          </tr></thead>
+          <tbody>
+            {data.items.map((it: any) => (
+              <tr key={it.key}>
+                <td className="t-primary">{t(it.title)}</td>
+                <td className="t-muted">{t(it.form)}</td>
+                <td>{it.receiver}</td>
+                <td>{it.status === 'DELIVERED'
+                  ? <span className="chip success">{t('تحویل‌شده')}{it.deliveredAt ? ` — ${fmtDT(it.deliveredAt)?.split('،')[0] ?? ''}` : ''}</span>
+                  : <span className="chip">{t('در انتظار تحویل')}</span>}</td>
+                <td>{it.status === 'DELIVERED' || data.locked || !writable ? '—' : (
+                  <button type="button" className="srip-button" style={{ padding: '3px 10px' }} disabled={busy}
+                    onClick={() => deliverItem(it.key)}>{t('تحویل انجام شد')}</button>
+                )}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table></div>
+
+        <div className="dlv-steps-wrap">
+          <b className="dlv-steps-title">{t('فرآیند هفت‌گام تحویل')}</b>
+          <ol className="mig-steps-list">
+            {data.steps.map((st: any) => (
+              <li key={st.key} className={`mig-step ${st.done ? 'done' : ''} ${st.key === data.currentStepKey ? 'current' : ''}`}>
+                <span className="mig-step-order">{fmtN(st.order)}</span>
+                <span className="mig-step-title">{t(st.title)}</span>
+                {st.done ? <CheckCircle2 size={14} /> : st.key === data.currentStepKey && writable && !data.locked ? (
+                  <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => completeStep(st.key)}>{t('تکمیل مرحله')}</button>
+                ) : null}
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        {data.locked ? (
+          <div className="dlv-signed" role="status">
+            <CheckCircle2 size={16} />
+            <span><b>{t('صورت‌جلسه امضا و قفل شد')}.</b> {t('نمایندهٔ برنامه')}: {data.signature?.programRep} · {t('نمایندهٔ هلدینگ')}: {data.signature?.holdingRep} — {fmtDT(data.signature?.signedAt) ?? ''}</span>
+          </div>
+        ) : data.allDelivered ? (
+          <form className="dlv-sign-form" onSubmit={(e) => { e.preventDefault(); sign(); }}>
+            <label className="field">
+              <span>{t('نمایندهٔ برنامه')} *</span>
+              <input value={reps.programRep} onChange={(e) => setReps(r => ({ ...r, programRep: e.target.value }))} required minLength={2}
+                placeholder={t('مثلاً: مدیر پروژه')} />
+            </label>
+            <label className="field">
+              <span>{t('نمایندهٔ هلدینگ')} *</span>
+              <input value={reps.holdingRep} onChange={(e) => setReps(r => ({ ...r, holdingRep: e.target.value }))} required minLength={2}
+                placeholder={t('مثلاً: مدیرعامل هلدینگ')} />
+            </label>
+            <button type="submit" className="srip-button primary" disabled={busy}>{t('امضای صورت‌جلسه')}</button>
+          </form>
+        ) : (
+          <p className="field-hint">{t('امضا فقط پس از تحویل همهٔ اقلام ممکن است')}: {fmtN(data.delivered)} {t('از')} {fmtN(data.totalItems)}</p>
+        )}
+        <p className="field-hint">{t('امضا فقط پس از تحویل همهٔ اقلام ممکن است و پس از امضای طرفین، صورت‌جلسه قفل می‌شود.')}</p>
+      </>)}
+    </SectionCard>
+  );
+}
+
   return (
     <main className="feature-page">
       <PageHeader
@@ -505,6 +622,9 @@ export default function Reports() {
 
       {/* گزارش ماهانهٔ استاندارد — گام ۲.۷ (فرم ۱۵ سند) */}
       <MonthlyReportCard />
+
+      {/* صورت‌جلسهٔ تحویل — گام ۴.۵ (فرم ۱۸ سند؛ بخش ۲۸.۱) */}
+      <DeliveryCard />
 
       <section className="panel" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <label style={{ flex: '1 1 320px' }}>

@@ -1788,6 +1788,66 @@ section('گام ۴.۴ — فرم ۱۴: تأیید هزینه پیش از تعه�
     && demoList.body.items.every((x) => x.id.startsWith('ex-d')));
 }
 
+/* ═════════════════ گام ۴.۵ — فرم ۱۸: صورت‌جلسهٔ تحویل (بخش ۲۸.۱ + پیوست ب) ═════════════════ */
+section('گام ۴.۵ — فرم ۱۸: صورت‌جلسهٔ تحویل');
+{
+  const ptok = (await api('/auth/login', { method: 'POST', body: { email: 'pars', password: 'pars1234' } })).body?.accessToken;
+
+  const list = await api('/program/delivery', { token: ptok });
+  check('GET /program/delivery → پنج قلم تحویل ۲۸.۱ سند', list.status === 200 && list.body.items.length === 5);
+  check('هر قلم با شکل تحویل و گیرندهٔ هلدینگ',
+    list.body.items.every((i) => i.form.length > 3 && i.receiver.length > 3));
+  check('بذر پارس: ۲ قلم تحویل‌شده + ۳ در انتظار · ۲ مرحله از ۷ · بدون امضا',
+    list.body.delivered === 2 && list.body.allDelivered === false && list.body.doneSteps === 2 && list.body.locked === false);
+  check('مرحلهٔ جاری فرآیند هفت‌گام = انتقال اقلام (۳)',
+    list.body.currentStepKey === 'transfer');
+  check('قاعدهٔ فرم ۱۸ در پاسخ سرور: امضا فقط پس از تحویل همهٔ اقلام',
+    String(list.body.rule).includes('امضا فقط پس از تحویل همهٔ اقلام'));
+
+  /* اقلام: تکرار تحویل → ۴۰۰ */
+  const again = await api('/program/delivery/items/data-export', { method: 'POST', token: ptok, body: {} });
+  check('تحویل دوبارهٔ قلم تحویل‌شده → ۴۰۰', again.status === 400);
+  const noPerm = await api('/program/delivery/items/brand-assets', { method: 'POST', token: (await login('client')).body?.accessToken, body: {} });
+  check('کاربر بدون program.write → ۴۰۳', noPerm.status === 403);
+
+  /* امضا پیش از تحویل همهٔ اقلام → ۴۰۰ با فهرست اقلام باز */
+  const signEarly = await api('/program/delivery/sign', { method: 'POST', token: ptok, body: { programRep: 'مدیر پروژه', holdingRep: 'مدیرعامل هلدینگ' } });
+  check('امضا پیش از تحویل همهٔ اقلام → ۴۰۰ با فهرست اقلام تحویل‌نشده',
+    signEarly.status === 400 && signEarly.body.message.includes('رجیستری دارایی برند'));
+
+  /* مراحل ترتیبی: پرش → ۴۰۰ · جاری → ۲۰۰ */
+  const skip = await api('/program/delivery/steps/verify', { method: 'POST', token: ptok });
+  check('پرش از مرحلهٔ جاری → ۴۰۰ (ترتیبی)', skip.status === 400 && skip.body.message.includes('ترتیبی'));
+  const step3 = await api('/program/delivery/steps/transfer', { method: 'POST', token: ptok });
+  check('تکمیل مرحلهٔ جاری → ۳ از ۷', step3.status === 200 && step3.body.doneSteps === 3);
+
+  /* تحویل سه قلم باقی‌مانده → همه تحویل */
+  for (const k of ['brand-assets', 'media-plan', 'training']) {
+    await api(`/program/delivery/items/${k}`, { method: 'POST', token: ptok, body: { note: 'تحویل تست باتری' } });
+  }
+  const all = await api('/program/delivery', { token: ptok });
+  check('تحویل سه قلم باقی‌مانده → ۵ از ۵ و آمادهٔ امضا',
+    all.body.delivered === 5 && all.body.allDelivered === true && all.body.locked === false);
+
+  /* امضا: بدون طرفین → ۴۰۰ · کامل → قفل */
+  const noReps = await api('/program/delivery/sign', { method: 'POST', token: ptok, body: { programRep: '', holdingRep: '' } });
+  check('امضا بدون نمایندگان طرفین → ۴۰۰', noReps.status === 400);
+  const signed = await api('/program/delivery/sign', { method: 'POST', token: ptok, body: { programRep: 'مدیر پروژه', holdingRep: 'مدیرعامل هلدینگ' } });
+  check('امضای طرفین → قفل صورت‌جلسه',
+    signed.status === 200 && signed.body.locked === true && signed.body.signature.programRep === 'مدیر پروژه' && !!signed.body.signature.signedAt);
+  const signAgain = await api('/program/delivery/sign', { method: 'POST', token: ptok, body: { programRep: 'x', holdingRep: 'y' } });
+  check('امضای دوباره → ۴۰۰', signAgain.status === 400);
+  const afterLock = await api('/program/delivery/steps/verify', { method: 'POST', token: ptok });
+  check('تغییر مرحله پس از قفل → ۴۰۰', afterLock.status === 400);
+
+  /* جداسازی مستأجر: دنیای دمو امضاشده و قفل است */
+  const demo = await api('/program/delivery', { token: (await login(OWNER.email)).body?.accessToken });
+  check('دنیای دمو: همهٔ اقلام تحویل و صورت‌جلسه امضاشده (قفل)',
+    demo.status === 200 && demo.body.allDelivered === true && demo.body.locked === true && demo.body.doneSteps === 7);
+  const demoSign = await api('/program/delivery/sign', { method: 'POST', token: (await login(OWNER.email)).body?.accessToken, body: { programRep: 'a', holdingRep: 'b' } });
+  check('امضا در دنیای قفل‌شدهٔ دمو → ۴۰۰', demoSign.status === 400);
+}
+
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
 if (failures.length) { console.log(`  Failed: ${failures.join(' | ')}`); }

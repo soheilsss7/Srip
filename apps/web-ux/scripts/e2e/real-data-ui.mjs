@@ -501,6 +501,61 @@ try {
   await page2.evaluate(() => { document.querySelector('.modal-close')?.click(); });
   await new Promise(r => setTimeout(r, 500));
 
+  /* ═══ گام ۴.۵ — فرم ۱۸: صورت‌جلسهٔ تحویل در /reports ═══ */
+  await page2.goto(`${BASE}/reports`, { waitUntil: 'networkidle0', timeout: 90000 });
+  await page2.waitForSelector('.delivery-panel .delivery-table', { timeout: 30000 });
+  await new Promise(r => setTimeout(r, 1200));
+  const dv0 = await page2.evaluate(() => ({
+    hasPanel: [...document.querySelectorAll('h2')].some(h => (h.textContent ?? '').includes('صورت‌جلسهٔ تحویل')),
+    rows: document.querySelectorAll('.delivery-panel tbody tr').length,
+    delivered: document.querySelectorAll('.delivery-panel tbody tr .chip.success').length,
+    deliverBtns: document.querySelectorAll('.delivery-panel tbody button').length,
+    steps: document.querySelectorAll('.delivery-panel .mig-step').length,
+    stepsDone: document.querySelectorAll('.delivery-panel .mig-step.done').length,
+    currentStep: (document.querySelector('.delivery-panel .mig-step.current .mig-step-title')?.textContent ?? ''),
+    hint: (document.querySelector('.delivery-panel .field-hint')?.textContent ?? '').includes('امضا فقط پس از تحویل همهٔ اقلام'),
+  }));
+  ok('فرم ۱۸: پنل صورت‌جلسهٔ تحویل با پنج قلم ۲۸.۱ سند', dv0.hasPanel && dv0.rows === 5, `rows=${dv0.rows}`);
+  ok('فرم ۱۸: بذر پارس — ۲ قلم تحویل‌شده + ۳ دکمهٔ «تحویل انجام شد»', dv0.delivered === 2 && dv0.deliverBtns === 3, `delivered=${dv0.delivered} btns=${dv0.deliverBtns}`);
+  ok('فرم ۱۸: فرآیند هفت‌گام — ۲ انجام‌شده و مرحلهٔ جاری «انتقال اقلام»',
+    dv0.steps === 7 && dv0.stepsDone === 2 && dv0.currentStep.includes('انتقال'), `steps=${dv0.steps} done=${dv0.stepsDone} cur=${dv0.currentStep}`);
+  ok('فرم ۱۸: قاعدهٔ امضا زیر جدول (فقط پس از تحویل همهٔ اقلام)', dv0.hint);
+  await (await page2.$('.delivery-panel')).screenshot({ path: '/home/user/Srip/docs/screenshots/delivery/01-form18-items.png' });
+
+  /* تحویل سه قلم باقی‌مانده → فرم امضای طرفین */
+  for (let i = 0; i < 3; i++) {
+    await page2.evaluate(() => { [...document.querySelectorAll('.delivery-panel tbody button')].find(b => (b.textContent ?? '').includes('تحویل انجام شد'))?.click(); });
+    await new Promise(r => setTimeout(r, 2500));
+  }
+  const dv1 = await page2.evaluate(() => ({
+    delivered: document.querySelectorAll('.delivery-panel tbody tr .chip.success').length,
+    deliverBtns: document.querySelectorAll('.delivery-panel tbody button').length,
+    signForm: !!document.querySelector('.dlv-sign-form'),
+    signBtn: [...document.querySelectorAll('.delivery-panel button')].some(b => (b.textContent ?? '').trim() === 'امضای صورت‌جلسه'),
+  }));
+  ok('فرم ۱۸: تحویل سه قلم باقی‌مانده → ۵ از ۵ و فرم امضای طرفین',
+    dv1.delivered === 5 && dv1.deliverBtns === 0 && dv1.signForm && dv1.signBtn, JSON.stringify(dv1).slice(0, 80));
+
+  /* امضای طرفین → قفل */
+  await page2.evaluate(() => {
+    const setVal = (el, v) => { if (!el) return; const s = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set; s.call(el, v); el.dispatchEvent(new Event('input', { bubbles: true })); };
+    const inputs = [...document.querySelectorAll('.dlv-sign-form input')];
+    setVal(inputs[0], 'مدیر پروژه');
+    setVal(inputs[1], 'مدیرعامل هلدینگ');
+  });
+  await page2.evaluate(() => { [...document.querySelectorAll('.delivery-panel button')].find(b => (b.textContent ?? '').trim() === 'امضای صورت‌جلسه')?.click(); });
+  await new Promise(r => setTimeout(r, 3000));
+  const dv2 = await page2.evaluate(() => ({
+    signed: !!document.querySelector('.dlv-signed'),
+    text: (document.querySelector('.dlv-signed')?.textContent ?? '').replace(/\s+/g, ' ').trim(),
+    lockChip: [...document.querySelectorAll('.delivery-panel .pmr-stats .chip')].some(c => (c.textContent ?? '').includes('قفل')),
+    signFormGone: !document.querySelector('.dlv-sign-form'),
+    stepBtns: document.querySelectorAll('.delivery-panel .mig-step button').length,
+  }));
+  ok('فرم ۱۸: امضای طرفین → مهر امضا + چیپ قفل و حذف همهٔ کنش‌ها',
+    dv2.signed && dv2.text.includes('مدیرعامل هلدینگ') && dv2.lockChip && dv2.signFormGone && dv2.stepBtns === 0, JSON.stringify(dv2).slice(0, 90));
+  await (await page2.$('.delivery-panel')).screenshot({ path: '/home/user/Srip/docs/screenshots/delivery/02-form18-signed.png' });
+
   await page2.close();
 
   /* ═══ سناریوی ۳ (فقط بیلد استاتیک): ۴۰۴ ریشهٔ سایت نباید حلقهٔ ریدایرکت بسازد ═══
