@@ -1692,6 +1692,56 @@ section('گام ۴.۲ — فرم ۸ و ۷: تقویم انتشار رسانه + 
     && !demoList.body.items.some((c) => c.id.startsWith('pc-') && !c.id.startsWith('pc-d')));
 }
 
+/* ═════════════════ گام ۴.۳ — فرم ۶: رجیستری دارایی برند (پیوست ب) ═════════════════ */
+section('گام ۴.۳ — فرم ۶: رجیستری دارایی برند');
+{
+  const ptok = (await api('/auth/login', { method: 'POST', body: { email: 'pars', password: 'pars1234' } })).body?.accessToken;
+
+  const list = await api('/program/brand-assets', { token: ptok });
+  check('GET /program/brand-assets → هفت دارایی بذر پارس', list.status === 200 && list.body.items.length === 7);
+  check('آمار رجیستری: ۴ فعال + ۳ در تدوین + ۱ بازبینی معوق',
+    list.body.stats.active === 4 && list.body.stats.inProgress === 3 && list.body.stats.overdue === 1);
+  const web = list.body.items.find((x) => x.id === 'ba-5');
+  check('وب‌سایت هلدینگ: بازبینی معوق با روزهای منفی', web.overdue === true && web.daysLeft < 0, `daysLeft=${web.daysLeft}`);
+  check('قاعدهٔ فرم ۶ در پاسخ سرور: دارایی بدون مالک ثبت نمی‌شود', String(list.body.rule).includes('بدون مالک'));
+
+  const noOwner = await api('/program/brand-assets', { method: 'POST', token: ptok, body: { name: 'دارایی بی‌مالک', version: '۱٫۰', location: 'مرکز دانش' } });
+  check('ثبت بدون مالک → ۴۰۰ (قاعدهٔ پیوست ب)', noOwner.status === 400 && noOwner.body.message.includes('بدون مالک'));
+  const shortName = await api('/program/brand-assets', { method: 'POST', token: ptok, body: { name: 'ب', version: '۱٫۰', ownerRole: 'مدیر محتوا', location: 'مرکز دانش' } });
+  check('عنوان کوتاه → ۴۰۰', shortName.status === 400);
+  const noVersion = await api('/program/brand-assets', { method: 'POST', token: ptok, body: { name: 'دارایی بدون نسخه', ownerRole: 'مدیر محتوا', location: 'مرکز دانش' } });
+  check('ثبت بدون نسخهٔ جاری → ۴۰۰', noVersion.status === 400 && noVersion.body.message.includes('نسخه'));
+  const noLocation = await api('/program/brand-assets', { method: 'POST', token: ptok, body: { name: 'دارایی بدون محل', version: '۱٫۰', ownerRole: 'مدیر محتوا' } });
+  check('ثبت بدون محل نگهداری → ۴۰۰', noLocation.status === 400);
+  const badDate = await api('/program/brand-assets', { method: 'POST', token: ptok, body: { name: 'دارایی تاریخ خراب', version: '۱٫۰', ownerRole: 'مدیر محتوا', location: 'مرکز دانش', reviewAt: '2026-02-31' } });
+  check('تاریخ بازبینی نامعتبر (۳۱ فوریه) → ۴۰۰', badDate.status === 400);
+  const badStatus = await api('/program/brand-assets', { method: 'POST', token: ptok, body: { name: 'دارایی وضعیت خراب', version: '۱٫۰', ownerRole: 'مدیر محتوا', location: 'مرکز دانش', status: 'OLD' } });
+  check('وضعیت خارج از «در تدوین/فعال» → ۴۰۰', badStatus.status === 400);
+
+  /* چارت سازمان دمو (org-1) ۲۲ نقش دارد — مالک باید از چارت باشد */
+  const otok = (await login(OWNER.email)).body?.accessToken;
+  const offChart = await api('/program/brand-assets', { method: 'POST', token: otok, body: { name: 'دارایی دمو', version: '۱', ownerRole: 'نقش خیالی', location: 'مرکز دانش' } });
+  check('مالک خارج از چارت ۲۲نقشی سازمان → ۴۰۰', offChart.status === 400 && offChart.body.message.includes('چارت'));
+  const noPerm = await api('/program/brand-assets', { method: 'POST', token: (await login('client')).body?.accessToken, body: { name: 'دارایی مشتری', version: '۱', ownerRole: 'مدیر', location: 'مرکز دانش' } });
+  check('کاربر بدون program.write → ۴۰۳', noPerm.status === 403);
+
+  /* چرخهٔ کامل: ثبت → ویرایش نسخه → مهر بازبینی فصلی */
+  const created = await api('/program/brand-assets', { method: 'POST', token: ptok,
+    body: { name: 'کاتالوگ تست باتری ۴.۳', version: '1.0', ownerRole: 'مدیر توسعه کسب‌وکار', location: 'درایو تیم توسعه', status: 'ACTIVE', reviewAt: '2026-11-15' } });
+  check('POST معتبر → 201 فعال با بازبینی آینده (بدون معوقی)',
+    created.status === 201 && created.body.status === 'ACTIVE' && created.body.overdue === false && created.body.daysLeft > 0);
+  const patched = await api(`/program/brand-assets/${created.body.id}`, { method: 'PATCH', token: ptok, body: { version: '1.1', status: 'IN_PROGRESS' } });
+  check('PATCH نسخه و وضعیت → 200', patched.status === 200 && patched.body.version === '1.1' && patched.body.status === 'IN_PROGRESS');
+  const reviewed = await api(`/program/brand-assets/${created.body.id}/review`, { method: 'POST', token: ptok });
+  check('مهر بازبینی → ۹۰ روز اعتبار + تاریخ آخرین بازبینی',
+    reviewed.status === 200 && reviewed.body.daysLeft >= 89 && reviewed.body.daysLeft <= 90 && !!reviewed.body.lastReviewedAt && reviewed.body.overdue === false);
+  const crossPatch = await api('/program/brand-assets/ba-d1', { method: 'PATCH', token: ptok, body: { version: '9.9' } });
+  check('ویرایش دارایی دنیای دمو با توکن پارس → ۴۰۴', crossPatch.status === 404);
+  const demoList = await api('/program/brand-assets', { token: otok });
+  check('دنیای دمو: فقط دو دارایی بذر خودش (نه رجیستری پارس)', demoList.status === 200 && demoList.body.items.length === 2
+    && demoList.body.items.every((x) => x.id.startsWith('ba-d')));
+}
+
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
 if (failures.length) { console.log(`  Failed: ${failures.join(' | ')}`); }

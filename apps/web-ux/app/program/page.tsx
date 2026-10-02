@@ -9,7 +9,7 @@ import {
 } from '../_components/page-ui';
 import {
   Activity, AlertTriangle, ArrowLeft, CheckCircle2, ClipboardList, Gauge, GitBranch,
-  LayoutDashboard, ListChecks, Plus, RefreshCw, ShieldAlert, Target, TrendingUp, X,
+  LayoutDashboard, ListChecks, Package, Plus, RefreshCw, ShieldAlert, Target, TrendingUp, X,
 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -34,6 +34,10 @@ const MIGRATION_FA = lt<Record<string, string>>({ KEEP: t('نگهداری'), MIG
 const MIGRATION_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = { KEEP: 'info', MIGRATE: 'warning', SHUTDOWN: 'danger' };
 const PRIORITY_FA = lt<Record<string, string>>({ KEEP: t('حفظ'), REDEFINE: t('بازتعریف'), HIRE: t('جذب') });
 const CHANNEL_ACTION_FA = lt<Record<string, string>>({ ASSIGN_OWNER: t('واگذاری به مالک'), TRANSFER: t('انتقال'), SHUTDOWN: t('خاموش‌سازی') });
+/* گام ۴.۳ — فرم ۶: وضعیت دارایی برند (رجیستری تب آمادگی) */
+const ASSET_STATUS_FA = lt<Record<string, string>>({ IN_PROGRESS: t('در تدوین'), ACTIVE: t('فعال — نسخهٔ جاری') });
+const ASSET_STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> = { IN_PROGRESS: 'warning', ACTIVE: 'success' };
+const ASSET_FORM_EMPTY = { name: '', version: '', ownerRole: '', location: '', status: 'IN_PROGRESS', reviewAt: '' };
 const SEASON_STATE_FA = lt<Record<string, string>>({ PASSED: t('دروازه پاس شد'), IN_PROGRESS: t('در جریان'), PENDING: t('در انتظار') });
 const SEASON_STATE_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = { PASSED: 'success', IN_PROGRESS: 'warning', PENDING: 'neutral' };
 const AUDIT_TABS = lt<Array<[string, string]>>([
@@ -77,6 +81,12 @@ export default function ProgramPage() {
   const [kpiFormError, setKpiFormError] = useState('');
   const [metrics, setMetrics] = useState<any[]>([]);
   const [kpiForm, setKpiForm] = useState({ title: '', category: '', owner: '', period: '', target: '', metric: '', targetValue: '' });
+  /* گام ۴.۳ — فرم ۶: رجیستری دارایی برند (تب آمادگی) */
+  const [assets, setAssets] = useState<any | null>(null);
+  const [assetCreateOpen, setAssetCreateOpen] = useState(false);
+  const [assetEdit, setAssetEdit] = useState<any | null>(null);
+  const [assetFormError, setAssetFormError] = useState('');
+  const [assetForm, setAssetForm] = useState(ASSET_FORM_EMPTY);
 
   const load = useCallback(async (which: string) => {
     setLoading(true); setError('');
@@ -96,6 +106,9 @@ export default function ProgramPage() {
 
   /* تغییر فیلتر ریسک (وضعیت/درجه) → بازخوانی همان تب */
   useEffect(() => { if (tab === 'risks') load('risks'); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [riskFilter]);
+  /* گام ۴.۳ — رجیستری دارایی برند جدا از نمرهٔ آمادگی بار می‌شود (فرم ۶ / پیوست ب) */
+  const reloadAssets = useCallback(async () => { try { setAssets(await api<any>('/program/brand-assets')); } catch { /* در نبود مجوز، پنل مخفی می‌شود */ } }, []);
+  useEffect(() => { if (tab === 'readiness') reloadAssets(); }, [tab, reloadAssets]);
 
   const refresh = () => load(tab);
 
@@ -157,6 +170,28 @@ export default function ProgramPage() {
       setKpiForm({ title: '', category: '', owner: '', period: '', target: '', metric: '', targetValue: '' });
       load('kpis'); load('overview');
     } catch (x) { setKpiFormError((x as Error).message); }
+    finally { setBusy(false); }
+  };
+
+  /* گام ۴.۳ — فرم ۶: ثبت/ویرایش دارایی برند + مهر بازبینی فصلی */
+  const openAssetCreate = () => { setAssetCreateOpen(true); setAssetEdit(null); setAssetFormError(''); setAssetForm({ ...ASSET_FORM_EMPTY }); };
+  const openAssetEdit = (row: any) => { setAssetEdit(row); setAssetCreateOpen(false); setAssetFormError('');
+    setAssetForm({ name: row.name, version: row.version, ownerRole: row.ownerRole, location: row.location, status: row.status, reviewAt: row.reviewAt ? String(row.reviewAt).slice(0, 10) : '' }); };
+  const submitAsset = async () => {
+    setAssetFormError(''); setBusy(true);
+    try {
+      if (assetEdit) await api(`/program/brand-assets/${assetEdit.id}`, { method: 'PATCH', body: JSON.stringify(assetForm) });
+      else await api('/program/brand-assets', { method: 'POST', body: JSON.stringify(assetForm) });
+      setAssetCreateOpen(false); setAssetEdit(null); await reloadAssets();
+    } catch (x) { setAssetFormError((x as Error).message); }
+    finally { setBusy(false); }
+  };
+  const reviewAsset = async () => {
+    setAssetFormError(''); setBusy(true);
+    try {
+      await api(`/program/brand-assets/${assetEdit.id}/review`, { method: 'POST' });
+      setAssetEdit(null); await reloadAssets();
+    } catch (x) { setAssetFormError((x as Error).message); }
     finally { setBusy(false); }
   };
 
@@ -498,6 +533,46 @@ export default function ProgramPage() {
               </SectionCard>
             ))}
           </div>
+
+          {/* ═══════════ فرم ۶ — رجیستری دارایی برند (پیوست ب سند) ═══════════ */}
+          <SectionCard className="brand-assets" title={t('فرم ۶ — رجیستری دارایی برند')} icon={<Package size={17} />}
+            description={t('هر دارایی برند — برندبوک، هویت بصری، تصویر مدیران، قالب ارائه، وب‌سایت و… — با نسخهٔ جاری، مالک، محل نگهداری، وضعیت و تاریخ بازبینی ثبت می‌شود.')}
+            actions={writable ? <button className="srip-button primary" onClick={openAssetCreate}><Plus size={14} /> {t('ثبت دارایی برند')}</button> : undefined}>
+            {assets ? (<>
+              <div className="chip-row" style={{ margin: '0 0 10px' }}>
+                <span className="chip neutral">{t('کل')}: {faNum(assets.stats.total)}</span>
+                <span className="chip success">{t('فعال — نسخهٔ جاری')}: {faNum(assets.stats.active)}</span>
+                <span className="chip warning">{t('در تدوین')}: {faNum(assets.stats.inProgress)}</span>
+                <span className="chip danger">{t('بازبینی معوق')}: {faNum(assets.stats.overdue)}</span>
+              </div>
+              {assets.items.length ? (
+                <div className="table-wrap"><table className="asset-table">
+                  <thead><tr>
+                    <th>{t('دارایی برند')}</th><th>{t('نسخهٔ جاری')}</th><th>{t('مالک')}</th>
+                    <th>{t('محل نگهداری')}</th><th>{t('وضعیت')}</th><th>{t('بازبینی بعدی')}</th>
+                  </tr></thead>
+                  <tbody>
+                    {assets.items.map((a: any) => (
+                      <tr key={a.id} className={`row-click ${a.overdue ? 'asset-due' : ''}`} onClick={() => writable && openAssetEdit(a)}
+                        title={writable ? t('کلیک: ویرایش دارایی یا ثبت بازبینی') : t('برای ویرایش به مجوز برنامه نیاز دارید')}>
+                        <td className="t-primary">{a.name}</td>
+                        <td><span className="asset-ver">{t('نسخه')} {faNum(a.version)}</span></td>
+                        <td>{a.ownerRole}</td>
+                        <td className="t-muted">{a.location}</td>
+                        <td><StatusBadge tone={ASSET_STATUS_TONE[a.status]}>{ASSET_STATUS_FA[a.status]}</StatusBadge></td>
+                        <td>{a.overdue ? <span className="chip danger">{t('بازبینی معوق')}</span>
+                          : a.reviewAt ? <span className="t-muted">{faDate(a.reviewAt)}</span> : '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table></div>
+              ) : (
+                <EmptyV4 icon={<Package size={22} />} title={t('هنوز دارایی برندی ثبت نشده است')}
+                  description={t('رجیستری دارایی با نسخه، مالک، محل نگهداری و تاریخ بازبینی — از «ثبت دارایی برند» آغاز کنید.')} />
+              )}
+              <p className="field-hint">{t('هر دارایی برند با نسخهٔ جاری، مالک، محل نگهداری، وضعیت و تاریخ بازبینی ثبت می‌شود (فرم ۶ / پیوست ب)؛ دارایی بدون مالک ثبت نمی‌شود و بازبینی دوره‌ای هر فصل (۹۰ روز) روی آن مهر می‌شود.')}</p>
+            </>) : <Loading />}
+          </SectionCard>
         </>
       )}
 
@@ -962,6 +1037,65 @@ export default function ProgramPage() {
             </>}
           </div>
         )}
+      </Modal>
+      {/* ═══════════ مودال: ثبت/ویرایش دارایی برند (فرم ۶ / پیوست ب) ═══════════ */}
+      <Modal open={assetCreateOpen || !!assetEdit}
+        title={assetEdit ? t('ویرایش دارایی برند') : t('ثبت دارایی برند (فرم ۶)')}
+        onClose={() => { setAssetCreateOpen(false); setAssetEdit(null); }}
+        description={t('دارایی بدون مالک ثبت نمی‌شود — مالک یکی از نقش‌های چارت سازمان است و بازبینی دوره‌ای هر فصل (۹۰ روز) روی رجیستری مهر می‌شود.')}
+        footer={<>
+          {assetEdit ? <button type="button" className="srip-button" disabled={busy} onClick={reviewAsset}><RefreshCw size={14} /> {t('ثبت بازبینی انجام‌شده (۹۰ روز)')}</button> : null}
+          <button className="srip-button" onClick={() => { setAssetCreateOpen(false); setAssetEdit(null); }}><X size={14} /> {t('انصراف')}</button>
+          <button type="submit" form="asset-form" className="srip-button primary" disabled={busy}>{busy ? t('در حال ذخیره…') : t('ثبت دارایی')}</button>
+        </>}>
+        <form id="asset-form" className="form-grid" onSubmit={(e) => { e.preventDefault(); submitAsset(); }}>
+          <label className="field">
+            <span>{t('عنوان دارایی')} *</span>
+            <input value={assetForm.name} onChange={(e) => setAssetForm(f => ({ ...f, name: e.target.value }))} required minLength={3}
+              placeholder={t('مثلاً: برندبوک و راهنمای هویت بصری')} />
+          </label>
+          <div className="field-pair">
+            <label className="field">
+              <span>{t('نسخهٔ جاری')} *</span>
+              <input value={assetForm.version} onChange={(e) => setAssetForm(f => ({ ...f, version: e.target.value }))} required
+                placeholder={t('مثلاً: ۲٫۱')} />
+            </label>
+            <label className="field">
+              <span>{t('وضعیت')} *</span>
+              <select value={assetForm.status} onChange={(e) => setAssetForm(f => ({ ...f, status: e.target.value }))}>
+                {Object.entries(ASSET_STATUS_FA).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+              </select>
+            </label>
+          </div>
+          <label className="field">
+            <span>{t('مالک دارایی')} *</span>
+            {(assets?.roles ?? []).length ? (
+              <select value={assetForm.ownerRole} onChange={(e) => setAssetForm(f => ({ ...f, ownerRole: e.target.value }))} required>
+                <option value="">{t('انتخاب کنید…')}</option>
+                {(assets?.roles ?? []).map((r: string) => <option key={r} value={r}>{r}</option>)}
+              </select>
+            ) : (
+              <input value={assetForm.ownerRole} onChange={(e) => setAssetForm(f => ({ ...f, ownerRole: e.target.value }))} required
+                placeholder={t('نقش مالک — چارت سازمان در تنظیمات برنامه تعریف نشده')} />
+            )}
+          </label>
+          <div className="field-pair">
+            <label className="field">
+              <span>{t('محل نگهداری')} *</span>
+              <input value={assetForm.location} onChange={(e) => setAssetForm(f => ({ ...f, location: e.target.value }))} required
+                placeholder={t('مثلاً: مرکز دانش › پوشهٔ برند')} />
+            </label>
+            <label className="field">
+              <span>{t('تاریخ بازبینی بعدی (میلادی)')}</span>
+              <input value={assetForm.reviewAt} onChange={(e) => setAssetForm(f => ({ ...f, reviewAt: e.target.value }))}
+                placeholder="YYYY-MM-DD" />
+            </label>
+          </div>
+          {assetEdit?.lastReviewedAt ? (
+            <p className="field-hint">{t('آخرین بازبینی')}: {faDate(assetEdit.lastReviewedAt)}</p>
+          ) : null}
+          {assetFormError ? <div className="alert-banner danger" role="alert"><AlertTriangle size={16} /><span>{assetFormError}</span></div> : null}
+        </form>
       </Modal>
     </main>
   );

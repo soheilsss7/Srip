@@ -19,7 +19,7 @@ const PORT = Number(process.env.MOCK_API_PORT || 4000);
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.10.02.01';
+const DEMO_MOCK_VERSION = '2026.10.02.02';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -6967,6 +6967,67 @@ function validateContentBody(b){
   return null;
 }
 
+/* ═══════════════ گام ۴.۳ — فرم ۶: رجیستری دارایی برند (پیوست ب سند) ═══════════════
+   هر دارایی برند سازمان — برندبوک، هویت بصری، تصویر مدیران، قالب ارائه، وب‌سایت و…
+   — با نسخهٔ جاری، مالک، محل نگهداری، وضعیت و تاریخ بازبینی ثبت می‌شود.
+   قواعد ثابت پیوست ب: دارایی بدون مالک ثبت نمی‌شود؛ مالک از چارت سازمان است و
+   بازبینی دوره‌ای هر فصل (۹۰ روز) روی رجیستری مهر می‌شود. */
+const ASSET_STATUS_FA={IN_PROGRESS:'در تدوین',ACTIVE:'فعال — نسخهٔ جاری'};
+const ASSET_REVIEW_DAYS=90; /* آهنگ بازبینی فصلی — هم‌ارز اعتبار ۹۰ روزهٔ پروندهٔ شناخت */
+function ensureBrandAssetsSeed(){
+  if((DB.brandAssets??[]).some(a=>a.organizationId==='org-pars')) return;
+  const ago=(d)=>new Date(Date.now()-d*86400000).toISOString();
+  const inD=(d)=>new Date(Date.now()+d*86400000).toISOString();
+  const mk=(id,org,name,version,ownerRole,location,status,reviewIn,reviewedAgo)=>({
+    id,organizationId:org,name,version,ownerRole,location,status,
+    reviewAt:reviewIn==null?null:inD(reviewIn),lastReviewedAt:reviewedAgo==null?null:ago(reviewedAgo),
+    createdAt:ago(120),updatedAt:ago(6)});
+  DB.brandAssets=[
+    /* جهان واقعی پارس — دارایی‌های برندِ لایه‌های آمادگی (بخش ۱۲ سند) */
+    mk('ba-1','org-pars','برندبوک و راهنمای هویت بصری','۲٫۱','مدیر هنری','مرکز دانش › پوشهٔ برند','ACTIVE',40,50),
+    mk('ba-2','org-pars','هویت بصری (لوگو، پالت، تایپوگرافی)','۳٫۰','مدیر هنری','مرکز دانش › پوشهٔ برند','ACTIVE',40,50),
+    mk('ba-3','org-pars','تصویر رسمی مدیران','۱٫۴','مدیر روابط عمومی','مرکز دانش › پروفایل‌ها','IN_PROGRESS',15,75),
+    mk('ba-4','org-pars','قالب یکدست ارائه','۲٫۰','مدیر محتوا','مرکز دانش › قالب‌ها','IN_PROGRESS',20,70),
+    mk('ba-5','org-pars','وب‌سایت هلدینگ','۱٫۹','مدیر محصول','میزبانی پلسک — دامنهٔ اصلی','ACTIVE',-7,97),
+    mk('ba-6','org-pars','پروفایل شرکت','۱٫۲','مدیر محصول','مرکز دانش › معرفی','ACTIVE',30,60),
+    mk('ba-7','org-pars','پوشهٔ ارائه','۰٫۹','مدیر توسعه کسب‌وکار','درایو تیم توسعه کسب‌وکار','IN_PROGRESS',25,65),
+    /* دنیای دمو */
+    mk('ba-d1','org-1','برندبوک نمونه','۱٫۰','مدیر روابط عمومی','مرکز دانش','ACTIVE',60,30),
+    mk('ba-d2','org-1','قالب ارائهٔ نمونه','۰٫۵','مدیر محتوا','درایو تیم محتوا','IN_PROGRESS',10,80),
+  ];
+}
+function brandAssetsFor(req){
+  ensureBrandAssetsSeed();
+  const ids=visibleOrgIds(req);
+  return (DB.brandAssets??[]).filter(a=>ids.includes(a.organizationId));
+}
+function brandAssetView(a){
+  const at=a.reviewAt?new Date(a.reviewAt).getTime():null;
+  const overdue=at!=null&&at<Date.now();
+  const daysLeft=at!=null?Math.ceil((at-Date.now())/86400000):null;
+  return {...a,statusFa:ASSET_STATUS_FA[a.status]??a.status,overdue,daysLeft};
+}
+function validateBrandAssetBody(b,chart){
+  const name=String(b.name??'').trim();
+  if(name.length<3) return {message:'عنوان دارایی را بنویسید (حداقل ۳ نویسه).'};
+  if(!String(b.version??'').trim()) return {message:'نسخهٔ جاری دارایی الزامی است (مثل ۲٫۱).'};
+  const owner=String(b.ownerRole??'').trim();
+  if(!owner) return {message:'دارایی برند بدون مالک ثبت نمی‌شود (فرم ۶ / پیوست ب سند).'};
+  if(chart.length&&!chart.includes(owner)) return {message:'مالک دارایی باید یکی از نقش‌های چارت سازمان شما باشد.'};
+  if(String(b.location??'').trim().length<2) return {message:'محل نگهداری دارایی را بنویسید (مثل: مرکز دانش › پوشهٔ برند).'};
+  const st=String(b.status??'IN_PROGRESS').toUpperCase();
+  if(!['IN_PROGRESS','ACTIVE'].includes(st)) return {message:'وضعیت دارایی باید «در تدوین» یا «فعال — نسخهٔ جاری» باشد.'};
+  const r=String(b.reviewAt??'').trim();
+  if(r){
+    const dm=/^(\d{4})-(\d{2})-(\d{2})/.exec(r);
+    if(!dm) return {message:'تاریخ بازبینی بعدی را به شکل YYYY-MM-DD وارد کنید.'};
+    const [y,mo,da]=[Number(dm[1]),Number(dm[2]),Number(dm[3])];
+    const dt=new Date(Date.UTC(y,mo-1,da));
+    if(dt.getUTCFullYear()!==y||dt.getUTCMonth()!==mo-1||dt.getUTCDate()!==da) return {message:'تاریخ بازبینی بعدی معتبر نیست (چنین روزی در تقویم وجود ندارد).'};
+  }
+  return null;
+}
+
 /* ═══════════════ گام ۲.۷ — گزارش ماهانهٔ استاندارد (فرم ۱۵؛ بخش ۲۶ سند) ═══════════════
    قالب ثابت گزارش ماهانه به مدیریت هلدینگ: خلاصهٔ مدیریتی، شاخص‌های کلیدی (زنده از
    بخش ۲۶)، ریسک‌های درجه بالا (زنده از بخش ۲۵)، انحراف‌های زمانی بیش از دو هفته و
@@ -13663,6 +13724,64 @@ const server=http.createServer(async(req,res)=>{
     row.status='PUBLISHED'; row.publishedAt=nowIso(); row.updatedAt=nowIso(); saveDb();
     audit(req,'UPDATE','Content',row.id,'PUBLISH',{title:row.title.slice(0,60)});
     return json(res,200,contentView(row));
+  }
+
+  /* ─────────────── گام ۴.۳ — فرم ۶: رجیستری دارایی برند (/program/brand-assets) ────────── */
+  if(is('/program/brand-assets')&&method==='GET'){
+    if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
+    const items=brandAssetsFor(req).map(brandAssetView);
+    return json(res,200,{items,
+      stats:{total:items.length,active:items.filter(a=>a.status==='ACTIVE').length,
+        inProgress:items.filter(a=>a.status==='IN_PROGRESS').length,
+        overdue:items.filter(a=>a.overdue).length},
+      roles:programSettingsFor(req).roles,
+      rule:'هر دارایی برند با نسخهٔ جاری، مالک، محل نگهداری، وضعیت و تاریخ بازبینی ثبت می‌شود (فرم ۶ / پیوست ب)؛ دارایی بدون مالک ثبت نمی‌شود و بازبینی دوره‌ای هر فصل (۹۰ روز) روی آن مهر می‌شود.'});
+  }
+  if(is('/program/brand-assets')&&method==='POST'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    const b=await readBody(req);
+    const err=validateBrandAssetBody(b,programSettingsFor(req).roles);
+    if(err) return json(res,400,err);
+    const row={id:`ba-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,
+      organizationId:primaryOrgId(authUser)??visibleOrgIds(req)[0]??PROGRAM_ORG_ID,
+      name:String(b.name).trim(),version:String(b.version).trim(),ownerRole:String(b.ownerRole).trim(),
+      location:String(b.location).trim(),status:String(b.status??'IN_PROGRESS').toUpperCase(),
+      reviewAt:String(b.reviewAt??'').trim()?new Date(String(b.reviewAt).trim()).toISOString():null,
+      lastReviewedAt:null,createdAt:nowIso(),updatedAt:nowIso()};
+    DB.brandAssets.push(row); saveDb();
+    audit(req,'CREATE','BrandAsset',row.id,'OK',{name:row.name.slice(0,60),version:row.version});
+    return json(res,201,brandAssetView(row));
+  }
+  const baRev=match('/program/brand-assets/:id/review');
+  if(baRev&&method==='POST'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    const row=brandAssetsFor(req).find(a=>a.id===baRev[0]);
+    if(!row) return json(res,404,{message:'دارایی برند یافت نشد یا خارج از محدودهٔ شماست.'});
+    const b=await readBody(req);
+    const days=Number(b?.reviewDays);
+    const d=Number.isFinite(days)&&days>0&&days<=365?days:ASSET_REVIEW_DAYS;
+    row.lastReviewedAt=nowIso();
+    row.reviewAt=new Date(Date.now()+d*86400000).toISOString();
+    row.updatedAt=nowIso(); saveDb();
+    audit(req,'UPDATE','BrandAsset',row.id,'REVIEW',{days:d});
+    return json(res,200,brandAssetView(row));
+  }
+  const baEdit=match('/program/brand-assets/:id');
+  if(baEdit&&method==='PATCH'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    const row=brandAssetsFor(req).find(a=>a.id===baEdit[0]);
+    if(!row) return json(res,404,{message:'دارایی برند یافت نشد یا خارج از محدودهٔ شماست.'});
+    const b=await readBody(req);
+    const merged={name:b.name??row.name,version:b.version??row.version,ownerRole:b.ownerRole??row.ownerRole,
+      location:b.location??row.location,status:b.status??row.status,reviewAt:b.reviewAt??row.reviewAt};
+    const err=validateBrandAssetBody(merged,programSettingsOf(row.organizationId).roles);
+    if(err) return json(res,400,err);
+    row.name=merged.name.trim();row.version=merged.version.trim();row.ownerRole=merged.ownerRole.trim();
+    row.location=merged.location.trim();row.status=String(merged.status).toUpperCase();
+    row.reviewAt=String(merged.reviewAt).trim()?new Date(String(merged.reviewAt).trim()).toISOString():null;
+    row.updatedAt=nowIso(); saveDb();
+    audit(req,'UPDATE','BrandAsset',row.id,'OK',{version:row.version,status:row.status});
+    return json(res,200,brandAssetView(row));
   }
 
   /* ─────────────── گام ۲.۷ — گزارش ماهانهٔ استاندارد (فرم ۱۵؛ /program/monthly-reports) ────────── */

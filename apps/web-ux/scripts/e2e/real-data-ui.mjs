@@ -360,6 +360,73 @@ try {
   await page2.evaluate(() => { document.querySelector('.modal-close')?.click(); });
   await new Promise(r => setTimeout(r, 500));
 
+  /* ═══ گام ۴.۳ — فرم ۶: رجیستری دارایی برند در تب آمادگی /program ═══ */
+  await page2.goto(`${BASE}/program`, { waitUntil: 'networkidle0', timeout: 90000 });
+  await new Promise(r => setTimeout(r, 3000));
+  await (await page2.evaluateHandle(() => [...document.querySelectorAll('button')].find(b => (b.textContent ?? '').includes('آمادگی بازار')))).asElement().click();
+  await page2.waitForSelector('.brand-assets .asset-table', { timeout: 30000 });
+  await new Promise(r => setTimeout(r, 1200));
+  const assets0 = await page2.evaluate(() => ({
+    hasPanel: [...document.querySelectorAll('h2')].some(h => (h.textContent ?? '').includes('رجیستری دارایی برند')),
+    rows: document.querySelectorAll('.asset-table tbody tr').length,
+    chips: [...document.querySelectorAll('.brand-assets .chip-row .chip')].map(c => (c.textContent ?? '').replace(/\s+/g, ' ').trim()),
+    overdueRow: [...document.querySelectorAll('.asset-table tbody tr')].some(tr => tr.className.includes('asset-due') && (tr.textContent ?? '').includes('بازبینی معوق') && (tr.textContent ?? '').includes('وب‌سایت')),
+    hint: (document.querySelector('.brand-assets .field-hint')?.textContent ?? '').includes('بدون مالک'),
+  }));
+  ok('فرم ۶: پنل رجیستری دارایی برند با ۷ دارایی بذر پارس', assets0.hasPanel && assets0.rows === 7, `rows=${assets0.rows}`);
+  ok('فرم ۶: آمار رجیستری (۴ فعال + ۳ در تدوین + ۱ بازبینی معوق)',
+    assets0.chips.some(c => c.includes('فعال — نسخهٔ جاری: ۴')) && assets0.chips.some(c => c.includes('در تدوین: ۳')) && assets0.chips.some(c => c.includes('بازبینی معوق: ۱')), JSON.stringify(assets0.chips));
+  ok('فرم ۶: وب‌سایت هلدینگ با نشان «بازبینی معوق» و ردیف رنگ‌شده', assets0.overdueRow);
+  ok('فرم ۶: قاعدهٔ سند زیر جدول (دارایی بدون مالک ثبت نمی‌شود)', assets0.hint);
+
+  /* ثبت دارایی تازه از فرم ۶ → ردیف هشتم */
+  await (await page2.evaluateHandle(() => [...document.querySelectorAll('button')].find(b => (b.textContent ?? '').trim() === 'ثبت دارایی برند'))).asElement().click();
+  await page2.waitForSelector('#asset-form', { timeout: 30000 });
+  const aForm = await page2.evaluate(() => ({
+    inputs: document.querySelectorAll('#asset-form input').length,
+    selects: document.querySelectorAll('#asset-form select').length,
+    ownerFree: !!document.querySelector('#asset-form input[placeholder*="نقش مالک"]'),
+  }));
+  ok('فرم ۶: مودال ثبت با قلم‌های سند (عنوان/نسخه/مالک/محل/وضعیت/تاریخ بازبینی)',
+    aForm.inputs >= 4 && aForm.selects >= 1 && aForm.ownerFree, JSON.stringify(aForm));
+  const assetName = `دارایی تست باتری ${Date.now().toString(36)}`;
+  await page2.evaluate((name) => {
+    const setVal = (el, v) => { if (!el) return; const s = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set; s.call(el, v); el.dispatchEvent(new Event('input', { bubbles: true })); };
+    const inputs = [...document.querySelectorAll('#asset-form input')];
+    setVal(inputs.find(i => (i.placeholder ?? '').includes('برندبوک')), name);
+    setVal(inputs.find(i => (i.placeholder ?? '').includes('۲٫۱')), '۱٫۰');
+    setVal(inputs.find(i => (i.placeholder ?? '').includes('نقش مالک')), 'مدیر هنری');
+    setVal(inputs.find(i => (i.placeholder ?? '').includes('مرکز دانش')), 'مرکز دانش');
+  }, assetName);
+  await page2.evaluate(() => { [...document.querySelectorAll('button')].find(b => (b.textContent ?? '').trim() === 'ثبت دارایی')?.click(); });
+  await new Promise(r => setTimeout(r, 3000));
+  const afterCreate = await page2.evaluate((name) => ({
+    rows: document.querySelectorAll('.asset-table tbody tr').length,
+    hasNew: [...document.querySelectorAll('.asset-table tbody tr')].some(tr => (tr.textContent ?? '').includes(name) && (tr.textContent ?? '').includes('مدیر هنری')),
+    modalClosed: !document.querySelector('#asset-form'),
+  }), assetName);
+  ok('فرم ۶: ثبت دارایی تازه → ردیف هشتم با مالک', afterCreate.rows === 8 && afterCreate.hasNew && afterCreate.modalClosed, JSON.stringify(afterCreate).slice(0, 90));
+
+  /* ویرایش ردیف → مهر بازبینی فصلی (۹۰ روز) */
+  await (await page2.evaluateHandle((name) => [...document.querySelectorAll('.asset-table tbody tr')].find(tr => (tr.textContent ?? '').includes(name)), assetName)).asElement().click();
+  await page2.waitForSelector('#asset-form', { timeout: 30000 });
+  const edForm = await page2.evaluate(() => ({
+    reviewBtn: [...document.querySelectorAll('button')].some(b => (b.textContent ?? '').includes('ثبت بازبینی انجام‌شده')),
+    verPrefilled: [...document.querySelectorAll('#asset-form input')].some(i => i.value === '۱٫۰'),
+  }));
+  ok('فرم ۶: مودال ویرایش با نسخهٔ پیش‌فرض و دکمهٔ «ثبت بازبینی انجام‌شده (۹۰ روز)»', edForm.reviewBtn && edForm.verPrefilled, JSON.stringify(edForm));
+  await page2.evaluate(() => { [...document.querySelectorAll('button')].find(b => (b.textContent ?? '').includes('ثبت بازبینی انجام‌شده'))?.click(); });
+  await new Promise(r => setTimeout(r, 3000));
+  const afterRev = await page2.evaluate((name) => {
+    const tr = [...document.querySelectorAll('.asset-table tbody tr')].find(t => (t.textContent ?? '').includes(name));
+    const cells = tr ? [...tr.querySelectorAll('td')] : [];
+    return { exists: !!tr, reviewCell: (cells[cells.length - 1]?.textContent ?? '').trim(), modalClosed: !document.querySelector('#asset-form') };
+  }, assetName);
+  ok('فرم ۶: مهر بازبینی → تاریخ شمسی تازه در ستون بازبینی (نه خط تیره)',
+    afterRev.exists && afterRev.modalClosed && afterRev.reviewCell !== '—' && afterRev.reviewCell.length > 3, JSON.stringify(afterRev).slice(0, 90));
+  await page2.evaluate(() => { document.querySelector('.modal-close')?.click(); });
+  await new Promise(r => setTimeout(r, 500));
+
   await page2.close();
 
   /* ═══ سناریوی ۳ (فقط بیلد استاتیک): ۴۰۴ ریشهٔ سایت نباید حلقهٔ ریدایرکت بسازد ═══

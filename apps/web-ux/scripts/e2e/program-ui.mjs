@@ -177,7 +177,9 @@ try {
     weights: [...document.querySelectorAll('.section-card .section-head p, .section-card p')].some(p => (p.textContent ?? '').includes('وزن')),
     clickable: document.querySelectorAll('.layer-status.clickable').length,
   }));
-  ok('آمادگی: شش لایهٔ وزن‌دار', rd.layers === 6, `cards=${rd.layers}`);
+  /* گام ۴.۳: هفت کارت = شش لایه + رجیستری دارایی برند (فرم ۶) */
+  const rdHasRegistry = await page.evaluate(() => [...document.querySelectorAll('.section-card')].some(c => (c.querySelector('h2')?.textContent ?? '').includes('رجیستری دارایی برند')));
+  ok('آمادگی: شش لایهٔ وزن‌دار + رجیستری دارایی برند (فرم ۶)', rd.layers === 7 && rdHasRegistry, `cards=${rd.layers}`);
   ok('آمادگی: لایهٔ «رابطه» از دادهٔ زنده محاسبه می‌شود', rd.relComputed);
   ok('آمادگی: اقلام قابل به‌روزرسانی (کلیک برای تغییر وضعیت)', rd.clickable >= 20, `clickable=${rd.clickable}`);
   /* چرخش وضعیت یک قلم: سه کلیک = یک دور کامل */
