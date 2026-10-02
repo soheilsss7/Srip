@@ -556,6 +556,29 @@ try {
     dv2.signed && dv2.text.includes('مدیرعامل هلدینگ') && dv2.lockChip && dv2.signFormGone && dv2.stepBtns === 0, JSON.stringify(dv2).slice(0, 90));
   await (await page2.$('.delivery-panel')).screenshot({ path: '/home/user/Srip/docs/screenshots/delivery/02-form18-signed.png' });
 
+  /* ═══ گام ۴.۶ — فرم ۱: چک‌لیست پروژه صفر در نمای کلی /program ═══ */
+  await page2.goto(`${BASE}/program`, { waitUntil: 'networkidle0', timeout: 90000 });
+  await page2.waitForSelector('.project-zero-panel .pz-grid', { timeout: 30000 });
+  await new Promise(r => setTimeout(r, 1200));
+  const pz0 = await page2.evaluate(() => ({
+    hasPanel: [...document.querySelectorAll('h2')].some(h => (h.textContent ?? '').includes('چک‌لیست پروژه صفر')),
+    items: document.querySelectorAll('.pz-item').length,
+    done: document.querySelectorAll('.pz-item.DONE').length,
+    gate: (document.querySelector('.project-zero-panel .note-strip')?.textContent ?? '').replace(/\s+/g, ' ').trim(),
+    firstItem: (document.querySelector('.pz-item .pz-title')?.textContent ?? '').trim(),
+    lastItem: ([...document.querySelectorAll('.pz-item .pz-title')].pop()?.textContent ?? '').trim(),
+    chips: [...document.querySelectorAll('.project-zero-panel .chip-row .chip')].map(c => (c.textContent ?? '').replace(/\s+/g, ' ').trim()),
+    rule: (document.querySelector('.project-zero-panel .field-hint')?.textContent ?? '').includes('شرط عبور از فاز استقرار'),
+  }));
+  ok('فرم ۱: پنل چک‌لیست پروژه صفر با بیست خروجی تأسیس', pz0.hasPanel && pz0.items === 20, `items=${pz0.items}`);
+  ok('فرم ۱: پارس — هر ۲۰ خروجی انجام‌شده (پروژه صفر در ماه نخست بسته شد)',
+    pz0.done === 20 && pz0.chips.some(c => c.includes('انجام‌شده: ۲۰')), `done=${pz0.done}`);
+  ok('فرم ۱: از «تعیین نوع شرکت» تا «ساختار گزارش مالی»',
+    pz0.firstItem.includes('نوع شرکت') && pz0.lastItem.includes('ساختار گزارش مالی'));
+  ok('فرم ۱: دروازهٔ فاز استقرار برقرار — نوار پیام دروازه', pz0.gate.includes('دروازهٔ فاز استقرار برقرار است'));
+  ok('فرم ۱: قاعدهٔ سند زیر فهرست (تکمیل همه شرط عبور از فاز استقرار)', pz0.rule);
+  await (await page2.$('.project-zero-panel')).screenshot({ path: '/home/user/Srip/docs/screenshots/program/23-project-zero-form1.png' });
+
   await page2.close();
 
   /* ═══ سناریوی ۳ (فقط بیلد استاتیک): ۴۰۴ ریشهٔ سایت نباید حلقهٔ ریدایرکت بسازد ═══

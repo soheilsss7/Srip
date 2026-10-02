@@ -9,7 +9,7 @@ import {
 } from '../_components/page-ui';
 import {
   Activity, AlertTriangle, ArrowLeft, CheckCircle2, ClipboardList, Gauge, GitBranch,
-  LayoutDashboard, ListChecks, Package, Plus, RefreshCw, ShieldAlert, Target, TrendingUp, Wallet, X,
+  Flag, LayoutDashboard, ListChecks, Package, Plus, RefreshCw, ShieldAlert, Target, TrendingUp, Wallet, X,
 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -43,6 +43,9 @@ const EXPENSE_STATUS_FA = lt<Record<string, string>>({ REQUESTED: t('در انت
 const EXPENSE_STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = { REQUESTED: 'neutral', APPROVED: 'info', COMMITTED: 'success' };
 const EXPENSE_FORM_EMPTY = { title: '', amount: '', category: '', requesterRole: '' };
 const faMoney = (v: number | string) => new Intl.NumberFormat(localeTag()).format(Number(v) || 0);
+/* گام ۴.۶ — فرم ۱: چک‌لیست پروژه صفر (نمای کلی) */
+const PZ_STATUS_FA = lt<Record<string, string>>({ PENDING: t('در انتظار'), IN_PROGRESS: t('در جریان'), DONE: t('انجام‌شده') });
+const PZ_STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> = { PENDING: 'neutral', IN_PROGRESS: 'warning', DONE: 'success' };
 const SEASON_STATE_FA = lt<Record<string, string>>({ PASSED: t('دروازه پاس شد'), IN_PROGRESS: t('در جریان'), PENDING: t('در انتظار') });
 const SEASON_STATE_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = { PASSED: 'success', IN_PROGRESS: 'warning', PENDING: 'neutral' };
 const AUDIT_TABS = lt<Array<[string, string]>>([
@@ -97,6 +100,8 @@ export default function ProgramPage() {
   const [expCreateOpen, setExpCreateOpen] = useState(false);
   const [expFormError, setExpFormError] = useState('');
   const [expForm, setExpForm] = useState(EXPENSE_FORM_EMPTY);
+  /* گام ۴.۶ — فرم ۱: چک‌لیست پروژه صفر (نمای کلی) */
+  const [projectZero, setProjectZero] = useState<any | null>(null);
 
   const load = useCallback(async (which: string) => {
     setLoading(true); setError('');
@@ -122,6 +127,9 @@ export default function ProgramPage() {
   /* گام ۴.۴ — گردش هزینه جدا از نمای کلی بار می‌شود (فرم ۱۴ / پیوست ب) */
   const reloadExpenses = useCallback(async () => { try { setExpenses(await api<any>('/program/expenses')); } catch { /* در نبود مجوز، پنل مخفی می‌شود */ } }, []);
   useEffect(() => { if (tab === 'overview') reloadExpenses(); }, [tab, reloadExpenses]);
+  /* گام ۴.۶ — چک‌لیست پروژه صفر (فرم ۱ / پیوست ب) */
+  const reloadProjectZero = useCallback(async () => { try { setProjectZero(await api<any>('/program/project-zero')); } catch { /* در نبود مجوز، پنل مخفی می‌شود */ } }, []);
+  useEffect(() => { if (tab === 'overview') reloadProjectZero(); }, [tab, reloadProjectZero]);
 
   const refresh = () => load(tab);
 
@@ -221,6 +229,16 @@ export default function ProgramPage() {
   const expenseAction = async (id: string, action: 'approve' | 'commit') => {
     setError(''); setBusy(true);
     try { await api(`/program/expenses/${id}/${action}`, { method: 'POST' }); await reloadExpenses(); }
+    catch (x) { setError((x as Error).message); }
+    finally { setBusy(false); }
+  };
+
+  /* گام ۴.۶ — فرم ۱: چرخش وضعیت خروجی تأسیس (در انتظار → در جریان → انجام‌شده) */
+  const cycleZeroItem = async (key: string, status: string) => {
+    if (!writable) return;
+    const next = status === 'PENDING' ? 'IN_PROGRESS' : status === 'IN_PROGRESS' ? 'DONE' : 'PENDING';
+    setBusy(true);
+    try { setProjectZero(await api(`/program/project-zero/items/${key}`, { method: 'PATCH', body: JSON.stringify({ status: next }) })); }
     catch (x) { setError((x as Error).message); }
     finally { setBusy(false); }
   };
@@ -421,6 +439,39 @@ export default function ProgramPage() {
                   description={t('هر هزینه پیش از تعهد تصویب می‌شود — از «ثبت درخواست هزینه» آغاز کنید.')} />
               )}
               <p className="field-hint">{t('هزینه پیش از تعهد تصویب می‌شود (فرم ۱۴ / پیوست ب): درخواست با شرح، مبلغ و دسته ثبت می‌شود، مدیر مالی تصویب می‌کند و تعهد فقط پس از تصویب قابل ثبت است.')}</p>
+            </>) : <Loading />}
+          </SectionCard>
+
+          {/* ═══════════ فرم ۱ — چک‌لیست پروژه صفر (پیوست ب سند) ═══════════ */}
+          <SectionCard className="project-zero-panel" title={t('فرم ۱ — چک‌لیست پروژه صفر')} icon={<Flag size={17} />}
+            description={t('بیست خروجی تأسیس — از تعیین نوع شرکت تا ساختار گزارش مالی؛ تکمیل همهٔ خروجی‌ها شرط عبور از فاز استقرار است.')}>
+            {projectZero ? (<>
+              <div className={`note-strip ${projectZero.passed ? '' : 'warn'}`}>
+                {projectZero.passed
+                  ? t('دروازهٔ فاز استقرار برقرار است — هر بیست خروجی تأسیس تکمیل شده و پروژه صفر بسته است.')
+                  : t('شرط عبور از فاز استقرار: تکمیل همهٔ بیست خروجی') + ` — ${faNum(projectZero.stats.done)} ${t('از')} ${faNum(projectZero.stats.total)}`}
+              </div>
+              <div className="prog-bar season-bar" style={{ margin: '10px 0 12px' }}>
+                <div className={`prog-fill ${projectZero.passed ? '' : 'warn'}`} style={{ width: `${Math.round((projectZero.stats.done / projectZero.stats.total) * 100)}%` }} />
+              </div>
+              <div className="chip-row" style={{ margin: '0 0 10px' }}>
+                <span className="chip neutral">{t('کل')}: {faNum(projectZero.stats.total)}</span>
+                <span className="chip success">{t('انجام‌شده')}: {faNum(projectZero.stats.done)}</span>
+                <span className="chip warning">{t('در جریان')}: {faNum(projectZero.stats.inProgress)}</span>
+                <span className="chip neutral">{t('در انتظار')}: {faNum(projectZero.stats.pending)}</span>
+              </div>
+              <div className="pz-grid">
+                {projectZero.items.map((it: any) => (
+                  <button type="button" key={it.key} className={`pz-item ${it.status} ${writable ? 'clickable' : ''}`}
+                    disabled={!writable || busy} onClick={() => cycleZeroItem(it.key, it.status)}
+                    title={writable ? t('کلیک: تغییر وضعیت (در انتظار → در جریان → انجام‌شده)') : t('برای تغییر وضعیت به مجوز برنامه نیاز دارید')}>
+                    <span className="pz-order">{faNum(it.order)}</span>
+                    <span className="pz-title">{t(it.title)}</span>
+                    <StatusBadge tone={PZ_STATUS_TONE[it.status]}>{PZ_STATUS_FA[it.status]}</StatusBadge>
+                  </button>
+                ))}
+              </div>
+              <p className="field-hint">{t('پروژه صفر با بیست خروجی تأسیس تعریف می‌شود؛ تکمیل همهٔ خروجی‌ها شرط عبور از فاز استقرار است (فرم ۱ / پیوست ب).')}</p>
             </>) : <Loading />}
           </SectionCard>
         </>

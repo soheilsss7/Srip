@@ -1848,6 +1848,46 @@ section('گام ۴.۵ — فرم ۱۸: صورت‌جلسهٔ تحویل');
   check('امضا در دنیای قفل‌شدهٔ دمو → ۴۰۰', demoSign.status === 400);
 }
 
+/* ═════════════════ گام ۴.۶ — فرم ۱: چک‌لیست پروژه صفر (پیوست ب) ═════════════════ */
+section('گام ۴.۶ — فرم ۱: چک‌لیست پروژه صفر');
+{
+  const ptok = (await api('/auth/login', { method: 'POST', body: { email: 'pars', password: 'pars1234' } })).body?.accessToken;
+  const otok = (await login(OWNER.email)).body?.accessToken;
+
+  const pars = await api('/program/project-zero', { token: ptok });
+  check('GET /program/project-zero → بیست خروجی تأسیس', pars.status === 200 && pars.body.items.length === 20);
+  check('پارس: پروژه صفر در ماه نخست بسته شد — هر ۲۰ انجام‌شده و دروازهٔ استقرار برقرار',
+    pars.body.stats.done === 20 && pars.body.passed === true && pars.body.items.every((i) => i.doneAt));
+  check('اولین خروجی «تعیین نوع شرکت» و آخرین «ساختار گزارش مالی»',
+    pars.body.items[0].title.includes('نوع شرکت') && pars.body.items[19].title === 'ساختار گزارش مالی');
+  check('قاعدهٔ فرم ۱ در پاسخ سرور: تکمیل همه شرط عبور از فاز استقرار',
+    String(pars.body.rule).includes('شرط عبور از فاز استقرار'));
+
+  /* دنیای دمو: در میانهٔ راه — ۱۲ انجام + ۳ در جریان + ۵ در انتظار */
+  const demo = await api('/program/project-zero', { token: otok });
+  check('دنیای دمو: ۱۲ انجام‌شده + ۳ در جریان + ۵ در انتظار — دروازه برقرار نیست',
+    demo.body.stats.done === 12 && demo.body.stats.inProgress === 3 && demo.body.stats.pending === 5 && demo.body.passed === false);
+
+  /* چرخش وضعیت در دنیای دمو: در انتظار → در جریان → انجام‌شده */
+  const target = demo.body.items.find((i) => i.status === 'PENDING');
+  const s1 = await api(`/program/project-zero/items/${target.key}`, { method: 'PATCH', token: otok, body: { status: 'IN_PROGRESS' } });
+  check('چرخش «در انتظار → در جریان» → آمار ۱۳/۴/۳', s1.status === 200 && s1.body.stats.done === 12 && s1.body.stats.inProgress === 4);
+  const s2 = await api(`/program/project-zero/items/${target.key}`, { method: 'PATCH', token: otok, body: { status: 'DONE' } });
+  check('چرخش «در جریان → انجام‌شده» با مهر زمانی → آمار ۱۳/۳/۳',
+    s2.status === 200 && s2.body.stats.done === 13 && !!s2.body.items.find((i) => i.key === target.key).doneAt);
+  const bad = await api(`/program/project-zero/items/${target.key}`, { method: 'PATCH', token: otok, body: { status: 'OLD' } });
+  check('وضعیت خارج از فهرست → ۴۰۰', bad.status === 400);
+  const noKey = await api('/program/project-zero/items/does-not-exist', { method: 'PATCH', token: otok, body: { status: 'DONE' } });
+  check('کلید نامعتبر → ۴۰۴', noKey.status === 404);
+  const noPerm = await api(`/program/project-zero/items/${target.key}`, { method: 'PATCH', token: (await login('client')).body?.accessToken, body: { status: 'DONE' } });
+  check('کاربر بدون program.write → ۴۰۳', noPerm.status === 403);
+
+  /* جداسازی مستأجر: پارس همه انجام‌شده، دمو مستقل */
+  const parsAgain = await api('/program/project-zero', { token: ptok });
+  check('جداسازی مستأجر: پارس همچنان ۲۰/۲۰ (تغییر دمو اثری نداشت)',
+    parsAgain.body.stats.done === 20 && parsAgain.body.passed === true);
+}
+
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
 if (failures.length) { console.log(`  Failed: ${failures.join(' | ')}`); }
