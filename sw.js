@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.10.02.03';
+const DEMO_MOCK_VERSION = '2026.10.02.04';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -8761,6 +8761,71 @@ function validateExpenseBody(b,chart){
   return null;
 }
 
+/* ═══════════════ گام ۴.۵ — فرم ۱۸: صورت‌جلسهٔ تحویل (بخش ۲۸.۱ سند؛ پیوست ب) ═══════════════
+   تحویل برنامه به هلدینگ: فهرست پنج‌قلمی تحویل (هر قلم با شکل تحویل و گیرندهٔ
+   هلدینگ) + فرآیند هفت‌گام تحویل + امضای طرفین. قاعدهٔ ثابت سند: امضا فقط پس از
+   تحویل همهٔ اقلام ممکن است و پس از امضا، صورت‌جلسه قفل می‌شود. */
+const DELIVERY_ITEMS=[ /* فهرست تحویل ۲۸.۱ سند — پنج قلم */
+  {key:'data-export', title:'دادهٔ کامل روابط، عموم‌ها و فرصت‌ها', form:'خروجی استاندارد و انتقال مالکیت', receiver:'مدیرعامل هلدینگ'},
+  {key:'knowledge',   title:'مرکز دانش و مستندات برنامه',           form:'بایگانی دیجیتال کامل',            receiver:'دستیار مدیرعامل'},
+  {key:'brand-assets',title:'رجیستری دارایی برند با نسخه‌ها',       form:'تحویل فایل و دسترسی',             receiver:'مدیر روابط عمومی هلدینگ'},
+  {key:'media-plan',  title:'برنامهٔ رسانه و تقویم انتشار',          form:'سند برنامه و تقویم جاری',         receiver:'مدیر روابط عمومی هلدینگ'},
+  {key:'training',    title:'آموزش کاربران و راهنمای یک‌صفحه‌ای',    form:'جلسهٔ آموزشی و مستند',            receiver:'مدیر منابع انسانی هلدینگ'},
+];
+const DELIVERY_STEPS=[ /* فرآیند هفت‌گام تحویل */
+  {key:'notify',   order:1, title:'ابلاغ رسمی آغاز تحویل به هلدینگ'},
+  {key:'inventory',order:2, title:'فهرست‌برداری کامل اقلام تحویل'},
+  {key:'transfer', order:3, title:'انتقال اقلام با ثبت شکل تحویل'},
+  {key:'verify',   order:4, title:'تطبیق رکوردبه‌رکورد با فهرست تحویل'},
+  {key:'fix',      order:5, title:'رفع مغایرت‌ها و نقص‌ها'},
+  {key:'train',    order:6, title:'آموزش کاربران و پاسخ به پرسش‌ها'},
+  {key:'sign',     order:7, title:'امضای صورت‌جلسهٔ نهایی و تحویل'},
+];
+function freshDelivery(org,deliveredKeys,doneStepKeys){
+  return {organizationId:org,
+    items:DELIVERY_ITEMS.map(i=>({...i,status:'PENDING',deliveredAt:null,note:''})),
+    steps:DELIVERY_STEPS.map(s=>({...s,done:doneStepKeys.includes(s.key),doneAt:null})),
+    signature:null};
+}
+function ensureDeliveryRow(org){
+  if(!Array.isArray(DB.programDelivery)) DB.programDelivery=[];
+  let row=DB.programDelivery.find(d=>d.organizationId===org);
+  if(!row){
+    row=freshDelivery(org,[],[]);
+    DB.programDelivery.push(row);
+  }
+  return row;
+}
+function ensureDeliverySeed(){
+  if(!Array.isArray(DB.programDelivery)) DB.programDelivery=[];
+  if(!DB.programDelivery.some(d=>d.organizationId==='org-pars')) seedDelivery();
+}
+function deliveryFor(req){
+  ensureDeliverySeed();
+  const org=primaryOrgId(currentUser(req))??visibleOrgIds(req)[0]??PROGRAM_ORG_ID;
+  return ensureDeliveryRow(org);
+}
+function deliveryView(d){
+  const delivered=d.items.filter(i=>i.status==='DELIVERED').length;
+  const doneSteps=d.steps.filter(s=>s.done).length;
+  const nextKey=DELIVERY_STEPS.find(s=>!d.steps.find(x=>x.key===s.key)?.done)?.key??null;
+  return {...d,delivered,totalItems:d.items.length,allDelivered:delivered===d.items.length,
+    doneSteps,totalSteps:d.steps.length,currentStepKey:nextKey,locked:!!d.signature};
+}
+function seedDelivery(){
+  /* جهان واقعی پارس: دو قلم تحویل‌شده، دو مرحله انجام‌شده، امضا باز */
+  const pars=freshDelivery('org-pars',['data-export','knowledge'],['notify','inventory']);
+  const ago=(d)=>new Date(Date.now()-d*86400000).toISOString();
+  pars.items=pars.items.map(i=>(['data-export','knowledge'].includes(i.key)?{...i,status:'DELIVERED',deliveredAt:ago(12),note:''}:i));
+  pars.steps=pars.steps.map(s=>(['notify','inventory'].includes(s.key)?{...s,done:true,doneAt:ago(14)}:s));
+  /* دنیای دمو: همهٔ اقلام تحویل و امضاشده — نمونهٔ حالت قفل */
+  const demo=freshDelivery('org-1',[],DELIVERY_STEPS.map(s=>s.key));
+  demo.items=demo.items.map(i=>({...i,status:'DELIVERED',deliveredAt:ago(30),note:''}));
+  demo.steps=demo.steps.map(s=>({...s,done:true,doneAt:ago(30)}));
+  demo.signature={programRep:'مدیر پروژه',holdingRep:'مدیرعامل هلدینگ',signedAt:ago(28)};
+  DB.programDelivery=[pars,demo];
+}
+
 /* ═══════════════ گام ۲.۷ — گزارش ماهانهٔ استاندارد (فرم ۱۵؛ بخش ۲۶ سند) ═══════════════
    قالب ثابت گزارش ماهانه به مدیریت هلدینگ: خلاصهٔ مدیریتی، شاخص‌های کلیدی (زنده از
    بخش ۲۶)، ریسک‌های درجه بالا (زنده از بخش ۲۵)، انحراف‌های زمانی بیش از دو هفته و
@@ -15567,6 +15632,56 @@ async function __handler(req, res) {
     row.status='COMMITTED'; row.committedAt=nowIso(); row.updatedAt=nowIso(); saveDb();
     audit(req,'UPDATE','Expense',row.id,'COMMIT',{amount:row.amount});
     return json(res,200,expenseView(row));
+  }
+
+  /* ─────────────── گام ۴.۵ — فرم ۱۸: صورت‌جلسهٔ تحویل (/program/delivery) ────────── */
+  if(is('/program/delivery')&&method==='GET'){
+    if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
+    return json(res,200,{...deliveryView(deliveryFor(req)),
+      rule:'تحویل برنامه به هلدینگ با فهرست پنج‌قلمی بخش ۲۸.۱ سند و فرآیند هفت‌گام انجام می‌شود (فرم ۱۸)؛ امضا فقط پس از تحویل همهٔ اقلام ممکن است و پس از امضای طرفین، صورت‌جلسه قفل می‌شود.'});
+  }
+  const dlItem=match('/program/delivery/items/:key');
+  if(dlItem&&method==='POST'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    const d=deliveryFor(req);
+    const item=d.items.find(i=>i.key===dlItem[0]);
+    if(!item) return json(res,404,{message:'قلم تحویل یافت نشد.'});
+    if(d.signature) return json(res,400,{message:'صورت‌جلسه امضا و قفل شده است — قلم تحویل دیگر قابل تغییر نیست.'});
+    if(item.status==='DELIVERED') return json(res,400,{message:`قلم «${item.title}» قبلاً تحویل شده است.`});
+    const b=await readBody(req);
+    item.status='DELIVERED'; item.deliveredAt=nowIso(); item.note=String(b?.note??'').trim().slice(0,200);
+    saveDb(); audit(req,'UPDATE','Delivery',`${d.organizationId}.${item.key}`,'DELIVER',{});
+    return json(res,200,deliveryView(d));
+  }
+  const dlStep=match('/program/delivery/steps/:key');
+  if(dlStep&&method==='POST'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    const d=deliveryFor(req);
+    if(!DELIVERY_STEPS.some(s=>s.key===dlStep[0])) return json(res,400,{message:'کلید مرحلهٔ تحویل نامعتبر است.'});
+    if(d.signature) return json(res,400,{message:'صورت‌جلسه امضا و قفل شده است — مراحل تحویل دیگر قابل تغییر نیست.'});
+    const view=deliveryView(d);
+    if(dlStep[0]!==view.currentStepKey){
+      const cur=DELIVERY_STEPS.find(s=>s.key===view.currentStepKey);
+      return json(res,400,{message:`مراحل تحویل ترتیبی‌اند — ابتدا مرحلهٔ جاری («${cur?.title??'—'}») را تکمیل کنید.`});
+    }
+    const st=d.steps.find(s=>s.key===dlStep[0]);
+    st.done=true; st.doneAt=nowIso(); saveDb();
+    audit(req,'UPDATE','Delivery',`${d.organizationId}.step.${st.key}`,'OK',{});
+    return json(res,200,deliveryView(d));
+  }
+  if(is('/program/delivery/sign')&&method==='POST'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    const d=deliveryFor(req);
+    if(d.signature) return json(res,400,{message:'صورت‌جلسه قبلاً امضا و قفل شده است.'});
+    const pending=d.items.filter(i=>i.status!=='DELIVERED');
+    if(pending.length) return json(res,400,{message:`امضا فقط پس از تحویل همهٔ اقلام ممکن است — اقلام تحویل‌نشده: ${pending.map(i=>i.title).join('، ')}.`});
+    const b=await readBody(req);
+    const programRep=String(b?.programRep??'').trim();
+    const holdingRep=String(b?.holdingRep??'').trim();
+    if(programRep.length<2||holdingRep.length<2) return json(res,400,{message:'امضای طرفین الزامی است — نام نمایندهٔ برنامه و نمایندهٔ هلدینگ را وارد کنید.'});
+    d.signature={programRep,holdingRep,signedAt:nowIso()};
+    saveDb(); audit(req,'UPDATE','Delivery',`${d.organizationId}`,'SIGN',{programRep,holdingRep});
+    return json(res,200,deliveryView(d));
   }
 
   /* ─────────────── گام ۲.۷ — گزارش ماهانهٔ استاندارد (فرم ۱۵؛ /program/monthly-reports) ────────── */
