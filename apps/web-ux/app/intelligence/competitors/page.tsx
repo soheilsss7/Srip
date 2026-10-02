@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   گام ۲.۴ مسترپلن — پروندهٔ رقیب ۷بُعدی (فرم ۶ سند، بخش ۹)
+   گام ۲.۴ مسترپلن — پروندهٔ رقیب ۷بُعدی (فرم ۵ سند، بخش ۹)
    تحلیل رقبا فراتر از فهرست نام‌هاست؛ هدف، یافتن «شکاف جایگاه» است — جایی که
    سازمان می‌تواند مرجع شود و دیگران نیستند. هفت بُعد جایگاه‌یابی + ماتریس شکاف؛
    سه حوزهٔ بیشترین شکاف = محور مرجعیت‌سازی. رقبا و نمرات = دادهٔ سازمان.
@@ -238,7 +238,7 @@ export default function CompetitorsPage() {
         </>
       )}
 
-      {/* ═══════════ مودال: ثبت/ویرایش پروندهٔ رقیب (فرم ۶) ═══════════ */}
+      {/* ═══════════ مودال: ثبت/ویرایش پروندهٔ رقیب (فرم ۵) ═══════════ */}
       <Modal open={modal} title={editRow ? `${t('ویرایش پروندهٔ رقیب')} — ${editRow.name}` : t('پروندهٔ رقیب جدید')} onClose={() => { setCreateOpen(false); setEditRow(null); }}
         description={editRow?.isSelf ? t('خودارزیابی هفت‌بُعدی سازمان — مبنای ماتریس شکاف جایگاه.') : t('نمرهٔ هر بُعد عددی بین ۰ تا ۱۰۰ است و از ابزار سنجش متناظرش به دست می‌آید.')}>
         <form id="competitor-form" className="form-grid" onSubmit={(e) => { e.preventDefault(); submit(); }}>
@@ -260,7 +260,7 @@ export default function CompetitorsPage() {
             </label>
           ))}
           <label className="field">
-            <span>{t('دارایی‌های ارتباطی (چک‌لیست فرم ۶)')}</span>
+            <span>{t('دارایی‌های ارتباطی (چک‌لیست فرم ۵)')}</span>
             <div className="chip-row">
               {(data?.assets ?? []).map((a: string) => (
                 <button type="button" key={a} className={`chip ${assets.includes(a) ? 'purple' : ''}`} style={{ cursor: 'pointer' }}

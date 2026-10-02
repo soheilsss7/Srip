@@ -1049,7 +1049,7 @@ export const EN_DICT_C: Record<string, string> = {
   'خودارزیابی هفت‌بُعدی سازمان — مبنای ماتریس شکاف جایگاه.': 'Seven-dimension self-assessment — the benchmark of the positioning gap matrix.',
   'خودِ سازمان': 'Own organization',
   'دارایی‌های ارتباطی': 'Communication assets',
-  'دارایی‌های ارتباطی (چک‌لیست فرم ۶)': 'Communication assets (form 6 checklist)',
+  'دارایی‌های ارتباطی (چک‌لیست فرم ۵)': 'Communication assets (form 5 checklist)',
   'دیده‌شدن در موتورهای هوش مصنوعی': 'Visibility in AI engines',
   'ذخیرهٔ پرونده': 'Save profile',
   'رقبا و شکاف جایگاه': 'Competitors & positioning gap',

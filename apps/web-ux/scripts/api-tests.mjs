@@ -1218,7 +1218,7 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
   check('ثبت هدف بدون program.write → ۴۰۳', noPerm.status === 403);
 }
 
-/* ═════════════════ گام ۲.۴ — پروندهٔ رقیب ۷بُعدی (فرم ۶ سند) ═════════════════ */
+/* ═════════════════ گام ۲.۴ — پروندهٔ رقیب ۷بُعدی (فرم ۵ سند) ═════════════════ */
 {
   const dl = await login('demo');
   const dt = dl.body?.accessToken;
@@ -1248,7 +1248,7 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
     L.body.topGaps.length === Math.min(3, lead) && L.body.topGaps.every((g, i) => i === 0 || L.body.topGaps[i - 1].gap >= g.gap) && L.body.topGaps.every(g => g.gap > 0));
   check('بیشترین عقب‌ماندگی شناسایی می‌شود', M.worstLag && M.worstLag.gap < 0);
 
-  /* اعتبارسنجی فرم ۶ */
+  /* اعتبارسنجی فرم ۵ */
   const noSeg = await api('/intelligence/competitors', { method: 'POST', token: dt, body: { name: 'رقیب تست', scores: { dataAuthority: 50, analysisDepth: 50, mediaPresence: 50, partnershipNetwork: 50, eventQuality: 50, policyAuthority: 50, aiVisibility: 50 } } });
   check('ثبت بدون بخش/حوزه → ۴۰۰', noSeg.status === 400);
   const badScore = await api('/intelligence/competitors', { method: 'POST', token: dt, body: { name: 'رقیب تست', segment: 'تست', scores: { dataAuthority: 150, analysisDepth: 50, mediaPresence: 50, partnershipNetwork: 50, eventQuality: 50, policyAuthority: 50, aiVisibility: 50 } } });
