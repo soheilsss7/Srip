@@ -862,3 +862,21 @@ html[data-theme="dark"] .pmr-risk{color:#f87171}
   .bp-grid,.bp-duo{grid-template-columns:1fr}
   .bp-head{flex-direction:column}
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   گام ۴.۱ — فرم ۱۲: چک‌لیست ده‌مرحله‌ای انتقال سامانه (مودال ممیزی /program)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.mig-steps{grid-column:1/-1;border-top:1px solid var(--srip-line);padding-top:12px;margin-top:4px}
+.mig-steps-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.mig-steps-head b{font-size:12.5px}
+.mig-steps-list{list-style:none;margin:0 0 8px;padding:0;display:flex;flex-direction:column;gap:4px}
+.mig-step{display:flex;gap:8px;align-items:center;padding:7px 10px;border-radius:11px;
+  border:1px solid var(--srip-line);font-size:12.5px}
+.mig-step.done{opacity:.75}
+.mig-step.done .mig-step-title{text-decoration:line-through;color:var(--srip-muted)}
+.mig-step.current{border-color:color-mix(in srgb,var(--srip-accent) 55%,transparent);
+  background:color-mix(in srgb,var(--srip-accent) 8%,transparent)}
+.mig-step-order{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;
+  font-size:11px;font-weight:800;background:var(--srip-panel);border:1px solid var(--srip-border)}
+.mig-step.done .mig-step-order{background:color-mix(in srgb,#16a34a 18%,transparent);border-color:transparent}
+.mig-step-title{flex:1;min-width:0}

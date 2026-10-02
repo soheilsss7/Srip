@@ -368,6 +368,45 @@ try {
   await page.goto(`${BASE}/program`, { waitUntil: 'networkidle0', timeout: 90000 });
   await new Promise(r => setTimeout(r, 2000));
 
+
+  /* ── ۷.۷) گام ۴.۱ — فرم ۱۲: چک‌لیست ده‌مرحله‌ای انتقال سامانه (تب ممیزی) ── */
+  await page.evaluate(() => { [...document.querySelectorAll('.segmented button')].find(b => (b.textContent ?? '').includes('ممیزی'))?.click(); });
+  await new Promise(r => setTimeout(r, 2500));
+  await page.evaluate(() => { [...document.querySelectorAll('.segmented button')].find(b => (b.textContent ?? '').includes('سامانه‌ها'))?.click(); });
+  await new Promise(r => setTimeout(r, 1200));
+  const mig0 = await page.evaluate(() => ({
+    hasCol: [...document.querySelectorAll('th')].some(th => (th.textContent ?? '').includes('فرم ۱۲')),
+    as4: ([...document.querySelectorAll('tbody tr')].find(tr => (tr.textContent ?? '').includes('گروه پیام‌رسان'))?.textContent ?? '').replace(/\s+/g, ' ').trim(),
+  }));
+  ok('فرم ۱۲: ستون مراحل انتقال در جدول سامانه‌ها با پیشرفت ۶ از ۱۰ برای پیام‌رسان مدیران',
+    mig0.hasCol && mig0.as4.includes('۶ / ۱۰') && mig0.as4.includes('در جریان'), mig0.as4.slice(0, 90));
+
+  await (await page.evaluateHandle(() => [...document.querySelectorAll('tbody tr')].find(tr => (tr.textContent ?? '').includes('گروه پیام‌رسان')))).asElement().click();
+  await page.waitForSelector('.mig-steps', { timeout: 30000 });
+  const m0 = await page.evaluate(() => ({
+    steps: document.querySelectorAll('.mig-steps-list .mig-step').length,
+    done: document.querySelectorAll('.mig-steps-list .mig-step.done').length,
+    current: (document.querySelector('.mig-step.current .mig-step-title')?.textContent ?? ''),
+    btn: [...document.querySelectorAll('.mig-steps button')].some(b => (b.textContent ?? '').includes('تکمیل مرحله')),
+    head: (document.querySelector('.mig-steps-head')?.textContent ?? '').replace(/\s+/g, ' ').trim(),
+  }));
+  ok('فرم ۱۲: چک‌لیست ده‌مرحله‌ای با ۶ مرحلهٔ انجام‌شده و مرحلهٔ جاری «آموزش»',
+    m0.steps === 10 && m0.done === 6 && m0.current.includes('آموزش') && m0.btn && m0.head.includes('۶'), JSON.stringify(m0).slice(0, 90));
+
+  await page.evaluate(() => { [...document.querySelectorAll('.mig-steps button')].find(b => (b.textContent ?? '').includes('تکمیل مرحله'))?.click(); });
+  await new Promise(r => setTimeout(r, 3000));
+  const m1 = await page.evaluate(() => ({
+    done: document.querySelectorAll('.mig-steps-list .mig-step.done').length,
+    current: (document.querySelector('.mig-step.current .mig-step-title')?.textContent ?? ''),
+    head: (document.querySelector('.mig-steps-head .chip')?.textContent ?? '').replace(/\s+/g, ' ').trim(),
+  }));
+  ok('تکمیل مرحله از رابط → ۷ انجام‌شده و مرحلهٔ بعدی (اجرای موازی) جاری',
+    m1.done === 7 && m1.current.includes('موازی') && m1.head.includes('۷'), JSON.stringify(m1));
+
+  /* بازگشت به هاب برنامه برای بخش‌های ۸ و ۹ */
+  await page.goto(`${BASE}/program`, { waitUntil: 'networkidle0', timeout: 90000 });
+  await new Promise(r => setTimeout(r, 2000));
+
   /* ── ۸) بدون خطای کنسول در کل جریان ──
      استثنا: پاسخ ۴۰۰ تستِ منفیِ «ریسک بدون مالک» — عمداً توسط سرور رد می‌شود */
   const realErrs = errs.filter(e => !e.includes('status of 400'));

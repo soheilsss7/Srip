@@ -1578,6 +1578,55 @@ section('گام ۲.۷ — گزارش ماهانهٔ استاندارد (فرم �
   check('حساب pars → فهرست خالی (نه دادهٔ هلدینگ دمو)', parsList.status === 200 && parsList.body.items.length === 0);
 }
 
+
+/* ═════════════════ گام ۴.۱ — فرم ۱۲: کنترل ده‌مرحله‌ای انتقال سامانه (بخش ۲۱ + پیوست ب) ═════════════════ */
+section('گام ۴.۱ — فرم ۱۲: انتقال سامانه (ده مرحله)');
+{
+  const pl = await login(OWNER.email);
+  const pt = pl.body?.accessToken;
+
+  const au0 = await api('/program/audits', { token: pt });
+  const as4 = au0.body.systems.find((s) => s.id === 'as-4');
+  const as1 = au0.body.systems.find((s) => s.id === 'as-1');
+  const as3 = au0.body.systems.find((s) => s.id === 'as-3');
+  check('GET ممیزی: ده مرحلهٔ انتقال در نمای هر سامانه (فرم ۱۲)',
+    as4.steps.total === 10 && as4.steps.done === 6 && as4.steps.currentKey === 'training' && as4.steps.steps.length === 10);
+  check('سامانهٔ تکمیل‌شده: هر ۱۰ مرحله done + وضعیت DONE', as1.steps.complete === true && as1.migrationStatus === 'DONE' && as1.steps.done === 10);
+  check('سامانهٔ «نگهداری» برنامهٔ انتقال ندارد (steps total=0)', as3.migration === 'KEEP' && as3.steps.total === 0);
+  check('قاعدهٔ فرم ۱۲ در پاسخ سرور آمده است', String(au0.body.migrationRule).includes('ده مرحله') && String(au0.body.migrationRule).includes('فرم ۱۲'));
+
+  const jump = await api('/program/audit/systems/as-4/steps/shutdown', { method: 'POST', token: pt });
+  check('پرش به مرحلهٔ دهم → ۴۰۰ (مراحل ترتیبی‌اند)', jump.status === 400);
+  const wrong = await api('/program/audit/systems/as-4/steps/parallel', { method: 'POST', token: pt });
+  check('مرحلهٔ غیرجاری → ۴۰۰ با نام مرحلهٔ جاری در پیام', wrong.status === 400 && wrong.body.message.includes('آموزش کوتاه کاربران'));
+  const keep = await api('/program/audit/systems/as-3/steps/audit', { method: 'POST', token: pt });
+  check('سامانهٔ KEEP → ۴۰۰ (فرم ۱۲ برای آن کاربرد ندارد)', keep.status === 400 && keep.body.message.includes('نگهداری'));
+  const badKey = await api('/program/audit/systems/as-4/steps/justify', { method: 'POST', token: pt });
+  check('کلید مرحلهٔ نامعتبر → ۴۰۰', badKey.status === 400);
+  const noPerm = await api('/program/audit/systems/as-4/steps/training', { method: 'POST', token: (await login('client')).body?.accessToken });
+  check('کاربر بدون program.write → ۴۰۳', noPerm.status === 403);
+  const notFound = await api('/program/audit/systems/as-99/steps/audit', { method: 'POST', token: pt });
+  check('سامانهٔ ناموجود → ۴۰۴', notFound.status === 404);
+
+  /* چرخهٔ کامل as-4: چهار مرحلهٔ باقی‌مانده → DONE خودکار + شمارش kpi-9 */
+  const kpi9Before = (await api('/program/kpis', { token: pt })).body.items.find((k) => k.id === 'kpi-9');
+  const s7 = await api('/program/audit/systems/as-4/steps/training', { method: 'POST', token: pt });
+  check('تکمیل مرحلهٔ ۷ (آموزش) → ۷ از ۱۰ و همچنان در جریان', s7.status === 200 && s7.body.steps.done === 7 && s7.body.migrationStatus === 'IN_PROGRESS');
+  for (const k of ['parallel', 'resolve', 'shutdown']) await api(`/program/audit/systems/as-4/steps/${k}`, { method: 'POST', token: pt });
+  const au1 = await api('/program/audits', { token: pt });
+  const as4b = au1.body.systems.find((s) => s.id === 'as-4');
+  check('اتمام مرحلهٔ دهم → سامانه «تکمیل‌شده» + خلاصهٔ انتقال ۳ از ۴',
+    as4b.migrationStatus === 'DONE' && as4b.steps.complete === true && au1.body.summary.migrationDone === 3 && au1.body.summary.migrationTotal === 4);
+  const kpi9After = (await api('/program/kpis', { token: pt })).body.items.find((k) => k.id === 'kpi-9');
+  check('شاخص ۹ (انتقال داده‌ها) از مراحل فرم ۱۲ تغذیه می‌شود', kpi9Before.value + 1 === kpi9After.value);
+  const again = await api('/program/audit/systems/as-4/steps/audit', { method: 'POST', token: pt });
+  check('تکمیل پس از اتمام هر ده مرحله → ۴۰۰', again.status === 400);
+
+  /* اولین مرحلهٔ سامانهٔ شروع‌نشده → در جریان */
+  const s5 = await api('/program/audit/systems/as-5/steps/audit', { method: 'POST', token: pt });
+  check('اولین مرحلهٔ سامانهٔ شروع‌نشده → وضعیت «در جریان»', s5.status === 200 && s5.body.migrationStatus === 'IN_PROGRESS' && s5.body.steps.done === 1);
+}
+
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
 if (failures.length) { console.log(`  Failed: ${failures.join(' | ')}`); }

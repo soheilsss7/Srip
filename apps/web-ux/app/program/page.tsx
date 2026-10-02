@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useWorkspace } from '../_components/workspace';
 import { api } from '../_lib/api';
 import { faNum, faFullDate } from '../_lib/jalali';
-import { t } from '../_lib/i18n';
+import { lt, t } from '../_lib/i18n';
 import {
   Badge, ErrorCard, Loading, Modal, PageHeader, SectionCard, Segmented, StatCard, StatusBadge, EmptyV4,
 } from '../_components/page-ui';
@@ -30,15 +30,15 @@ const KPI_STATUS_FA: Record<string, string> = { ON_TARGET: t('در هدف'), NEA
 const KPI_STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> = { ON_TARGET: 'success', NEAR: 'warning', OFF_TARGET: 'danger' };
 const ITEM_STATUS_FA: Record<string, string> = { NOT_STARTED: t('شروع‌نشده'), IN_PROGRESS: t('در جریان'), ACCEPTED: t('پذیرفته‌شده') };
 const ITEM_STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> = { NOT_STARTED: 'neutral', IN_PROGRESS: 'warning', ACCEPTED: 'success' };
-const MIGRATION_FA: Record<string, string> = { KEEP: t('نگهداری'), MIGRATE: t('انتقال'), SHUTDOWN: t('خاموش‌سازی') };
+const MIGRATION_FA = lt<Record<string, string>>({ KEEP: t('نگهداری'), MIGRATE: t('انتقال'), SHUTDOWN: t('خاموش‌سازی') }); /* lt: ترجمه در زمان خواندن */
 const MIGRATION_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = { KEEP: 'info', MIGRATE: 'warning', SHUTDOWN: 'danger' };
-const PRIORITY_FA: Record<string, string> = { KEEP: t('حفظ'), REDEFINE: t('بازتعریف'), HIRE: t('جذب') };
-const CHANNEL_ACTION_FA: Record<string, string> = { ASSIGN_OWNER: t('واگذاری به مالک'), TRANSFER: t('انتقال'), SHUTDOWN: t('خاموش‌سازی') };
-const SEASON_STATE_FA: Record<string, string> = { PASSED: t('دروازه پاس شد'), IN_PROGRESS: t('در جریان'), PENDING: t('در انتظار') };
+const PRIORITY_FA = lt<Record<string, string>>({ KEEP: t('حفظ'), REDEFINE: t('بازتعریف'), HIRE: t('جذب') });
+const CHANNEL_ACTION_FA = lt<Record<string, string>>({ ASSIGN_OWNER: t('واگذاری به مالک'), TRANSFER: t('انتقال'), SHUTDOWN: t('خاموش‌سازی') });
+const SEASON_STATE_FA = lt<Record<string, string>>({ PASSED: t('دروازه پاس شد'), IN_PROGRESS: t('در جریان'), PENDING: t('در انتظار') });
 const SEASON_STATE_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = { PASSED: 'success', IN_PROGRESS: 'warning', PENDING: 'neutral' };
-const AUDIT_TABS: Array<[string, string]> = [
+const AUDIT_TABS = lt<Array<[string, string]>>([
   ['people', t('افراد')], ['systems', t('سامانه‌ها')], ['channels', t('کانال‌ها')],
-];
+]);
 
 const faDate = (iso?: string | null) => (iso ? faFullDate(new Date(iso)) : '—');
 
@@ -98,6 +98,17 @@ export default function ProgramPage() {
   useEffect(() => { if (tab === 'risks') load('risks'); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [riskFilter]);
 
   const refresh = () => load(tab);
+
+  /* گام ۴.۱ — فرم ۱۲: تکمیل مرحلهٔ جاریِ انتقال سامانه (ترتیبی؛ سرور قاعده را اعمال می‌کند) */
+  const completeMigrationStep = async (sysId: string, key: string) => {
+    setError('');
+    try {
+      await api(`/program/audit/systems/${sysId}/steps/${key}`, { method: 'POST' });
+      const result = await api<any>('/program/audits');
+      setData((prev: Record<string, any>) => ({ ...prev, audit: result }));
+      setAuditDetail((d: any) => (d && d.kind === 'systems' ? { ...d, row: result.systems.find((s: any) => s.id === sysId) } : d));
+    } catch (x) { setError((x as Error).message); }
+  };
 
   const reloadRisks = () => { load('risks'); load('overview'); };
 
@@ -531,12 +542,17 @@ export default function ProgramPage() {
             ) : <EmptyV4 icon={<ClipboardList size={22} />} title={t('ممیزی افراد ثبت نشده است')} description={t('ممیزی در ماه نخست برنامه آغاز می‌شود تا هیچ تصمیم ساختاری بدون دادهٔ ممیزی گرفته نشود.')} />)}
             {auditTab === 'systems' && (audits.systems.length ? (
               <div className="table-wrap"><table>
-                <thead><tr><th>{t('سامانه')}</th><th>{t('مالک فعلی')}</th><th>{t('حساسیت داده')}</th><th>{t('وضعیت در برنامهٔ انتقال')}</th><th>{t('پیشرفت')}</th></tr></thead>
+                <thead><tr><th>{t('سامانه')}</th><th>{t('مالک فعلی')}</th><th>{t('حساسیت داده')}</th><th>{t('وضعیت در برنامهٔ انتقال')}</th><th>{t('فرم ۱۲ — مراحل انتقال')}</th><th>{t('پیشرفت')}</th></tr></thead>
                 <tbody>{audits.systems.map((r: any) => (
                   <tr key={r.id} className="row-click" onClick={() => setAuditDetail({ kind: 'systems', row: r })}>
                     <td className="t-primary">{r.name}</td><td>{r.owner}</td>
                     <td>{r.sensitivity === 'CONFIDENTIAL' ? t('حساس') : r.sensitivity === 'MIXED' ? t('مختلط') : r.sensitivity === 'INTERNAL' ? t('داخلی') : t('عمومی')}</td>
                     <td><StatusBadge tone={MIGRATION_TONE[r.migration]}>{MIGRATION_FA[r.migration]}</StatusBadge></td>
+                    <td>{r.migration === 'KEEP' ? '—' : (
+                      <span className={`chip ${r.steps?.complete ? 'success' : (r.steps?.done ?? 0) > 0 ? 'warning' : 'neutral'}`}>
+                        {faNum(r.steps?.done ?? 0)} / {faNum(r.steps?.total ?? 10)}
+                      </span>
+                    )}</td>
                     <td>{r.migration === 'KEEP' ? '—' : r.migrationStatus === 'DONE' ? <StatusBadge tone="success">{t('انجام شد')}</StatusBadge>
                       : r.migrationStatus === 'IN_PROGRESS' ? <StatusBadge tone="warning">{t('در جریان')}</StatusBadge>
                         : <StatusBadge tone="neutral">{t('شروع نشده')}</StatusBadge>}</td>
@@ -912,6 +928,30 @@ export default function ProgramPage() {
               <div><b>{t('وضعیت در برنامهٔ انتقال')}</b><p><StatusBadge tone={MIGRATION_TONE[auditDetail.row.migration]}>{MIGRATION_FA[auditDetail.row.migration]}</StatusBadge></p></div>
               <div><b>{t('یادداشت ممیزی')}</b><p>{auditDetail.row.note}</p></div>
             </>}
+            {auditDetail.kind === 'systems' && auditDetail.row.migration !== 'KEEP' && (auditDetail.row.steps?.total ?? 0) > 0 && (
+              <div className="mig-steps">
+                <div className="mig-steps-head">
+                  <b>{t('فرم ۱۲ — کنترل ده‌مرحله‌ای انتقال سامانه (بخش ۲۱ سند)')}</b>
+                  <span className={`chip ${auditDetail.row.steps.complete ? 'success' : 'warning'}`}>
+                    {t('پیشرفت')}: {faNum(auditDetail.row.steps.done)} {t('از')} {faNum(auditDetail.row.steps.total)}
+                  </span>
+                </div>
+                <ol className="mig-steps-list">
+                  {auditDetail.row.steps.steps.map((st: any) => (
+                    <li key={st.key} className={`mig-step ${st.done ? 'done' : ''} ${st.key === auditDetail.row.steps.currentKey ? 'current' : ''}`}>
+                      <span className="mig-step-order">{faNum(st.order)}</span>
+                      <span className="mig-step-title">{t(st.title)}</span>
+                      {st.done ? <CheckCircle2 size={14} /> : st.key === auditDetail.row.steps.currentKey && writable ? (
+                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => completeMigrationStep(auditDetail.row.id, st.key)}>{t('تکمیل مرحله')}</button>
+                      ) : null}
+                    </li>
+                  ))}
+                </ol>
+                <p className="field-hint">{auditDetail.row.steps.complete
+                  ? t('هر ده مرحله تکمیل شده و سامانه در وضعیت «تکمیل‌شده» ثبت شده است.')
+                  : t('مراحل ترتیبی‌اند؛ سامانه فقط با اتمام هر ده مرحله «تکمیل‌شده» می‌شود — مرحلهٔ دهم خودش ثبت تکمیل انتقال است.')}</p>
+              </div>
+            )}
             {auditDetail.kind === 'channels' && <>
               <div><b>{t('نشانی')}</b><p>{auditDetail.row.address}</p></div>
               <div><b>{t('مالک و مدیر دسترسی')}</b><p>{auditDetail.row.owner}</p></div>
