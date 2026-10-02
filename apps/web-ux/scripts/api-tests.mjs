@@ -1627,6 +1627,71 @@ section('گام ۴.۱ — فرم ۱۲: انتقال سامانه (ده مرحل�
   check('اولین مرحلهٔ سامانهٔ شروع‌نشده → وضعیت «در جریان»', s5.status === 200 && s5.body.migrationStatus === 'IN_PROGRESS' && s5.body.steps.done === 1);
 }
 
+
+/* ═════════════════ گام ۴.۲ — فرم ۸ و ۷: تقویم انتشار رسانه + گردش تأیید محتوا (بخش ۱۶ + پیوست ب) ═════════════════ */
+section('گام ۴.۲ — فرم ۸ و ۷: تقویم انتشار رسانه + تأیید محتوا');
+{
+  const ptok = (await api('/auth/login', { method: 'POST', body: { email: 'pars', password: 'pars1234' } })).body?.accessToken;
+
+  const list = await api('/program/content', { token: ptok });
+  check('GET /program/content → هفت خروجی بذر رسانه تخصصی پارس', list.status === 200 && list.body.items.length === 7);
+  check('فرم ۸: هفت ستون رسانه تخصصی سند با ریتم هرکدام',
+    list.body.pillars.length === 7
+    && list.body.pillars.find((p) => p.key === 'newsroom').rhythm === 'بر پایه رویداد'
+    && list.body.pillars.find((p) => p.key === 'podcast').rhythm === 'دوهفتگی'
+    && list.body.pillars.find((p) => p.key === 'magazine').rhythm === 'فصلی');
+  check('فرم ۷: چهار کنترل الزامی (پیام هسته/مخاطب/حقوقی/هوش مصنوعی)',
+    list.body.controls.length === 4 && list.body.controls.map((c) => c.key).join() === 'coreMessage,audience,legal,aiStructure');
+  check('آمار وضعیت: ۳ پیش‌نویس + ۱ در بازبینی + ۱ تأییدشده + ۲ منتشرشده',
+    list.body.stats.draft === 3 && list.body.stats.inReview === 1 && list.body.stats.approved === 1 && list.body.stats.published === 2);
+  const pc3 = list.body.items.find((c) => c.id === 'pc-3');
+  check('نمای خروجی: دو کنترل ثبت‌شده (پیام هسته + مخاطب) و دو کنترل باز',
+    pc3.okControls === 2 && pc3.controlsView.coreMessage.registered === true && pc3.controlsView.legal.registered === false);
+  check('قاعدهٔ فرم ۷ در پاسخ سرور: انتشار بدون تأیید کامل ممنوع', String(list.body.rule).includes('انتشار بدون تأیید کامل ممنوع'));
+
+  const noTitle = await api('/program/content', { method: 'POST', token: ptok, body: { pillar: 'newsroom', month: '2026-12' } });
+  check('عنوان کوتاه → ۴۰۰', noTitle.status === 400);
+  const badPillar = await api('/program/content', { method: 'POST', token: ptok, body: { title: 'تست ستون', pillar: 'blog', month: '2026-12' } });
+  check('ستون خارج از فهرست هفت‌گانه → ۴۰۰', badPillar.status === 400);
+  const noPerm = await api('/program/content', { method: 'POST', token: (await login('client')).body?.accessToken, body: { title: 'محتوای مشتری', pillar: 'newsroom', month: '2026-12' } });
+  check('کاربر بدون program.write → ۴۰۳', noPerm.status === 403);
+
+  /* چرخهٔ کامل فرم ۷: پیش‌نویس → در بازبینی → تأییدشده → منتشرشده */
+  const created = await api('/program/content', { method: 'POST', token: ptok, body: { title: 'بیانیهٔ تست باتری ۴.۲', pillar: 'newsroom', month: '2026-12' } });
+  const cid = created.body?.id;
+  check('POST → 201 با وضعیت پیش‌نویس و بدون هیچ کنترل', created.status === 201 && created.body.status === 'DRAFT' && created.body.okControls === 0);
+  const pubEarly = await api(`/program/content/${cid}/publish`, { method: 'POST', token: ptok });
+  check('انتشار بدون هیچ کنترل → ۴۰۰ با فهرست چهار کنترل', pubEarly.status === 400 && pubEarly.body.message.includes('هوش مصنوعی'));
+  const c1 = await api(`/program/content/${cid}/controls/coreMessage`, { method: 'POST', token: ptok, body: { ok: true } });
+  check('اولین کنترل → گردش به «در بازبینی» با ۱ از ۴', c1.status === 200 && c1.body.status === 'IN_REVIEW' && c1.body.okControls === 1);
+  const dup = await api(`/program/content/${cid}/controls/coreMessage`, { method: 'POST', token: ptok, body: { ok: true } });
+  check('ثبت مجدد کنترل ثبت‌شده → ۴۰۰', dup.status === 400);
+  await api(`/program/content/${cid}/controls/audience`, { method: 'POST', token: ptok, body: { ok: true } });
+  await api(`/program/content/${cid}/controls/legal`, { method: 'POST', token: ptok, body: { ok: true } });
+  const c4 = await api(`/program/content/${cid}/controls/aiStructure`, { method: 'POST', token: ptok, body: { ok: true } });
+  check('چهارمین کنترل → «تأییدشده» و آمادهٔ انتشار', c4.status === 200 && c4.body.status === 'APPROVED' && c4.body.okControls === 4 && c4.body.canPublish === true);
+  const pub = await api(`/program/content/${cid}/publish`, { method: 'POST', token: ptok });
+  check('انتشار از وضعیت تأییدشده → «منتشرشده» با مهر زمانی', pub.status === 200 && pub.body.status === 'PUBLISHED' && !!pub.body.publishedAt);
+  const pubAgain = await api(`/program/content/${cid}/publish`, { method: 'POST', token: ptok });
+  check('انتشار دوباره → ۴۰۰', pubAgain.status === 400);
+  const ctlAfterPub = await api(`/program/content/${cid}/controls/legal`, { method: 'POST', token: ptok, body: { ok: false } });
+  check('ثبت کنترل روی خروجی منتشرشده → ۴۰۰', ctlAfterPub.status === 400);
+
+  /* کنترل ناموفق = سد انتشار */
+  const neg = await api('/program/content', { method: 'POST', token: ptok, body: { title: 'خروجی کنترل ناموفق', pillar: 'video', month: '2026-12' } });
+  await api(`/program/content/${neg.body.id}/controls/coreMessage`, { method: 'POST', token: ptok, body: { ok: true } });
+  const failed = await api(`/program/content/${neg.body.id}/controls/legal`, { method: 'POST', token: ptok, body: { ok: false, note: 'بازبینی حقوقی لازم دارد' } });
+  check('کنترل ناموفق → «در بازبینی» می‌ماند و تأیید کامل رخ نمی‌دهد',
+    failed.body.status === 'IN_REVIEW' && failed.body.okControls === 1);
+  const pubFailed = await api(`/program/content/${neg.body.id}/publish`, { method: 'POST', token: ptok });
+  check('انتشار با کنترل ناموفق → ۴۰۰ (سکوت دربارهٔ کنترل ممنوع)', pubFailed.status === 400);
+
+  /* جداسازی مستأجر: دنیای دمو فقط دو خروجی خودش را می‌بیند */
+  const demoList = await api('/program/content', { token: (await login(OWNER.email)).body?.accessToken });
+  check('دنیای دمو: فقط دو خروجی بذر خودش (نه رسانهٔ پارس)', demoList.status === 200 && demoList.body.items.length === 2
+    && !demoList.body.items.some((c) => c.id.startsWith('pc-') && !c.id.startsWith('pc-d')));
+}
+
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
 if (failures.length) { console.log(`  Failed: ${failures.join(' | ')}`); }

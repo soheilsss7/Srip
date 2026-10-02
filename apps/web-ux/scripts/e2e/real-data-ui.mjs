@@ -311,6 +311,55 @@ try {
   }));
   ok('تکمیل مرحله → ۲ انجام‌شده و مرحلهٔ بعدی جاری', afterStep.done === 2 && afterStep.current.includes('آماده‌سازی'), `done=${afterStep.done}`);
 
+
+  /* ═══ گام ۴.۲ — فرم ۸ و ۷: رسانه تخصصی و تأیید محتوا در تقویم ═══ */
+  await page2.evaluate(() => { document.querySelector('.ev-checklist .modal-close, .modal-backdrop .modal-close')?.click?.(); });
+  await page2.keyboard.press('Escape');
+  await new Promise(r => setTimeout(r, 700));
+  const cinfo = await page2.evaluate(() => ({
+    hasPanel: [...document.querySelectorAll('h2')].some(h => (h.textContent ?? '').includes('رسانه تخصصی و تأیید محتوا')),
+    pillars: document.querySelectorAll('.cnt-pillar').length,
+    rows: [...document.querySelectorAll('.cnt-row')].map(r => (r.textContent ?? '').replace(/\s+/g, ' ').trim()),
+    stats: [...document.querySelectorAll('.content-panel .pmr-stats .chip')].map(c => (c.textContent ?? '').replace(/\s+/g, ' ').trim()),
+  }));
+  ok('فرم ۸: پنل رسانه تخصصی با هفت ستون ریتم‌دار سند', cinfo.hasPanel && cinfo.pillars === 7, `pillars=${cinfo.pillars}`);
+  ok('فرم ۸: هفت خروجی بذر پارس با ستون و ریتم', cinfo.rows.length === 7 && cinfo.rows.some(r => r.includes('پروندهٔ ویژهٔ دادهٔ باز صنعت')) && cinfo.rows.every(r => r.includes('مدیر محتوا')), `rows=${cinfo.rows.length}`);
+  ok('فرم ۸: آمار وضعیت (۲ منتشرشده + ۱ تأییدشده + ۱ در بازبینی + ۳ پیش‌نویس)',
+    cinfo.stats.some(c => c.includes('منتشرشده: ۲')) && cinfo.stats.some(c => c.includes('تأییدشده: ۱')) && cinfo.stats.some(c => c.includes('در بازبینی: ۱')), JSON.stringify(cinfo.stats));
+
+  /* فرم ۷: مودال چهار کنترل — ثبت دو کنترل باقی‌ماندهٔ اپیزود پادکست → تأییدشده → انتشار */
+  await (await page2.evaluateHandle(() => [...document.querySelectorAll('.cnt-row')].find(r => (r.textContent ?? '').includes('اپیزود: سخنران داده')))).asElement().click();
+  await page2.waitForSelector('.cnt-detail', { timeout: 30000 });
+  const d0 = await page2.evaluate(() => ({
+    head: (document.querySelector('.cnt-detail-head')?.textContent ?? '').replace(/\s+/g, ' ').trim(),
+    ctls: document.querySelectorAll('.cnt-ctl').length,
+    okCount: document.querySelectorAll('.cnt-ctl.ok').length,
+    buttons: document.querySelectorAll('.cnt-ctl button').length,
+    publishBtn: [...document.querySelectorAll('.cnt-detail button')].some(b => (b.textContent ?? '').trim() === 'انتشار'),
+    hint: (document.querySelector('.cnt-detail .field-hint')?.textContent ?? '').includes('انتشار بدون تأیید کامل ممنوع'),
+  }));
+  ok('فرم ۷: مودال گردش تأیید با چهار کنترل الزامی (۲ تأییدشده، ۲ دکمهٔ ثبت)', d0.ctls === 4 && d0.okCount === 2 && d0.buttons === 2 && !d0.publishBtn && d0.hint, JSON.stringify(d0).slice(0, 80));
+  for (let i = 0; i < 2; i++) {
+    await page2.evaluate(() => { [...document.querySelectorAll('.cnt-ctl button')][0]?.click(); });
+    await new Promise(r => setTimeout(r, 2500));
+  }
+  const d1 = await page2.evaluate(() => ({
+    okCount: document.querySelectorAll('.cnt-ctl.ok').length,
+    status: (document.querySelector('.cnt-detail-head .srip-badge')?.textContent ?? '').trim(),
+    publishBtn: [...document.querySelectorAll('.cnt-detail button')].some(b => (b.textContent ?? '').trim() === 'انتشار'),
+  }));
+  ok('فرم ۷: ثبت دو کنترل دیگر → «تأییدشده» با دکمهٔ انتشار', d1.okCount === 4 && d1.status.includes('تأییدشده') && d1.publishBtn, JSON.stringify(d1));
+  await page2.evaluate(() => { [...document.querySelectorAll('.cnt-detail button')].find(b => (b.textContent ?? '').trim() === 'انتشار')?.click(); });
+  await new Promise(r => setTimeout(r, 3000));
+  const d2 = await page2.evaluate(() => ({
+    status: (document.querySelector('.cnt-detail-head .srip-badge')?.textContent ?? '').trim(),
+    rowStatus: ([...document.querySelectorAll('.cnt-row')].find(r => (r.textContent ?? '').includes('اپیزود: سخنران داده'))?.textContent ?? '').includes('منتشرشده'),
+    noBtn: ![...document.querySelectorAll('.cnt-detail button')].some(b => (b.textContent ?? '').trim() === 'انتشار'),
+  }));
+  ok('فرم ۷: انتشار از رابط → «منتشرشده» در مودال و فهرست؛ دکمهٔ انتشار برداشته شد', d2.status.includes('منتشرشده') && d2.rowStatus && d2.noBtn, JSON.stringify(d2));
+  await page2.evaluate(() => { document.querySelector('.modal-close')?.click(); });
+  await new Promise(r => setTimeout(r, 500));
+
   await page2.close();
 
   /* ═══ سناریوی ۳ (فقط بیلد استاتیک): ۴۰۴ ریشهٔ سایت نباید حلقهٔ ریدایرکت بسازد ═══

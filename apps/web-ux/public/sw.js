@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.10.01.05';
+const DEMO_MOCK_VERSION = '2026.10.02.01';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -8584,6 +8584,76 @@ function crisisProtocolOf(orgId){
   return (DB.crisisProtocols??[]).find(c=>c.organizationId===orgId)??null;
 }
 
+/* ═══════════════ گام ۴.۲ — فرم ۸ و ۷ (پیوست ب): تقویم انتشار رسانه تخصصی + گردش تأیید محتوا ═══════════════
+   فرم ۸: برنامه‌ریزی و پایش خروجی ماهانه رسانه — هفت ستون رسانه تخصصی سند (بخش ۱۶) با ریتم هرکدام.
+   فرم ۷: گردش تأیید سه‌مرحله‌ای هر خروجی عمومی — چهار کنترل الزامی پیش از انتشار (پیام هسته،
+   شخصی‌سازی مخاطب، بازبینی حقوقی، ساختاریافتگی هوش مصنوعی)؛ انتشار بدون تأیید کامل ممنوع است. */
+const MEDIA_PILLARS=[
+  {key:'newsroom',  title:'نیوزروم مرجع',            rhythm:'بر پایه رویداد', desc:'بیانیه‌ها، اطلاعیه‌ها، دستاوردها، دسترسی رسانه'},
+  {key:'magazine',  title:'مجله تخصصی هوش مصنوعی',   rhythm:'فصلی',          desc:'تحلیل عمیق، پرونده ویژه، گفت‌وگو'},
+  {key:'podcast',   title:'پادکست تخصصی',             rhythm:'دوهفتگی',       desc:'گفت‌وگو با خبرگان و مدیران'},
+  {key:'video',     title:'دارایی‌های ویدئویی',        rhythm:'ماهانه',        desc:'گزارش تصویری، مصاحبه، مستند کوتاه'},
+  {key:'newsletter',title:'خبرنامه دوره‌ای',           rhythm:'ماهانه',        desc:'گزیده ماهانه برای ذی‌نفعان'},
+  {key:'interview', title:'مصاحبه با متخصصان',        rhythm:'ماهانه',        desc:'گفت‌وگوی ساختاریافته با صاحب‌نظران'},
+  {key:'dataviz',   title:'گزارش‌های داده‌محور',       rhythm:'فصلی',          desc:'داده‌نما، داشبورد عمومی، نمودارهای مرجع'},
+];
+const CONTENT_CONTROLS=[
+  {key:'coreMessage',title:'هم‌راستایی با پیام هسته'},
+  {key:'audience',   title:'شخصی‌سازی برای مخاطب'},
+  {key:'legal',      title:'بازبینی حقوقی'},
+  {key:'aiStructure',title:'ساختاریافتگی برای سامانه‌های هوش مصنوعی'},
+];
+const CONTENT_STATUS_FA={DRAFT:'پیش‌نویس',IN_REVIEW:'در بازبینی',APPROVED:'تأییدشده',PUBLISHED:'منتشرشده'};
+function ensureContentSeed(){
+  if((DB.programContent??[]).some(c=>c.organizationId==='org-pars')) return;
+  const now=new Date();
+  const mNow=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const mPrev=now.getMonth()===0?`${now.getFullYear()-1}-12`:`${now.getFullYear()}-${String(now.getMonth()).padStart(2,'0')}`;
+  const ago=(d)=>new Date(Date.now()-d*86400000).toISOString();
+  const CTL=(n)=>Object.fromEntries(CONTENT_CONTROLS.slice(0,n).map((c,i)=>[c.key,{ok:true,at:ago(10-i),note:''}]));
+  const mk=(id,org,pillar,title,month,status)=>({
+    id,organizationId:org,pillar,title,month,ownerRole:'مدیر محتوا',status,
+    controls:{...(status==='PUBLISHED'?CTL(4):status==='APPROVED'?CTL(4):status==='IN_REVIEW'?CTL(2):{})},
+    publishedAt:status==='PUBLISHED'?ago(8):null,
+    createdAt:ago(20),updatedAt:ago(6)});
+  DB.programContent=[
+    /* جهان واقعی پارس — برنامهٔ رسانه تخصصی سند */
+    mk('pc-1','org-pars','newsroom','بیانیهٔ انتشار گزارش فصلی داده',mPrev,'PUBLISHED'),
+    mk('pc-2','org-pars','magazine','پروندهٔ ویژهٔ دادهٔ باز صنعت',mNow,'APPROVED'),
+    mk('pc-3','org-pars','podcast','اپیزود: سخنران داده در صنعت',mNow,'IN_REVIEW'),
+    mk('pc-4','org-pars','newsletter','گزیدهٔ ماهانهٔ ذی‌نفعان',mNow,'DRAFT'),
+    mk('pc-5','org-pars','video','گزارش تصویری میزگرد داده',mPrev,'PUBLISHED'),
+    mk('pc-6','org-pars','interview','گفت‌وگو با رئیس پژوهشگاه داده',mNow,'DRAFT'),
+    mk('pc-7','org-pars','dataviz','داده‌نمای صنعت — نسخهٔ پاییز',mNow,'DRAFT'),
+    /* دنیای دمو */
+    mk('pc-d1','org-1','newsroom','بیانیهٔ دمو: انتشار بریف فصلی',mPrev,'PUBLISHED'),
+    mk('pc-d2','org-1','podcast','اپیزود دمو: معرفی سامانه',mNow,'DRAFT'),
+  ];
+}
+function contentFor(req){
+  ensureContentSeed();
+  const ids=visibleOrgIds(req);
+  return (DB.programContent??[]).filter(c=>ids.includes(c.organizationId));
+}
+function contentView(c){
+  const ctr=Object.fromEntries(CONTENT_CONTROLS.map(x=>{
+    const st=c.controls?.[x.key];
+    return [x.key,st?{...st,registered:true}:{registered:false}];
+  }));
+  const okCount=CONTENT_CONTROLS.filter(x=>ctr[x.key].registered&&ctr[x.key].ok).length;
+  return {...c,statusFa:CONTENT_STATUS_FA[c.status]??c.status,pillarTitle:MEDIA_PILLARS.find(p=>p.key===c.pillar)?.title??c.pillar,
+    pillarRhythm:MEDIA_PILLARS.find(p=>p.key===c.pillar)?.rhythm??'',
+    controlsView:ctr,okControls:okCount,totalControls:CONTENT_CONTROLS.length,
+    canPublish:c.status==='APPROVED'};
+}
+function validateContentBody(b){
+  const title=String(b.title??'').trim();
+  if(title.length<3) return {message:'عنوان خروجی را بنویسید (حداقل ۳ نویسه).'};
+  if(!MEDIA_PILLARS.some(p=>p.key===String(b.pillar??'').trim())) return {message:'ستون رسانه از فهرست هفت‌گانهٔ رسانه تخصصی انتخاب شود.'};
+  if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(b.month??'').trim())) return {message:'ماه انتشار را به شکل YYYY-MM وارد کنید.'};
+  return null;
+}
+
 /* ═══════════════ گام ۲.۷ — گزارش ماهانهٔ استاندارد (فرم ۱۵؛ بخش ۲۶ سند) ═══════════════
    قالب ثابت گزارش ماهانه به مدیریت هلدینگ: خلاصهٔ مدیریتی، شاخص‌های کلیدی (زنده از
    بخش ۲۶)، ریسک‌های درجه بالا (زنده از بخش ۲۵)، انحراف‌های زمانی بیش از دو هفته و
@@ -15210,6 +15280,76 @@ async function __handler(req, res) {
     p.updatedAt=nowIso(); saveDb();
     audit(req,'UPDATE','Crisis',row.id,'OK',{});
     return json(res,200,crisisView(p));
+  }
+
+  /* ─────────────── گام ۴.۲ — فرم ۸ و ۷: تقویم انتشار رسانه + تأیید محتوا (/program/content) ────────── */
+  if(is('/program/content')&&method==='GET'){
+    if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
+    const rows=contentFor(req);
+    const items=rows.map(contentView);
+    const now=new Date();
+    const mNow=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    const pillarStats=MEDIA_PILLARS.map(p=>{
+      const ofPillar=items.filter(c=>c.pillar===p.key);
+      return {key:p.key,title:p.title,rhythm:p.rhythm,desc:p.desc,
+        total:ofPillar.length,
+        thisMonth:ofPillar.filter(c=>c.month===mNow).length,
+        published:ofPillar.filter(c=>c.status==='PUBLISHED').length};
+    });
+    return json(res,200,{items:rows.sort((a,b)=>b.month.localeCompare(a.month)||String(b.createdAt).localeCompare(String(a.createdAt))).map(contentView),
+      pillars:pillarStats,controls:CONTENT_CONTROLS,
+      stats:{total:items.length,draft:items.filter(c=>c.status==='DRAFT').length,
+        inReview:items.filter(c=>c.status==='IN_REVIEW').length,
+        approved:items.filter(c=>c.status==='APPROVED').length,
+        published:items.filter(c=>c.status==='PUBLISHED').length,
+        thisMonth:items.filter(c=>c.month===mNow).length},
+      ownerDefault:'مدیر محتوا',
+      rule:'رسانه تخصصی در هفت ستون سازمان‌دهی می‌شود (فرم ۸) و هر خروجی عمومی پیش از انتشار، گردش تأیید سه‌مرحله‌ای (فرم ۷) را طی می‌کند: بازبینی با چهار کنترل الزامی — هم‌راستایی با پیام هسته، شخصی‌سازی برای مخاطب، بازبینی حقوقی و ساختاریافتگی برای سامانه‌های هوش مصنوعی — سپس تأیید کامل و انتشار؛ انتشار بدون تأیید کامل ممنوع است.'});
+  }
+  if(is('/program/content')&&method==='POST'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    const b=await readBody(req);
+    const err=validateContentBody(b);
+    if(err) return json(res,400,err);
+    const row={id:`pc-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,
+      organizationId:primaryOrgId(authUser)??visibleOrgIds(req)[0]??PROGRAM_ORG_ID,
+      pillar:String(b.pillar).trim(),title:String(b.title).trim(),month:String(b.month).trim(),
+      ownerRole:String(b.ownerRole??'').trim()||'مدیر محتوا',
+      status:'DRAFT',controls:{},publishedAt:null,createdAt:nowIso(),updatedAt:nowIso()};
+    DB.programContent.push(row); saveDb();
+    audit(req,'CREATE','Content',row.id,'OK',{pillar:row.pillar,title:row.title.slice(0,60)});
+    return json(res,201,contentView(row));
+  }
+  const ctlReg=match('/program/content/:id/controls/:key');
+  if(ctlReg&&method==='POST'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    const row=contentFor(req).find(c=>c.id===ctlReg[0]);
+    if(!row) return json(res,404,{message:'خروجی محتوایی یافت نشد یا خارج از محدودهٔ شماست.'});
+    const ctl=CONTENT_CONTROLS.find(x=>x.key===ctlReg[1]);
+    if(!ctl) return json(res,400,{message:'کنترل نامعتبر است — چهار کنترل الزامی فرم ۷: پیام هسته، مخاطب، حقوقی، هوش مصنوعی.'});
+    if(row.status==='PUBLISHED') return json(res,400,{message:'خروجی منتشرشده قابل تغییر نیست.'});
+    if(row.controls?.[ctl.key]) return json(res,400,{message:`نتیجهٔ کنترل «${ctl.title}» قبلاً ثبت شده است.`});
+    const b=await readBody(req);
+    const ok=!(b.ok===false);
+    row.controls={...(row.controls??{}),[ctl.key]:{ok,at:nowIso(),note:String(b.note??'').trim()}};
+    /* گردش سه‌مرحله‌ای: پیش‌نویس → در بازبینی (اولین کنترل) → تأییدشده (هر چهار کنترل مثبت) */
+    if(row.status==='DRAFT') row.status='IN_REVIEW';
+    if(CONTENT_CONTROLS.every(x=>row.controls[x.key]?.ok)) row.status='APPROVED';
+    row.updatedAt=nowIso(); saveDb();
+    audit(req,'UPDATE','Content',row.id,'CONTROL',{key:ctl.key,ok,status:row.status});
+    return json(res,200,contentView(row));
+  }
+  const cPub=match('/program/content/:id/publish');
+  if(cPub&&method==='POST'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    const row=contentFor(req).find(c=>c.id===cPub[0]);
+    if(!row) return json(res,404,{message:'خروجی محتوایی یافت نشد یا خارج از محدودهٔ شماست.'});
+    if(row.status==='PUBLISHED') return json(res,400,{message:'این خروجی قبلاً منتشر شده است.'});
+    const missing=CONTENT_CONTROLS.filter(x=>!row.controls?.[x.key]?.ok);
+    if(missing.length) return json(res,400,{message:`انتشار بدون تأیید کامل ممنوع است — کنترل‌های ثبت‌نشده یا ناموفق: ${missing.map(x=>x.title).join('، ')}.`});
+    row.status='PUBLISHED'; row.publishedAt=nowIso(); row.updatedAt=nowIso(); saveDb();
+    audit(req,'UPDATE','Content',row.id,'PUBLISH',{title:row.title.slice(0,60)});
+    return json(res,200,contentView(row));
   }
 
   /* ─────────────── گام ۲.۷ — گزارش ماهانهٔ استاندارد (فرم ۱۵؛ /program/monthly-reports) ────────── */

@@ -7,7 +7,7 @@ import { ErrorCard, Loading, Modal, Badge } from '../_components/page-ui';
 import { t } from '../_lib/i18n';
 import {
   JALALI_MONTHS, WEEKDAYS_SAT, faNum, todayJalali, toJalali, toGregorian,
-  jalaaliMonthLength, saturdayFirst, toJalaliKey,
+  jalaaliMonthLength, saturdayFirst, toJalaliKey, faFullDate,
 } from '../_lib/jalali';
 import {
   CalendarDays, ChevronRight, ChevronLeft, Plus, Clock, MapPin, RefreshCw, Building2,
@@ -66,20 +66,31 @@ export default function CalendarPage() {
   const [busy, setBusy] = useState(false);
   const [crisisOpen, setCrisisOpen] = useState(false);
   const [crisisForm, setCrisisForm] = useState({ title: '', detectedAt: '', firstResponseAt: '', notes: '' });
+  /* گام ۴.۲ — فرم ۸ و ۷: تقویم انتشار رسانه تخصصی + گردش تأیید محتوا */
+  const [content, setContent] = useState<any>(null);
+  const [contentSel, setContentSel] = useState<any>(null);
+  const [contentFormOpen, setContentFormOpen] = useState(false);
+  const programWritable = can('program.write');
+  const nowD = new Date();
+  const monthNow = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, '0')}`;
+  const emptyContentForm = { title: '', pillar: 'newsroom', month: monthNow, ownerRole: 'مدیر محتوا' };
+  const [contentForm, setContentForm] = useState(emptyContentForm);
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
     try {
       const qs = scopeId !== 'all' ? `?organizationId=${encodeURIComponent(scopeId)}` : '';
-      const [ms, evs, cr] = await Promise.all([
+      const [ms, evs, cr, cnt] = await Promise.all([
         api(`/meetings${qs}`),
         api('/events'),
         api('/crisis-protocol').catch(() => null),
+        api('/program/content').catch(() => null),
       ]);
       setMeetings(unwrap(ms));
       setEvents(unwrap(evs) ?? []);
       setEvMeta(evs ?? null);
       if (cr) setCrisis(cr);
+      if (cnt) setContent(cnt);
       if (scopeId !== 'all' && !scopeName) {
         try {
           const orgs = unwrap(await api('/organizations'));
@@ -123,6 +134,30 @@ export default function CalendarPage() {
   }, [events]);
 
   // Grid: Saturday-first, 6 rows × 7 cols
+  /* گام ۴.۲ — ثبت نتیجهٔ کنترل فرم ۷ و انتشار خروجی تأییدشده */
+  const reloadContent = async () => { try { setContent(await api('/program/content')); } catch {} };
+  const registerControl = async (item: any, key: string) => {
+    setBusy(true);
+    try {
+      const upd = await api(`/program/content/${item.id}/controls/${key}`, { method: 'POST', body: JSON.stringify({ ok: true }) });
+      setContentSel(upd); await reloadContent();
+    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+  };
+  const publishContent = async (item: any) => {
+    setBusy(true);
+    try {
+      const upd = await api(`/program/content/${item.id}/publish`, { method: 'POST' });
+      setContentSel(upd); await reloadContent();
+    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+  };
+  const saveContent = async () => {
+    setBusy(true);
+    try {
+      await api('/program/content', { method: 'POST', body: JSON.stringify(contentForm) });
+      setContentFormOpen(false); setContentForm(emptyContentForm); await reloadContent();
+    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+  };
+
   const grid = useMemo(() => {
     const first = toGregorian(jy, jm, 1);
     const offset = saturdayFirst(first.gy, first.gm, first.gd); // 0=شنبه
@@ -433,6 +468,57 @@ export default function CalendarPage() {
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
         <button className="btn btn-ghost btn-sm" onClick={load}><RefreshCw size={13}/> بازخوانی</button>
       </div>
+      {/* ═══ گام ۴.۲ — فرم ۸ و ۷: رسانه تخصصی و تأیید محتوا ═══ */}
+      {content && (
+        <section className="panel content-panel">
+          <div className="panel-title">
+            <div>
+              <h2>{t('رسانه تخصصی و تأیید محتوا (فرم ۸ و ۷)')}</h2>
+              <p>{t('هفت ستون رسانه تخصصی با ریتم انتشار؛ هر خروجی عمومی پیش از انتشار، گردش تأیید سه‌مرحله‌ای با چهار کنترل الزامی را طی می‌کند.')}</p>
+            </div>
+            <div className="toolbar">
+              {programWritable && <button className="btn btn-ghost btn-sm" onClick={() => { setContentForm(emptyContentForm); setContentFormOpen(true); }}>{t('خروجی رسانه‌ای تازه')}</button>}
+            </div>
+          </div>
+          <div className="pmr-stats">
+            <span className="chip success">{t('منتشرشده')}: {faNum(content.stats.published)}</span>
+            <span className="chip info">{t('تأییدشده')}: {faNum(content.stats.approved)}</span>
+            <span className="chip warning">{t('در بازبینی')}: {faNum(content.stats.inReview)}</span>
+            <span className="chip neutral">{t('پیش‌نویس')}: {faNum(content.stats.draft)}</span>
+            <span className="chip neutral">{t('خروجی ماه جاری')}: {faNum(content.stats.thisMonth)}</span>
+          </div>
+          <div className="cnt-pillars">
+            {content.pillars.map((p: any) => (
+              <div key={p.key} className="cnt-pillar">
+                <b>{t(p.title)}</b>
+                <small>{t(p.rhythm)}</small>
+                <span className="t-muted">{t(p.desc)}</span>
+                <em>{t('این ماه')}: {faNum(p.thisMonth)} · {t('منتشرشده')}: {faNum(p.published)}</em>
+              </div>
+            ))}
+          </div>
+          <div className="cnt-list">
+            {content.items.map((c: any) => (
+              <button type="button" key={c.id} className={`cnt-row ${c.status}`} onClick={() => setContentSel(c)}>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <strong>{c.title}</strong>
+                  <small>{t(c.pillarTitle)} · {t(c.pillarRhythm)} · {c.month} · {c.ownerRole}</small>
+                </span>
+                <span className="cnt-ctl-dots">
+                  {content.controls.map((x: any) => (
+                    <i key={x.key} className={c.controlsView[x.key]?.registered && c.controlsView[x.key]?.ok ? 'ok' : c.controlsView[x.key]?.registered ? 'bad' : ''} title={t(x.title)} />
+                  ))}
+                </span>
+                <span className="pmr-badges">
+                  <Badge tone={c.status === 'PUBLISHED' ? 'success' : c.status === 'APPROVED' ? 'info' : c.status === 'IN_REVIEW' ? 'warning' : 'neutral'}>{t(c.statusFa)}</Badge>
+                </span>
+              </button>
+            ))}
+            {!content.items.length && <p className="empty-state">{t('هنوز خروجی رسانه‌ای ثبت نشده است — از «خروجی رسانه‌ای تازه» آغاز کنید.')}</p>}
+          </div>
+        </section>
+      )}
+
 
       {/* مودال رویداد جدید — فرم ۱۰ سند */}
       <Modal open={evFormOpen} title={t('ثبت رویداد در تقویم سالانه')} onClose={() => setEvFormOpen(false)}>
@@ -536,6 +622,69 @@ export default function CalendarPage() {
           <div className="form-actions">
             <button type="button" className="srip-button" onClick={() => setCrisisOpen(false)}>{t('انصراف')}</button>
             <button type="submit" className="srip-button primary" disabled={busy}>{busy ? t('در حال ذخیره…') : t('ثبت بحران')}</button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* گام ۴.۲ — مودال جزئیات خروجی: چهار کنترل فرم ۷ + انتشار */}
+      <Modal open={!!contentSel} title={contentSel?.title ?? ''} onClose={() => setContentSel(null)}>
+        {contentSel && (
+          <div className="cnt-detail">
+            <div className="cnt-detail-head">
+              <Badge tone={contentSel.status === 'PUBLISHED' ? 'success' : contentSel.status === 'APPROVED' ? 'info' : contentSel.status === 'IN_REVIEW' ? 'warning' : 'neutral'}>{t(contentSel.statusFa)}</Badge>
+              <span>{t(contentSel.pillarTitle)} · {t(contentSel.pillarRhythm)}</span>
+              <small>{contentSel.month} · {contentSel.ownerRole}</small>
+            </div>
+            <div className="cnt-controls">
+              <b className="bp-col-t">{t('گردش تأیید سه‌مرحله‌ای — چهار کنترل الزامی (فرم ۷)')}</b>
+              {content.controls.map((x: any) => {
+                const st = contentSel.controlsView[x.key];
+                return (
+                  <div key={x.key} className={`cnt-ctl ${st?.registered ? (st.ok ? 'ok' : 'bad') : ''}`}>
+                    <span>{t(x.title)}</span>
+                    {st?.registered
+                      ? <small>{st.ok ? t('تأیید شد') : t('اصلاح لازم')}{st.at ? ` · ${faFullDate(new Date(st.at))}` : ''}</small>
+                      : programWritable && contentSel.status !== 'PUBLISHED'
+                        ? <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => registerControl(contentSel, x.key)}>{t('ثبت نتیجهٔ کنترل')}</button>
+                        : <small className="t-muted">{t('ثبت نشده')}</small>}
+                  </div>
+                );
+              })}
+            </div>
+            <p className="field-hint">{t('انتشار بدون تأیید کامل ممنوع است — هر چهار کنترل باید تأیید شده باشد؛ سپس «تأییدشده» و آمادهٔ انتشار می‌شود.')}</p>
+            {programWritable && contentSel.status === 'APPROVED' && (
+              <div className="form-actions">
+                <button type="button" className="srip-button primary" disabled={busy} onClick={() => publishContent(contentSel)}>{t('انتشار')}</button>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      {/* گام ۴.۲ — مودال خروجی رسانه‌ای تازه (فرم ۸) */}
+      <Modal open={contentFormOpen} title={t('خروجی رسانه‌ای تازه (فرم ۸)')} onClose={() => setContentFormOpen(false)}>
+        <form id="content-form" className="form-grid" onSubmit={(e) => { e.preventDefault(); saveContent(); }}>
+          <div className="field full">
+            <label className="field-label">{t('عنوان خروجی')}</label>
+            <input required value={contentForm.title} onChange={(e) => setContentForm(f => ({ ...f, title: e.target.value }))} />
+          </div>
+          <div className="field">
+            <label className="field-label">{t('ستون رسانه تخصصی')}</label>
+            <select value={contentForm.pillar} onChange={(e) => setContentForm(f => ({ ...f, pillar: e.target.value }))}>
+              {content?.pillars.map((p: any) => <option key={p.key} value={p.key}>{t(p.title)} — {t(p.rhythm)}</option>)}
+            </select>
+          </div>
+          <div className="field">
+            <label className="field-label">{t('ماه انتشار (میلادی)')}</label>
+            <input type="month" required value={contentForm.month} onChange={(e) => setContentForm(f => ({ ...f, month: e.target.value }))} />
+          </div>
+          <div className="field full">
+            <label className="field-label">{t('مالک (نقش)')}</label>
+            <input value={contentForm.ownerRole} onChange={(e) => setContentForm(f => ({ ...f, ownerRole: e.target.value }))} />
+          </div>
+          <div className="form-actions">
+            <button type="button" className="srip-button" onClick={() => setContentFormOpen(false)}>{t('انصراف')}</button>
+            <button type="submit" className="srip-button primary" disabled={busy}>{busy ? t('در حال ذخیره…') : t('ثبت پیش‌نویس خروجی')}</button>
           </div>
         </form>
       </Modal>
