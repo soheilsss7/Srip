@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.10.01.04';
+const DEMO_MOCK_VERSION = '2026.10.01.05';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -8099,12 +8099,16 @@ function ensureProgramSeed(){
     {id:'ap-4',organizationId:PROGRAM_ORG_ID,role:'توسعه‌دهنده',duties:'نگهداری وب‌سایت و سامانه‌ها',manager:'مدیر محصول',capacity:'HIGH',dependencyRisk:'HIGH',successor:'ندارد',priority:'KEEP',note:'دانش سامانه متمرکز روی یک نفر'},
     {id:'ap-5',organizationId:PROGRAM_ORG_ID,role:'تحلیلگر تحقیقات بازار',duties:'—',manager:'مدیر توسعه کسب‌وکار',capacity:'—',dependencyRisk:'—',successor:'—',priority:'HIRE',note:'جایگاه خالی — جذب در ماه ۳'},
   ];}
-  if(!Array.isArray(DB.auditSystems)||!DB.auditSystems.length){DB.auditSystems=[
-    {id:'as-1',organizationId:PROGRAM_ORG_ID,name:'اکسل روابط رسانه‌ای',owner:'کارشناس رسانه و روابط عمومی',data:'حدود ۸۰۰ ردیف مخاطبان',sensitivity:'PUBLIC',backup:'هفتگی دستی',overlap:'SRIP — روابط',migration:'MIGRATE',migrationStatus:'DONE',note:'رکوردها تطبیق و منتقل شد'},
-    {id:'as-2',organizationId:PROGRAM_ORG_ID,name:'CRM قدیمی فروش',owner:'مدیر حساب',data:'حدود ۳هزار شرکت',sensitivity:'CONFIDENTIAL',backup:'ماهانه',overlap:'SRIP — سازمان‌ها',migration:'SHUTDOWN',migrationStatus:'DONE',note:'خروجی کامل گرفته شد'},
-    {id:'as-3',organizationId:PROGRAM_ORG_ID,name:'درایو مشترک اسناد',owner:'دستیار مدیرعامل',data:'حدود ۱۲۰ گیگابایت',sensitivity:'MIXED',backup:'روزانهٔ خودکار',overlap:'کم',migration:'KEEP',migrationStatus:null,note:'نقطهٔ اشتراک رسمی باقی می‌ماند'},
-    {id:'as-4',organizationId:PROGRAM_ORG_ID,name:'گروه پیام‌رسان هماهنگی مدیران',owner:'دستیار مدیرعامل',data:'تصمیم‌ها و ابلاغ‌ها',sensitivity:'INTERNAL',backup:'ندارد',overlap:'SRIP — تعاملات',migration:'MIGRATE',migrationStatus:'IN_PROGRESS',note:'تصمیم‌های کاری به تعاملات SRIP منتقل می‌شود'},
-    {id:'as-5',organizationId:PROGRAM_ORG_ID,name:'دفترچهٔ ثبت رویداد',owner:'مدیر رویداد',data:'رویدادهای سالانه',sensitivity:'PUBLIC',backup:'ندارد',overlap:'SRIP — تقویم',migration:'SHUTDOWN',migrationStatus:'NOT_STARTED',note:'پس از راه‌اندازی تقویم رویداد خاموش می‌شود'},
+  if(!Array.isArray(DB.auditSystems)||!DB.auditSystems.length){
+    /* گام ۴.۱ — بذر مراحل فرم ۱۲: دو سامانهٔ تکمیل‌شده (هر ۱۰ مرحله)، یکی در میانهٔ راه (۶ مرحله)، یکی شروع‌نشده */
+    const migSteps=(keys,base)=>Object.fromEntries(keys.map((k,i)=>[k,new Date(Date.now()-(base-i)*3*86400000).toISOString()]));
+    const ALL10=MIGRATION_STEPS.map(s=>s.key);
+    DB.auditSystems=[
+    {id:'as-1',organizationId:PROGRAM_ORG_ID,name:'اکسل روابط رسانه‌ای',owner:'کارشناس رسانه و روابط عمومی',data:'حدود ۸۰۰ ردیف مخاطبان',sensitivity:'PUBLIC',backup:'هفتگی دستی',overlap:'SRIP — روابط',migration:'MIGRATE',migrationStatus:'DONE',note:'رکوردها تطبیق و منتقل شد',migrationSteps:migSteps(ALL10,120)},
+    {id:'as-2',organizationId:PROGRAM_ORG_ID,name:'CRM قدیمی فروش',owner:'مدیر حساب',data:'حدود ۳هزار شرکت',sensitivity:'CONFIDENTIAL',backup:'ماهانه',overlap:'SRIP — سازمان‌ها',migration:'SHUTDOWN',migrationStatus:'DONE',note:'خروجی کامل گرفته شد',migrationSteps:migSteps(ALL10,200)},
+    {id:'as-3',organizationId:PROGRAM_ORG_ID,name:'درایو مشترک اسناد',owner:'دستیار مدیرعامل',data:'حدود ۱۲۰ گیگابایت',sensitivity:'MIXED',backup:'روزانهٔ خودکار',overlap:'کم',migration:'KEEP',migrationStatus:null,note:'نقطهٔ اشتراک رسمی باقی می‌ماند',migrationSteps:{}},
+    {id:'as-4',organizationId:PROGRAM_ORG_ID,name:'گروه پیام‌رسان هماهنگی مدیران',owner:'دستیار مدیرعامل',data:'تصمیم‌ها و ابلاغ‌ها',sensitivity:'INTERNAL',backup:'ندارد',overlap:'SRIP — تعاملات',migration:'MIGRATE',migrationStatus:'IN_PROGRESS',note:'تصمیم‌های کاری به تعاملات SRIP منتقل می‌شود',migrationSteps:migSteps(ALL10.slice(0,6),40)},
+    {id:'as-5',organizationId:PROGRAM_ORG_ID,name:'دفترچهٔ ثبت رویداد',owner:'مدیر رویداد',data:'رویدادهای سالانه',sensitivity:'PUBLIC',backup:'ندارد',overlap:'SRIP — تقویم',migration:'SHUTDOWN',migrationStatus:'NOT_STARTED',note:'پس از راه‌اندازی تقویم رویداد خاموش می‌شود',migrationSteps:{}},
   ];}
   if(!Array.isArray(DB.auditChannels)||!DB.auditChannels.length){DB.auditChannels=[
     {id:'ac-1',organizationId:PROGRAM_ORG_ID,name:'وب‌سایت قدیمی هلدینگ',address:'pars-old.example',owner:'نامشخص',lastActivity:'۶ ماه پیش',brand:'غیرمنطبق',action:'TRANSFER',note:'محتوا به وب‌سایت مرجع جدید منتقل شود'},
@@ -8639,13 +8643,39 @@ function validateMonthlyReportBody(b){
 }
 
 /* ممیزی سه‌گانه — دادهٔ ممیزی متعلق به سازمان برنامه است و بیرون از محدوده دیده نمی‌شود */
+/* ─────────────── گام ۴.۱ — فرم ۱۲ (پیوست ب): کنترل ده‌مرحله‌ای انتقال هر سامانه ───────────────
+   مراحل از فرآیند بخش ۲۱ سند استخراج شده‌اند: ممیزی → اولویت‌بندی ریسک → خروج کامل داده →
+   ثبت پشتیبان معتبر → انتقال با فهرست کنترل → تطبیق رکوردبه‌رکورد → آموزش و راهنما →
+   اجرای موازی → رفع مغایرت‌ها → خاموش‌سازی و ثبت تکمیل. مراحل ترتیبی‌اند و سامانه فقط با
+   اتمام هر ده مرحله «تکمیل‌شده» می‌شود (مرحلهٔ دهم خودش ثبت تکمیل است). */
+const MIGRATION_STEPS=[
+  {key:'audit',    title:'تکمیل فرم ممیزی سامانه (بخش ۲۰ سند)'},
+  {key:'priority', title:'اولویت‌بندی بر پایه ریسک داده و وابستگی روزمره'},
+  {key:'export',   title:'خروج کامل داده از سامانهٔ قدیمی'},
+  {key:'backup',   title:'ثبت نسخهٔ پشتیبان معتبر'},
+  {key:'transfer', title:'انتقال داده با فهرست کنترل'},
+  {key:'match',    title:'تطبیق رکوردبه‌رکورد و آزمون صحت'},
+  {key:'training', title:'آموزش کوتاه کاربران و راهنمای یک‌صفحه‌ای'},
+  {key:'parallel', title:'دورهٔ اجرای موازی محدود'},
+  {key:'resolve',  title:'رفع مغایرت‌های باقی‌مانده'},
+  {key:'shutdown', title:'خاموش‌سازی سامانهٔ قدیمی و ثبت تکمیل انتقال'},
+];
+function systemMigrationView(s){
+  if(s.migration==='KEEP') return {steps:[],done:0,total:0,complete:false,currentKey:null,currentTitle:null};
+  const doneMap=s.migrationSteps??{};
+  const steps=MIGRATION_STEPS.map((st,i)=>({key:st.key,title:st.title,order:i+1,done:!!doneMap[st.key],doneAt:doneMap[st.key]??null}));
+  const done=steps.filter(x=>x.done).length;
+  const cur=steps.find(x=>!x.done)??null;
+  return {steps,done,total:steps.length,complete:done===steps.length,currentKey:cur?.key??null,currentTitle:cur?.title??null};
+}
+
 function programAuditsFor(req){
   ensureProgramSeed();
   const ids=visibleOrgIds(req);
   const vis=(rows)=>(rows??[]).filter(r=>ids.includes(r.organizationId));
   const people=vis(DB.auditPeople),systems=vis(DB.auditSystems),channels=vis(DB.auditChannels);
   const nonKeep=systems.filter(x=>x.migration!=='KEEP');
-  return {people,systems,channels,summary:{
+  return {people,systems:systems.map(s=>({...s,steps:systemMigrationView(s)})),channels,summary:{
     peopleTotal:people.length,peopleKeep:people.filter(r=>r.priority==='KEEP').length,
     peopleRedefine:people.filter(r=>r.priority==='REDEFINE').length,peopleHire:people.filter(r=>r.priority==='HIRE').length,
     systemsTotal:systems.length,systemsKeep:systems.filter(x=>x.migration==='KEEP').length,
@@ -14786,7 +14816,27 @@ async function __handler(req, res) {
   if(is('/program/audits')&&method==='GET'){
     if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
     return json(res,200,{...programAuditsFor(req),
-      rule:'ممیزی ارزیابی صادقانه از وضعیت موجود است؛ خروجی آن ورودی مستقیم بازسازی نقش‌ها و برنامهٔ انتقال داده است (بخش ۲۰/۲۱ سند).'});
+      rule:'ممیزی ارزیابی صادقانه از وضعیت موجود است؛ خروجی آن ورودی مستقیم بازسازی نقش‌ها و برنامهٔ انتقال داده است (بخش ۲۰/۲۱ سند).',
+      migrationRule:'هر سامانهٔ در صف انتقال/خاموش‌سازی، ده مرحلهٔ کنترلی بخش ۲۱ سند را ترتیبی طی می‌کند (فرم ۱۲)؛ سامانه فقط با اتمام هر ده مرحله «تکمیل‌شده» می‌شود.'});
+  }
+  /* گام ۴.۱ — فرم ۱۲: تکمیل مرحلهٔ انتقال سامانه (ترتیبی؛ مرحلهٔ دهم = ثبت تکمیل) */
+  const migStep=match('/program/audit/systems/:id/steps/:key');
+  if(migStep&&method==='POST'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    const sys=(DB.auditSystems??[]).find(s=>s.id===migStep[0]&&visibleOrgIds(req).includes(s.organizationId));
+    if(!sys) return json(res,404,{message:'سامانه یافت نشد یا خارج از محدودهٔ شماست.'});
+    if(sys.migration==='KEEP') return json(res,400,{message:'سامانهٔ «نگهداری» برنامهٔ انتقال ندارد و فرم ۱۲ برای آن کاربرد ندارد.'});
+    if(!MIGRATION_STEPS.some(s=>s.key===migStep[1])) return json(res,400,{message:'کلید مرحلهٔ انتقال نامعتبر است.'});
+    const view=systemMigrationView(sys);
+    if(view.complete) return json(res,400,{message:'هر ده مرحلهٔ انتقال این سامانه پیش‌تر تکمیل شده است.'});
+    if(migStep[1]!==view.currentKey) return json(res,400,{message:`مراحل انتقال ترتیبی‌اند — ابتدا مرحلهٔ جاری («${view.currentTitle}») را تکمیل کنید (پرش یا بازگشت مجاز نیست).`});
+    sys.migrationSteps={...(sys.migrationSteps??{}),[migStep[1]]:nowIso()};
+    const after=systemMigrationView(sys);
+    if(after.complete) sys.migrationStatus='DONE';
+    else if(sys.migrationStatus!=='IN_PROGRESS') sys.migrationStatus='IN_PROGRESS';
+    saveDb();
+    audit(req,'UPDATE','AuditSystem',sys.id,'MIGRATION_STEP',{key:migStep[1],complete:after.complete});
+    return json(res,200,{...sys,steps:after});
   }
 
   /* ─────────────── گام ۲.۳ — اهداف راهبردی سازمان (/program/goals) ──────────
