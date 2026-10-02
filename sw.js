@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.10.02.04';
+const DEMO_MOCK_VERSION = '2026.10.02.05';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -8826,6 +8826,68 @@ function seedDelivery(){
   DB.programDelivery=[pars,demo];
 }
 
+/* ═══════════════ گام ۴.۶ — فرم ۱: چک‌لیست پروژه صفر (پیوست ب سند) ═══════════════
+   بیست خروجی تأسیس — از تعیین نوع شرکت تا ساختار گزارش مالی. قاعدهٔ ثابت
+   سند: تکمیل همهٔ خروجی‌ها شرط عبور از فاز استقرار است؛ وضعیت هر خروجی
+   per-organization ثبت می‌شود (قالب مشترک سند، دادهٔ هر مستأجر جدا). */
+const PROJECT_ZERO_ITEMS=[
+  {key:'company-type',     order:1,  title:'تعیین نوع شرکت و ساختار حقوقی'},
+  {key:'registration',     order:2,  title:'ثبت رسمی شرکت و اساسنامه'},
+  {key:'board',            order:3,  title:'تشکیل هیئت‌مدیره و انتصاب مدیرعامل'},
+  {key:'bank-account',     order:4,  title:'افتتاح حساب بانکی و سرمایهٔ اولیه'},
+  {key:'brand-name',       order:5,  title:'تعیین نام و برند شرکت'},
+  {key:'org-chart',        order:6,  title:'تدوین چارت سازمانی و نقش‌ها'},
+  {key:'core-hiring',      order:7,  title:'استخدام هستهٔ ده‌نفرهٔ ماه نخست'},
+  {key:'office',           order:8,  title:'انتخاب دفتر مرکزی و زیرساخت اداری'},
+  {key:'core-narrative',   order:9,  title:'تدوین روایت هسته و معماری پیام'},
+  {key:'visual-identity',  order:10, title:'طراحی هویت بصری و برندبوک'},
+  {key:'subsidiaries',     order:11, title:'تعریف ساختار زیرمجموعه‌ها و مالکیت'},
+  {key:'hr-policies',      order:12, title:'قراردادهای استخدامی و خط‌مشی منابع انسانی'},
+  {key:'legal-counsel',    order:13, title:'انتخاب مشاور حقوقی و حسابرس'},
+  {key:'srip-setup',       order:14, title:'راه‌اندازی سامانهٔ مدیریت روابط (SRIP)'},
+  {key:'knowledge-center', order:15, title:'راه‌اندازی مرکز دانش و بایگانی دیجیتال'},
+  {key:'annual-program',   order:16, title:'تدوین برنامهٔ ۱۲ماهه و فصل‌های چهارگانه'},
+  {key:'kpis',             order:17, title:'تعریف شاخص‌های کلیدی و اهداف راهبردی'},
+  {key:'publishing-policy',order:18, title:'تدوین خط‌مشی انتشار و پروتکل بحران'},
+  {key:'budget',           order:19, title:'بودجهٔ سالانه و جریان نقدی'},
+  {key:'finance-reports',  order:20, title:'ساختار گزارش مالی'},
+];
+const PZ_STATUS_FA={PENDING:'در انتظار',IN_PROGRESS:'در جریان',DONE:'انجام‌شده'};
+function ensureProjectZeroSeed(){
+  if(!Array.isArray(DB.projectZero)) DB.projectZero=[];
+  if(!DB.projectZero.some(z=>z.organizationId==='org-pars')){
+    /* جهان واقعی پارس: پروژه صفر در ماه نخست استقرار بسته شد (گزارش ماهانهٔ ماه ۱) */
+    const ago=(d)=>new Date(Date.now()-d*86400000).toISOString();
+    DB.projectZero.push({organizationId:'org-pars',
+      items:PROJECT_ZERO_ITEMS.map(i=>({key:i.key,status:'DONE',doneAt:ago(150-i.order*2)}))});
+  }
+  if(!DB.projectZero.some(z=>z.organizationId==='org-1')){
+    /* دنیای دمو: در میانهٔ راه — دروازهٔ استقرار هنوز برقرار نیست */
+    const done=['company-type','registration','board','bank-account','brand-name','org-chart','core-hiring','office','core-narrative','visual-identity','subsidiaries','hr-policies'];
+    const prog=['legal-counsel','srip-setup','knowledge-center'];
+    DB.projectZero.push({organizationId:'org-1',
+      items:PROJECT_ZERO_ITEMS.map(i=>({key:i.key,
+        status:done.includes(i.key)?'DONE':prog.includes(i.key)?'IN_PROGRESS':'PENDING',doneAt:null}))});
+  }
+}
+function projectZeroFor(req){
+  ensureProjectZeroSeed();
+  const org=primaryOrgId(currentUser(req))??visibleOrgIds(req)[0]??PROGRAM_ORG_ID;
+  if(!visibleOrgIds(req).includes(org)) return null;
+  let row=DB.projectZero.find(z=>z.organizationId===org);
+  if(!row){row={organizationId:org,items:PROJECT_ZERO_ITEMS.map(i=>({key:i.key,status:'PENDING',doneAt:null}))};DB.projectZero.push(row);}
+  return row;
+}
+function projectZeroView(z){
+  const items=z.items.map(it=>{
+    const def=PROJECT_ZERO_ITEMS.find(d=>d.key===it.key);
+    return {...it,order:def.order,title:def.title,statusFa:PZ_STATUS_FA[it.status]??it.status};
+  }).sort((a,b)=>a.order-b.order);
+  const done=items.filter(i=>i.status==='DONE').length;
+  return {items,stats:{total:items.length,done,inProgress:items.filter(i=>i.status==='IN_PROGRESS').length,
+    pending:items.filter(i=>i.status==='PENDING').length},passed:done===items.length};
+}
+
 /* ═══════════════ گام ۲.۷ — گزارش ماهانهٔ استاندارد (فرم ۱۵؛ بخش ۲۶ سند) ═══════════════
    قالب ثابت گزارش ماهانه به مدیریت هلدینگ: خلاصهٔ مدیریتی، شاخص‌های کلیدی (زنده از
    بخش ۲۶)، ریسک‌های درجه بالا (زنده از بخش ۲۵)، انحراف‌های زمانی بیش از دو هفته و
@@ -15682,6 +15744,30 @@ async function __handler(req, res) {
     d.signature={programRep,holdingRep,signedAt:nowIso()};
     saveDb(); audit(req,'UPDATE','Delivery',`${d.organizationId}`,'SIGN',{programRep,holdingRep});
     return json(res,200,deliveryView(d));
+  }
+
+  /* ─────────────── گام ۴.۶ — فرم ۱: چک‌لیست پروژه صفر (/program/project-zero) ────────── */
+  if(is('/program/project-zero')&&method==='GET'){
+    if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
+    const z=projectZeroFor(req);
+    if(!z) return json(res,404,{message:'سازمانی در محدودهٔ شما یافت نشد.'});
+    return json(res,200,{...projectZeroView(z),
+      rule:'پروژه صفر با بیست خروجی تأسیس — از تعیین نوع شرکت تا ساختار گزارش مالی — تعریف می‌شود (فرم ۱ / پیوست ب)؛ تکمیل همهٔ خروجی‌ها شرط عبور از فاز استقرار است.'});
+  }
+  const pzItem=match('/program/project-zero/items/:key');
+  if(pzItem&&method==='PATCH'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    const z=projectZeroFor(req);
+    if(!z) return json(res,404,{message:'سازمانی در محدودهٔ شما یافت نشد.'});
+    const item=z.items.find(i=>i.key===pzItem[0]);
+    if(!item) return json(res,404,{message:'خروجی تأسیس یافت نشد — فهرست بیست‌گانهٔ پروژه صفر را ببینید.'});
+    const b=await readBody(req);
+    const st=String(b.status??'').toUpperCase();
+    if(!['PENDING','IN_PROGRESS','DONE'].includes(st)) return json(res,400,{message:'وضعیت خروجی باید در انتظار/در جریان/انجام‌شده باشد.'});
+    item.status=st;
+    item.doneAt=st==='DONE'?(item.doneAt??nowIso()):null;
+    saveDb(); audit(req,'UPDATE','ProjectZero',`${z.organizationId}.${item.key}`,'OK',{status:st});
+    return json(res,200,projectZeroView(z));
   }
 
   /* ─────────────── گام ۲.۷ — گزارش ماهانهٔ استاندارد (فرم ۱۵؛ /program/monthly-reports) ────────── */
