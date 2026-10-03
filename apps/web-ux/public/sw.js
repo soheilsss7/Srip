@@ -8826,45 +8826,51 @@ function seedDelivery(){
   DB.programDelivery=[pars,demo];
 }
 
-/* ═══════════════ گام ۴.۶ — پروژه صفر: چک‌لیست پروژه صفر (پیوست ب سند) ═══════════════
-   بیست خروجی تأسیس — از تعیین نوع شرکت تا ساختار گزارش مالی. قاعدهٔ ثابت
-   سند: تکمیل همهٔ خروجی‌ها شرط عبور از فاز استقرار است؛ وضعیت هر خروجی
+/* ═══════════════ گام ۵.۲ — پروژه صفر: چک‌لیست پروژه صفر (بخش ۵.۱ سند v6) ═══════════════
+   بیست خروجی تأسیس v6 — قراردادمحور: از تعیین نوع شرکت تا ساختار گزارش مالی.
+   قاعدهٔ ثابت سند: پروژه صفر در ماه نخست آغاز و حداکثر تا پایان ماه دوم تکمیل
+   می‌شود؛ تکمیل همهٔ خروجی‌ها شرط عبور از فاز استقرار است؛ وضعیت هر خروجی
    per-organization ثبت می‌شود (قالب مشترک سند، دادهٔ هر مستأجر جدا). */
 const PROJECT_ZERO_ITEMS=[
-  {key:'company-type',     order:1,  title:'تعیین نوع شرکت و ساختار حقوقی'},
-  {key:'registration',     order:2,  title:'ثبت رسمی شرکت و اساسنامه'},
-  {key:'board',            order:3,  title:'تشکیل هیئت‌مدیره و انتصاب مدیرعامل'},
-  {key:'bank-account',     order:4,  title:'افتتاح حساب بانکی و سرمایهٔ اولیه'},
-  {key:'brand-name',       order:5,  title:'تعیین نام و برند شرکت'},
-  {key:'org-chart',        order:6,  title:'تدوین چارت سازمانی و نقش‌ها'},
-  {key:'core-hiring',      order:7,  title:'استخدام هستهٔ ده‌نفرهٔ ماه نخست'},
-  {key:'office',           order:8,  title:'انتخاب دفتر مرکزی و زیرساخت اداری'},
-  {key:'core-narrative',   order:9,  title:'تدوین روایت هسته و معماری پیام'},
-  {key:'visual-identity',  order:10, title:'طراحی هویت بصری و برندبوک'},
-  {key:'subsidiaries',     order:11, title:'تعریف ساختار زیرمجموعه‌ها و مالکیت'},
-  {key:'hr-policies',      order:12, title:'قراردادهای استخدامی و خط‌مشی منابع انسانی'},
-  {key:'legal-counsel',    order:13, title:'انتخاب مشاور حقوقی و حسابرس'},
-  {key:'srip-setup',       order:14, title:'راه‌اندازی سامانهٔ مدیریت روابط (SRIP)'},
-  {key:'knowledge-center', order:15, title:'راه‌اندازی مرکز دانش و بایگانی دیجیتال'},
-  {key:'annual-program',   order:16, title:'تدوین برنامهٔ ۱۲ماهه و فصل‌های چهارگانه'},
-  {key:'kpis',             order:17, title:'تعریف شاخص‌های کلیدی و اهداف راهبردی'},
-  {key:'publishing-policy',order:18, title:'تدوین خط‌مشی انتشار و پروتکل بحران'},
-  {key:'budget',           order:19, title:'بودجهٔ سالانه و جریان نقدی'},
+  {key:'company-type',     order:1,  title:'تعیین نوع شرکت'},
+  {key:'capital',          order:2,  title:'تعیین سرمایه'},
+  {key:'shareholders',     order:3,  title:'تعیین سهامداران'},
+  {key:'board',            order:4,  title:'تعیین هیئت‌مدیره'},
+  {key:'ceo',              order:5,  title:'تعیین مدیرعامل'},
+  {key:'registration',     order:6,  title:'ثبت رسمی'},
+  {key:'tax',              order:7,  title:'امور مالیاتی'},
+  {key:'bank-account',     order:8,  title:'حساب بانکی'},
+  {key:'accounting',       order:9,  title:'حسابداری'},
+  {key:'base-contracts',   order:10, title:'قراردادهای پایه'},
+  {key:'customer-contract',order:11, title:'الگوی قرارداد مشتری'},
+  {key:'nda',              order:12, title:'قرارداد عدم افشا و عدم رقابت'},
+  {key:'consulting',       order:13, title:'قرارداد مشاوره'},
+  {key:'project-contract', order:14, title:'قرارداد پروژه'},
+  {key:'outsourcing',      order:15, title:'قرارداد برون‌سپاری'},
+  {key:'expense-system',   order:16, title:'نظام تأیید هزینه'},
+  {key:'payroll',          order:17, title:'ساختار حقوق و دستمزد'},
+  {key:'project-payments', order:18, title:'ساختار پرداخت پروژه‌ای'},
+  {key:'insurance-hr',     order:19, title:'بیمه و امور پرسنلی'},
   {key:'finance-reports',  order:20, title:'ساختار گزارش مالی'},
 ];
 const PZ_STATUS_FA={PENDING:'در انتظار',IN_PROGRESS:'در جریان',DONE:'انجام‌شده'};
 function ensureProjectZeroSeed(){
   if(!Array.isArray(DB.projectZero)) DB.projectZero=[];
+  /* مهاجرت قالب (گام ۵.۲): ردیف‌های persisted با کلیدهای قدیمی v3 با قالب v6
+     جایگزین می‌شوند — وضعیت چرخشِ تست‌پذیر از بذر تازه می‌آید */
+  const validKeys=new Set(PROJECT_ZERO_ITEMS.map(i=>i.key));
+  DB.projectZero=DB.projectZero.filter(z=>Array.isArray(z.items)&&z.items.length===PROJECT_ZERO_ITEMS.length&&z.items.every(it=>validKeys.has(it.key)));
   if(!DB.projectZero.some(z=>z.organizationId==='org-pars')){
-    /* جهان واقعی پارس: پروژه صفر در ماه نخست استقرار بسته شد (گزارش ماهانهٔ ماه ۱) */
+    /* جهان واقعی پارس: پروژه صفر در ماه‌های ۱–۲ سند v6 بسته شد (گزارش ماهانهٔ ماه ۱) */
     const ago=(d)=>new Date(Date.now()-d*86400000).toISOString();
     DB.projectZero.push({organizationId:'org-pars',
       items:PROJECT_ZERO_ITEMS.map(i=>({key:i.key,status:'DONE',doneAt:ago(150-i.order*2)}))});
   }
   if(!DB.projectZero.some(z=>z.organizationId==='org-1')){
-    /* دنیای دمو: در میانهٔ راه — دروازهٔ استقرار هنوز برقرار نیست */
-    const done=['company-type','registration','board','bank-account','brand-name','org-chart','core-hiring','office','core-narrative','visual-identity','subsidiaries','hr-policies'];
-    const prog=['legal-counsel','srip-setup','knowledge-center'];
+    /* دنیای دمو: در میانهٔ ماه دوم — تأسیس و قراردادهای نخست بسته، قراردادهای تخصصی در جریان،
+       نظام‌های مالی/پرسنلی در انتظار (دروازهٔ استقرار هنوز برقرار نیست) */
+    const done=['company-type','capital','shareholders','board','ceo','registration','tax','bank-account','accounting','base-contracts','customer-contract','nda'];
+    const prog=['consulting','project-contract','outsourcing'];
     DB.projectZero.push({organizationId:'org-1',
       items:PROJECT_ZERO_ITEMS.map(i=>({key:i.key,
         status:done.includes(i.key)?'DONE':prog.includes(i.key)?'IN_PROGRESS':'PENDING',doneAt:null}))});
