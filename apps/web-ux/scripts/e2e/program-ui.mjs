@@ -80,6 +80,26 @@ try {
   ok('نمای کلی: روند فصلی', ov.trend >= 3, `trend=${ov.trend}`);
   ok('نمرهٔ آمادگی با رقم فارسی نمایش داده می‌شود', /[۰-۹]/.test(ov.score), `score=${ov.score}`);
 
+  /* ── ۳.۵) گام ۵.۱ — کاتالوگ فرم‌های سند v6 (نمای کلی) ── */
+  const cat = await page.evaluate(() => {
+    const card = [...document.querySelectorAll('.section-card')].find(c => (c.querySelector('h2, h3')?.textContent ?? '').includes('کاتالوگ فرم‌های سند'));
+    const rows = card ? [...card.querySelectorAll('tbody tr')] : [];
+    const codes = rows.map(r => (r.querySelector('td')?.textContent ?? '').trim());
+    const chips = rows.map(r => (r.querySelector('.chip')?.textContent ?? '').trim());
+    return {
+      found: !!card,
+      rows: rows.length,
+      codes,
+      have: chips.filter(c => c.startsWith('موجود')).length,
+      planned: chips.filter(c => c === 'در برنامه').length,
+      platformNote: (card?.querySelector('.field-hint')?.textContent ?? '').includes('ماژول‌های پلتفرمی'),
+      fCodes: ['F01', 'F04', 'F08', 'F11', 'F14', 'F18'].every(c => codes.includes(c)),
+    };
+  });
+  ok('کاتالوگ فرم‌ها: کارت با هجده ردیف F01–F18', cat.found && cat.rows === 18, `rows=${cat.rows}`);
+  ok('کاتالوگ فرم‌ها: کدهای کلیدی (F01/F04/F08/F11/F14/F18) حاضر', cat.fCodes, JSON.stringify(cat.codes.slice(0, 3)));
+  ok('کاتالوگ فرم‌ها: نُه موجود + نُه در برنامه + یادداشت ماژول‌های پلتفرمی', cat.have === 9 && cat.planned === 9 && cat.platformNote, `have=${cat.have} planned=${cat.planned}`);
+
   /* ── ۴) شاخص‌ها: ۱۰ ردیف با مالک و منبع محاسبه ── */
   await page.evaluate(() => { [...document.querySelectorAll('.segmented button')].find(b => (b.textContent ?? '').includes('شاخص‌ها'))?.click(); });
   await new Promise(r => setTimeout(r, 1200));

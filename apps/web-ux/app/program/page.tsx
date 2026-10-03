@@ -8,7 +8,7 @@ import {
   Badge, ErrorCard, Loading, Modal, PageHeader, SectionCard, Segmented, StatCard, StatusBadge, EmptyV4,
 } from '../_components/page-ui';
 import {
-  Activity, AlertTriangle, ArrowLeft, CheckCircle2, ClipboardList, Gauge, GitBranch,
+  Activity, AlertTriangle, ArrowLeft, BookOpen, CheckCircle2, ClipboardList, Gauge, GitBranch,
   Flag, LayoutDashboard, ListChecks, Package, Plus, RefreshCw, ShieldAlert, Target, TrendingUp, Wallet, X,
 } from 'lucide-react';
 
@@ -46,6 +46,30 @@ const faMoney = (v: number | string) => new Intl.NumberFormat(localeTag()).forma
 /* گام ۴.۶ — پروژه صفر: چک‌لیست پروژه صفر (نمای کلی) */
 const PZ_STATUS_FA = lt<Record<string, string>>({ PENDING: t('در انتظار'), IN_PROGRESS: t('در جریان'), DONE: t('انجام‌شده') });
 const PZ_STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> = { PENDING: 'neutral', IN_PROGRESS: 'warning', DONE: 'success' };
+/* گام ۵.۱ — کاتالوگ فرم‌های پیوست ب سند v6 (F01–F18) و وضعیت هرکدام در پلتفرم.
+   مرجع نگاشت: docs/مسترپلن-v6-سامانه-هوشمند-SRIP.md (بخش ۴ — جدول نگاشت فرم‌ها). */
+const FORM_CATALOG = lt<Array<{ code: string; name: string; status: string; where: string }>>([
+  { code: 'F01', name: 'کنترل اجرا', status: 'PLANNED', where: 'حاکمیت برنامه — فاز ۱۰' },
+  { code: 'F02', name: 'پروندهٔ Due Diligence', status: 'PLANNED', where: 'فاز ۱۰' },
+  { code: 'F03', name: 'برگهٔ ممیزی ظرفیت و دارایی', status: 'PLANNED', where: 'ممیزی سه‌گانه — فاز ۱۰' },
+  { code: 'F04', name: 'کارت محیط، ذی‌نفع و رقیب', status: 'HAVE', where: 'هوشمندی → پروندهٔ رقیب هفت‌بُعدی' },
+  { code: 'F05', name: 'درخواست و تصویب دارایی برند', status: 'HAVE', where: 'حاکمیت برنامه → تب آمادگی' },
+  { code: 'F06', name: 'فرم صفحه و انتشار PESO', status: 'HAVE', where: 'تقویم → رسانه تخصصی' },
+  { code: 'F07', name: 'طرح پژوهش و داوری', status: 'PLANNED', where: 'فاز ۱۰' },
+  { code: 'F08', name: 'کارت تولید و کنترل محتوای هوش مصنوعی', status: 'PARTIAL', where: 'تقویم → گردش تأیید محتوا؛ فیلدهای AI: فاز ۷' },
+  { code: 'F09', name: 'فرصت مناقصه', status: 'PLANNED', where: 'فاز ۱۰' },
+  { code: 'F10', name: 'طرح اجرایی و گزارش رویداد', status: 'HAVE', where: 'تقویم → رویدادها' },
+  { code: 'F11', name: 'برگهٔ ورود و تطبیق داده', status: 'HAVE', where: 'ممیزی سه‌گانه → مراحل انتقال' },
+  { code: 'F12', name: 'کارت کاربرد و ارزیابی هوش مصنوعی', status: 'PLANNED', where: 'درگاه هوش مصنوعی — فاز ۹' },
+  { code: 'F13', name: 'پروندهٔ اصالت و تقلب', status: 'PLANNED', where: 'اصالت و ریسک — فاز ۸' },
+  { code: 'F14', name: 'جدول پایش ماهانهٔ مرجعیت هوش مصنوعی', status: 'HAVE', where: 'حاکمیت برنامه → اهداف راهبردی' },
+  { code: 'F15', name: 'کارت آماده‌سازی سرمایه‌گذار و شریک', status: 'PARTIAL', where: 'مشارکت‌ها؛ توسعه: فاز ۱۰' },
+  { code: 'F16', name: 'کارت نقش و ورود همکار', status: 'PLANNED', where: 'فاز ۱۰' },
+  { code: 'F17', name: 'دفتر ثبت ریسک و انتشار هوش مصنوعی', status: 'PARTIAL', where: 'حاکمیت برنامه → ریسک‌ها؛ ستون‌های AI: فاز ۹' },
+  { code: 'F18', name: 'کارت آماده‌سازی ورود به بازار', status: 'PLANNED', where: 'فاز ۱۰' },
+]);
+const FORM_STATUS_FA = lt<Record<string, string>>({ HAVE: t('موجود'), PARTIAL: t('موجود — تکمیل در برنامه'), PLANNED: t('در برنامه') });
+const FORM_STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = { HAVE: 'success', PARTIAL: 'info', PLANNED: 'neutral' };
 const SEASON_STATE_FA = lt<Record<string, string>>({ PASSED: t('دروازه پاس شد'), IN_PROGRESS: t('در جریان'), PENDING: t('در انتظار') });
 const SEASON_STATE_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = { PASSED: 'success', IN_PROGRESS: 'warning', PENDING: 'neutral' };
 const AUDIT_TABS = lt<Array<[string, string]>>([
@@ -473,6 +497,29 @@ export default function ProgramPage() {
               </div>
               <p className="field-hint">{t('پروژه صفر با بیست خروجی تأسیس تعریف می‌شود؛ تکمیل همهٔ خروجی‌ها شرط عبور از فاز استقرار است (ماژول پلتفرمی).')}</p>
             </>) : <Loading />}
+          </SectionCard>
+
+          {/* ═══════════ گام ۵.۱ — کاتالوگ فرم‌های سند v6 (پیوست ب) ═══════════ */}
+          <SectionCard className="form-catalog" title={t('کاتالوگ فرم‌های سند (F01–F18)')} icon={<BookOpen size={17} />}
+            description={t('نگاشت هجده فرم عملیاتی پیوست ب سند v6 به ماژول‌های پلتفرم؛ فرم‌های بدون معادل سندی، ماژول پلتفرمی‌اند و کد نمی‌گیرند.')}>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>{t('کد')}</th><th>{t('فرم')}</th><th>{t('وضعیت در پلتفرم')}</th><th>{t('محل')}</th></tr>
+                </thead>
+                <tbody>
+                  {FORM_CATALOG.map((f: any) => (
+                    <tr key={f.code}>
+                      <td className="t-primary">{f.code}</td>
+                      <td>{f.name}</td>
+                      <td><StatusBadge tone={FORM_STATUS_TONE[f.status]}>{FORM_STATUS_FA[f.status]}</StatusBadge></td>
+                      <td className="t-muted" style={{ fontSize: 11.5 }}>{f.where}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="field-hint">{t('ماژول‌های پلتفرمی بدون کد سندی: چک‌لیست پروژه صفر · پروندهٔ شناخت · شاخص‌های برنامه · تأیید هزینه · گزارش ماهانه · صورت‌جلسهٔ تحویل.')}</p>
           </SectionCard>
         </>
       )}
