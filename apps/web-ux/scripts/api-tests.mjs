@@ -925,10 +925,10 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
     && ov.body.readiness.seasons.every(x => typeof x.threshold === 'number'));
   check('نمای کلی: خلاصهٔ شاخص‌ها و ریسک و ممیزی', ov.status === 200 && ov.body?.kpis?.total === 10
     && typeof ov.body?.risks?.highOpen === 'number' && typeof ov.body?.audits?.migrationDone === 'number');
-  /* شاخص‌ها — فرم ۱۷: هر شاخص مالک/هدف/دوره/منبع محاسبه دارد */
+  /* شاخص‌ها — ماژول شاخص‌ها: هر شاخص مالک/هدف/دوره/منبع محاسبه دارد */
   const kp = await api('/program/kpis', { token: dt });
   check('شاخص‌ها: ۱۰ شاخص جدول بخش ۲۶ سند', kp.status === 200 && kp.body?.items?.length === 10);
-  check('شاخص‌ها: هر شاخص مالک و هدف و دوره و منبع محاسبه دارد (فرم ۱۷)',
+  check('شاخص‌ها: هر شاخص مالک و هدف و دوره و منبع محاسبه دارد (ماژول شاخص‌ها)',
     kp.body.items.every(k => k.owner && k.target && k.period && k.source && typeof k.percent === 'number'));
   check('شاخص‌ها: مقدار محاسبه‌شده نه دستی — وضعیت سه‌حالته',
     kp.body.items.every(k => ['ON_TARGET', 'NEAR', 'OFF_TARGET'].includes(k.status)) && kp.body.items.every(k => k.valueLabel));
@@ -937,7 +937,7 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
   const pplList = Array.isArray(ppl.body) ? ppl.body : ppl.body?.items ?? [];
   check('شاخص ساختار ۲۵ نفره از دادهٔ اشخاص محاسبه می‌شود (نه عدد دستی)',
     kpi8 && pplList.length > 0 && kpi8.value === pplList.filter(p => p.status !== 'INACTIVE').length);
-  /* ریسک‌ها — فرم ۱۶ */
+  /* ریسک‌ها — F17 */
   const rk = await api('/program/risks', { token: dt });
   check('ریسک‌ها: ۹ ریسک بذری سند + خلاصه و ماتریس', rk.status === 200 && rk.body?.items?.length >= 9
     && rk.body.summary && Array.isArray(rk.body.matrix) && rk.body.matrix.length === 3);
@@ -1035,7 +1035,7 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
   check('فیلتر مرحله (?stage=ACTIVE)', st.status === 200 && st.body.items.length === sm.byStage.ACTIVE
     && st.body.items.every(x => x.stage === 'ACTIVE'));
 
-  /* قواعد ثبت (فرم ۱۱ سند) */
+  /* قواعد ثبت (F15 سند) */
   const noOwner = await api('/partnerships', { method: 'POST', token: dt, body: { partnerOrgId: 'org-4', type: 'راهبردی' } });
   check('ثبت بدون مالک → ۴۰۰ «مشارکت بدون مالک ثبت نمی‌شود»', noOwner.status === 400 && String(noOwner.body?.message).includes('بدون مالک'));
   const noPartner = await api('/partnerships', { method: 'POST', token: dt, body: { type: 'راهبردی', ownerRole: 'مدیرعامل' } });
@@ -1053,7 +1053,7 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
 
   if (pid) {
     const actBad = await api(`/partnerships/${pid}`, { method: 'PATCH', token: dt, body: { stage: 'ACTIVE' } });
-    check('فعال‌سازی بدون قرارداد → ۴۰۰ (فرم ۱۱ سند)', actBad.status === 400 && String(actBad.body?.message).includes('قرارداد'));
+    check('فعال‌سازی بدون قرارداد → ۴۰۰ (F15 سند)', actBad.status === 400 && String(actBad.body?.message).includes('قرارداد'));
     const badStage = await api(`/partnerships/${pid}`, { method: 'PATCH', token: dt, body: { stage: 'DRAFT' } });
     check('مرحلهٔ نامعتبر → ۴۰۰', badStage.status === 400);
     const withContract = await api(`/partnerships/${pid}`, { method: 'PATCH', token: dt, body: { contractName: 'تفاهم‌نامهٔ پژوهشی بورس' } });
@@ -1095,11 +1095,11 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
   check('فهرست سنجه‌های محاسبهٔ پلتفرم ارائه می‌شود', (st.body.metrics ?? []).length >= 10
     && st.body.metrics.every(m => m.key && m.label && m.unit));
 
-  /* ثبت شاخص (فرم ۱۷) — تعریف دادهٔ سازمان، مقدار از سنجهٔ زنده */
+  /* ثبت شاخص (ماژول شاخص‌ها) — تعریف دادهٔ سازمان، مقدار از سنجهٔ زنده */
   const kBad = await api('/program/kpis', { method: 'POST', token: dt, body: { title: 'شاخص بد', owner: 'x', metric: 'nope', targetValue: 5 } });
   check('ثبت شاخص با سنجهٔ نامعتبر → ۴۰۰', kBad.status === 400);
   const kNoOwner = await api('/program/kpis', { method: 'POST', token: dt, body: { title: 'شاخص بدون مالک', metric: 'active-people', targetValue: 10 } });
-  check('ثبت شاخص بدون مالک → ۴۰۰ (فرم ۱۷)', kNoOwner.status === 400 && String(kNoOwner.body?.message).includes('بدون مالک'));
+  check('ثبت شاخص بدون مالک → ۴۰۰ (ماژول شاخص‌ها)', kNoOwner.status === 400 && String(kNoOwner.body?.message).includes('بدون مالک'));
   const kCreated = await api('/program/kpis', { method: 'POST', token: dt, body: { title: 'شاخص تست باتری', owner: 'مدیر تست', metric: 'active-people', targetValue: 30, category: 'تست', period: 'ماهانه', target: '۳۰ نفر' } });
   check('ثبت شاخص معتبر → ۲۰۱ با منبع سنجه', kCreated.status === 201 && kCreated.body.source.includes('افراد فعال'));
   if (kCreated.status === 201) {
@@ -1218,7 +1218,7 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
   check('ثبت هدف بدون program.write → ۴۰۳', noPerm.status === 403);
 }
 
-/* ═════════════════ گام ۲.۴ — پروندهٔ رقیب ۷بُعدی (فرم ۵ سند) ═════════════════ */
+/* ═════════════════ گام ۲.۴ — پروندهٔ رقیب ۷بُعدی (F04 سند) ═════════════════ */
 {
   const dl = await login('demo');
   const dt = dl.body?.accessToken;
@@ -1248,7 +1248,7 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
     L.body.topGaps.length === Math.min(3, lead) && L.body.topGaps.every((g, i) => i === 0 || L.body.topGaps[i - 1].gap >= g.gap) && L.body.topGaps.every(g => g.gap > 0));
   check('بیشترین عقب‌ماندگی شناسایی می‌شود', M.worstLag && M.worstLag.gap < 0);
 
-  /* اعتبارسنجی فرم ۵ */
+  /* اعتبارسنجی F04 */
   const noSeg = await api('/intelligence/competitors', { method: 'POST', token: dt, body: { name: 'رقیب تست', scores: { dataAuthority: 50, analysisDepth: 50, mediaPresence: 50, partnershipNetwork: 50, eventQuality: 50, policyAuthority: 50, aiVisibility: 50 } } });
   check('ثبت بدون بخش/حوزه → ۴۰۰', noSeg.status === 400);
   const badScore = await api('/intelligence/competitors', { method: 'POST', token: dt, body: { name: 'رقیب تست', segment: 'تست', scores: { dataAuthority: 150, analysisDepth: 50, mediaPresence: 50, partnershipNetwork: 50, eventQuality: 50, policyAuthority: 50, aiVisibility: 50 } } });
@@ -1299,7 +1299,7 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
   if (clPost.status === 201) await api(`/intelligence/competitors/${clPost.body.id}`, { method: 'DELETE', token: ct });
 }
 
-/* ═════════════════ گام ۲.۵ — پروندهٔ شناخت ۳۱بخشی (فرم ۲ و ۳ سند) ═════════════════ */
+/* ═════════════════ گام ۲.۵ — پروندهٔ شناخت ۳۱بخشی (ماژول شناخت سند) ═════════════════ */
 {
   const dl = await login('demo');
   const dt = dl.body?.accessToken;
@@ -1331,7 +1331,7 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
   /* اعتبار ۹۰روزه (۷.۳) */
   check('اعتبار پروندهٔ فعال: حداکثر ۹۰ روز', L.body.reviewState === 'VALID' && L.body.daysLeft != null && L.body.daysLeft > 0 && L.body.daysLeft <= 90);
 
-  /* ثبت/ویرایش بخش (فرم ۲ و ۳) */
+  /* ثبت/ویرایش بخش (ماژول شناخت) */
   const cleared = await api('/organizations/org-1/knowledge/sections/catalog', { method: 'PATCH', token: dt, body: { data: 'کاتالوگ واحد در تدوین', source: '' } });
   check('ثبت بخش بدون منبع → پذیرفته اما «نامعتبر»', cleared.status === 200
     && cleared.body.sections.find(s => s.key === 'catalog').status === 'INVALID');
@@ -1366,20 +1366,20 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
   const goneOrg = await api('/organizations/org-none/knowledge', { token: dt });
   check('سازمان غایب → ۴۰۴', goneOrg.status === 404);
 
-  /* مستأجر پارس: پروندهٔ هلدینگ (فرم ۲) + زیرمجموعه (فرم ۳) + پروندهٔ منقضی */
+  /* مستأجر پارس: پروندهٔ هلدینگ (ماژول شناخت) + زیرمجموعه (ماژول شناخت) + پروندهٔ منقضی */
   const pl = await login('pars', 'pars1234');
   const pt = pl.body?.accessToken;
   if (pt) {
     const pars = await api('/organizations/org-pars/knowledge', { token: pt });
     check('پارس: پروندهٔ هلدینگ در مرحلهٔ تحلیل با بخش‌های معتبر', pars.status === 200
       && pars.body.stage === 'analysis' && pars.body.stats.valid >= 15);
-    check('پارس: مالک پرونده = مدیر استراتژی (فرم ۲ سند)', pars.body.ownerRole === 'مدیر استراتژی');
+    check('پارس: مالک پرونده = مدیر استراتژی (ماژول شناخت)', pars.body.ownerRole === 'مدیر استراتژی');
     const edu = await api('/organizations/org-pars-02/knowledge', { token: pt });
     check('پروندهٔ ۹۰روزه: بازبینی ۱۰۰ روز پیش → منقضی', edu.status === 200 && edu.body.reviewState === 'EXPIRED' && edu.body.daysLeft < 0);
     const eduRev = await api('/organizations/org-pars-02/knowledge/review', { method: 'POST', token: pt });
     check('بازبینی پروندهٔ منقضی → اعتبار تازه', eduRev.status === 200 && eduRev.body.reviewState === 'VALID');
     const fresh = await api('/organizations/org-pars-05/knowledge', { token: pt });
-    check('زیرمجموعهٔ بدون پرونده → قالب خالی ۳۱ بخش (فرم ۳)', fresh.status === 200
+    check('زیرمجموعهٔ بدون پرونده → قالب خالی ۳۱ بخش (ماژول شناخت)', fresh.status === 200
       && fresh.body.stats.valid === 0 && fresh.body.stage === 'docsReview' && fresh.body.sections.length === 31);
     /* kpi-1 پارس: تنظیمات خالی → بدون شاخص؛ پوشش فقط داده است */
     const mine = await api('/organizations/org-pars-01/knowledge/sections/weaknesses', { method: 'PATCH', token: pt, body: { data: 'وابستگی به یک مشتری کلیدی', source: 'مصاحبهٔ مدیران حوزه' } });
@@ -1395,7 +1395,7 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
   check('kpi-1 از پوشش زندهٔ پروندهٔ شناخت محاسبه می‌شود', k1 && k1.value === expect
     && String(k1.source).includes('پروندهٔ شناخت'), `value=${k1?.value} expected=${expect}`);
 }
-/* ═════════════════ گام ۲.۶ — معماری رویدادها + پروتکل بحران (بخش ۱۷ سند؛ فرم ۱۰ و ۱۱.۵) ═════════════════ */
+/* ═════════════════ گام ۲.۶ — معماری رویدادها + پروتکل بحران (بخش ۱۷ سند؛ F10 و F15) ═════════════════ */
 {
   const pl = await login('pars', 'pars1234');
   const pt = pl.body?.accessToken;
@@ -1426,7 +1426,7 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
   check('حضور بیرونی: نوع + الزام متناظر (سخنرانی → راهنمای گفتار و تمرین)', !!att
     && att.attendLabel === 'سخنرانی در رویدادهای بیرونی' && att.attendRequirement === 'راهنمای گفتار + تمرین');
 
-  /* قواعد ثبت (فرم ۱۰ — رویداد بدون مالک ایجاد نمی‌شود) */
+  /* قواعد ثبت (F10 — رویداد بدون مالک ایجاد نمی‌شود) */
   const noOwner = await api('/events', { method: 'POST', token: pt, body: { title: 'رویداد تست', path: 'OWNED', kind: 'execRoundtable', eventAt: '2026-12-01T09:00:00Z' } });
   check('رویداد بدون مالک → ۴۰۰', noOwner.status === 400);
   const badPath = await api('/events', { method: 'POST', token: pt, body: { title: 'رویداد تست', path: 'X', ownerRole: 'مدیر', eventAt: '2026-12-01T09:00:00Z' } });
@@ -1501,8 +1501,8 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
 }
 
 
-/* ═════════════════ گام ۲.۷ — گزارش ماهانهٔ استاندارد (فرم ۱۵؛ بخش ۲۶ + ۲۵ + ۱۴۰۱ سند) ═════════════════ */
-section('گام ۲.۷ — گزارش ماهانهٔ استاندارد (فرم ۱۵)');
+/* ═════════════════ گام ۲.۷ — گزارش ماهانهٔ استاندارد (ماژول پلتفرمی؛ بخش ۲۶ + ۲۵ + ۱۴۰۱ سند) ═════════════════ */
+section('گام ۲.۷ — گزارش ماهانهٔ استاندارد (ماژول پلتفرمی)');
 {
   const pl = await login(OWNER.email);
   const pt = pl.body?.accessToken;
@@ -1510,7 +1510,7 @@ section('گام ۲.۷ — گزارش ماهانهٔ استاندارد (فرم �
   /* فهرست + قالب + آمار — با هر دو روش احراز هویتِ رایج باتری */
   const list = await api('/program/monthly-reports', { token: pt });
   check('GET /program/monthly-reports → 200 با ۳ گزارش بذر دمو', list.status === 200 && list.body.items.length === 3);
-  check('قالب ثابت فرم ۱۵ — پنج بخش: خلاصه/شاخص‌های زنده/ریسک‌های زنده/انحراف/برنامهٔ ماه آینده',
+  check('قالب ثابت گزارش ماهانه — پنج بخش: خلاصه/شاخص‌های زنده/ریسک‌های زنده/انحراف/برنامهٔ ماه آینده',
     JSON.stringify(list.body.template.map(s => s.key)) === JSON.stringify(['summary', 'kpis', 'highRisks', 'deviations', 'nextMonthPlan']));
   check('آمار: ۲ ارائه‌شده + ۱ پیش‌نویس + ۲ به‌موقع',
     list.body.stats.submitted === 2 && list.body.stats.draft === 1 && list.body.stats.onTime === 2);
@@ -1579,8 +1579,8 @@ section('گام ۲.۷ — گزارش ماهانهٔ استاندارد (فرم �
 }
 
 
-/* ═════════════════ گام ۴.۱ — فرم ۱۲: کنترل ده‌مرحله‌ای انتقال سامانه (بخش ۲۱ + پیوست ب) ═════════════════ */
-section('گام ۴.۱ — فرم ۱۲: انتقال سامانه (ده مرحله)');
+/* ═════════════════ گام ۴.۱ — F11: کنترل ده‌مرحله‌ای انتقال سامانه (بخش ۲۱ + پیوست ب) ═════════════════ */
+section('گام ۴.۱ — F11: انتقال سامانه (ده مرحله)');
 {
   const pl = await login(OWNER.email);
   const pt = pl.body?.accessToken;
@@ -1589,18 +1589,18 @@ section('گام ۴.۱ — فرم ۱۲: انتقال سامانه (ده مرحل�
   const as4 = au0.body.systems.find((s) => s.id === 'as-4');
   const as1 = au0.body.systems.find((s) => s.id === 'as-1');
   const as3 = au0.body.systems.find((s) => s.id === 'as-3');
-  check('GET ممیزی: ده مرحلهٔ انتقال در نمای هر سامانه (فرم ۱۲)',
+  check('GET ممیزی: ده مرحلهٔ انتقال در نمای هر سامانه (F11)',
     as4.steps.total === 10 && as4.steps.done === 6 && as4.steps.currentKey === 'training' && as4.steps.steps.length === 10);
   check('سامانهٔ تکمیل‌شده: هر ۱۰ مرحله done + وضعیت DONE', as1.steps.complete === true && as1.migrationStatus === 'DONE' && as1.steps.done === 10);
   check('سامانهٔ «نگهداری» برنامهٔ انتقال ندارد (steps total=0)', as3.migration === 'KEEP' && as3.steps.total === 0);
-  check('قاعدهٔ فرم ۱۲ در پاسخ سرور آمده است', String(au0.body.migrationRule).includes('ده مرحله') && String(au0.body.migrationRule).includes('فرم ۱۲'));
+  check('قاعدهٔ F11 در پاسخ سرور آمده است', String(au0.body.migrationRule).includes('ده مرحله') && String(au0.body.migrationRule).includes('F11'));
 
   const jump = await api('/program/audit/systems/as-4/steps/shutdown', { method: 'POST', token: pt });
   check('پرش به مرحلهٔ دهم → ۴۰۰ (مراحل ترتیبی‌اند)', jump.status === 400);
   const wrong = await api('/program/audit/systems/as-4/steps/parallel', { method: 'POST', token: pt });
   check('مرحلهٔ غیرجاری → ۴۰۰ با نام مرحلهٔ جاری در پیام', wrong.status === 400 && wrong.body.message.includes('آموزش کوتاه کاربران'));
   const keep = await api('/program/audit/systems/as-3/steps/audit', { method: 'POST', token: pt });
-  check('سامانهٔ KEEP → ۴۰۰ (فرم ۱۲ برای آن کاربرد ندارد)', keep.status === 400 && keep.body.message.includes('نگهداری'));
+  check('سامانهٔ KEEP → ۴۰۰ (F11 برای آن کاربرد ندارد)', keep.status === 400 && keep.body.message.includes('نگهداری'));
   const badKey = await api('/program/audit/systems/as-4/steps/justify', { method: 'POST', token: pt });
   check('کلید مرحلهٔ نامعتبر → ۴۰۰', badKey.status === 400);
   const noPerm = await api('/program/audit/systems/as-4/steps/training', { method: 'POST', token: (await login('client')).body?.accessToken });
@@ -1618,7 +1618,7 @@ section('گام ۴.۱ — فرم ۱۲: انتقال سامانه (ده مرحل�
   check('اتمام مرحلهٔ دهم → سامانه «تکمیل‌شده» + خلاصهٔ انتقال ۳ از ۴',
     as4b.migrationStatus === 'DONE' && as4b.steps.complete === true && au1.body.summary.migrationDone === 3 && au1.body.summary.migrationTotal === 4);
   const kpi9After = (await api('/program/kpis', { token: pt })).body.items.find((k) => k.id === 'kpi-9');
-  check('شاخص ۹ (انتقال داده‌ها) از مراحل فرم ۱۲ تغذیه می‌شود', kpi9Before.value + 1 === kpi9After.value);
+  check('شاخص ۹ (انتقال داده‌ها) از مراحل F11 تغذیه می‌شود', kpi9Before.value + 1 === kpi9After.value);
   const again = await api('/program/audit/systems/as-4/steps/audit', { method: 'POST', token: pt });
   check('تکمیل پس از اتمام هر ده مرحله → ۴۰۰', again.status === 400);
 
@@ -1628,26 +1628,26 @@ section('گام ۴.۱ — فرم ۱۲: انتقال سامانه (ده مرحل�
 }
 
 
-/* ═════════════════ گام ۴.۲ — فرم ۸ و ۷: تقویم انتشار رسانه + گردش تأیید محتوا (بخش ۱۶ + پیوست ب) ═════════════════ */
-section('گام ۴.۲ — فرم ۸ و ۷: تقویم انتشار رسانه + تأیید محتوا');
+/* ═════════════════ گام ۴.۲ — F06 و F08: تقویم انتشار رسانه + گردش تأیید محتوا (بخش ۱۶ + پیوست ب) ═════════════════ */
+section('گام ۴.۲ — F06 و F08: تقویم انتشار رسانه + تأیید محتوا');
 {
   const ptok = (await api('/auth/login', { method: 'POST', body: { email: 'pars', password: 'pars1234' } })).body?.accessToken;
 
   const list = await api('/program/content', { token: ptok });
   check('GET /program/content → هفت خروجی بذر رسانه تخصصی پارس', list.status === 200 && list.body.items.length === 7);
-  check('فرم ۸: هفت ستون رسانه تخصصی سند با ریتم هرکدام',
+  check('F06: هفت ستون رسانه تخصصی سند با ریتم هرکدام',
     list.body.pillars.length === 7
     && list.body.pillars.find((p) => p.key === 'newsroom').rhythm === 'بر پایه رویداد'
     && list.body.pillars.find((p) => p.key === 'podcast').rhythm === 'دوهفتگی'
     && list.body.pillars.find((p) => p.key === 'magazine').rhythm === 'فصلی');
-  check('فرم ۷: چهار کنترل الزامی (پیام هسته/مخاطب/حقوقی/هوش مصنوعی)',
+  check('F08: چهار کنترل الزامی (پیام هسته/مخاطب/حقوقی/هوش مصنوعی)',
     list.body.controls.length === 4 && list.body.controls.map((c) => c.key).join() === 'coreMessage,audience,legal,aiStructure');
   check('آمار وضعیت: ۳ پیش‌نویس + ۱ در بازبینی + ۱ تأییدشده + ۲ منتشرشده',
     list.body.stats.draft === 3 && list.body.stats.inReview === 1 && list.body.stats.approved === 1 && list.body.stats.published === 2);
   const pc3 = list.body.items.find((c) => c.id === 'pc-3');
   check('نمای خروجی: دو کنترل ثبت‌شده (پیام هسته + مخاطب) و دو کنترل باز',
     pc3.okControls === 2 && pc3.controlsView.coreMessage.registered === true && pc3.controlsView.legal.registered === false);
-  check('قاعدهٔ فرم ۷ در پاسخ سرور: انتشار بدون تأیید کامل ممنوع', String(list.body.rule).includes('انتشار بدون تأیید کامل ممنوع'));
+  check('قاعدهٔ F08 در پاسخ سرور: انتشار بدون تأیید کامل ممنوع', String(list.body.rule).includes('انتشار بدون تأیید کامل ممنوع'));
 
   const noTitle = await api('/program/content', { method: 'POST', token: ptok, body: { pillar: 'newsroom', month: '2026-12' } });
   check('عنوان کوتاه → ۴۰۰', noTitle.status === 400);
@@ -1656,7 +1656,7 @@ section('گام ۴.۲ — فرم ۸ و ۷: تقویم انتشار رسانه + 
   const noPerm = await api('/program/content', { method: 'POST', token: (await login('client')).body?.accessToken, body: { title: 'محتوای مشتری', pillar: 'newsroom', month: '2026-12' } });
   check('کاربر بدون program.write → ۴۰۳', noPerm.status === 403);
 
-  /* چرخهٔ کامل فرم ۷: پیش‌نویس → در بازبینی → تأییدشده → منتشرشده */
+  /* چرخهٔ کامل F08: پیش‌نویس → در بازبینی → تأییدشده → منتشرشده */
   const created = await api('/program/content', { method: 'POST', token: ptok, body: { title: 'بیانیهٔ تست باتری ۴.۲', pillar: 'newsroom', month: '2026-12' } });
   const cid = created.body?.id;
   check('POST → 201 با وضعیت پیش‌نویس و بدون هیچ کنترل', created.status === 201 && created.body.status === 'DRAFT' && created.body.okControls === 0);
@@ -1692,8 +1692,8 @@ section('گام ۴.۲ — فرم ۸ و ۷: تقویم انتشار رسانه + 
     && !demoList.body.items.some((c) => c.id.startsWith('pc-') && !c.id.startsWith('pc-d')));
 }
 
-/* ═════════════════ گام ۴.۳ — فرم ۶: رجیستری دارایی برند (پیوست ب) ═════════════════ */
-section('گام ۴.۳ — فرم ۶: رجیستری دارایی برند');
+/* ═════════════════ گام ۴.۳ — F05: رجیستری دارایی برند (پیوست ب) ═════════════════ */
+section('گام ۴.۳ — F05: رجیستری دارایی برند');
 {
   const ptok = (await api('/auth/login', { method: 'POST', body: { email: 'pars', password: 'pars1234' } })).body?.accessToken;
 
@@ -1703,7 +1703,7 @@ section('گام ۴.۳ — فرم ۶: رجیستری دارایی برند');
     list.body.stats.active === 4 && list.body.stats.inProgress === 3 && list.body.stats.overdue === 1);
   const web = list.body.items.find((x) => x.id === 'ba-5');
   check('وب‌سایت هلدینگ: بازبینی معوق با روزهای منفی', web.overdue === true && web.daysLeft < 0, `daysLeft=${web.daysLeft}`);
-  check('قاعدهٔ فرم ۶ در پاسخ سرور: دارایی بدون مالک ثبت نمی‌شود', String(list.body.rule).includes('بدون مالک'));
+  check('قاعدهٔ F05 در پاسخ سرور: دارایی بدون مالک ثبت نمی‌شود', String(list.body.rule).includes('بدون مالک'));
 
   const noOwner = await api('/program/brand-assets', { method: 'POST', token: ptok, body: { name: 'دارایی بی‌مالک', version: '۱٫۰', location: 'مرکز دانش' } });
   check('ثبت بدون مالک → ۴۰۰ (قاعدهٔ پیوست ب)', noOwner.status === 400 && noOwner.body.message.includes('بدون مالک'));
@@ -1742,8 +1742,8 @@ section('گام ۴.۳ — فرم ۶: رجیستری دارایی برند');
     && demoList.body.items.every((x) => x.id.startsWith('ba-d')));
 }
 
-/* ═════════════════ گام ۴.۴ — فرم ۱۴: تأیید هزینه پیش از تعهد (پیوست ب) ═════════════════ */
-section('گام ۴.۴ — فرم ۱۴: تأیید هزینه پیش از تعهد');
+/* ═════════════════ گام ۴.۴ — تأیید هزینه: تأیید هزینه پیش از تعهد (پیوست ب) ═════════════════ */
+section('گام ۴.۴ — تأیید هزینه: تأیید هزینه پیش از تعهد');
 {
   const ptok = (await api('/auth/login', { method: 'POST', body: { email: 'pars', password: 'pars1234' } })).body?.accessToken;
 
@@ -1754,7 +1754,7 @@ section('گام ۴.۴ — فرم ۱۴: تأیید هزینه پیش از تعه�
   check('جمع تعهدات = مبلغ هزینهٔ تعهدشده (۲۵۰ میلیون)',
     list.body.stats.committedAmount === 250000000);
   check('تصویب‌کنندهٔ سند: مدیر مالی', list.body.approverRole === 'مدیر مالی');
-  check('قاعدهٔ فرم ۱۴ در پاسخ سرور: تعهد فقط پس از تصویب', String(list.body.rule).includes('تعهد فقط پس از تصویب'));
+  check('قاعدهٔ تأیید هزینه در پاسخ سرور: تعهد فقط پس از تصویب', String(list.body.rule).includes('تعهد فقط پس از تصویب'));
 
   const noRequester = await api('/program/expenses', { method: 'POST', token: ptok, body: { title: 'هزینهٔ بی‌درخواست‌کننده', amount: 1000000, category: 'رویداد' } });
   check('ثبت بدون درخواست‌کننده → ۴۰۰ (قاعدهٔ پیوست ب)', noRequester.status === 400 && noRequester.body.message.includes('بدون درخواست‌کننده'));
@@ -1772,7 +1772,7 @@ section('گام ۴.۴ — فرم ۱۴: تأیید هزینه پیش از تعه�
     body: { title: 'هزینهٔ تست باتری ۴.۴', amount: 12000000, category: 'زیرساخت', requesterRole: 'مدیر محصول' } });
   check('POST معتبر → 201 «در انتظار تصویب»', created.status === 201 && created.body.status === 'REQUESTED');
   const commitEarly = await api(`/program/expenses/${created.body.id}/commit`, { method: 'POST', token: ptok });
-  check('تعهد پیش از تصویب → ۴۰۰ (قاعدهٔ اصلی فرم ۱۴)',
+  check('تعهد پیش از تصویب → ۴۰۰ (قاعدهٔ اصلی تأیید هزینه)',
     commitEarly.status === 400 && commitEarly.body.message.includes('پس از تصویب'));
   const approved = await api(`/program/expenses/${created.body.id}/approve`, { method: 'POST', token: ptok });
   check('تصویب → «تصویب‌شده» با مهر زمانی', approved.status === 200 && approved.body.status === 'APPROVED' && !!approved.body.approvedAt);
@@ -1788,8 +1788,8 @@ section('گام ۴.۴ — فرم ۱۴: تأیید هزینه پیش از تعه�
     && demoList.body.items.every((x) => x.id.startsWith('ex-d')));
 }
 
-/* ═════════════════ گام ۴.۵ — فرم ۱۸: صورت‌جلسهٔ تحویل (بخش ۲۸.۱ + پیوست ب) ═════════════════ */
-section('گام ۴.۵ — فرم ۱۸: صورت‌جلسهٔ تحویل');
+/* ═════════════════ گام ۴.۵ — صورت‌جلسهٔ تحویل: صورت‌جلسهٔ تحویل (بخش ۲۸.۱ + پیوست ب) ═════════════════ */
+section('گام ۴.۵ — صورت‌جلسهٔ تحویل: صورت‌جلسهٔ تحویل');
 {
   const ptok = (await api('/auth/login', { method: 'POST', body: { email: 'pars', password: 'pars1234' } })).body?.accessToken;
 
@@ -1801,7 +1801,7 @@ section('گام ۴.۵ — فرم ۱۸: صورت‌جلسهٔ تحویل');
     list.body.delivered === 2 && list.body.allDelivered === false && list.body.doneSteps === 2 && list.body.locked === false);
   check('مرحلهٔ جاری فرآیند هفت‌گام = انتقال اقلام (۳)',
     list.body.currentStepKey === 'transfer');
-  check('قاعدهٔ فرم ۱۸ در پاسخ سرور: امضا فقط پس از تحویل همهٔ اقلام',
+  check('قاعدهٔ صورت‌جلسهٔ تحویل در پاسخ سرور: امضا فقط پس از تحویل همهٔ اقلام',
     String(list.body.rule).includes('امضا فقط پس از تحویل همهٔ اقلام'));
 
   /* اقلام: تکرار تحویل → ۴۰۰ */
@@ -1848,8 +1848,8 @@ section('گام ۴.۵ — فرم ۱۸: صورت‌جلسهٔ تحویل');
   check('امضا در دنیای قفل‌شدهٔ دمو → ۴۰۰', demoSign.status === 400);
 }
 
-/* ═════════════════ گام ۴.۶ — فرم ۱: چک‌لیست پروژه صفر (پیوست ب) ═════════════════ */
-section('گام ۴.۶ — فرم ۱: چک‌لیست پروژه صفر');
+/* ═════════════════ گام ۴.۶ — پروژه صفر: چک‌لیست پروژه صفر (پیوست ب) ═════════════════ */
+section('گام ۴.۶ — پروژه صفر: چک‌لیست پروژه صفر');
 {
   const ptok = (await api('/auth/login', { method: 'POST', body: { email: 'pars', password: 'pars1234' } })).body?.accessToken;
   const otok = (await login(OWNER.email)).body?.accessToken;
@@ -1860,7 +1860,7 @@ section('گام ۴.۶ — فرم ۱: چک‌لیست پروژه صفر');
     pars.body.stats.done === 20 && pars.body.passed === true && pars.body.items.every((i) => i.doneAt));
   check('اولین خروجی «تعیین نوع شرکت» و آخرین «ساختار گزارش مالی»',
     pars.body.items[0].title.includes('نوع شرکت') && pars.body.items[19].title === 'ساختار گزارش مالی');
-  check('قاعدهٔ فرم ۱ در پاسخ سرور: تکمیل همه شرط عبور از فاز استقرار',
+  check('قاعدهٔ پروژه صفر در پاسخ سرور: تکمیل همه شرط عبور از فاز استقرار',
     String(pars.body.rule).includes('شرط عبور از فاز استقرار'));
 
   /* دنیای دمو: در میانهٔ راه — ۱۲ انجام + ۳ در جریان + ۵ در انتظار */

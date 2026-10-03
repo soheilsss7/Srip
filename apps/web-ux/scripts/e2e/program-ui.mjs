@@ -95,7 +95,7 @@ try {
   ok('شاخص‌ها: نشان وضعیت سه‌حالته روی ردیف‌ها', kpis.badges >= 10, `badges=${kpis.badges}`);
   ok('شاخص‌ها: قاعدهٔ «عدد دستی وارد داشبورد نمی‌شود» در صفحه', kpis.rule);
 
-  /* فرم ۱۷: ثبت شاخص جدید با سنجهٔ محاسبهٔ پلتفرم */
+  /* ماژول شاخص‌ها: ثبت شاخص جدید با سنجهٔ محاسبهٔ پلتفرم */
   await page.evaluate(() => { [...document.querySelectorAll('button')].find(b => (b.textContent ?? '').includes('ثبت شاخص'))?.click(); });
   await new Promise(r => setTimeout(r, 1500));
   const kpiModal = await page.evaluate(() => ({
@@ -103,7 +103,7 @@ try {
     hasMetric: !!document.querySelector('.modal-card select'),
     opts: [...(document.querySelectorAll('.modal-card select option') ?? [])].map(o => o.textContent).length,
   }));
-  ok('فرم ۱۷: مودال ثبت شاخص با فهرست سنجه‌های محاسبه', kpiModal.open && kpiModal.hasMetric && kpiModal.opts >= 8, JSON.stringify(kpiModal));
+  ok('ماژول شاخص‌ها: مودال ثبت شاخص با فهرست سنجه‌های محاسبه', kpiModal.open && kpiModal.hasMetric && kpiModal.opts >= 8, JSON.stringify(kpiModal));
   await page.type('.modal-card input', 'شاخص تست باتری UI');
   const ownerInp = await page.evaluateHandle(() => [...document.querySelectorAll('.modal-card input')][1]);
   await ownerInp.asElement().type('مدیر تست');
@@ -117,7 +117,7 @@ try {
     closed: !document.querySelector('.modal-card'),
     found: [...document.querySelectorAll('.table-wrap tbody tr')].some(r => (r.textContent ?? '').includes('شاخص تست باتری UI')),
   }));
-  ok('فرم ۱۷: ثبت شاخص → ردیف جدید با مقدار محاسبه‌شده', kpiRow.closed && kpiRow.found, JSON.stringify(kpiRow));
+  ok('ماژول شاخص‌ها: ثبت شاخص → ردیف جدید با مقدار محاسبه‌شده', kpiRow.closed && kpiRow.found, JSON.stringify(kpiRow));
 
   /* ── ۵) ریسک‌ها: بنر + ماتریس + جدول + مودال ── */
   await page.evaluate(() => { [...document.querySelectorAll('.segmented button')].find(b => (b.textContent ?? '').includes('ریسک‌ها'))?.click(); });
@@ -177,9 +177,9 @@ try {
     weights: [...document.querySelectorAll('.section-card .section-head p, .section-card p')].some(p => (p.textContent ?? '').includes('وزن')),
     clickable: document.querySelectorAll('.layer-status.clickable').length,
   }));
-  /* گام ۴.۳: هفت کارت = شش لایه + رجیستری دارایی برند (فرم ۶) */
+  /* گام ۴.۳: هفت کارت = شش لایه + رجیستری دارایی برند (F05) */
   const rdHasRegistry = await page.evaluate(() => [...document.querySelectorAll('.section-card')].some(c => (c.querySelector('h2')?.textContent ?? '').includes('رجیستری دارایی برند')));
-  ok('آمادگی: شش لایهٔ وزن‌دار + رجیستری دارایی برند (فرم ۶)', rd.layers === 7 && rdHasRegistry, `cards=${rd.layers}`);
+  ok('آمادگی: شش لایهٔ وزن‌دار + رجیستری دارایی برند (F05)', rd.layers === 7 && rdHasRegistry, `cards=${rd.layers}`);
   ok('آمادگی: لایهٔ «رابطه» از دادهٔ زنده محاسبه می‌شود', rd.relComputed);
   ok('آمادگی: اقلام قابل به‌روزرسانی (کلیک برای تغییر وضعیت)', rd.clickable >= 20, `clickable=${rd.clickable}`);
   /* چرخش وضعیت یک قلم: سه کلیک = یک دور کامل */
@@ -264,16 +264,16 @@ try {
   ok('اهداف: ثبت مقدار پایش مؤلفه → نمرهٔ مرکب بازمحاسبه', compBefore !== compAfter && compAfter !== '', `قبل=${compBefore} بعد=${compAfter}`);
 
 
-  /* ── ۷.۵) گام ۲.۷ — گزارش ماهانهٔ استاندارد (فرم ۱۵) در /reports ── */
+  /* ── ۷.۵) گام ۲.۷ — گزارش ماهانهٔ استاندارد (ماژول پلتفرمی) در /reports ── */
   await page.goto(`${BASE}/reports`, { waitUntil: 'networkidle0', timeout: 90000 });
   await new Promise(r => setTimeout(r, 3500));
   const pmr0 = await page.evaluate(() => ({
-    hasPanel: [...document.querySelectorAll('h2, h3')].some(h => (h.textContent ?? '').includes('گزارش ماهانهٔ استاندارد (فرم ۱۵)')),
+    hasPanel: [...document.querySelectorAll('h2, h3')].some(h => (h.textContent ?? '').includes('گزارش ماهانهٔ استاندارد (ماژول پلتفرمی)')),
     chips: [...document.querySelectorAll('.pmr-stats .chip')].map(c => (c.textContent ?? '').replace(/\s+/g, ' ').trim()),
     rows: [...document.querySelectorAll('.pmr-row')].map(r => (r.textContent ?? '').replace(/\s+/g, ' ').trim()),
     rule: (document.querySelector('.pmr-stats')?.parentElement?.textContent ?? '').includes('دو هفته'),
   }));
-  ok('گزارش ماهانه: کارت فرم ۱۵ در صفحهٔ گزارش‌ها', pmr0.hasPanel);
+  ok('گزارش ماهانه: کارت گزارش ماهانه در صفحهٔ گزارش‌ها', pmr0.hasPanel);
   ok('گزارش ماهانه: چیپ‌های آمار (۲ ارائه‌شده + ۱ پیش‌نویس + ۲ به‌موقع)',
     pmr0.chips.some(c => c.includes('ارائه‌شده: ۲')) && pmr0.chips.some(c => c.includes('پیش‌نویس: ۱')) && pmr0.chips.some(c => c.includes('به‌موقع: ۲')), JSON.stringify(pmr0.chips));
   ok('گزارش ماهانه: سه گزارش بذر (مرداد/شهریور/مهر) با مالک و مهلت',
@@ -291,7 +291,7 @@ try {
     onTime: [...document.querySelectorAll('.pmr-row')].find(r => (r.textContent ?? '').includes('شهریور'))?.textContent.includes('به‌موقع'),
     noSubmit: ![...document.querySelectorAll('.pmr-detail button')].some(b => (b.textContent ?? '').includes('ارائه به مدیریت هلدینگ')),
   }));
-  ok('قالب فرم ۱۵: پنج بخش (خلاصه/شاخص‌های زنده/ریسک‌های زنده/انحراف/برنامهٔ ماه آینده)',
+  ok('قالب گزارش ماهانه: پنج بخش (خلاصه/شاخص‌های زنده/ریسک‌های زنده/انحراف/برنامهٔ ماه آینده)',
     pmr2.secs.length === 5 && pmr2.secs[0].includes('خلاصهٔ مدیریتی') && pmr2.secs[1].includes('شاخص‌های کلیدی') && pmr2.secs[2].includes('ریسک‌های درجه بالا') && pmr2.secs[3].includes('انحراف') && pmr2.secs[4].includes('برنامهٔ ماه آینده'), JSON.stringify(pmr2.secs));
   ok('شاخص‌های زندهٔ بخش ۲۶: همهٔ شاخص‌ها به‌صورت چیپ رنگی با مقدار محاسبه‌شده',
     pmr2.kpis >= 10 && pmr2.kpiTones === pmr2.kpis, `kpis=${pmr2.kpis}`);
@@ -306,7 +306,7 @@ try {
   ok('پیش‌نویس مهر: دکمهٔ «ارائه به مدیریت هلدینگ» حاضر است (ولی کلیک نمی‌شود تا بذر بماند)',
     await page.evaluate(() => [...document.querySelectorAll('.pmr-detail button')].some(b => (b.textContent ?? '').includes('ارائه به مدیریت هلدینگ'))));
 
-  /* ثبت گزارش تازه از فرم ۱۵ + چرخهٔ ارائه */
+  /* ثبت گزارش تازه از گزارش ماهانه + چرخهٔ ارائه */
   const e2eLbl = `گزارش تست باتری ${Date.now().toString(36)}`;
   const e2eMonth = await page.evaluate(() => { const t = Date.now(); const m = t % 240; return `${2027 + Math.floor(m / 12)}-${String(1 + (m % 12)).padStart(2, '0')}`; });
   await (await page.evaluateHandle(() => [...document.querySelectorAll('button')].find(b => (b.textContent ?? '').includes('گزارش ماهانهٔ تازه')))).asElement().click();
@@ -316,7 +316,7 @@ try {
     hints: (document.querySelector('#monthly-report-form .field-hint')?.textContent ?? ''),
     devBtn: [...document.querySelectorAll('#monthly-report-form button')].some(b => (b.textContent ?? '').includes('انحراف زمانی')),
   }));
-  ok('فرم ۱۵: ماه + راهنمای قاعدهٔ سه‌قلمی + افزودن انحراف', form27.months === 1 && form27.hints.includes('سه قلم') && form27.devBtn, JSON.stringify(form27).slice(0, 80));
+  ok('گزارش ماهانه: ماه + راهنمای قاعدهٔ سه‌قلمی + افزودن انحراف', form27.months === 1 && form27.hints.includes('سه قلم') && form27.devBtn, JSON.stringify(form27).slice(0, 80));
   await page.evaluate(({ lbl, mon }) => {
     const f = document.querySelector('#monthly-report-form');
     const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
@@ -371,16 +371,16 @@ try {
   await new Promise(r => setTimeout(r, 2000));
 
 
-  /* ── ۷.۷) گام ۴.۱ — فرم ۱۲: چک‌لیست ده‌مرحله‌ای انتقال سامانه (تب ممیزی) ── */
+  /* ── ۷.۷) گام ۴.۱ — F11: چک‌لیست ده‌مرحله‌ای انتقال سامانه (تب ممیزی) ── */
   await page.evaluate(() => { [...document.querySelectorAll('.segmented button')].find(b => (b.textContent ?? '').includes('ممیزی'))?.click(); });
   await new Promise(r => setTimeout(r, 2500));
   await page.evaluate(() => { [...document.querySelectorAll('.segmented button')].find(b => (b.textContent ?? '').includes('سامانه‌ها'))?.click(); });
   await new Promise(r => setTimeout(r, 1200));
   const mig0 = await page.evaluate(() => ({
-    hasCol: [...document.querySelectorAll('th')].some(th => (th.textContent ?? '').includes('فرم ۱۲')),
+    hasCol: [...document.querySelectorAll('th')].some(th => (th.textContent ?? '').includes('F11')),
     as4: ([...document.querySelectorAll('tbody tr')].find(tr => (tr.textContent ?? '').includes('گروه پیام‌رسان'))?.textContent ?? '').replace(/\s+/g, ' ').trim(),
   }));
-  ok('فرم ۱۲: ستون مراحل انتقال در جدول سامانه‌ها با پیشرفت ۶ از ۱۰ برای پیام‌رسان مدیران',
+  ok('F11: ستون مراحل انتقال در جدول سامانه‌ها با پیشرفت ۶ از ۱۰ برای پیام‌رسان مدیران',
     mig0.hasCol && mig0.as4.includes('۶ / ۱۰') && mig0.as4.includes('در جریان'), mig0.as4.slice(0, 90));
 
   await (await page.evaluateHandle(() => [...document.querySelectorAll('tbody tr')].find(tr => (tr.textContent ?? '').includes('گروه پیام‌رسان')))).asElement().click();
@@ -392,7 +392,7 @@ try {
     btn: [...document.querySelectorAll('.mig-steps button')].some(b => (b.textContent ?? '').includes('تکمیل مرحله')),
     head: (document.querySelector('.mig-steps-head')?.textContent ?? '').replace(/\s+/g, ' ').trim(),
   }));
-  ok('فرم ۱۲: چک‌لیست ده‌مرحله‌ای با ۶ مرحلهٔ انجام‌شده و مرحلهٔ جاری «آموزش»',
+  ok('F11: چک‌لیست ده‌مرحله‌ای با ۶ مرحلهٔ انجام‌شده و مرحلهٔ جاری «آموزش»',
     m0.steps === 10 && m0.done === 6 && m0.current.includes('آموزش') && m0.btn && m0.head.includes('۶'), JSON.stringify(m0).slice(0, 90));
 
   await page.evaluate(() => { [...document.querySelectorAll('.mig-steps button')].find(b => (b.textContent ?? '').includes('تکمیل مرحله'))?.click(); });

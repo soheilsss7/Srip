@@ -129,7 +129,7 @@ try {
   await page.evaluate(() => { [...document.querySelectorAll('.pp-stage-chip')].find(b => (b.textContent ?? '').includes('فعال'))?.click(); });
   await new Promise(r => setTimeout(r, 1500));
   const actErr = await page.evaluate(() => (document.querySelector('.modal-card .alert-banner, .modal-card [role=alert]')?.textContent ?? ''));
-  ok('فعال‌سازی بدون قرارداد → خطای قاعدهٔ سند (فرم ۱۱)', actErr.includes('بدون قرارداد') || actErr.includes('قرارداد'), actErr.slice(0, 80));
+  ok('فعال‌سازی بدون قرارداد → خطای قاعدهٔ سند (F15)', actErr.includes('بدون قرارداد') || actErr.includes('قرارداد'), actErr.slice(0, 80));
   await page.type('.pp-contract-form input', 'تفاهم‌نامهٔ پژوهشی بورس');
   await new Promise(r => setTimeout(r, 200));
   await page.evaluate(() => { [...document.querySelectorAll('.pp-contract-form button')].find(b => (b.textContent ?? '').includes('پیوست قرارداد'))?.click(); });

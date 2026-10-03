@@ -165,7 +165,7 @@ try {
     return !!sum && (sum.textContent ?? '').includes('مرجعیت هوش مصنوعی کشور');
   }));
 
-  /* ═══ گام ۲.۵ — پروندهٔ شناخت ۳۱بخشی در پروفایل سازمان (بخش ۶/۷ سند؛ فرم ۲ و ۳) ═══ */
+  /* ═══ گام ۲.۵ — پروندهٔ شناخت ۳۱بخشی در پروفایل سازمان (بخش ۶/۷ سند؛ ماژول شناخت) ═══ */
   await page2.goto(`${BASE}/organizations/org-pars`, { waitUntil: 'networkidle0', timeout: 90000 });
   await new Promise(r => setTimeout(r, 3500));
   const knl = await page2.evaluate(() => {
@@ -189,7 +189,7 @@ try {
   ok('ستون‌های جدا: داده خام / برداشت تحلیلی / منبع / تاریخ', ['داده خام', 'برداشت تحلیلی', 'منبع', 'تاریخ منبع'].every(h => knl.heads.includes(h)));
   ok('دکمهٔ «ثبت بازبینی (۹۰ روز)» حاضر است', knl.reviewBtn);
 
-  /* مودال ثبت بخش (فرم ۲/۳): بدون منبع → نامعتبر؛ با منبع → معتبر */
+  /* مودال ثبت بخش (ماژول شناخت): بدون منبع → نامعتبر؛ با منبع → معتبر */
   const pencil = await page2.evaluateHandle(() => [...document.querySelectorAll('.knl-table tr.knl-invalid button')][0]);
   await pencil.asElement().click();
   await page2.waitForSelector('#knowledge-form', { timeout: 30000 });
@@ -232,7 +232,7 @@ try {
   const revTxt = await page2.evaluate(() => document.body.textContent ?? '');
   ok('ثبت بازبینی → اعتبار ۹۰ روزهٔ تازه', revTxt.includes('۹۰ روز مانده تا بازبینی'));
 
-  /* ═══ گام ۲.۶ — رویدادها در تقویم + پروتکل بحران (بخش ۱۷ سند؛ فرم ۱۰ و ۱۱.۵) ═══ */
+  /* ═══ گام ۲.۶ — رویدادها در تقویم + پروتکل بحران (بخش ۱۷ سند؛ F10 و F15) ═══ */
   await page2.goto(`${BASE}/calendar`, { waitUntil: 'networkidle0', timeout: 90000 });
   await new Promise(r => setTimeout(r, 3500));
   const cal = await page2.evaluate(() => ({
@@ -252,9 +252,9 @@ try {
   ok('پروتکل بحران: سخنگو + جانشین + طلایی', cal.crisisH2 && cal.spokesperson.includes('مدیر روابط عمومی') && cal.spokesperson.includes('مدیرعامل') && cal.spokesperson.includes('۲'));
   ok('بحران‌ها: هر دو حالت واکنش (طلایی/دیرتر)', cal.goldenChips.some(c => c.includes('طلایی') && !c.includes('دیرتر')) && cal.goldenChips.some(c => c.includes('دیرتر از طلایی')), JSON.stringify(cal.goldenChips));
   ok('بحران فعال: هشدار در جریان', cal.activeCrisis);
-  ok('دکمهٔ «رویداد جدید» (فرم ۱۰) حاضر است', cal.newEventBtn);
+  ok('دکمهٔ «رویداد جدید» (F10) حاضر است', cal.newEventBtn);
 
-  /* ثبت رویداد تازه از فرم ۱۰ → فهرست + چک‌لیست هفت‌مرحله‌ای */
+  /* ثبت رویداد تازه از F10 → فهرست + چک‌لیست هفت‌مرحله‌ای */
   const evTitle = `رویداد تست باتری ${Date.now().toString(36)}`;
   const newBtn = await page2.evaluateHandle(() => [...document.querySelectorAll('button')].find(b => (b.textContent ?? '').includes('رویداد جدید')));
   await newBtn.asElement().click();
@@ -264,7 +264,7 @@ try {
     kindOpts: document.querySelectorAll('#event-form select')[1]?.options.length ?? 0,
     hint: (document.querySelector('#event-form .field-hint')?.textContent ?? ''),
   }));
-  ok('فرم ۱۰: دو مسیر + انواع استاندارد + الزام', formInfo.pathOpts === 2 && formInfo.kindOpts >= 3, JSON.stringify(formInfo));
+  ok('F10: دو مسیر + انواع استاندارد + الزام', formInfo.pathOpts === 2 && formInfo.kindOpts >= 3, JSON.stringify(formInfo));
   const titleInp = await page2.evaluateHandle(() => [...document.querySelectorAll('#event-form input')].filter(i => i.type === 'text' || !i.type)[0]);
   await titleInp.asElement().type(evTitle);
   await page2.evaluate(() => {
@@ -312,7 +312,7 @@ try {
   ok('تکمیل مرحله → ۲ انجام‌شده و مرحلهٔ بعدی جاری', afterStep.done === 2 && afterStep.current.includes('آماده‌سازی'), `done=${afterStep.done}`);
 
 
-  /* ═══ گام ۴.۲ — فرم ۸ و ۷: رسانه تخصصی و تأیید محتوا در تقویم ═══ */
+  /* ═══ گام ۴.۲ — F06 و F08: رسانه تخصصی و تأیید محتوا در تقویم ═══ */
   await page2.evaluate(() => { document.querySelector('.ev-checklist .modal-close, .modal-backdrop .modal-close')?.click?.(); });
   await page2.keyboard.press('Escape');
   await new Promise(r => setTimeout(r, 700));
@@ -322,12 +322,12 @@ try {
     rows: [...document.querySelectorAll('.cnt-row')].map(r => (r.textContent ?? '').replace(/\s+/g, ' ').trim()),
     stats: [...document.querySelectorAll('.content-panel .pmr-stats .chip')].map(c => (c.textContent ?? '').replace(/\s+/g, ' ').trim()),
   }));
-  ok('فرم ۸: پنل رسانه تخصصی با هفت ستون ریتم‌دار سند', cinfo.hasPanel && cinfo.pillars === 7, `pillars=${cinfo.pillars}`);
-  ok('فرم ۸: هفت خروجی بذر پارس با ستون و ریتم', cinfo.rows.length === 7 && cinfo.rows.some(r => r.includes('پروندهٔ ویژهٔ دادهٔ باز صنعت')) && cinfo.rows.every(r => r.includes('مدیر محتوا')), `rows=${cinfo.rows.length}`);
-  ok('فرم ۸: آمار وضعیت (۲ منتشرشده + ۱ تأییدشده + ۱ در بازبینی + ۳ پیش‌نویس)',
+  ok('F06: پنل رسانه تخصصی با هفت ستون ریتم‌دار سند', cinfo.hasPanel && cinfo.pillars === 7, `pillars=${cinfo.pillars}`);
+  ok('F06: هفت خروجی بذر پارس با ستون و ریتم', cinfo.rows.length === 7 && cinfo.rows.some(r => r.includes('پروندهٔ ویژهٔ دادهٔ باز صنعت')) && cinfo.rows.every(r => r.includes('مدیر محتوا')), `rows=${cinfo.rows.length}`);
+  ok('F06: آمار وضعیت (۲ منتشرشده + ۱ تأییدشده + ۱ در بازبینی + ۳ پیش‌نویس)',
     cinfo.stats.some(c => c.includes('منتشرشده: ۲')) && cinfo.stats.some(c => c.includes('تأییدشده: ۱')) && cinfo.stats.some(c => c.includes('در بازبینی: ۱')), JSON.stringify(cinfo.stats));
 
-  /* فرم ۷: مودال چهار کنترل — ثبت دو کنترل باقی‌ماندهٔ اپیزود پادکست → تأییدشده → انتشار */
+  /* F08: مودال چهار کنترل — ثبت دو کنترل باقی‌ماندهٔ اپیزود پادکست → تأییدشده → انتشار */
   await (await page2.evaluateHandle(() => [...document.querySelectorAll('.cnt-row')].find(r => (r.textContent ?? '').includes('اپیزود: سخنران داده')))).asElement().click();
   await page2.waitForSelector('.cnt-detail', { timeout: 30000 });
   const d0 = await page2.evaluate(() => ({
@@ -338,7 +338,7 @@ try {
     publishBtn: [...document.querySelectorAll('.cnt-detail button')].some(b => (b.textContent ?? '').trim() === 'انتشار'),
     hint: (document.querySelector('.cnt-detail .field-hint')?.textContent ?? '').includes('انتشار بدون تأیید کامل ممنوع'),
   }));
-  ok('فرم ۷: مودال گردش تأیید با چهار کنترل الزامی (۲ تأییدشده، ۲ دکمهٔ ثبت)', d0.ctls === 4 && d0.okCount === 2 && d0.buttons === 2 && !d0.publishBtn && d0.hint, JSON.stringify(d0).slice(0, 80));
+  ok('F08: مودال گردش تأیید با چهار کنترل الزامی (۲ تأییدشده، ۲ دکمهٔ ثبت)', d0.ctls === 4 && d0.okCount === 2 && d0.buttons === 2 && !d0.publishBtn && d0.hint, JSON.stringify(d0).slice(0, 80));
   for (let i = 0; i < 2; i++) {
     await page2.evaluate(() => { [...document.querySelectorAll('.cnt-ctl button')][0]?.click(); });
     await new Promise(r => setTimeout(r, 2500));
@@ -348,7 +348,7 @@ try {
     status: (document.querySelector('.cnt-detail-head .srip-badge')?.textContent ?? '').trim(),
     publishBtn: [...document.querySelectorAll('.cnt-detail button')].some(b => (b.textContent ?? '').trim() === 'انتشار'),
   }));
-  ok('فرم ۷: ثبت دو کنترل دیگر → «تأییدشده» با دکمهٔ انتشار', d1.okCount === 4 && d1.status.includes('تأییدشده') && d1.publishBtn, JSON.stringify(d1));
+  ok('F08: ثبت دو کنترل دیگر → «تأییدشده» با دکمهٔ انتشار', d1.okCount === 4 && d1.status.includes('تأییدشده') && d1.publishBtn, JSON.stringify(d1));
   await page2.evaluate(() => { [...document.querySelectorAll('.cnt-detail button')].find(b => (b.textContent ?? '').trim() === 'انتشار')?.click(); });
   await new Promise(r => setTimeout(r, 3000));
   const d2 = await page2.evaluate(() => ({
@@ -356,11 +356,11 @@ try {
     rowStatus: ([...document.querySelectorAll('.cnt-row')].find(r => (r.textContent ?? '').includes('اپیزود: سخنران داده'))?.textContent ?? '').includes('منتشرشده'),
     noBtn: ![...document.querySelectorAll('.cnt-detail button')].some(b => (b.textContent ?? '').trim() === 'انتشار'),
   }));
-  ok('فرم ۷: انتشار از رابط → «منتشرشده» در مودال و فهرست؛ دکمهٔ انتشار برداشته شد', d2.status.includes('منتشرشده') && d2.rowStatus && d2.noBtn, JSON.stringify(d2));
+  ok('F08: انتشار از رابط → «منتشرشده» در مودال و فهرست؛ دکمهٔ انتشار برداشته شد', d2.status.includes('منتشرشده') && d2.rowStatus && d2.noBtn, JSON.stringify(d2));
   await page2.evaluate(() => { document.querySelector('.modal-close')?.click(); });
   await new Promise(r => setTimeout(r, 500));
 
-  /* ═══ گام ۴.۳ — فرم ۶: رجیستری دارایی برند در تب آمادگی /program ═══ */
+  /* ═══ گام ۴.۳ — F05: رجیستری دارایی برند در تب آمادگی /program ═══ */
   await page2.goto(`${BASE}/program`, { waitUntil: 'networkidle0', timeout: 90000 });
   await new Promise(r => setTimeout(r, 3000));
   await (await page2.evaluateHandle(() => [...document.querySelectorAll('button')].find(b => (b.textContent ?? '').includes('آمادگی بازار')))).asElement().click();
@@ -373,13 +373,13 @@ try {
     overdueRow: [...document.querySelectorAll('.asset-table tbody tr')].some(tr => tr.className.includes('asset-due') && (tr.textContent ?? '').includes('بازبینی معوق') && (tr.textContent ?? '').includes('وب‌سایت')),
     hint: (document.querySelector('.brand-assets .field-hint')?.textContent ?? '').includes('بدون مالک'),
   }));
-  ok('فرم ۶: پنل رجیستری دارایی برند با ۷ دارایی بذر پارس', assets0.hasPanel && assets0.rows === 7, `rows=${assets0.rows}`);
-  ok('فرم ۶: آمار رجیستری (۴ فعال + ۳ در تدوین + ۱ بازبینی معوق)',
+  ok('F05: پنل رجیستری دارایی برند با ۷ دارایی بذر پارس', assets0.hasPanel && assets0.rows === 7, `rows=${assets0.rows}`);
+  ok('F05: آمار رجیستری (۴ فعال + ۳ در تدوین + ۱ بازبینی معوق)',
     assets0.chips.some(c => c.includes('فعال — نسخهٔ جاری: ۴')) && assets0.chips.some(c => c.includes('در تدوین: ۳')) && assets0.chips.some(c => c.includes('بازبینی معوق: ۱')), JSON.stringify(assets0.chips));
-  ok('فرم ۶: وب‌سایت هلدینگ با نشان «بازبینی معوق» و ردیف رنگ‌شده', assets0.overdueRow);
-  ok('فرم ۶: قاعدهٔ سند زیر جدول (دارایی بدون مالک ثبت نمی‌شود)', assets0.hint);
+  ok('F05: وب‌سایت هلدینگ با نشان «بازبینی معوق» و ردیف رنگ‌شده', assets0.overdueRow);
+  ok('F05: قاعدهٔ سند زیر جدول (دارایی بدون مالک ثبت نمی‌شود)', assets0.hint);
 
-  /* ثبت دارایی تازه از فرم ۶ → ردیف هشتم */
+  /* ثبت دارایی تازه از F05 → ردیف هشتم */
   await (await page2.evaluateHandle(() => [...document.querySelectorAll('button')].find(b => (b.textContent ?? '').trim() === 'ثبت دارایی برند'))).asElement().click();
   await page2.waitForSelector('#asset-form', { timeout: 30000 });
   const aForm = await page2.evaluate(() => ({
@@ -387,7 +387,7 @@ try {
     selects: document.querySelectorAll('#asset-form select').length,
     ownerFree: !!document.querySelector('#asset-form input[placeholder*="نقش مالک"]'),
   }));
-  ok('فرم ۶: مودال ثبت با قلم‌های سند (عنوان/نسخه/مالک/محل/وضعیت/تاریخ بازبینی)',
+  ok('F05: مودال ثبت با قلم‌های سند (عنوان/نسخه/مالک/محل/وضعیت/تاریخ بازبینی)',
     aForm.inputs >= 4 && aForm.selects >= 1 && aForm.ownerFree, JSON.stringify(aForm));
   const assetName = `دارایی تست باتری ${Date.now().toString(36)}`;
   await page2.evaluate((name) => {
@@ -405,7 +405,7 @@ try {
     hasNew: [...document.querySelectorAll('.asset-table tbody tr')].some(tr => (tr.textContent ?? '').includes(name) && (tr.textContent ?? '').includes('مدیر هنری')),
     modalClosed: !document.querySelector('#asset-form'),
   }), assetName);
-  ok('فرم ۶: ثبت دارایی تازه → ردیف هشتم با مالک', afterCreate.rows === 8 && afterCreate.hasNew && afterCreate.modalClosed, JSON.stringify(afterCreate).slice(0, 90));
+  ok('F05: ثبت دارایی تازه → ردیف هشتم با مالک', afterCreate.rows === 8 && afterCreate.hasNew && afterCreate.modalClosed, JSON.stringify(afterCreate).slice(0, 90));
 
   /* ویرایش ردیف → مهر بازبینی فصلی (۹۰ روز) */
   await (await page2.evaluateHandle((name) => [...document.querySelectorAll('.asset-table tbody tr')].find(tr => (tr.textContent ?? '').includes(name)), assetName)).asElement().click();
@@ -414,7 +414,7 @@ try {
     reviewBtn: [...document.querySelectorAll('button')].some(b => (b.textContent ?? '').includes('ثبت بازبینی انجام‌شده')),
     verPrefilled: [...document.querySelectorAll('#asset-form input')].some(i => i.value === '۱٫۰'),
   }));
-  ok('فرم ۶: مودال ویرایش با نسخهٔ پیش‌فرض و دکمهٔ «ثبت بازبینی انجام‌شده (۹۰ روز)»', edForm.reviewBtn && edForm.verPrefilled, JSON.stringify(edForm));
+  ok('F05: مودال ویرایش با نسخهٔ پیش‌فرض و دکمهٔ «ثبت بازبینی انجام‌شده (۹۰ روز)»', edForm.reviewBtn && edForm.verPrefilled, JSON.stringify(edForm));
   await page2.evaluate(() => { [...document.querySelectorAll('button')].find(b => (b.textContent ?? '').includes('ثبت بازبینی انجام‌شده'))?.click(); });
   await new Promise(r => setTimeout(r, 3000));
   const afterRev = await page2.evaluate((name) => {
@@ -422,12 +422,12 @@ try {
     const cells = tr ? [...tr.querySelectorAll('td')] : [];
     return { exists: !!tr, reviewCell: (cells[cells.length - 1]?.textContent ?? '').trim(), modalClosed: !document.querySelector('#asset-form') };
   }, assetName);
-  ok('فرم ۶: مهر بازبینی → تاریخ شمسی تازه در ستون بازبینی (نه خط تیره)',
+  ok('F05: مهر بازبینی → تاریخ شمسی تازه در ستون بازبینی (نه خط تیره)',
     afterRev.exists && afterRev.modalClosed && afterRev.reviewCell !== '—' && afterRev.reviewCell.length > 3, JSON.stringify(afterRev).slice(0, 90));
   await page2.evaluate(() => { document.querySelector('.modal-close')?.click(); });
   await new Promise(r => setTimeout(r, 500));
 
-  /* ═══ گام ۴.۴ — فرم ۱۴: تأیید هزینه پیش از تعهد در نمای کلی /program ═══ */
+  /* ═══ گام ۴.۴ — تأیید هزینه: تأیید هزینه پیش از تعهد در نمای کلی /program ═══ */
   await page2.goto(`${BASE}/program`, { waitUntil: 'networkidle0', timeout: 90000 });
   await page2.waitForSelector('.expense-panel .expense-table', { timeout: 30000 });
   await new Promise(r => setTimeout(r, 1200));
@@ -439,12 +439,12 @@ try {
     commitBtns: [...document.querySelectorAll('.expense-panel tbody button')].filter(b => (b.textContent ?? '').trim() === 'ثبت تعهد').length,
     rule: (document.querySelector('.expense-panel .field-hint')?.textContent ?? '').includes('تعهد فقط پس از تصویب'),
   }));
-  ok('فرم ۱۴: پنل تأیید هزینه با ۴ هزینهٔ بذر پارس', ex0.hasPanel && ex0.rows === 4, `rows=${ex0.rows}`);
-  ok('فرم ۱۴: آمار گردش (۲ در انتظار + ۱ تصویب‌شده + ۱ تعهد ثبت‌شده)',
+  ok('تأیید هزینه: پنل تأیید هزینه با ۴ هزینهٔ بذر پارس', ex0.hasPanel && ex0.rows === 4, `rows=${ex0.rows}`);
+  ok('تأیید هزینه: آمار گردش (۲ در انتظار + ۱ تصویب‌شده + ۱ تعهد ثبت‌شده)',
     ex0.chips.some(c => c.includes('در انتظار تصویب: ۲')) && ex0.chips.some(c => c.includes('تصویب‌شده: ۱')) && ex0.chips.some(c => c.includes('تعهد ثبت‌شده: ۱')), JSON.stringify(ex0.chips));
-  ok('فرم ۱۴: جمع تعهدات ۲۵۰ میلیون تومان + قاعدهٔ سند زیر جدول',
+  ok('تأیید هزینه: جمع تعهدات ۲۵۰ میلیون تومان + قاعدهٔ سند زیر جدول',
     ex0.chips.some(c => c.includes('جمع تعهدات') && c.includes('۲۵۰')) && ex0.rule);
-  ok('فرم ۱۴: دکمه‌های اقدام — دو «تصویب» و یک «ثبت تعهد»', ex0.approveBtns === 2 && ex0.commitBtns === 1, `approve=${ex0.approveBtns} commit=${ex0.commitBtns}`);
+  ok('تأیید هزینه: دکمه‌های اقدام — دو «تصویب» و یک «ثبت تعهد»', ex0.approveBtns === 2 && ex0.commitBtns === 1, `approve=${ex0.approveBtns} commit=${ex0.commitBtns}`);
 
   /* گردش کامل از رابط: تصویب «اشتراک ابزار پایش رسانه» → ثبت تعهد */
   await (await page2.evaluateHandle(() => [...document.querySelectorAll('.expense-panel tbody tr')].find(tr => (tr.textContent ?? '').includes('اشتراک سالانه'))
@@ -455,7 +455,7 @@ try {
     const tds = tr ? [...tr.querySelectorAll('td')] : [];
     return { status: (tds[4]?.textContent ?? '').trim(), btn: (tr?.querySelector('button')?.textContent ?? '').trim() };
   });
-  ok('فرم ۱۴: تصویب از رابط → «تصویب‌شده» با دکمهٔ «ثبت تعهد»', ex1.status.includes('تصویب‌شده') && ex1.btn === 'ثبت تعهد', JSON.stringify(ex1));
+  ok('تأیید هزینه: تصویب از رابط → «تصویب‌شده» با دکمهٔ «ثبت تعهد»', ex1.status.includes('تصویب‌شده') && ex1.btn === 'ثبت تعهد', JSON.stringify(ex1));
   await (await page2.evaluateHandle(() => [...document.querySelectorAll('.expense-panel tbody tr')].find(tr => (tr.textContent ?? '').includes('اشتراک سالانه'))
     ?.querySelector('button'))).asElement().click();
   await new Promise(r => setTimeout(r, 3000));
@@ -466,10 +466,10 @@ try {
     return { status: (tds[4]?.textContent ?? '').trim(), hasBtn: !!tr?.querySelector('button'),
       total: chips.find(c => c.includes('جمع تعهدات')) ?? '' };
   });
-  ok('فرم ۱۴: ثبت تعهد پس از تصویب → «تعهد ثبت‌شده» و رشد جمع تعهدات (۲۹۵ میلیون)',
+  ok('تأیید هزینه: ثبت تعهد پس از تصویب → «تعهد ثبت‌شده» و رشد جمع تعهدات (۲۹۵ میلیون)',
     ex2.status.includes('تعهد ثبت‌شده') && !ex2.hasBtn && ex2.total.includes('۲۹۵'), JSON.stringify(ex2).slice(0, 90));
 
-  /* ثبت درخواست تازه از فرم ۱۴ → ردیف پنجم */
+  /* ثبت درخواست تازه از تأیید هزینه → ردیف پنجم */
   await (await page2.evaluateHandle(() => [...document.querySelectorAll('.expense-panel button')].find(b => (b.textContent ?? '').includes('ثبت درخواست هزینه')))).asElement().click();
   await page2.waitForSelector('#expense-form', { timeout: 30000 });
   const exForm = await page2.evaluate(() => ({
@@ -478,7 +478,7 @@ try {
     amountType: document.querySelector('#expense-form input[type=number]') != null,
     ownerFree: !!document.querySelector('#expense-form input[placeholder*="نقش درخواست\u200cکننده"]') || document.querySelectorAll('#expense-form select').length >= 1,
   }));
-  ok('فرم ۱۴: مودال درخواست با شرح/مبلغ عددی/دسته/درخواست‌کننده', exForm.inputs >= 3 && exForm.amountType && exForm.ownerFree, JSON.stringify(exForm));
+  ok('تأیید هزینه: مودال درخواست با شرح/مبلغ عددی/دسته/درخواست‌کننده', exForm.inputs >= 3 && exForm.amountType && exForm.ownerFree, JSON.stringify(exForm));
   const expTitle = `هزینهٔ تست باتری ${Date.now().toString(36)}`;
   await page2.evaluate((name) => {
     const setVal = (el, v) => { if (!el) return; const s = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set; s.call(el, v); el.dispatchEvent(new Event('input', { bubbles: true })); };
@@ -496,12 +496,12 @@ try {
     return { rows: document.querySelectorAll('.expense-panel tbody tr').length, status: (tds[4]?.textContent ?? '').trim(),
       hasApprove: (tr?.querySelector('button')?.textContent ?? '').trim() === 'تصویب', modalClosed: !document.querySelector('#expense-form') };
   }, expTitle);
-  ok('فرم ۱۴: ثبت درخواست تازه → ردیف پنجم «در انتظار تصویب» با دکمهٔ تصویب',
+  ok('تأیید هزینه: ثبت درخواست تازه → ردیف پنجم «در انتظار تصویب» با دکمهٔ تصویب',
     ex3.rows === 5 && ex3.status.includes('در انتظار تصویب') && ex3.hasApprove && ex3.modalClosed, JSON.stringify(ex3).slice(0, 90));
   await page2.evaluate(() => { document.querySelector('.modal-close')?.click(); });
   await new Promise(r => setTimeout(r, 500));
 
-  /* ═══ گام ۴.۵ — فرم ۱۸: صورت‌جلسهٔ تحویل در /reports ═══ */
+  /* ═══ گام ۴.۵ — صورت‌جلسهٔ تحویل: صورت‌جلسهٔ تحویل در /reports ═══ */
   await page2.goto(`${BASE}/reports`, { waitUntil: 'networkidle0', timeout: 90000 });
   await page2.waitForSelector('.delivery-panel .delivery-table', { timeout: 30000 });
   await new Promise(r => setTimeout(r, 1200));
@@ -515,11 +515,11 @@ try {
     currentStep: (document.querySelector('.delivery-panel .mig-step.current .mig-step-title')?.textContent ?? ''),
     hint: (document.querySelector('.delivery-panel .field-hint')?.textContent ?? '').includes('امضا فقط پس از تحویل همهٔ اقلام'),
   }));
-  ok('فرم ۱۸: پنل صورت‌جلسهٔ تحویل با پنج قلم ۲۸.۱ سند', dv0.hasPanel && dv0.rows === 5, `rows=${dv0.rows}`);
-  ok('فرم ۱۸: بذر پارس — ۲ قلم تحویل‌شده + ۳ دکمهٔ «تحویل انجام شد»', dv0.delivered === 2 && dv0.deliverBtns === 3, `delivered=${dv0.delivered} btns=${dv0.deliverBtns}`);
-  ok('فرم ۱۸: فرآیند هفت‌گام — ۲ انجام‌شده و مرحلهٔ جاری «انتقال اقلام»',
+  ok('صورت‌جلسهٔ تحویل: پنل صورت‌جلسهٔ تحویل با پنج قلم ۲۸.۱ سند', dv0.hasPanel && dv0.rows === 5, `rows=${dv0.rows}`);
+  ok('صورت‌جلسهٔ تحویل: بذر پارس — ۲ قلم تحویل‌شده + ۳ دکمهٔ «تحویل انجام شد»', dv0.delivered === 2 && dv0.deliverBtns === 3, `delivered=${dv0.delivered} btns=${dv0.deliverBtns}`);
+  ok('صورت‌جلسهٔ تحویل: فرآیند هفت‌گام — ۲ انجام‌شده و مرحلهٔ جاری «انتقال اقلام»',
     dv0.steps === 7 && dv0.stepsDone === 2 && dv0.currentStep.includes('انتقال'), `steps=${dv0.steps} done=${dv0.stepsDone} cur=${dv0.currentStep}`);
-  ok('فرم ۱۸: قاعدهٔ امضا زیر جدول (فقط پس از تحویل همهٔ اقلام)', dv0.hint);
+  ok('صورت‌جلسهٔ تحویل: قاعدهٔ امضا زیر جدول (فقط پس از تحویل همهٔ اقلام)', dv0.hint);
   await (await page2.$('.delivery-panel')).screenshot({ path: '/home/user/Srip/docs/screenshots/delivery/01-form18-items.png' });
 
   /* تحویل سه قلم باقی‌مانده → فرم امضای طرفین */
@@ -533,7 +533,7 @@ try {
     signForm: !!document.querySelector('.dlv-sign-form'),
     signBtn: [...document.querySelectorAll('.delivery-panel button')].some(b => (b.textContent ?? '').trim() === 'امضای صورت‌جلسه'),
   }));
-  ok('فرم ۱۸: تحویل سه قلم باقی‌مانده → ۵ از ۵ و فرم امضای طرفین',
+  ok('صورت‌جلسهٔ تحویل: تحویل سه قلم باقی‌مانده → ۵ از ۵ و فرم امضای طرفین',
     dv1.delivered === 5 && dv1.deliverBtns === 0 && dv1.signForm && dv1.signBtn, JSON.stringify(dv1).slice(0, 80));
 
   /* امضای طرفین → قفل */
@@ -552,11 +552,11 @@ try {
     signFormGone: !document.querySelector('.dlv-sign-form'),
     stepBtns: document.querySelectorAll('.delivery-panel .mig-step button').length,
   }));
-  ok('فرم ۱۸: امضای طرفین → مهر امضا + چیپ قفل و حذف همهٔ کنش‌ها',
+  ok('صورت‌جلسهٔ تحویل: امضای طرفین → مهر امضا + چیپ قفل و حذف همهٔ کنش‌ها',
     dv2.signed && dv2.text.includes('مدیرعامل هلدینگ') && dv2.lockChip && dv2.signFormGone && dv2.stepBtns === 0, JSON.stringify(dv2).slice(0, 90));
   await (await page2.$('.delivery-panel')).screenshot({ path: '/home/user/Srip/docs/screenshots/delivery/02-form18-signed.png' });
 
-  /* ═══ گام ۴.۶ — فرم ۱: چک‌لیست پروژه صفر در نمای کلی /program ═══ */
+  /* ═══ گام ۴.۶ — پروژه صفر: چک‌لیست پروژه صفر در نمای کلی /program ═══ */
   await page2.goto(`${BASE}/program`, { waitUntil: 'networkidle0', timeout: 90000 });
   await page2.waitForSelector('.project-zero-panel .pz-grid', { timeout: 30000 });
   await new Promise(r => setTimeout(r, 1200));
@@ -570,13 +570,13 @@ try {
     chips: [...document.querySelectorAll('.project-zero-panel .chip-row .chip')].map(c => (c.textContent ?? '').replace(/\s+/g, ' ').trim()),
     rule: (document.querySelector('.project-zero-panel .field-hint')?.textContent ?? '').includes('شرط عبور از فاز استقرار'),
   }));
-  ok('فرم ۱: پنل چک‌لیست پروژه صفر با بیست خروجی تأسیس', pz0.hasPanel && pz0.items === 20, `items=${pz0.items}`);
-  ok('فرم ۱: پارس — هر ۲۰ خروجی انجام‌شده (پروژه صفر در ماه نخست بسته شد)',
+  ok('پروژه صفر: پنل چک‌لیست پروژه صفر با بیست خروجی تأسیس', pz0.hasPanel && pz0.items === 20, `items=${pz0.items}`);
+  ok('پروژه صفر: پارس — هر ۲۰ خروجی انجام‌شده (پروژه صفر در ماه نخست بسته شد)',
     pz0.done === 20 && pz0.chips.some(c => c.includes('انجام‌شده: ۲۰')), `done=${pz0.done}`);
-  ok('فرم ۱: از «تعیین نوع شرکت» تا «ساختار گزارش مالی»',
+  ok('پروژه صفر: از «تعیین نوع شرکت» تا «ساختار گزارش مالی»',
     pz0.firstItem.includes('نوع شرکت') && pz0.lastItem.includes('ساختار گزارش مالی'));
-  ok('فرم ۱: دروازهٔ فاز استقرار برقرار — نوار پیام دروازه', pz0.gate.includes('دروازهٔ فاز استقرار برقرار است'));
-  ok('فرم ۱: قاعدهٔ سند زیر فهرست (تکمیل همه شرط عبور از فاز استقرار)', pz0.rule);
+  ok('پروژه صفر: دروازهٔ فاز استقرار برقرار — نوار پیام دروازه', pz0.gate.includes('دروازهٔ فاز استقرار برقرار است'));
+  ok('پروژه صفر: قاعدهٔ سند زیر فهرست (تکمیل همه شرط عبور از فاز استقرار)', pz0.rule);
   await (await page2.$('.project-zero-panel')).screenshot({ path: '/home/user/Srip/docs/screenshots/program/23-project-zero-form1.png' });
 
   await page2.close();

@@ -6183,8 +6183,8 @@ const nowIso=()=>new Date().toISOString();
 /* ═══════════════════════════════════════════════════════════════════════════
    گام ۲.۱ مسترپلن — «حاکمیت برنامه» (سند عملیاتی هلدینگ پارس نسخهٔ ۳)
    بخش ۱۲/۱۳: آمادگی شش‌لایهٔ وزن‌دار + دروازهٔ فصل · بخش ۲۰/۲۱: ممیزی سه‌گانه
-   بخش ۲۵/فرم ۱۶: ریجستری ریسک (ریسک بدون مالک ثبت نمی‌شود)
-   بخش ۲۶/فرم ۱۷: شاخص‌های مالک‌دار — «عدد دستی وارد داشبورد نمی‌شود»؛ هر شاخص
+   بخش ۲۵/F17: ریجستری ریسک (ریسک بدون مالک ثبت نمی‌شود)
+   بخش ۲۶/ماژول شاخص‌ها: شاخص‌های مالک‌دار — «عدد دستی وارد داشبورد نمی‌شود»؛ هر شاخص
    از دادهٔ زندهٔ ماژول‌ها محاسبه می‌شود.
    ═══════════════════════════════════════════════════════════════════════════ */
 const PROGRAM_ORG_ID='org-1'; /* دادهٔ برنامهٔ هلدینگ دمو؛ مستأجر واقعی دادهٔ خودش را می‌سازد */
@@ -6234,7 +6234,7 @@ const programDemoSettings=()=>({organizationId:PROGRAM_ORG_ID,
   ],
   partnershipTarget:25,
   kpis:[
-    {id:'kpi-1',category:'شناخت و دانش',title:'تکمیل پرونده شناخت هلدینگ و دوازده زیرمجموعه',owner:'مدیر استراتژی',period:'ماه ۳',target:'تکمیل ۱۰۰٪ بخش‌ها',source:'پروندهٔ شناخت ۳۱بخشی (فرم ۲ و ۳) — بخش‌های معتبر (داده + منبع) هلدینگ و زیرمجموعه‌ها',metric:'profile-completeness',unit:'percent',targetValue:100,config:{}},
+    {id:'kpi-1',category:'شناخت و دانش',title:'تکمیل پرونده شناخت هلدینگ و دوازده زیرمجموعه',owner:'مدیر استراتژی',period:'ماه ۳',target:'تکمیل ۱۰۰٪ بخش‌ها',source:'پروندهٔ شناخت ۳۱بخشی (ماژول شناخت) — بخش‌های معتبر (داده + منبع) هلدینگ و زیرمجموعه‌ها',metric:'profile-completeness',unit:'percent',targetValue:100,config:{}},
     {id:'kpi-2',category:'شناخت و دانش',title:'خروجی پژوهشی اندیشکده',owner:'مدیر اندیشکده و پژوهش',period:'ماهانه از ماه ۵',target:'دست‌کم یک یادداشت سیاستی در ماه',source:'مرکز دانش — یادداشت‌های سیاستی ماه جاری',metric:'docs-month',unit:'count',targetValue:1,config:{pattern:'یادداشت سیاستی'}},
     {id:'kpi-3',category:'شناخت و دانش',title:'شاخص مرجعیت هوش مصنوعی (نمرهٔ مرکب نُه مؤلفه)',owner:'مدیر اندیشکده و پژوهش',period:'ماه ۱۲',target:'رسیدن از ۵۵ به ۹۰',source:'هدف راهبردی «مرجعیت هوش مصنوعی» — نمرهٔ مرکب نُه مؤلفهٔ پایش‌شده',metric:'goal-composite',unit:'score',targetValue:90,config:{}},
     {id:'kpi-4',category:'دارایی و رسانه',title:'انتشار رسانه تخصصی',owner:'مدیر روابط عمومی',period:'ماهانه از ماه ۵',target:'۲۰ خروجی در ماه',source:'عموم‌ها — بازنمایی رسانه‌ای ثبت‌شدهٔ ماه جاری',metric:'media-mentions-month',unit:'count',targetValue:20,config:{}},
@@ -6413,7 +6413,7 @@ function ensureProgramSeed(){
     {id:'ap-5',organizationId:PROGRAM_ORG_ID,role:'تحلیلگر تحقیقات بازار',duties:'—',manager:'مدیر توسعه کسب‌وکار',capacity:'—',dependencyRisk:'—',successor:'—',priority:'HIRE',note:'جایگاه خالی — جذب در ماه ۳'},
   ];}
   if(!Array.isArray(DB.auditSystems)||!DB.auditSystems.length){
-    /* گام ۴.۱ — بذر مراحل فرم ۱۲: دو سامانهٔ تکمیل‌شده (هر ۱۰ مرحله)، یکی در میانهٔ راه (۶ مرحله)، یکی شروع‌نشده */
+    /* گام ۴.۱ — بذر مراحل F11: دو سامانهٔ تکمیل‌شده (هر ۱۰ مرحله)، یکی در میانهٔ راه (۶ مرحله)، یکی شروع‌نشده */
     const migSteps=(keys,base)=>Object.fromEntries(keys.map((k,i)=>[k,new Date(Date.now()-(base-i)*3*86400000).toISOString()]));
     const ALL10=MIGRATION_STEPS.map(s=>s.key);
     DB.auditSystems=[
@@ -6429,7 +6429,7 @@ function ensureProgramSeed(){
     {id:'ac-3',organizationId:PROGRAM_ORG_ID,name:'اینستاگرام',address:'instagram.com/pars',owner:'نامشخص',lastActivity:'۸ ماه پیش',brand:'غیرمنطبق',action:'SHUTDOWN',note:'بی‌مالک و رهاشده — خاموش‌سازی'},
     {id:'ac-4',organizationId:PROGRAM_ORG_ID,name:'خبرنامهٔ ایمیلی',address:'—',owner:'مدیر محتوا',lastActivity:'۲ ماه پیش',brand:'بخشی منطبق',action:'TRANSFER',note:'انتقال به سکوی جدید'},
   ];}
-  /* گزارش ماهانهٔ استاندارد (فرم ۱۵؛ شاخص ۱۰) — دو ماه ارائه‌شده + پیش‌نویس ماه جاری
+  /* گزارش ماهانهٔ استاندارد (ماژول پلتفرمی؛ شاخص ۱۰) — دو ماه ارائه‌شده + پیش‌نویس ماه جاری
      قالب ثابت: خلاصهٔ مدیریتی + شاخص‌های زندهٔ ۲۶ + ریسک‌های درجه بالای ۲۵ + انحراف‌های
      زمانی بیش از دو هفته (با علت/اثر بر مسیر بحرانی/اقدام جبرانی) + برنامهٔ ماه آینده */
   if(!Array.isArray(DB.programMonthlyReports)||!DB.programMonthlyReports.length){DB.programMonthlyReports=[
@@ -6492,7 +6492,7 @@ function programReadinessFor(req){
 }
 
 /* شاخص‌های مالک‌دار (جدول بخش ۲۶ سند) — مقدار هر شاخص از ماژول مربوطه محاسبه می‌شود */
-/* شاخص‌های برنامه — تعریف هر شاخص دادهٔ سازمان است (فرم ۱۷: مالک/هدف/دوره)؛
+/* شاخص‌های برنامه — تعریف هر شاخص دادهٔ سازمان است (ماژول شاخص‌ها: مالک/هدف/دوره)؛
    مقدار آن از سنجه‌های محاسبهٔ پلتفرم روی دادهٔ زنده به دست می‌آید (بدون عدد دستی). */
 function programKpisFor(req){
   ensureProgramSeed();
@@ -6524,7 +6524,7 @@ function programKpisFor(req){
   });
 }
 
-/* ═══════════════ گام ۲.۴ — پروندهٔ رقیب ۷بُعدی (فرم ۵ سند) ═══════════════
+/* ═══════════════ گام ۲.۴ — پروندهٔ رقیب ۷بُعدی (F04 سند) ═══════════════
    تحلیل رقبا فراتر از فهرست نام‌هاست؛ هدف یافتن «شکاف جایگاه» است — جایی که
    سازمان می‌تواند مرجع شود و دیگران نیستند. هر رقیب کلیدی پرونده‌ای با هفت بُعد
    جایگاه‌یابی دارد: مرجعیت داده، عمق تحلیل، حضور رسانه‌ای، شبکه مشارکت، کیفیت
@@ -6596,7 +6596,7 @@ function validateCompetitorScores(b){
   return null;
 }
 
-/* ═══════════════ گام ۲.۵ — پروندهٔ شناخت ۳۱بخشی (بخش ۶/۷ سند؛ فرم ۲ و ۳) ═══════════════
+/* ═══════════════ گام ۲.۵ — پروندهٔ شناخت ۳۱بخشی (بخش ۶/۷ سند؛ ماژول شناخت) ═══════════════
    شناخت مبنای تمام تصمیم‌های بعدی است و فراتر از پروفایل مالی به شناخت انسانی،
    ساختاری و سازمانی گسترش می‌یابد. پروندهٔ استاندارد هر سازمان ۳۱ بخش دارد — از
    هویت و ساختار حقوقی تا شبکهٔ ذی‌نفعان، دارایی‌های ارتباطی، مسائل و فرصت‌ها.
@@ -6703,7 +6703,7 @@ function ensureKnowledgeSeed(){
   const S=(data,interpretation,source,srcDaysAgo)=>({data,interpretation,source,sourceDate:ago(srcDaysAgo),updatedAt:ago(srcDaysAgo)});
   const P=(organizationId,stage,ownerRole,reviewedDaysAgo,sections)=>({organizationId,stage,ownerRole,reviewedAt:reviewedDaysAgo==null?null:ago(reviewedDaysAgo),sections});
   DB.knowledgeProfiles=[
-    /* هلدینگ پارس — فرم ۲ «شناخت هلدینگ»: ماه دوم برنامه، مرحلهٔ تحلیل؛ بازبینی ۳۲ روز پیش (اعتبار ۹۰روزه) */
+    /* هلدینگ پارس — ماژول شناخت هلدینگ: ماه دوم برنامه، مرحلهٔ تحلیل؛ بازبینی ۳۲ روز پیش (اعتبار ۹۰روزه) */
     P('org-pars','analysis','مدیر استراتژی',32,{
       name:S('هلدینگ پارس؛ گروه چندبخشی با ۱۲ حوزهٔ کاری از انرژی تا محتوا.','برنامهٔ ۱۲ماهه بر همین ساختار ۱۲بخشی بنا شده است.','روزنامهٔ رسمی و اساس‌نامه',38),
       shareholders:S('سهام نزد هیئت‌مدیره و خانوادهٔ مؤسس متمرکز است.','مالکیت متمرکز: تصمیم‌گیری سریع، ریسک وابستگی به افراد.','اساس‌نامه و صورت‌جلسات مجمع',40),
@@ -6728,7 +6728,7 @@ function ensureKnowledgeSeed(){
       structuralIssues:S('تصمیم‌گیری غیرمتمرکز در حوزه‌ها دیده می‌شود.','','',12),
       suggestedActions:S('تشکیل کمیتهٔ دادهٔ خانواده پیشنهاد می‌شود.','','',10),
     }),
-    /* پارس انرژی — فرم ۳ «شناخت زیرمجموعه»: مرحلهٔ مصاحبه */
+    /* پارس انرژی — ماژول شناخت زیرمجموعه: مرحلهٔ مصاحبه */
     P('org-pars-01','interview','مدیر استراتژی',null,{
       name:S('پارس انرژی؛ حوزهٔ انرژی هلدینگ پارس.','نخستین زیرمجموعهٔ اولویت‌دار شناخت.','روزنامهٔ رسمی',35),
       activityScope:S('تولید و خدمات انرژی‌های تجدیدپذیر.','هم‌راستا با محور مرجعیت داده.','مصاحبهٔ مدیران',20),
@@ -6774,11 +6774,11 @@ function ensureKnowledgeSeed(){
   ];
 }
 
-/* ═══════════════ گام ۲.۶ — معماری رویدادها + پروتکل بحران (بخش ۱۷ سند؛ فرم ۱۰ و ۱۱.۵) ═══════════════
+/* ═══════════════ گام ۲.۶ — معماری رویدادها + پروتکل بحران (بخش ۱۷ سند؛ F10 و F15) ═══════════════
    رویدادها دو مسیر مستقل دارند: مسیر الف «تحت مالکیت» (سرمایه‌گذاری سنگین، شاخص
    مرجعیت) و مسیر ب «حضور در رویداد بیرونی» (سرمایه‌گذاری سبک، شاخص شبکه‌سازی).
    خروجی این محور، تدوین و نگهداری تقویم رویدادهای سالانه است که هر دو مسیر را
-   پوشش می‌دهد. هر رویداد با چک‌لیست هفت‌مرحله‌ای فرم ۱۰ کنترل می‌شود (۶۰/۳۰/۱۵/۱۰
+   پوشش می‌دهد. هر رویداد با چک‌لیست هفت‌مرحله‌ای F10 کنترل می‌شود (۶۰/۳۰/۱۵/۱۰
    روز قبل، روز رویداد، ۷۲ ساعت و ۷ روز پس از رویداد) و مراحل به‌ترتیب طی می‌شوند.
    پروتکل ارتباط بحران (۱۱.۵): پیام‌های اولیه از پیش آماده، سخنگوی رسمی و جانشین،
    زمان واکنش طلایی حداکثر ۲ ساعت؛ هر بحران رسانه‌ای با همین پروتکل و ثبت در SRIP
@@ -6801,7 +6801,7 @@ const EVENT_ATTEND_TYPES=[
   {key:'networking',label:'شبکه‌سازی',requirement:'فهرست اهداف تماس'},
   {key:'sidelineMeeting',label:'جلسات جانبی رویدادها',requirement:'بریف جلسه + پیگیری ۷۲ ساعته'},
 ];
-/* چک‌لیست هفت‌مرحله‌ای فرم ۱۰ (۱۸.۳ سند) — موعد نسبی بر حسب روز نسبت به رویداد */
+/* چک‌لیست هفت‌مرحله‌ای F10 (۱۸.۳ سند) — موعد نسبی بر حسب روز نسبت به رویداد */
 const EVENT_STEPS=[
   {key:'register',no:1,label:'ثبت رویداد در تقویم و ارزیابی ارزش حضور',offset:-60,when:'۶۰ روز قبل'},
   {key:'decision',no:2,label:'تصمیم درباره نوع حضور با بریف رویداد',offset:-30,when:'۳۰ روز قبل'},
@@ -6897,9 +6897,9 @@ function crisisProtocolOf(orgId){
   return (DB.crisisProtocols??[]).find(c=>c.organizationId===orgId)??null;
 }
 
-/* ═══════════════ گام ۴.۲ — فرم ۸ و ۷ (پیوست ب): تقویم انتشار رسانه تخصصی + گردش تأیید محتوا ═══════════════
-   فرم ۸: برنامه‌ریزی و پایش خروجی ماهانه رسانه — هفت ستون رسانه تخصصی سند (بخش ۱۶) با ریتم هرکدام.
-   فرم ۷: گردش تأیید سه‌مرحله‌ای هر خروجی عمومی — چهار کنترل الزامی پیش از انتشار (پیام هسته،
+/* ═══════════════ گام ۴.۲ — F06 و F08 (پیوست ب): تقویم انتشار رسانه تخصصی + گردش تأیید محتوا ═══════════════
+   F06: برنامه‌ریزی و پایش خروجی ماهانه رسانه — هفت ستون رسانه تخصصی سند (بخش ۱۶) با ریتم هرکدام.
+   F08: گردش تأیید سه‌مرحله‌ای هر خروجی عمومی — چهار کنترل الزامی پیش از انتشار (پیام هسته،
    شخصی‌سازی مخاطب، بازبینی حقوقی، ساختاریافتگی هوش مصنوعی)؛ انتشار بدون تأیید کامل ممنوع است. */
 const MEDIA_PILLARS=[
   {key:'newsroom',  title:'نیوزروم مرجع',            rhythm:'بر پایه رویداد', desc:'بیانیه‌ها، اطلاعیه‌ها، دستاوردها، دسترسی رسانه'},
@@ -6967,7 +6967,7 @@ function validateContentBody(b){
   return null;
 }
 
-/* ═══════════════ گام ۴.۳ — فرم ۶: رجیستری دارایی برند (پیوست ب سند) ═══════════════
+/* ═══════════════ گام ۴.۳ — F05: رجیستری دارایی برند (پیوست ب سند) ═══════════════
    هر دارایی برند سازمان — برندبوک، هویت بصری، تصویر مدیران، قالب ارائه، وب‌سایت و…
    — با نسخهٔ جاری، مالک، محل نگهداری، وضعیت و تاریخ بازبینی ثبت می‌شود.
    قواعد ثابت پیوست ب: دارایی بدون مالک ثبت نمی‌شود؛ مالک از چارت سازمان است و
@@ -7012,7 +7012,7 @@ function validateBrandAssetBody(b,chart){
   if(name.length<3) return {message:'عنوان دارایی را بنویسید (حداقل ۳ نویسه).'};
   if(!String(b.version??'').trim()) return {message:'نسخهٔ جاری دارایی الزامی است (مثل ۲٫۱).'};
   const owner=String(b.ownerRole??'').trim();
-  if(!owner) return {message:'دارایی برند بدون مالک ثبت نمی‌شود (فرم ۶ / پیوست ب سند).'};
+  if(!owner) return {message:'دارایی برند بدون مالک ثبت نمی‌شود (F05 / پیوست ب سند).'};
   if(chart.length&&!chart.includes(owner)) return {message:'مالک دارایی باید یکی از نقش‌های چارت سازمان شما باشد.'};
   if(String(b.location??'').trim().length<2) return {message:'محل نگهداری دارایی را بنویسید (مثل: مرکز دانش › پوشهٔ برند).'};
   const st=String(b.status??'IN_PROGRESS').toUpperCase();
@@ -7028,7 +7028,7 @@ function validateBrandAssetBody(b,chart){
   return null;
 }
 
-/* ═══════════════ گام ۴.۴ — فرم ۱۴: تأیید هزینه پیش از تعهد (پیوست ب سند) ═══════════════
+/* ═══════════════ گام ۴.۴ — تأیید هزینه: تأیید هزینه پیش از تعهد (پیوست ب سند) ═══════════════
    گردش تصویب هزینه پیش از تعهد: درخواست (شرح/مبلغ/دسته/درخواست‌کننده) → تصویب
    مدیر مالی → ثبت تعهد. قاعدهٔ ثابت: تعهد فقط پس از تصویب قابل ثبت است؛
    درخواست بدون درخواست‌کننده ثبت نمی‌شود (قاعدهٔ مالک پیوست ب). */
@@ -7069,12 +7069,12 @@ function validateExpenseBody(b,chart){
   if(!Number.isFinite(amount)||amount<=0) return {message:'مبلغ هزینه باید عددی بزرگ‌تر از صفر باشد.'};
   if(String(b.category??'').trim().length<2) return {message:'دستهٔ هزینه را بنویسید (مثل: رویداد، تولید محتوا، پژوهش).'};
   const requester=String(b.requesterRole??'').trim();
-  if(!requester) return {message:'درخواست هزینه بدون درخواست‌کننده ثبت نمی‌شود (فرم ۱۴ / پیوست ب سند).'};
+  if(!requester) return {message:'درخواست هزینه بدون درخواست‌کننده ثبت نمی‌شود (ماژول پلتفرمی).'};
   if(chart.length&&!chart.includes(requester)) return {message:'درخواست‌کننده باید یکی از نقش‌های چارت سازمان شما باشد.'};
   return null;
 }
 
-/* ═══════════════ گام ۴.۵ — فرم ۱۸: صورت‌جلسهٔ تحویل (بخش ۲۸.۱ سند؛ پیوست ب) ═══════════════
+/* ═══════════════ گام ۴.۵ — صورت‌جلسهٔ تحویل: صورت‌جلسهٔ تحویل (بخش ۲۸.۱ سند؛ پیوست ب) ═══════════════
    تحویل برنامه به هلدینگ: فهرست پنج‌قلمی تحویل (هر قلم با شکل تحویل و گیرندهٔ
    هلدینگ) + فرآیند هفت‌گام تحویل + امضای طرفین. قاعدهٔ ثابت سند: امضا فقط پس از
    تحویل همهٔ اقلام ممکن است و پس از امضا، صورت‌جلسه قفل می‌شود. */
@@ -7139,7 +7139,7 @@ function seedDelivery(){
   DB.programDelivery=[pars,demo];
 }
 
-/* ═══════════════ گام ۴.۶ — فرم ۱: چک‌لیست پروژه صفر (پیوست ب سند) ═══════════════
+/* ═══════════════ گام ۴.۶ — پروژه صفر: چک‌لیست پروژه صفر (پیوست ب سند) ═══════════════
    بیست خروجی تأسیس — از تعیین نوع شرکت تا ساختار گزارش مالی. قاعدهٔ ثابت
    سند: تکمیل همهٔ خروجی‌ها شرط عبور از فاز استقرار است؛ وضعیت هر خروجی
    per-organization ثبت می‌شود (قالب مشترک سند، دادهٔ هر مستأجر جدا). */
@@ -7201,7 +7201,7 @@ function projectZeroView(z){
     pending:items.filter(i=>i.status==='PENDING').length},passed:done===items.length};
 }
 
-/* ═══════════════ گام ۲.۷ — گزارش ماهانهٔ استاندارد (فرم ۱۵؛ بخش ۲۶ سند) ═══════════════
+/* ═══════════════ گام ۲.۷ — گزارش ماهانهٔ استاندارد (ماژول پلتفرمی؛ بخش ۲۶ سند) ═══════════════
    قالب ثابت گزارش ماهانه به مدیریت هلدینگ: خلاصهٔ مدیریتی، شاخص‌های کلیدی (زنده از
    بخش ۲۶)، ریسک‌های درجه بالا (زنده از بخش ۲۵)، انحراف‌های زمانی بیش از دو هفته و
    برنامهٔ ماه آینده. هر انحراف باید با سه قلم توضیح داده شود: علت، اثر بر مسیر
@@ -7260,7 +7260,7 @@ function validateMonthlyReportBody(b){
 }
 
 /* ممیزی سه‌گانه — دادهٔ ممیزی متعلق به سازمان برنامه است و بیرون از محدوده دیده نمی‌شود */
-/* ─────────────── گام ۴.۱ — فرم ۱۲ (پیوست ب): کنترل ده‌مرحله‌ای انتقال هر سامانه ───────────────
+/* ─────────────── گام ۴.۱ — F11 (پیوست ب): کنترل ده‌مرحله‌ای انتقال هر سامانه ───────────────
    مراحل از فرآیند بخش ۲۱ سند استخراج شده‌اند: ممیزی → اولویت‌بندی ریسک → خروج کامل داده →
    ثبت پشتیبان معتبر → انتقال با فهرست کنترل → تطبیق رکوردبه‌رکورد → آموزش و راهنما →
    اجرای موازی → رفع مغایرت‌ها → خاموش‌سازی و ثبت تکمیل. مراحل ترتیبی‌اند و سامانه فقط با
@@ -13434,15 +13434,15 @@ const server=http.createServer(async(req,res)=>{
     if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
     return json(res,200,{...programAuditsFor(req),
       rule:'ممیزی ارزیابی صادقانه از وضعیت موجود است؛ خروجی آن ورودی مستقیم بازسازی نقش‌ها و برنامهٔ انتقال داده است (بخش ۲۰/۲۱ سند).',
-      migrationRule:'هر سامانهٔ در صف انتقال/خاموش‌سازی، ده مرحلهٔ کنترلی بخش ۲۱ سند را ترتیبی طی می‌کند (فرم ۱۲)؛ سامانه فقط با اتمام هر ده مرحله «تکمیل‌شده» می‌شود.'});
+      migrationRule:'هر سامانهٔ در صف انتقال/خاموش‌سازی، ده مرحلهٔ کنترلی بخش ۲۱ سند را ترتیبی طی می‌کند (F11)؛ سامانه فقط با اتمام هر ده مرحله «تکمیل‌شده» می‌شود.'});
   }
-  /* گام ۴.۱ — فرم ۱۲: تکمیل مرحلهٔ انتقال سامانه (ترتیبی؛ مرحلهٔ دهم = ثبت تکمیل) */
+  /* گام ۴.۱ — F11: تکمیل مرحلهٔ انتقال سامانه (ترتیبی؛ مرحلهٔ دهم = ثبت تکمیل) */
   const migStep=match('/program/audit/systems/:id/steps/:key');
   if(migStep&&method==='POST'){
     if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
     const sys=(DB.auditSystems??[]).find(s=>s.id===migStep[0]&&visibleOrgIds(req).includes(s.organizationId));
     if(!sys) return json(res,404,{message:'سامانه یافت نشد یا خارج از محدودهٔ شماست.'});
-    if(sys.migration==='KEEP') return json(res,400,{message:'سامانهٔ «نگهداری» برنامهٔ انتقال ندارد و فرم ۱۲ برای آن کاربرد ندارد.'});
+    if(sys.migration==='KEEP') return json(res,400,{message:'سامانهٔ «نگهداری» برنامهٔ انتقال ندارد و F11 برای آن کاربرد ندارد.'});
     if(!MIGRATION_STEPS.some(s=>s.key===migStep[1])) return json(res,400,{message:'کلید مرحلهٔ انتقال نامعتبر است.'});
     const view=systemMigrationView(sys);
     if(view.complete) return json(res,400,{message:'هر ده مرحلهٔ انتقال این سامانه پیش‌تر تکمیل شده است.'});
@@ -13829,7 +13829,7 @@ const server=http.createServer(async(req,res)=>{
     return json(res,200,crisisView(p));
   }
 
-  /* ─────────────── گام ۴.۲ — فرم ۸ و ۷: تقویم انتشار رسانه + تأیید محتوا (/program/content) ────────── */
+  /* ─────────────── گام ۴.۲ — F06 و F08: تقویم انتشار رسانه + تأیید محتوا (/program/content) ────────── */
   if(is('/program/content')&&method==='GET'){
     if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
     const rows=contentFor(req);
@@ -13851,7 +13851,7 @@ const server=http.createServer(async(req,res)=>{
         published:items.filter(c=>c.status==='PUBLISHED').length,
         thisMonth:items.filter(c=>c.month===mNow).length},
       ownerDefault:'مدیر محتوا',
-      rule:'رسانه تخصصی در هفت ستون سازمان‌دهی می‌شود (فرم ۸) و هر خروجی عمومی پیش از انتشار، گردش تأیید سه‌مرحله‌ای (فرم ۷) را طی می‌کند: بازبینی با چهار کنترل الزامی — هم‌راستایی با پیام هسته، شخصی‌سازی برای مخاطب، بازبینی حقوقی و ساختاریافتگی برای سامانه‌های هوش مصنوعی — سپس تأیید کامل و انتشار؛ انتشار بدون تأیید کامل ممنوع است.'});
+      rule:'رسانه تخصصی در هفت ستون سازمان‌دهی می‌شود (F06) و هر خروجی عمومی پیش از انتشار، گردش تأیید سه‌مرحله‌ای (F08) را طی می‌کند: بازبینی با چهار کنترل الزامی — هم‌راستایی با پیام هسته، شخصی‌سازی برای مخاطب، بازبینی حقوقی و ساختاریافتگی برای سامانه‌های هوش مصنوعی — سپس تأیید کامل و انتشار؛ انتشار بدون تأیید کامل ممنوع است.'});
   }
   if(is('/program/content')&&method==='POST'){
     if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
@@ -13873,7 +13873,7 @@ const server=http.createServer(async(req,res)=>{
     const row=contentFor(req).find(c=>c.id===ctlReg[0]);
     if(!row) return json(res,404,{message:'خروجی محتوایی یافت نشد یا خارج از محدودهٔ شماست.'});
     const ctl=CONTENT_CONTROLS.find(x=>x.key===ctlReg[1]);
-    if(!ctl) return json(res,400,{message:'کنترل نامعتبر است — چهار کنترل الزامی فرم ۷: پیام هسته، مخاطب، حقوقی، هوش مصنوعی.'});
+    if(!ctl) return json(res,400,{message:'کنترل نامعتبر است — چهار کنترل الزامی F08: پیام هسته، مخاطب، حقوقی، هوش مصنوعی.'});
     if(row.status==='PUBLISHED') return json(res,400,{message:'خروجی منتشرشده قابل تغییر نیست.'});
     if(row.controls?.[ctl.key]) return json(res,400,{message:`نتیجهٔ کنترل «${ctl.title}» قبلاً ثبت شده است.`});
     const b=await readBody(req);
@@ -13899,7 +13899,7 @@ const server=http.createServer(async(req,res)=>{
     return json(res,200,contentView(row));
   }
 
-  /* ─────────────── گام ۴.۳ — فرم ۶: رجیستری دارایی برند (/program/brand-assets) ────────── */
+  /* ─────────────── گام ۴.۳ — F05: رجیستری دارایی برند (/program/brand-assets) ────────── */
   if(is('/program/brand-assets')&&method==='GET'){
     if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
     const items=brandAssetsFor(req).map(brandAssetView);
@@ -13908,7 +13908,7 @@ const server=http.createServer(async(req,res)=>{
         inProgress:items.filter(a=>a.status==='IN_PROGRESS').length,
         overdue:items.filter(a=>a.overdue).length},
       roles:programSettingsFor(req).roles,
-      rule:'هر دارایی برند با نسخهٔ جاری، مالک، محل نگهداری، وضعیت و تاریخ بازبینی ثبت می‌شود (فرم ۶ / پیوست ب)؛ دارایی بدون مالک ثبت نمی‌شود و بازبینی دوره‌ای هر فصل (۹۰ روز) روی آن مهر می‌شود.'});
+      rule:'هر دارایی برند با نسخهٔ جاری، مالک، محل نگهداری، وضعیت و تاریخ بازبینی ثبت می‌شود (F05 / پیوست ب)؛ دارایی بدون مالک ثبت نمی‌شود و بازبینی دوره‌ای هر فصل (۹۰ روز) روی آن مهر می‌شود.'});
   }
   if(is('/program/brand-assets')&&method==='POST'){
     if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
@@ -13957,7 +13957,7 @@ const server=http.createServer(async(req,res)=>{
     return json(res,200,brandAssetView(row));
   }
 
-  /* ─────────────── گام ۴.۴ — فرم ۱۴: تأیید هزینه پیش از تعهد (/program/expenses) ────────── */
+  /* ─────────────── گام ۴.۴ — تأیید هزینه: تأیید هزینه پیش از تعهد (/program/expenses) ────────── */
   if(is('/program/expenses')&&method==='GET'){
     if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
     const items=expensesFor(req).map(expenseView)
@@ -13971,7 +13971,7 @@ const server=http.createServer(async(req,res)=>{
         pendingAmount:rows.filter(e=>e.status==='REQUESTED').reduce((s,e)=>s+e.amount,0),
         committedAmount:rows.filter(e=>e.status==='COMMITTED').reduce((s,e)=>s+e.amount,0)},
       roles:programSettingsFor(req).roles,approverRole:EXPENSE_APPROVER_ROLE,
-      rule:'هزینه پیش از تعهد تصویب می‌شود (فرم ۱۴ / پیوست ب): درخواست با شرح، مبلغ و دسته ثبت می‌شود، مدیر مالی تصویب می‌کند و تعهد فقط پس از تصویب قابل ثبت است.'});
+      rule:'هزینه پیش از تعهد تصویب می‌شود (ماژول پلتفرمی): درخواست با شرح، مبلغ و دسته ثبت می‌شود، مدیر مالی تصویب می‌کند و تعهد فقط پس از تصویب قابل ثبت است.'});
   }
   if(is('/program/expenses')&&method==='POST'){
     if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
@@ -14002,18 +14002,18 @@ const server=http.createServer(async(req,res)=>{
     if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
     const row=expensesFor(req).find(e=>e.id===expCom[0]);
     if(!row) return json(res,404,{message:'درخواست هزینه یافت نشد یا خارج از محدودهٔ شماست.'});
-    if(row.status==='REQUESTED') return json(res,400,{message:'تعهد فقط پس از تصویب مدیر مالی قابل ثبت است (فرم ۱۴ / پیوست ب).'});
+    if(row.status==='REQUESTED') return json(res,400,{message:'تعهد فقط پس از تصویب مدیر مالی قابل ثبت است (ماژول پلتفرمی).'});
     if(row.status==='COMMITTED') return json(res,400,{message:'تعهد این هزینه قبلاً ثبت شده است.'});
     row.status='COMMITTED'; row.committedAt=nowIso(); row.updatedAt=nowIso(); saveDb();
     audit(req,'UPDATE','Expense',row.id,'COMMIT',{amount:row.amount});
     return json(res,200,expenseView(row));
   }
 
-  /* ─────────────── گام ۴.۵ — فرم ۱۸: صورت‌جلسهٔ تحویل (/program/delivery) ────────── */
+  /* ─────────────── گام ۴.۵ — صورت‌جلسهٔ تحویل: صورت‌جلسهٔ تحویل (/program/delivery) ────────── */
   if(is('/program/delivery')&&method==='GET'){
     if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
     return json(res,200,{...deliveryView(deliveryFor(req)),
-      rule:'تحویل برنامه به هلدینگ با فهرست پنج‌قلمی بخش ۲۸.۱ سند و فرآیند هفت‌گام انجام می‌شود (فرم ۱۸)؛ امضا فقط پس از تحویل همهٔ اقلام ممکن است و پس از امضای طرفین، صورت‌جلسه قفل می‌شود.'});
+      rule:'تحویل برنامه به هلدینگ با فهرست پنج‌قلمی بخش ۲۸.۱ سند و فرآیند هفت‌گام انجام می‌شود (صورت‌جلسهٔ تحویل)؛ امضا فقط پس از تحویل همهٔ اقلام ممکن است و پس از امضای طرفین، صورت‌جلسه قفل می‌شود.'});
   }
   const dlItem=match('/program/delivery/items/:key');
   if(dlItem&&method==='POST'){
@@ -14059,13 +14059,13 @@ const server=http.createServer(async(req,res)=>{
     return json(res,200,deliveryView(d));
   }
 
-  /* ─────────────── گام ۴.۶ — فرم ۱: چک‌لیست پروژه صفر (/program/project-zero) ────────── */
+  /* ─────────────── گام ۴.۶ — پروژه صفر: چک‌لیست پروژه صفر (/program/project-zero) ────────── */
   if(is('/program/project-zero')&&method==='GET'){
     if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
     const z=projectZeroFor(req);
     if(!z) return json(res,404,{message:'سازمانی در محدودهٔ شما یافت نشد.'});
     return json(res,200,{...projectZeroView(z),
-      rule:'پروژه صفر با بیست خروجی تأسیس — از تعیین نوع شرکت تا ساختار گزارش مالی — تعریف می‌شود (فرم ۱ / پیوست ب)؛ تکمیل همهٔ خروجی‌ها شرط عبور از فاز استقرار است.'});
+      rule:'پروژه صفر با بیست خروجی تأسیس — از تعیین نوع شرکت تا ساختار گزارش مالی — تعریف می‌شود (ماژول پلتفرمی)؛ تکمیل همهٔ خروجی‌ها شرط عبور از فاز استقرار است.'});
   }
   const pzItem=match('/program/project-zero/items/:key');
   if(pzItem&&method==='PATCH'){
@@ -14083,7 +14083,7 @@ const server=http.createServer(async(req,res)=>{
     return json(res,200,projectZeroView(z));
   }
 
-  /* ─────────────── گام ۲.۷ — گزارش ماهانهٔ استاندارد (فرم ۱۵؛ /program/monthly-reports) ────────── */
+  /* ─────────────── گام ۲.۷ — گزارش ماهانهٔ استاندارد (ماژول پلتفرمی؛ /program/monthly-reports) ────────── */
   if(is('/program/monthly-reports')&&method==='GET'){
     if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
     const rows=monthlyReportsFor(req).sort((a,b)=>b.month.localeCompare(a.month));
@@ -14093,7 +14093,7 @@ const server=http.createServer(async(req,res)=>{
         draft:items.filter(r=>r.status==='DRAFT').length,
         onTime:items.filter(r=>r.onTime===true).length},
       ownerDefault:'مدیر پروژه',
-      rule:'قالب ثابت گزارش ماهانه به مدیریت هلدینگ (فرم ۱۵)؛ شاخص‌ها و ریسک‌های درجه بالا از داشبورد زنده برداشت می‌شوند و '+DEVIATION_RULE});
+      rule:'قالب ثابت گزارش ماهانه به مدیریت هلدینگ (ماژول پلتفرمی)؛ شاخص‌ها و ریسک‌های درجه بالا از داشبورد زنده برداشت می‌شوند و '+DEVIATION_RULE});
   }
   if(is('/program/monthly-reports')&&method==='POST'){
     if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
@@ -14201,7 +14201,7 @@ const server=http.createServer(async(req,res)=>{
     const title=String(b.title??'').trim();
     if(title.length<3) return json(res,400,{message:'عنوان شاخص را بنویسید (حداقل ۳ نویسه).'});
     const owner=String(b.owner??'').trim();
-    if(!owner) return json(res,400,{message:'شاخص بدون مالک ثبت نمی‌شود (فرم ۱۷ سند).'});
+    if(!owner) return json(res,400,{message:'شاخص بدون مالک ثبت نمی‌شود (ماژول شاخص‌ها).'});
     const metric=String(b.metric??'').trim();
     const M=PROGRAM_METRICS[metric];
     if(!M) return json(res,400,{message:'سنجهٔ محاسبه معتبر نیست؛ از فهرست سنجه‌های پلتفرم انتخاب کنید.'});
@@ -14237,7 +14237,7 @@ const server=http.createServer(async(req,res)=>{
 
   /* ─────────────── گام ۲.۲ مسترپلن — ماژول مشارکت (/partnerships) ──────────
      خط لولهٔ چهارسطحی مذاکره → تفاهم‌نامه → فعال → پایان؛ قاعدهٔ سند:
-     فعال‌سازی مشارکت بدون قرارداد ثبت نمی‌شود (فرم ۱۱ — مذاکره تا فعال‌سازی). */
+     فعال‌سازی مشارکت بدون قرارداد ثبت نمی‌شود (F15 — مذاکره تا فعال‌سازی). */
   if(is('/partnerships')&&method==='GET'){
     if(!hasPerm('partnership.read')) return json(res,403,{message:'شما مجوز «مشاهده مشارکت‌ها» (partnership.read) را ندارید.'});
     const rows=partnershipsFor(req);
@@ -14246,7 +14246,7 @@ const server=http.createServer(async(req,res)=>{
     return json(res,200,{items:filtered.map(partnershipView),summary:partnershipSummary(rows,programSettingsFor(req).partnershipTarget),
       stages:PARTNERSHIP_STAGES.map(st=>({key:st,label:PARTNERSHIP_STAGE_FA[st]})),
       types:PARTNERSHIP_TYPES,roles:programSettingsFor(req).roles,
-      rule:'فعال‌سازی مشارکت بدون قرارداد ثبت نمی‌شود (فرم ۱۱ سند — مذاکره تا فعال‌سازی).',generatedAt:nowIso()});
+      rule:'فعال‌سازی مشارکت بدون قرارداد ثبت نمی‌شود (F15 سند — مذاکره تا فعال‌سازی).',generatedAt:nowIso()});
   }
   if(is('/partnerships')&&method==='POST'){
     if(!hasPerm('partnership.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر مشارکت» (partnership.write) را ندارید.'});
@@ -14266,7 +14266,7 @@ const server=http.createServer(async(req,res)=>{
     const oppId=String(b.opportunityId??'').trim()||null;
     if(oppId&&!OPPORTUNITIES.some(o=>o.id===oppId)) return json(res,400,{message:'فرصت انتخاب‌شده یافت نشد.'});
     const contractName=String(b.contractName??'').trim()||null;
-    const stage='NEGOTIATION'; /* هر مشارکت تازه از مذاکره آغاز می‌شود (فرم ۱۱) */
+    const stage='NEGOTIATION'; /* هر مشارکت تازه از مذاکره آغاز می‌شود (F15) */
     const row={id:`pt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`,
       organizationId:primaryOrgId(authUser)??visibleOrgIds(req)[0]??PARTNERSHIP_ORG_ID,
       partnerOrgId,type,stage,ownerRole,
@@ -14295,7 +14295,7 @@ const server=http.createServer(async(req,res)=>{
     if(b.stage!=null){
       const v=String(b.stage).toUpperCase();
       if(!PARTNERSHIP_STAGE_FA[v]) return json(res,400,{message:'مرحلهٔ مشارکت باید مذاکره، تفاهم‌نامه، فعال یا پایان باشد.'});
-      if(v==='ACTIVE'&&!row.contractName) return json(res,400,{message:'فعال‌سازی مشارکت بدون قرارداد ثبت نمی‌شود (فرم ۱۱ سند — مذاکره تا فعال‌سازی).'});
+      if(v==='ACTIVE'&&!row.contractName) return json(res,400,{message:'فعال‌سازی مشارکت بدون قرارداد ثبت نمی‌شود (F15 سند — مذاکره تا فعال‌سازی).'});
       row.stage=v;
     }
     for(const k of ['ourCommitments','theirCommitments','notes']) if(b[k]!=null) row[k]=String(b[k]).trim();

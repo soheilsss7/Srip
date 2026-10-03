@@ -14,7 +14,7 @@ import {
 
 /* ═══════════════════════════════════════════════════════════════════════════
    گام ۲.۱ مسترپلن — هاب «حاکمیت برنامه»
-   شاخص‌های مالک‌دار (فرم ۱۷ / جدول بخش ۲۶) · ریجستری ریسک (فرم ۱۶ / بخش ۲۵)
+   شاخص‌های مالک‌دار (ماژول شاخص‌ها / جدول بخش ۲۶) · ریجستری ریسک (F17 / بخش ۲۵)
    نمرهٔ آمادگی شش‌لایهٔ وزن‌دار (بخش ۱۲/۱۳) · ممیزی سه‌گانه (بخش ۲۰/۲۱)
    قاعدهٔ ثابت سند: مقدار هر شاخص از دادهٔ زندهٔ ماژول‌ها محاسبه می‌شود؛
    عدد دستی وارد داشبورد نمی‌شود و ریسک بدون مالک ثبت نمی‌گردد.
@@ -34,16 +34,16 @@ const MIGRATION_FA = lt<Record<string, string>>({ KEEP: t('نگهداری'), MIG
 const MIGRATION_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = { KEEP: 'info', MIGRATE: 'warning', SHUTDOWN: 'danger' };
 const PRIORITY_FA = lt<Record<string, string>>({ KEEP: t('حفظ'), REDEFINE: t('بازتعریف'), HIRE: t('جذب') });
 const CHANNEL_ACTION_FA = lt<Record<string, string>>({ ASSIGN_OWNER: t('واگذاری به مالک'), TRANSFER: t('انتقال'), SHUTDOWN: t('خاموش‌سازی') });
-/* گام ۴.۳ — فرم ۶: وضعیت دارایی برند (رجیستری تب آمادگی) */
+/* گام ۴.۳ — F05: وضعیت دارایی برند (رجیستری تب آمادگی) */
 const ASSET_STATUS_FA = lt<Record<string, string>>({ IN_PROGRESS: t('در تدوین'), ACTIVE: t('فعال — نسخهٔ جاری') });
 const ASSET_STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> = { IN_PROGRESS: 'warning', ACTIVE: 'success' };
 const ASSET_FORM_EMPTY = { name: '', version: '', ownerRole: '', location: '', status: 'IN_PROGRESS', reviewAt: '' };
-/* گام ۴.۴ — فرم ۱۴: گردش تصویب هزینه پیش از تعهد (نمای کلی) */
+/* گام ۴.۴ — تأیید هزینه: گردش تصویب هزینه پیش از تعهد (نمای کلی) */
 const EXPENSE_STATUS_FA = lt<Record<string, string>>({ REQUESTED: t('در انتظار تصویب'), APPROVED: t('تصویب‌شده'), COMMITTED: t('تعهد ثبت‌شده') });
 const EXPENSE_STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = { REQUESTED: 'neutral', APPROVED: 'info', COMMITTED: 'success' };
 const EXPENSE_FORM_EMPTY = { title: '', amount: '', category: '', requesterRole: '' };
 const faMoney = (v: number | string) => new Intl.NumberFormat(localeTag()).format(Number(v) || 0);
-/* گام ۴.۶ — فرم ۱: چک‌لیست پروژه صفر (نمای کلی) */
+/* گام ۴.۶ — پروژه صفر: چک‌لیست پروژه صفر (نمای کلی) */
 const PZ_STATUS_FA = lt<Record<string, string>>({ PENDING: t('در انتظار'), IN_PROGRESS: t('در جریان'), DONE: t('انجام‌شده') });
 const PZ_STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> = { PENDING: 'neutral', IN_PROGRESS: 'warning', DONE: 'success' };
 const SEASON_STATE_FA = lt<Record<string, string>>({ PASSED: t('دروازه پاس شد'), IN_PROGRESS: t('در جریان'), PENDING: t('در انتظار') });
@@ -84,23 +84,23 @@ export default function ProgramPage() {
   const [monError, setMonError] = useState('');
   const [monForm, setMonForm] = useState({ system: '', referralRate: '', accuracy: '', probableSource: '', action: '' });
 
-  /* شاخص: ثبت فرم ۱۷ — تعریف شاخص دادهٔ سازمان است و به سنجهٔ محاسبهٔ پلتفرم bind می‌شود */
+  /* شاخص: ثبت ماژول شاخص‌ها — تعریف شاخص دادهٔ سازمان است و به سنجهٔ محاسبهٔ پلتفرم bind می‌شود */
   const [kpiCreateOpen, setKpiCreateOpen] = useState(false);
   const [kpiFormError, setKpiFormError] = useState('');
   const [metrics, setMetrics] = useState<any[]>([]);
   const [kpiForm, setKpiForm] = useState({ title: '', category: '', owner: '', period: '', target: '', metric: '', targetValue: '' });
-  /* گام ۴.۳ — فرم ۶: رجیستری دارایی برند (تب آمادگی) */
+  /* گام ۴.۳ — F05: رجیستری دارایی برند (تب آمادگی) */
   const [assets, setAssets] = useState<any | null>(null);
   const [assetCreateOpen, setAssetCreateOpen] = useState(false);
   const [assetEdit, setAssetEdit] = useState<any | null>(null);
   const [assetFormError, setAssetFormError] = useState('');
   const [assetForm, setAssetForm] = useState(ASSET_FORM_EMPTY);
-  /* گام ۴.۴ — فرم ۱۴: تأیید هزینه پیش از تعهد (نمای کلی) */
+  /* گام ۴.۴ — تأیید هزینه: تأیید هزینه پیش از تعهد (نمای کلی) */
   const [expenses, setExpenses] = useState<any | null>(null);
   const [expCreateOpen, setExpCreateOpen] = useState(false);
   const [expFormError, setExpFormError] = useState('');
   const [expForm, setExpForm] = useState(EXPENSE_FORM_EMPTY);
-  /* گام ۴.۶ — فرم ۱: چک‌لیست پروژه صفر (نمای کلی) */
+  /* گام ۴.۶ — پروژه صفر: چک‌لیست پروژه صفر (نمای کلی) */
   const [projectZero, setProjectZero] = useState<any | null>(null);
 
   const load = useCallback(async (which: string) => {
@@ -121,19 +121,19 @@ export default function ProgramPage() {
 
   /* تغییر فیلتر ریسک (وضعیت/درجه) → بازخوانی همان تب */
   useEffect(() => { if (tab === 'risks') load('risks'); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [riskFilter]);
-  /* گام ۴.۳ — رجیستری دارایی برند جدا از نمرهٔ آمادگی بار می‌شود (فرم ۶ / پیوست ب) */
+  /* گام ۴.۳ — رجیستری دارایی برند جدا از نمرهٔ آمادگی بار می‌شود (F05 / پیوست ب) */
   const reloadAssets = useCallback(async () => { try { setAssets(await api<any>('/program/brand-assets')); } catch { /* در نبود مجوز، پنل مخفی می‌شود */ } }, []);
   useEffect(() => { if (tab === 'readiness') reloadAssets(); }, [tab, reloadAssets]);
-  /* گام ۴.۴ — گردش هزینه جدا از نمای کلی بار می‌شود (فرم ۱۴ / پیوست ب) */
+  /* گام ۴.۴ — گردش هزینه جدا از نمای کلی بار می‌شود (ماژول پلتفرمی) */
   const reloadExpenses = useCallback(async () => { try { setExpenses(await api<any>('/program/expenses')); } catch { /* در نبود مجوز، پنل مخفی می‌شود */ } }, []);
   useEffect(() => { if (tab === 'overview') reloadExpenses(); }, [tab, reloadExpenses]);
-  /* گام ۴.۶ — چک‌لیست پروژه صفر (فرم ۱ / پیوست ب) */
+  /* گام ۴.۶ — چک‌لیست پروژه صفر (ماژول پلتفرمی) */
   const reloadProjectZero = useCallback(async () => { try { setProjectZero(await api<any>('/program/project-zero')); } catch { /* در نبود مجوز، پنل مخفی می‌شود */ } }, []);
   useEffect(() => { if (tab === 'overview') reloadProjectZero(); }, [tab, reloadProjectZero]);
 
   const refresh = () => load(tab);
 
-  /* گام ۴.۱ — فرم ۱۲: تکمیل مرحلهٔ جاریِ انتقال سامانه (ترتیبی؛ سرور قاعده را اعمال می‌کند) */
+  /* گام ۴.۱ — F11: تکمیل مرحلهٔ جاریِ انتقال سامانه (ترتیبی؛ سرور قاعده را اعمال می‌کند) */
   const completeMigrationStep = async (sysId: string, key: string) => {
     setError('');
     try {
@@ -194,7 +194,7 @@ export default function ProgramPage() {
     finally { setBusy(false); }
   };
 
-  /* گام ۴.۳ — فرم ۶: ثبت/ویرایش دارایی برند + مهر بازبینی فصلی */
+  /* گام ۴.۳ — F05: ثبت/ویرایش دارایی برند + مهر بازبینی فصلی */
   const openAssetCreate = () => { setAssetCreateOpen(true); setAssetEdit(null); setAssetFormError(''); setAssetForm({ ...ASSET_FORM_EMPTY }); };
   const openAssetEdit = (row: any) => { setAssetEdit(row); setAssetCreateOpen(false); setAssetFormError('');
     setAssetForm({ name: row.name, version: row.version, ownerRole: row.ownerRole, location: row.location, status: row.status, reviewAt: row.reviewAt ? String(row.reviewAt).slice(0, 10) : '' }); };
@@ -216,7 +216,7 @@ export default function ProgramPage() {
     finally { setBusy(false); }
   };
 
-  /* گام ۴.۴ — فرم ۱۴: ثبت درخواست → تصویب مدیر مالی → ثبت تعهد */
+  /* گام ۴.۴ — تأیید هزینه: ثبت درخواست → تصویب مدیر مالی → ثبت تعهد */
   const openExpCreate = () => { setExpCreateOpen(true); setExpFormError(''); setExpForm({ ...EXPENSE_FORM_EMPTY }); };
   const submitExpense = async () => {
     setExpFormError(''); setBusy(true);
@@ -233,7 +233,7 @@ export default function ProgramPage() {
     finally { setBusy(false); }
   };
 
-  /* گام ۴.۶ — فرم ۱: چرخش وضعیت خروجی تأسیس (در انتظار → در جریان → انجام‌شده) */
+  /* گام ۴.۶ — پروژه صفر: چرخش وضعیت خروجی تأسیس (در انتظار → در جریان → انجام‌شده) */
   const cycleZeroItem = async (key: string, status: string) => {
     if (!writable) return;
     const next = status === 'PENDING' ? 'IN_PROGRESS' : status === 'IN_PROGRESS' ? 'DONE' : 'PENDING';
@@ -397,8 +397,8 @@ export default function ProgramPage() {
             </SectionCard>
           </div>
 
-          {/* ═══════════ فرم ۱۴ — تأیید هزینه پیش از تعهد (پیوست ب سند) ═══════════ */}
-          <SectionCard className="expense-panel" title={t('فرم ۱۴ — تأیید هزینه پیش از تعهد')} icon={<Wallet size={17} />}
+          {/* ═══════════ تأیید هزینه پیش از تعهد (ماژول پلتفرمی) (پیوست ب سند) ═══════════ */}
+          <SectionCard className="expense-panel" title={t('تأیید هزینه پیش از تعهد (ماژول پلتفرمی)')} icon={<Wallet size={17} />}
             description={t('هزینه پیش از تعهد تصویب می‌شود: درخواست با شرح، مبلغ و دسته ثبت می‌شود، مدیر مالی تصویب می‌کند و تعهد فقط پس از تصویب ثبت می‌شود.')}
             actions={writable ? <button className="srip-button primary" onClick={openExpCreate}><Plus size={14} /> {t('ثبت درخواست هزینه')}</button> : undefined}>
             {expenses ? (<>
@@ -438,12 +438,12 @@ export default function ProgramPage() {
                 <EmptyV4 icon={<Wallet size={22} />} title={t('هنوز درخواست هزینه‌ای ثبت نشده است')}
                   description={t('هر هزینه پیش از تعهد تصویب می‌شود — از «ثبت درخواست هزینه» آغاز کنید.')} />
               )}
-              <p className="field-hint">{t('هزینه پیش از تعهد تصویب می‌شود (فرم ۱۴ / پیوست ب): درخواست با شرح، مبلغ و دسته ثبت می‌شود، مدیر مالی تصویب می‌کند و تعهد فقط پس از تصویب قابل ثبت است.')}</p>
+              <p className="field-hint">{t('هزینه پیش از تعهد تصویب می‌شود (ماژول پلتفرمی): درخواست با شرح، مبلغ و دسته ثبت می‌شود، مدیر مالی تصویب می‌کند و تعهد فقط پس از تصویب قابل ثبت است.')}</p>
             </>) : <Loading />}
           </SectionCard>
 
-          {/* ═══════════ فرم ۱ — چک‌لیست پروژه صفر (پیوست ب سند) ═══════════ */}
-          <SectionCard className="project-zero-panel" title={t('فرم ۱ — چک‌لیست پروژه صفر')} icon={<Flag size={17} />}
+          {/* ═══════════ چک‌لیست پروژه صفر (ماژول پلتفرمی) (پیوست ب سند) ═══════════ */}
+          <SectionCard className="project-zero-panel" title={t('چک‌لیست پروژه صفر (ماژول پلتفرمی)')} icon={<Flag size={17} />}
             description={t('بیست خروجی تأسیس — از تعیین نوع شرکت تا ساختار گزارش مالی؛ تکمیل همهٔ خروجی‌ها شرط عبور از فاز استقرار است.')}>
             {projectZero ? (<>
               <div className={`note-strip ${projectZero.passed ? '' : 'warn'}`}>
@@ -471,13 +471,13 @@ export default function ProgramPage() {
                   </button>
                 ))}
               </div>
-              <p className="field-hint">{t('پروژه صفر با بیست خروجی تأسیس تعریف می‌شود؛ تکمیل همهٔ خروجی‌ها شرط عبور از فاز استقرار است (فرم ۱ / پیوست ب).')}</p>
+              <p className="field-hint">{t('پروژه صفر با بیست خروجی تأسیس تعریف می‌شود؛ تکمیل همهٔ خروجی‌ها شرط عبور از فاز استقرار است (ماژول پلتفرمی).')}</p>
             </>) : <Loading />}
           </SectionCard>
         </>
       )}
 
-      {/* ═══════════ تب شاخص‌ها — فرم ۱۷ / جدول بخش ۲۶ سند ═══════════ */}
+      {/* ═══════════ تب شاخص‌ها — ماژول شاخص‌ها / جدول بخش ۲۶ سند ═══════════ */}
       {tab === 'kpis' && kpis && (
         <>
           <div className="note-strip">{t('قاعدهٔ سند: هر شاخص مالک، هدف عددی و دورهٔ سنجش مشخص دارد و از دادهٔ ثبت‌شده در سامانه محاسبه می‌شود — عدد دستی وارد داشبورد نمی‌شود.')}</div>
@@ -527,7 +527,7 @@ export default function ProgramPage() {
         </>
       )}
 
-      {/* ═══════════ تب ریسک‌ها — فرم ۱۶ / بخش ۲۵ سند ═══════════ */}
+      {/* ═══════════ تب ریسک‌ها — F17 / بخش ۲۵ سند ═══════════ */}
       {tab === 'risks' && risks && (
         <>
           {(risks.summary.highOpen > 0) && (
@@ -660,8 +660,8 @@ export default function ProgramPage() {
             ))}
           </div>
 
-          {/* ═══════════ فرم ۶ — رجیستری دارایی برند (پیوست ب سند) ═══════════ */}
-          <SectionCard className="brand-assets" title={t('فرم ۶ — رجیستری دارایی برند')} icon={<Package size={17} />}
+          {/* ═══════════ F05 — رجیستری دارایی برند (پیوست ب سند) ═══════════ */}
+          <SectionCard className="brand-assets" title={t('F05 — رجیستری دارایی برند')} icon={<Package size={17} />}
             description={t('هر دارایی برند — برندبوک، هویت بصری، تصویر مدیران، قالب ارائه، وب‌سایت و… — با نسخهٔ جاری، مالک، محل نگهداری، وضعیت و تاریخ بازبینی ثبت می‌شود.')}
             actions={writable ? <button className="srip-button primary" onClick={openAssetCreate}><Plus size={14} /> {t('ثبت دارایی برند')}</button> : undefined}>
             {assets ? (<>
@@ -696,7 +696,7 @@ export default function ProgramPage() {
                 <EmptyV4 icon={<Package size={22} />} title={t('هنوز دارایی برندی ثبت نشده است')}
                   description={t('رجیستری دارایی با نسخه، مالک، محل نگهداری و تاریخ بازبینی — از «ثبت دارایی برند» آغاز کنید.')} />
               )}
-              <p className="field-hint">{t('هر دارایی برند با نسخهٔ جاری، مالک، محل نگهداری، وضعیت و تاریخ بازبینی ثبت می‌شود (فرم ۶ / پیوست ب)؛ دارایی بدون مالک ثبت نمی‌شود و بازبینی دوره‌ای هر فصل (۹۰ روز) روی آن مهر می‌شود.')}</p>
+              <p className="field-hint">{t('هر دارایی برند با نسخهٔ جاری، مالک، محل نگهداری، وضعیت و تاریخ بازبینی ثبت می‌شود (F05 / پیوست ب)؛ دارایی بدون مالک ثبت نمی‌شود و بازبینی دوره‌ای هر فصل (۹۰ روز) روی آن مهر می‌شود.')}</p>
             </>) : <Loading />}
           </SectionCard>
         </>
@@ -743,7 +743,7 @@ export default function ProgramPage() {
             ) : <EmptyV4 icon={<ClipboardList size={22} />} title={t('ممیزی افراد ثبت نشده است')} description={t('ممیزی در ماه نخست برنامه آغاز می‌شود تا هیچ تصمیم ساختاری بدون دادهٔ ممیزی گرفته نشود.')} />)}
             {auditTab === 'systems' && (audits.systems.length ? (
               <div className="table-wrap"><table>
-                <thead><tr><th>{t('سامانه')}</th><th>{t('مالک فعلی')}</th><th>{t('حساسیت داده')}</th><th>{t('وضعیت در برنامهٔ انتقال')}</th><th>{t('فرم ۱۲ — مراحل انتقال')}</th><th>{t('پیشرفت')}</th></tr></thead>
+                <thead><tr><th>{t('سامانه')}</th><th>{t('مالک فعلی')}</th><th>{t('حساسیت داده')}</th><th>{t('وضعیت در برنامهٔ انتقال')}</th><th>{t('F11 — مراحل انتقال')}</th><th>{t('پیشرفت')}</th></tr></thead>
                 <tbody>{audits.systems.map((r: any) => (
                   <tr key={r.id} className="row-click" onClick={() => setAuditDetail({ kind: 'systems', row: r })}>
                     <td className="t-primary">{r.name}</td><td>{r.owner}</td>
@@ -907,7 +907,7 @@ export default function ProgramPage() {
         )}
       </Modal>
 
-      {/* ═══════════ مودال: ریسک جدید (فرم ۱۶) ═══════════ */}
+      {/* ═══════════ مودال: ریسک جدید (F17) ═══════════ */}
       <Modal open={createOpen} title={t('ثبت ریسک جدید')} onClose={() => setCreateOpen(false)}
         description={t('ریسک بدون مالک ثبت نمی‌شود — مالک یکی از نقش‌های چارت برنامه است.')}
         footer={<>
@@ -1062,7 +1062,7 @@ export default function ProgramPage() {
         </form>
       </Modal>
 
-      {/* ═══════════ مودال: ثبت شاخص (فرم ۱۷) ═══════════ */}
+      {/* ═══════════ مودال: ثبت شاخص (ماژول شاخص‌ها) ═══════════ */}
       <Modal open={kpiCreateOpen} title={t('ثبت شاخص')} onClose={() => setKpiCreateOpen(false)}
         description={t('شاخص‌های برنامهٔ سازمان خود را با مالک، هدف و سنجهٔ محاسبه ثبت کنید؛ مقدار هر شاخص از دادهٔ زندهٔ سامانه محاسبه می‌شود.')}>
         <form id="kpi-create-form" className="form-grid" onSubmit={(e) => { e.preventDefault(); submitKpi(); }}>
@@ -1132,7 +1132,7 @@ export default function ProgramPage() {
             {auditDetail.kind === 'systems' && auditDetail.row.migration !== 'KEEP' && (auditDetail.row.steps?.total ?? 0) > 0 && (
               <div className="mig-steps">
                 <div className="mig-steps-head">
-                  <b>{t('فرم ۱۲ — کنترل ده‌مرحله‌ای انتقال سامانه (بخش ۲۱ سند)')}</b>
+                  <b>{t('F11 — کنترل ده‌مرحله‌ای انتقال سامانه (بخش ۲۱ سند)')}</b>
                   <span className={`chip ${auditDetail.row.steps.complete ? 'success' : 'warning'}`}>
                     {t('پیشرفت')}: {faNum(auditDetail.row.steps.done)} {t('از')} {faNum(auditDetail.row.steps.total)}
                   </span>
@@ -1164,8 +1164,8 @@ export default function ProgramPage() {
           </div>
         )}
       </Modal>
-      {/* ═══════════ مودال: ثبت درخواست هزینه (فرم ۱۴ / پیوست ب) ═══════════ */}
-      <Modal open={expCreateOpen} title={t('ثبت درخواست هزینه (فرم ۱۴)')}
+      {/* ═══════════ مودال: ثبت درخواست هزینه (ماژول پلتفرمی) ═══════════ */}
+      <Modal open={expCreateOpen} title={t('ثبت درخواست هزینه (تأیید هزینه)')}
         onClose={() => setExpCreateOpen(false)}
         description={t('درخواست بدون درخواست‌کننده ثبت نمی‌شود؛ پس از ثبت، مدیر مالی تصویب می‌کند و تعهد فقط پس از تصویب قابل ثبت است.')}
         footer={<>
@@ -1206,9 +1206,9 @@ export default function ProgramPage() {
         </form>
       </Modal>
 
-      {/* ═══════════ مودال: ثبت/ویرایش دارایی برند (فرم ۶ / پیوست ب) ═══════════ */}
+      {/* ═══════════ مودال: ثبت/ویرایش دارایی برند (F05 / پیوست ب) ═══════════ */}
       <Modal open={assetCreateOpen || !!assetEdit}
-        title={assetEdit ? t('ویرایش دارایی برند') : t('ثبت دارایی برند (فرم ۶)')}
+        title={assetEdit ? t('ویرایش دارایی برند') : t('ثبت دارایی برند (F05)')}
         onClose={() => { setAssetCreateOpen(false); setAssetEdit(null); }}
         description={t('دارایی بدون مالک ثبت نمی‌شود — مالک یکی از نقش‌های چارت سازمان است و بازبینی دوره‌ای هر فصل (۹۰ روز) روی رجیستری مهر می‌شود.')}
         footer={<>

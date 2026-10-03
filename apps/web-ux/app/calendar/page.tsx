@@ -31,7 +31,7 @@ const unwrap = (x: any): any[] => (Array.isArray(x) ? x : x?.items ?? x?.rows ??
 /** نمونهٔ کوتاه روز هفته برای نمایشگرهای باریک (ش، ی، د، س، چ، پ، ج) */
 const DOW_SHORT = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
 
-/* ═══ گام ۲.۶ مسترپلن — معماری رویدادها (بخش ۱۷ سند؛ فرم ۱۰) ═══
+/* ═══ گام ۲.۶ مسترپلن — معماری رویدادها (بخش ۱۷ سند؛ F10) ═══
    رویدادها دو مسیر مستقل دارند: مالکیت (شاخص مرجعیت) و حضور بیرونی (شاخص
    شبکه‌سازی)؛ خروجی، تقویم رویدادهای سالانه است. هر رویداد با چک‌لیست
    هفت‌مرحله‌ای کنترل می‌شود و پروتکل بحران با واکنش طلایی ۲ ساعتی کنارش است. */
@@ -66,7 +66,7 @@ export default function CalendarPage() {
   const [busy, setBusy] = useState(false);
   const [crisisOpen, setCrisisOpen] = useState(false);
   const [crisisForm, setCrisisForm] = useState({ title: '', detectedAt: '', firstResponseAt: '', notes: '' });
-  /* گام ۴.۲ — فرم ۸ و ۷: تقویم انتشار رسانه تخصصی + گردش تأیید محتوا */
+  /* گام ۴.۲ — F06 و F08: تقویم انتشار رسانه تخصصی + گردش تأیید محتوا */
   const [content, setContent] = useState<any>(null);
   const [contentSel, setContentSel] = useState<any>(null);
   const [contentFormOpen, setContentFormOpen] = useState(false);
@@ -134,7 +134,7 @@ export default function CalendarPage() {
   }, [events]);
 
   // Grid: Saturday-first, 6 rows × 7 cols
-  /* گام ۴.۲ — ثبت نتیجهٔ کنترل فرم ۷ و انتشار خروجی تأییدشده */
+  /* گام ۴.۲ — ثبت نتیجهٔ کنترل F08 و انتشار خروجی تأییدشده */
   const reloadContent = async () => { try { setContent(await api('/program/content')); } catch {} };
   const registerControl = async (item: any, key: string) => {
     setBusy(true);
@@ -216,7 +216,7 @@ export default function CalendarPage() {
     return faNum(`${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`);
   };
 
-  /* ── ثبت رویداد (فرم ۱۰) ── */
+  /* ── ثبت رویداد (F10) ── */
   const openEventForm = () => {
     setEvForm(f => ({ ...f, title: '', eventAt: '', ownerRole: '', notes: '' }));
     setEvFormOpen(true);
@@ -468,12 +468,12 @@ export default function CalendarPage() {
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
         <button className="btn btn-ghost btn-sm" onClick={load}><RefreshCw size={13}/> بازخوانی</button>
       </div>
-      {/* ═══ گام ۴.۲ — فرم ۸ و ۷: رسانه تخصصی و تأیید محتوا ═══ */}
+      {/* ═══ گام ۴.۲ — F06 و F08: رسانه تخصصی و تأیید محتوا ═══ */}
       {content && (
         <section className="panel content-panel">
           <div className="panel-title">
             <div>
-              <h2>{t('رسانه تخصصی و تأیید محتوا (فرم ۸ و ۷)')}</h2>
+              <h2>{t('رسانه تخصصی و تأیید محتوا (F06 و F08)')}</h2>
               <p>{t('هفت ستون رسانه تخصصی با ریتم انتشار؛ هر خروجی عمومی پیش از انتشار، گردش تأیید سه‌مرحله‌ای با چهار کنترل الزامی را طی می‌کند.')}</p>
             </div>
             <div className="toolbar">
@@ -520,7 +520,7 @@ export default function CalendarPage() {
       )}
 
 
-      {/* مودال رویداد جدید — فرم ۱۰ سند */}
+      {/* مودال رویداد جدید — F10 سند */}
       <Modal open={evFormOpen} title={t('ثبت رویداد در تقویم سالانه')} onClose={() => setEvFormOpen(false)}>
         <form id="event-form" className="form-grid" onSubmit={(e) => { e.preventDefault(); saveEvent(); }}>
           <div className="field full">
@@ -566,7 +566,7 @@ export default function CalendarPage() {
         </form>
       </Modal>
 
-      {/* مودال چک‌لیست هفت‌مرحله‌ای رویداد — فرم ۱۰ سند */}
+      {/* مودال چک‌لیست هفت‌مرحله‌ای رویداد — F10 سند */}
       <Modal open={!!checklist} title={`${t('چک‌لیست رویداد')} — ${checklist?.title ?? ''}`} onClose={() => setChecklist(null)}>
         {checklist && (
           <div className="ev-checklist">
@@ -626,7 +626,7 @@ export default function CalendarPage() {
         </form>
       </Modal>
 
-      {/* گام ۴.۲ — مودال جزئیات خروجی: چهار کنترل فرم ۷ + انتشار */}
+      {/* گام ۴.۲ — مودال جزئیات خروجی: چهار کنترل F08 + انتشار */}
       <Modal open={!!contentSel} title={contentSel?.title ?? ''} onClose={() => setContentSel(null)}>
         {contentSel && (
           <div className="cnt-detail">
@@ -636,7 +636,7 @@ export default function CalendarPage() {
               <small>{contentSel.month} · {contentSel.ownerRole}</small>
             </div>
             <div className="cnt-controls">
-              <b className="bp-col-t">{t('گردش تأیید سه‌مرحله‌ای — چهار کنترل الزامی (فرم ۷)')}</b>
+              <b className="bp-col-t">{t('گردش تأیید سه‌مرحله‌ای — چهار کنترل الزامی (F08)')}</b>
               {content.controls.map((x: any) => {
                 const st = contentSel.controlsView[x.key];
                 return (
@@ -661,8 +661,8 @@ export default function CalendarPage() {
         )}
       </Modal>
 
-      {/* گام ۴.۲ — مودال خروجی رسانه‌ای تازه (فرم ۸) */}
-      <Modal open={contentFormOpen} title={t('خروجی رسانه‌ای تازه (فرم ۸)')} onClose={() => setContentFormOpen(false)}>
+      {/* گام ۴.۲ — مودال خروجی رسانه‌ای تازه (F06) */}
+      <Modal open={contentFormOpen} title={t('خروجی رسانه‌ای تازه (F06)')} onClose={() => setContentFormOpen(false)}>
         <form id="content-form" className="form-grid" onSubmit={(e) => { e.preventDefault(); saveContent(); }}>
           <div className="field full">
             <label className="field-label">{t('عنوان خروجی')}</label>

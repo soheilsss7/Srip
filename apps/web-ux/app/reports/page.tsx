@@ -149,7 +149,7 @@ function Stats({ map }: { map: Record<string, unknown> }) {
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   گام ۲.۷ مسترپلن — گزارش ماهانهٔ استاندارد (فرم ۱۵؛ بخش ۲۶ سند)
+   گام ۲.۷ مسترپلن — گزارش ماهانهٔ استاندارد (ماژول پلتفرمی؛ بخش ۲۶ سند)
    قالب ثابت گزارش به مدیریت هلدینگ: خلاصهٔ مدیریتی + شاخص‌های کلیدی زندهٔ بخش ۲۶ +
    ریسک‌های درجه بالای بخش ۲۵ + انحراف‌های زمانی بیش از دو هفته (با علت، اثر بر مسیر
    بحرانی و اقدام جبرانی) + برنامهٔ ماه آینده. هر ماه فقط یک گزارش؛ سکوت درباره
@@ -204,7 +204,7 @@ function MonthlyReportCard() {
 
   return (
     <SectionCard
-      title={t('گزارش ماهانهٔ استاندارد (فرم ۱۵)')}
+      title={t('گزارش ماهانهٔ استاندارد (ماژول پلتفرمی)')}
       icon={<FileText size={16} />}
       description={t('قالب ثابت گزارش ماهانه به مدیریت هلدینگ — شاخص‌ها و ریسک‌های درجه بالا از داشبورد زنده برداشت می‌شوند؛ انحراف زمانی بیش از دو هفته باید با علت، اثر بر مسیر بحرانی و اقدام جبرانی توضیح داده شود.')}
       actions={
@@ -223,7 +223,7 @@ function MonthlyReportCard() {
       </div>
 
       {items.length === 0 ? (
-        <p className="empty-state">{t('هنوز گزارش ماهانه‌ای ثبت نشده است — قالب ثابت فرم ۱۵ را از دکمهٔ «گزارش ماهانهٔ تازه» آغاز کنید.')}</p>
+        <p className="empty-state">{t('هنوز گزارش ماهانه‌ای ثبت نشده است — قالب ثابت گزارش ماهانه را از دکمهٔ «گزارش ماهانهٔ تازه» آغاز کنید.')}</p>
       ) : (
         <div className="pmr-layout">
           <div className="pmr-list">
@@ -293,7 +293,7 @@ function MonthlyReportCard() {
         </div>
       )}
 
-      <Modal open={formOpen} title={t('گزارش ماهانهٔ تازه (فرم ۱۵)')} onClose={() => setFormOpen(false)}>
+      <Modal open={formOpen} title={t('گزارش ماهانهٔ تازه (ماژول پلتفرمی)')} onClose={() => setFormOpen(false)}>
         <form id="monthly-report-form" className="form-grid" onSubmit={(e) => { e.preventDefault(); saveReport(); }}>
           <div className="field">
             <label className="field-label">{t('نام ماه گزارش')}</label>
@@ -488,7 +488,7 @@ export default function Reports() {
 
   const scopeLabel = orgId ? (orgs.find(o => o.id === orgId)?.name ?? orgId) : `همهٔ محدودهٔ من (${orgs.length} سازمان)`;
 
-/* ═══ گام ۴.۵ — فرم ۱۸: صورت‌جلسهٔ تحویل برنامه به هلدینگ (بخش ۲۸.۱ سند؛ پیوست ب) ═══ */
+/* ═══ گام ۴.۵ — صورت‌جلسهٔ تحویل: صورت‌جلسهٔ تحویل برنامه به هلدینگ (بخش ۲۸.۱ سند؛ پیوست ب) ═══ */
 function DeliveryCard() {
   const { can } = useWorkspace();
   const writable = can('program.write');
@@ -526,7 +526,7 @@ function DeliveryCard() {
   return (
     <SectionCard
       className="delivery-panel"
-      title={t('فرم ۱۸ — صورت‌جلسهٔ تحویل برنامه به هلدینگ')}
+      title={t('صورت‌جلسهٔ تحویل برنامه به هلدینگ (ماژول پلتفرمی)')}
       icon={<ClipboardCheck size={16} />}
       description={t('فهرست پنج‌قلمی تحویل (بخش ۲۸.۱ سند) با شکل تحویل و گیرندهٔ هلدینگ، فرآیند هفت‌گام تحویل و امضای طرفین.')}
       actions={<button className="btn btn-ghost btn-sm" onClick={load}><RefreshCw size={13} /> {t('بازخوانی')}</button>}
@@ -620,10 +620,10 @@ function DeliveryCard() {
       />
       <IntelHub />
 
-      {/* گزارش ماهانهٔ استاندارد — گام ۲.۷ (فرم ۱۵ سند) */}
+      {/* گزارش ماهانهٔ استاندارد — گام ۲.۷ (ماژول پلتفرمی) */}
       <MonthlyReportCard />
 
-      {/* صورت‌جلسهٔ تحویل — گام ۴.۵ (فرم ۱۸ سند؛ بخش ۲۸.۱) */}
+      {/* صورت‌جلسهٔ تحویل — گام ۴.۵ (صورت‌جلسهٔ تحویل؛ بخش ۲۸.۱) */}
       <DeliveryCard />
 
       <section className="panel" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
