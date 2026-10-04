@@ -7187,7 +7187,8 @@ function ensureAiCallsSeed(){
    «مجوز در نقطهٔ بازیابی» (۱۹.۴): دامنهٔ هر کاربر همان لحظهٔ پرسش روی نتایج
    اعمال می‌شود، نه هنگام نمایه‌سازی. منشأ هر مدخل ثبت می‌شود. */
 function aiNormalize(s){return String(s??'').toLowerCase().replace(/[«»()\[\]:؛,.!?؟، \u200c]/g,' ').replace(/\s+/g,' ').trim();}
-function aiTokens(q){return aiNormalize(q).split(' ').filter(w=>w.length>1);}
+const AI_FA_STOPWORDS=new Set(['است','هست','بود','شود','شده','باشد','چقدر','چطور','چگونه','چه','از','با','به','در','را','که','و','تا','برای','این','آن','هم','می','نه','کدام','بده','نشان','کن']);
+function aiTokens(q){return aiNormalize(q).split(' ').filter(w=>w.length>1&&!AI_FA_STOPWORDS.has(w));}
 function aiOrgIdsOf(rec){
   const ids=[];
   if(rec.organizationId) ids.push(rec.organizationId);
@@ -7217,7 +7218,7 @@ function aiIndexBuild(){
     ['organization',ORGS,o=>[o.id],o=>({title:o.name,snippet:o.type??'',kw:[o.name,o.type]}),'/organizations/'],
     ['person',PEOPLE,aiOrgIdsOf,p=>({title:`${p.firstName??''} ${p.lastName??''}`.trim(),snippet:p.title??'',kw:[p.firstName,p.lastName,p.title,'شخص']}),'/people/'],
     ['meeting',MEETINGS,aiOrgIdsOf,m=>({title:m.title,snippet:m.objective??'',kw:[m.title,m.objective,'جلسه']}),'/meetings/'],
-    ['interaction',INTERACTIONS,aiOrgIdsOf,x=>({title:x.subject,snippet:x.outcome??x.type??'',kw:[x.subject,x.outcome,'تعامل']}),'/interactions'],
+    ['interaction',INTERACTIONS,aiOrgIdsOf,x=>({title:x.subject,snippet:x.outcome??x.type??'',kw:[x.subject,x.outcome,'تعامل','تعاملات']}),'/interactions'],
     ['opportunity',OPPORTUNITIES,aiOrgIdsOf,o=>({title:o.name,snippet:o.status??'',kw:[o.name,'فرصت']}),'/opportunities/'],
     ['project',PROJECTS,aiOrgIdsOf,pr=>({title:pr.name,snippet:pr.status??'',kw:[pr.name,'پروژه']}),'/projects/'],
     ['commitment',COMMITMENTS,aiOrgIdsOf,c=>({title:c.description,snippet:c.status??'',kw:[c.description,'تعهد']}),'/commitments'],
@@ -14655,6 +14656,90 @@ const server=http.createServer(async(req,res)=>{
       score:h.score,matchedTokens:h.matchedTokens,origin:h.origin,shared:!!h.shared})),
       stats:{indexed,matched:totalHits,retrieved:hits.length,tookMs:Date.now()-t0},
       rule:'جست‌وجوی ترکیبی روی نمایهٔ قطعی؛ دامنهٔ شما در لحظهٔ بازیابی اعمال شد — نتایج فقط از منابع مجازِ شماست.'});
+  }
+
+  /* ─────────────── گام ۷.۲ — پرسش سازمانی منبع‌دار (/ai/ask) ──────────
+     پاسخ = متن + منابع (با پیوند) + سطح اطمینان + برچسب «فقط پیشنهاد» (۱۹.۲).
+     دو موتور: اگر ارائه‌دهندهٔ مسیرِ «پرسش سازمانی» فعال و غیرِ داخلی باشد،
+     پاسخ از ارائه‌دهنده با زمینهٔ بازیابی‌شده ساخته می‌شود (RAG واقعی — در دمو
+     سمت سرور شبیه‌سازی می‌شود) وگرنه موتور قطعی؛ هر دو منبع‌دار.
+     قاعدهٔ صداقت: پاسخ بدون منبع ساخته نمی‌شود — بی‌منبع یعنی «نمی‌دانم». */
+  if(is('/ai/ask')&&method==='POST'){
+    if(!hasPerm('ai.use')) return json(res,403,{message:'شما مجوز «فراخوانی درگاه هوش مصنوعی» (ai.use) را ندارید.'});
+    const b=await readBody(req);
+    const question=String(b.question??'').trim();
+    if(!question) return json(res,400,{message:'متن پرسش الزامی است.'});
+    if(question.length>500) return json(res,400,{message:'پرسش بیش از حد بلند است (حداکثر ۵۰۰ نویسه).'});
+    const halt=aiHaltCheck(req,'org-question');
+    if(halt.halted){
+      aiLogCall(req,'org-question',{providerName:'—',model:'—',status:'HALTED',
+        promptChars:question.length,durationMs:0,orgId:halt.orgId,
+        note:`توقف ${halt.scope==='GLOBAL'?'کلی':'کاربرد'}: ${halt.reason??''}`});
+      return json(res,503,{code:'AI_HALTED',
+        message:'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',
+        gateway:{status:'HALTED',scope:halt.scope,reason:halt.reason}});
+    }
+    const t0=Date.now();
+    const orgId=halt.orgId;
+    const route=aiResolveRoute(orgId,'org-question');
+    /* بازیابی مجاز — مجوز در نقطهٔ بازیابی؛ فقط تطبیق قوی (امتیاز ≥۶)
+       مبنای پاسخ می‌شود تا تطبیق‌های ضعیفِ تک‌واژه‌ای پاسخ بی‌ربط نسازند */
+    const {hits}=aiHybridSearch(req,authUser,question,5);
+    const strongHits=hits.filter(h=>h.score>=6);
+    const core=assistantAsk(req,authUser,question);
+    /* منابع: ارجاعات هستهٔ قطعی + مدخل‌های نمایه (بدون تکرار) */
+    const REF_URL={ORGANIZATION:'/organizations/',RELATIONSHIP:'/relationships/',PERSON:'/people/',MEETING:'/meetings/',INTERACTION:'/interactions',OPPORTUNITY:'/opportunities/',PROJECT:'/projects/',COMMITMENT:'/commitments'};
+    const sources=[];
+    const pushSrc=(s)=>{if(!sources.some(x=>x.key===s.key))sources.push(s);};
+    (core?.references??[]).forEach(r=>pushSrc({key:`ref:${r.type}:${r.id}`,sourceType:'record',
+      sourceTypeFa:'رکورد ساختاریافته',title:r.label,url:(REF_URL[r.type]??'/search')+(r.id??''),score:null}));
+    strongHits.forEach(h=>pushSrc({key:h.entryId,sourceType:h.sourceType,
+      sourceTypeFa:AI_SOURCE_FA[h.sourceType]??h.sourceType,title:h.title,url:h.url,score:h.score}));
+    /* پاسخ — بدون منبعِ کافی، پاسخ محکم ساخته نمی‌شود */
+    let answer,outOfScope=false;
+    if(core?.answer&&core.outOfScope===false){
+      answer=core.answer;
+    }else if(strongHits.length){
+      answer=`بر پایهٔ ${faN(strongHits.length)} منبع مجاز: `+strongHits.slice(0,3).map(h=>`${h.title} — ${h.snippet}`).join('؛ ')+'.';
+    }else{
+      answer='نمی‌دانم — در محدودهٔ دادهٔ مجاز شما منبعی برای این پرسش پیدا نشد.';
+      outOfScope=true;
+      sources.length=0;
+    }
+    const confidence=outOfScope?0:Math.min(95,40+(strongHits[0]?.score??0)*2+(core?.outOfScope===false?25:0));
+    /* مسیر ارائه‌دهنده (RAG واقعی) اگر اصلیِ مسیر غیرِ داخلی و ACTIVE باشد */
+    let engine='deterministic';
+    let engineFa='موتور قطعی — بدون مدل بیرونی';
+    let providerName=route.providerName, model=route.model;
+    let boundaryApplied=false, maskedFindings=null, promptChars=question.length;
+    const prov=(DB.aiProviders??[]).find(x=>x.id===route.providerId&&x.organizationId===orgId);
+    if(prov&&prov.status==='ACTIVE'&&prov.kind!=='BUILTIN'){
+      engine='provider'; engineFa=`ارائه‌دهنده: ${prov.name}`; providerName=prov.name; model=route.model||prov.model;
+      boundaryApplied=true;
+      let ctx=hits.map(h=>`[${h.title}] ${h.snippet}`).join('\n');
+      promptChars=question.length+ctx.length;
+      if(prov.mode==='API_KEY'){
+        const patterns=aiPatternsFor(orgId);
+        maskedFindings=aiMaskFindings(ctx,patterns);
+        ctx=aiMaskText(ctx,patterns);
+      }
+      /* مرز داده و دستور (۱۹.۴): زمینهٔ بازیابی‌شده در بلوک دادهٔ جدا — قالب واقعی ارسال به مدل */
+      aiBoundaryPrompt('به پرسش کاربر فقط بر پایهٔ بلوک دادهٔ مجاز پاسخ بده و منبع را نام ببر.',ctx);
+      /* در دمو، خروجی مدل سمت سرور شبیه‌سازی می‌شود: همان پاسخ منبع‌دار قطعی */
+    }
+    const answerChars=answer.length;
+    aiLogCall(req,'org-question',{providerId:prov?.id??route.providerId,
+      providerName:engine==='provider'?prov.name:route.providerName,
+      model:engine==='provider'?model:route.model,mode:prov?.mode??route.mode,
+      promptChars,outputChars:answerChars,durationMs:Date.now()-t0,
+      costEstimate:aiCostEstimate(prov?.mode??route.mode,promptChars,answerChars),
+      status:'OK',docsRetrieved:sources.length,orgId});
+    return json(res,200,{question,answer,sources,outOfScope,confidence,
+      disclaimer:'فقط پیشنهاد — تصمیم و اقدام نهایی با کاربر است (سطح اختیار ۱۹.۲)',
+      engine,engineFa,providerName,model,boundaryApplied,maskedFindings,
+      intentFa:core?.intentFa??null,needsClarification:!!core?.needsClarification,
+      retrieval:{matched:hits.length,indexedAt:nowIso()},
+      rule:'پرسش سازمانی منبع‌دار (۱۹.۲): پاسخ همیشه با منبع می‌آید؛ پاسخ بدون منبع ساخته نمی‌شود و صادقانه «نمی‌دانم» گفته می‌شود. منابع فقط از محدودهٔ مجاز شما بازیابی شده‌اند.'});
   }
 
   /* ─────────────── گام ۵.۴ — تقویم خروجی اندیشکده (/program/think-tank) ────────── */

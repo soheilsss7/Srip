@@ -215,7 +215,39 @@ try {
   ok('جست‌وجوی ترکیبی: نتایج با نوع، منشأ و پیوند منبع — ترکیب چند منبع',
     ragRes.count >= 3 && new Set(ragRes.types).size >= 2 && ragRes.hasOrigin && ragRes.hasLink, JSON.stringify(ragRes.types));
 
+  /* ── ۸.۵) گام ۷.۲ — پرسش آزاد منبع‌دار ── */
+  await page.evaluate(() => [...document.querySelectorAll('.segmented button')].find(b => (b.textContent ?? '').includes('پرسش آزاد'))?.click());
+  await page.waitForSelector('.as-input', { timeout: 15000 });
+  await page.type('.as-input', 'تعاملات و جلسات اخیر با تأمین‌کننده قطعات البرز');
+  await page.evaluate(() => [...document.querySelectorAll('button')].find(b => (b.textContent ?? '').trim() === 'بپرس')?.click());
+  await page.waitForFunction(() => document.querySelectorAll('.as-turn').length > 0, { timeout: 30000 });
+  const ask1 = await page.evaluate(() => {
+    const last = [...document.querySelectorAll('.as-turn .as-a')].pop();
+    const txtA = last?.textContent ?? '';
+    return { sources: [...(last?.querySelectorAll('a.p3-chip') ?? [])].length,
+      suggestion: txtA.includes('فقط پیشنهاد'),
+      confidence: txtA.includes('سطح اطمینان'),
+      engine: txtA.includes('موتور قطعی') };
+  });
+  ok('پرسش منبع‌دار: پاسخ با منابع پیونددار + «فقط پیشنهاد» + سطح اطمینان + موتور قطعی',
+    ask1.sources >= 1 && ask1.suggestion && ask1.confidence && ask1.engine, JSON.stringify(ask1));
+  await page.type('.as-input', 'قیمت بیت‌کوین چقدر است؟');
+  await page.evaluate(() => [...document.querySelectorAll('button')].find(b => (b.textContent ?? '').trim() === 'بپرس')?.click());
+  await page.waitForFunction(() => {
+    const turns = [...document.querySelectorAll('.as-turn .as-a')];
+    const last = turns[turns.length - 1];
+    return last && (last.textContent ?? '').includes('نمی‌دانم');
+  }, { timeout: 30000 });
+  const ask2 = await page.evaluate(() => {
+    const turns = [...document.querySelectorAll('.as-turn .as-a')];
+    const last = turns[turns.length - 1];
+    return { oos: (last?.textContent ?? '').includes('نمی‌دانم'),
+      srcChips: [...(last?.querySelectorAll('a.p3-chip') ?? [])].length };
+  });
+  ok('بی‌منبع: پرسش خارج از دامنه → «نمی‌دانم» بدون هیچ منبعی', ask2.oos && ask2.srcChips === 0, JSON.stringify(ask2));
+
   /* ── ۹) گام ۶.۳ — داشبورد مصرف و سناریوی توقف ایمن (ماه ۱۲) ── */
+  await page.evaluate(() => [...document.querySelectorAll('.segmented button')].find(b => (b.textContent ?? '').includes('درگاه و ارائه‌دهنده‌ها'))?.click());
   await page.waitForSelector('.gw-call-row', { timeout: 30000 });
   const dash = await page.evaluate(() => ({
     totals: (document.querySelector('.gateway-panel')?.textContent ?? '').includes('فراخوانی‌ها'),

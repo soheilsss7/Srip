@@ -713,7 +713,7 @@ export default function AI(){
     const text=(preset??freeQ).trim();
     if(!text || freeBusy) return;
     setFreeBusy(true); setError(''); setFreeQ(''); setResult(null);
-    api<any>('/assistant/ask',{method:'POST',body:JSON.stringify({question:text})})
+    api<any>('/ai/ask',{method:'POST',body:JSON.stringify({question:text})})
       .then(a=>{
         setChat(prev=>[...prev,{q:text,a}]);
         setTimeout(()=>{ try{ chatRef.current?.scrollTo({top:chatRef.current.scrollHeight,behavior:'smooth'}); }catch{} },60);
@@ -836,6 +836,14 @@ export default function AI(){
                       <p style={{margin:0,whiteSpace:'pre-wrap'}}>{m.a?.answer}</p>
                       <div className="as-meta">
                         {m.a?.intentFa && <span className="chip">{m.a.intentFa}</span>}
+                        {m.a?.engineFa && <span className="chip info">{m.a.engineFa}</span>}
+                        {typeof m.a?.confidence==='number' && m.a?.confidence>0 && (
+                          <span className="chip">{t('سطح اطمینان')}: {fa(m.a.confidence)}٪</span>
+                        )}
+                        {m.a?.answer && !m.a?.outOfScope && <span className="chip warning">{t('فقط پیشنهاد')}</span>}
+                        {(m.a?.sources??[]).slice(0,6).map((s:any,j:number)=>(
+                          <Link key={'src'+j} className="p3-chip" href={s.url} title={s.sourceTypeFa}>{s.sourceTypeFa} — {String(s.title).slice(0,32)}</Link>
+                        ))}
                         {(m.a?.references??[]).slice(0,5).map((r:any,j:number)=>(
                           <span key={j} className="p3-chip" title={`${REF_FA[r.type]??r.type}: ${r.id}`}>{REF_FA[r.type]??r.type} — {String(r.label).slice(0,30)}</span>
                         ))}

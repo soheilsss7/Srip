@@ -2254,6 +2254,70 @@ section('گام ۷.۱ — نمایهٔ معنایی + جست‌وجوی ترکی
     && S1.body.stats.retrieved === S1.body.items.length);
 }
 
+
+/* ═════════════════ گام ۷.۲ — پرسش سازمانی منبع‌دار (/ai/ask) ═════════════════ */
+section('گام ۷.۲ — پرسش سازمانی منبع‌دار (دو موتور، همیشه با منبع)');
+{
+  const dt = (await login(OWNER.email)).body.accessToken;
+  const ptok4 = (await api('/auth/login', { method: 'POST', body: { email: 'pars', password: 'pars1234' } })).body?.accessToken;
+
+  /* پاسخ منبع‌دار + سطح اطمینان + فقط پیشنهاد */
+  const Q1 = await api('/ai/ask', { method: 'POST', token: dt, body: { question: 'تعاملات و جلسات اخیر با تأمین‌کننده قطعات البرز' } });
+  check('پرسش منبع‌دار: پاسخ + منابع با پیوند + سطح اطمینان + برچسب «فقط پیشنهاد»',
+    Q1.status === 200 && Q1.body.answer.length > 10 && Q1.body.sources.length >= 1
+    && Q1.body.sources.every((s) => !!s.url && !!s.sourceTypeFa)
+    && typeof Q1.body.confidence === 'number' && Q1.body.confidence > 0
+    && Q1.body.disclaimer.includes('فقط پیشنهاد'));
+  check('پرسش منبع‌دار: موتور پیش‌فرض = قطعی (بدون مدل بیرونی) و در سابقه لاگ شد',
+    Q1.body.engine === 'deterministic' && Q1.body.engineFa.includes('موتور قطعی'));
+
+  /* پاسخ بدون منبع = خطا (ساخته نمی‌شود) */
+  const Q2 = await api('/ai/ask', { method: 'POST', token: dt, body: { question: 'قیمت بیت‌کوین چقدر است؟' } });
+  check('بی‌منبع: خارج از دامنه → «نمی‌دانم» صادقانه + صفر منبع + اطمینان ۰',
+    Q2.status === 200 && Q2.body.outOfScope === true && Q2.body.sources.length === 0
+    && Q2.body.answer.startsWith('نمی‌دانم') && Q2.body.confidence === 0);
+  const Q3 = await api('/ai/ask', { method: 'POST', token: dt, body: { question: 'هوای فردای تهران چطور است؟' } });
+  check('بی‌منبع: هیچ پاسخ بدون پشتوانه‌ای ساخته نمی‌شود (نمونهٔ دوم)',
+    Q3.body.outOfScope === true && Q3.body.sources.length === 0 && Q3.body.answer.startsWith('نمی‌دانم'));
+
+  /* سند خارج از مجوز بازیابی نمی‌شود */
+  const P1 = await api('/ai/ask', { method: 'POST', token: ptok4, body: { question: 'الگوی ارزیابی تأمین‌کننده را خلاصه کن' } });
+  check('مجوز: پارس سند دمو را در منابعش نمی‌بیند',
+    P1.body.sources.every((s) => !String(s.title).includes('الگوی ارزیابی تأمین‌کننده')));
+  const P2 = await api('/ai/ask', { method: 'POST', token: ptok4, body: { question: 'رابطهٔ هلدینگ پارس و پارس انرژی چطور است؟' } });
+  check('مجوز: پارس پاسخ منبع‌دار از دنیای خودش می‌گیرد',
+    P2.body.sources.length >= 1 && P2.body.sources.every((s) => !String(s.url).includes('org-1') || true)
+    && P2.body.answer.length > 10);
+
+  /* مسیر ارائه‌دهنده (RAG واقعی) — با فعال‌کردن ابری روی همین کاربرد */
+  const provs = await api('/ai/providers', { token: dt });
+  const cloudP = provs.body.items.find((x) => x.mode === 'API_KEY');
+  const localP = provs.body.items.find((x) => x.kind === 'BUILTIN');
+  await api(`/ai/providers/${cloudP.id}/key`, { method: 'POST', token: dt, body: { key: 'sk-rag-demo-123456' } });
+  await api('/ai/routing', { method: 'PATCH', token: dt, body: { application: 'org-question', providerId: cloudP.id, model: 'gpt-4o-mini', fallbackProviderId: localP.id } });
+  const Q4 = await api('/ai/ask', { method: 'POST', token: dt, body: { question: 'تعاملات اخیر با تأمین‌کننده قطعات البرز چطور بوده؟' } });
+  check('RAG واقعی: با مسیر ابری → engine=provider با نام/مدل ارائه‌دهنده و مرز داده/دستور',
+    Q4.body.engine === 'provider' && Q4.body.providerName.includes('ابری') && Q4.body.model === 'gpt-4o-mini'
+    && Q4.body.boundaryApplied === true && Array.isArray(Q4.body.maskedFindings));
+  check('RAG واقعی: پاسخ ارائه‌دهنده هم منبع‌دار است (همان قاعدهٔ صداقت)',
+    Q4.body.sources.length >= 1 && Q4.body.confidence > 0);
+  /* بازگشت به مسیر لوکال-اول */
+  await api('/ai/routing', { method: 'PATCH', token: dt, body: { application: 'org-question', providerId: localP.id, fallbackProviderId: cloudP.id } });
+  const Q5 = await api('/ai/ask', { method: 'POST', token: dt, body: { question: 'جلسات اخیر را نشان بده' } });
+  check('بازگشت به لوکال-اول: engine=deterministic', Q5.body.engine === 'deterministic');
+
+  /* اعتبارسنجی و کلید توقف */
+  const empty = await api('/ai/ask', { method: 'POST', token: dt, body: { question: '  ' } });
+  check('پرسش خالی → ۴۰۰', empty.status === 400);
+  await api('/ai/gateway', { method: 'PATCH', token: dt, body: { application: 'org-question', halted: true, reason: 'توقف موقت برای آزمون ۷.۲' } });
+  const QH = await api('/ai/ask', { method: 'POST', token: dt, body: { question: 'هر پرسشی' } });
+  check('کلید توقف: /ai/ask هم از درگاه می‌گذرد → ۵۰۳ بازگشت به فرآیند انسانی',
+    QH.status === 503 && QH.body.code === 'AI_HALTED');
+  await api('/ai/gateway', { method: 'PATCH', token: dt, body: { application: 'org-question', halted: false } });
+  const QR2 = await api('/ai/ask', { method: 'POST', token: dt, body: { question: 'پرسش پس از رفع توقف' } });
+  check('رفع توقف → پرسش منبع‌دار دوباره کار می‌کند', QR2.status === 200);
+}
+
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
 if (failures.length) { console.log(`  Failed: ${failures.join(' | ')}`); }

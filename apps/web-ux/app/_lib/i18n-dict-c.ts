@@ -1744,4 +1744,8 @@ export const EN_DICT_C: Record<string, string> = {
   'منشأ': 'Origin',
   'نمایش منبع': 'Open source',
   'چیزی در محدودهٔ مجاز شما یافت نشد.': 'Nothing found within your permitted scope.',
+
+  /* ═══ گام ۷.۲ — پرسش سازمانی منبع‌دار ═══ */
+  'سطح اطمینان': 'Confidence level',
+  'فقط پیشنهاد': 'Suggestion only',
 };
