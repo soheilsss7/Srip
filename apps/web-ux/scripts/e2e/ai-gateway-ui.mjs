@@ -132,6 +132,66 @@ try {
   });
   await page.waitForFunction(() => ![...document.querySelectorAll('.gateway-panel .gw-row')].some(tr => (tr.textContent ?? '').includes('Ollama سرور دوم')), { timeout: 30000 });
   ok('حذف: ردیف دلخواه حذف شد (موتور داخلی ماند)', (await rows()).length === 3);
+
+  /* ── ۶) گام ۶.۲ — مسیریابی کاربردها (لوکال-اول) ── */
+  await page.waitForSelector('.gateway-panel .gw-route-row', { timeout: 30000 });
+  const routeInfo = await page.evaluate(() => {
+    const rowsR = [...document.querySelectorAll('.gateway-panel .gw-route-row')];
+    return { count: rowsR.length,
+      allLocal: rowsR.every(tr => {
+        const sel = tr.querySelector('select');
+        return (sel?.selectedOptions?.[0]?.textContent ?? '').includes('موتور محلی SRIP');
+      }),
+      allUsable: rowsR.every(tr => (tr.textContent ?? '').includes('در دسترس')) };
+  });
+  ok('مسیریابی: هفت کاربرد — همه با اصلیِ «موتور محلی SRIP» و مسیر در دسترس',
+    routeInfo.count === 7 && routeInfo.allLocal && routeInfo.allUsable, JSON.stringify(routeInfo));
+  await page.evaluate(() => {
+    const tr = [...document.querySelectorAll('.gateway-panel .gw-route-row')].find(x => (x.textContent ?? '').includes('اولویت‌بندی فرصت'));
+    const sel = tr.querySelector('select');
+    const opt = [...sel.options].find(o => (o.textContent ?? '').includes('ابری'));
+    if (opt) { const s = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value').set; s.call(sel, opt.value); sel.dispatchEvent(new Event('change', { bubbles: true })); }
+    [...(tr?.querySelectorAll('button') ?? [])].find(b => (b.textContent ?? '').includes('ذخیرهٔ مسیر'))?.click();
+  });
+  await page.waitForFunction(() => {
+    const tr = [...document.querySelectorAll('.gateway-panel .gw-route-row')].find(x => (x.textContent ?? '').includes('اولویت‌بندی فرصت'));
+    const sel = tr?.querySelector('select');
+    return sel && (sel.selectedOptions?.[0]?.textContent ?? '').includes('ابری');
+  }, { timeout: 30000 });
+  ok('مسیریابی: تغییر «اولویت‌بندی فرصت» به ارائه‌دهندهٔ ابری ذخیره شد', true);
+
+  /* ── ۷) گام ۶.۲ — خط‌مشی کنترل داده (پوشاندن/معافیت/پالایش) ── */
+  await page.waitForSelector('.gateway-panel .ai-quick-chip[aria-pressed]', { timeout: 15000 });
+  const patCount = await page.evaluate(() =>
+    [...document.querySelectorAll('.gateway-panel .ai-quick-chip[aria-pressed]')].filter(b => (b.textContent ?? '').includes('کد ملی') || (b.textContent ?? '').includes('شبا') || (b.textContent ?? '').includes('موبایل') || (b.textContent ?? '').includes('کارت') || (b.textContent ?? '').includes('محرمانه')).length);
+  ok('خط‌مشی: کاتالوگ الگوهای پوشاندن دیده می‌شود', patCount >= 4, `patterns=${patCount}`);
+  await page.evaluate(() => [...document.querySelectorAll('.gateway-panel button')].find(b => (b.textContent ?? '').includes('پیش‌نمایش کنترل داده'))?.click());
+  await page.waitForSelector('.gw-preview .gw-masked', { timeout: 30000 });
+  const pvCloud = await page.evaluate(() => ({
+    masked: document.querySelector('.gw-masked')?.textContent ?? '',
+    findings: [...document.querySelectorAll('.gw-preview .chip.warning')].length,
+    boundary: (document.querySelector('.gw-preview details')?.textContent ?? ''),
+  }));
+  ok('پیش‌نمایش ابری: کد ملی/موبایل/شبا پوشانده شد + یافته‌ها',
+    pvCloud.masked.includes('[کد ملی پوشانده شد]') && pvCloud.masked.includes('[موبایل پوشانده شد]')
+    && !pvCloud.masked.includes('1234567890') && pvCloud.findings >= 3, JSON.stringify(pvCloud.findings));
+  ok('پیش‌نمایش ابری: مرز داده/دستور با بلوک صریح BEGIN-DATA', pvCloud.boundary.includes('BEGIN-DATA'));
+  await page.evaluate(() => [...document.querySelectorAll('.gateway-panel button')].find(b => (b.textContent ?? '').includes('مسیر لوکال (معاف از پوشاندن)'))?.click());
+  await page.evaluate(() => [...document.querySelectorAll('.gateway-panel button')].find(b => (b.textContent ?? '').includes('پیش‌نمایش کنترل داده'))?.click());
+  await page.waitForFunction(() => {
+    const box = document.querySelector('.gw-masked');
+    return box && (box.textContent ?? '').includes('1234567890');
+  }, { timeout: 30000 });
+  ok('پیش‌نمایش لوکال: ورودی معاف — کد ملی دست‌نخورده', true);
+  await page.evaluate(() => [...document.querySelectorAll('.gateway-panel button')].find(b => (b.textContent ?? '').includes('مسیر ابری (کلید API)'))?.click());
+  await page.evaluate(() => [...document.querySelectorAll('.gateway-panel .ai-quick-chip[aria-pressed]')].find(b => (b.textContent ?? '').includes('کد ملی'))?.click());
+  await new Promise(r => setTimeout(r, 800));
+  await page.evaluate(() => [...document.querySelectorAll('.gateway-panel button')].find(b => (b.textContent ?? '').includes('پیش‌نمایش کنترل داده'))?.click());
+  await page.waitForFunction(() => {
+    const box = document.querySelector('.gw-masked');
+    return box && (box.textContent ?? '').includes('1234567890') && (box.textContent ?? '').includes('[موبایل پوشانده شد]');
+  }, { timeout: 30000 });
+  ok('خط‌مشی: خاموش‌کردن الگوی کد ملی → فقط آن معاف می‌شود (موبایل همچنان پوشانده)', true);
 } catch (e) {
   fail++; failures.push(`استثنا: ${e.message}`);
   console.error('  ❌ استثنا:', e.message);

@@ -34,11 +34,20 @@ function GatewayPanel(){
   const [keyResult,setKeyResult]=useState<any>(null);
   const [editFor,setEditFor]=useState<any>(null);
   const [createForm,setCreateForm]=useState<any>(null);
+  /* گام ۶.۲ — مسیریابی کاربردها + خط‌مشی کنترل داده */
+  const [routing,setRouting]=useState<any>(null);
+  const [policy,setPolicy]=useState<any>(null);
+  const [rowDraft,setRowDraft]=useState<Record<string,any>>({});
+  const [pvText,setPvText]=useState('قرارداد محرمانه — کد ملی 1234567890، موبایل 09121234567 و شبا IR123456789012345678901234 در متن.');
+  const [pvMode,setPvMode]=useState<'LOCAL'|'API_KEY'>('API_KEY');
+  const [pv,setPv]=useState<any>(null);
 
   function reload(){
     apiGet('/ai/providers').then((r:any)=>{
       setProviders(r.items??[]); setRule(String(r.rule??''));
     }).catch(x=>setError((x as Error).message));
+    apiGet('/ai/routing').then((r:any)=>{setRouting(r);setRowDraft({});}).catch(()=>{});
+    apiGet('/ai/data-policy').then(setPolicy).catch(()=>{});
   }
   useEffect(()=>{reload();},[]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -74,6 +83,29 @@ function GatewayPanel(){
     setBusyId(p.id); setError('');
     try{ await api(`/ai/providers/${p.id}`,{method:'DELETE'}); reload(); }
     catch(x:any){ setError(x.message); } finally{ setBusyId(''); }
+  }
+
+  async function saveRoute(appKey:string){
+    const d=rowDraft[appKey]; if(!d) return;
+    setBusyId('route-'+appKey); setError('');
+    try{
+      await api('/ai/routing',{method:'PATCH',body:JSON.stringify({application:appKey,
+        providerId:d.providerId,model:d.model,fallbackProviderId:d.fallbackProviderId??'',fallbackModel:d.fallbackModel})});
+      reload();
+    }catch(x:any){ setError(x.message); } finally{ setBusyId(''); }
+  }
+  async function togglePattern(key:string,val:boolean){
+    setError('');
+    try{
+      const r:any=await api('/ai/data-policy',{method:'PATCH',body:JSON.stringify({patterns:{[key]:val}})});
+      setPolicy((p:any)=>({...p,...r}));
+    }catch(x:any){ setError(x.message); }
+  }
+  async function runPreview(){
+    setBusyId('preview'); setError('');
+    try{ const r=await api('/ai/data-policy/preview',{method:'POST',body:JSON.stringify({text:pvText,mode:pvMode})});
+      setPv(r);
+    }catch(x:any){ setError(x.message); } finally{ setBusyId(''); }
   }
 
   const active=providers.filter(p=>p.status==='ACTIVE').length;
@@ -148,6 +180,110 @@ function GatewayPanel(){
         </table>
       </div>
       {rule && <p className="field-hint">{rule}</p>}
+
+      {/* ═══ گام ۶.۲ — مسیریابی کاربردها (لوکال-اول، ابری جایگزین) ═══ */}
+      <div className="composer-head" style={{marginTop:18}}>
+        <h2><Target size={16}/> {t('مسیریابی کاربردها — لوکال اول، ابری جایگزین')}</h2>
+      </div>
+      <div className="table-wrap">
+        <table>
+          <thead><tr>
+            <th>{t('کاربرد')}</th><th>{t('ارائه‌دهنده و مدل اصلی')}</th><th>{t('جایگزین')}</th><th>{t('وضعیت مسیر')}</th><th></th>
+          </tr></thead>
+          <tbody>
+            {(routing?.items??[]).map((r:any)=>(
+              <tr key={r.application} className="gw-route-row" data-app={r.application}>
+                <td className="t-primary">{r.label}</td>
+                <td>
+                  <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}>
+                    <select value={rowDraft[r.application]?.providerId??r.providerId??''}
+                      onChange={e=>setRowDraft((d)=>({...d,[r.application]:{...d[r.application],providerId:e.target.value}}))}>
+                      {(routing?.providers??[]).map((p:any)=><option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                    <input style={{width:150}} dir="ltr" placeholder={t('مدل')}
+                      value={rowDraft[r.application]?.model??r.model??''}
+                      onChange={e=>setRowDraft((d)=>({...d,[r.application]:{...d[r.application],model:e.target.value}}))} />
+                  </div>
+                </td>
+                <td>
+                  <select value={rowDraft[r.application]?.fallbackProviderId??r.fallbackProviderId??''}
+                    onChange={e=>setRowDraft((d)=>({...d,[r.application]:{...d[r.application],fallbackProviderId:e.target.value}}))}>
+                    <option value="">{t('— بدون جایگزین')}</option>
+                    {(routing?.providers??[]).map((p:any)=><option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </td>
+                <td>
+                  {r.usable
+                    ?<span className="chip success">{t('در دسترس')}</span>
+                    :<span className="chip danger">{t('مسیر فعال ندارد — کلید ثبت نشده')}</span>}
+                </td>
+                <td>
+                  <button className="btn btn-ghost btn-sm" onClick={()=>saveRoute(r.application)}
+                    disabled={!rowDraft[r.application]||busyId==='route-'+r.application}>
+                    {busyId==='route-'+r.application?t('…'):t('ذخیرهٔ مسیر')}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {routing?.rule && <p className="field-hint">{routing.rule}</p>}
+
+      {/* ═══ گام ۶.۲ — خط‌مشی کنترل داده (۱۹.۴) ═══ */}
+      <div className="composer-head" style={{marginTop:18}}>
+        <h2><ShieldCheck size={16}/> {t('خط‌مشی کنترل داده — پوشاندن، مرز و پالایش')}</h2>
+      </div>
+      <div className="ai-quick-chips" aria-label={t('الگوهای پوشاندن')}>
+        {(policy?.patternsCatalog??[]).map((pt:any)=>(
+          <button key={pt.key} type="button"
+            className="ai-quick-chip"
+            style={{opacity:policy?.patterns?.[pt.key]?1:.5,borderStyle:policy?.patterns?.[pt.key]?'solid':'dashed'}}
+            aria-pressed={!!policy?.patterns?.[pt.key]}
+            onClick={()=>togglePattern(pt.key,!policy?.patterns?.[pt.key])}>
+            {policy?.patterns?.[pt.key]?<CheckCircle2 size={12}/>:<AlertTriangle size={12}/>} {pt.label}
+          </button>
+        ))}
+      </div>
+      <div className="form-grid" style={{marginTop:8}}>
+        <div className="field full">
+          <label className="field-label">{t('متن پیش‌نمایش')}</label>
+          <textarea rows={2} value={pvText} onChange={e=>setPvText(e.target.value)} />
+        </div>
+        <div className="field full" style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+          <div className="segmented" style={{margin:0}}>
+            <button type="button" className={pvMode==='API_KEY'?'active':''} onClick={()=>setPvMode('API_KEY')}>{t('مسیر ابری (کلید API)')}</button>
+            <button type="button" className={pvMode==='LOCAL'?'active':''} onClick={()=>setPvMode('LOCAL')}>{t('مسیر لوکال (معاف از پوشاندن)')}</button>
+          </div>
+          <button type="button" className="srip-button primary" onClick={()=>runPreview()} disabled={busyId==='preview'}>
+            {busyId==='preview'?t('در حال…'):t('پیش‌نمایش کنترل داده')}
+          </button>
+        </div>
+      </div>
+      {pv && (
+        <div className="gw-preview" style={{marginTop:10,display:'grid',gap:8}}>
+          <div>
+            <b>{pvMode==='LOCAL'?t('ورودی ارسالی (مسیر لوکال — معاف):'):t('ورودی پوشانده‌شده پیش از ارسال ابری:')}</b>
+            <div className="gw-masked" style={{marginTop:4,padding:10,border:'1px solid var(--card-border-strong)',borderRadius:10,whiteSpace:'pre-wrap',fontSize:12.5}}>{pv.masked}</div>
+          </div>
+          <div>
+            <b>{t('خروجی پس از پالایش (همهٔ مسیرها):')}</b>
+            <div style={{marginTop:4,padding:10,border:'1px solid var(--card-border-strong)',borderRadius:10,whiteSpace:'pre-wrap',fontSize:12.5}}>{pv.filteredOutput}</div>
+          </div>
+          <div className="ai-quick-chips">
+            {(pv.findings??[]).map((f:any)=>(
+              <span key={f.key} className="chip warning">{f.label} ×{fa(f.count)}</span>
+            ))}
+            {(pv.findings??[]).length===0 && <span className="chip neutral">{t('الگوی محرمانه‌ای یافت نشد')}</span>}
+          </div>
+          <p className="field-hint" style={{margin:0}}>{pv.note}</p>
+          <details>
+            <summary style={{cursor:'pointer',fontSize:12.5}}>{t('مرز داده و دستور — قالب ارسال به مدل (۱۹.۴)')}</summary>
+            <pre style={{whiteSpace:'pre-wrap',fontSize:11.5,margin:'6px 0 0',padding:10,border:'1px dashed var(--card-border-strong)',borderRadius:8}}>{pv.boundary}</pre>
+          </details>
+        </div>
+      )}
+      {policy?.rule && <p className="field-hint">{policy.rule}</p>}
 
       {/* مودال ثبت/چرخش کلید — نمایش یک‌بار کلید کامل */}
       <Modal open={!!keyFor} title={t('ثبت/چرخش کلید API')} onClose={()=>{setKeyFor(null);setKeyResult(null);}}

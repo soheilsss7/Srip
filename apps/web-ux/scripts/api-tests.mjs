@@ -2035,6 +2035,79 @@ section('گام ۶.۱ — درگاه هوش مصنوعی (لوکال + کلید 
     pL.status === 200 && pL.body.items.length === 3 && pL.body.items.every((p) => p.id.includes('org-pars')));
 }
 
+
+/* ═════════════════ گام ۶.۲ — مسیریابی کاربردها و کنترل داده ═════════════════ */
+section('گام ۶.۲ — قواعد انتخاب مدل و کنترل داده');
+{
+  const dt = (await login(OWNER.email)).body.accessToken;
+  const ct = (await login(CLIENT.email)).body.accessToken;
+
+  /* مسیریابی: هفت کاربرد ۱۹.۲ با پیش‌فرض لوکال-اول */
+  const R = await api('/ai/routing', { token: dt });
+  check('مسیریابی: هفت کاربرد سند با اصلی = موتور محلی (لوکال-اول) و جایگزین ابری',
+    R.status === 200 && R.body.items.length === 7
+    && R.body.items.every((r) => r.providerName === 'موتور محلی SRIP' && r.providerMode === 'LOCAL')
+    && R.body.items.every((r) => r.fallbackName === 'ارائه‌دهندهٔ ابری (سازگار-OpenAI)'),
+    JSON.stringify(R.body.items?.map((r) => r.application)));
+  check('مسیریابی: همهٔ مسیرها «در دسترس» چون موتور داخلی ACTIVE است',
+    R.body.items.every((r) => r.usable === true));
+  const oppRow = R.body.items.find((r) => r.application === 'opp-priority');
+  const cloudP = R.body.providers.find((p) => p.mode === 'API_KEY');
+  const localP = R.body.providers.find((p) => p.kind === 'BUILTIN');
+  const noKeyP = await api('/ai/providers', { method: 'POST', token: dt, body: { name: 'ابری بدون کلید (تست مسیریابی)', mode: 'API_KEY', kind: 'OPENAI_COMPATIBLE', baseUrl: 'https://nokey.example/v1' } });
+  const badCloud = await api('/ai/routing', { method: 'PATCH', token: dt, body: { application: 'opp-priority', providerId: noKeyP.body.id } });
+  check('مسیریابی: انتخاب ابریِ بدون کلید → ۴۰۰ «ابتدا کلید را ثبت کنید»', badCloud.status === 400);
+  await api(`/ai/providers/${noKeyP.body.id}`, { method: 'DELETE', token: dt });
+  await api(`/ai/providers/${cloudP.id}/key`, { method: 'POST', token: dt, body: { key: 'sk-route-123456' } });
+  const okCloud = await api('/ai/routing', { method: 'PATCH', token: dt, body: { application: 'opp-priority', providerId: cloudP.id, model: 'gpt-4o-mini', fallbackProviderId: localP.id } });
+  check('مسیریابی: پس از ثبت کلید، تغییر «اولویت‌بندی فرصت» به ابری → ۲۰۰',
+    okCloud.status === 200 && okCloud.body.providerId === cloudP.id && okCloud.body.fallbackProviderId === localP.id);
+  const R2 = await api('/ai/routing', { token: dt });
+  const opp2 = R2.body.items.find((r) => r.application === 'opp-priority');
+  check('مسیریابی: GET پس از تغییر — اصلی ابری، جایگزین موتور محلی (معکوس سیاست پیش‌فرض)',
+    opp2.providerName === 'ارائه‌دهندهٔ ابری (سازگار-OpenAI)' && opp2.fallbackName === 'موتور محلی SRIP');
+  const badApp = await api('/ai/routing', { method: 'PATCH', token: dt, body: { application: 'xyz', providerId: localP.id } });
+  check('مسیریابی: کاربرد نامعتبر → ۴۰۰', badApp.status === 400);
+  const badProv = await api('/ai/routing', { method: 'PATCH', token: dt, body: { application: 'org-question', providerId: 'aip-org-pars-local' } });
+  check('مسیریابی: ارائه‌دهندهٔ مستأجر دیگر → ۴۰۰ (خارج از محدوده)', badProv.status === 400);
+  const samePf = await api('/ai/routing', { method: 'PATCH', token: dt, body: { application: 'org-question', providerId: localP.id, fallbackProviderId: localP.id } });
+  check('مسیریابی: اصلی = جایگزین → ۴۰۰', samePf.status === 400);
+  const cPatch = await api('/ai/routing', { method: 'PATCH', token: ct, body: { application: 'org-question', providerId: localP.id } });
+  check('مسیریابی: client بدون ai.admin → ۴۰۳', cPatch.status === 403);
+
+  /* خط‌مشی کنترل داده (۱۹.۴) */
+  const P = await api('/ai/data-policy', { token: dt });
+  check('خط‌مشی: کاتالوگ پنج الگو + همه روشن + قاعدهٔ ۱۹.۴',
+    P.status === 200 && P.body.patternsCatalog.length === 5
+    && Object.values(P.body.patterns).every((v) => v === true) && String(P.body.rule).includes('معاف'));
+  const sample = 'کد ملی 1234567890 و موبایل 09121234567 — شبا IR123456789012345678901234 برای پرداخت.';
+  const pvCloud = await api('/ai/data-policy/preview', { method: 'POST', token: dt, body: { text: sample, mode: 'API_KEY' } });
+  check('پیش‌نمایش ابری: کد ملی/موبایل/شبا پوشانده شد + سه یافته',
+    pvCloud.status === 200 && pvCloud.body.masked.includes('[کد ملی پوشانده شد]')
+    && pvCloud.body.masked.includes('[موبایل پوشانده شد]') && pvCloud.body.masked.includes('[شبا پوشانده شد]')
+    && pvCloud.body.masked.includes('09121234567') === false
+    && pvCloud.body.findings.length === 3, JSON.stringify(pvCloud.body.findings));
+  check('پیش‌نمایش ابری: پالایش خروجی هم اعمال شد + مرز داده/دستور با بلوک صریح',
+    pvCloud.body.filteredOutput.includes('1234567890') === false
+    && pvCloud.body.boundary.includes('BEGIN-DATA') && pvCloud.body.boundary.includes('غیرقابل اعتماد'));
+  const pvLocal = await api('/ai/data-policy/preview', { method: 'POST', token: dt, body: { text: sample, mode: 'LOCAL' } });
+  check('پیش‌نمایش لوکال: ورودی معاف از پوشاندن (دست‌نخورده) ولی خروجی پالایش می‌شود',
+    pvLocal.status === 200 && pvLocal.body.localExempt === true
+    && pvLocal.body.masked === sample && pvLocal.body.filteredOutput.includes('09121234567') === false);
+  const offNat = await api('/ai/data-policy', { method: 'PATCH', token: dt, body: { patterns: { 'national-id': false } } });
+  check('خط‌مشی: خاموش‌کردن الگوی کد ملی → ۲۰۰', offNat.status === 200 && offNat.body.patterns['national-id'] === false);
+  const pvAfter = await api('/ai/data-policy/preview', { method: 'POST', token: dt, body: { text: sample, mode: 'API_KEY' } });
+  check('پیش‌نمایش پس از خاموشی: کد ملی پوشانده نمی‌شود ولی موبایل همچنان پوشانده می‌شود',
+    pvAfter.body.masked.includes('1234567890') && pvAfter.body.masked.includes('[موبایل پوشانده شد]')
+    && pvAfter.body.findings.some((f) => f.key === 'mobile') && !pvAfter.body.findings.some((f) => f.key === 'national-id'));
+  const badPat = await api('/ai/data-policy', { method: 'PATCH', token: dt, body: { patterns: { nope: true } } });
+  check('خط‌مشی: الگوی خارج از کاتالوگ → ۴۰۰', badPat.status === 400);
+  const cPol = await api('/ai/data-policy', { method: 'PATCH', token: ct, body: { patterns: { 'iban': false } } });
+  check('خط‌مشی: client بدون ai.admin → ۴۰۳', cPol.status === 403);
+  const emptyPv = await api('/ai/data-policy/preview', { method: 'POST', token: dt, body: { text: '   ', mode: 'API_KEY' } });
+  check('پیش‌نمایش: متن خالی → ۴۰۰', emptyPv.status === 400);
+}
+
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
 if (failures.length) { console.log(`  Failed: ${failures.join(' | ')}`); }
