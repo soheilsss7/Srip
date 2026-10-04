@@ -200,6 +200,12 @@ try {
   /* گام ۴.۳: هفت کارت = شش لایه + رجیستری دارایی برند (F05) */
   const rdHasRegistry = await page.evaluate(() => [...document.querySelectorAll('.section-card')].some(c => (c.querySelector('h2')?.textContent ?? '').includes('رجیستری دارایی برند')));
   ok('آمادگی: شش لایهٔ وزن‌دار + رجیستری دارایی برند (F05)', rd.layers === 7 && rdHasRegistry, `cards=${rd.layers}`);
+  const entryLayer = await page.evaluate(() => {
+    const cards = [...document.querySelectorAll('.readiness-layers .section-card, .section-card')];
+    const hit = cards.find(c => (c.querySelector('h2, h3')?.textContent ?? '').trim() === 'ورود');
+    return { found: !!hit, crit: (hit?.textContent ?? '').includes('Due Diligence') };
+  });
+  ok('گام ۵.۵ — لایهٔ ششم «ورود» با معیار پذیرش Due Diligence', entryLayer.found && entryLayer.crit, JSON.stringify(entryLayer));
   ok('آمادگی: لایهٔ «رابطه» از دادهٔ زنده محاسبه می‌شود', rd.relComputed);
   ok('آمادگی: اقلام قابل به‌روزرسانی (کلیک برای تغییر وضعیت)', rd.clickable >= 20, `clickable=${rd.clickable}`);
   /* چرخش وضعیت یک قلم: سه کلیک = یک دور کامل */
@@ -276,6 +282,14 @@ try {
   ok('اهداف: جدول نُه مؤلفه با روش سنجش و اهداف ماه ۶/۱۲', goal.compRows === 9, `rows=${goal.compRows}`);
   ok('اهداف: ۲۵ پرامپت در سه دسته', goal.promptCats === 3 && goal.promptItems === 25, `cats=${goal.promptCats} items=${goal.promptItems}`);
   ok('اهداف: توصیف هدف راهبردی نمایش داده می‌شود', goal.desc);
+  const goalV6 = await page.evaluate(() => ({
+    title: (document.querySelector('.stat-grid .stat-card, .section-card')?.textContent ?? document.body.textContent ?? ''),
+    hasVcQ: (document.body.textContent ?? '').includes('۱۲ VC و شرکت\u200cهای سرمایه گذاری\u200cشده آن\u200cها چه محصولاتی دارند؟'),
+    hasOrgName: (document.body.textContent ?? '').includes('فناوران پارس ایرانیان'),
+    f14: [...document.querySelectorAll('h2, h3')].some(h => (h.textContent ?? '').includes('جدول پایش ماهانهٔ مرجعیت (F14)')),
+  }));
+  ok('گام ۵.۵ — هدف v6: نام «فناوران پارس ایرانیان» + سؤال ۱۲ VC', goalV6.hasVcQ && goalV6.hasOrgName, JSON.stringify({ vc: goalV6.hasVcQ, name: goalV6.hasOrgName }));
+  ok('گام ۵.۵ — برچسب F14 روی جدول پایش ماهانهٔ مرجعیت', goalV6.f14);
   /* ثبت پایش جدید → ردیف */
   await page.evaluate(() => { [...document.querySelectorAll('button')].find(b => (b.textContent ?? '').includes('ثبت پایش'))?.click(); });
   await new Promise(r => setTimeout(r, 700));

@@ -931,7 +931,7 @@ export default function ProgramPage() {
                     </div>
                   </SectionCard>
 
-                  <SectionCard title={t('جدول پایش ماهانه')} icon={<Activity size={17} />}
+                  <SectionCard title={t('جدول پایش ماهانهٔ مرجعیت (F14)')} icon={<Activity size={17} />}
                     description={t('نتیجهٔ هر پایش با اقدام اصلاحی ثبت می‌شود.')}
                     actions={writable ? (
                       <button className="srip-button primary" onClick={() => { setMonOpen(true); setMonError(''); }}><Plus size={14} /> {t('ثبت پایش')}</button>

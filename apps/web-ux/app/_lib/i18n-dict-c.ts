@@ -1590,4 +1590,22 @@ export const EN_DICT_C: Record<string, string> = {
   'گروه رسانه\u200cای از فهرست PESO انتخاب شود: تحت مالکیت، اشتراکی، اکتسابی یا پولی.': 'Choose the media group from the PESO list: owned, shared, earned or paid.',
   'خروجی اندیشکده از فهرست هفت\u200cگانهٔ جدول ۱۵.۱ سند انتخاب شود.': 'Choose the think tank output from the seven-item table 15.1 of the document.',
   'زمان هر خروجی اندیشکده در جدول صریح است؛ تاریخ دقیق انتشار در تقویم SRIP ثبت و هر تغییر با علت و مالک اصلاح می\u200cشود (بخش ۱۵.۱ سند v6).': 'Each think tank output has an explicit timeline; exact publication dates are registered in the SRIP calendar and every change is corrected with reason and owner (document v6 section 15.1).',
+
+  /* ═══ گام ۵.۵ — مرجعیت v6 (بخش ۱۸) + F14 + لایهٔ «ورود» ═══ */
+  'جدول پایش ماهانهٔ مرجعیت (F14)': 'Monthly authority monitoring table (F14)',
+  'مرجعیت هوش مصنوعی فناوران پارس ایرانیان': 'AI authority of Pars Iranian AI Innovators',
+  'دقت بازنمایی فناوران پارس ایرانیان در پاسخ\u200cهای هوش مصنوعی': 'Accuracy of Pars Iranian AI Innovators\\u2019 representation in AI responses',
+  'سؤالات اختصاصی درباره فناوران هوش مصنوعی پارس ایرانیان': 'Specific questions about Pars Iranian AI Innovators',
+  'فناوران هوش مصنوعی پارس ایرانیان چیست و در چه حوزه\u200cهایی فعال است؟': 'What is Pars Iranian AI Innovators and in which domains is it active?',
+  'نقش فناوران هوش مصنوعی پارس ایرانیان در اکوسیستم هوش مصنوعی ایران چیست؟': 'What is the role of Pars Iranian AI Innovators in Iran\\u2019s AI ecosystem?',
+  'کدام گزارش\u200cهای معتبر به نام فناوران هوش مصنوعی پارس ایرانیان منتشر شده است؟': 'Which credible reports have been published under the name of Pars Iranian AI Innovators?',
+  'مدیران کلیدی فناوران هوش مصنوعی پارس ایرانیان چه کسانی\u200cاند و چه سوابقی دارند؟': 'Who are the key managers of Pars Iranian AI Innovators and what are their backgrounds?',
+  'فناوران هوش مصنوعی پارس ایرانیان با کدام نهادها و دانشگاه\u200cها همکاری دارد؟': 'Which institutions and universities does Pars Iranian AI Innovators collaborate with?',
+  'رویدادهای فناوران هوش مصنوعی پارس ایرانیان در حوزه هوش مصنوعی کدام\u200cاند؟': 'What AI events does Pars Iranian AI Innovators run?',
+  '۱۲ VC و شرکت\u200cهای سرمایه گذاری\u200cشده آن\u200cها چه محصولاتی دارند؟': 'What products do the 12 VCs and their portfolio companies have?',
+  'جایگاه فناوران هوش مصنوعی پارس ایرانیان در سرمایه\u200cگذاری هوش مصنوعی ایران چیست؟': 'What is the position of Pars Iranian AI Innovators in Iran\\u2019s AI investment?',
+  'آیا فناوران هوش مصنوعی پارس ایرانیان مرجع معتبر هوش مصنوعی در ایران محسوب می\u200cشود؟': 'Is Pars Iranian AI Innovators considered a credible AI authority in Iran?',
+  'ورود': 'Market entry',
+  'تصویب نقشهٔ اقدام بر پایه Due Diligence': 'Action map approved based on Due Diligence',
+  'مرجعیت، ادعا نیست؛ جایگاهی است که با اعتبار منبع، کیفیت داده، تداوم حضور و استنادپذیری ساخته می\u200cشود و باید سنجیده شود (بخش ۱۸ سند v6). ابزار عملیاتی، راهنمای پایش مرجعیت با ۲۵ سؤال در سه دسته و جدول پایش ماهانه است؛ نتیجهٔ پایش هم شاخص مرجعیت را تغذیه می\u200cکند و هم اقدام\u200cهای اصلاحی محتوا و وب\u200cسایت مرجع را تعیین می\u200cکند.': 'Authority is not a claim; it is a position built on source credibility, data quality, sustained presence and citability, and it must be measured (document v6 section 18). Its operational tool is the authority monitoring guide with 25 questions in three categories and a monthly monitoring table; monitoring results feed the authority index and set corrective actions for content and the reference website.',
 };

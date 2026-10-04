@@ -964,6 +964,9 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
   const relLayer = rd.body.layers.find(L => L.key === 'rel');
   check('لایهٔ «رابطه» از دادهٔ زنده محاسبه می‌شود (درصد هر قلم)',
     relLayer.computed === true && relLayer.items.every(i => typeof i.percent === 'number'));
+  const entryLayer = rd.body.layers.find(L => L.key === 'market');
+  check('گام ۵.۵ — لایهٔ ششم v6: «ورود» با معیار پذیرش «تصویب نقشهٔ اقدام بر پایه Due Diligence»',
+    entryLayer.label === 'ورود' && entryLayer.criterion === 'تصویب نقشهٔ اقدام بر پایه Due Diligence');
   const rItemBad = await api('/program/readiness/rel/items/stakeholders', { method: 'PATCH', token: dt, body: { status: 'ACCEPTED' } });
   check('قلم لایهٔ محاسبه‌شده قابل ثبت دستی نیست → ۴۰۰', rItemBad.status === 400);
   const rItem = await api('/program/readiness/brand/items/brand-photos', { method: 'PATCH', token: dt, body: { status: 'ACCEPTED', evidence: 'تست باتری' } });
@@ -1171,9 +1174,13 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
   check('نمرهٔ مرکب هدف = ۵۵ (خط پایهٔ سند)', g.composite === 55, `composite=${g.composite}`);
   check('پایش ماهانه: سه رکورد با ارجاع/دقت/اقدام', (g.monitoring ?? []).length === 3
     && g.monitoring.every(m => m.system && typeof m.referralRate === 'number' && typeof m.accuracy === 'number'));
-  check('جدول ۲۵ پرامپت سند دقیقاً مطابق متن', g.prompts[0].questions.includes('بازیگران اصلی هوش مصنوعی در ایران کدام‌اند؟')
-    && g.prompts[1].questions.includes('آیا پارس مرجع معتبر هوش مصنوعی در ایران محسوب می‌شود؟')
+  check('جدول ۲۵ پرامت v6 (۱۸.۲) دقیقاً مطابق متن', g.prompts[0].questions.includes('بازیگران اصلی هوش مصنوعی در ایران کدام‌اند؟')
+    && g.prompts[1].questions.includes('آیا فناوران هوش مصنوعی پارس ایرانیان مرجع معتبر هوش مصنوعی در ایران محسوب می‌شود؟')
     && g.prompts[2].questions.includes('حکمرانی داده در ایران چه الزاماتی دارد؟'));
+  check('هدف v6: عنوان «فناوران پارس ایرانیان» + سؤال ۱۲ VC + مؤلفهٔ دقت بازنمایی',
+    g.title === 'مرجعیت هوش مصنوعی فناوران پارس ایرانیان'
+    && g.prompts[1].questions.includes('۱۲ VC و شرکت‌های سرمایه گذاری‌شده آن‌ها چه محصولاتی دارند؟')
+    && g.components.some((c) => c.title === 'دقت بازنمایی فناوران پارس ایرانیان در پاسخ‌های هوش مصنوعی'));
 
   /* سیم‌کشی kpi-3 به نمرهٔ مرکب هدف */
   const kpis = await api('/program/kpis', { token: dt });
