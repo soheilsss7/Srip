@@ -2798,6 +2798,63 @@ section('گام ۹.۱ — F12 کارت کاربرد و ارزیابی AI (رجی
     clientPatch.status === 403, `s=${clientPatch.status}`);
 }
 
+/* ═════════════════ گام ۹.۲ — F17 دفتر ثبت ریسک و انتشار AI ═════════════════ */
+section('گام ۹.۲ — F17 دفتر ثبت ریسک و انتشار AI (ستون‌های AI + شناسنامهٔ مدل)');
+{
+  const dt = (await login(OWNER.email)).body.accessToken;
+  const ct = (await login(CLIENT.email)).body.accessToken;
+
+  /* ۱) شناسنامهٔ مدل متصل به ارائه‌دهنده */
+  const MC = await api('/ai/model-cards', { token: dt });
+  const cards = MC.body.items ?? [];
+  check('F17: برای هر ارائه‌دهندهٔ سازمان اصلی شناسنامهٔ مدل (مدل/نسخه/منشأ/محدودیت‌ها) هست',
+    MC.status === 200 && cards.length === 3 && cards.every(c => c.model && c.version && c.originFa && c.limitations),
+    `n=${cards.length}`);
+  check('F17: شناسنامه به ارائه‌دهنده وصل است — نام و وضعیت زنده',
+    cards.some(c => c.providerName === 'موتور محلی SRIP' && c.providerStatus === 'ACTIVE'));
+
+  /* ۲) اعتبارسنجی شناسنامه */
+  const dup = await api('/ai/model-cards', { method: 'POST', token: dt, body: { providerId: cards[0].providerId, model: cards[0].model } });
+  check('F17: شناسنامهٔ تکراری برای همان ارائه‌دهنده/مدل → ۴۰۹', dup.status === 409);
+  const badProv = await api('/ai/model-cards', { method: 'POST', token: dt, body: { providerId: 'aip-org-2-local' } });
+  check('F17: ارائه‌دهندهٔ بیرون از محدوده → ۴۰۰', badProv.status === 400);
+  const up = await api(`/ai/model-cards/${cards[0].id}`, { method: 'PATCH', token: dt, body: { limitations: 'محدودیت تازهٔ آزمون', version: 'v9.2-test' } });
+  check('F17: به‌روزرسانی نسخه/محدودیت‌های شناسنامه ثبت شد',
+    up.status === 200 && up.body.version === 'v9.2-test' && up.body.limitations === 'محدودیت تازهٔ آزمون');
+
+  /* ۳) ریسک‌های AI در رجیستری ریسک (F17 توسعه) */
+  const RK = await api('/program/risks', { token: dt });
+  const rkItems = Array.isArray(RK.body) ? RK.body : (RK.body.items ?? []);
+  const aiR = rkItems.filter(r => r.kind === 'AI');
+  check('F17: ریسک‌های AI بذر با هر هشت ستون (مورد استفاده تا توقف)',
+    aiR.length === 2 && aiR.every(r => ['useCase', 'testRun', 'finding', 'version', 'releaseDecision', 'limitation', 'review', 'stopped'].every(k => k in (r.ai ?? {}))),
+    `n=${aiR.length}`);
+
+  /* ۴) اعتبارسنجی ریسک AI */
+  const badAi = await api('/program/risks', { method: 'POST', token: dt, body: { title: 'ریسک AI تست', probability: 'LOW', impact: 'MEDIUM', ownerRole: 'مدیرعامل', ai: { useCase: 'xyz' } } });
+  check('F17: مورد استفادهٔ AI نامعتبر → ۴۰۰', badAi.status === 400);
+  const badDec = await api('/program/risks', { method: 'POST', token: dt, body: { title: 'ریسک AI تست ۲', probability: 'LOW', impact: 'MEDIUM', ownerRole: 'مدیرعامل', ai: { useCase: 'org-question', releaseDecision: 'XXX' } } });
+  check('F17: تصمیم انتشار نامعتبر → ۴۰۰', badDec.status === 400);
+  const noPerm = await api('/program/risks', { method: 'POST', token: ct, body: { title: 'ریسک AI مشتری', probability: 'LOW', impact: 'LOW', ownerRole: 'مدیرعامل', ai: { useCase: 'org-question' } } });
+  check('F17: RBAC — ثبت ریسک AI هم فقط با program.write (client → ۴۰۳)', noPerm.status === 403);
+
+  /* ۵) ثبت و به‌روزرسانی ریسک AI */
+  const okAi = await api('/program/risks', { method: 'POST', token: dt, body: { title: 'اتکای بیش‌ازحد به پیشنهاد اولویت‌بندی', probability: 'MEDIUM', impact: 'MEDIUM', ownerRole: 'مدیر محصول', preventive: 'برچسب «فقط پیشنهاد» همیشه کنار خروجی', ai: { useCase: 'opp-priority', finding: 'امتیاز فقط مرتب‌سازی می‌دهد؛ تصمیم با کاربر است', version: 'demo-v6', releaseDecision: 'CONDITIONAL' } } });
+  check('F17: ثبت ریسک AI با ستون‌های هشت‌گانه → ۲۰۱',
+    okAi.status === 201 && okAi.body.kind === 'AI' && okAi.body.ai.useCase === 'opp-priority');
+  const stop = await api(`/program/risks/${okAi.body.id}`, { method: 'PATCH', token: dt, body: { ai: { releaseDecision: 'REJECTED', stopped: true } } });
+  check('F17: تصمیم انتشار «رد» + پرچم توقف روی ریسک AI ثبت شد',
+    stop.status === 200 && stop.body.ai.releaseDecision === 'REJECTED' && stop.body.ai.stopped === true);
+
+  /* ۶) جداسازی شناسنامه */
+  const cMC = await api('/ai/model-cards', { token: ct });
+  check('F17: جداسازی — آریا فناوری ارائه‌دهنده‌ای ندارد → بدون شناسنامهٔ هلدینگ',
+    cMC.status === 200 && (cMC.body.items ?? []).length === 0);
+  const cPatch = await api(`/ai/model-cards/${cards[0].id}`, { method: 'PATCH', token: ct, body: { limitations: 'x' } });
+  check('F17: ویرایش شناسنامه فقط با ai.admin (client → ۴۰۳/۴۰۴)',
+    cPatch.status === 403 || cPatch.status === 404, `s=${cPatch.status}`);
+}
+
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
 if (failures.length) { console.log(`  Failed: ${failures.join(' | ')}`); }

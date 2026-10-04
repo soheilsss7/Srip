@@ -21,6 +21,13 @@ import {
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const LEVEL_FA: Record<string, string> = { LOW: t('پایین'), MEDIUM: t('متوسط'), HIGH: t('بالا') };
+/* گام ۹.۲ — F17: ستون‌های AI روی ریسک (مورد استفاده تا توقف) */
+const AI_USECASE_FA: Record<string, string> = {
+  'org-question': 'جست‌وجوی سازمانی', 'meeting-assist': 'دستیار جلسه', 'dd-review': 'دستیار Due Diligence',
+  'opp-priority': 'اولویت‌بندی فرصت', 'next-action': 'پیشنهاد اقدام بعدی', 'content-draft': 'تولید محتوا',
+  'authority-monitor': 'پایش مرجعیت', 'authenticity': 'تشخیص اصالت',
+};
+const AI_DECISION_FA: Record<string, string> = { APPROVED: 'تأیید', CONDITIONAL: 'مشروط', REJECTED: 'رد' };
 const LEVEL_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> = { LOW: 'success', MEDIUM: 'warning', HIGH: 'danger' };
 const RISK_STATUS_FA: Record<string, string> = { OPEN: t('باز'), IN_PROGRESS: t('در اقدام'), CLOSED: t('بسته') };
 const RISK_STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = { OPEN: 'danger', IN_PROGRESS: 'warning', CLOSED: 'success' };
@@ -185,10 +192,24 @@ export default function ProgramPage() {
   const submitRisk = async () => {
     setFormError(''); setBusy(true);
     try {
-      await api('/program/risks', { method: 'POST', body: JSON.stringify(form) });
+      /* گام ۹.۲ — اگر کاربرد AI انتخاب شده باشد، ریسک با ستون‌های هشت‌گانهٔ AI ثبت می‌شود */
+      const payload: any = { ...form };
+      if ((form as any).aiUseCase) payload.ai = { useCase: (form as any).aiUseCase, finding: (form as any).aiFinding ?? '' };
+      await api('/program/risks', { method: 'POST', body: JSON.stringify(payload) });
       setCreateOpen(false);
-      setForm({ title: '', probability: 'MEDIUM', impact: 'MEDIUM', preventive: '', reactive: '', ownerRole: '', notes: '' });
+      setForm({ title: '', probability: 'MEDIUM', impact: 'MEDIUM', preventive: '', reactive: '', ownerRole: '', notes: '', aiUseCase: '', aiFinding: '' } as any);
       reloadRisks();
+    } catch (x) { setFormError((x as Error).message); }
+    finally { setBusy(false); }
+  };
+
+  /* گام ۹.۲ — ذخیرهٔ ستون‌های AI ریسک (تصمیم انتشار/توقف) از مودال جزئیات */
+  const saveRiskAi = async () => {
+    if (!riskDetail?.ai) return;
+    setBusy(true);
+    try {
+      const r: any = await api(`/program/risks/${riskDetail.id}`, { method: 'PATCH', body: JSON.stringify({ ai: riskDetail.ai }) });
+      setRiskDetail(r); reloadRisks();
     } catch (x) { setFormError((x as Error).message); }
     finally { setBusy(false); }
   };
@@ -668,7 +689,7 @@ export default function ProgramPage() {
                   <tbody>
                     {risks.items.map((r: any) => (
                       <tr key={r.id} className="row-click" onClick={() => setRiskDetail(r)}>
-                        <td className="t-primary">{r.title}</td>
+                        <td className="t-primary">{r.title}{r.kind === 'AI' && <span className="chip purple" style={{marginInlineStart:6}}>AI</span>}</td>
                         <td><StatusBadge tone={LEVEL_TONE[r.probability]}>{r.probabilityFa}</StatusBadge></td>
                         <td><StatusBadge tone={LEVEL_TONE[r.impact]}>{r.impactFa}</StatusBadge></td>
                         <td><StatusBadge tone={GRADE_TONE[r.grade]}>{r.gradeFa}</StatusBadge></td>
@@ -1009,6 +1030,37 @@ export default function ProgramPage() {
             <div><b>{t('وضعیت')}</b><p><StatusBadge tone={RISK_STATUS_TONE[riskDetail.status]}>{RISK_STATUS_FA[riskDetail.status]}</StatusBadge></p></div>
             <div><b>{t('تاریخ بازبینی بعدی')}</b><p>{faDate(riskDetail.reviewAt)}</p></div>
             {riskDetail.notes ? <div><b>{t('یادداشت')}</b><p>{riskDetail.notes}</p></div> : null}
+            {/* گام ۹.۲ — ستون‌های هشت‌گانهٔ AI (F17) */}
+            {riskDetail.kind === 'AI' && riskDetail.ai && (
+              <div style={{ gridColumn: '1 / -1' }}>
+                <b>{t('ستون‌های AI (F17)')}</b>
+                <div className="detail-grid" style={{ marginTop: 6 }}>
+                  <div><b>{t('مورد استفاده')}</b><p>{AI_USECASE_FA[riskDetail.ai.useCase] ?? riskDetail.ai.useCase ?? '—'}</p></div>
+                  <div><b>{t('آزمون')}</b><p>{riskDetail.ai.testRun || '—'}</p></div>
+                  <div><b>{t('یافته')}</b><p>{riskDetail.ai.finding || '—'}</p></div>
+                  <div><b>{t('نسخه')}</b><p dir="ltr" style={{ textAlign: 'start' }}>{riskDetail.ai.version || '—'}</p></div>
+                  <div><b>{t('محدودیت')}</b><p>{riskDetail.ai.limitation || '—'}</p></div>
+                  <div><b>{t('بازبینی')}</b><p>{riskDetail.ai.review || '—'}</p></div>
+                  <div><b>{t('تصمیم انتشار')}</b>
+                    <p><select value={riskDetail.ai.releaseDecision || ''} disabled={!writable}
+                      onChange={e => setRiskDetail((d: any) => ({ ...d, ai: { ...d.ai, releaseDecision: e.target.value } }))}>
+                      <option value="">—</option>
+                      {Object.entries(AI_DECISION_FA).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+                    </select></p></div>
+                  <div><b>{t('توقف')}</b>
+                    <p><label style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                      <input type="checkbox" checked={!!riskDetail.ai.stopped} disabled={!writable}
+                        onChange={e => setRiskDetail((d: any) => ({ ...d, ai: { ...d.ai, stopped: e.target.checked } }))} />
+                      {riskDetail.ai.stopped ? t('کاربرد متوقف شده است') : t('فعال')}
+                    </label></p></div>
+                </div>
+                {writable && (
+                  <button className="srip-button primary" style={{ marginTop: 8 }} disabled={busy} onClick={saveRiskAi}>
+                    {busy ? t('در حال ذخیره…') : t('ذخیرهٔ ستون‌های AI')}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
       </Modal>
@@ -1060,6 +1112,21 @@ export default function ProgramPage() {
             <input value={form.reactive} onChange={(e) => setForm(f => ({ ...f, reactive: e.target.value }))} placeholder={t('اگر رخ داد…')} />
           </label>
           {formError ? <div className="alert-banner danger" role="alert"><AlertTriangle size={16} /><span>{formError}</span></div> : null}
+        
+          {/* گام ۹.۲ — F17: ریسک AI (اختیاری) */}
+          <label className="field">
+            <span>{t('کاربرد AI (اختیاری — ریسک را به کاربرد ۱۹.۲ وصل می‌کند)')}</span>
+            <select value={(form as any).aiUseCase ?? ''} onChange={(e) => setForm(f => ({ ...f, aiUseCase: e.target.value } as any))}>
+              <option value="">{t('— بدون کاربرد AI —')}</option>
+              {Object.entries(AI_USECASE_FA).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+            </select>
+          </label>
+          {(form as any).aiUseCase ? (
+            <label className="field">
+              <span>{t('یافتهٔ اولیه')}</span>
+              <input value={(form as any).aiFinding ?? ''} onChange={(e) => setForm(f => ({ ...f, aiFinding: e.target.value } as any))} placeholder={t('چه چیزی در آزمون دیده شد؟')} />
+            </label>
+          ) : null}
         </form>
       </Modal>
 

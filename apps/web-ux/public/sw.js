@@ -8129,6 +8129,11 @@ function ensureProgramSeed(){
     {id:'risk-7',organizationId:PROGRAM_ORG_ID,title:'خزش محدوده و درخواست‌های بیرون از برنامه',probability:'HIGH',impact:'MEDIUM',preventive:'قاعدهٔ کنترل محدوده',reactive:'هر درخواست جدید فقط از طریق تغییر رسمی برنامه',ownerRole:'مدیر پروژه',status:'OPEN',createdAt:ago(30),reviewAt:in90(8),notes:''},
     {id:'risk-8',organizationId:PROGRAM_ORG_ID,title:'پیشی‌گرفتن رقبا در انتشار مرجعیت',probability:'MEDIUM',impact:'MEDIUM',preventive:'تقویم انتشار پیوسته؛ تقدم گزارش سالانه',reactive:'پایش ماهانهٔ رقبا',ownerRole:'مدیر اندیشکده و پژوهش',status:'IN_PROGRESS',createdAt:ago(20),reviewAt:in90(15),notes:''},
     {id:'risk-9',organizationId:PROGRAM_ORG_ID,title:'تغییر اولویت مدیریت هلدینگ در میانهٔ برنامه',probability:'LOW',impact:'HIGH',preventive:'گزارش ماهانهٔ شفاف؛ بازنگری فصلی با صورت‌جلسه',reactive:'حفظ هستهٔ ثابت برنامه',ownerRole:'مدیرعامل',status:'CLOSED',createdAt:ago(60),reviewAt:in90(40),notes:'در بازنگری فصل گذشته بسته شد.'},
+    /* گام ۹.۲ — F17: ریسک‌های AI با ستون‌های هشت‌گانه (مورد استفاده تا توقف) */
+    {id:'risk-ai-1',organizationId:PROGRAM_ORG_ID,kind:'AI',title:'تزریق دستور از طریق سند بازیابی‌شده در پرسش سازمانی',probability:'LOW',impact:'HIGH',preventive:'مرز داده و دستور (بلوک غیرقابل اعتماد BEGIN-DATA/END-DATA)',reactive:'توقف per-کاربرد و بازگشت به پاسخ انسانی',ownerRole:'مدیر محصول',status:'IN_PROGRESS',createdAt:ago(25),reviewAt:in90(20),notes:'آزمون ۱۹.۴ در باتری api هر تغییر کد اجرا می‌شود.',
+      ai:{useCase:'org-question',testRun:'باتری api — چک تزریق دستور',finding:'پیلود داخل سند بازیابی‌شده در بلوک داده می‌ماند و دستور سامانه را عوض نمی‌کند',version:'demo-v6',releaseDecision:'CONDITIONAL',limitation:'خروجی فقط از منابع بازیابی‌شده؛ پاسخ بدون منبع نمایش داده نمی‌شود',review:'با هر تغییر موتور بازیابی',stopped:false}},
+    {id:'risk-ai-2',organizationId:PROGRAM_ORG_ID,kind:'AI',title:'نشت الگوی محرمانه در خروجی مدل ابری',probability:'LOW',impact:'HIGH',preventive:'پوشاندن ورودی پیش از ارسال ابری + پالایش خروجی در همهٔ مسیرها',reactive:'قطع کلید ارائه‌دهنده و توقف مسیر ابری',ownerRole:'مدیر فناوری اطلاعات',status:'OPEN',createdAt:ago(20),reviewAt:in90(25),notes:'',
+      ai:{useCase:'content-draft',testRun:'باتری api — چک نشت داده',finding:'الگوهای محرمانه در خروجی پالایش می‌شوند؛ مسیر لوکال معاف از خروج داده',version:'demo-v6',releaseDecision:'APPROVED',limitation:'مسیر ابری فقط با کلید ثبت‌شده و پس از پوشاندن؛ مسیر لوکال اول است',review:'ماهانه در کمیتهٔ امنیت',stopped:false}},
   ];}
   /* ── آمادگی شش‌لایه — اجزا و معیار پذیرش از جدول بخش ۱۲ سند؛ وزن‌ها بر پایهٔ
         تأکید سند (بازار = مهم‌ترین محصول؛ رابطه = دادهٔ زندهٔ SRIP).
@@ -8792,6 +8797,25 @@ function ensureAiRoutingSeed(){
    مدل/زمان/هزینه/وضعیت)؛ داشبورد مصرف همهٔ اعدادش را از همین لاگ می‌سازد — هیچ
    عدد دستی نیست. کلید توقف کلی و per-کاربرد با دلیل و اقدام‌کننده ثبت می‌شود؛
    حالت HALTED یعنی «بازگشت به فرآیند انسانی» (توقف ایمن، ماه ۱۲ سند). */
+/* ═══════════ گام ۹.۲ — F17 دفتر ثبت ریسک و انتشار AI ═══════════
+   ستون‌های هشت‌گانهٔ AI روی ریسک: مورد استفاده · آزمون · یافته · نسخه ·
+   تصمیم انتشار · محدودیت · بازبینی · توقف. اعتبارسنجی مشترک POST/PATCH. */
+const AI_RISK_RELEASE_FA={APPROVED:'تأیید',CONDITIONAL:'مشروط',REJECTED:'رد'};
+function aiRiskFields(b,partial){
+  /* partial=true یعنی PATCH: فقط کلیدهای ارسالی بررسی می‌شوند */
+  const keys=partial?Object.keys(b??{}).filter(k=>k in (b??{})&&['useCase','testRun','finding','version','releaseDecision','limitation','review','stopped'].includes(k))
+    :['useCase','testRun','finding','version','releaseDecision','limitation','review','stopped'];
+  const out={};
+  for(const k of keys){
+    if(!(k in (b??{}))) continue;
+    if(k==='useCase'){ const u=String(b.useCase??'').trim(); if(u&&!AI_F12_USE_CASES.some(s=>s.key===u)) return {err:'مورد استفادهٔ AI باید یکی از هشت کاربرد جدول ۱۹.۲ باشد.'}; out.useCase=u; }
+    else if(k==='releaseDecision'){ const d=String(b.releaseDecision??'').toUpperCase(); if(d&&!['APPROVED','CONDITIONAL','REJECTED'].includes(d)) return {err:'تصمیم انتشار باید تأیید/مشروط/رد باشد.'}; out.releaseDecision=d; }
+    else if(k==='stopped'){ out.stopped=!!b.stopped; }
+    else if(k==='version'){ out.version=String(b.version??'').trim().slice(0,40); }
+    else { out[k]=String(b[k]??'').trim().slice(0,400); }
+  }
+  return {err:null,ai:out};
+}
 /* ═══════════ گام ۹.۱ — F12 کارت کاربرد و ارزیابی AI (۱۹.۲/۱۹.۳ سند v6) ═══════════
    رجیستری هشت کاربرد AI جدول ۱۹.۲ با هر سیزده ستون؛ ستون «مدل» زنده از مسیریابی
    درگاه خوانده می‌شود (عدد/متن دستی نیست) و «تشخیص اصالت» به‌عنوان کاربردِ موتور
@@ -8830,6 +8854,34 @@ function ensureAiUseCaseCardsFor(orgId){
   }
 }
 function ensureAiUseCaseCards(){ for(const orgId of AI_GATEWAY_ORGS) ensureAiUseCaseCardsFor(orgId); }
+/* ═══════════ گام ۹.۲ — شناسنامهٔ مدل: کارت مستقل متصل به ارائه‌دهنده ═══════════
+   مدل/نسخه/منشأ/محدودیت‌ها برای هر ارائه‌دهندهٔ سازمان؛ وضعیت ارائه‌دهنده زنده خوانده می‌شود. */
+const AI_MODEL_ORIGIN_FA={LOCAL_BUILTIN:'موتور درون‌سامانه‌ای (SRIP)',LOCAL_OPEN:'لوکال متن‌باز (Ollama)',CLOUD:'سرویس ابری سازگار-OpenAI'};
+function aiProviderOrigin(p){ if(p?.kind==='BUILTIN') return 'LOCAL_BUILTIN'; if(p?.mode==='LOCAL') return 'LOCAL_OPEN'; return 'CLOUD'; }
+function ensureAiModelCardsFor(orgId){
+  if(!Array.isArray(DB.aiModelCards)) DB.aiModelCards=[];
+  if(!orgId) return;
+  ensureAiProvidersSeed();
+  for(const p of (DB.aiProviders??[]).filter(x=>x.organizationId===orgId)){
+    if(DB.aiModelCards.some(c=>c.providerId===p.id)) continue;
+    const origin=aiProviderOrigin(p);
+    DB.aiModelCards.push({id:`amc-${orgId}-${p.id}`,organizationId:orgId,providerId:p.id,
+      model:p.model??'—',version:'demo-v6',origin,
+      limitations:origin==='LOCAL_BUILTIN'
+        ?'موتور قطعی استدلال زبانی ندارد؛ پاسخ فقط از منابع بازیابی‌شده ساخته می‌شود و منبع نداشتن = نمایش نداشتن'
+        :origin==='LOCAL_OPEN'
+        ?'مدل لوکال فقط با نصب Ollama روی دستگاه کار می‌شود؛ بدون سرویس بیرونی، داده از دستگاه خارج نمی‌شود'
+        :'مسیر ابری فقط با کلید ثبت‌شده؛ ورودی پیش از ارسال پوشانده می‌شود و در قطعی سرویس، مسیر لوکال جایگزین است',
+      useCases:origin==='CLOUD'?['content-draft']:AI_APPLICATIONS.map(a=>a.key),
+      updatedAt:nowIso()});
+  }
+}
+function aiModelCardView(card){
+  const p=(DB.aiProviders??[]).find(x=>x.id===card.providerId&&x.organizationId===card.organizationId);
+  return {...card,providerName:p?.name??'—',providerMode:p?.mode??null,providerStatus:p?.status??null,
+    originFa:AI_MODEL_ORIGIN_FA[card.origin]??card.origin,
+    useCasesFa:(card.useCases??[]).map(k=>AI_APPLICATIONS.find(a=>a.key===k)?.label??k)};
+}
 /* ستون «مدل» زنده از مسیریابی درگاه؛ کاربرد authenticity موتور قواعد قطعی است */
 function f12CardView(orgId,card){
   const gw=AI_APPLICATIONS.some(a=>a.key===card.application);
@@ -15930,14 +15982,22 @@ async function __handler(req, res) {
     if(!ownerRole) return json(res,400,{message:'ریسک بدون مالک ثبت نمی‌شود (بخش ۲۵ سند).'});
     const riskChart=programSettingsFor(req).roles;
     if(riskChart.length&&!riskChart.includes(ownerRole)) return json(res,400,{message:'مالک ریسک باید یکی از نقش‌های چارت سازمان شما باشد.'});
+    /* گام ۹.۲ — F17: ثبت ریسک AI با ستون‌های هشت‌گانه (اختیاری) */
+    let ai=null;
+    if(b.ai&&typeof b.ai==='object'){
+      const v=aiRiskFields(b.ai,false);
+      if(v.err) return json(res,400,{message:v.err});
+      ai={useCase:'',testRun:'',finding:'',version:'',releaseDecision:'',limitation:'',review:'',stopped:false,...v.ai};
+    }
     const row={id:`risk-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`,
       organizationId:primaryOrgId(authUser)??visibleOrgIds(req)[0]??PROGRAM_ORG_ID,
       title,probability,impact,
       preventive:String(b.preventive??'').trim(),reactive:String(b.reactive??'').trim(),
       ownerRole,status:'OPEN',createdAt:nowIso(),
-      reviewAt:new Date(Date.now()+90*86400000).toISOString(),notes:String(b.notes??'').trim()};
+      reviewAt:new Date(Date.now()+90*86400000).toISOString(),notes:String(b.notes??'').trim(),
+      ...(ai?{kind:'AI',ai}:{})};
     DB.risks.unshift(row); saveDb();
-    audit(req,'CREATE','Risk',row.id,'OK',{title:row.title,ownerRole});
+    audit(req,'CREATE','Risk',row.id,'OK',{title:row.title,ownerRole,...(ai?{aiUseCase:ai.useCase}:{})});
     return json(res,201,{...row,grade:riskGrade(row),gradeFa:RISK_GRADE_FA[riskGrade(row)]});
   }
   const riskId=match('/program/risks/:id');
@@ -15954,8 +16014,14 @@ async function __handler(req, res) {
     if(b.status!=null){const st=String(b.status).toUpperCase(); if(!RISK_STATUS_FA[st]) return json(res,400,{message:'وضعیت باید باز/در اقدام/بسته باشد.'}); row.status=st;}
     for(const k of ['preventive','reactive','notes']) if(b[k]!=null) row[k]=String(b[k]).trim();
     if(b.reviewAt!=null) row.reviewAt=String(b.reviewAt);
+    /* گام ۹.۲ — به‌روزرسانی ستون‌های AI ریسک (تصمیم انتشار/توقف/…) */
+    if(b.ai&&typeof b.ai==='object'){
+      const v=aiRiskFields(b.ai,true);
+      if(v.err) return json(res,400,{message:v.err});
+      row.kind='AI'; row.ai={useCase:'',testRun:'',finding:'',version:'',releaseDecision:'',limitation:'',review:'',stopped:false,...(row.ai??{}),...v.ai};
+    }
     saveDb();
-    audit(req,'UPDATE','Risk',row.id,'OK',{status:row.status});
+    audit(req,'UPDATE','Risk',row.id,'OK',{status:row.status,...(b.ai?{ai:true}:{})});
     return json(res,200,{...row,grade:riskGrade(row),gradeFa:RISK_GRADE_FA[riskGrade(row)]});
   }
   if(is('/program/readiness')&&method==='GET'){
@@ -16892,6 +16958,54 @@ async function __handler(req, res) {
     saveDb();
     audit(req,'TEST_RUN','AiUseCaseCard',card.id,run.result,{cases:run.cases,findings:run.findings});
     return json(res,201,f12CardView(orgId,card));
+  }
+
+  /* ─────────────── گام ۹.۲ — شناسنامهٔ مدل (/ai/model-cards) ────────── */
+  if(is('/ai/model-cards')&&method==='GET'){
+    if(!hasPerm('ai.use')) return json(res,403,{message:'شما مجوز «فراخوانی درگاه هوش مصنوعی» (ai.use) را ندارید.'});
+    ensureAiRoutingSeed();
+    const ids=visibleOrgIds(req);
+    for(const id of ids) ensureAiModelCardsFor(id);
+    const prim=primaryOrgId(authUser)??ids[0]??null;
+    const items=(DB.aiModelCards??[]).filter(c=>c.organizationId===prim).map(aiModelCardView);
+    return json(res,200,{items,
+      rule:'هر ارائه‌دهندهٔ هوش مصنوعی یک شناسنامهٔ مدل مستقل دارد: مدل، نسخه، منشأ و محدودیت‌ها — متصل به ارائه‌دهنده و با وضعیت زندهٔ آن (F17 / ۱۹.۴ سند v6).'});
+  }
+  if(is('/ai/model-cards')&&method==='POST'){
+    if(!hasPerm('ai.admin')) return json(res,403,{message:'شما مجوز «مدیریت درگاه هوش مصنوعی» (ai.admin) را ندارید.'});
+    ensureAiRoutingSeed();
+    const b=await readBody(req);
+    const ids=visibleOrgIds(req);
+    const p=(DB.aiProviders??[]).find(x=>x.id===String(b.providerId??'')&&ids.includes(x.organizationId));
+    if(!p) return json(res,400,{message:'ارائه‌دهنده در محدودهٔ شما نیست.'});
+    const model=String(b.model??p.model??'').trim()||'—';
+    if((DB.aiModelCards??[]).some(c=>c.providerId===p.id&&c.model===model))
+      return json(res,409,{message:'برای این ارائه‌دهنده و مدل همین‌اکنون شناسنامه ثبت شده است.'});
+    const card={id:`amc-${p.organizationId}-${p.id}-${Date.now().toString(36)}`,organizationId:p.organizationId,providerId:p.id,
+      model,version:String(b.version??'demo-v6').trim().slice(0,40)||'demo-v6',origin:aiProviderOrigin(p),
+      limitations:String(b.limitations??'').trim().slice(0,400),
+      useCases:Array.isArray(b.useCases)?b.useCases.filter(k=>AI_F12_USE_CASES.some(s=>s.key===k)):[]},
+      card2={...card,updatedAt:nowIso()};
+    DB.aiModelCards=[...(DB.aiModelCards??[]),card2]; saveDb();
+    audit(req,'CREATE','AiModelCard',card2.id,'OK',{providerId:p.id,model});
+    return json(res,201,aiModelCardView(card2));
+  }
+  const amcId=match('/ai/model-cards/:id');
+  if(amcId&&method==='PATCH'){
+    if(!hasPerm('ai.admin')) return json(res,403,{message:'شما مجوز «مدیریت درگاه هوش مصنوعی» (ai.admin) را ندارید.'});
+    const card=(DB.aiModelCards??[]).find(c=>c.id===amcId[0]&&visibleOrgIds(req).includes(c.organizationId));
+    if(!card) return json(res,404,{message:'شناسنامهٔ مدل یافت نشد یا خارج از محدودهٔ شماست.'});
+    const b=await readBody(req);
+    if(b.version!=null) card.version=String(b.version).trim().slice(0,40)||card.version;
+    if(b.limitations!=null) card.limitations=String(b.limitations).trim().slice(0,400);
+    if(Array.isArray(b.useCases)){
+      const bad=b.useCases.find(k=>!AI_F12_USE_CASES.some(s=>s.key===k));
+      if(bad) return json(res,400,{message:`کاربرد «${bad}» در فهرست هشت کاربرد ۱۹.۲ نیست.`});
+      card.useCases=b.useCases;
+    }
+    card.updatedAt=nowIso(); saveDb();
+    audit(req,'UPDATE','AiModelCard',card.id,'OK',{version:card.version});
+    return json(res,200,aiModelCardView(card));
   }
 
   /* ─────────────── گام ۶.۳ — وضعیت درگاه و کلید توقف (/ai/gateway) + سابقهٔ فراخوانی‌ها (/ai/calls) ────────── */

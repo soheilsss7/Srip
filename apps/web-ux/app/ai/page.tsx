@@ -52,7 +52,10 @@ function GatewayPanel(){
   const [useCases,setUseCases]=useState<any>(null);
   const [f12For,setF12For]=useState<any>(null); /* کارت باز‌شده */
   const [f12Run,setF12Run]=useState<any>(null); /* فرم اجرای آزمون */
-  const [f12Dec,setF12Dec]=useState<any>(null); /* فرم تصمیم انتشار
+  const [f12Dec,setF12Dec]=useState<any>(null); /* فرم تصمیم انتشار */
+  /* گام ۹.۲ — شناسنامهٔ مدل (F17) */
+  const [modelCards,setModelCards]=useState<any>(null);
+  const [mcEdit,setMcEdit]=useState<any>(null);
   /* گام ۷.۱ — نمایهٔ معنایی و جست‌وجوی ترکیبی */
   const [ragIndex,setRagIndex]=useState<any>(null);
   const [ragQuery,setRagQuery]=useState('');
@@ -73,6 +76,7 @@ function GatewayPanel(){
     apiGet('/ai/usage').then((r:any)=>setUsageG(r?.gateway??null)).catch(()=>{});
     apiGet('/ai/rag/index').then(setRagIndex).catch(()=>{});
     apiGet('/ai/use-cases').then((r:any)=>{setUseCases(r);setF12For((f:any)=>f?(r.items??[]).find((c:any)=>c.id===f.id)??f:f);}).catch(()=>{});
+    apiGet('/ai/model-cards').then(setModelCards).catch(()=>{});
   }
   useEffect(()=>{reload();},[]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -173,6 +177,16 @@ function GatewayPanel(){
     try{
       await api(`/ai/use-cases/${card.id}`,{method:'PATCH',body:JSON.stringify({releaseDecision:f12Dec.releaseDecision,rollback:f12Dec.rollback??card.rollback})});
       setF12Dec(null); reload();
+    }catch(x:any){ setError(x.message); } finally{ setBusyId(''); }
+  }
+
+  /* گام ۹.۲ — ذخیرهٔ شناسنامهٔ مدل */
+  async function mcSave(){
+    if(!mcEdit) return;
+    setBusyId('mc-'+mcEdit.id); setError('');
+    try{
+      await api(`/ai/model-cards/${mcEdit.id}`,{method:'PATCH',body:JSON.stringify({version:mcEdit.version,limitations:mcEdit.limitations})});
+      setMcEdit(null); reload();
     }catch(x:any){ setError(x.message); } finally{ setBusyId(''); }
   }
 
@@ -386,6 +400,50 @@ function GatewayPanel(){
           <div className="form-actions">
             <button className="btn btn-primary" onClick={()=>f12SaveDecision(f12For)} disabled={!f12Dec?.releaseDecision||busyId==='f12d-'+f12For.id}>
               {busyId==='f12d-'+f12For.id?t('…'):t('ثبت تصمیم انتشار')}</button>
+          </div>
+        </div>)}
+      </Modal>
+
+      {/* ═══ گام ۹.۲ — شناسنامهٔ مدل (F17) ═══ */}
+      <div className="composer-head" style={{marginTop:18}}>
+        <h2><FileText size={16}/> {t('شناسنامهٔ مدل — متصل به ارائه‌دهنده')}</h2>
+        <span className="chip neutral">{t('مدل · نسخه · منشأ · محدودیت‌ها')}</span>
+      </div>
+      <div className="table-wrap">
+        <table>
+          <thead><tr>
+            <th>{t('مدل')}</th><th>{t('نسخه')}</th><th>{t('منشأ')}</th><th>{t('ارائه‌دهنده (زنده)')}</th><th>{t('محدودیت‌ها')}</th><th>{t('کاربردهای متصل')}</th><th></th>
+          </tr></thead>
+          <tbody>
+            {(modelCards?.items??[]).map((c:any)=>(
+              <tr key={c.id} data-amc={c.providerId}>
+                <td className="t-primary" dir="ltr">{c.model}</td>
+                <td dir="ltr">{c.version}</td>
+                <td>{c.originFa}</td>
+                <td>
+                  {c.providerName}
+                  <span className={`chip ${c.providerStatus==='ACTIVE'?'success':c.providerStatus==='UNREACHABLE'?'danger':'neutral'}`} style={{marginInlineStart:6}}>
+                    {AI_STATUS_FA[c.providerStatus]??c.providerStatus}
+                  </span>
+                </td>
+                <td className="t-muted" style={{maxWidth:320}}>{c.limitations}</td>
+                <td className="t-muted">{(c.useCasesFa??[]).join(' · ')||'—'}</td>
+                <td><button className="btn btn-ghost btn-sm" onClick={()=>setMcEdit({...c})}>{t('ویرایش')}</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {modelCards?.rule && <p className="field-hint">{modelCards.rule}</p>}
+      <Modal open={!!mcEdit} title={`${t('شناسنامهٔ مدل')} — ${mcEdit?.model??''}`} description={mcEdit?`${t('ارائه‌دهنده')}: ${mcEdit.providerName}`:undefined} onClose={()=>setMcEdit(null)}>
+        {mcEdit&&(<div className="entity-form">
+          <div className="field"><label className="field-label">{t('نسخه')}</label>
+            <input dir="ltr" value={mcEdit.version} onChange={e=>setMcEdit((m:any)=>({...m,version:e.target.value}))}/></div>
+          <div className="field full"><label className="field-label">{t('محدودیت‌ها')}</label>
+            <textarea rows={3} value={mcEdit.limitations} onChange={e=>setMcEdit((m:any)=>({...m,limitations:e.target.value}))}/></div>
+          <div className="form-actions">
+            <button className="btn btn-primary" onClick={mcSave} disabled={busyId==='mc-'+mcEdit.id}>
+              {busyId==='mc-'+mcEdit.id?t('…'):t('ذخیرهٔ شناسنامهٔ مدل')}</button>
           </div>
         </div>)}
       </Modal>

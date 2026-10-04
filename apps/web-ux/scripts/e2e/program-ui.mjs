@@ -195,7 +195,9 @@ try {
   const noOwner = await page.evaluate(() => (document.querySelector('.modal-card .alert-banner, .modal-card [role=alert]')?.textContent ?? ''));
   ok('ثبت ریسک بدون مالک → پیام «ریسک بدون مالک ثبت نمی‌شود»', noOwner.includes('بدون مالک'), `msg=${noOwner.slice(0, 60)}`);
   /* با مالک → ثبت موفق و ردیف جدید */
-  const ownerSel = await page.evaluateHandle(() => [...document.querySelectorAll('.modal-card select')].pop());
+  /* سِلکت مالک = سِلکتی که گزینهٔ نقش چارت را دارد (فرم ۹.۲ سِلکت «کاربرد AI» هم دارد) */
+  const ownerSel = await page.evaluateHandle(() =>
+    [...document.querySelectorAll('.modal-card select')].find(s => [...s.options].some(o => (o.textContent ?? '') === 'مدیر پروژه')));
   await ownerSel.asElement().select('مدیر پروژه');
   await new Promise(r => setTimeout(r, 300));
   await page.evaluate(() => { const f = document.querySelector('#risk-create-form'); if (f) f.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
