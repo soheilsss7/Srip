@@ -2714,6 +2714,90 @@ section('گام ۸.۳ — اصالت داده و منشأ محتوا (اثران
     && M.body.reconciliation.duplicateFingerprints[0].documents.length === 2);
 }
 
+/* ═════════════════ گام ۹.۱ — F12 کارت کاربرد و ارزیابی AI ═════════════════ */
+section('گام ۹.۱ — F12 کارت کاربرد و ارزیابی AI (رجیستری هشت کاربرد ۱۹.۲)');
+{
+  const dt = (await login(OWNER.email)).body.accessToken;
+  const ct = (await login(CLIENT.email)).body.accessToken;
+
+  /* ۱) رجیستری هشت کاربرد با هر سیزده ستون */
+  const R = await api('/ai/use-cases', { token: dt });
+  const items = R.body.items ?? [];
+  const cols = ['problem', 'user', 'allowedData', 'model', 'tool', 'retrieval', 'authority', 'testSet', 'sourceReliance', 'security', 'humanConfirm', 'releaseDecision', 'rollback'];
+  check('F12: رجیستری هشت کاربرد جدول ۱۹.۲ (هفت کاربرد درگاه + تشخیص اصالت)',
+    R.status === 200 && items.length === 8, `n=${items.length}`);
+  check('F12: هر کارت هر سیزده ستون (مسئله تا بازگشت ایمن) را دارد',
+    items.every(c => cols.every(k => c[k] != null && c[k] !== '')));
+
+  /* ۲) سطح اختیار هر کاربرد طبق ۱۹.۲ */
+  const byKey = Object.fromEntries(items.map(c => [c.application, c]));
+  check('F12: سطح اختیار — جست‌وجوی سازمانی «فقط پیشنهاد» و تشخیص اصالت «اقدام محدودکننده فقط پس از بازبینی انسانی»',
+    byKey['org-question']?.authority === 'فقط پیشنهاد'
+    && byKey['authenticity']?.authority === 'اقدام محدودکننده فقط پس از بازبینی انسانی');
+
+  /* ۳) ستون مدل زنده از مسیریابی؛ اصالت = موتور قواعد قطعی */
+  const rt = await api('/ai/routing', { token: dt });
+  const rtQ = (rt.body.items ?? []).find(r => r.application === 'org-question');
+  /* probe واقعی: مدل مسیر موقتاً عوض می‌شود، کارت باید دنبال کند، سپس بازگردانی */
+  const probe = await api('/ai/routing', { method: 'PATCH', token: dt, body: { application: 'org-question', providerId: rtQ.providerId, model: 'f12-live-probe', fallbackProviderId: rtQ.fallbackProviderId ?? '' } });
+  const R2 = await api('/ai/use-cases', { token: dt });
+  const probeCard = (R2.body.items ?? []).find(c => c.application === 'org-question');
+  const back = await api('/ai/routing', { method: 'PATCH', token: dt, body: { application: 'org-question', providerId: rtQ.providerId, model: rtQ.model, fallbackProviderId: rtQ.fallbackProviderId ?? '' } });
+  check('F12: ستون «مدل» زنده است — با تغییر مسیر درگاه، کارت به‌روز می‌شود',
+    probe.status === 200 && probeCard?.model === 'f12-live-probe' && back.status === 200,
+    `probe=${probeCard?.model} back=${back.status}`);
+  check('F12: کارت تشخیص اصالت به موتور قواعد قطعی (۱۶ نشانه) وصل است، نه مسیریابی ابری',
+    byKey['authenticity']?.gateway === false && byKey['authenticity']?.model === 'srip-rules-signals');
+
+  /* ۴) پوشش: هر کاربرد فعال درگاه کارت دارد */
+  check('F12: پوشش — هر کاربرد فعال درگاه یک کارت F12 دارد (بدون مورد جاافتاده)',
+    R.body.coverage?.gatewayApplications === 7 && R.body.coverage?.covered === 7
+    && Array.isArray(R.body.coverage?.missing) && R.body.coverage.missing.length === 0);
+
+  /* ۵) ثبت اجرای آزمون */
+  const cid = byKey['org-question'].id;
+  const badRun = await api(`/ai/use-cases/${cid}`, { method: 'POST', token: dt, body: { result: 'MAYBE' } });
+  check('F12: نتیجهٔ آزمون نامعتبر → ۴۰۰', badRun.status === 400);
+  const run = await api(`/ai/use-cases/${cid}`, { method: 'POST', token: dt, body: { result: 'FAIL', findings: 'تزریق دستور در سند بازیابی‌شده' } });
+  check('F12: ثبت اجرای آزمون FAIL → آخرین نتیجه و تاریخ به‌روز + شاهد یافته',
+    run.status === 201 && run.body.lastTestResult === 'FAIL' && !!run.body.lastTestAt
+    && run.body.testRuns?.[0]?.findings === 'تزریق دستور در سند بازیابی‌شده');
+
+  /* ۶) تصمیم انتشار و بازگشت ایمن */
+  const badDec = await api(`/ai/use-cases/${cid}`, { method: 'PATCH', token: dt, body: { releaseDecision: 'XXX' } });
+  check('F12: تصمیم انتشار نامعتبر → ۴۰۰', badDec.status === 400);
+  const dec = await api(`/ai/use-cases/${cid}`, { method: 'PATCH', token: dt, body: { releaseDecision: 'CONDITIONAL', rollback: 'توقف per-کاربرد و بازگشت به پاسخ انسانی' } });
+  check('F12: تصمیم انتشار «مشروط» + روش بازگشت ایمن ثبت شد',
+    dec.status === 200 && dec.body.releaseDecision === 'CONDITIONAL' && dec.body.rollback.includes('بازگشت به پاسخ انسانی'));
+
+  /* ۷) قاعدهٔ سمت سرور (۱۹.۳): فراخوانی کاربردِ بدون کارت → ۴۰۰ */
+  const dupCard = await api('/ai/use-cases', { method: 'POST', token: dt, body: { application: 'meeting-assist' } });
+  check('F12: کارت تکراری برای کاربرد موجود → ۴۰۹', dupCard.status === 409);
+  /* کارت سازمان اصلی (org-1) صریحاً — نظم درج کارت‌ها نباید معیار باشد */
+  const mainCard = (R.body.items ?? []).find((c) => c.application === 'org-question' && c.organizationId === 'org-1');
+  const del = await api(`/ai/use-cases/${mainCard?.id ?? cid}`, { method: 'DELETE', token: dt });
+  check('F12: حذف کارت (ai.admin) با پیام قاعدهٔ ۱۹.۳',
+    del.status === 200 && !!del.body.rule);
+  const blockedAsk = await api('/ai/ask', { method: 'POST', token: dt, body: { question: 'تعاملات اخیر با تأمین‌کننده قطعات البرز' } });
+  check('F12: قاعدهٔ سرور — فراخوانی کاربردِ بدون کارت F12 → ۴۰۰ AI_NO_F12_CARD',
+    blockedAsk.status === 400 && blockedAsk.body.code === 'AI_NO_F12_CARD', `s=${blockedAsk.status}`);
+  const readd = await api('/ai/use-cases', { method: 'POST', token: dt, body: { application: 'org-question' } });
+  const askAgain = await api('/ai/ask', { method: 'POST', token: dt, body: { question: 'تعاملات اخیر با تأمین‌کننده قطعات البرز' } });
+  check('F12: ثبت کارت تازه (مشروط) → کاربرد دوباره قابل فراخوانی است',
+    readd.status === 201 && readd.body.releaseDecision === 'CONDITIONAL' && askAgain.status === 200,
+    `re=${readd.status} ask=${askAgain.status}`);
+
+  /* ۸) جداسازی و مجوز */
+  const clientList = await api('/ai/use-cases', { token: ct });
+  const cliItems = clientList.body.items ?? [];
+  check('F12: جداسازی — آریا فناوری فقط کارت‌های سازمان خودش را می‌بیند (بدون هیچ کارت هلدینگ)',
+    clientList.status === 200 && cliItems.length === 8 && cliItems.every(c => c.organizationId === 'org-2'),
+    `n=${cliItems.length}`);
+  const clientPatch = await api(`/ai/use-cases/${cliItems[0]?.id ?? 'x'}`, { method: 'PATCH', token: ct, body: { releaseDecision: 'APPROVED' } });
+  check('F12: RBAC — تصمیم انتشار فقط با مجوز ai.admin (client → ۴۰۳)',
+    clientPatch.status === 403, `s=${clientPatch.status}`);
+}
+
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
 if (failures.length) { console.log(`  Failed: ${failures.join(' | ')}`); }

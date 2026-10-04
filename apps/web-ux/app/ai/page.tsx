@@ -9,6 +9,7 @@ import {
   Sparkles, Search, CalendarCheck, FileText, ListChecks, ShieldCheck, AlertTriangle, Target,
   Lightbulb, Briefcase, Send, History, Cpu, Zap, Database, Clock, Wand2, CheckCircle2, Info,
   Users, ArrowLeft, Link2, KeyRound, PlugZap, Pencil, Trash2, Plus, Server, Cloud, Copy, Activity,
+  ClipboardCheck,
 } from 'lucide-react';
 import { localeTag, lt, t } from '../_lib/i18n';
 
@@ -21,7 +22,10 @@ const AI_MODE_FA=lt<Record<string,string>>({LOCAL:'مسیر لوکال',API_KEY:
 const AI_KIND_FA=lt<Record<string,string>>({BUILTIN:'موتور داخلی (قطعی)',OPENAI_COMPATIBLE:'سازگار-OpenAI',ANTHROPIC:'Anthropic',GEMINI:'Gemini'});
 const AI_STATUS_FA=lt<Record<string,string>>({ACTIVE:'فعال',INACTIVE:'غیرفعال',UNREACHABLE:'در دسترس نیست'});
 const AI_STATUS_CHIP:Record<string,string>={ACTIVE:'success',INACTIVE:'neutral',UNREACHABLE:'danger'};
-const AI_APP_FA=lt<Record<string,string>>({'org-question':'پرسش سازمانی','meeting-assist':'دستیار جلسه','dd-review':'دستیار Due Diligence','opp-priority':'اولویت‌بندی فرصت','next-action':'پیشنهاد اقدام بعدی','content-draft':'تولید محتوا','authority-monitor':'پایش مرجعیت'});
+const AI_APP_FA=lt<Record<string,string>>({'org-question':'پرسش سازمانی','meeting-assist':'دستیار جلسه','dd-review':'دستیار Due Diligence','opp-priority':'اولویت‌بندی فرصت','next-action':'پیشنهاد اقدام بعدی','content-draft':'تولید محتوا','authority-monitor':'پایش مرجعیت','authenticity':'تشخیص اصالت'});
+/* گام ۹.۱ — F12 */
+const F12_DECISION_FA=lt<Record<string,string>>({APPROVED:'تأیید',CONDITIONAL:'مشروط',REJECTED:'رد'});
+const F12_RESULT_FA=lt<Record<string,string>>({PASS:'قبول',FAIL:'مردود'});
 const emptyProviderForm={name:'',mode:'LOCAL',kind:'OPENAI_COMPATIBLE',baseUrl:'',model:''};
 
 function GatewayPanel(){
@@ -44,6 +48,11 @@ function GatewayPanel(){
   const [pv,setPv]=useState<any>(null);
   /* گام ۶.۳ — پایش فنی و کلید توقف */
   const [gw,setGw]=useState<any>(null);
+  /* گام ۹.۱ — F12 کارت کاربرد و ارزیابی AI */
+  const [useCases,setUseCases]=useState<any>(null);
+  const [f12For,setF12For]=useState<any>(null); /* کارت باز‌شده */
+  const [f12Run,setF12Run]=useState<any>(null); /* فرم اجرای آزمون */
+  const [f12Dec,setF12Dec]=useState<any>(null); /* فرم تصمیم انتشار
   /* گام ۷.۱ — نمایهٔ معنایی و جست‌وجوی ترکیبی */
   const [ragIndex,setRagIndex]=useState<any>(null);
   const [ragQuery,setRagQuery]=useState('');
@@ -63,6 +72,7 @@ function GatewayPanel(){
     apiGet('/ai/calls').then((r:any)=>setCalls(r.items??[])).catch(()=>{});
     apiGet('/ai/usage').then((r:any)=>setUsageG(r?.gateway??null)).catch(()=>{});
     apiGet('/ai/rag/index').then(setRagIndex).catch(()=>{});
+    apiGet('/ai/use-cases').then((r:any)=>{setUseCases(r);setF12For((f:any)=>f?(r.items??[]).find((c:any)=>c.id===f.id)??f:f);}).catch(()=>{});
   }
   useEffect(()=>{reload();},[]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -145,6 +155,24 @@ function GatewayPanel(){
         :{application:haltFor,halted:true,reason:haltReason};
       await api('/ai/gateway',{method:'PATCH',body:JSON.stringify(body)});
       setHaltFor(null); setHaltReason(''); reload();
+    }catch(x:any){ setError(x.message); } finally{ setBusyId(''); }
+  }
+
+  /* گام ۹.۱ — F12: ثبت اجرای آزمون و تصمیم انتشار */
+  async function f12TestRun(card:any){
+    if(!f12Run?.result) return;
+    setBusyId('f12-'+card.id); setError('');
+    try{
+      await api(`/ai/use-cases/${card.id}`,{method:'POST',body:JSON.stringify({result:f12Run.result,findings:f12Run.findings??''})});
+      setF12Run(null); reload();
+    }catch(x:any){ setError(x.message); } finally{ setBusyId(''); }
+  }
+  async function f12SaveDecision(card:any){
+    if(!f12Dec?.releaseDecision) return;
+    setBusyId('f12d-'+card.id); setError('');
+    try{
+      await api(`/ai/use-cases/${card.id}`,{method:'PATCH',body:JSON.stringify({releaseDecision:f12Dec.releaseDecision,rollback:f12Dec.rollback??card.rollback})});
+      setF12Dec(null); reload();
     }catch(x:any){ setError(x.message); } finally{ setBusyId(''); }
   }
 
@@ -269,6 +297,98 @@ function GatewayPanel(){
         </table>
       </div>
       {routing?.rule && <p className="field-hint">{routing.rule}</p>}
+
+      {/* ═══ گام ۹.۱ — F12 کارت کاربرد و ارزیابی AI ═══ */}
+      <div className="composer-head" style={{marginTop:18}}>
+        <h2><ClipboardCheck size={16}/> {t('کارت کاربرد و ارزیابی AI (F12)')}</h2>
+        {useCases&&(useCases.coverage?.missing?.length
+          ?<span className="chip danger">{t('کاربرد بدون کارت')}: {fa(useCases.coverage.missing.length)}</span>
+          :<span className="chip success">{t('هر کاربرد فعال درگاه کارت دارد')}</span>)}
+      </div>
+      <div className="table-wrap">
+        <table>
+          <thead><tr>
+            <th>{t('کاربرد')}</th><th>{t('سطح اختیار')}</th><th>{t('مدل (زنده)')}</th><th>{t('تصمیم انتشار')}</th><th>{t('آخرین آزمون')}</th><th></th>
+          </tr></thead>
+          <tbody>
+            {(useCases?.items??[]).map((c:any)=>(
+              <tr key={c.id} data-f12={c.application}>
+                <td className="t-primary">{AI_APP_FA[c.application]??c.application}</td>
+                <td><span className="chip neutral">{c.authority}</span></td>
+                <td dir="ltr" className="t-muted">{c.providerName} — {c.model}</td>
+                <td><span className={`chip ${c.releaseDecision==='APPROVED'?'success':c.releaseDecision==='CONDITIONAL'?'warning':'danger'}`}>{F12_DECISION_FA[c.releaseDecision]??c.releaseDecision}</span></td>
+                <td>{c.lastTestResult
+                  ?<span className={`chip ${c.lastTestResult==='PASS'?'success':'danger'}`}>{F12_RESULT_FA[c.lastTestResult]??c.lastTestResult}</span>
+                  :<span className="chip neutral">{t('ثبت نشده')}</span>}</td>
+                <td><button className="btn btn-ghost btn-sm" onClick={()=>{setF12For(c);setF12Run(null);setF12Dec(null);}}>{t('کارت F12')}</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {useCases?.rule && <p className="field-hint">{useCases.rule}</p>}
+
+      {/* جزئیات کارت F12 — هر سیزده ستون + فرم آزمون/تصمیم */}
+      <Modal open={!!f12For} title={`${t('کارت F12')} — ${f12For?(AI_APP_FA[f12For.application]??f12For.application):''}`}
+        description={f12For?`${t('سطح اختیار')}: ${f12For.authority}`:undefined}
+        onClose={()=>{setF12For(null);setF12Run(null);setF12Dec(null);}}>
+        {f12For&&(<div className="list">
+          <div className="panel-title"><div><h2>{t('مشخصات کاربرد (۱۹.۲)')}</h2></div>
+            <span className={`chip ${f12For.status==='ACTIVE'?'success':'warning'}`}>{f12For.status==='ACTIVE'?t('فعال'):t('متوقف')}</span></div>
+          <div className="listRow"><span style={{flex:1}}>
+            <strong>{t('مسئله')}</strong><small style={{display:'block'}}>{f12For.problem}</small>
+            <strong>{t('کاربر')}</strong><small style={{display:'block'}}>{f12For.user}</small>
+            <strong>{t('دادهٔ مجاز')}</strong><small style={{display:'block'}}>{f12For.allowedData}</small>
+            <strong>{t('ابزار')}</strong><small style={{display:'block'}}>{f12For.tool}</small>
+            <strong>{t('روش بازیابی')}</strong><small style={{display:'block'}}>{f12For.retrieval}</small>
+            <strong>{t('مجموعهٔ آزمون')}</strong><small style={{display:'block'}}>{f12For.testSet?.name} — {fa(f12For.testSet?.cases)} {t('مورد')}</small>
+            <strong>{t('میزان اتکای پاسخ به منبع')}</strong><small style={{display:'block'}}>{f12For.sourceReliance}</small>
+            <strong>{t('امنیت')}</strong><small style={{display:'block'}}>{f12For.security}</small>
+            <strong>{t('تأیید انسانی')}</strong><small style={{display:'block'}}>{f12For.humanConfirm}</small>
+            <strong>{t('روش بازگشت ایمن')}</strong><small style={{display:'block'}}>{f12For.rollback}</small>
+            <strong>{t('مدل (زنده)')}</strong><small style={{display:'block',direction:'ltr'}}>{f12For.providerName} — {f12For.model}</small>
+          </span></div>
+          {(f12For.testRuns??[]).length>0&&(<div className="panel-title"><div><h2>{t('اجراهای اخیر آزمون')}</h2></div></div>)}
+          {(f12For.testRuns??[]).slice(0,5).map((r:any)=>(
+            <div className="listRow" key={r.id}><span style={{flex:1}}>
+              <strong>{F12_RESULT_FA[r.result]??r.result}</strong>
+              <small style={{display:'block'}}>{r.actor} · {new Date(r.at).toLocaleString('fa-IR')}</small>
+              {r.findings&&<small style={{display:'block',opacity:.8}}>{r.findings}</small>}
+            </span></div>
+          ))}
+          <div className="panel-title"><div><h2>{t('ثبت اجرای آزمون')}</h2></div></div>
+          <div className="entity-form">
+            <div className="field"><label className="field-label">{t('نتیجه')}</label>
+              <select value={f12Run?.result??''} onChange={e=>setF12Run((f:any)=>({...f,result:e.target.value}))}>
+                <option value="">— {t('انتخاب کنید')} —</option>
+                <option value="PASS">{t('قبول')}</option>
+                <option value="FAIL">{t('مردود')}</option>
+              </select></div>
+            <div className="field full"><label className="field-label">{t('یافته‌ها')}</label>
+              <input value={f12Run?.findings??''} onChange={e=>setF12Run((f:any)=>({...f,findings:e.target.value}))} placeholder={t('مثال: تزریق دستور در سند بازیابی‌شده')}/></div>
+          </div>
+          <div className="form-actions">
+            <button className="btn btn-primary" onClick={()=>f12TestRun(f12For)} disabled={!f12Run?.result||busyId==='f12-'+f12For.id}>
+              {busyId==='f12-'+f12For.id?t('…'):t('ثبت اجرای آزمون')}</button>
+          </div>
+          <div className="panel-title"><div><h2>{t('تصمیم انتشار')}</h2></div></div>
+          <div className="entity-form">
+            <div className="field"><label className="field-label">{t('تصمیم انتشار')}</label>
+              <select value={f12Dec?.releaseDecision??''} onChange={e=>setF12Dec((d:any)=>({...d,releaseDecision:e.target.value}))}>
+                <option value="">— {t('انتخاب کنید')} —</option>
+                <option value="APPROVED">{t('تأیید')}</option>
+                <option value="CONDITIONAL">{t('مشروط')}</option>
+                <option value="REJECTED">{t('رد')}</option>
+              </select></div>
+            <div className="field full"><label className="field-label">{t('روش بازگشت ایمن')}</label>
+              <input value={f12Dec?.rollback??f12For.rollback} onChange={e=>setF12Dec((d:any)=>({...d,rollback:e.target.value}))}/></div>
+          </div>
+          <div className="form-actions">
+            <button className="btn btn-primary" onClick={()=>f12SaveDecision(f12For)} disabled={!f12Dec?.releaseDecision||busyId==='f12d-'+f12For.id}>
+              {busyId==='f12d-'+f12For.id?t('…'):t('ثبت تصمیم انتشار')}</button>
+          </div>
+        </div>)}
+      </Modal>
 
       {/* ═══ گام ۶.۲ — خط‌مشی کنترل داده (۱۹.۴) ═══ */}
       <div className="composer-head" style={{marginTop:18}}>

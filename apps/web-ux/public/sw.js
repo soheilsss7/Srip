@@ -8792,6 +8792,57 @@ function ensureAiRoutingSeed(){
    مدل/زمان/هزینه/وضعیت)؛ داشبورد مصرف همهٔ اعدادش را از همین لاگ می‌سازد — هیچ
    عدد دستی نیست. کلید توقف کلی و per-کاربرد با دلیل و اقدام‌کننده ثبت می‌شود؛
    حالت HALTED یعنی «بازگشت به فرآیند انسانی» (توقف ایمن، ماه ۱۲ سند). */
+/* ═══════════ گام ۹.۱ — F12 کارت کاربرد و ارزیابی AI (۱۹.۲/۱۹.۳ سند v6) ═══════════
+   رجیستری هشت کاربرد AI جدول ۱۹.۲ با هر سیزده ستون؛ ستون «مدل» زنده از مسیریابی
+   درگاه خوانده می‌شود (عدد/متن دستی نیست) و «تشخیص اصالت» به‌عنوان کاربردِ موتور
+   قواعد قطعی (۸.۱) خارج از مسیریابی، کارت خودش را دارد. */
+const AI_F12_AUTHORITY={
+  'org-question':'فقط پیشنهاد',
+  'meeting-assist':'ثبت پس از تأیید صاحب جلسه',
+  'dd-review':'نظر نهایی صرفاً انسانی',
+  'opp-priority':'بدون رد/قبول خودکار',
+  'next-action':'ارسال فقط با تأیید',
+  'content-draft':'انتشار صرفاً انسانی',
+  'authority-monitor':'تأیید مدیر اندیشکده',
+  'authenticity':'اقدام محدودکننده فقط پس از بازبینی انسانی',
+};
+const AI_F12_USE_CASES=[
+  {key:'org-question',problem:'پرسش از دادهٔ روابط، سازمان‌ها و اسناد بدون جست‌وجوی دستی',user:'همهٔ کاربران سازمانی در محدودهٔ خود',allowedData:'نمایهٔ معنایی: مخزن دانش + اسناد CLEAN/READY در محدوده + رکوردهای ساختاریافته',tool:'پنل پرسش‌وپاسخ درگاه هوش مصنوعی',retrieval:'نمایهٔ معنایی و جست‌وجوی ترکیبی (۷.۱) با ارجاع‌های موتور قطعی',testSet:{name:'پرسش‌های نمونهٔ سازمانی',cases:12},sourceReliance:'کامل — پاسخ فقط از منابع بازیابی‌شده ساخته می‌شود و منابع با پیوند همیشه همراه پاسخ است',security:'مرز داده و دستور + پوشاندن ورودی در مسیر ابری + پالایش خروجی در همهٔ مسیرها + محدودهٔ سازمانی',humanConfirm:'بدون اقدام — خروجی با برچسب «فقط پیشنهاد» ارائه می‌شود',rollback:'توقف per-کاربرد از پایش فنی و بازگشت به پاسخ انسانی؛ مسیر جایگزین لوکال همیشه در دسترس است'},
+  {key:'meeting-assist',problem:'استخراج خلاصه/تصمیم/تعهد/اقدام از متن جلسه',user:'صاحب جلسه و شرکت‌کنندگان مجاز',allowedData:'متن یا رونوشت جلسه‌ای که کاربر به آن دسترسی دارد',tool:'پنل دستیار جلسه در صفحهٔ جلسه',retrieval:'تحلیل قطعی الگوهای زبانی روی متن ورودی (بدون سرویس بیرونی)',testSet:{name:'رونوشت‌های نمونهٔ جلسه',cases:8},sourceReliance:'کامل — پیشنهاد چهارگانه مستقیم از متن جلسه با امکان ویرایش',security:'مرز داده و دستور روی متن جلسه + ثبت در aiCalls با شناسهٔ واحد',humanConfirm:'ثبت پیشنهادها فقط پس از تأیید صاحب جلسه (۱۹.۲)',rollback:'ثبت نشدن پیشنهادها به‌صورت خودکار؛ توقف per-کاربرد از پایش فنی'},
+  {key:'dd-review',problem:'بررسی منظم محورهای Due Diligence در برابر سوالات استاندارد',user:'کاربران مجاز پروندهٔ DD',allowedData:'سوالات استاندارد DD + پاسخ‌ها و شواهد پیوست پروندهٔ در محدوده',tool:'پنل پروندهٔ Due Diligence',retrieval:'چرخهٔ پرسش–پاسخ ساختاریافته روی پروندهٔ DD',testSet:{name:'محورهای ۶.۲.۱/۶.۲.۲ سند',cases:9},sourceReliance:'کامل — وضعیت هر محور از پاسخ‌ها و شواهد ثبت‌شده محاسبه می‌شود',security:'محدودهٔ سازمانی + مجوز دسترسی به پرونده + ثبت کامل تغییرات',humanConfirm:'نظر نهایی صرفاً انسانی — دستیار فقط پیش‌نویس و جمع‌بندی می‌سازد',rollback:'پروندهٔ DD بدون جمع‌بندی دستیار معتبر می‌ماند؛ توقف per-کاربرد'},
+  {key:'opp-priority',problem:'رتبه‌بندی فرصت‌ها با معیارهای متعدد',user:'مدیران فرصت و فروش',allowedData:'فرصت‌ها، ارزش پلکانی، احتمال و تعاملات رابطهٔ مرتبط در محدوده',tool:'پنل اولویت‌بندی هوشمند در صفحهٔ فرصت',retrieval:'محاسبهٔ وزنی روی دادهٔ زندهٔ فرصت و آخرین تعامل رابطه',testSet:{name:'فرصت‌های نمونه با امتیاز معلوم',cases:10},sourceReliance:'کامل — امتیاز و دلیل سه‌عاملی از دادهٔ خود فرصت محاسبه می‌شود',security:'بدون خروج داده — محاسبهٔ درون‌سازانه و قطعی',humanConfirm:'بدون رد/قبول خودکار — امتیاز فقط مرتب‌سازی و دلیل می‌دهد',rollback:'مرتب‌سازی دستی همیشه در دسترس است؛ توقف per-کاربرد'},
+  {key:'next-action',problem:'پیشنهاد گام بعدی روی تعامل/تعهد/اقدام',user:'کاربران تعامل و تعهد',allowedData:'تعامل، تعهد و اقدام‌های مرتبط در محدوده',tool:'کارت پیشنهاد اقدام بعدی روی تعامل',retrieval:'قواعد قطعی مهلت و وضعیت روی دادهٔ زندهٔ تعامل',testSet:{name:'سناریوهای مهلت و وضعیت',cases:6},sourceReliance:'کامل — پیشنهاد از وضعیت و مهلت رکورد محاسبه می‌شود',security:'بدون خروج داده — قواعد درون‌سامانه',humanConfirm:'ارسال/ثبت فقط با تأیید کاربر (۱۹.۲)',rollback:'اقدام دستی از مسیر معمول همیشه ممکن است؛ توقف per-کاربرد'},
+  {key:'content-draft',problem:'پیش‌نویس محتوای منبع‌دار از بستهٔ اسناد مجاز',user:'تیم رسانه و محتوا',allowedData:'فقط اسناد انتخاب‌شدهٔ مجاز در محدوده (چک‌باکس)',tool:'پنل دستیار تولید محتوا در رسانهٔ تقویم',retrieval:'بستهٔ اسناد مجاز کاربر + قالب انتشار نه‌گامی',testSet:{name:'پیش‌نویس‌های نمونه با برچسب سهم AI',cases:7},sourceReliance:'کامل — ادعاها به سند منبع پیوند می‌خورند؛ سهم AI اعلام می‌شود',security:'پوشاندن الگوهای محرمانه + مرز داده و دستور + کارت F08 کامل',humanConfirm:'انتشار صرفاً انسانی با C2PA و اثرانگشت SHA-256 انتشار (۷.۵)',rollback:'پیش‌نویس منتشرنشده قابل دورریز است؛ توقف per-کاربرد'},
+  {key:'authority-monitor',problem:'پایش جایگاه مرجعیت در برابر رقبا',user:'مدیر اندیشکده و پژوهش',allowedData:'رقیبان هفت‌بُعدی و نظرسنجی‌های عمومی در محدوده',tool:'پنل پایش مرجعیت هوش مصنوعی',retrieval:'دادهٔ رقیب/نظرسنجی + معیارهای پایش ماهانه',testSet:{name:'دوره‌های پایش نمونه',cases:5},sourceReliance:'کامل — نتیجهٔ پایش از دادهٔ رقیب و نظرسنجی محاسبه می‌شود',security:'محدودهٔ سازمانی + دادهٔ عمومی/در محدوده',humanConfirm:'ثبت نتیجهٔ پایش با تأیید مدیر اندیشکده (۱۹.۲)',rollback:'پایش دستی با راهنمای ۲۵ سؤال ممکن است؛ توقف per-کاربرد'},
+  {key:'authenticity',problem:'تشخیص حساب/منبع/سرور جعلی و ریسک اصالت',user:'تحلیلگر اعتماد و ایمنی + مالک',allowedData:'رویدادهای امنیتی، نشست‌ها و دستگاه‌های در محدوده',tool:'موتور نشانه‌ها و پرونده‌های اصالت (F13) در هوشمندی',retrieval:'کاتالوگ ۱۶ نشانهٔ وزن‌دار روی دادهٔ زندهٔ امنیتی',testSet:{name:'سناریوهای نشانه و امتیاز (۸.۱)',cases:16},sourceReliance:'کامل — امتیاز ریسک قطعی از نشانه‌های فعال با دلیل و شاهد',security:'دسترسی فقط برای نقش تحلیلگر/مالک + snapshot نسخهٔ قاعده در پرونده',humanConfirm:'اقدام محدودکننده فقط پس از بازبینی انسانی (۸.۲/۱۹.۵.۱)',rollback:'پرونده بدون اقدام باز می‌ماند؛ رفع محدودیت با ابطال اعتراض'},
+];
+function ensureAiUseCaseCardsFor(orgId){
+  if(!Array.isArray(DB.aiUseCases)) DB.aiUseCases=[];
+  if(!orgId||DB.aiUseCases.some(c=>c.organizationId===orgId)) return; /* سازمان تازه کارت می‌گیرد؛ کارت حذف‌شده خودکار برنمی‌گردد */
+  const at=nowIso();
+  for(const s of AI_F12_USE_CASES){
+    DB.aiUseCases.push({id:`f12-${orgId}-${s.key}`,organizationId:orgId,application:s.key,
+      problem:s.problem,user:s.user,allowedData:s.allowedData,tool:s.tool,retrieval:s.retrieval,
+      authorityKey:s.key,authority:AI_F12_AUTHORITY[s.key],
+      testSet:{...s.testSet},sourceReliance:s.sourceReliance,security:s.security,humanConfirm:s.humanConfirm,
+      releaseDecision:'APPROVED',releaseActor:'demo@srip.local',releaseAt:at,
+      rollback:s.rollback,status:'ACTIVE',testRuns:[],lastTestAt:null,lastTestResult:null,updatedAt:at});
+  }
+}
+function ensureAiUseCaseCards(){ for(const orgId of AI_GATEWAY_ORGS) ensureAiUseCaseCardsFor(orgId); }
+/* ستون «مدل» زنده از مسیریابی درگاه؛ کاربرد authenticity موتور قواعد قطعی است */
+function f12CardView(orgId,card){
+  const gw=AI_APPLICATIONS.some(a=>a.key===card.application);
+  let model=null,providerName=null,providerMode=null,routeUsable=null;
+  if(gw){ const r=aiResolveRoute(orgId,card.application);
+    model=r.model; providerName=r.providerName; providerMode=r.mode;
+    const p=(DB.aiProviders??[]).find(x=>x.id===r.providerId&&x.organizationId===orgId);
+    const fb=(DB.aiRouting??[]).find(x=>x.organizationId===orgId&&x.application===card.application);
+    const fbProv=(DB.aiProviders??[]).find(x=>x.id===fb?.fallbackProviderId&&x.organizationId===orgId);
+    routeUsable=p?.status==='ACTIVE'||fbProv?.status==='ACTIVE';
+  }else{ model='srip-rules-signals'; providerName='موتور قواعد قطعی — کاتالوگ نشانه‌های اصالت (۸.۱)'; providerMode='LOCAL'; routeUsable=true; }
+  return {...card,gateway:gw,model,providerName,providerMode,routeUsable};
+}
 function aiGatewayStateFor(orgId){
   return (DB.aiGateway??[]).find(g=>g.organizationId===orgId)
     ??{organizationId:orgId,status:'ACTIVE',reason:null,actorEmail:null,haltedAt:null,
@@ -8811,6 +8862,13 @@ function aiHaltCheck(req,application){
   const st=aiGatewayStateFor(orgId);
   if(st.status==='HALTED') return {halted:true,scope:'GLOBAL',status:st.status,reason:st.reason,orgId};
   if(st.haltedApps?.[application]) return {halted:true,scope:'APPLICATION',status:'HALTED',reason:st.haltedApps[application]?.reason??st.reason,orgId};
+  /* گام ۹.۱ — قاعدهٔ سمت سرور (۱۹.۳): فراخوانی کاربردِ بدون کارت F12 → ۴۰۰ */
+  ensureAiUseCaseCardsFor(orgId);
+  if(AI_APPLICATIONS.some(a=>a.key===application)
+    &&!(DB.aiUseCases??[]).some(c=>c.organizationId===orgId&&c.application===application)){
+    return {halted:true,httpStatus:400,code:'AI_NO_F12_CARD',scope:'F12',reason:'کاربرد بدون کارت ارزیابی F12',
+      message:'این کاربرد AI کارت ارزیابی (F12) ندارد — فراخوانی از درگاه مجاز نیست (۱۹.۳).',orgId};
+  }
   return {halted:false,orgId};
 }
 function aiLogCall(req,application,info){
@@ -10733,11 +10791,11 @@ async function __handler(req, res) {
     /* گام ۶.۳ — کلید توقف: همهٔ فراخوانی‌های AI از درگاه می‌گذرند */
     const halt=aiHaltCheck(req,'org-question');
     if(halt.halted){
-      aiLogCall(req,'org-question',{providerName:'—',model:'—',status:'HALTED',
+      aiLogCall(req,'org-question',{providerName:'—',model:'—',status:halt.code==='AI_NO_F12_CARD'?'ERROR':'HALTED',
         promptChars:(b.query??'').length,durationMs:0,orgId:halt.orgId,
         note:`توقف ${halt.scope==='GLOBAL'?'کلی':'کاربرد'}: ${halt.reason??''}`});
-      return json(res,503,{code:'AI_HALTED',
-        message:'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',
+      return json(res,halt.httpStatus??503,{code:halt.code??'AI_HALTED',
+        message:halt.message??'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',
         gateway:{status:'HALTED',scope:halt.scope,reason:halt.reason}});
     }
     const t0=Date.now();
@@ -16457,8 +16515,8 @@ async function __handler(req, res) {
     if(!hasPerm('ai.use')) return json(res,403,{message:'شما مجوز «فراخوانی درگاه هوش مصنوعی» (ai.use) را ندارید.'});
     const halt=aiHaltCheck(req,'content-draft');
     if(halt.halted){
-      aiLogCall(req,'content-draft',{providerName:'—',model:'—',status:'HALTED',promptChars:0,durationMs:0,orgId:halt.orgId,note:`توقف: ${halt.reason??''}`});
-      return json(res,503,{code:'AI_HALTED',message:'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',gateway:{status:'HALTED',scope:halt.scope,reason:halt.reason}});
+      aiLogCall(req,'content-draft',{providerName:'—',model:'—',status:halt.code==='AI_NO_F12_CARD'?'ERROR':'HALTED',promptChars:0,durationMs:0,orgId:halt.orgId,note:`توقف: ${halt.reason??''}`});
+      return json(res,halt.httpStatus??503,{code:halt.code??'AI_HALTED',message:halt.message??'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',gateway:{status:'HALTED',scope:halt.scope,reason:halt.reason}});
     }
     const orgIds=visibleOrgIds(req);
     const docsIn=(DB.documents??[]).filter(d=>d.organizationId&&orgIds.includes(d.organizationId));
@@ -16488,7 +16546,7 @@ async function __handler(req, res) {
   if(aiCDraftApply&&method==='POST'){
     if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید — ثبت پیش‌نویس محتوا نیاز به آن دارد.'});
     const halt=aiHaltCheck(req,'content-draft');
-    if(halt.halted) return json(res,503,{code:'AI_HALTED',message:'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',gateway:{status:'HALTED',scope:halt.scope,reason:halt.reason}});
+    if(halt.halted) return json(res,halt.httpStatus??503,{code:halt.code??'AI_HALTED',message:halt.message??'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',gateway:{status:'HALTED',scope:halt.scope,reason:halt.reason}});
     const b=await readBody(req);
     if(b.confirmed!==true) return json(res,400,{message:'بدون تأیید کاربر چیزی ثبت نمی‌شود — گاهی confirmed=true لازم است (۱۹.۲).'});
     const d=b.draft??{};
@@ -16750,6 +16808,92 @@ async function __handler(req, res) {
         :'مسیر ابری: ورودی پیش از ارسال پوشانده می‌شود و خروجی هم از الگوهای محرمانه پالایش می‌شود.'});
   }
 
+  /* ─────────────── گام ۹.۱ — F12 کارت کاربرد و ارزیابی AI (/ai/use-cases) ────────── */
+  if(is('/ai/use-cases')&&method==='GET'){
+    if(!hasPerm('ai.use')) return json(res,403,{message:'شما مجوز «فراخوانی درگاه هوش مصنوعی» (ai.use) را ندارید.'});
+    ensureAiRoutingSeed();
+    const ids=visibleOrgIds(req);
+    for(const id of ids) ensureAiUseCaseCardsFor(id); /* هر سازمانی که AI صدا می‌زند کارت دارد */
+    /* رجیستری = یک کارت به ازای هر کاربرد (۱۹.۲)؛ کارت سازمان اصلی مقدم بر سایر سازمان‌های مرئی */
+    const prim=primaryOrgId(authUser)??ids[0]??null;
+    const cards=AI_F12_USE_CASES.map(s=>{
+      const card=(DB.aiUseCases??[]).find(c=>c.organizationId===prim&&c.application===s.key)
+        ||(DB.aiUseCases??[]).find(c=>ids.includes(c.organizationId)&&c.application===s.key);
+      return card?f12CardView(card.organizationId,card):null;
+    }).filter(Boolean);
+    /* پوشش: هر کاربردِ فعال درگاهِ سازمان اصلی باید کارت داشته باشد (۱۹.۳) */
+    const routedApps=(DB.aiRouting??[]).filter(r=>r.organizationId===prim).map(r=>r.application);
+    const covered=new Set((DB.aiUseCases??[]).filter(c=>c.organizationId===prim&&AI_APPLICATIONS.some(a=>a.key===c.application)).map(c=>c.application));
+    const missing=[...new Set(routedApps.filter(a=>!covered.has(a)))];
+    return json(res,200,{items:cards,
+      coverage:{gatewayApplications:new Set(routedApps).size,covered:covered.size,missing},
+      rule:'هر کاربرد فعال درگاه هوش مصنوعی باید یک کارت F12 (کاربرد و ارزیابی AI) داشته باشد؛ ستون مدل زنده از مسیریابی خوانده می‌شود و تصمیم انتشار/آزمون/بازگشت ایمن در همین کارت ثبت می‌شود (۱۹.۲/۱۹.۳ سند v6).'});
+  }
+  if(is('/ai/use-cases')&&method==='POST'){
+    if(!hasPerm('ai.admin')) return json(res,403,{message:'شما مجوز «مدیریت درگاه هوش مصنوعی» (ai.admin) را ندارید.'});
+    ensureAiRoutingSeed();
+    const b=await readBody(req);
+    const app=AI_F12_USE_CASES.find(s=>s.key===String(b.application??'').trim());
+    if(!app) return json(res,400,{message:'کاربرد نامعتبر است — از فهرست هشت کاربرد جدول ۱۹.۲ انتخاب کنید.'});
+    const orgId=primaryOrgId(authUser)??visibleOrgIds(req)[0]??PROGRAM_ORG_ID;
+    ensureAiUseCaseCardsFor(orgId);
+    if((DB.aiUseCases??[]).some(c=>c.organizationId===orgId&&c.application===app.key))
+      return json(res,409,{message:'این کاربرد هم‌اکنون کارت F12 دارد.'});
+    const at=nowIso();
+    const card={id:`f12-${orgId}-${app.key}-${Date.now().toString(36)}`,organizationId:orgId,application:app.key,
+      problem:app.problem,user:app.user,allowedData:app.allowedData,tool:app.tool,retrieval:app.retrieval,
+      authorityKey:app.key,authority:AI_F12_AUTHORITY[app.key],
+      testSet:{...app.testSet},sourceReliance:app.sourceReliance,security:app.security,humanConfirm:app.humanConfirm,
+      releaseDecision:'CONDITIONAL',releaseActor:authUser?.email??'—',releaseAt:at,
+      rollback:app.rollback,status:'ACTIVE',testRuns:[],lastTestAt:null,lastTestResult:null,updatedAt:at};
+    DB.aiUseCases.push(card); saveDb();
+    audit(req,'CREATE','AiUseCaseCard',card.id,'OK',{application:app.key});
+    return json(res,201,f12CardView(orgId,card));
+  }
+  const f12Id=match('/ai/use-cases/:id');
+  if(f12Id&&(method==='PATCH'||method==='POST'||method==='DELETE')){
+    if(!hasPerm('ai.admin')) return json(res,403,{message:'شما مجوز «مدیریت درگاه هوش مصنوعی» (ai.admin) را ندارید.'});
+    ensureAiRoutingSeed(); ensureAiUseCaseCards();
+    const card=(DB.aiUseCases??[]).find(c=>c.id===f12Id[0]&&visibleOrgIds(req).includes(c.organizationId));
+    if(!card) return json(res,404,{message:'کارت F12 یافت نشد یا خارج از محدودهٔ شماست.'});
+    const orgId=card.organizationId;
+    if(method==='DELETE'){
+      DB.aiUseCases=(DB.aiUseCases??[]).filter(c=>c.id!==card.id);
+      saveDb();
+      audit(req,'DELETE','AiUseCaseCard',card.id,'OK',{application:card.application});
+      return json(res,200,{ok:true,deleted:card.id,rule:'فراخوانی این کاربرد از درگاه تا ثبت کارت تازه F12 با ۴۰۰ رد می‌شود (۱۹.۳).'});
+    }
+    if(method==='PATCH'){
+      const b=await readBody(req);
+      if(b.releaseDecision!=null){
+        const d=String(b.releaseDecision??'').toUpperCase();
+        if(!['APPROVED','CONDITIONAL','REJECTED'].includes(d)) return json(res,400,{message:'تصمیم انتشار باید یکی از مقادیر تأیید/مشروط/رد باشد.'});
+        card.releaseDecision=d; card.releaseActor=authUser?.email??'—'; card.releaseAt=nowIso();
+      }
+      if(b.status!=null){
+        const st=String(b.status??'').toUpperCase();
+        if(!['ACTIVE','PAUSED'].includes(st)) return json(res,400,{message:'وضعیت کارت باید فعال یا متوقف باشد.'});
+        card.status=st;
+      }
+      if(b.rollback!=null) card.rollback=String(b.rollback??'').trim().slice(0,400);
+      card.updatedAt=nowIso(); saveDb();
+      audit(req,'UPDATE','AiUseCaseCard',card.id,'OK',{releaseDecision:card.releaseDecision,status:card.status});
+      return json(res,200,f12CardView(orgId,card));
+    }
+    /* POST — ثبت یک اجرای مجموعهٔ آزمون روی کارت */
+    const b=await readBody(req);
+    const result=String(b.result??'').toUpperCase();
+    if(!['PASS','FAIL'].includes(result)) return json(res,400,{message:'نتیجهٔ آزمون باید PASS یا FAIL باشد.'});
+    const cases=Math.max(1,Math.min(1000,Number(b.cases)||card.testSet?.cases||1));
+    const run={id:`f12r-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,
+      at:nowIso(),actor:authUser?.email??'—',result,cases,findings:String(b.findings??'').trim().slice(0,300)};
+    card.testRuns=[run,...(card.testRuns??[])].slice(0,20);
+    card.lastTestAt=run.at; card.lastTestResult=result; card.updatedAt=nowIso();
+    saveDb();
+    audit(req,'TEST_RUN','AiUseCaseCard',card.id,run.result,{cases:run.cases,findings:run.findings});
+    return json(res,201,f12CardView(orgId,card));
+  }
+
   /* ─────────────── گام ۶.۳ — وضعیت درگاه و کلید توقف (/ai/gateway) + سابقهٔ فراخوانی‌ها (/ai/calls) ────────── */
   if(is('/ai/gateway')&&method==='GET'){
     if(!hasPerm('ai.use')) return json(res,403,{message:'شما مجوز «فراخوانی درگاه هوش مصنوعی» (ai.use) را ندارید.'});
@@ -16856,11 +17000,11 @@ async function __handler(req, res) {
     if(question.length>500) return json(res,400,{message:'پرسش بیش از حد بلند است (حداکثر ۵۰۰ نویسه).'});
     const halt=aiHaltCheck(req,'org-question');
     if(halt.halted){
-      aiLogCall(req,'org-question',{providerName:'—',model:'—',status:'HALTED',
+      aiLogCall(req,'org-question',{providerName:'—',model:'—',status:halt.code==='AI_NO_F12_CARD'?'ERROR':'HALTED',
         promptChars:question.length,durationMs:0,orgId:halt.orgId,
         note:`توقف ${halt.scope==='GLOBAL'?'کلی':'کاربرد'}: ${halt.reason??''}`});
-      return json(res,503,{code:'AI_HALTED',
-        message:'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',
+      return json(res,halt.httpStatus??503,{code:halt.code??'AI_HALTED',
+        message:halt.message??'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',
         gateway:{status:'HALTED',scope:halt.scope,reason:halt.reason}});
     }
     const t0=Date.now();
@@ -16934,8 +17078,8 @@ async function __handler(req, res) {
     const m=g.m;
     const halt=aiHaltCheck(req,'meeting-assist');
     if(halt.halted){
-      aiLogCall(req,'meeting-assist',{providerName:'—',model:'—',status:'HALTED',promptChars:0,durationMs:0,orgId:halt.orgId,note:`توقف ${halt.scope==='GLOBAL'?'کلی':'کاربرد'}: ${halt.reason??''}`});
-      return json(res,503,{code:'AI_HALTED',message:'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',gateway:{status:'HALTED',scope:halt.scope,reason:halt.reason}});
+      aiLogCall(req,'meeting-assist',{providerName:'—',model:'—',status:halt.code==='AI_NO_F12_CARD'?'ERROR':'HALTED',promptChars:0,durationMs:0,orgId:halt.orgId,note:`توقف ${halt.scope==='GLOBAL'?'کلی':'کاربرد'}: ${halt.reason??''}`});
+      return json(res,halt.httpStatus??503,{code:halt.code??'AI_HALTED',message:halt.message??'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',gateway:{status:'HALTED',scope:halt.scope,reason:halt.reason}});
     }
     const b=await readBody(req);
     const transcript=String(b.transcript??'').trim();
@@ -16961,7 +17105,7 @@ async function __handler(req, res) {
     const g=meetingGuard(aiAssistApply[0]); if(g.code) return json(res,g.code,{message:g.msg});
     const m=g.m;
     const halt=aiHaltCheck(req,'meeting-assist');
-    if(halt.halted) return json(res,503,{code:'AI_HALTED',message:'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',gateway:{status:'HALTED',scope:halt.scope,reason:halt.reason}});
+    if(halt.halted) return json(res,halt.httpStatus??503,{code:halt.code??'AI_HALTED',message:halt.message??'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',gateway:{status:'HALTED',scope:halt.scope,reason:halt.reason}});
     const b=await readBody(req);
     if(b.confirmed!==true) return json(res,400,{message:'بدون تأیید صاحب جلسه چیزی ثبت نمی‌شود — گونهٔ confirmed=true لازم است (۱۹.۲).'});
     const d=b.draft??{};
@@ -17025,8 +17169,8 @@ async function __handler(req, res) {
     if(!o||!scopedOpps(req).some(s=>s.id===o.id)) return json(res,404,{message:'فرصت یافت نشد یا خارج از محدودهٔ شماست.'});
     const halt=aiHaltCheck(req,'opp-priority');
     if(halt.halted){
-      aiLogCall(req,'opp-priority',{providerName:'—',model:'—',status:'HALTED',promptChars:0,durationMs:0,orgId:halt.orgId,note:`توقف: ${halt.reason??''}`});
-      return json(res,503,{code:'AI_HALTED',message:'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',gateway:{status:'HALTED',scope:halt.scope,reason:halt.reason}});
+      aiLogCall(req,'opp-priority',{providerName:'—',model:'—',status:halt.code==='AI_NO_F12_CARD'?'ERROR':'HALTED',promptChars:0,durationMs:0,orgId:halt.orgId,note:`توقف: ${halt.reason??''}`});
+      return json(res,halt.httpStatus??503,{code:halt.code??'AI_HALTED',message:halt.message??'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',gateway:{status:'HALTED',scope:halt.scope,reason:halt.reason}});
     }
     const t0=Date.now();
     const route=aiResolveRoute(halt.orgId,'opp-priority');
@@ -17047,8 +17191,8 @@ async function __handler(req, res) {
     if(!inter||!scopedInteractions(req).some(s=>s.id===inter.id)) return json(res,404,{message:'تعامل یافت نشد یا خارج از محدودهٔ شماست.'});
     const halt=aiHaltCheck(req,'next-action');
     if(halt.halted){
-      aiLogCall(req,'next-action',{providerName:'—',model:'—',status:'HALTED',promptChars:0,durationMs:0,orgId:halt.orgId,note:`توقف: ${halt.reason??''}`});
-      return json(res,503,{code:'AI_HALTED',message:'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',gateway:{status:'HALTED',scope:halt.scope,reason:halt.reason}});
+      aiLogCall(req,'next-action',{providerName:'—',model:'—',status:halt.code==='AI_NO_F12_CARD'?'ERROR':'HALTED',promptChars:0,durationMs:0,orgId:halt.orgId,note:`توقف: ${halt.reason??''}`});
+      return json(res,halt.httpStatus??503,{code:halt.code??'AI_HALTED',message:halt.message??'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',gateway:{status:'HALTED',scope:halt.scope,reason:halt.reason}});
     }
     const t0=Date.now();
     const route=aiResolveRoute(halt.orgId,'next-action');
@@ -17069,7 +17213,7 @@ async function __handler(req, res) {
     const inter=INTERACTIONS.find(x=>x.id===aiNextActApply[0]&&!x.deletedAt);
     if(!inter||!scopedInteractions(req).some(s=>s.id===inter.id)) return json(res,404,{message:'تعامل یافت نشد یا خارج از محدودهٔ شماست.'});
     const halt=aiHaltCheck(req,'next-action');
-    if(halt.halted) return json(res,503,{code:'AI_HALTED',message:'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',gateway:{status:'HALTED',scope:halt.scope,reason:halt.reason}});
+    if(halt.halted) return json(res,halt.httpStatus??503,{code:halt.code??'AI_HALTED',message:halt.message??'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',gateway:{status:'HALTED',scope:halt.scope,reason:halt.reason}});
     const b=await readBody(req);
     if(b.confirmed!==true) return json(res,400,{message:'بدون تأیید کاربر چیزی ثبت نمی‌شود — گاهی confirmed=true لازم است (۱۹.۲).'});
     const pr=b.proposal??{};
@@ -17810,11 +17954,11 @@ async function __handler(req, res) {
     /* گام ۶.۳ — کلید توقف: پرسش آزاد هم از درگاه می‌گذرد */
     const halt=aiHaltCheck(req,'org-question');
     if(halt.halted){
-      aiLogCall(req,'org-question',{providerName:'—',model:'—',status:'HALTED',
+      aiLogCall(req,'org-question',{providerName:'—',model:'—',status:halt.code==='AI_NO_F12_CARD'?'ERROR':'HALTED',
         promptChars:question.length,durationMs:0,orgId:halt.orgId,
         note:`توقف ${halt.scope==='GLOBAL'?'کلی':'کاربرد'}: ${halt.reason??''}`});
-      return json(res,503,{code:'AI_HALTED',
-        message:'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',
+      return json(res,halt.httpStatus??503,{code:halt.code??'AI_HALTED',
+        message:halt.message??'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',
         gateway:{status:'HALTED',scope:halt.scope,reason:halt.reason}});
     }
     const t0=Date.now();
