@@ -73,24 +73,31 @@ export default function CalendarPage() {
   const programWritable = can('program.write');
   const nowD = new Date();
   const monthNow = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, '0')}`;
-  const emptyContentForm = { title: '', pillar: 'newsroom', month: monthNow, ownerRole: 'مدیر محتوا' };
+  const emptyContentForm = { title: '', pillar: 'newsroom', pesoGroup: 'OWNED', month: monthNow, ownerRole: 'مدیر محتوا' };
   const [contentForm, setContentForm] = useState(emptyContentForm);
+  /* گام ۵.۴ — تقویم خروجی اندیشکده (جدول ۱۵.۱ سند v6) */
+  const [thinkTank, setThinkTank] = useState<any>(null);
+  const [ttFormOpen, setTtFormOpen] = useState(false);
+  const emptyTtForm = { outputKey: 'policy-note', month: monthNow, note: '' };
+  const [ttForm, setTtForm] = useState(emptyTtForm);
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
     try {
       const qs = scopeId !== 'all' ? `?organizationId=${encodeURIComponent(scopeId)}` : '';
-      const [ms, evs, cr, cnt] = await Promise.all([
+      const [ms, evs, cr, cnt, tt] = await Promise.all([
         api(`/meetings${qs}`),
         api('/events'),
         api('/crisis-protocol').catch(() => null),
         api('/program/content').catch(() => null),
+        api('/program/think-tank').catch(() => null),
       ]);
       setMeetings(unwrap(ms));
       setEvents(unwrap(evs) ?? []);
       setEvMeta(evs ?? null);
       if (cr) setCrisis(cr);
       if (cnt) setContent(cnt);
+      if (tt) setThinkTank(tt);
       if (scopeId !== 'all' && !scopeName) {
         try {
           const orgs = unwrap(await api('/organizations'));
@@ -156,6 +163,23 @@ export default function CalendarPage() {
       await api('/program/content', { method: 'POST', body: JSON.stringify(contentForm) });
       setContentFormOpen(false); setContentForm(emptyContentForm); await reloadContent();
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+  };
+
+  /* گام ۵.۴ — ثبت/حذف خروجی اندیشکده در تقویم */
+  const saveTt = async () => {
+    setBusy(true);
+    try {
+      await api('/program/think-tank', { method: 'POST', body: JSON.stringify(ttForm) });
+      setTtFormOpen(false); setTtForm(emptyTtForm);
+      setThinkTank(await api('/program/think-tank'));
+    } catch (e: any) { setError(e?.message ?? String(e)); }
+    finally { setBusy(false); }
+  };
+  const removeTt = async (id: string) => {
+    setBusy(true);
+    try { await api(`/program/think-tank/${id}`, { method: 'DELETE' }); setThinkTank(await api('/program/think-tank')); }
+    catch (e: any) { setError(e?.message ?? String(e)); }
+    finally { setBusy(false); }
   };
 
   const grid = useMemo(() => {
@@ -502,7 +526,7 @@ export default function CalendarPage() {
               <button type="button" key={c.id} className={`cnt-row ${c.status}`} onClick={() => setContentSel(c)}>
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <strong>{c.title}</strong>
-                  <small>{t(c.pillarTitle)} · {t(c.pillarRhythm)} · {c.month} · {c.ownerRole}</small>
+                  <small>{t(c.pillarTitle)} · {t(c.pillarRhythm)} · {t(c.pesoTitle)} · {c.month} · {c.ownerRole}</small>
                 </span>
                 <span className="cnt-ctl-dots">
                   {content.controls.map((x: any) => (
@@ -519,6 +543,49 @@ export default function CalendarPage() {
         </section>
       )}
 
+
+
+      {/* ═══ گام ۵.۴ — تقویم خروجی اندیشکده (جدول ۱۵.۱ سند v6) ═══ */}
+      {thinkTank && (
+        <section className="panel think-tank-panel">
+          <div className="panel-title">
+            <div>
+              <h2>{t('تقویم خروجی اندیشکده (v6)')}</h2>
+              <p>{t('زمان هر خروجی صریح است؛ تاریخ دقیق انتشار در تقویم SRIP ثبت و هر تغییر با علت و مالک اصلاح می‌شود.')}</p>
+            </div>
+            <div className="toolbar">
+              {programWritable && <button className="btn btn-ghost btn-sm" onClick={() => { setTtForm(emptyTtForm); setTtFormOpen(true); }}>{t('ثبت در تقویم')}</button>}
+            </div>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>{t('خروجی')}</th><th>{t('تعداد در سال')}</th><th>{t('زمان انتشار')}</th><th>{t('حجم هدف')}</th><th>{t('ثبت‌شده در تقویم')}</th></tr></thead>
+              <tbody>
+                {thinkTank.outputs.map((o: any) => (
+                  <tr key={o.key}>
+                    <td className="t-primary">{t(o.title)}</td>
+                    <td>{faNum(o.count)}</td>
+                    <td>{t(o.timing)}</td>
+                    <td className="t-muted">{t(o.size)}</td>
+                    <td>{o.registered > 0 ? <span className="chip success">{faNum(o.registered)}</span> : <span className="chip neutral">{t('ثبت نشده')}</span>}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {thinkTank.items.length > 0 && (
+            <div className="chip-row" style={{ margin: '10px 0 0' }}>
+              {thinkTank.items.map((r: any) => (
+                <span key={r.id} className="chip info">
+                  {t(thinkTank.outputs.find((o: any) => o.key === r.outputKey)?.title ?? r.outputKey)} — {r.month}
+                  {programWritable && <button type="button" className="chip-x" title={t('حذف ثبت')} onClick={() => removeTt(r.id)}>×</button>}
+                </span>
+              ))}
+            </div>
+          )}
+          <p className="field-hint">{thinkTank.rule}</p>
+        </section>
+      )}
 
       {/* مودال رویداد جدید — F10 سند */}
       <Modal open={evFormOpen} title={t('ثبت رویداد در تقویم سالانه')} onClose={() => setEvFormOpen(false)}>
@@ -675,6 +742,12 @@ export default function CalendarPage() {
             </select>
           </div>
           <div className="field">
+            <label className="field-label">{t('گروه رسانه‌ای (PESO)')}</label>
+            <select value={contentForm.pesoGroup} onChange={(e) => setContentForm(f => ({ ...f, pesoGroup: e.target.value }))}>
+              {(content?.pesoGroups ?? [{ key: 'OWNED', title: 'تحت مالکیت' }, { key: 'SHARED', title: 'اشتراکی' }, { key: 'EARNED', title: 'اکتسابی' }, { key: 'PAID', title: 'پولی' }]).map((g: any) => <option key={g.key} value={g.key}>{t(g.title)}</option>)}
+            </select>
+          </div>
+          <div className="field">
             <label className="field-label">{t('ماه انتشار (میلادی)')}</label>
             <input type="month" required value={contentForm.month} onChange={(e) => setContentForm(f => ({ ...f, month: e.target.value }))} />
           </div>
@@ -685,6 +758,30 @@ export default function CalendarPage() {
           <div className="form-actions">
             <button type="button" className="srip-button" onClick={() => setContentFormOpen(false)}>{t('انصراف')}</button>
             <button type="submit" className="srip-button primary" disabled={busy}>{busy ? t('در حال ذخیره…') : t('ثبت پیش‌نویس خروجی')}</button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* گام ۵.۴ — مودال ثبت خروجی اندیشکده در تقویم */}
+      <Modal open={ttFormOpen} title={t('ثبت خروجی اندیشکده در تقویم')} onClose={() => setTtFormOpen(false)}>
+        <form id="tt-form" className="form-grid" onSubmit={(e) => { e.preventDefault(); saveTt(); }}>
+          <div className="field full">
+            <label className="field-label">{t('خروجی اندیشکده')}</label>
+            <select value={ttForm.outputKey} onChange={(e) => setTtForm(f => ({ ...f, outputKey: e.target.value }))}>
+              {(thinkTank?.outputs ?? []).map((o: any) => <option key={o.key} value={o.key}>{t(o.title)} — {t(o.timing)}</option>)}
+            </select>
+          </div>
+          <div className="field">
+            <label className="field-label">{t('ماه انتشار (میلادی)')}</label>
+            <input type="month" required value={ttForm.month} onChange={(e) => setTtForm(f => ({ ...f, month: e.target.value }))} />
+          </div>
+          <div className="field full">
+            <label className="field-label">{t('یادداشت (اختیاری)')}</label>
+            <input value={ttForm.note} onChange={(e) => setTtForm(f => ({ ...f, note: e.target.value }))} placeholder={t('مثلاً: سپیدنامهٔ نخست — پایان فصل ۲')} />
+          </div>
+          <div className="form-actions">
+            <button type="button" className="srip-button" onClick={() => setTtFormOpen(false)}>{t('انصراف')}</button>
+            <button type="submit" className="srip-button primary" disabled={busy}>{busy ? t('در حال ذخیره…') : t('ثبت در تقویم')}</button>
           </div>
         </form>
       </Modal>

@@ -1644,11 +1644,11 @@ section('گام ۴.۲ — F06 و F08: تقویم انتشار رسانه + تأ�
 
   const list = await api('/program/content', { token: ptok });
   check('GET /program/content → هفت خروجی بذر رسانه تخصصی پارس', list.status === 200 && list.body.items.length === 7);
-  check('F06: هفت ستون رسانه تخصصی سند با ریتم هرکدام',
+  check('F06: هفت ستون رسانه تخصصی v6 با ریتم هرکدام',
     list.body.pillars.length === 7
-    && list.body.pillars.find((p) => p.key === 'newsroom').rhythm === 'بر پایه رویداد'
+    && list.body.pillars.find((p) => p.key === 'newsroom').rhythm === 'رویدادی'
     && list.body.pillars.find((p) => p.key === 'podcast').rhythm === 'دوهفتگی'
-    && list.body.pillars.find((p) => p.key === 'magazine').rhythm === 'فصلی');
+    && list.body.pillars.find((p) => p.key === 'magazine').rhythm === 'ماهانه و فصلی');
   check('F08: چهار کنترل الزامی (پیام هسته/مخاطب/حقوقی/هوش مصنوعی)',
     list.body.controls.length === 4 && list.body.controls.map((c) => c.key).join() === 'coreMessage,audience,legal,aiStructure');
   check('آمار وضعیت: ۳ پیش‌نویس + ۱ در بازبینی + ۱ تأییدشده + ۲ منتشرشده',
@@ -1699,6 +1699,51 @@ section('گام ۴.۲ — F06 و F08: تقویم انتشار رسانه + تأ�
   const demoList = await api('/program/content', { token: (await login(OWNER.email)).body?.accessToken });
   check('دنیای دمو: فقط دو خروجی بذر خودش (نه رسانهٔ پارس)', demoList.status === 200 && demoList.body.items.length === 2
     && !demoList.body.items.some((c) => c.id.startsWith('pc-') && !c.id.startsWith('pc-d')));
+}
+
+/* ═════════════════ گام ۵.۴ — رسانه v6 (ستون‌ها + PESO) و تقویم خروجی اندیشکده ═════════════════ */
+section('گام ۵.۴ — رسانه v6 + تقویم خروجی اندیشکده');
+{
+  const dt = (await login(OWNER.email)).body?.accessToken;
+  const ptok = (await api('/auth/login', { method: 'POST', body: { email: 'pars', password: 'pars1234' } })).body?.accessToken;
+
+  const cnt = await api('/program/content', { token: ptok });
+  check('ستون‌های v6: هفت ستون با «محتوای آموزشی» (هفتگی) و بدون «مصاحبه» مستقل',
+    cnt.body.pillars.length === 7
+    && cnt.body.pillars.some((p) => p.key === 'educational' && p.rhythm === 'هفتگی')
+    && cnt.body.pillars.some((p) => p.key === 'magazine' && p.rhythm === 'ماهانه و فصلی')
+    && !cnt.body.pillars.some((p) => p.key === 'interview'));
+  check('گروه PESO: چهار گروه روی خروجی‌ها (ویدئوی میزگرد = اشتراکی)',
+    cnt.body.pesoGroups?.length === 4
+    && cnt.body.items.some((c) => c.pillar === 'video' && c.pesoGroup === 'SHARED' && c.pesoTitle === 'اشتراکی'));
+  const badPeso = await api('/program/content', { method: 'POST', token: dt, body: { title: 'خروجی تست گروه', pillar: 'newsroom', month: '2026-10', pesoGroup: 'WRONG' } });
+  check('گروه PESO نامعتبر → ۴۰۰', badPeso.status === 400);
+
+  const tt = await api('/program/think-tank', { token: dt });
+  check('اندیشکده: هفت خروجی جدول ۱۵.۱ سند با تعداد/زمان/حجم صریح',
+    tt.status === 200 && tt.body.outputs.length === 7
+    && tt.body.outputs.every((o) => o.count > 0 && o.timing && o.size)
+    && tt.body.outputs.some((o) => o.key === 'annual-report' && o.count === 1 && o.timing.includes('ماه ۱۱')));
+  check('اندیشکده: بذر دمو — یک ثبت (یادداشت سیاستی ماه ۴)',
+    tt.body.items.length === 1 && tt.body.items[0].outputKey === 'policy-note');
+  const ttPars = await api('/program/think-tank', { token: ptok });
+  check('جداسازی مستأجر: پارس سه ثبت در تقویم (سیاستی/سپیدنامه/میزگرد)',
+    ttPars.body.items.length === 3
+    && ['policy-note', 'whitepaper', 'roundtable'].every((k) => ttPars.body.items.some((r) => r.outputKey === k)));
+
+  const reg = await api('/program/think-tank', { method: 'POST', token: dt, body: { outputKey: 'whitepaper', month: '2027-06', note: 'تست ثبت' } });
+  check('ثبت خروجی در تقویم → ۲۰۱ با ماه و یادداشت',
+    reg.status === 201 && reg.body.outputKey === 'whitepaper' && reg.body.month === '2027-06');
+  const badKey = await api('/program/think-tank', { method: 'POST', token: dt, body: { outputKey: 'nope', month: '2027-06' } });
+  check('کلید خروجی خارج از فهرست ۱۵.۱ → ۴۰۰', badKey.status === 400);
+  const badMonth = await api('/program/think-tank', { method: 'POST', token: dt, body: { outputKey: 'roundtable', month: '2026-13' } });
+  check('ماه نامعتبر → ۴۰۰', badMonth.status === 400);
+  const del = await api(`/program/think-tank/${reg.body.id}`, { method: 'DELETE', token: dt });
+  const afterDel = await api('/program/think-tank', { token: dt });
+  check('حذف ثبت → ۲۰۰ و ردیف واقعاً حذف شد (دمو به یک ثبت بازگشت)',
+    del.status === 200 && afterDel.body.items.length === 1 && afterDel.body.items.every((r) => r.id !== reg.body.id));
+  const noPerm = await api('/program/think-tank', { method: 'POST', token: (await login('client')).body?.accessToken, body: { outputKey: 'roundtable', month: '2027-06' } });
+  check('کاربر بدون program.write → ۴۰۳', noPerm.status === 403);
 }
 
 /* ═════════════════ گام ۴.۳ — F05: رجیستری دارایی برند (پیوست ب) ═════════════════ */

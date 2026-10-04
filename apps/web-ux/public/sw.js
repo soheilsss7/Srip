@@ -8633,15 +8633,48 @@ function crisisProtocolOf(orgId){
    F06: برنامه‌ریزی و پایش خروجی ماهانه رسانه — هفت ستون رسانه تخصصی سند (بخش ۱۶) با ریتم هرکدام.
    F08: گردش تأیید سه‌مرحله‌ای هر خروجی عمومی — چهار کنترل الزامی پیش از انتشار (پیام هسته،
    شخصی‌سازی مخاطب، بازبینی حقوقی، ساختاریافتگی هوش مصنوعی)؛ انتشار بدون تأیید کامل ممنوع است. */
+/* گام ۵.۴ — ستون‌های هفت‌گانهٔ رسانه تخصصی سند v6 (بخش ۱۶): «مصاحبه» ستون مستقل
+   نیست و در مجله/پادکست/ویدئو جذب شده؛ «محتوای آموزشی» (هفتگی) ستون هفتم است. */
 const MEDIA_PILLARS=[
-  {key:'newsroom',  title:'نیوزروم مرجع',            rhythm:'بر پایه رویداد', desc:'بیانیه‌ها، اطلاعیه‌ها، دستاوردها، دسترسی رسانه'},
-  {key:'magazine',  title:'مجله تخصصی هوش مصنوعی',   rhythm:'فصلی',          desc:'تحلیل عمیق، پرونده ویژه، گفت‌وگو'},
-  {key:'podcast',   title:'پادکست تخصصی',             rhythm:'دوهفتگی',       desc:'گفت‌وگو با خبرگان و مدیران'},
-  {key:'video',     title:'دارایی‌های ویدئویی',        rhythm:'ماهانه',        desc:'گزارش تصویری، مصاحبه، مستند کوتاه'},
-  {key:'newsletter',title:'خبرنامه دوره‌ای',           rhythm:'ماهانه',        desc:'گزیده ماهانه برای ذی‌نفعان'},
-  {key:'interview', title:'مصاحبه با متخصصان',        rhythm:'ماهانه',        desc:'گفت‌وگوی ساختاریافته با صاحب‌نظران'},
-  {key:'dataviz',   title:'گزارش‌های داده‌محور',       rhythm:'فصلی',          desc:'داده‌نما، داشبورد عمومی، نمودارهای مرجع'},
+  {key:'newsroom',  title:'بخش خبری',            rhythm:'رویدادی',        desc:'بیانیه، اطلاعیه، دستاورد، بسته شواهد و پاسخ رسمی'},
+  {key:'magazine',  title:'مجله تخصصی',          rhythm:'ماهانه و فصلی',  desc:'مقاله تحلیلی، پروندهٔ ویژه و گفت‌وگوی عمیق'},
+  {key:'podcast',   title:'پادکست',               rhythm:'دوهفتگی',        desc:'گفت‌وگو با خبره، بنیان‌گذار، مدیر VC و کارشناس پژوهش'},
+  {key:'video',     title:'ویدئو و موشن‌گرافیک',   rhythm:'ماهانه',          desc:'مصاحبه، توضیح محصول، داده‌نما، مستند کوتاه و نسخهٔ رویداد'},
+  {key:'newsletter',title:'خبرنامه',              rhythm:'ماهانه',          desc:'گزیدهٔ تصمیم‌ساز برای هر گروه ذی‌نفع'},
+  {key:'dataviz',   title:'گزارش داده‌محور',       rhythm:'فصلی',            desc:'نمایشگر عمومی داده، نمودار، مرور صنعت و تحلیل عملکرد سرمایه‌گذاری‌ها'},
+  {key:'educational',title:'محتوای آموزشی',       rhythm:'هفتگی',           desc:'راهنما، درس کوتاه، پرسش متداول و نمونهٔ کاربرد'},
 ];
+/* گروه رسانه‌ای PESO (بخش ۱۰.۲ سند) — هر خروجی عمومی به یک گروه تعلق دارد */
+const PESO_GROUPS=[
+  {key:'OWNED', title:'تحت مالکیت'},
+  {key:'SHARED',title:'اشتراکی'},
+  {key:'EARNED',title:'اکتسابی'},
+  {key:'PAID',  title:'پولی'},
+];
+/* گام ۵.۴ — تقویم خروجی دوازده‌ماههٔ اندیشکده (جدول ۱۵.۱ سند v6): زمان هر خروجی
+   صریح است؛ تاریخ دقیق انتشار در تقویم SRIP ثبت و هر تغییر با علت و مالک اصلاح
+   می‌شود. قالب مشترک سند؛ ثبت‌های تقویم per-organization اند. */
+const THINK_TANK_OUTPUTS=[
+  {key:'annual-report',     title:'گزارش سالانه هوش مصنوعی',  count:1, timing:'ماه ۱۱، انتشار رسمی',    size:'۸۰ تا ۱۰۰ صفحه و خلاصهٔ اجرایی'},
+  {key:'industry-report',   title:'گزارش صنعت',                count:2, timing:'ماه‌های ۷ و ۱۰',          size:'۳۰ تا ۵۰ صفحه'},
+  {key:'investment-report', title:'گزارش سرمایه‌گذاری',        count:1, timing:'ماه ۹',                    size:'۲۵ تا ۴۰ صفحه'},
+  {key:'policy-note',       title:'یادداشت سیاستی',            count:8, timing:'ماهانه از ماه ۴',         size:'۴ تا ۶ صفحه'},
+  {key:'trend-analysis',    title:'تحلیل روند',                count:4, timing:'پایان هر فصل',             size:'۸ تا ۱۲ صفحه'},
+  {key:'whitepaper',        title:'وایت‌پیپر (سپیدنامه)',      count:3, timing:'ماه‌های ۶، ۹ و ۱۲',        size:'۲۰ تا ۳۰ صفحه'},
+  {key:'roundtable',        title:'میزگرد تخصصی',              count:4, timing:'یک نوبت در هر فصل',       size:'۹۰ دقیقه و صورت‌جلسهٔ تحلیلی'},
+];
+function ensureThinkTankSeed(){
+  if(!Array.isArray(DB.thinkTankPlan)) DB.thinkTankPlan=[];
+  if(!DB.thinkTankPlan.some(r=>r.organizationId==='org-pars')){
+    DB.thinkTankPlan.push(
+      {id:'tt-1',organizationId:'org-pars',outputKey:'policy-note',month:'2027-01',note:'یادداشت سیاستی ماه ۴ برنامه',createdAt:nowIso()},
+      {id:'tt-2',organizationId:'org-pars',outputKey:'whitepaper',month:'2027-03',note:'سپیدنامهٔ نخست — پایان فصل ۲',createdAt:nowIso()},
+      {id:'tt-3',organizationId:'org-pars',outputKey:'roundtable',month:'2027-03',note:'میزگرد فصل دوم',createdAt:nowIso()});
+  }
+  if(!DB.thinkTankPlan.some(r=>r.organizationId==='org-1')){
+    DB.thinkTankPlan.push({id:'tt-d1',organizationId:'org-1',outputKey:'policy-note',month:'2027-01',note:'دمو: نخستین یادداشت سیاستی',createdAt:nowIso()});
+  }
+}
 const CONTENT_CONTROLS=[
   {key:'coreMessage',title:'هم‌راستایی با پیام هسته'},
   {key:'audience',   title:'شخصی‌سازی برای مخاطب'},
@@ -8650,25 +8683,26 @@ const CONTENT_CONTROLS=[
 ];
 const CONTENT_STATUS_FA={DRAFT:'پیش‌نویس',IN_REVIEW:'در بازبینی',APPROVED:'تأییدشده',PUBLISHED:'منتشرشده'};
 function ensureContentSeed(){
+  /* مهاجرت ستون‌های v6 (گام ۵.۴): خروجی persisted با ستون حذف‌شدهٔ v3 (مثل interview) → بذر مجدد */
+  DB.programContent=(DB.programContent??[]).filter(c=>MEDIA_PILLARS.some(p=>p.key===c.pillar));
   if((DB.programContent??[]).some(c=>c.organizationId==='org-pars')) return;
-  const now=new Date();
-  const mNow=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const now=new Date(); const mNow=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const mPrev=now.getMonth()===0?`${now.getFullYear()-1}-12`:`${now.getFullYear()}-${String(now.getMonth()).padStart(2,'0')}`;
   const ago=(d)=>new Date(Date.now()-d*86400000).toISOString();
   const CTL=(n)=>Object.fromEntries(CONTENT_CONTROLS.slice(0,n).map((c,i)=>[c.key,{ok:true,at:ago(10-i),note:''}]));
-  const mk=(id,org,pillar,title,month,status)=>({
-    id,organizationId:org,pillar,title,month,ownerRole:'مدیر محتوا',status,
+  const mk=(id,org,pillar,title,month,status,peso='OWNED')=>({
+    id,organizationId:org,pillar,pesoGroup:peso,title,month,ownerRole:'مدیر محتوا',status,
     controls:{...(status==='PUBLISHED'?CTL(4):status==='APPROVED'?CTL(4):status==='IN_REVIEW'?CTL(2):{})},
     publishedAt:status==='PUBLISHED'?ago(8):null,
     createdAt:ago(20),updatedAt:ago(6)});
   DB.programContent=[
-    /* جهان واقعی پارس — برنامهٔ رسانه تخصصی سند */
+    /* جهان واقعی پارس — برنامهٔ رسانه تخصصی سند v6 (هر هفت ستون یک‌بار) */
     mk('pc-1','org-pars','newsroom','بیانیهٔ انتشار گزارش فصلی داده',mPrev,'PUBLISHED'),
     mk('pc-2','org-pars','magazine','پروندهٔ ویژهٔ دادهٔ باز صنعت',mNow,'APPROVED'),
     mk('pc-3','org-pars','podcast','اپیزود: سخنران داده در صنعت',mNow,'IN_REVIEW'),
     mk('pc-4','org-pars','newsletter','گزیدهٔ ماهانهٔ ذی‌نفعان',mNow,'DRAFT'),
-    mk('pc-5','org-pars','video','گزارش تصویری میزگرد داده',mPrev,'PUBLISHED'),
-    mk('pc-6','org-pars','interview','گفت‌وگو با رئیس پژوهشگاه داده',mNow,'DRAFT'),
+    mk('pc-5','org-pars','video','گزارش تصویری میزگرد داده',mPrev,'PUBLISHED','SHARED'),
+    mk('pc-6','org-pars','educational','راهنمای آموزشی: خواندن گزارش داده‌نما',mNow,'DRAFT'),
     mk('pc-7','org-pars','dataviz','داده‌نمای صنعت — نسخهٔ پاییز',mNow,'DRAFT'),
     /* دنیای دمو */
     mk('pc-d1','org-1','newsroom','بیانیهٔ دمو: انتشار بریف فصلی',mPrev,'PUBLISHED'),
@@ -8687,6 +8721,7 @@ function contentView(c){
   }));
   const okCount=CONTENT_CONTROLS.filter(x=>ctr[x.key].registered&&ctr[x.key].ok).length;
   return {...c,statusFa:CONTENT_STATUS_FA[c.status]??c.status,pillarTitle:MEDIA_PILLARS.find(p=>p.key===c.pillar)?.title??c.pillar,
+    pesoGroup:c.pesoGroup??'OWNED',pesoTitle:PESO_GROUPS.find(g=>g.key===(c.pesoGroup??'OWNED'))?.title??'تحت مالکیت',
     pillarRhythm:MEDIA_PILLARS.find(p=>p.key===c.pillar)?.rhythm??'',
     controlsView:ctr,okControls:okCount,totalControls:CONTENT_CONTROLS.length,
     canPublish:c.status==='APPROVED'};
@@ -8696,6 +8731,7 @@ function validateContentBody(b){
   if(title.length<3) return {message:'عنوان خروجی را بنویسید (حداقل ۳ نویسه).'};
   if(!MEDIA_PILLARS.some(p=>p.key===String(b.pillar??'').trim())) return {message:'ستون رسانه از فهرست هفت‌گانهٔ رسانه تخصصی انتخاب شود.'};
   if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(b.month??'').trim())) return {message:'ماه انتشار را به شکل YYYY-MM وارد کنید.'};
+  if(b.pesoGroup!=null&&!PESO_GROUPS.some(g=>g.key===String(b.pesoGroup).trim())) return {message:'گروه رسانه‌ای از فهرست PESO انتخاب شود: تحت مالکیت، اشتراکی، اکتسابی یا پولی.'};
   return null;
 }
 
@@ -15586,7 +15622,7 @@ async function __handler(req, res) {
         published:ofPillar.filter(c=>c.status==='PUBLISHED').length};
     });
     return json(res,200,{items:rows.sort((a,b)=>b.month.localeCompare(a.month)||String(b.createdAt).localeCompare(String(a.createdAt))).map(contentView),
-      pillars:pillarStats,controls:CONTENT_CONTROLS,
+      pillars:pillarStats,controls:CONTENT_CONTROLS,pesoGroups:PESO_GROUPS,
       stats:{total:items.length,draft:items.filter(c=>c.status==='DRAFT').length,
         inReview:items.filter(c=>c.status==='IN_REVIEW').length,
         approved:items.filter(c=>c.status==='APPROVED').length,
@@ -15602,7 +15638,8 @@ async function __handler(req, res) {
     if(err) return json(res,400,err);
     const row={id:`pc-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,
       organizationId:primaryOrgId(authUser)??visibleOrgIds(req)[0]??PROGRAM_ORG_ID,
-      pillar:String(b.pillar).trim(),title:String(b.title).trim(),month:String(b.month).trim(),
+      pillar:String(b.pillar).trim(),pesoGroup:PESO_GROUPS.some(g=>g.key===String(b.pesoGroup??'').trim())?String(b.pesoGroup).trim():'OWNED',
+      title:String(b.title).trim(),month:String(b.month).trim(),
       ownerRole:String(b.ownerRole??'').trim()||'مدیر محتوا',
       status:'DRAFT',controls:{},publishedAt:null,createdAt:nowIso(),updatedAt:nowIso()};
     DB.programContent.push(row); saveDb();
@@ -15639,6 +15676,43 @@ async function __handler(req, res) {
     row.status='PUBLISHED'; row.publishedAt=nowIso(); row.updatedAt=nowIso(); saveDb();
     audit(req,'UPDATE','Content',row.id,'PUBLISH',{title:row.title.slice(0,60)});
     return json(res,200,contentView(row));
+  }
+
+  /* ─────────────── گام ۵.۴ — تقویم خروجی اندیشکده (/program/think-tank) ────────── */
+  if(is('/program/think-tank')&&method==='GET'){
+    if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
+    ensureThinkTankSeed();
+    const ids=visibleOrgIds(req);
+    const items=(DB.thinkTankPlan??[]).filter(r=>ids.includes(r.organizationId));
+    const outputs=THINK_TANK_OUTPUTS.map(o=>({...o,
+      registered:items.filter(r=>r.outputKey===o.key).length}));
+    return json(res,200,{outputs,items,
+      rule:'زمان هر خروجی اندیشکده در جدول صریح است؛ تاریخ دقیق انتشار در تقویم SRIP ثبت و هر تغییر با علت و مالک اصلاح می‌شود (بخش ۱۵.۱ سند v6).'});
+  }
+  if(is('/program/think-tank')&&method==='POST'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    ensureThinkTankSeed();
+    const b=await readBody(req);
+    const out=THINK_TANK_OUTPUTS.find(o=>o.key===String(b.outputKey??'').trim());
+    if(!out) return json(res,400,{message:'خروجی اندیشکده از فهرست هفت‌گانهٔ جدول ۱۵.۱ سند انتخاب شود.'});
+    if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(b.month??'').trim())) return json(res,400,{message:'ماه انتشار را به شکل YYYY-MM وارد کنید.'});
+    const row={id:`tt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,
+      organizationId:primaryOrgId(authUser)??visibleOrgIds(req)[0]??PROGRAM_ORG_ID,
+      outputKey:out.key,month:String(b.month).trim(),
+      note:String(b.note??'').trim()||null,createdAt:nowIso()};
+    DB.thinkTankPlan.push(row); saveDb();
+    audit(req,'CREATE','ThinkTankPlan',row.id,'OK',{outputKey:row.outputKey,month:row.month});
+    return json(res,201,row);
+  }
+  const ttDel=match('/program/think-tank/:id');
+  if(ttDel&&method==='DELETE'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    ensureThinkTankSeed();
+    const idx=(DB.thinkTankPlan??[]).findIndex(r=>r.id===ttDel[0]&&visibleOrgIds(req).includes(r.organizationId));
+    if(idx<0) return json(res,404,{message:'ثبت تقویم یافت نشد یا خارج از محدودهٔ شماست.'});
+    const [gone]=DB.thinkTankPlan.splice(idx,1); saveDb();
+    audit(req,'DELETE','ThinkTankPlan',gone.id,'OK',{outputKey:gone.outputKey});
+    return json(res,200,{deleted:gone.id});
   }
 
   /* ─────────────── گام ۴.۳ — F05: رجیستری دارایی برند (/program/brand-assets) ────────── */

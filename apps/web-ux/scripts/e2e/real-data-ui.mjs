@@ -360,6 +360,24 @@ try {
   await page2.evaluate(() => { document.querySelector('.modal-close')?.click(); });
   await new Promise(r => setTimeout(r, 500));
 
+  /* ═══ گام ۵.۴ — ستون‌های v6 + PESO + تقویم خروجی اندیشکده ═══ */
+  const c54 = await page2.evaluate(() => ({
+    pillars: [...document.querySelectorAll('.cnt-pillar')].map(p => `${p.querySelector('b')?.textContent ?? ''}|${p.querySelector('small')?.textContent ?? ''}`),
+    sharedRow: [...document.querySelectorAll('.cnt-row')].some(r => (r.textContent ?? '').includes('اشتراکی')),
+    ttPanel: [...document.querySelectorAll('h2')].some(h => (h.textContent ?? '').includes('تقویم خروجی اندیشکده')),
+    ttRows: document.querySelectorAll('.think-tank-panel tbody tr').length,
+    ttChips: [...document.querySelectorAll('.think-tank-panel .chip.info')].length,
+    ttRegBtn: [...document.querySelectorAll('.think-tank-panel button')].some(b => (b.textContent ?? '').includes('ثبت در تقویم')),
+    ttAnnual: (document.querySelector('.think-tank-panel tbody')?.textContent ?? '').includes('گزارش سالانه هوش مصنوعی'),
+  }));
+  ok('رسانه v6: «محتوای آموزشی (هفتگی)» ستون هفتم — «مصاحبه» مستقل حذف شد',
+    c54.pillars.length === 7 && c54.pillars.some(p => p.includes('محتوای آموزشی|هفتگی')) && !c54.pillars.some(p => p.includes('مصاحبه')), `pillars=${c54.pillars.length}`);
+  ok('PESO: گروه رسانه‌ای روی خروجی‌ها نمایش می‌یابد (ویدئوی میزگرد = اشتراکی)', c54.sharedRow);
+  ok('اندیشکده: پنل تقویم خروجی با هفت ردیف جدول ۱۵.۱ (شامل گزارش سالانه)',
+    c54.ttPanel && c54.ttRows === 7 && c54.ttAnnual, `rows=${c54.ttRows}`);
+  ok('اندیشکده: بذر پارس سه ثبت + دکمهٔ «ثبت در تقویم»',
+    c54.ttChips === 3 && c54.ttRegBtn, `chips=${c54.ttChips}`);
+
   /* ═══ گام ۴.۳ — F05: رجیستری دارایی برند در تب آمادگی /program ═══ */
   await page2.goto(`${BASE}/program`, { waitUntil: 'networkidle0', timeout: 90000 });
   await new Promise(r => setTimeout(r, 3000));
