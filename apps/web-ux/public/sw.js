@@ -16868,7 +16868,8 @@ async function __handler(req, res) {
     const filteredOutput=aiFilterOutput(text,patterns);
     return json(res,200,{mode,masked,findings,filteredOutput,
       localExempt:mode==='LOCAL',
-      boundary:aiBoundaryPrompt('به پرسش کاربر بر پایهٔ داده‌های مجاز پاسخ بده.','(محتوای بازیابی‌شدهٔ مجاز همین‌جا قرار می‌گیرد)'),
+      /* گام ۹.۳ — پیش‌نمایش مرز با همان متن کاربر: پیلود واقعی در بلوک داده می‌افتد */
+      boundary:aiBoundaryPrompt('به پرسش کاربر بر پایهٔ داده‌های مجاز پاسخ بده و منبع را نام ببر.',masked),
       note:mode==='LOCAL'
         ?'مسیر لوکال از پوشاندن ورودی معاف است — داده از دستگاه خارج نمی‌شود؛ پالایش خروجی همچنان اعمال می‌شود.'
         :'مسیر ابری: ورودی پیش از ارسال پوشانده می‌شود و خروجی هم از الگوهای محرمانه پالایش می‌شود.'});
@@ -17169,14 +17170,18 @@ async function __handler(req, res) {
       aiBoundaryPrompt('به پرسش کاربر فقط بر پایهٔ بلوک دادهٔ مجاز پاسخ بده و منبع را نام ببر.',ctx);
       /* در دمو، خروجی مدل سمت سرور شبیه‌سازی می‌شود: همان پاسخ منبع‌دار قطعی */
     }
+    /* گام ۹.۳ — پالایش خروجی (۱۹.۴): الگوهای محرمانه از پاسخ و عنوان منابع، روی همهٔ مسیرها */
+    const outPatterns=aiPatternsFor(orgId);
+    answer=aiFilterOutput(answer,outPatterns);
+    const safeSources=sources.map(s=>({...s,title:aiFilterOutput(String(s.title??''),outPatterns)}));
     const answerChars=answer.length;
     aiLogCall(req,'org-question',{providerId:prov?.id??route.providerId,
       providerName:engine==='provider'?prov.name:route.providerName,
       model:engine==='provider'?model:route.model,mode:prov?.mode??route.mode,
       promptChars,outputChars:answerChars,durationMs:Date.now()-t0,
       costEstimate:aiCostEstimate(prov?.mode??route.mode,promptChars,answerChars),
-      status:'OK',docsRetrieved:sources.length,orgId});
-    return json(res,200,{question,answer,sources,outOfScope,confidence,
+      status:'OK',docsRetrieved:safeSources.length,orgId});
+    return json(res,200,{question,answer,sources:safeSources,outOfScope,confidence,
       disclaimer:'فقط پیشنهاد — تصمیم و اقدام نهایی با کاربر است (سطح اختیار ۱۹.۲)',
       engine,engineFa,providerName,model,boundaryApplied,maskedFindings,
       intentFa:core?.intentFa??null,needsClarification:!!core?.needsClarification,
