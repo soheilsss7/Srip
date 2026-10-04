@@ -28,6 +28,10 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const [busy, setBusy] = useState('');
   const [prompt, setPrompt] = useState<null | 'outcome' | 'participant'>(null);
   const [outForm, setOutForm] = useState({ outcome: '', notes: '', decisionsText: '', transcript: '' });
+  /* گام ۷.۳ — دستیار جلسه (درگاه هوش مصنوعی) */
+  const [aiTranscript, setAiTranscript] = useState('');
+  const [aiDraft, setAiDraft] = useState<any>(null);
+  const [aiBusy, setAiBusy] = useState('');
   const [newParticipant, setNewParticipant] = useState('');
   const [candidates, setCandidates] = useState<any[]>([]);
   const [checked, setChecked] = useState<Record<number, boolean>>({});
@@ -90,6 +94,32 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
     setMinutes(null);
     await Promise.all([load(), refreshMinutes()]);
   }
+
+  /* گام ۷.۳ — دستیار جلسه: پیشنهاد پیش‌نویس (فقط پیشنهاد، بدون ثبت) */
+  async function aiAssist() {
+    if (aiTranscript.trim().length < 20) { setError('متن یا رونوشت جلسه را وارد کنید (حداقل ۲۰ نویسه).'); return; }
+    setAiBusy('draft'); setError(''); setInfo('');
+    try {
+      const r: any = await api(`/ai/meetings/${id}/assist`, { method: 'POST', body: JSON.stringify({ transcript: aiTranscript }) });
+      setAiDraft(r.draft ?? null);
+    } catch (e) { setError((e as Error).message); }
+    finally { setAiBusy(''); }
+  }
+  async function aiApply() {
+    setAiBusy('apply'); setError(''); setInfo('');
+    try {
+      const r: any = await api(`/ai/meetings/${id}/assist/apply`, { method: 'POST', body: JSON.stringify({ confirmed: true, draft: aiDraft }) });
+      setAiDraft(null); setAiTranscript('');
+      await Promise.all([load(), refreshMinutes()]);
+      setInfo(`پیش‌نویس با تأیید شما ثبت شد — ${r.commitmentIds?.length ?? 0} تعهد، ${r.actionIds?.length ?? 0} اقدام${r.interactionId ? ' و خلاصهٔ تعامل' : ''}.`);
+    } catch (e) { setError((e as Error).message); }
+    finally { setAiBusy(''); }
+  }
+  const aiItems = (k: string) => (aiDraft?.[k] ?? []) as Array<{ id: string; text: string }>;
+  const aiSetItem = (k: string, i: number, v: string) =>
+    setAiDraft((d: any) => ({ ...d, [k]: (d?.[k] ?? []).map((x: any, j: number) => j === i ? { ...x, text: v } : x) }));
+  const aiRemoveItem = (k: string, i: number) =>
+    setAiDraft((d: any) => ({ ...d, [k]: (d?.[k] ?? []).filter((_: any, j: number) => j !== i) }));
 
   async function addParticipant() {
     if (!newParticipant) return;
@@ -385,6 +415,54 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
               )}
             </section>
           </div>
+
+          {/* ═══ گام ۷.۳ — دستیار جلسه (درگاه هوش مصنوعی، سطح اختیار ۱۹.۲) ═══ */}
+          <section className="panel ai-meeting-assistant">
+            <div className="panel-title">
+              <div><h2><Sparkles size={16}/> دستیار جلسه (درگاه هوش مصنوعی)</h2>
+                <p>متن یا رونوشت جلسه را بدهید؛ چهار پیشنهادِ قابل ویرایش می‌گیرید — ثبت فقط با تأیید صاحب جلسه.</p></div>
+              <Badge tone="warning">فقط پیشنهاد</Badge>
+            </div>
+            <div className="entity-form" style={{ gap: 10 }}>
+              <textarea rows={4} value={aiTranscript} onChange={e => setAiTranscript(e.target.value)}
+                placeholder="مثلاً: جلسه با حضور طرف مقابل برگزار شد. توافق شد که نمونهٔ اول تا پایان ماه تحویل شود. تصمیم گرفتیم قرارداد چارچوب را تمدید کنیم. آقای رضایی مسئول پیگیری مستندات فنی است."
+                aria-label="متن یا رونوشت جلسه" />
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                <button className="primary-action" onClick={aiAssist} disabled={!!aiBusy || aiTranscript.trim().length < 20}>
+                  <Sparkles size={14}/> {aiBusy === 'draft' ? 'در حال پیشنهاد…' : 'پیشنهاد پیش‌نویس'}
+                </button>
+                {aiDraft && <span className="chip info">{aiDraft.sentenceCount} جمله تحلیل شد</span>}
+                {aiDraft && <Badge tone="success">موتور قطعی — منبع‌دار</Badge>}
+              </div>
+            </div>
+            {aiDraft && (
+              <div style={{ display: 'grid', gap: 12, marginTop: 6 }}>
+                <div className="detail-item" style={{ gridColumn: '1/-1' }}>
+                  <small>خلاصه (قابل ویرایش)</small>
+                  <textarea rows={2} value={aiDraft.summary ?? ''} onChange={e => setAiDraft((d: any) => ({ ...d, summary: e.target.value }))} aria-label="خلاصهٔ پیشنهادی" />
+                </div>
+                {([['decisions', 'تصمیم‌ها'], ['commitments', 'تعهدها'], ['nextActions', 'اقدام‌های بعدی']] as const).map(([k, label]) => (
+                  <div key={k} style={{ display: 'grid', gap: 6 }}>
+                    <small><strong>{label}</strong> ({aiItems(k).length})</small>
+                    {aiItems(k).map((it, i) => (
+                      <div key={it.id} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <input style={{ flex: 1 }} value={it.text} onChange={e => aiSetItem(k, i, e.target.value)} aria-label={`${label} ${i + 1}`} />
+                        <button className="secondary-action" onClick={() => aiRemoveItem(k, i)} aria-label="حذف پیشنهاد">حذف</button>
+                      </div>
+                    ))}
+                    {aiItems(k).length === 0 && <p className="empty-state" style={{ margin: 0 }}>موردی استخراج نشد — می‌توانید از فرم‌های اصلی ثبت کنید.</p>}
+                  </div>
+                ))}
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button className="primary-action" onClick={aiApply} disabled={!!aiBusy}>
+                    <ShieldCheck size={14}/> {aiBusy === 'apply' ? 'در حال ثبت…' : 'ثبت با تأیید صاحب جلسه'}
+                  </button>
+                  <button className="secondary-action" onClick={() => setAiDraft(null)} disabled={!!aiBusy}>دور انداختن پیش‌نویس</button>
+                  <small className="empty-state" style={{ margin: 0 }}>بدون تأیید، هیچ چیزی ثبت نمی‌شود (سطح اختیار ۱۹.۲ سند v6).</small>
+                </div>
+              </div>
+            )}
+          </section>
 
           {/* کاندیداهای استخراج */}
           {candidates.length > 0 && (

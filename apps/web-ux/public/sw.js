@@ -8959,6 +8959,28 @@ function aiHybridSearch(req,authUser,query,limit=8){
   hits.sort((a,b)=>b.score-a.score||String(a.entryId).localeCompare(String(b.entryId)));
   return {hits:hits.slice(0,limit),totalHits:hits.length,indexed:entries.length};
 }
+/* ═══════════ گام ۷.۳ — دستیار جلسه (سطح اختیار ۱۹.۲: ثبت پس از تأیید صاحب جلسه) ═══════════
+   موتور قطعی: از متن/رونوشت جلسه، چهار پیشنهادِ قابل ویرایش استخراج می‌شود —
+   خلاصه، تصمیم، تعهد و اقدام بعدی. هیچ چیزی بدون تأیید ثبت نمی‌شود. */
+function aiSplitSentences(t){
+  return String(t).split(/(?<=[.!؟؛])\s+|\n+/).map(s=>s.trim()).filter(s=>s.length>2);
+}
+function aiMeetingAssistDraft(transcript){
+  const sents=aiSplitSentences(transcript);
+  const summary=sents.slice(0,2).join(' ').slice(0,320);
+  const used=new Set();
+  const pick=(re)=>sents.filter(s=>{
+    if(used.has(s)) return false;
+    if(re.test(s)){used.add(s);return true;}
+    return false;
+  }).slice(0,5).map((s,i)=>({id:`x${i+1}`,text:s.slice(0,220)}));
+  const decisions=pick(/تصمیم|تصویب شد|توافق شد|مقرر شد|تعیین شد|همسو شد|به طور قطع/);
+  const commitments=pick(/تعهد|قول|متعهد|تحویل خواهد|تکمیل خواهد|تا تاریخ|سررسید/);
+  const nextActions=pick(/اقدام|پیگیری|انجام می\u200cشود|انجام شود|مسئول|تا قبل از|مکلف/);
+  return {summary,decisions,commitments,nextActions,
+    sentenceCount:sents.length,
+    engineNote:'استخراج قطعی از متن جلسه — فقط پیشنهاد؛ ویرایش کنید و با تأیید صاحب جلسه ثبت کنید.'};
+}
 const CONTENT_CONTROLS=[
   {key:'coreMessage',title:'هم‌راستایی با پیام هسته'},
   {key:'audience',   title:'شخصی‌سازی برای مخاطب'},
@@ -16422,6 +16444,97 @@ async function __handler(req, res) {
       intentFa:core?.intentFa??null,needsClarification:!!core?.needsClarification,
       retrieval:{matched:hits.length,indexedAt:nowIso()},
       rule:'پرسش سازمانی منبع‌دار (۱۹.۲): پاسخ همیشه با منبع می‌آید؛ پاسخ بدون منبع ساخته نمی‌شود و صادقانه «نمی‌دانم» گفته می‌شود. منابع فقط از محدودهٔ مجاز شما بازیابی شده‌اند.'});
+  }
+
+  /* ─────────────── گام ۷.۳ — دستیار جلسه (/ai/meetings/:id/assist) ────────── */
+  const aiAssistDraft=match('/ai/meetings/:id/assist');
+  if(aiAssistDraft&&method==='POST'&& !path.endsWith('/apply')){
+    if(!hasPerm('ai.use')) return json(res,403,{message:'شما مجوز «فراخوانی درگاه هوش مصنوعی» (ai.use) را ندارید.'});
+    const g=meetingGuard(aiAssistDraft[0]); if(g.code) return json(res,g.code,{message:g.msg});
+    const m=g.m;
+    const halt=aiHaltCheck(req,'meeting-assist');
+    if(halt.halted){
+      aiLogCall(req,'meeting-assist',{providerName:'—',model:'—',status:'HALTED',promptChars:0,durationMs:0,orgId:halt.orgId,note:`توقف ${halt.scope==='GLOBAL'?'کلی':'کاربرد'}: ${halt.reason??''}`});
+      return json(res,503,{code:'AI_HALTED',message:'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',gateway:{status:'HALTED',scope:halt.scope,reason:halt.reason}});
+    }
+    const b=await readBody(req);
+    const transcript=String(b.transcript??'').trim();
+    if(transcript.length<20) return json(res,400,{message:'متن یا رونوشت جلسه را وارد کنید (حداقل ۲۰ نویسه).'});
+    const t0=Date.now();
+    const route=aiResolveRoute(halt.orgId,'meeting-assist');
+    const draft=aiMeetingAssistDraft(transcript);
+    aiLogCall(req,'meeting-assist',{providerId:route.providerId,providerName:route.providerName,
+      model:route.model,mode:route.mode,promptChars:transcript.length,
+      outputChars:JSON.stringify(draft).length,durationMs:Date.now()-t0,
+      costEstimate:aiCostEstimate(route.mode,transcript.length,400),
+      status:'OK',docsRetrieved:1,orgId:halt.orgId});
+    return json(res,200,{draft,
+      requiresApproval:true,
+      approvalRule:'ثبت پس از تأیید صاحب جلسه (سطح اختیار ۱۹.۲ سند v6) — بدون تأیید، هیچ چیزی ثبت نمی‌شود.',
+      engine:route.providerName,engineFa:route.mode==='LOCAL'?'موتور قطعی (بدون مدل بیرونی)':`ارائه‌دهنده: ${route.providerName}`,
+      sources:[{sourceTypeFa:'جلسه',title:m.title,url:`/meetings/${m.id}`}],
+      disclaimer:'فقط پیشنهاد — ویرایش کنید و سپس با تأیید ثبت کنید.'});
+  }
+  const aiAssistApply=match('/ai/meetings/:id/assist/apply');
+  if(aiAssistApply&&method==='POST'){
+    if(!hasPerm('meeting.write')) return json(res,403,{message:'شما مجوز «برنامه‌ریزی و ویرایش جلسه» (meeting.write) را ندارید — ثبت فقط با تأیید صاحب جلسه.'});
+    const g=meetingGuard(aiAssistApply[0]); if(g.code) return json(res,g.code,{message:g.msg});
+    const m=g.m;
+    const halt=aiHaltCheck(req,'meeting-assist');
+    if(halt.halted) return json(res,503,{code:'AI_HALTED',message:'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',gateway:{status:'HALTED',scope:halt.scope,reason:halt.reason}});
+    const b=await readBody(req);
+    if(b.confirmed!==true) return json(res,400,{message:'بدون تأیید صاحب جلسه چیزی ثبت نمی‌شود — گونهٔ confirmed=true لازم است (۱۹.۲).'});
+    const d=b.draft??{};
+    const summary=String(d.summary??'').trim();
+    const decisions=(d.decisions??[]).map(x=>String(x?.text??x??'').trim()).filter(Boolean).slice(0,5);
+    const commitments=(d.commitments??[]).map(x=>String(x?.text??x??'').trim()).filter(Boolean).slice(0,5);
+    const nextActions=(d.nextActions??[]).map(x=>String(x?.text??x??'').trim()).filter(Boolean).slice(0,5);
+    if(!summary&&!decisions.length&&!commitments.length&&!nextActions.length)
+      return json(res,400,{message:'پیش‌نویس خالی است — چیزی برای ثبت نیست.'});
+    const rel=m.relationshipId?RELS.find(r=>r.id===m.relationshipId):null;
+    const orgId=m.organizationId??rel?.targetOrganizationId??rel?.sourceOrganizationId??primaryOrgId(authUser)??visibleOrgIds(req)[0]??null;
+    const created={interactionId:null,commitmentIds:[],actionIds:[],meetingOutcomeSet:false,decisionsAppended:0};
+    /* خلاصه + تصمیم‌ها → تعاملِ جلسه و صورت‌جلسه */
+    if(summary){
+      const inter={id:`i-${Date.now()}`,kind:'NOTE',type:'NOTE',
+        subject:`خلاصهٔ دستیار جلسه — ${m.title}`,outcome:summary+(decisions.length?` | تصمیم‌ها: ${decisions.join(' ؛ ')}`:''),
+        importance:'MEDIUM',sentiment:0,organizationId:orgId,relationshipId:m.relationshipId??null,
+        personId:null,meetingId:m.id,occurredAt:m.startAt??nowIso(),createdBy:authUser?.id??null,
+        deletedAt:null,source:'ai-meeting-assistant'};
+      INTERACTIONS.unshift(inter); created.interactionId=inter.id;
+    }
+    if(!m.outcome&&summary){m.outcome=summary;created.meetingOutcomeSet=true;}
+    if(decisions.length){
+      const merged=[...(m.decisions??[]),...decisions.filter(dv=>!(m.decisions??[]).includes(dv))];
+      created.decisionsAppended=merged.length-(m.decisions??[]).length;
+      m.decisions=merged;
+    }
+    /* تعهدها */
+    for(const c of commitments){
+      const row={id:`c-${Date.now()}-${Math.random().toString(36).slice(2,5)}`,description:c,dueAt:null,
+        reminderAt:null,status:'OPEN',risk:'MEDIUM',direction:'OURS',
+        notes:'از دستیار جلسه — ثبت با تأیید صاحب جلسه',organizationId:orgId,ownerId:null,personId:null,
+        relationshipId:m.relationshipId??null,meetingId:m.id,projectId:null,createdAt:nowIso(),fulfilledAt:null};
+      COMMITMENTS.push(row); created.commitmentIds.push(row.id);
+    }
+    /* اقدام‌های بعدی */
+    for(const a of nextActions){
+      const row={id:`a-${Date.now()}-${Math.random().toString(36).slice(2,5)}`,title:a.slice(0,140),
+        status:'OPEN',priority:'MEDIUM',dueAt:null,description:'از دستیار جلسه (تأییدشده)',reminderAt:null,
+        meetingId:m.id,outcome:null,ownerId:null,relationshipId:m.relationshipId??null,
+        organizationId:orgId,createdBy:authUser?.id??null};
+      ACTIONS.push(row); created.actionIds.push(row.id);
+    }
+    saveDb();
+    audit(req,'APPLY','MeetingAssistant',m.id,'OK',{...created,confirmedBy:authUser?.email??null});
+    aiLogCall(req,'meeting-assist',{providerName:'—',model:'—',status:'OK',
+      promptChars:0,outputChars:0,durationMs:0,orgId:halt.orgId,
+      docsRetrieved:0,note:`ثبت با تأیید صاحب جلسه: ${authUser?.email??''}`});
+    NOTIFICATIONS.unshift({id:`n-${Date.now()}`,title:'دستیار جلسه ثبت شد',
+      body:`پیش‌نویس دستیار جلسهٔ «${m.title}» با تأیید ${authUser?.email??''} ثبت شد (${commitments.length} تعهد، ${nextActions.length} اقدام).`,
+      type:'SYSTEM',priority:'information',isRead:false,createdAt:nowIso()});
+    return json(res,200,{...created,confirmedBy:authUser?.email??null,
+      rule:'سطح اختیار ۱۹.۲: خروجی دستیار فقط پیشنهاد بود؛ ثبت نهایی با تأیید صاحب جلسه انجام و در ممیزی ثبت شد.'});
   }
 
   /* ─────────────── گام ۵.۴ — تقویم خروجی اندیشکده (/program/think-tank) ────────── */

@@ -2318,6 +2318,67 @@ section('گام ۷.۲ — پرسش سازمانی منبع‌دار (دو موت
   check('رفع توقف → پرسش منبع‌دار دوباره کار می‌کند', QR2.status === 200);
 }
 
+
+/* ═════════════════ گام ۷.۳ — دستیار جلسه (ثبت پس از تأیید صاحب جلسه) ═════════════════ */
+section('گام ۷.۳ — دستیار جلسه: پیشنهاد چهارگانه + ثبت با تأیید');
+{
+  const dt = (await login(OWNER.email)).body.accessToken;
+  const ct = (await login(CLIENT.email)).body.accessToken;
+  const meetings = await api('/meetings', { token: dt });
+  const mt = meetings.body?.items?.[0] ?? meetings.body?.[0];
+  check('جلسهٔ دمو برای آزمون دستیار موجود است', !!mt?.id, JSON.stringify(mt?.id));
+
+  const SAMPLE = 'جلسهٔ بررسی همکاری برگزار شد. توافق شد که نمونهٔ اول محصول تا پایان ماه تحویل شود. تصمیم گرفتیم قرارداد چارچوب را یک سال تمدید کنیم. شرکت متعهد شد مستندات فنی را تا تاریخ بعدی ارائه کند. آقای رضایی مسئول پیگیری مسائل گمرکی است.';
+
+  /* پیشنهاد پیش‌نویس — چهار بخش، فقط پیشنهاد */
+  const short = await api(`/ai/meetings/${mt.id}/assist`, { method: 'POST', token: dt, body: { transcript: 'کوتاه' } });
+  check('دستیار: متن کوتاه‌تر از ۲۰ نویسه → ۴۰۰', short.status === 400);
+  const D = await api(`/ai/meetings/${mt.id}/assist`, { method: 'POST', token: dt, body: { transcript: SAMPLE } });
+  check('دستیار: پیشنهاد چهارگانه — خلاصه + تصمیم + تعهد + اقدام بعدی',
+    D.status === 200 && D.body.draft.summary.length > 10
+    && D.body.draft.decisions.length >= 1 && D.body.draft.commitments.length >= 1 && D.body.draft.nextActions.length >= 1,
+    JSON.stringify({ d: D.body?.draft?.decisions?.length, c: D.body?.draft?.commitments?.length, a: D.body?.draft?.nextActions?.length }));
+  check('دستیار: برچسب «فقط پیشنهاد» + قاعدهٔ تأیید صاحب جلسه + منبع جلسه',
+    D.body.requiresApproval === true && D.body.approvalRule.includes('تأیید صاحب جلسه')
+    && D.body.disclaimer.includes('فقط پیشنهاد') && D.body.sources[0].url.includes('/meetings/'));
+  check('دستیار: در سابقهٔ درگاه با کاربرد meeting-assist لاگ شد',
+    (await api('/ai/calls?application=meeting-assist&limit=5', { token: dt })).body.items.length >= 1);
+
+  /* بدون تأیید، ثبت نمی‌شود */
+  const noConfirm = await api(`/ai/meetings/${mt.id}/assist/apply`, { method: 'POST', token: dt, body: { draft: D.body.draft } });
+  check('بدون تأیید: confirmed نیست → ۴۰۰ «بدون تأیید صاحب جلسه چیزی ثبت نمی‌شود»',
+    noConfirm.status === 400 && noConfirm.body.message.includes('بدون تأیید'));
+
+  /* ثبت با تأیید — تعامل + تعهد + اقدام + نتیجهٔ جلسه */
+  const before = { c: (await api('/commitments', { token: dt })).body.length, a: (await api('/actions', { token: dt })).body.length };
+  const A = await api(`/ai/meetings/${mt.id}/assist/apply`, { method: 'POST', token: dt, body: { confirmed: true, draft: D.body.draft } });
+  check('ثبت با تأیید: تعامل + تعهدها + اقدام‌ها ساخته شد و تأییدکننده ثبت شد',
+    A.status === 200 && !!A.body.interactionId
+    && A.body.commitmentIds.length === D.body.draft.commitments.length
+    && A.body.actionIds.length === D.body.draft.nextActions.length
+    && A.body.confirmedBy === 'demo@srip.local');
+  const after = { c: (await api('/commitments', { token: dt })).body.length, a: (await api('/actions', { token: dt })).body.length };
+  check('ثبت با تأیید: تعهدات و اقدامات واقعاً در فهرست‌ها ظاهر شدند',
+    after.c === before.c + A.body.commitmentIds.length && after.a === before.a + A.body.actionIds.length,
+    JSON.stringify({ before, after }));
+  const mtAfter = await api(`/meetings/${mt.id}`, { token: dt });
+  check('ثبت با تأیید: نتیجهٔ جلسه و تصمیم‌ها روی جلسه مهر شد',
+    (A.body.meetingOutcomeSet ? mtAfter.body.outcome === D.body.draft.summary : true)
+    && (A.body.decisionsAppended > 0 ? (mtAfter.body.decisions ?? []).length >= A.body.decisionsAppended : true));
+
+  /* RBAC و کلید توقف */
+  const cAssist = await api(`/ai/meetings/${mt.id}/assist`, { method: 'POST', token: ct, body: { transcript: SAMPLE } });
+  check('RBAC: client به جلسهٔ دمو دسترسی ندارد → ۴۰۳', cAssist.status === 403);
+  const cApply = await api(`/ai/meetings/${mt.id}/assist/apply`, { method: 'POST', token: ct, body: { confirmed: true, draft: D.body.draft } });
+  check('RBAC: client بدون meeting.write → ۴۰۳ ثبت', cApply.status === 403);
+  await api('/ai/gateway', { method: 'PATCH', token: dt, body: { application: 'meeting-assist', halted: true, reason: 'توقف موقت دستیار جلسه برای آزمون' } });
+  const H = await api(`/ai/meetings/${mt.id}/assist`, { method: 'POST', token: dt, body: { transcript: SAMPLE } });
+  check('کلید توقف: دستیار جلسه متوقف → ۵۰۳ بازگشت به فرآیند انسانی', H.status === 503 && H.body.code === 'AI_HALTED');
+  await api('/ai/gateway', { method: 'PATCH', token: dt, body: { application: 'meeting-assist', halted: false } });
+  const D2 = await api(`/ai/meetings/${mt.id}/assist`, { method: 'POST', token: dt, body: { transcript: SAMPLE } });
+  check('رفع توقف → دستیار جلسه دوباره پیشنهاد می‌دهد', D2.status === 200 && !!D2.body.draft.summary);
+}
+
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
 if (failures.length) { console.log(`  Failed: ${failures.join(' | ')}`); }
