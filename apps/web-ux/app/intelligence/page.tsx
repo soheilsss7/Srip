@@ -7,6 +7,7 @@ import { fa } from '../_lib/fa';
 import { useWorkspace } from '../_components/workspace';
 import { Badge, ErrorCard, Loading, PageHeader, StatCard } from '../_components/page-ui';
 import { NudgeBanner, useNudges } from '../_components/nudges';
+import AuthenticityRisk from '../_components/authenticity-risk';
 import { Activity, AlertTriangle, ArrowUpRight, CheckCircle2, ChevronLeft, Clock3, Coins, GitBranch, Handshake, HeartPulse, Lightbulb, Link2, Network, RefreshCw, ShieldAlert, TrendingUp, User, Zap } from 'lucide-react';;
 
 /* --------------------------------- types --------------------------------- */
@@ -562,6 +563,9 @@ export default function IntelligencePage() {
               </p>
             </section>
           )}
+
+          {/* گام ۸.۱ — اصالت و ریسک: موتور نشانه‌ها و امتیاز ریسک (۱۹.۵) */}
+          <AuthenticityRisk canSecurityRead={can('security.read')} canSecurityWrite={can('security.write')} />
         </>
       )}
     </main>

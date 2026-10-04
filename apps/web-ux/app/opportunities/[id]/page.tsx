@@ -46,6 +46,15 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const [info, setInfo] = useState('');
   const [busy, setBusy] = useState('');
   const [confirmDel, setConfirmDel] = useState(false);
+  /* گام ۷.۴ — اولویت‌بندی هوشمند فرصت (فقط پیشنهاد) */
+  const [aiPriority, setAiPriority] = useState<any>(null);
+  const [aiBusy, setAiBusy] = useState(false);
+  const runPriority = async () => {
+    setAiBusy(true); setError(''); setInfo('');
+    try { setAiPriority(await api(`/ai/opportunities/${id}/priority`, { method: 'POST' })); }
+    catch (e) { setError((e as Error).message); }
+    finally { setAiBusy(false); }
+  };
   const [valForm, setValForm] = useState({ valueB: '', probability: '' });
   const [committee, setCommittee] = useState<any>(null);
   const [cmForm, setCmForm] = useState({ personId: '', role: 'ECONOMIC_BUYER', status: 'IDENTIFIED', note: '' });
@@ -298,6 +307,34 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                 <div className="detail-item"><small>درصد پیشرفت تا برد</small><strong>{fmtNum(probability)}٪</strong></div>
               </div>
               <div className="info-card" style={{ marginTop: 12 }}><TrendingUp size={14} /> با تغییر مرحله به «برنده‌شده» احتمال خودکار ۱۰۰٪ و با «ازدست‌رفته» صفر می‌شود.</div>
+              {/* گام ۷.۴ — اولویت‌بندی هوشمند (فقط پیشنهاد، بدون رد/قبول خودکار) */}
+              <div className="ai-opp-priority" style={{ marginTop: 16, borderTop: '1px dashed var(--card-border-strong)', paddingTop: 14 }}>
+                <div className="panel-title">
+                  <div><h2><Award size={15}/> اولویت‌بندی هوشمند (درگاه هوش مصنوعی)</h2>
+                    <p>امتیاز + دلیل قابل توضیح از سه عامل داده — بدون رد یا قبول خودکار</p></div>
+                  <Badge tone="warning">فقط پیشنهاد</Badge>
+                </div>
+                <button className="primary-action" onClick={runPriority} disabled={aiBusy}>
+                  <Target size={14}/> {aiBusy ? 'در حال محاسبه…' : 'محاسبهٔ امتیاز و دلیل'}
+                </button>
+                {aiPriority && (
+                  <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+                    <div className="detail-grid">
+                      <div className="detail-item"><small>امتیاز اولویت</small><strong style={{ color: 'var(--srip-accent-text)' }}>{fmtNum(aiPriority.score)} از ۱۰۰</strong></div>
+                      <div className="detail-item" style={{ gridColumn: '1/-1' }}><small>دلیل قابل توضیح</small><strong>{aiPriority.reason}</strong></div>
+                    </div>
+                    <div className="list">
+                      {(aiPriority.factors ?? []).map((f: any) => (
+                        <div className="listRow" key={f.key}>
+                          <strong style={{ flex: 1 }}>{f.label}</strong>
+                          <small>{f.detail} · امتیاز {fmtNum(f.score)}/۱۰۰ · وزن {fmtNum(f.weight)}٪</small>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="info-card"><ShieldX size={14}/> {aiPriority.decisionRule}</div>
+                  </div>
+                )}
+              </div>
             </section>
           </div>
 

@@ -2520,6 +2520,66 @@ section('گام ۷.۵ — دستیار تولید محتوا و کارت F08');
     && cl.some((x) => x.application === 'content-draft' && (x.note ?? '').includes('تأیید کاربر')));
 }
 
+
+/* ═════════════════ گام ۸.۱ — موتور نشانه‌ها و امتیاز ریسک اصالت ═════════════════ */
+section('گام ۸.۱ — موتور نشانه‌ها و امتیاز ریسک اصالت');
+{
+  const dt = (await login(OWNER.email)).body.accessToken;
+  const ct = (await login(CLIENT.email)).body.accessToken;
+
+  const R = await api('/authenticity/risks', { token: dt });
+  check('کاتالوگ چهار خانوادهٔ نشانه (هویتی/فنی/شبکه‌ای/رفتاری+محتوایی) per-tenant',
+    R.status === 200 && ['identity', 'technical', 'network', 'behavioral']
+      .every((f) => R.body.families.some((x) => x.key === f && x.signals >= 3))
+    && R.body.catalog.length >= 14, `catalog=${R.body?.catalog?.length}`);
+  check('موضوع‌های پایش‌شده با امتیاز + سطح چهارسطحی (۱۹.۵.۱)',
+    R.body.items.length >= 5 && R.body.items.every((x) => typeof x.risk.score === 'number' && !!x.risk.levelFa)
+    && R.body.levels.length === 4
+    && R.body.levels.map((l) => l.actionFa).join('|').includes('قرنطینه'));
+  const src = R.body.items.find((x) => x.id === 'src-gazette');
+  check('امتیاز قطعی از ترکیب وزن‌دار: منبع «روزنامهٔ رسمی» = گواهی (۳۰) + تغییر داده (۳۵) = ۶۵/بالا',
+    src.risk.score === 65 && src.risk.levelKey === 'HIGH' && src.signalCount === 2,
+    `score=${src?.risk?.score}`);
+  check('«دلیل و شاهد» همیشه همراه عدد — دلیل شامل وزن هر نشانه',
+    src.risk.reason.includes('وزن ۳۰') && src.risk.reason.includes('وزن ۳۵')
+    && src._signals.every((s) => !!s.evidence));
+  const farm = R.body.items.find((x) => x.id === 'device-farm-a');
+  check('سقف ۱۰۰: خوشهٔ دستگاه (۴۰+۱۸=۵۸) و سرور با امضای ناسازگار (۴۵) محاسبه شد',
+    farm.risk.score === 58 && R.body.items.find((x) => x.id === 'srv-partner-portal').risk.score === 45);
+  check('نشانهٔ غیرفعال در امتیاز نمی‌آید (impossible-travel بررسی‌شدهٔ client)',
+    R.body.items.find((x) => x.id === 'u-2').risk.score === 42
+    && R.body.items.find((x) => x.id === 'u-2').signalCount === 2);
+
+  /* ثبت نشانهٔ تازه: شاهد الزامی + کلید معتبر + بازگشت امتیاز جدید */
+  const noEv = await api('/authenticity/risks/signals', { method: 'POST', token: dt, body: { subjectId: 'u-1', signalKey: 'rate-burst' } });
+  check('ثبت نشانه بدون شاهد → ۴۰۰ (۱۹.۵)', noEv.status === 400);
+  const badKey = await api('/authenticity/risks/signals', { method: 'POST', token: dt, body: { subjectId: 'u-1', signalKey: 'nope', evidence: 'x' } });
+  check('کلید نشانهٔ نامعتبر → ۴۰۰', badKey.status === 400);
+  const S = await api('/authenticity/risks/signals', { method: 'POST', token: dt, body: { subjectId: 'u-1', signalKey: 'rate-burst', evidence: '۲۱۰ درخواست در ۵ دقیقه از این حساب' } });
+  check('ثبت نشانه با شاهد → امتیاز به‌روز (دمو: ۱۵+۱۸=۳۳/متوسط) + دلیل به‌روز',
+    S.status === 201 && S.body.subject.risk.score === 33 && S.body.subject.risk.levelKey === 'MEDIUM'
+    && S.body.subject.risk.reason.includes('انفجار نرخ درخواست'));
+  const sigId = S.body.signal.id;
+  const noNote = await api(`/authenticity/risks/signals/${sigId}/toggle`, { method: 'POST', token: dt, body: { active: false } });
+  check('غیرفعال کردن نشانه بدون یادداشت بازبین → ۴۰۰', noNote.status === 400);
+  const T = await api(`/authenticity/risks/signals/${sigId}/toggle`, { method: 'POST', token: dt, body: { active: false, note: 'بررسی شد — اسکریپت داخلی گزارش‌گیری بوده است' } });
+  check('غیرفعال با یادداشت بازبین → امتیاز به ۱۵ برگشت',
+    T.status === 200 && T.body.subject.risk.score === 15 && T.body.signal.reviewNote.includes('اسکریپت داخلی'));
+
+  /* RBAC */
+  const cR = await api('/authenticity/risks', { token: ct });
+  check('RBAC: client بدون security.read → ۴۰۳', cR.status === 403);
+
+  /* نشانه‌گذاری خودکار ورود ناموفق (۳ تلاش پیاپی روی demo که قبلاً فقط proxy-or-vpn=15 دارد) */
+  for (let i = 0; i < 3; i++) await api('/auth/login', { method: 'POST', body: { email: 'demo', password: 'wrong-pass' } });
+  const after = await api('/authenticity/risks', { token: dt });
+  const du = after.body.items.find((x) => x.id === 'u-1');
+  check('نشانه‌گذاری خودکار: ۳ ورود ناموفق پیاپی → نشانهٔ «رویهٔ ناموفق ورود» خودکار ثبت (۱۵+۳۰=۴۵/متوسط)',
+    du.signalCount === 2 && du.risk.score === 45 && du.risk.levelKey === 'MEDIUM'
+    && du._signals.some((s) => s.signalKey === 'login-failed-streak' && s.evidence.includes('۳ تلاش ناموفق پیاپی')),
+    `score=${du?.risk?.score} signals=${du?.signalCount}`);
+}
+
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
 if (failures.length) { console.log(`  Failed: ${failures.join(' | ')}`); }
