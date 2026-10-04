@@ -3010,6 +3010,78 @@ section('گام ۱۰.۱ — F02 پروندهٔ Due Diligence + F15 کارت آم
     cView.status === 200 && (cView.body.items ?? []).length === 0);
 }
 
+/* ═════════════════ گام ۱۰.۲ — F09 فرصت مناقصه + F18 کارت ورود به بازار ═════════════════ */
+section('گام ۱۰.۲ — F09 فرصت مناقصه + F18 کارت ورود به بازار');
+{
+  const dt = (await login(OWNER.email)).body.accessToken;
+  const ct = (await login(CLIENT.email)).body.accessToken;
+
+  /* ── F09 ── */
+  const L = await api('/tenders', { token: dt });
+  const items = L.body.items ?? [];
+  check('F09: سه مناقصهٔ بذر با تصمیم/وضعیت ارسال/نتیجهٔ فارسی‌شده و قاعدهٔ درس‌آموخته',
+    L.status === 200 && items.length === 3 && items.every(x => x.decisionFa && x.submissionFa && x.outcomeFa) && !!L.body.rule,
+    `n=${items.length}`);
+  const tnd3 = items.find(x => x.id === 'tnd-3');
+  check('F09: مناقصهٔ برده با درس‌آموخته ثبت‌شده (حلقهٔ یادگیری)',
+    tnd3.outcome === 'WON' && tnd3.submissionStatus === 'SUBMITTED' && (tnd3.lessonsLearned ?? '').length > 10);
+
+  const noTitle = await api('/tenders', { method: 'POST', token: dt, body: { authority: 'سازمان x', deadline: '2026-11-01' } });
+  check('F09: مناقصه بدون عنوان → ۴۰۰', noTitle.status === 400);
+  const badDate = await api('/tenders', { method: 'POST', token: dt, body: { authority: 'سازمان x', title: 'مناقصهٔ تست', deadline: 'هفت روز دیگر' } });
+  check('F09: مهلت بدون تاریخ مشخص → ۴۰۰', badDate.status === 400);
+  const NT = await api('/tenders', { method: 'POST', token: dt, body: { authority: 'اتاق بازرگانی تهران', title: 'مناقصهٔ ترجمهٔ هوشمند اسناد تجاری', deadline: '2026-11-15', fit: 'متوسط', decision: 'CONDITIONAL', ownerRole: 'مدیرعامل' } });
+  check('F09: ثبت مناقصهٔ تازه → شروع با «ارسال نشده / در انتظار»',
+    NT.status === 201 && NT.body.submissionStatus === 'NOT_SUBMITTED' && NT.body.outcome === 'PENDING');
+
+  /* قاعدهٔ نتیجه */
+  const earlyOutcome = await api(`/tenders/${NT.body.id}`, { method: 'PATCH', token: dt, body: { outcome: 'WON' } });
+  check('F09: نتیجه پیش از ارسال پیشنهاد → ۴۰۰', earlyOutcome.status === 400);
+  const submitted = await api(`/tenders/${NT.body.id}`, { method: 'PATCH', token: dt, body: { submissionStatus: 'SUBMITTED' } });
+  check('F09: تغییر وضعیت ارسال به «ارسال شد»', submitted.status === 200 && submitted.body.submissionStatus === 'SUBMITTED');
+  const noLesson = await api(`/tenders/${NT.body.id}`, { method: 'PATCH', token: dt, body: { outcome: 'LOST' } });
+  check('F09: ثبت نتیجه بدون درس‌آموخته → ۴۰۰', noLesson.status === 400);
+  const lost = await api(`/tenders/${NT.body.id}`, { method: 'PATCH', token: dt, body: { outcome: 'LOST', lessonsLearned: 'ارزیابی فنی رقیب قوی‌تر بود؛ دفعه بعد شریک فنی همراه کنیم.' } });
+  check('F09: نتیجهٔ باخت با درس‌آموخته ثبت شد',
+    lost.status === 200 && lost.body.outcome === 'LOST' && lost.body.lessonsLearned.includes('شریک فنی'));
+  const withdraw = await api(`/tenders/${NT.body.id}`, { method: 'PATCH', token: dt, body: { submissionStatus: 'WITHDRAWN' } });
+  check('F09: بازپس‌گیری پس از ثبت نتیجه → ۴۰۰ (ناسازگاری وضعیت)', withdraw.status === 400);
+  const cNoPerm = await api('/tenders', { method: 'POST', token: ct, body: { authority: 'x', title: 'y', deadline: '2026-11-01', decision: 'JOIN', ownerRole: 'مدیرعامل' } });
+  check('F09: RBAC — ثبت مناقصه فقط با opportunity.write (client → ۴۰۳)', cNoPerm.status === 403);
+  const cView = await api('/tenders', { token: ct });
+  check('F09: جداسازی — مناقصات هلدینگ برای آریا فناوری فهرست نمی‌شود',
+    cView.status === 200 && (cView.body.items ?? []).length === 0);
+
+  /* ── F18 ── */
+  const G = await api('/gtm-cards', { token: dt });
+  const cards = G.body.items ?? [];
+  check('F18: دو کارت بذر با وضعیت DD زنده از پروندهٔ متصل',
+    G.status === 200 && cards.length === 2 && cards.every(x => x.ddStatus && x.ddStatusFa) && !!G.body.rule,
+    `n=${cards.length}`);
+  const gtm1 = cards.find(x => x.id === 'gtm-1');
+  const gtm2 = cards.find(x => x.id === 'gtm-2');
+  check('F18: کارت GO متصل به DD تصویب‌شده؛ کارت پایلوت متصل به DD در بررسی',
+    gtm1.decision === 'GO' && gtm1.ddStatus.status === 'APPROVED' && gtm1.ddStatus.g2Ready === true
+    && gtm2.decision === 'PILOT' && gtm2.ddStatus.status === 'IN_REVIEW');
+
+  const noProduct = await api('/gtm-cards', { method: 'POST', token: dt, body: { product: 'ab' } });
+  check('F18: کارت بدون نام محصول معتبر → ۴۰۰', noProduct.status === 400);
+  const badDossier = await api('/gtm-cards', { method: 'POST', token: dt, body: { product: 'محصول تست', dossierId: 'dd-999' } });
+  check('F18: پروندهٔ DD نامعتبر → ۴۰۰', badDossier.status === 400);
+  const goGate = await api('/gtm-cards', { method: 'POST', token: dt, body: { product: 'محصول بدون DD', decision: 'GO' } });
+  check('F18: گرهٔ تصمیم — GO بدون پروندهٔ DD متصل → ۴۰۰', goGate.status === 400);
+  const goNotApproved = await api('/gtm-cards', { method: 'POST', token: dt, body: { product: 'محصول با DD ناقص', dossierId: 'dd-2', decision: 'GO' } });
+  check('F18: گرهٔ تصمیم — GO با DD تصویب‌نشده → ۴۰۰', goNotApproved.status === 400);
+  const NG = await api('/gtm-cards', { method: 'POST', token: dt, body: { product: 'داشبورد تحلیلی بورس', dossierId: 'dd-1', idealCustomer: 'کارگزاری‌های متوسط', pricing: 'اشتراک ماهانه', channels: 'فروش مستقیم', decision: 'PENDING' } });
+  check('F18: ثبت کارت متصل به DD تصویب‌شده → ۲۰۱ با وضعیت DD زنده',
+    NG.status === 201 && NG.body.ddStatus.status === 'APPROVED');
+  const goAfter = await api(`/gtm-cards/${NG.body.id}`, { method: 'PATCH', token: dt, body: { decision: 'GO' } });
+  check('F18: ارتقای تصمیم همان کارت به GO (DD متصل تصویب‌شده) → ۲۰۰',
+    goAfter.status === 200 && goAfter.body.decision === 'GO' && goAfter.body.decisionFa === 'ورود (GO)');
+  const gNoPerm = await api('/gtm-cards', { method: 'POST', token: ct, body: { product: 'محصول مشتری' } });
+  check('F18: RBAC — ثبت کارت ورود فقط با opportunity.write (client → ۴۰۳)', gNoPerm.status === 403);
+}
+
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
 if (failures.length) { console.log(`  Failed: ${failures.join(' | ')}`); }

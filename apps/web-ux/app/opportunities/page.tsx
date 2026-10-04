@@ -8,6 +8,8 @@ import { Badge, ErrorCard, Modal, PageHeader, StatCard, Toolbar } from '../_comp
 import { CheckCircle2, ChevronLeft, Coins, Handshake, Plus, RefreshCw, Search, TrendingUp, ArrowDownWideNarrow, CalendarClock } from 'lucide-react';;
 import { JalaliDateField } from '../_components/jalali-date-field';
 import { CriteriaBadge, type Summary as CriteriaSummary } from '../_components/criteria';
+import TenderOpportunities from '../_components/tender-opportunities';
+import GtmCards from '../_components/gtm-cards';
 
 type Opportunity = {
   id: string; name: string; status: string; description?: string | null;
@@ -418,6 +420,10 @@ export default function OpportunitiesPage() {
           </div>
         </form>
       </Modal>
+
+      {/* ═══ گام ۱۰.۲ — F09 فرصت‌های مناقصه + F18 کارت‌های ورود به بازار ═══ */}
+      <TenderOpportunities />
+      <GtmCards />
     </main>
   );
 }

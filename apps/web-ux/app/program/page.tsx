@@ -64,7 +64,7 @@ const FORM_CATALOG = lt<Array<{ code: string; name: string; status: string; wher
   { code: 'F06', name: 'فرم صفحه و انتشار PESO', status: 'HAVE', where: 'تقویم → رسانه تخصصی' },
   { code: 'F07', name: 'طرح پژوهش و داوری', status: 'PLANNED', where: 'فاز ۱۰' },
   { code: 'F08', name: 'کارت تولید و کنترل محتوای هوش مصنوعی', status: 'PARTIAL', where: 'تقویم → گردش تأیید محتوا؛ فیلدهای AI: فاز ۷' },
-  { code: 'F09', name: 'فرصت مناقصه', status: 'PLANNED', where: 'فاز ۱۰' },
+  { code: 'F09', name: 'فرصت مناقصه', status: 'HAVE', where: 'فرصت‌ها → فرصت‌های مناقصه' },
   { code: 'F10', name: 'طرح اجرایی و گزارش رویداد', status: 'HAVE', where: 'تقویم → رویدادها' },
   { code: 'F11', name: 'برگهٔ ورود و تطبیق داده', status: 'HAVE', where: 'ممیزی سه‌گانه → مراحل انتقال' },
   { code: 'F12', name: 'کارت کاربرد و ارزیابی هوش مصنوعی', status: 'PLANNED', where: 'درگاه هوش مصنوعی — فاز ۹' },
@@ -73,7 +73,7 @@ const FORM_CATALOG = lt<Array<{ code: string; name: string; status: string; wher
   { code: 'F15', name: 'کارت آماده‌سازی سرمایه‌گذار و شریک', status: 'HAVE', where: 'مشارکت‌ها → آماده‌سازی سرمایه‌گذار و شریک' },
   { code: 'F16', name: 'کارت نقش و ورود همکار', status: 'PLANNED', where: 'فاز ۱۰' },
   { code: 'F17', name: 'دفتر ثبت ریسک و انتشار هوش مصنوعی', status: 'PARTIAL', where: 'حاکمیت برنامه → ریسک‌ها؛ ستون‌های AI: فاز ۹' },
-  { code: 'F18', name: 'کارت آماده‌سازی ورود به بازار', status: 'PLANNED', where: 'فاز ۱۰' },
+  { code: 'F18', name: 'کارت آماده‌سازی ورود به بازار', status: 'HAVE', where: 'فرصت‌ها → کارت‌های ورود به بازار' },
 ]);
 const FORM_STATUS_FA = lt<Record<string, string>>({ HAVE: t('موجود'), PARTIAL: t('موجود — تکمیل در برنامه'), PLANNED: t('در برنامه') });
 /* گام ۵.۶ — دروازه‌های کنترل مشترک (پیوست پ سند v6): G0–G6 با شرط عبور و

@@ -9917,6 +9917,68 @@ function readinessPackView(x,req){
     ddStatus:dd?{dossierId:dd.id,status:dd.status,statusFa:dd.statusFa,acceptedAxes:dd.acceptedAxes,totalAxes:dd.totalAxes,g2Ready:dd.g2Ready}:null,
     ddStatusFa:dd?`${dd.statusFa} — ${dd.acceptedAxes}/${dd.totalAxes} محور`:'بدون پروندهٔ DD'};
 }
+/* ═══════════ گام ۱۰.۲ — F09 فرصت مناقصه + F18 کارت ورود به بازار: ثابت‌ها، بذر و نما ═══════════ */
+const TENDER_DECISION_FA={JOIN:'می‌کنیم',CONDITIONAL:'مشروط',DECLINE:'می‌کنیم — منصرف',UNDECIDED:'هنوز نامشخص'}; /* تصمیم شرکت */
+const TENDER_SUBMIT_FA={NOT_SUBMITTED:'ارسال نشده',PREPARING:'در حال آماده‌سازی',SUBMITTED:'ارسال شد',WITHDRAWN:'بازپس‌گیری'};
+const TENDER_OUTCOME_FA={PENDING:'در انتظار',WON:'برد',LOST:'باخت'};
+const GTM_DECISION_FA={PENDING:'در انتظار',PILOT:'اجرای آزمایشی',GO:'ورود (GO)',NO_GO:'ورود نمی‌کنیم'};
+
+function ensureTenderSeed(){
+  if(!Array.isArray(DB.tenders)) DB.tenders=[];
+  if(DB.tenders.length) return;
+  const AGO=(d)=>new Date(Date.now()-d*86400000).toISOString();
+  const IN=(d)=>new Date(Date.now()+d*86400000).toISOString();
+  DB.tenders.push(
+    {id:'tnd-1',organizationId:PARTNERSHIP_ORG_ID,authority:'سازمان بورس و اوراق بهادار',
+     title:'مناقصهٔ سامانهٔ هوشمندسازی گزارش‌گیری معاملات',deadline:IN(9),
+     fit:'بالا — تناسب کامل با ماژول گزارش‌ساز و پایش داده',requirements:'سابقهٔ سه پروژه مشابه + تأمین امنیت اطلاعات',capabilityEvidence:'پروژه‌های پترو صنعت و بانک پارس',risk:'قیمت‌گذاری رقبا و شرط سابقهٔ بورسی',
+     decision:'JOIN',ownerRole:'مدیر توسعه کسب‌وکار',documents:'اساید فنی + اسناد شرکت',
+     submissionStatus:'SUBMITTED',outcome:'PENDING',lessonsLearned:null,createdAt:AGO(20),updatedAt:AGO(1)},
+    {id:'tnd-2',organizationId:PARTNERSHIP_ORG_ID,authority:'شهرداری منطقهٔ ۲۲ تهران',
+     title:'مناقصهٔ پایش هوشمند پروژه‌های عمرانی',deadline:IN(24),
+     fit:'متوسط — نیاز به شریک اجرایی محلی',requirements:'مجوز رسمی + تجربهٔ شهرداری',capabilityEvidence:'پایلوت گروه سدنا',risk:'چرخهٔ پرداخت طولانی شهرداری',
+     decision:'CONDITIONAL',ownerRole:'مدیرعامل',documents:'پرسش‌های شفاف‌سازی',
+     submissionStatus:'PREPARING',outcome:'PENDING',lessonsLearned:null,createdAt:AGO(10),updatedAt:AGO(2)},
+    {id:'tnd-3',organizationId:PARTNERSHIP_ORG_ID,authority:'صندوق سرمایه‌گذاری امید',
+     title:'مناقصهٔ داشبورد پایش پرتفوی',deadline:AGO(15),
+     fit:'بالا',requirements:'یکپارچگی با سامانهٔ موجود صندوق',capabilityEvidence:'ادغام با هلدینگ البرز',risk:'حجم دادهٔ تاریخی',
+     decision:'JOIN',ownerRole:'مدیر اندیشکده و پژوهش',documents:'پیشنهاد فنی و مالی',
+     submissionStatus:'SUBMITTED',outcome:'WON',lessonsLearned:'جلسهٔ پیش از ارسال با ارزیاب فنی، ریسک الزام یکپارچگی را از بین برد؛ در مناقصه‌های بعدی تکرار شود.',
+     createdAt:AGO(45),updatedAt:AGO(12)}
+  );
+  saveDb();
+}
+function tenderView(x){
+  return {...x,decisionFa:TENDER_DECISION_FA[x.decision]??x.decision,
+    submissionFa:TENDER_SUBMIT_FA[x.submissionStatus]??x.submissionStatus,
+    outcomeFa:TENDER_OUTCOME_FA[x.outcome]??x.outcome};
+}
+function ensureGtmCardSeed(){
+  if(!Array.isArray(DB.gtmCards)) DB.gtmCards=[];
+  if(DB.gtmCards.length) return;
+  const AGO=(d)=>new Date(Date.now()-d*86400000).toISOString();
+  DB.gtmCards.push(
+    {id:'gtm-1',organizationId:PARTNERSHIP_ORG_ID,product:'سامانهٔ هوشمند عملیات هلدینگ',dossierId:'dd-1',
+     idealCustomer:'هلدینگ‌های چندشرکتی با بیش از پنج زیرمجموعه',valueProp:'یک منبع حقیقت برای شاخص‌ها و تصمیم‌های هفتگی',
+     packaging:'اشتراک سالانهٔ سه‌سطحی + راه‌اندازی',pricing:'سرخط سالانه بر پایهٔ تعداد شرکت زیرمجموعه',
+     channels:'فروش مستقیم + معرفی شرکای مشاور',partner:'صندوق سرمایه‌گذاری امید',pilot:'پایلوت دو ماهه با هلدینگ البرز',
+     customerEvidence:'گزارش پایلوت سدنا و نرخ استفادهٔ ۸۴ درصدی',decision:'GO',createdAt:AGO(30),updatedAt:AGO(5)},
+    {id:'gtm-2',organizationId:PARTNERSHIP_ORG_ID,product:'موتور قطعی فارسی',dossierId:'dd-2',
+     idealCustomer:'نهادهای عمومی با محدودیت ابری',valueProp:'پاسخ بدون وابستگی به سرویس ابری',
+     packaging:'استقرار درون‌سازمانی + آموزش',pricing:'لایسنس + پشتیبانی سالانه',
+     channels:'مناقصات و فرصت‌های دولتی',partner:'استانداری تهران',pilot:'پایلوت پژوهش مشترک با استانداری',
+     customerEvidence:'گزارش پذیرش کاربران پایلوت',decision:'PILOT',createdAt:AGO(18),updatedAt:AGO(3)}
+  );
+  saveDb();
+}
+function gtmCardView(x){
+  const d=(DB.dossiers??[]).find(v=>v.id===x.dossierId);
+  const dv=d?dossierView(d):null;
+  return {...x,ddStatus:dv?{status:dv.status,acceptedAxes:dv.acceptedAxes,totalAxes:dv.totalAxes,g2Ready:dv.g2Ready}:null,
+    ddStatusFa:dv?`${dv.statusFa} — ${faN(dv.acceptedAxes)}/${faN(dv.totalAxes)} محور`:null,
+    decisionFa:GTM_DECISION_FA[x.decision]??x.decision};
+}
+
 function partnershipsFor(req){
   ensurePartnershipSeed();
   const ids=visibleOrgIds(req);
@@ -18232,6 +18294,156 @@ async function __handler(req, res) {
     row.updatedAt=nowIso(); saveDb();
     audit(req,'UPDATE','ReadinessPack',row.id,'OK',{});
     return json(res,200,readinessPackView(row,req));
+  }
+
+  /* ─────────────── گام ۱۰.۲ — F09 فرصت مناقصه (/tenders) ────────── */
+  if(is('/tenders')&&method==='GET'){
+    if(!hasPerm('opportunity.read')) return json(res,403,{message:'شما مجوز «مشاهده فرصت‌ها» (opportunity.read) را ندارید.'});
+    ensureTenderSeed();
+    const items=(DB.tenders??[]).filter(x=>visibleOrgIds(req).includes(x.organizationId))
+      .map(tenderView).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));
+    return json(res,200,{items,
+      decisions:Object.fromEntries(Object.entries(TENDER_DECISION_FA)),
+      submissions:Object.fromEntries(Object.entries(TENDER_SUBMIT_FA)),
+      outcomes:Object.fromEntries(Object.entries(TENDER_OUTCOME_FA)),
+      rule:'فرصت مناقصه (F09): مرجع، مهلت، تناسب، الزامات، شواهد توان، ریسک و تصمیم شرکت؛ ثبت نتیجه (برد/باخت) فقط پس از «ارسال شد» و همراه درس‌آموخته ممکن است.'});
+  }
+  if(is('/tenders')&&method==='POST'){
+    if(!hasPerm('opportunity.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر فرصت» (opportunity.write) را ندارید.'});
+    ensureTenderSeed();
+    const b=await readBody(req);
+    const authority=String(b.authority??'').trim();
+    if(authority.length<3) return json(res,400,{message:'مرجع مناقصه را بنویسید.'});
+    const title=String(b.title??'').trim();
+    if(title.length<3) return json(res,400,{message:'عنوان مناقصه را بنویسید.'});
+    const deadline=String(b.deadline??'').trim();
+    if(!/^\d{4}-\d{2}-\d{2}/.test(deadline)) return json(res,400,{message:'مهلت ارسال مناقصه را در قالب تاریخ مشخص کنید.'});
+    const ownerRole=String(b.ownerRole??'').trim();
+    const tChart=programSettingsFor(req).roles;
+    if(!ownerRole||!tChart.includes(ownerRole)) return json(res,400,{message:'مسئول پیگیری باید یکی از نقش‌های چارت سازمان شما باشد.'});
+    const decision=String(b.decision??'').toUpperCase();
+    if(!TENDER_DECISION_FA[decision]) return json(res,400,{message:'تصمیم شرکت نامعتبر است (می‌کنیم/مشروط/منصرف/نامشخص).'});
+    const row={id:`tnd-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,
+      organizationId:primaryOrgId(authUser)??visibleOrgIds(req)[0]??PARTNERSHIP_ORG_ID,
+      authority:authority.slice(0,150),title:title.slice(0,200),deadline,
+      fit:String(b.fit??'').trim().slice(0,300),requirements:String(b.requirements??'').trim().slice(0,400),
+      capabilityEvidence:String(b.capabilityEvidence??'').trim().slice(0,400),risk:String(b.risk??'').trim().slice(0,300),
+      decision,ownerRole,documents:String(b.documents??'').trim().slice(0,300),
+      submissionStatus:'NOT_SUBMITTED',outcome:'PENDING',lessonsLearned:null,
+      createdAt:nowIso(),updatedAt:nowIso()};
+    DB.tenders.unshift(row); saveDb();
+    audit(req,'CREATE','Tender',row.id,'OK',{authority:row.authority,decision});
+    return json(res,201,tenderView(row));
+  }
+  const tndId=match('/tenders/:id');
+  if(tndId&&method==='PATCH'){
+    if(!hasPerm('opportunity.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر فرصت» (opportunity.write) را ندارید.'});
+    ensureTenderSeed();
+    const row=(DB.tenders??[]).find(x=>x.id===tndId[0]&&visibleOrgIds(req).includes(x.organizationId));
+    if(!row) return json(res,404,{message:'فرصت مناقصه یافت نشد یا خارج از محدودهٔ شماست.'});
+    const b=await readBody(req);
+    for(const k of ['authority','title','fit','requirements','capabilityEvidence','risk','documents'])
+      if(b[k]!=null) row[k]=String(b[k]).trim().slice(0,k==='title'?200:400);
+    if(b.deadline!=null){
+      const dl=String(b.deadline).trim();
+      if(!/^\d{4}-\d{2}-\d{2}/.test(dl)) return json(res,400,{message:'مهلت ارسال مناقصه را در قالب تاریخ مشخص کنید.'});
+      row.deadline=dl;
+    }
+    if(b.ownerRole!=null){const v=String(b.ownerRole).trim(); const tChart=programSettingsOf(row.organizationId).roles; if(!tChart.includes(v)) return json(res,400,{message:'مسئول پیگیری باید یکی از نقش‌های چارت سازمان شما باشد.'}); row.ownerRole=v;}
+    if(b.decision!=null){const v=String(b.decision).toUpperCase(); if(!TENDER_DECISION_FA[v]) return json(res,400,{message:'تصمیم شرکت نامعتبر است.'}); row.decision=v;}
+    if(b.submissionStatus!=null){
+      const v=String(b.submissionStatus).toUpperCase();
+      if(!TENDER_SUBMIT_FA[v]) return json(res,400,{message:'وضعیت ارسال نامعتبر است.'});
+      if(v!=='SUBMITTED'&&['WON','LOST'].includes(row.outcome)) return json(res,400,{message:'نتیجهٔ ثبت‌شده (برد/باخت) با بازپس‌گیری یا عدم ارسال سازگار نیست.'});
+      row.submissionStatus=v;
+    }
+    if(b.outcome!=null){
+      const v=String(b.outcome).toUpperCase();
+      if(!TENDER_OUTCOME_FA[v]) return json(res,400,{message:'نتیجهٔ مناقصه نامعتبر است.'});
+      if(['WON','LOST'].includes(v)){
+        if(row.submissionStatus!=='SUBMITTED') return json(res,400,{message:'نتیجه فقط پس از ارسال پیشنهاد ثبت می‌شود — ابتدا وضعیت ارسال را «ارسال شد» کنید.'});
+        const lessons=String(b.lessonsLearned??row.lessonsLearned??'').trim();
+        if(lessons.length<5) return json(res,400,{message:'ثبت نتیجهٔ مناقصه نیازمند درس‌آموخته است — جمله‌ای از آنچه آموختید بنویسید.'});
+        row.lessonsLearned=lessons.slice(0,500);
+      }
+      row.outcome=v;
+    }
+    if(b.lessonsLearned!=null) row.lessonsLearned=String(b.lessonsLearned).trim().slice(0,500)||null;
+    row.updatedAt=nowIso(); saveDb();
+    audit(req,'UPDATE','Tender',row.id,'OK',{outcome:row.outcome,submission:row.submissionStatus});
+    return json(res,200,tenderView(row));
+  }
+
+  /* ─────────────── گام ۱۰.۲ — F18 کارت ورود به بازار (/gtm-cards) ────────── */
+  if(is('/gtm-cards')&&method==='GET'){
+    if(!hasPerm('opportunity.read')) return json(res,403,{message:'شما مجوز «مشاهده فرصت‌ها» (opportunity.read) را ندارید.'});
+    ensureDossierSeed(); ensureGtmCardSeed();
+    const items=(DB.gtmCards??[]).filter(x=>visibleOrgIds(req).includes(x.organizationId))
+      .map(gtmCardView).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));
+    return json(res,200,{items,
+      decisions:Object.fromEntries(Object.entries(GTM_DECISION_FA)),
+      rule:'کارت ورود به بازار (F18): محصول، وضعیت DD (زنده از پروندهٔ متصل)، مشتری ایدئال، ارزش پیشنهادی، بسته‌بندی، قیمت‌گذاری، کانال، شریک، اجرای آزمایشی و شواهد مشتری؛ تصمیم ورود (GO) فقط با پروندهٔ DD تصویب‌شده باز می‌شود.'});
+  }
+  if(is('/gtm-cards')&&method==='POST'){
+    if(!hasPerm('opportunity.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر فرصت» (opportunity.write) را ندارید.'});
+    ensureDossierSeed(); ensureGtmCardSeed();
+    const b=await readBody(req);
+    const product=String(b.product??'').trim();
+    if(product.length<3) return json(res,400,{message:'نام محصول را بنویسید.'});
+    const decision=String(b.decision??'PENDING').toUpperCase();
+    if(!GTM_DECISION_FA[decision]) return json(res,400,{message:'تصمیم ورود به بازار نامعتبر است.'});
+    const ids=visibleOrgIds(req);
+    let dossierId=String(b.dossierId??'').trim()||null;
+    if(dossierId&&!(DB.dossiers??[]).some(d=>d.id===dossierId&&ids.includes(d.organizationId)))
+      return json(res,400,{message:'پروندهٔ DD انتخاب‌شده یافت نشد یا خارج از محدودهٔ شماست.'});
+    /* گرهٔ تصمیم GO: پروندهٔ DD متصل باید تصویب‌شده باشد */
+    if(decision==='GO'){
+      const d=dossierId?(DB.dossiers??[]).find(v=>v.id===dossierId):null;
+      if(!d||d.status!=='APPROVED') return json(res,400,{message:'تصمیم ورود (GO) نیازمند پروندهٔ DD متصلِ تصویب‌شده است — ابتدا پروندهٔ DD را باز و تصویب کنید.'});
+    }
+    const row={id:`gtm-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,
+      organizationId:primaryOrgId(authUser)??ids[0]??PARTNERSHIP_ORG_ID,
+      product:product.slice(0,200),dossierId,
+      idealCustomer:String(b.idealCustomer??'').trim().slice(0,300),
+      valueProp:String(b.valueProp??'').trim().slice(0,400),
+      packaging:String(b.packaging??'').trim().slice(0,300),
+      pricing:String(b.pricing??'').trim().slice(0,300),
+      channels:String(b.channels??'').trim().slice(0,300),
+      partner:String(b.partner??'').trim().slice(0,200),
+      pilot:String(b.pilot??'').trim().slice(0,400),
+      customerEvidence:String(b.customerEvidence??'').trim().slice(0,400),
+      decision,createdAt:nowIso(),updatedAt:nowIso()};
+    DB.gtmCards.unshift(row); saveDb();
+    audit(req,'CREATE','GtmCard',row.id,'OK',{product:row.product,decision});
+    return json(res,201,gtmCardView(row));
+  }
+  const gtmId=match('/gtm-cards/:id');
+  if(gtmId&&method==='PATCH'){
+    if(!hasPerm('opportunity.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر فرصت» (opportunity.write) را ندارید.'});
+    ensureDossierSeed(); ensureGtmCardSeed();
+    const row=(DB.gtmCards??[]).find(x=>x.id===gtmId[0]&&visibleOrgIds(req).includes(x.organizationId));
+    if(!row) return json(res,404,{message:'کارت ورود به بازار یافت نشد یا خارج از محدودهٔ شماست.'});
+    const b=await readBody(req);
+    for(const k of ['product','idealCustomer','valueProp','packaging','pricing','channels','partner','pilot','customerEvidence'])
+      if(b[k]!=null) row[k]=String(b[k]).trim().slice(0,k==='product'?200:400);
+    if(b.dossierId!=null){
+      const v=String(b.dossierId).trim()||null;
+      if(v&&!(DB.dossiers??[]).some(d=>d.id===v&&visibleOrgIds(req).includes(d.organizationId)))
+        return json(res,400,{message:'پروندهٔ DD انتخاب‌شده یافت نشد یا خارج از محدودهٔ شماست.'});
+      row.dossierId=v;
+    }
+    if(b.decision!=null){
+      const v=String(b.decision).toUpperCase();
+      if(!GTM_DECISION_FA[v]) return json(res,400,{message:'تصمیم ورود به بازار نامعتبر است.'});
+      if(v==='GO'){
+        const d=row.dossierId?(DB.dossiers??[]).find(x=>x.id===row.dossierId):null;
+        if(!d||d.status!=='APPROVED') return json(res,400,{message:'تصمیم ورود (GO) نیازمند پروندهٔ DD متصلِ تصویب‌شده است — ابتدا پروندهٔ DD را باز و تصویب کنید.'});
+      }
+      row.decision=v;
+    }
+    row.updatedAt=nowIso(); saveDb();
+    audit(req,'UPDATE','GtmCard',row.id,'OK',{decision:row.decision});
+    return json(res,200,gtmCardView(row));
   }
 
   /* ── آیتم ۲۱: Web Push (رضایت اعلان ملزم؛ انتقال دمو = polling) ── */
