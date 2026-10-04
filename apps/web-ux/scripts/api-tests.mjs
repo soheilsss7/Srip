@@ -2921,6 +2921,95 @@ section('گام ۹.۳ — آزمون‌های امنیتی ۱۹.۴ (تزریق �
     `sw=${sw.status} engine=${after.body?.engine} eq=${after.body?.answer === before.body?.answer}`);
 }
 
+/* ═════════════════ گام ۱۰.۱ — F02 پروندهٔ DD + F15 آماده‌سازی سرمایه‌گذار و شریک ═════════════════ */
+section('گام ۱۰.۱ — F02 پروندهٔ Due Diligence + F15 کارت آماده‌سازی (G2)');
+{
+  const dt = (await login(OWNER.email)).body.accessToken;
+  const ct = (await login(CLIENT.email)).body.accessToken;
+
+  /* ── F02 ── */
+  const L = await api('/dossiers', { token: dt });
+  const items = L.body.items ?? [];
+  check('F02: دو پروندهٔ بذر با دوازده محور ۶.۲.۱/۶.۲.۲ و نمای محاسبه‌شده',
+    L.status === 200 && items.length === 2 && (L.body.axes ?? []).length === 12
+    && items.every(d => d.totalAxes === 12 && typeof d.acceptedAxes === 'number' && typeof d.g2Ready === 'boolean'),
+    `n=${items.length} axes=${(L.body.axes ?? []).length}`);
+  const dd1 = items.find(d => d.id === 'dd-1');
+  const dd2 = items.find(d => d.id === 'dd-2');
+  check('F02: بذر تصویب‌شده با همهٔ محورها پذیرفته + نظر تیم Y → g2Ready',
+    dd1.status === 'APPROVED' && dd1.acceptedAxes === 12 && dd1.g2Ready === true && dd1.teamY?.opinion === 'APPROVE');
+
+  /* client مجوز partnership.read دارد — جداسازی سازمانی + RBAC نوشتن */
+  const cView1 = await api('/dossiers', { token: ct });
+  check('F02: جداسازی — پرونده‌های هلدینگ برای آریا فناوری فهرست نمی‌شود',
+    cView1.status === 200 && (cView1.body.items ?? []).length === 0);
+  const cCreate = await api('/dossiers', { method: 'POST', token: ct, body: { subjectOrgId: 'org-3', ownerRole: 'مدیرعامل' } });
+  check('F02: RBAC — باز کردن پرونده فقط با partnership.write (client → ۴۰۳)', cCreate.status === 403);
+
+  const badOrg = await api('/dossiers', { method: 'POST', token: dt, body: { subjectOrgId: 'org-not-exist-xyz', ownerRole: 'مدیرعامل' } });
+  check('F02: سازمان موضوع نامعتبر → ۴۰۰', badOrg.status === 400);
+  const noOwner = await api('/dossiers', { method: 'POST', token: dt, body: { subjectOrgId: 'org-4' } });
+  check('F02: پرونده بدون مالک → ۴۰۰', noOwner.status === 400);
+  const ND = await api('/dossiers', { method: 'POST', token: dt, body: { subjectOrgId: 'org-4', ownerRole: 'مدیرعامل' } });
+  check('F02: باز کردن پروندهٔ تازه → دوازده محور شروع‌نشده + وضعیت پیش‌نویس',
+    ND.status === 201 && ND.body.totalAxes === 12 && ND.body.acceptedAxes === 0 && ND.body.status === 'DRAFT');
+
+  /* قاعدهٔ G2 */
+  const early = await api(`/dossiers/${ND.body.id}/approval`, { method: 'POST', token: dt, body: { decision: 'APPROVED' } });
+  check('F02: دروازهٔ G2 — تصویب پیش از تکمیل محورها → ۴۰۰', early.status === 400);
+  const noEvidence = await api(`/dossiers/${ND.body.id}/axes/security`, { method: 'PATCH', token: dt, body: { status: 'ACCEPTED' } });
+  check('F02: محور بدون شاهد پذیرفته نمی‌شود → ۴۰۰', noEvidence.status === 400);
+  const ax = await api(`/dossiers/${ND.body.id}/axes/security`, { method: 'PATCH', token: dt, body: { answer: 'MFA و ممیزی رویداد فعال', evidence: 'گزارش امنیت', status: 'ACCEPTED' } });
+  check('F02: ثبت پاسخ + شاهد → محور پذیرفته شد', ax.status === 200 && ax.body.acceptedAxes === 1);
+  const badAxis = await api(`/dossiers/${ND.body.id}/axes/xyz`, { method: 'PATCH', token: dt, body: { answer: 'x' } });
+  check('F02: محور نامعتبر → ۴۰۰', badAxis.status === 400);
+
+  /* حق پاسخ */
+  const resp = await api(`/dossiers/${ND.body.id}/axes/security`, { method: 'POST', token: dt, body: { response: 'گزارش امنیت تأیید شد؛ اصلاح جزئی انجام شد.' } });
+  check('F02: حق پاسخ — پاسخ طرف مقابل روی محور ثبت و مهر زمان خورد',
+    resp.status === 200 && resp.body.axes.find(a => a.key === 'security')?.response?.includes('تأیید شد')
+    && !!resp.body.axes.find(a => a.key === 'security')?.responseAt);
+
+  /* نظر تیم Y + تصویب */
+  const tyNoNote = await api(`/dossiers/${ND.body.id}/team-y`, { method: 'POST', token: dt, body: { opinion: 'APPROVE' } });
+  check('F02: نظر تیم Y بدون یادداشت → ۴۰۰', tyNoNote.status === 400);
+  const ty = await api(`/dossiers/${ND.body.id}/team-y`, { method: 'POST', token: dt, body: { opinion: 'CONDITIONS', note: 'با شرط تکمیل محورهای باقی‌مانده' } });
+  check('F02: نظر مدیر تیم Y (مشروط) ثبت شد', ty.status === 200 && ty.body.teamYFa?.opinionFa === 'مشروط');
+  const stillNo = await api(`/dossiers/${ND.body.id}/approval`, { method: 'POST', token: dt, body: { decision: 'APPROVED' } });
+  check('F02: گرهٔ G2 — با نظر تیم Y اما بدون تکمیل محورها هنوز ۴۰۰', stillNo.status === 400);
+  /* تکمیل بقیهٔ محورها با شاهد */
+  for (const a of (L.body.axes ?? []).filter(x => x.key !== 'security')) {
+    await api(`/dossiers/${ND.body.id}/axes/${a.key}`, { method: 'PATCH', token: dt, body: { answer: `پاسخ ${a.title}`, evidence: `شاهد ${a.title}`, status: 'ACCEPTED' } });
+  }
+  const done = await api(`/dossiers/${ND.body.id}/approval`, { method: 'POST', token: dt, body: { decision: 'APPROVED' } });
+  check('F02: پس از پذیرش همهٔ محورها + نظر تیم Y → تصویب (G2 باز شد)',
+    done.status === 200 && done.body.status === 'APPROVED' && done.body.g2Ready === true);
+
+  /* ── F15 ── */
+  const P = await api('/readiness-packs', { token: dt });
+  const packs = P.body.items ?? [];
+  check('F15: کارت‌های بذر متصل به مشارکت — وضعیت DD و تعهدها زنده',
+    P.status === 200 && packs.length === 2
+    && packs.every(p => p.partnerName && p.commitments?.ours && p.ddStatus),
+    `n=${packs.length}`);
+  const rp1 = packs.find(p => p.id === 'rp-1');
+  check('F15: وضعیت DD زنده از پروندهٔ متصل (تصویب‌شده ۱۲/۱۲ + آمادهٔ G2)',
+    rp1.ddStatus.status === 'APPROVED' && rp1.ddStatus.acceptedAxes === 12 && rp1.ddStatus.g2Ready === true);
+
+  const noLink = await api('/readiness-packs', { method: 'POST', token: dt, body: { subject: 'کارت بدون اتصال', ownerRole: 'مدیرعامل' } });
+  check('F15: کارت باید به مشارکت یا فرصت متصل باشد → ۴۰۰', noLink.status === 400);
+  const badPt = await api('/readiness-packs', { method: 'POST', token: dt, body: { subject: 'کارت با مشارکت نادرست', partnershipId: 'pt-999', ownerRole: 'مدیرعامل' } });
+  check('F15: مشارکت نامعتبر/خارج از محدوده → ۴۰۰', badPt.status === 400);
+  const NP = await api('/readiness-packs', { method: 'POST', token: dt, body: { subject: 'آماده‌سازی عرضه به بورس', partnershipId: 'pt-7', ownerRole: 'مدیر توسعه کسب‌وکار', relationshipGoal: 'تسهیل دادهٔ معاملاتی', nextAction: 'جلسهٔ معرفی با مدیر فناوری بورس' } });
+  check('F15: ثبت کارت متصل به مشارکت → ۲۰۱ (بدون DD → وضعیت «بدون پروندهٔ DD»)',
+    NP.status === 201 && NP.body.ddStatus === null && NP.body.ddStatusFa === 'بدون پروندهٔ DD');
+  const UP = await api(`/readiness-packs/${NP.body.id}`, { method: 'PATCH', token: dt, body: { nextAction: 'ارسال پیش‌نویس تفاهم‌نامه تا پایان هفته' } });
+  check('F15: به‌روزرسانی اقدام بعدی کارت', UP.status === 200 && UP.body.nextAction.includes('پایان هفته'));
+  const cView = await api('/readiness-packs', { token: ct });
+  check('F15: جداسازی — کارت‌های هلدینگ برای آریا فناوری فهرست نمی‌شود',
+    cView.status === 200 && (cView.body.items ?? []).length === 0);
+}
+
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
 if (failures.length) { console.log(`  Failed: ${failures.join(' | ')}`); }

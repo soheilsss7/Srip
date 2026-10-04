@@ -10,6 +10,8 @@ import {
 import {
   AlertTriangle, ArrowLeft, CalendarClock, FileCheck2, Handshake, Link2, Plus, RefreshCw, Target, X,
 } from 'lucide-react';
+import DdDossiers from '../_components/dd-dossiers';
+import ReadinessPacks from '../_components/readiness-packs';
 
 /* ═══════════════════════════════════════════════════════════════════════════
    گام ۲.۲ مسترپلن — ماژول مشارکت (Partnership)
@@ -192,6 +194,10 @@ export default function PartnershipsPage() {
           )}
         </>
       )}
+
+      {/* ═══ گام ۱۰.۱ — F02 پرونده‌های Due Diligence + F15 کارت آماده‌سازی ═══ */}
+      <DdDossiers />
+      <ReadinessPacks />
 
       {/* ═══════════ مودال: جزئیات مشارکت و تغییر مرحله ═══════════ */}
       <Modal open={!!detail} title={detail?.partnerName ?? ''} onClose={() => setDetail(null)}

@@ -57,7 +57,7 @@ const PZ_STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral
    مرجع نگاشت: docs/مسترپلن-v6-سامانه-هوشمند-SRIP.md (بخش ۴ — جدول نگاشت فرم‌ها). */
 const FORM_CATALOG = lt<Array<{ code: string; name: string; status: string; where: string }>>([
   { code: 'F01', name: 'کنترل اجرا', status: 'PLANNED', where: 'حاکمیت برنامه — فاز ۱۰' },
-  { code: 'F02', name: 'پروندهٔ Due Diligence', status: 'PLANNED', where: 'فاز ۱۰' },
+  { code: 'F02', name: 'پروندهٔ Due Diligence', status: 'HAVE', where: 'مشارکت‌ها → پرونده‌های Due Diligence' },
   { code: 'F03', name: 'برگهٔ ممیزی ظرفیت و دارایی', status: 'PLANNED', where: 'ممیزی سه‌گانه — فاز ۱۰' },
   { code: 'F04', name: 'کارت محیط، ذی‌نفع و رقیب', status: 'HAVE', where: 'هوشمندی → پروندهٔ رقیب هفت‌بُعدی' },
   { code: 'F05', name: 'درخواست و تصویب دارایی برند', status: 'HAVE', where: 'حاکمیت برنامه → تب آمادگی' },
@@ -70,7 +70,7 @@ const FORM_CATALOG = lt<Array<{ code: string; name: string; status: string; wher
   { code: 'F12', name: 'کارت کاربرد و ارزیابی هوش مصنوعی', status: 'PLANNED', where: 'درگاه هوش مصنوعی — فاز ۹' },
   { code: 'F13', name: 'پروندهٔ اصالت و تقلب', status: 'PLANNED', where: 'اصالت و ریسک — فاز ۸' },
   { code: 'F14', name: 'جدول پایش ماهانهٔ مرجعیت هوش مصنوعی', status: 'HAVE', where: 'حاکمیت برنامه → اهداف راهبردی' },
-  { code: 'F15', name: 'کارت آماده‌سازی سرمایه‌گذار و شریک', status: 'PARTIAL', where: 'مشارکت‌ها؛ توسعه: فاز ۱۰' },
+  { code: 'F15', name: 'کارت آماده‌سازی سرمایه‌گذار و شریک', status: 'HAVE', where: 'مشارکت‌ها → آماده‌سازی سرمایه‌گذار و شریک' },
   { code: 'F16', name: 'کارت نقش و ورود همکار', status: 'PLANNED', where: 'فاز ۱۰' },
   { code: 'F17', name: 'دفتر ثبت ریسک و انتشار هوش مصنوعی', status: 'PARTIAL', where: 'حاکمیت برنامه → ریسک‌ها؛ ستون‌های AI: فاز ۹' },
   { code: 'F18', name: 'کارت آماده‌سازی ورود به بازار', status: 'PLANNED', where: 'فاز ۱۰' },

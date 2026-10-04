@@ -8147,6 +8147,93 @@ function ensurePartnershipSeed(){
     {id:'pt-9',organizationId:PARTNERSHIP_ORG_ID,partnerOrgId:'org-5',type:'رویدادی',stage:'ENDED',ownerRole:'مدیر رویداد',ourCommitments:'برگزاری وبینار مشترک',theirCommitments:'معرفی به شبکهٔ پیمانکاران',contractName:'قرارداد وبینار مشترک',contractSignedAt:ago(300),relationshipId:'r-3',opportunityId:'o-2',reviewAt:ago(10),createdAt:ago(320),updatedAt:ago(10),notes:'پایان موفق؛ امکان تمدید در برنامهٔ سال دوم.'},
   ];
 }
+/* ═══════════ گام ۱۰.۱ — F02 پروندهٔ Due Diligence + F15 آماده‌سازی سرمایه‌گذار و شریک ═══════════
+   F02: محورهای ۶.۲.۱ (فنی) و ۶.۲.۲ (کسب‌وکاری) با پاسخ/شاهد/نقص · حق پاسخ طرف مقابل ·
+   نظر مدیر تیم Y · وضعیت تصویب G2 (شرط: تکمیل همهٔ محورها + نظر تیم Y).
+   F15: کارت آماده‌سازی متصل به مشارکت/فرصت — وضعیت DD و تعهدها زنده محاسبه می‌شوند. */
+const DD_AXIS_STATUS_FA={NOT_STARTED:'شروع‌نشده',IN_PROGRESS:'در جریان',ACCEPTED:'پذیرفته‌شده'};
+const DOSSIER_STATUS_FA={DRAFT:'پیش‌نویس',IN_REVIEW:'در بررسی',APPROVED:'تصویب‌شده',REJECTED:'ردشده'};
+const TEAM_Y_OPINION_FA={APPROVE:'تأیید',CONDITIONS:'مشروط',REJECT:'رد'};
+const DD_AXES=[
+  {key:'product-arch',cat:'621',title:'محصول و معماری'},
+  {key:'code-data',cat:'621',title:'کد و داده'},
+  {key:'ai',cat:'621',title:'هوش مصنوعی'},
+  {key:'security',cat:'621',title:'امنیت'},
+  {key:'scale',cat:'621',title:'مقیاس‌پذیری'},
+  {key:'ip-sbom',cat:'621',title:'مالکیت فکری و SBOM'},
+  {key:'gaps',cat:'621',title:'نواقص'},
+  {key:'problem',cat:'622',title:'مسئله'},
+  {key:'market',cat:'622',title:'بازار'},
+  {key:'fit',cat:'622',title:'تناسب محصول–بازار'},
+  {key:'economics',cat:'622',title:'اقتصاد واحد کسب‌وکار'},
+  {key:'competition',cat:'622',title:'رقابت'},
+];
+const DD_AXIS_CAT_FA={'621':'محورهای ۶.۲.۱ — فنی و محصول','622':'محورهای ۶.۲.۲ — کسب‌وکار'};
+function ensureDossierSeed(){
+  if(!Array.isArray(DB.dossiers)) DB.dossiers=[];
+  if(DB.dossiers.length) return;
+  const AGO=(d)=>new Date(Date.now()-d*86400000).toISOString();
+  const ax=(over={})=>Object.fromEntries(DD_AXES.map(a=>[a.key,{answer:'',evidence:'',gap:'',status:'NOT_STARTED',response:null,responseAt:null,...(over[a.key]??{})}]));
+  DB.dossiers.push(
+    {id:'dd-1',organizationId:PARTNERSHIP_ORG_ID,subjectOrgId:'org-7',ownerRole:'مدیر توسعه کسب‌وکار',
+     status:'APPROVED',axes:ax({'product-arch':{answer:'معماری چندمستأجری با جداسازی داده per-tenant',evidence:'سند معماری + بازبینی کد',gap:'',status:'ACCEPTED'},
+       'code-data':{answer:'مالکیت کامل کد در تیم داخلی؛ دادهٔ دمو جدا از مشتری',evidence:'مخزن کد + سیاست داده',gap:'',status:'ACCEPTED'},
+       'ai':{answer:'موتور قطعی + درگاه دوگانه لوکال/ابری',evidence:'کارت‌های F12 فاز ۹',gap:'',status:'ACCEPTED'},
+       'security':{answer:'احراز هویت دومرحله‌ای و ممیزی رویداد',evidence:'گزارش امنیت فاز ۸',gap:'',status:'ACCEPTED',response:'گزارش امنیت تأیید شد؛ دو مورد جزئی اصلاح شد.',responseAt:AGO(12)},
+       'scale':{answer:'مقیاس افقی سرویس‌ها؛ آزمون بار فصلی',evidence:'گزارش آزمون بار',gap:'',status:'ACCEPTED'},
+       'ip-sbom':{answer:'ثبت نرم‌افزار در سامانهٔ مالکیت؛ SBOM کامل اجزا',evidence:'گواهی ثبت + SBOM',gap:'',status:'ACCEPTED'},
+       'gaps':{answer:'فقط مکالمات فارسی در موتور قطعی پشتیبانی می‌شود',evidence:'یادداشت محدودیت',gap:'پشتیبانی زبان‌های دیگر در نقشهٔ راه',status:'ACCEPTED'},
+       'problem':{answer:'پرداخت‌های دیرهنگام مشتریان سازمانی',evidence:'مصاحبه با ۱۲ مشتری',gap:'',status:'ACCEPTED'},
+       'market':{answer:'شرکت‌های زیرمجموعه هلدینگ‌ها',evidence:'تحلیل بازار',gap:'',status:'ACCEPTED'},
+       'fit':{answer:'تناسب با فرآیند ارتباط‌محور هلدینگ‌ها',evidence:'پایلوت دو ماهه',gap:'',status:'ACCEPTED'},
+       'economics':{answer:'اشتراک سالانه + سرخط موفقیت در ۱۸ ماه',evidence:'مدل مالی',gap:'',status:'ACCEPTED'},
+       'competition':{answer:'بدون رقیب داخلی هم‌تراز؛ CRMهای عمومی جایگزین نیستند',evidence:'تحلیل رقبا',gap:'',status:'ACCEPTED'}}),
+     teamY:{opinion:'APPROVE',note:'بررسی فنی و کسب‌وکاری تکمیل است؛ شروع هم‌سرمایه‌گذاری تایید می‌شود.',by:'demo@srip.local',at:AGO(10)},
+     createdAt:AGO(60),updatedAt:AGO(10)},
+    {id:'dd-2',organizationId:PARTNERSHIP_ORG_ID,subjectOrgId:'org-8',ownerRole:'مدیر اندیشکده و پژوهش',
+     status:'IN_REVIEW',axes:ax({'product-arch':{answer:'سامانهٔ استاندارد استان با دادهٔ رسمی',evidence:'نمونهٔ اولیه',gap:'مقیاس‌پذیری دادهٔ استانی آزموده نشده',status:'IN_PROGRESS'},
+       'problem':{answer:'نبود پایش یکپارچهٔ دادهٔ استانی',evidence:'درخواست رسمی استانداری',gap:'',status:'ACCEPTED'}}),
+     teamY:null,createdAt:AGO(20),updatedAt:AGO(5)});
+}
+function dossierView(d){
+  const axes=DD_AXES.map(a=>({key:a.key,cat:a.cat,catFa:DD_AXIS_CAT_FA[a.cat],title:a.title,...(d.axes?.[a.key]??{answer:'',evidence:'',gap:'',status:'NOT_STARTED',response:null,responseAt:null}),
+    statusFa:DD_AXIS_STATUS_FA[(d.axes?.[a.key]?.status)??'NOT_STARTED']}));
+  const accepted=axes.filter(x=>x.status==='ACCEPTED').length;
+  const org=ORGS.find(o=>o.id===d.subjectOrgId);
+  return {...d,subjectName:org?.name??d.subjectOrgId,subjectType:org?.type??null,
+    axes,acceptedAxes:accepted,totalAxes:axes.length,
+    ddComplete:accepted===axes.length,g2Ready:accepted===axes.length&&!!d.teamY,
+    statusFa:DOSSIER_STATUS_FA[d.status]??d.status,
+    teamYFa:d.teamY?{...d.teamY,opinionFa:TEAM_Y_OPINION_FA[d.teamY.opinion]??d.teamY.opinion}:null};
+}
+function ensureReadinessPackSeed(){
+  if(!Array.isArray(DB.readinessPacks)) DB.readinessPacks=[];
+  if(DB.readinessPacks.length) return;
+  const AGO=(d)=>new Date(Date.now()-d*86400000).toISOString();
+  DB.readinessPacks.push(
+    {id:'rp-1',organizationId:PARTNERSHIP_ORG_ID,subject:'آماده‌سازی هم‌سرمایه‌گذاری با هلدینگ البرز',partnershipId:'pt-5',opportunityId:null,ownerRole:'مدیرعامل',
+     relationshipGoal:'هم‌سرمایه‌گذاری در محصولات داده‌محور با سهم‌های مشخص',evidence:'گزارش سلامت روابط + پروندهٔ DD تصویب‌شده',
+     targetList:'هلدینگ البرز؛ صندوق سرمایه‌گذاری خطرپذیر پارس؛ مدیرعامل گروه صنعتی نینا',meetingPlan:'نمایش زندهٔ محصول؛ مرور محورهای DD؛ پیشنهاد سهامداری',
+     nextAction:'ارسال پیش‌نویس تفاهم‌نامهٔ هم‌سرمایه‌گذاری تا پایان ماه',createdAt:AGO(30),updatedAt:AGO(4)},
+    {id:'rp-2',organizationId:PARTNERSHIP_ORG_ID,subject:'آماده‌سازی پژوهش مشترک با استانداری',partnershipId:'pt-6',opportunityId:null,ownerRole:'مدیر اندیشکده و پژوهش',
+     relationshipGoal:'تفاهم‌نامهٔ پژوهشی با دسترسی به دادهٔ رسمی استان',evidence:'درخواست رسمی + نمونهٔ گزارش فصلی',
+     targetList:'استانداری؛ معاونت برنامه‌ریزی استان',meetingPlan:'مرور دامنهٔ داده؛ تعیین داوران علمی',
+     nextAction:'تکمیل محور مقیاس‌پذیری در پروندهٔ DD',createdAt:AGO(15),updatedAt:AGO(2)});
+}
+function readinessPackView(x,req){
+  /* وضعیت DD و تعهدها زنده از رکوردهای متصل — عدد/وضعیت دستی نیست */
+  const pt=x.partnershipId?(DB.partnerships??[]).find(p=>p.id===x.partnershipId):null;
+  const opp=x.opportunityId?OPPORTUNITIES.find(o=>o.id===x.opportunityId):null;
+  const subjectOrgId=pt?.partnerOrgId??null;
+  const dd=(DB.dossiers??[]).filter(d=>d.organizationId===x.organizationId&&d.subjectOrgId===subjectOrgId)
+    .map(dossierView).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt))[0]??null;
+  const commitments=pt?{ours:pt.ourCommitments,theirs:pt.theirCommitments}:null;
+  return {...x,partnerName:pt?ORGS.find(o=>o.id===pt.partnerOrgId)?.name??pt.partnerOrgId:null,
+    opportunityName:opp?.name??null,
+    commitments,
+    ddStatus:dd?{dossierId:dd.id,status:dd.status,statusFa:dd.statusFa,acceptedAxes:dd.acceptedAxes,totalAxes:dd.totalAxes,g2Ready:dd.g2Ready}:null,
+    ddStatusFa:dd?`${dd.statusFa} — ${dd.acceptedAxes}/${dd.totalAxes} محور`:'بدون پروندهٔ DD'};
+}
 function partnershipsFor(req){
   ensurePartnershipSeed();
   const ids=visibleOrgIds(req);
@@ -16301,6 +16388,167 @@ const server=http.createServer(async(req,res)=>{
     row.updatedAt=nowIso(); saveDb();
     audit(req,'UPDATE','Partnership',row.id,'OK',{stage:row.stage});
     return json(res,200,partnershipView(row));
+  }
+
+  /* ─────────────── گام ۱۰.۱ — F02 پروندهٔ Due Diligence (/dossiers) ────────── */
+  if(is('/dossiers')&&method==='GET'){
+    if(!hasPerm('partnership.read')) return json(res,403,{message:'شما مجوز «مشاهده مشارکت‌ها» (partnership.read) را ندارید.'});
+    ensurePartnershipSeed(); ensureDossierSeed();
+    const ids=visibleOrgIds(req);
+    const items=(DB.dossiers??[]).filter(d=>ids.includes(d.organizationId)).map(dossierView)
+      .sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));
+    return json(res,200,{items,
+      axes:DD_AXES.map(a=>({key:a.key,cat:a.cat,catFa:DD_AXIS_CAT_FA[a.cat],title:a.title})),
+      statuses:Object.fromEntries(Object.entries(DOSSIER_STATUS_FA)),
+      rule:'پروندهٔ Due Diligence (F02): دوازده محور استاندارد ۶.۲.۱ (فنی) و ۶.۲.۲ (کسب‌وکاری)؛ هر محور با پاسخ، شاهد و نقص. طرف مقابل حق پاسخ به یافته‌ها دارد و تصویب (G2) فقط با پذیرش همهٔ محورها + ثبت نظر مدیر تیم Y ممکن است.'});
+  }
+  if(is('/dossiers')&&method==='POST'){
+    if(!hasPerm('partnership.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر مشارکت» (partnership.write) را ندارید.'});
+    ensurePartnershipSeed(); ensureDossierSeed();
+    const b=await readBody(req);
+    const subjectOrgId=String(b.subjectOrgId??'').trim();
+    if(!subjectOrgId||!ORGS.some(o=>o.id===subjectOrgId)) return json(res,400,{message:'سازمان موضوع بررسی (سرمایه‌گذار/شریک) را از فهرست انتخاب کنید.'});
+    const ownerRole=String(b.ownerRole??'').trim();
+    if(!ownerRole) return json(res,400,{message:'پروندهٔ DD بدون مالک ثبت نمی‌شود.'});
+    const dChart=programSettingsFor(req).roles;
+    if(dChart.length&&!dChart.includes(ownerRole)) return json(res,400,{message:'مالک پرونده باید یکی از نقش‌های چارت سازمان شما باشد.'});
+    const row={id:`dd-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,
+      organizationId:primaryOrgId(authUser)??visibleOrgIds(req)[0]??PARTNERSHIP_ORG_ID,
+      subjectOrgId,ownerRole,status:'DRAFT',
+      axes:Object.fromEntries(DD_AXES.map(a=>[a.key,{answer:'',evidence:'',gap:'',status:'NOT_STARTED',response:null,responseAt:null}])),
+      teamY:null,createdAt:nowIso(),updatedAt:nowIso()};
+    DB.dossiers.unshift(row); saveDb();
+    audit(req,'CREATE','Dossier',row.id,'OK',{subject:subjectOrgId,ownerRole});
+    return json(res,201,dossierView(row));
+  }
+  const ddId=match('/dossiers/:id');
+  if(ddId&&method==='GET'){
+    if(!hasPerm('partnership.read')) return json(res,403,{message:'شما مجوز «مشاهده مشارکت‌ها» (partnership.read) را ندارید.'});
+    ensureDossierSeed();
+    const d=(DB.dossiers??[]).find(x=>x.id===ddId[0]&&visibleOrgIds(req).includes(x.organizationId));
+    if(!d) return json(res,404,{message:'پروندهٔ DD یافت نشد یا خارج از محدودهٔ شماست.'});
+    return json(res,200,dossierView(d));
+  }
+  const ddAx=match('/dossiers/:id/axes/:key');
+  if(ddAx&&(method==='PATCH'||method==='POST')){
+    if(!hasPerm('partnership.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر مشارکت» (partnership.write) را ندارید.'});
+    ensureDossierSeed();
+    const d=(DB.dossiers??[]).find(x=>x.id===ddAx[0]&&visibleOrgIds(req).includes(x.organizationId));
+    if(!d) return json(res,404,{message:'پروندهٔ DD یافت نشد یا خارج از محدودهٔ شماست.'});
+    const axis=DD_AXES.find(a=>a.key===ddAx[1]);
+    if(!axis) return json(res,400,{message:'محور نامعتبر است — از فهرست دوازده محور ۶.۲.۱/۶.۲.۲ انتخاب کنید.'});
+    d.axes=d.axes??{};
+    d.axes[axis.key]=d.axes[axis.key]??{answer:'',evidence:'',gap:'',status:'NOT_STARTED',response:null,responseAt:null};
+    const b=await readBody(req);
+    if(method==='POST'){ /* حق پاسخ: پاسخ طرف مقابل به یافته‌های همین محور */
+      const resp=String(b.response??'').trim();
+      if(!resp) return json(res,400,{message:'متن پاسخ خالی است.'});
+      d.axes[axis.key].response=resp.slice(0,500);
+      d.axes[axis.key].responseAt=nowIso();
+      d.updatedAt=nowIso(); saveDb();
+      audit(req,'RESPOND','DossierAxis',`${d.id}:${axis.key}`,'OK',{len:resp.length});
+      return json(res,200,dossierView(d));
+    }
+    const ax=d.axes[axis.key];
+    if(b.answer!=null) ax.answer=String(b.answer).trim().slice(0,500);
+    if(b.evidence!=null) ax.evidence=String(b.evidence).trim().slice(0,300);
+    if(b.gap!=null) ax.gap=String(b.gap).trim().slice(0,300);
+    if(b.status!=null){
+      const st=String(b.status??'').toUpperCase();
+      if(!DD_AXIS_STATUS_FA[st]) return json(res,400,{message:'وضعیت محور باید شروع‌نشده/در جریان/پذیرفته‌شده باشد.'});
+      if(st==='ACCEPTED'&&!String(ax.evidence??'').trim()) return json(res,400,{message:'محور بدون شاهد پذیرفته نمی‌شود — ابتدا شاهد ثبت کنید.'});
+      ax.status=st;
+    }
+    d.updatedAt=nowIso(); saveDb();
+    audit(req,'UPDATE','DossierAxis',`${d.id}:${axis.key}`,'OK',{status:ax.status});
+    return json(res,200,dossierView(d));
+  }
+  const ddTY=match('/dossiers/:id/team-y');
+  if(ddTY&&method==='POST'){
+    if(!hasPerm('partnership.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر مشارکت» (partnership.write) را ندارید.'});
+    ensureDossierSeed();
+    const d=(DB.dossiers??[]).find(x=>x.id===ddTY[0]&&visibleOrgIds(req).includes(x.organizationId));
+    if(!d) return json(res,404,{message:'پروندهٔ DD یافت نشد یا خارج از محدودهٔ شماست.'});
+    const b=await readBody(req);
+    const opinion=String(b.opinion??'').toUpperCase();
+    if(!TEAM_Y_OPINION_FA[opinion]) return json(res,400,{message:'نظر مدیر تیم Y باید تأیید/مشروط/رد باشد.'});
+    const note=String(b.note??'').trim();
+    if(!note) return json(res,400,{message:'نظر مدیر تیم Y بدون یادداشت ثبت نمی‌شود — دلیل را بنویسید.'});
+    d.teamY={opinion,note:note.slice(0,500),by:authUser?.email??'—',at:nowIso()};
+    d.updatedAt=nowIso(); saveDb();
+    audit(req,'TEAM_Y','Dossier',d.id,'OK',{opinion});
+    return json(res,200,dossierView(d));
+  }
+  const ddAp=match('/dossiers/:id/approval');
+  if(ddAp&&method==='POST'){
+    if(!hasPerm('partnership.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر مشارکت» (partnership.write) را ندارید.'});
+    ensureDossierSeed();
+    const d=(DB.dossiers??[]).find(x=>x.id===ddAp[0]&&visibleOrgIds(req).includes(x.organizationId));
+    if(!d) return json(res,404,{message:'پروندهٔ DD یافت نشد یا خارج از محدودهٔ شماست.'});
+    const b=await readBody(req);
+    const decision=String(b.decision??'').toUpperCase();
+    if(!['APPROVED','REJECTED'].includes(decision)) return json(res,400,{message:'وضعیت تصویب باید تصویب‌شده یا ردشده باشد.'});
+    const view=dossierView(d);
+    /* شرط G2: تصویب فقط با پذیرش همهٔ محورها + نظر مدیر تیم Y */
+    if(decision==='APPROVED'&&!view.ddComplete) return json(res,400,{message:`دروازهٔ G2 باز نیست — ${faN(view.acceptedAxes)} از ${faN(view.totalAxes)} محور پذیرفته شده؛ همهٔ محورها باید پذیرفته شوند.`});
+    if(decision==='APPROVED'&&!d.teamY) return json(res,400,{message:'دروازهٔ G2 باز نیست — نظر مدیر تیم Y هنوز ثبت نشده است.'});
+    d.status=decision; d.updatedAt=nowIso(); saveDb();
+    audit(req,'APPROVAL','Dossier',d.id,'OK',{decision});
+    return json(res,200,dossierView(d));
+  }
+
+  /* ─────────────── گام ۱۰.۱ — F15 کارت آماده‌سازی سرمایه‌گذار و شریک (/readiness-packs) ────────── */
+  if(is('/readiness-packs')&&method==='GET'){
+    if(!hasPerm('partnership.read')) return json(res,403,{message:'شما مجوز «مشاهده مشارکت‌ها» (partnership.read) را ندارید.'});
+    ensurePartnershipSeed(); ensureDossierSeed(); ensureReadinessPackSeed();
+    const ids=visibleOrgIds(req);
+    const items=(DB.readinessPacks??[]).filter(x=>ids.includes(x.organizationId))
+      .map(x=>readinessPackView(x,req)).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));
+    return json(res,200,{items,
+      rule:'کارت آماده‌سازی سرمایه‌گذار و شریک (F15): موضوع، هدف رابطه، شواهد، فهرست هدف، طرح جلسه و اقدام بعدی — متصل به مشارکت/فرصت موجود؛ «وضعیت DD» و «تعهدها» زنده از پروندهٔ DD و مشارکت متصل خوانده می‌شوند و دستی ثبت نمی‌شوند.'});
+  }
+  if(is('/readiness-packs')&&method==='POST'){
+    if(!hasPerm('partnership.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر مشارکت» (partnership.write) را ندارید.'});
+    ensurePartnershipSeed(); ensureReadinessPackSeed();
+    const b=await readBody(req);
+    const subject=String(b.subject??'').trim();
+    if(subject.length<3) return json(res,400,{message:'موضوع آماده‌سازی را بنویسید (حداقل ۳ نویسه).'});
+    const ownerRole=String(b.ownerRole??'').trim();
+    if(!ownerRole) return json(res,400,{message:'کارت آماده‌سازی بدون مالک ثبت نمی‌شود.'});
+    const rChart=programSettingsFor(req).roles;
+    if(rChart.length&&!rChart.includes(ownerRole)) return json(res,400,{message:'مالک کارت باید یکی از نقش‌های چارت سازمان شما باشد.'});
+    const ids=visibleOrgIds(req);
+    const ptId=String(b.partnershipId??'').trim()||null;
+    if(ptId&&!(DB.partnerships??[]).some(p=>p.id===ptId&&ids.includes(p.organizationId))) return json(res,400,{message:'مشارکت انتخاب‌شده یافت نشد یا خارج از محدودهٔ شماست.'});
+    const opId=String(b.opportunityId??'').trim()||null;
+    if(opId&&!OPPORTUNITIES.some(o=>o.id===opId)) return json(res,400,{message:'فرصت انتخاب‌شده یافت نشد.'});
+    if(!ptId&&!opId) return json(res,400,{message:'کارت F15 باید به یک مشارکت یا فرصت موجود متصل باشد.'});
+    const row={id:`rp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,
+      organizationId:primaryOrgId(authUser)??ids[0]??PARTNERSHIP_ORG_ID,
+      subject,partnershipId:ptId,opportunityId:opId,ownerRole,
+      relationshipGoal:String(b.relationshipGoal??'').trim().slice(0,300),
+      evidence:String(b.evidence??'').trim().slice(0,300),
+      targetList:String(b.targetList??'').trim().slice(0,400),
+      meetingPlan:String(b.meetingPlan??'').trim().slice(0,400),
+      nextAction:String(b.nextAction??'').trim().slice(0,300),
+      createdAt:nowIso(),updatedAt:nowIso()};
+    DB.readinessPacks.unshift(row); saveDb();
+    audit(req,'CREATE','ReadinessPack',row.id,'OK',{subject:row.subject,partnershipId:ptId,opportunityId:opId});
+    return json(res,201,readinessPackView(row,req));
+  }
+  const rpId=match('/readiness-packs/:id');
+  if(rpId&&method==='PATCH'){
+    if(!hasPerm('partnership.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر مشارکت» (partnership.write) را ندارید.'});
+    ensureReadinessPackSeed();
+    const row=(DB.readinessPacks??[]).find(x=>x.id===rpId[0]&&visibleOrgIds(req).includes(x.organizationId));
+    if(!row) return json(res,404,{message:'کارت آماده‌سازی یافت نشد یا خارج از محدودهٔ شماست.'});
+    const b=await readBody(req);
+    for(const k of ['subject','relationshipGoal','evidence','targetList','meetingPlan','nextAction'])
+      if(b[k]!=null) row[k]=String(b[k]).trim().slice(0,k==='subject'?200:400);
+    if(b.ownerRole!=null){const v=String(b.ownerRole).trim(); if(!v) return json(res,400,{message:'کارت آماده‌سازی بدون مالک ثبت نمی‌شود.'}); const rChart=programSettingsOf(row.organizationId).roles; if(rChart.length&&!rChart.includes(v)) return json(res,400,{message:'مالک کارت باید یکی از نقش‌های چارت سازمان شما باشد.'}); row.ownerRole=v;}
+    row.updatedAt=nowIso(); saveDb();
+    audit(req,'UPDATE','ReadinessPack',row.id,'OK',{});
+    return json(res,200,readinessPackView(row,req));
   }
 
   /* ── آیتم ۲۱: Web Push (رضایت اعلان ملزم؛ انتقال دمو = polling) ── */
