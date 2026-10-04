@@ -9,7 +9,7 @@ import { Card, Badge } from '@srip/design-system';
 import { Modal } from '../_components/page-ui';
 import {
   Phone, Mail, Users, StickyNote, MessageSquare, Plus, Search, CalendarDays,
-  BellRing, Clock, Building2, User, ListFilter, Activity, ClipboardList,
+  BellRing, Clock, Building2, User, ListFilter, Activity, ClipboardList, Sparkles, CheckCircle2,
 } from 'lucide-react';
 import { JalaliDateField } from '../_components/jalali-date-field';
 
@@ -68,6 +68,28 @@ export default function InteractionsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [followUps, setFollowUps] = useState(false);
+  /* گام ۷.۴ — پیشنهاد اقدام بعدی (درگاه هوش مصنوعی؛ ثبت فقط با تأیید کاربر) */
+  const [aiSel, setAiSel] = useState('');
+  const [aiProposal, setAiProposal] = useState<any>(null);
+  const [aiBusy, setAiBusy] = useState(false);
+  const runNextAction = async () => {
+    if (!aiSel) return;
+    setAiBusy(true); setError(''); setAiProposal(null);
+    try { setAiProposal(await api(`/ai/interactions/${aiSel}/next-action`, { method: 'POST' })); }
+    catch (e) { setError((e as Error).message); }
+    finally { setAiBusy(false); }
+  };
+  const applyNextAction = async () => {
+    setAiBusy(true); setError('');
+    try {
+      const r: any = await api(`/ai/interactions/${aiSel}/next-action/apply`, { method: 'POST', body: JSON.stringify({ confirmed: true, proposal: aiProposal?.proposal }) });
+      setAiProposal(null); setAiSel('');
+      setError('');
+      alert(`اقدام «${r.actionId ? 'ثبت شد' : ''}» با تأیید شما ثبت شد.`);
+      load();
+    } catch (e) { setError((e as Error).message); }
+    finally { setAiBusy(false); }
+  };
   const [q, setQ] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
 
@@ -184,6 +206,44 @@ export default function InteractionsPage() {
           <strong className="st-value">{typesPresent.length}</strong>
           <div className="st-foot"><span className="st-delta">{typesPresent.map(t=>TYPE_META[t]?.label??t).join(' · ') || '—'}</span></div>
         </div>
+      </section>
+
+      {/* ═══ گام ۷.۴ — پیشنهاد اقدام بعدی (AI؛ فقط پیشنهاد، ثبت با تأیید کاربر) ═══ */}
+      <section className="ai-next-action panel" style={{ marginBottom: 16 }}>
+        <div className="panel-title">
+          <div><h2><Sparkles size={15}/> پیشنهاد اقدام بعدی (درگاه هوش مصنوعی)</h2>
+            <p>یک تعامل را انتخاب کنید؛ اقدام، پیام پیشنهادی و مهلت از داده ساخته می‌شود — ثبت فقط با تأیید شما.</p></div>
+          <span className="chip warning">فقط پیشنهاد</span>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <select value={aiSel} onChange={e => { setAiSel(e.target.value); setAiProposal(null); }} aria-label="انتخاب تعامل"
+            style={{ minWidth: 280 }}>
+            <option value="">— تعاملی را انتخاب کنید —</option>
+            {items.slice(0, 12).map((it: any) => (
+              <option key={it.id} value={it.id}>{it.subject}</option>
+            ))}
+          </select>
+          <button type="button" className="primary-action" onClick={runNextAction} disabled={!aiSel || aiBusy}>
+            <Sparkles size={14}/> {aiBusy ? 'در حال پیشنهاد…' : 'پیشنهاد اقدام بعدی'}
+          </button>
+        </div>
+        {aiProposal && (
+          <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+            <div className="detail-grid">
+              <div className="detail-item" style={{ gridColumn: '1/-1' }}><small>اقدام پیشنهادی</small><strong>{aiProposal.proposal?.actionTitle}</strong></div>
+              <div className="detail-item" style={{ gridColumn: '1/-1' }}><small>پیام پیشنهادی</small><strong>{aiProposal.proposal?.message}</strong></div>
+              <div className="detail-item"><small>مهلت پیشنهادی</small><strong>{fa(aiProposal.proposal?.dueDays)} روز ({aiProposal.proposal?.dueAt ? new Date(aiProposal.proposal.dueAt).toLocaleDateString('fa-IR') : '—'})</strong></div>
+              <div className="detail-item"><small>مبنای پیشنهاد</small><strong>{fa(aiProposal.proposal?.basis?.overdueCommitments ?? 0)} تعهد معوق · {fa(aiProposal.proposal?.basis?.openActions ?? 0)} اقدام باز</strong></div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <button type="button" className="primary-action" onClick={applyNextAction} disabled={aiBusy}>
+                <CheckCircle2 size={14}/> ثبت اقدام با تأیید من
+              </button>
+              <button type="button" className="secondary-action" onClick={() => setAiProposal(null)} disabled={aiBusy}>دور انداختن</button>
+              <small className="subtitle" style={{ margin: 0 }}>بدون تأیید، هیچ اقدامی ثبت نمی‌شود (سطح اختیار ۱۹.۲ سند v6).</small>
+            </div>
+          </div>
+        )}
       </section>
 
       <div className="interactions-layout">
