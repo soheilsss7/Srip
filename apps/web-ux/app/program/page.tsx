@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useWorkspace } from '../_components/workspace';
+import CapacityAudits from '../_components/capacity-audits';
 import { api } from '../_lib/api';
 import { faNum, faFullDate } from '../_lib/jalali';
 import { localeTag, lt, t } from '../_lib/i18n';
@@ -58,11 +59,11 @@ const PZ_STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral
 const FORM_CATALOG = lt<Array<{ code: string; name: string; status: string; where: string }>>([
   { code: 'F01', name: 'کنترل اجرا', status: 'HAVE', where: 'پروژه‌ها → کنترل اجرا' },
   { code: 'F02', name: 'پروندهٔ Due Diligence', status: 'HAVE', where: 'مشارکت‌ها → پرونده‌های Due Diligence' },
-  { code: 'F03', name: 'برگهٔ ممیزی ظرفیت و دارایی', status: 'PLANNED', where: 'ممیزی سه‌گانه — فاز ۱۰' },
-  { code: 'F04', name: 'کارت محیط، ذی‌نفع و رقیب', status: 'HAVE', where: 'هوشمندی → پروندهٔ رقیب هفت‌بُعدی' },
+  { code: 'F03', name: 'برگهٔ ممیزی ظرفیت و دارایی', status: 'HAVE', where: 'حاکمیت برنامه → تب ممیزی' },
+  { code: 'F04', name: 'کارت محیط، ذی‌نفع و رقیب', status: 'HAVE', where: 'هوشمندی → کارت محیط/ذی‌نفع/رقیب + پروندهٔ هفت‌بُعدی' },
   { code: 'F05', name: 'درخواست و تصویب دارایی برند', status: 'HAVE', where: 'حاکمیت برنامه → تب آمادگی' },
   { code: 'F06', name: 'فرم صفحه و انتشار PESO', status: 'HAVE', where: 'تقویم → رسانه تخصصی' },
-  { code: 'F07', name: 'طرح پژوهش و داوری', status: 'PLANNED', where: 'فاز ۱۰' },
+  { code: 'F07', name: 'طرح پژوهش و داوری', status: 'HAVE', where: 'راهبرد → طرح پژوهش و داوری' },
   { code: 'F08', name: 'کارت تولید و کنترل محتوای هوش مصنوعی', status: 'PARTIAL', where: 'تقویم → گردش تأیید محتوا؛ فیلدهای AI: فاز ۷' },
   { code: 'F09', name: 'فرصت مناقصه', status: 'HAVE', where: 'فرصت‌ها → فرصت‌های مناقصه' },
   { code: 'F10', name: 'طرح اجرایی و گزارش رویداد', status: 'HAVE', where: 'تقویم → رویدادها' },
@@ -871,6 +872,9 @@ export default function ProgramPage() {
               </table></div>
             ) : <EmptyV4 icon={<ClipboardList size={22} />} title={t('ممیزی کانال‌ها ثبت نشده است')} description={t('تمام کانال‌های ارتباطی فعال — وب‌سایت‌ها، شبکه‌های اجتماعی و خبرنامه‌ها — بررسی می‌شوند.')} />)}
           </SectionCard>
+
+          {/* ═══ گام ۱۰.۴ — F03 گسترش ممیزی سه‌گانه به فرد/دارایی ═══ */}
+          <CapacityAudits />
 
           {/* ═══════════ گام ۵.۳ — چارت هدف تیم (بخش ۲۱.۳ سند v6) ═══════════ */}
           {(audits.chart ?? []).length > 0 && (

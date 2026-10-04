@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api, apiBlob } from '../_lib/api';
 import { useWorkspace } from '../_components/workspace';
 import { Badge, ErrorCard, Loading, Modal, PageHeader, SectionCard, StatCard } from '../_components/page-ui';
+import ResearchPlans from '../_components/research-plans';
 import {
   Target, Users2, Database, FlaskConical, Telescope, FileDown, Plus, RefreshCw, Trash2,
   Copy, CheckCircle2, AlertTriangle, Layers, GitBranch, Upload, FileJson, FileSpreadsheet,
@@ -944,6 +945,9 @@ export default function StrategyPage() {
           <div className="field full"><label className="field-label">نام سناریو</label><input value={tplName} onChange={e => setTplName(e.target.value)} placeholder="مثلاً: رقابت قیمتی بهار" /></div>
         </div>
       </Modal>
+
+      {/* ═══ گام ۱۰.۴ — F07 طرح پژوهش و داوری (حلقهٔ ۱۵.۳) ═══ */}
+      <ResearchPlans />
     </div>
   );
 }

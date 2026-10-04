@@ -10039,6 +10039,92 @@ function roleCardView(x){
   return {...x,inChart:roles.includes(x.title)};
 }
 
+/* ═══════════ گام ۱۰.۴ — F03 ممیزی ظرفیت و دارایی + F04 محیط/ذی‌نفع/رقیب + F07 پژوهش و داوری ═══════════ */
+const CAP_MATURITY_FA={BASIC:'پایه',GOOD:'خوب',ADVANCED:'پیشرفته'};
+const CAP_RISK_FA={LOW:'کم',MEDIUM:'متوسط',HIGH:'بالا'};
+const CAP_KIND_FA={PERSON:'فرد',ASSET:'دارایی'};
+const ENV_KIND_FA={PUBLIC:'عموم‌ها',STAKEHOLDER:'ذی‌نفع',COMPETITOR:'رقیب'};
+const ENV_STATUS_FA={DRAFT:'پیش‌نویس',PENDING:'در انتظار تصویب',APPROVED:'مصوب',REJECTED:'ردشده'};
+const ENV_IMPORTANCE_FA={HIGH:'زیاد',MEDIUM:'متوسط',LOW:'کم'};
+const RES_STATUS_FA={DRAFT:'پیش‌نویس',IN_REVIEW:'در داوری',PUBLISHED:'منتشرشده'};
+const RES_VERDICT_FA={PENDING:'در انتظار',APPROVE:'تأیید',REVISE:'اصلاح'};
+
+function ensureCapacityAuditSeed(){
+  if(!Array.isArray(DB.capacityAudits)) DB.capacityAudits=[];
+  if(DB.capacityAudits.length) return;
+  const AGO=(d)=>new Date(Date.now()-d*86400000).toISOString();
+  DB.capacityAudits.push(
+    {id:'ca-1',organizationId:PROGRAM_ORG_ID,kind:'ASSET',subject:'سامانهٔ CRM قدیمی فروش',
+     maturity:'BASIC',access:'دسترسی کامل تیم فروش؛ بدون API',dependency:'وابسته به پشتیبان خارجی و یک سرور انبار',
+     evidence:'قرارداد پشتیبانی ۱۴۰۳ + ممیزی سامانه‌ها',gap:'بدون خروجی استاندارد و گزارش‌گیری دستی',
+     risk:'HIGH',action:'مهاجرت به سامانهٔ جدید تا پایان فصل (پیوند با F11)',
+     createdAt:AGO(22),updatedAt:AGO(4)},
+    {id:'ca-2',organizationId:PROGRAM_ORG_ID,kind:'PERSON',subject:'کارشناس ارشد داده',
+     maturity:'GOOD',access:'دسترسی به انبار داده و داشبوردها',dependency:'تنها فرد آشنا با خط دادهٔ تاریخی',
+     evidence:'مصاحبهٔ ممیزی + سابقهٔ پروژه‌ها',gap:'نبود جانشین و مستندات ناکافی',
+     risk:'MEDIUM',action:'جذب دستیار داده و مستندسازی خط داده (پیوند با F16)',
+     createdAt:AGO(18),updatedAt:AGO(6)}
+  );
+  saveDb();
+}
+function capacityAuditView(x){
+  return {...x,kindFa:CAP_KIND_FA[x.kind],maturityFa:CAP_MATURITY_FA[x.maturity],riskFa:CAP_RISK_FA[x.risk]};
+}
+const ENV_ORG_ID=PARTNERSHIP_ORG_ID; /* دادهٔ دمو */
+function ensureEnvCardSeed(){
+  if(!Array.isArray(DB.envCards)) DB.envCards=[];
+  if(DB.envCards.length) return;
+  const AGO=(d)=>new Date(Date.now()-d*86400000).toISOString();
+  DB.envCards.push(
+    {id:'env-1',organizationId:ENV_ORG_ID,kind:'COMPETITOR',infoType:'حرکت رقیب',
+     changeSignal:'اندیشکده داده‌پژوهان گزارش فصلی داده و هوش مصنوعی راه‌اندازی کرد',
+     source:'وب‌سایت رقیب + خبرنامهٔ تخصصی',importance:'HIGH',position:'رقیب در حال تقویت مرجعیت داده',
+     power:'MEDIUM',message:'تقویت گزارش‌های اختصاصی و مرجعیت دادهٔ خودمان',
+     competitorEvidence:'دو گزارش فصلی منتشرشده + وبینار ماهانه با میهمان صنعت',
+     scenario:'جنگ محتوای تخصصی در شش ماه آینده؛ تمرکز رقیب بر بخش بانکی',
+     alert:true,status:'APPROVED',approvedBy:'demo@srip.local',approvedAt:AGO(8),
+     createdAt:AGO(14),updatedAt:AGO(8)},
+    {id:'env-2',organizationId:ENV_ORG_ID,kind:'PUBLIC',infoType:'تغییر مقرراتی',
+     changeSignal:'سازمان بورس طرح طبقه‌بندی جدید صنایع را ابلاغ کرد',
+     source:'اطلاعیهٔ رسمی بورس',importance:'MEDIUM',position:'فرصت رگولاتوری برای دادهٔ ساخت‌یافته',
+     power:'HIGH',message:'ورود زودهنگام با گزارش تحلیلی طبقه‌بندی',
+     competitorEvidence:'',scenario:'ابلاغ رسمی تا پایان فصل و موج گزارش‌های تفسیری',
+     alert:false,status:'DRAFT',approvedBy:null,approvedAt:null,
+     createdAt:AGO(5),updatedAt:AGO(5)}
+  );
+  saveDb();
+}
+function envCardView(x){
+  return {...x,kindFa:ENV_KIND_FA[x.kind],statusFa:ENV_STATUS_FA[x.status],importanceFa:ENV_IMPORTANCE_FA[x.importance]};
+}
+const RES_ORG_ID=PARTNERSHIP_ORG_ID;
+function ensureResearchPlanSeed(){
+  if(!Array.isArray(DB.researchPlans)) DB.researchPlans=[];
+  if(DB.researchPlans.length) return;
+  const AGO=(d)=>new Date(Date.now()-d*86400000).toISOString();
+  DB.researchPlans.push(
+    {id:'res-1',organizationId:RES_ORG_ID,question:'اثر گزارش‌های شفاف بر اعتماد ذی‌نفعان هلدینگ چیست؟',
+     scope:'ذی‌نفعان هلدینگ البرز و صندوق امید',method:'مصاحبهٔ نیمه‌ساختاریافته + پرسشنامهٔ اعتماد',
+     sample:'۱۲ مدیر هلدینگ و ۳ مدیر صندوق',sources:'مصاحبه‌ها + گزارش‌های داخلی + دادهٔ پایش',
+     limitations:'عدم تعمیم به صنایع دیگر؛ بازهٔ زمانی کوتاه',conflicts:'تعارض با یافتهٔ پژوهش داخلی ۱۴۰۲',
+     reviewer1:'دکتر رضایی — دانشگاه صنعتی شریف',rev1Verdict:'APPROVE',
+     reviewer2:'دکتر موسوی — اندیشکدهٔ داده‌پژوهان',rev2Verdict:'APPROVE',
+     revisions:'افزودن محدودیت نمونه پس از نظر داور اول',version:2,status:'PUBLISHED',
+     createdAt:AGO(60),updatedAt:AGO(15)},
+    {id:'res-2',organizationId:RES_ORG_ID,question:'کدام سناریوی هوش مصنوعی بیشترین اثر را بر ارتباط سازمانی دارد؟',
+     scope:'چهار سناریوی فناورانهٔ در افق ۱۸ ماه',method:'تحلیل سناریو + دلفی دو مرحله‌ای',
+     sample:'پنل ۸ خبره',sources:'گزارش‌های روند + مصاحبهٔ خبرگان',limitations:'وابستگی به پیش‌بینی فناوری',
+     conflicts:'',reviewer1:'دکتر رضایی — دانشگاه صنعتی شریف',rev1Verdict:'REVISE',
+     reviewer2:'',rev2Verdict:'PENDING',revisions:'',version:1,status:'IN_REVIEW',
+     createdAt:AGO(20),updatedAt:AGO(3)}
+  );
+  saveDb();
+}
+function researchPlanView(x){
+  return {...x,statusFa:RES_STATUS_FA[x.status],rev1Fa:RES_VERDICT_FA[x.rev1Verdict],rev2Fa:RES_VERDICT_FA[x.rev2Verdict],
+    bothApproved:x.rev1Verdict==='APPROVE'&&x.rev2Verdict==='APPROVE'};
+}
+
 function partnershipsFor(req){
   ensurePartnershipSeed();
   const ids=visibleOrgIds(req);
@@ -18629,6 +18715,217 @@ async function __handler(req, res) {
     row.updatedAt=nowIso(); saveDb();
     audit(req,'UPDATE','RoleCard',row.id,'OK',{approved:row.approved});
     return json(res,200,roleCardView(row));
+  }
+
+  /* ─────────────── گام ۱۰.۴ — F03 ممیزی ظرفیت و دارایی (/program/capacity-audits) ────────── */
+  if(is('/program/capacity-audits')&&method==='GET'){
+    if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
+    ensureCapacityAuditSeed();
+    const items=(DB.capacityAudits??[]).filter(x=>visibleOrgIds(req).includes(x.organizationId))
+      .map(capacityAuditView).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));
+    return json(res,200,{items,
+      rule:'برگهٔ ممیزی ظرفیت و دارایی (F03): گسترش ممیزی سه‌گانه به «فرد یا دارایی» — سطح بلوغ، دسترسی، وابستگی، شاهد، شکاف، ریسک و اقدام؛ ریسک بالا بدون اقدام و بلوغ پیشرفته بدون شاهد ثبت نمی‌شود.'});
+  }
+  if(is('/program/capacity-audits')&&method==='POST'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر حاکمیت برنامه» (program.write) را ندارید.'});
+    ensureCapacityAuditSeed();
+    const b=await readBody(req);
+    const kind=String(b.kind??'').toUpperCase();
+    if(!CAP_KIND_FA[kind]) return json(res,400,{message:'موضوع ممیزی باید «فرد» یا «دارایی» باشد.'});
+    const subject=String(b.subject??'').trim();
+    if(subject.length<3) return json(res,400,{message:'نام فرد یا دارایی را بنویسید.'});
+    const maturity=String(b.maturity??'').toUpperCase();
+    if(!CAP_MATURITY_FA[maturity]) return json(res,400,{message:'سطح بلوغ را انتخاب کنید (پایه/خوب/پیشرفته).'});
+    const risk=String(b.risk??'').toUpperCase();
+    if(!CAP_RISK_FA[risk]) return json(res,400,{message:'سطح ریسک را انتخاب کنید (کم/متوسط/بالا).'});
+    const evidence=String(b.evidence??'').trim();
+    if(maturity==='ADVANCED'&&!evidence) return json(res,400,{message:'بلوغ «پیشرفته» نیازمند شاهد است — شاهد را ثبت کنید.'});
+    const action=String(b.action??'').trim();
+    if(risk==='HIGH'&&!action) return json(res,400,{message:'ریسک «بالا» بدون اقدام ثبت نمی‌شود — اقدام را بنویسید.'});
+    const row={id:`ca-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,
+      organizationId:primaryOrgId(authUser)??visibleOrgIds(req)[0]??PROGRAM_ORG_ID,
+      kind,subject:subject.slice(0,150),maturity,
+      access:String(b.access??'').trim().slice(0,300),dependency:String(b.dependency??'').trim().slice(0,300),
+      evidence:evidence.slice(0,300),gap:String(b.gap??'').trim().slice(0,300),
+      risk,action:action.slice(0,300),createdAt:nowIso(),updatedAt:nowIso()};
+    DB.capacityAudits.unshift(row); saveDb();
+    audit(req,'CREATE','CapacityAudit',row.id,'OK',{subject:row.subject,risk});
+    return json(res,201,capacityAuditView(row));
+  }
+  const caId=match('/program/capacity-audits/:id');
+  if(caId&&method==='PATCH'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر حاکمیت برنامه» (program.write) را ندارید.'});
+    ensureCapacityAuditSeed();
+    const row=(DB.capacityAudits??[]).find(x=>x.id===caId[0]&&visibleOrgIds(req).includes(x.organizationId));
+    if(!row) return json(res,404,{message:'برگهٔ ممیزی ظرفیت یافت نشد یا خارج از محدودهٔ شماست.'});
+    const b=await readBody(req);
+    for(const k of ['subject','access','dependency','evidence','gap','action'])
+      if(b[k]!=null) row[k]=String(b[k]).trim().slice(0,300);
+    if(b.maturity!=null){
+      const v=String(b.maturity).toUpperCase();
+      if(!CAP_MATURITY_FA[v]) return json(res,400,{message:'سطح بلوغ نامعتبر است.'});
+      if(v==='ADVANCED'&&!String(b.evidence??row.evidence??'').trim()) return json(res,400,{message:'بلوغ «پیشرفته» نیازمند شاهد است — شاهد را ثبت کنید.'});
+      row.maturity=v;
+    }
+    if(b.risk!=null){
+      const v=String(b.risk).toUpperCase();
+      if(!CAP_RISK_FA[v]) return json(res,400,{message:'سطح ریسک نامعتبر است.'});
+      if(v==='HIGH'&&!String(b.action??row.action??'').trim()) return json(res,400,{message:'ریسک «بالا» بدون اقدام ثبت نمی‌شود — اقدام را بنویسید.'});
+      row.risk=v;
+    }
+    row.updatedAt=nowIso(); saveDb();
+    audit(req,'UPDATE','CapacityAudit',row.id,'OK',{risk:row.risk});
+    return json(res,200,capacityAuditView(row));
+  }
+
+  /* ─────────────── گام ۱۰.۴ — F04 کارت محیط، ذی‌نفع و رقیب (/env-stakeholder-cards) ────────── */
+  if(is('/env-stakeholder-cards')&&method==='GET'){
+    if(!hasPerm('publics.read')) return json(res,403,{message:'شما مجوز «مشاهده عموم‌ها» (publics.read) را ندارید.'});
+    ensureEnvCardSeed();
+    const items=(DB.envCards??[]).filter(x=>visibleOrgIds(req).includes(x.organizationId))
+      .map(envCardView).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));
+    return json(res,200,{items,
+      rule:'کارت محیط، ذی‌نفع و رقیب (F04): ادغام عموم‌ها و رقیب — نوع اطلاعات، نشانهٔ تغییر، منبع، اهمیت، موضع، قدرت، پیام، شواهد رقیب، سناریو و هشدار؛ فعال‌سازی هشدار فقط پس از تصویب در گردش F05 (درخواست و تصویب).'});
+  }
+  if(is('/env-stakeholder-cards')&&method==='POST'){
+    if(!hasPerm('publics.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر عموم‌ها» (publics.write) را ندارید.'});
+    ensureEnvCardSeed();
+    const b=await readBody(req);
+    const kind=String(b.kind??'').toUpperCase();
+    if(!ENV_KIND_FA[kind]) return json(res,400,{message:'نوع کارت را انتخاب کنید (عموم‌ها/ذی‌نفع/رقیب).'});
+    const infoType=String(b.infoType??'').trim();
+    if(infoType.length<3) return json(res,400,{message:'نوع اطلاعات را بنویسید.'});
+    const changeSignal=String(b.changeSignal??'').trim();
+    if(changeSignal.length<5) return json(res,400,{message:'نشانهٔ تغییر را بنویسید — کارت محیط بدون نشانه ثبت نمی‌شود.'});
+    const source=String(b.source??'').trim();
+    if(!source) return json(res,400,{message:'منبع اطلاعات الزامی است.'});
+    const importance=String(b.importance??'').toUpperCase();
+    if(!ENV_IMPORTANCE_FA[importance]) return json(res,400,{message:'اهمیت را انتخاب کنید (زیاد/متوسط/کم).'});
+    const power=String(b.power??'MEDIUM').toUpperCase();
+    if(!ENV_IMPORTANCE_FA[power]) return json(res,400,{message:'قدرت را انتخاب کنید (زیاد/متوسط/کم).'});
+    const row={id:`env-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,
+      organizationId:primaryOrgId(authUser)??visibleOrgIds(req)[0]??ENV_ORG_ID,
+      kind,infoType:infoType.slice(0,100),changeSignal:changeSignal.slice(0,400),
+      source:source.slice(0,200),importance,
+      position:String(b.position??'').trim().slice(0,300),power,
+      message:String(b.message??'').trim().slice(0,300),
+      competitorEvidence:String(b.competitorEvidence??'').trim().slice(0,400),
+      scenario:String(b.scenario??'').trim().slice(0,400),alert:false,
+      status:'DRAFT',approvedBy:null,approvedAt:null,createdAt:nowIso(),updatedAt:nowIso()};
+    DB.envCards.unshift(row); saveDb();
+    audit(req,'CREATE','EnvCard',row.id,'OK',{kind,infoType});
+    return json(res,201,envCardView(row));
+  }
+  const envId=match('/env-stakeholder-cards/:id');
+  if(envId&&(method==='PATCH'||method==='POST')){
+    if(!hasPerm('publics.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر عموم‌ها» (publics.write) را ندارید.'});
+    ensureEnvCardSeed();
+    const row=(DB.envCards??[]).find(x=>x.id===envId[0]&&visibleOrgIds(req).includes(x.organizationId));
+    if(!row) return json(res,404,{message:'کارت محیط یافت نشد یا خارج از محدودهٔ شماست.'});
+    if(method==='POST'){ /* گردش F05: درخواست و تصویب */
+      const decision=String((await readBody(req)).decision??'').toUpperCase();
+      if(!['APPROVED','REJECTED','PENDING'].includes(decision)) return json(res,400,{message:'تصمیم گردش نامعتبر است (مصوب/ردشده/در انتظار).'});
+      if(decision==='APPROVED'&&!row.changeSignal) return json(res,400,{message:'کارت بدون نشانهٔ تغییر مصوب نمی‌شود.'});
+      row.status=decision;
+      row.approvedBy=decision==='APPROVED'?(authUser?.email??'—'):null;
+      row.approvedAt=decision==='APPROVED'?nowIso():null;
+      if(decision!=='APPROVED') row.alert=false;
+      row.updatedAt=nowIso(); saveDb();
+      audit(req,'F05_FLOW','EnvCard',row.id,'OK',{decision});
+      return json(res,200,envCardView(row));
+    }
+    const b=await readBody(req);
+    for(const k of ['infoType','changeSignal','source','position','message','competitorEvidence','scenario'])
+      if(b[k]!=null) row[k]=String(b[k]).trim().slice(0,400);
+    if(b.importance!=null){const v=String(b.importance).toUpperCase(); if(!ENV_IMPORTANCE_FA[v]) return json(res,400,{message:'اهمیت نامعتبر است.'}); row.importance=v;}
+    if(b.power!=null){const v=String(b.power).toUpperCase(); if(!ENV_IMPORTANCE_FA[v]) return json(res,400,{message:'قدرت نامعتبر است.'}); row.power=v;}
+    if(b.kind!=null){const v=String(b.kind).toUpperCase(); if(!ENV_KIND_FA[v]) return json(res,400,{message:'نوع کارت نامعتبر است.'}); row.kind=v;}
+    if(b.alert===true){
+      if(row.status!=='APPROVED') return json(res,400,{message:'هشدار فقط پس از تصویب کارت در گردش F05 فعال می‌شود — ابتدا کارت را به تصویب برسانید.'});
+      row.alert=true;
+    } else if(b.alert===false) row.alert=false;
+    row.updatedAt=nowIso(); saveDb();
+    audit(req,'UPDATE','EnvCard',row.id,'OK',{alert:row.alert});
+    return json(res,200,envCardView(row));
+  }
+
+  /* ─────────────── گام ۱۰.۴ — F07 طرح پژوهش و داوری (/research-plans) ────────── */
+  if(is('/research-plans')&&method==='GET'){
+    if(!hasPerm('strategy.read')) return json(res,403,{message:'شما مجوز «مشاهده راهبرد» (strategy.read) را ندارید.'});
+    ensureResearchPlanSeed();
+    const items=(DB.researchPlans??[]).filter(x=>visibleOrgIds(req).includes(x.organizationId))
+      .map(researchPlanView).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));
+    return json(res,200,{items,
+      rule:'طرح پژوهش و داوری (F07): پرسش، دامنه، روش، نمونه، منابع، محدودیت، تعارض، دو داور مستقل، اصلاحات و نسخه — انتشار فقط با تأیید هر دو داور مستقل (حلقهٔ ۱۵.۳ سند v6).'});
+  }
+  if(is('/research-plans')&&method==='POST'){
+    if(!hasPerm('strategy.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر راهبرد» (strategy.write) را ندارید.'});
+    ensureResearchPlanSeed();
+    const b=await readBody(req);
+    const question=String(b.question??'').trim();
+    if(question.length<10||!question.includes('؟')) return json(res,400,{message:'پرسش پژوهش را در قالب یک پرسش (با «؟») بنویسید.'});
+    const scope=String(b.scope??'').trim();
+    if(scope.length<5) return json(res,400,{message:'دامنهٔ پژوهش الزامی است.'});
+    const method=String(b.method??'').trim();
+    if(method.length<5) return json(res,400,{message:'روش پژوهش را بنویسید.'});
+    const reviewer1=String(b.reviewer1??'').trim(),reviewer2=String(b.reviewer2??'').trim();
+    if(reviewer1&&reviewer2&&reviewer1===reviewer2) return json(res,400,{message:'داوران باید مستقل باشند — دو نفر متفاوت وارد کنید.'});
+    const row={id:`res-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,
+      organizationId:primaryOrgId(authUser)??visibleOrgIds(req)[0]??RES_ORG_ID,
+      question:question.slice(0,400),scope:scope.slice(0,300),method:method.slice(0,300),
+      sample:String(b.sample??'').trim().slice(0,200),sources:String(b.sources??'').trim().slice(0,300),
+      limitations:String(b.limitations??'').trim().slice(0,300),conflicts:String(b.conflicts??'').trim().slice(0,300),
+      reviewer1:reviewer1.slice(0,150),rev1Verdict:reviewer1?'PENDING':'PENDING',
+      reviewer2:reviewer2.slice(0,150),rev2Verdict:'PENDING',
+      revisions:'',version:1,status:'DRAFT',createdAt:nowIso(),updatedAt:nowIso()};
+    if(reviewer1||reviewer2) row.status='IN_REVIEW';
+    DB.researchPlans.unshift(row); saveDb();
+    audit(req,'CREATE','ResearchPlan',row.id,'OK',{question:row.question.slice(0,50)});
+    return json(res,201,researchPlanView(row));
+  }
+  const resId=match('/research-plans/:id');
+  if(resId&&(method==='PATCH'||method==='POST')){
+    if(!hasPerm('strategy.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر راهبرد» (strategy.write) را ندارید.'});
+    ensureResearchPlanSeed();
+    const row=(DB.researchPlans??[]).find(x=>x.id===resId[0]&&visibleOrgIds(req).includes(x.organizationId));
+    if(!row) return json(res,404,{message:'طرح پژوهش یافت نشد یا خارج از محدودهٔ شماست.'});
+    const b=await readBody(req);
+    if(method==='POST'){ /* ثبت رأی داور یا انتشار */
+      const act=String(b.action??'');
+      if(act==='verdict'){
+        const which=String(b.reviewer??'')==='2'?'2':'1';
+        const verdict=String(b.verdict??'').toUpperCase();
+        if(!RES_VERDICT_FA[verdict]) return json(res,400,{message:'رأی داور نامعتبر است (تأیید/اصلاح/در انتظار).'});
+        const nameKey=which==='1'?'reviewer1':'reviewer2';
+        if(!row[nameKey]) return json(res,400,{message:`نام داور ${which==='1'?'اول':'دوم'} ثبت نشده است — ابتدا نام او را وارد کنید.`});
+        if(which==='1') row.rev1Verdict=verdict; else row.rev2Verdict=verdict;
+        if(row.status==='DRAFT'&&(row.reviewer1||row.reviewer2)) row.status='IN_REVIEW';
+        row.updatedAt=nowIso(); saveDb();
+        audit(req,'REVIEW','ResearchPlan',row.id,'OK',{reviewer:which,verdict});
+        return json(res,200,researchPlanView(row));
+      }
+      if(act==='publish'){
+        if(!row.reviewer1||!row.reviewer2) return json(res,400,{message:'انتشار نیازمند دو داور مستقل است — هر دو داور را ثبت کنید.'});
+        if(row.reviewer1===row.reviewer2) return json(res,400,{message:'داوران باید مستقل باشند — دو نفر متفاوت وارد کنید.'});
+        if(!(row.rev1Verdict==='APPROVE'&&row.rev2Verdict==='APPROVE')) return json(res,400,{message:'انتشار طرح فقط با تأیید هر دو داور مستقل ممکن است (حلقهٔ ۱۵.۳) — رأی داوران را کامل کنید.'});
+        row.status='PUBLISHED'; row.updatedAt=nowIso(); saveDb();
+        audit(req,'PUBLISH','ResearchPlan',row.id,'OK',{version:row.version});
+        return json(res,200,researchPlanView(row));
+      }
+      return json(res,400,{message:'اقدام نامعتبر است (verdict/publish).'});
+    }
+    for(const k of ['question','scope','method','sample','sources','limitations','conflicts'])
+      if(b[k]!=null) row[k]=String(b[k]).trim().slice(0,400);
+    if(b.reviewer1!=null){const v=String(b.reviewer1).trim(); if(row.reviewer2&&v===row.reviewer2) return json(res,400,{message:'داوران باید مستقل باشند — دو نفر متفاوت وارد کنید.'}); row.reviewer1=v.slice(0,150);}
+    if(b.reviewer2!=null){const v=String(b.reviewer2).trim(); if(row.reviewer1&&v===row.reviewer1) return json(res,400,{message:'داوران باید مستقل باشند — دو نفر متفاوت وارد کنید.'}); row.reviewer2=v.slice(0,150);}
+    if(b.revisions!=null){
+      const v=String(b.revisions).trim();
+      if(v&&v!==row.revisions){ row.revisions=v.slice(0,500); row.version=Number(row.version??1)+1; }
+      else if(!v) row.revisions='';
+    }
+    row.updatedAt=nowIso(); saveDb();
+    audit(req,'UPDATE','ResearchPlan',row.id,'OK',{version:row.version});
+    return json(res,200,researchPlanView(row));
   }
 
   /* ── آیتم ۲۱: Web Push (رضایت اعلان ملزم؛ انتقال دمو = polling) ── */

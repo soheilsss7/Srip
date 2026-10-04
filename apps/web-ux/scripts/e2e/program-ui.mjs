@@ -98,7 +98,7 @@ try {
   });
   ok('کاتالوگ فرم‌ها: کارت با هجده ردیف F01–F18', cat.found && cat.rows === 18, `rows=${cat.rows}`);
   ok('کاتالوگ فرم‌ها: کدهای کلیدی (F01/F04/F08/F11/F14/F18) حاضر', cat.fCodes, JSON.stringify(cat.codes.slice(0, 3)));
-  ok('کاتالوگ فرم‌ها: چهارده موجود + چهار در برنامه + یادداشت ماژول‌های پلتفرمی', cat.have === 14 && cat.planned === 4 && cat.platformNote, `have=${cat.have} planned=${cat.planned}`);
+  ok('کاتالوگ فرم‌ها: شانزده موجود + دو در برنامه + یادداشت ماژول‌های پلتفرمی', cat.have === 16 && cat.planned === 2 && cat.platformNote, `have=${cat.have} planned=${cat.planned}`);
 
   /* ── ۳.۶) گام ۵.۶ — دروازه‌های کنترل مشترک G0–G6 ── */
   const gates = await page.evaluate(() => {

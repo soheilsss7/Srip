@@ -3149,6 +3149,91 @@ section('گام ۱۰.۳ — F01 کنترل اجرا + F16 کارت نقش و و�
     cView.status === 200 && (cView.body.items ?? []).length === 0);
 }
 
+/* ═════════════════ گام ۱۰.۴ — F03 ممیزی ظرفیت و دارایی + F04 محیط/ذی‌نفع/رقیب + F07 پژوهش و داوری ═════════════════ */
+section('گام ۱۰.۴ — F03 ممیزی ظرفیت + F04 محیط/ذی‌نفع/رقیب + F07 پژوهش و داوری');
+{
+  const dt = (await login(OWNER.email)).body.accessToken;
+  const ct = (await login(CLIENT.email)).body.accessToken;
+
+  /* ── F03 ── */
+  const C = await api('/program/capacity-audits', { token: dt });
+  const citems = C.body.items ?? [];
+  check('F03: دو برگهٔ ممیزی بذر (فرد و دارایی) با بلوغ/ریسک فارسی‌شده',
+    C.status === 200 && citems.length === 2 && citems.some(x => x.kind === 'ASSET') && citems.some(x => x.kind === 'PERSON') && !!C.body.rule);
+  check('F03: دارایی پرریسک با اقدام؛ فرد با وابستگی و شکاف',
+    citems.find(x => x.kind === 'ASSET').risk === 'HIGH' && (citems.find(x => x.kind === 'ASSET').action ?? '').length > 5
+    && (citems.find(x => x.kind === 'PERSON').dependency ?? '').length > 5);
+
+  const advNoEv = await api('/program/capacity-audits', { method: 'POST', token: dt, body: { kind: 'ASSET', subject: 'انبار دادهٔ جدید', maturity: 'ADVANCED', risk: 'LOW' } });
+  check('F03: بلوغ «پیشرفته» بدون شاهد → ۴۰۰', advNoEv.status === 400);
+  const highNoAct = await api('/program/capacity-audits', { method: 'POST', token: dt, body: { kind: 'ASSET', subject: 'سرور پشتیبان قدیمی', maturity: 'BASIC', risk: 'HIGH' } });
+  check('F03: ریسک «بالا» بدون اقدام → ۴۰۰', highNoAct.status === 400);
+  const NC = await api('/program/capacity-audits', { method: 'POST', token: dt, body: { kind: 'ASSET', subject: 'سرور پشتیبان قدیمی', maturity: 'BASIC', access: 'دسترسی مدیر زیرساخت', dependency: 'تنها نسخهٔ پشتیبان روی همین سرور', evidence: 'گزارش زیرساخت فاز ۸', gap: 'نبود پشتیبان دوم', risk: 'HIGH', action: 'راه‌اندازی پشتیبان دوم تا پایان ماه' } });
+  check('F03: ثبت دارایی پرریسک با اقدام → ۲۰۱',
+    NC.status === 201 && NC.body.riskFa === 'بالا' && NC.body.kindFa === 'دارایی');
+  const cNoPerm = await api('/program/capacity-audits', { method: 'POST', token: ct, body: { kind: 'ASSET', subject: 'تست مشتری', maturity: 'BASIC', risk: 'LOW' } });
+  check('F03: RBAC — ثبت ممیزی ظرفیت فقط با program.write (client → ۴۰۳)', cNoPerm.status === 403);
+
+  /* ── F04 ── */
+  const E = await api('/env-stakeholder-cards', { token: dt });
+  const eitems = E.body.items ?? [];
+  check('F04: دو کارت بذر (رقیب مصوب با هشدار + عمومی پیش‌نویس) — ادغام عموم‌ها و رقیب',
+    E.status === 200 && eitems.length === 2
+    && eitems.find(x => x.kind === 'COMPETITOR').status === 'APPROVED' && eitems.find(x => x.kind === 'COMPETITOR').alert === true
+    && eitems.find(x => x.kind === 'PUBLIC').status === 'DRAFT' && !!E.body.rule);
+
+  const noSignal = await api('/env-stakeholder-cards', { method: 'POST', token: dt, body: { kind: 'STAKEHOLDER', infoType: 'موضع ذی‌نفع', source: 'جلسهٔ行业协会' } });
+  check('F04: کارت بدون نشانهٔ تغییر → ۴۰۰', noSignal.status === 400);
+  const NE = await api('/env-stakeholder-cards', { method: 'POST', token: dt, body: { kind: 'STAKEHOLDER', infoType: 'موضع ذی‌نفع', changeSignal: 'اتاق بازرگانی موضع انتقادی نسبت به طرح طبقه‌بندی گرفت', source: 'بیانیهٔ رسمی اتاق', importance: 'HIGH', position: 'ذی‌نفع مخالف فعال', power: 'HIGH', message: 'گفت‌وگوی فنی با کمیسیون تخصصی', scenario: 'اصلاح طرح طبقه‌بندی در جلسهٔ بعدی' } });
+  check('F04: ثبت کارت ذی‌نفع → ۲۰۱ پیش‌نویس بدون هشدار',
+    NE.status === 201 && NE.body.status === 'DRAFT' && NE.body.alert === false && NE.body.kindFa === 'ذی‌نفع');
+  const earlyAlert = await api(`/env-stakeholder-cards/${NE.body.id}`, { method: 'PATCH', token: dt, body: { alert: true } });
+  check('F04: هشدار پیش از تصویب گردش F05 → ۴۰۰', earlyAlert.status === 400);
+  const approve = await api(`/env-stakeholder-cards/${NE.body.id}`, { method: 'POST', token: dt, body: { decision: 'APPROVED' } });
+  check('F04: تصویب کارت در گردش F05 → مصوب با تأییدکننده',
+    approve.status === 200 && approve.body.status === 'APPROVED' && approve.body.approvedBy === OWNER.email);
+  const alertOn = await api(`/env-stakeholder-cards/${NE.body.id}`, { method: 'PATCH', token: dt, body: { alert: true } });
+  check('F04: پس از تصویب، فعال‌سازی هشدار → ۲۰۰',
+    alertOn.status === 200 && alertOn.body.alert === true);
+  const eNoPerm = await api('/env-stakeholder-cards', { method: 'POST', token: ct, body: { kind: 'PUBLIC', infoType: 'x', changeSignal: 'y متن', source: 'z' } });
+  check('F04: RBAC — ثبت کارت محیط فقط با publics.write (client → ۴۰۳)', eNoPerm.status === 403);
+
+  /* ── F07 ── */
+  const R = await api('/research-plans', { token: dt });
+  const ritems = R.body.items ?? [];
+  check('F07: دو طرح بذر — یکی منتشرشده با دو تأیید مستقل و یکی در داوری',
+    R.status === 200 && ritems.length === 2 && !!R.body.rule
+    && ritems.find(x => x.id === 'res-1').status === 'PUBLISHED' && ritems.find(x => x.id === 'res-1').bothApproved === true
+    && ritems.find(x => x.id === 'res-2').status === 'IN_REVIEW');
+
+  const badQ = await api('/research-plans', { method: 'POST', token: dt, body: { question: 'پرسش بدون علامت سؤال', scope: 'دامنه تست', method: 'روش تست' } });
+  check('F07: پرسش پژوهش بدون «؟» → ۴۰۰', badQ.status === 400);
+  const sameRev = await api('/research-plans', { method: 'POST', token: dt, body: { question: 'اثر خودکارسازی بر سرعت پاسخ چیست؟', scope: 'تیم پشتیبانی', method: 'آزمون کنترل‌شده', reviewer1: 'دکتر واحد', reviewer2: 'دکتر واحد' } });
+  check('F07: دو داور یکسان → ۴۰۰ (استقلال داوران)', sameRev.status === 400);
+  const NR2 = await api('/research-plans', { method: 'POST', token: dt, body: { question: 'اثر خودکارسازی بر سرعت پاسخ چیست؟', scope: 'تیم پشتیبانی مشتریان', method: 'آزمون کنترل‌شده پیش/پس', sample: '۲۰۰ تیکت', sources: 'سامانهٔ تیکتینگ', limitations: 'بازهٔ دو ماهه', reviewer1: 'دکتر رضایی — دانشگاه صنعتی شریف', reviewer2: 'دکتر کاظمی — پژوهشگاه داده' } });
+  check('F07: ثبت طرح با دو داور مستقل → ۲۰۱ در داوری',
+    NR2.status === 201 && NR2.body.status === 'IN_REVIEW' && NR2.body.rev1Verdict === 'PENDING');
+  const earlyPub = await api(`/research-plans/${NR2.body.id}`, { method: 'POST', token: dt, body: { action: 'publish' } });
+  check('F07: انتشار پیش از رأی داوران → ۴۰۰ (حلقهٔ ۱۵.۳)', earlyPub.status === 400);
+  const v1 = await api(`/research-plans/${NR2.body.id}`, { method: 'POST', token: dt, body: { action: 'verdict', reviewer: '1', verdict: 'APPROVE' } });
+  check('F07: رأی داور اول (تأیید)', v1.status === 200 && v1.body.rev1Verdict === 'APPROVE');
+  const stillNo = await api(`/research-plans/${NR2.body.id}`, { method: 'POST', token: dt, body: { action: 'publish' } });
+  check('F07: انتشار با یک تأیید → هنوز ۴۰۰', stillNo.status === 400);
+  const rev2 = await api(`/research-plans/${NR2.body.id}`, { method: 'PATCH', token: dt, body: { revisions: 'افزودن گروه کنترل هم‌اندازه پس از نظر داور دوم' } });
+  check('F07: ثبت اصلاحات → نسخهٔ ۲ (v2)',
+    rev2.status === 200 && rev2.body.version === 2 && rev2.body.revisions.includes('گروه کنترل'));
+  const v2 = await api(`/research-plans/${NR2.body.id}`, { method: 'POST', token: dt, body: { action: 'verdict', reviewer: '2', verdict: 'APPROVE' } });
+  check('F07: رأی داور دوم (تأیید)', v2.status === 200 && v2.body.bothApproved === true);
+  const pub = await api(`/research-plans/${NR2.body.id}`, { method: 'POST', token: dt, body: { action: 'publish' } });
+  check('F07: انتشار پس از تأیید هر دو داور مستقل → ۲۰۰',
+    pub.status === 200 && pub.body.status === 'PUBLISHED');
+  const rNoPerm = await api('/research-plans', { method: 'POST', token: ct, body: { question: 'پرسش مشتری؟', scope: 'دامنه', method: 'روش' } });
+  check('F07: RBAC — ثبت طرح پژوهش فقط با strategy.write (client → ۴۰۳)', rNoPerm.status === 403);
+  const cViewR = await api('/research-plans', { token: ct });
+  check('F07: RBAC — مشاهدهٔ طرح پژوهش فقط با strategy.read (client بدون مجوز → ۴۰۳)',
+    cViewR.status === 403);
+}
+
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
 if (failures.length) { console.log(`  Failed: ${failures.join(' | ')}`); }
