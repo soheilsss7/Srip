@@ -2188,6 +2188,72 @@ section('گام ۶.۳ — ثبت سابقه، داشبورد مصرف و کلی�
     && pC.body.items.every((c) => c.user === 'pars@srip.local' || c.id.includes('seed')));
 }
 
+
+/* ═════════════════ گام ۷.۱ — نمایهٔ معنایی و جست‌وجوی ترکیبی ═════════════════ */
+section('گام ۷.۱ — نمایهٔ معنایی + جست‌وجوی ترکیبی + مجوز در نقطهٔ بازیابی');
+{
+  const dt = (await login(OWNER.email)).body.accessToken;
+  const ct = (await login(CLIENT.email)).body.accessToken;
+  const ptok3 = (await api('/auth/login', { method: 'POST', body: { email: 'pars', password: 'pars1234' } })).body?.accessToken;
+
+  /* نمایه: سه منبع + منشأ */
+  const I = await api('/ai/rag/index', { token: dt });
+  check('نمایه: اسناد دانشی + اسناد مخزن + رکوردها + یال‌های گراف همگی نمایه شده‌اند',
+    I.status === 200 && I.body.totals.knowledge >= 10 && I.body.totals.document >= 2
+    && I.body.totals.record > 100 && I.body.totals.graph > 30, JSON.stringify(I.body.totals));
+  check('نمایه: اسناد فقط پس از اسکن CLEAN و READY ایندکس می‌شوند (نمایه‌شده + در انتظار = همه)',
+    I.body.documents.indexed >= 3 && I.body.documents.pending >= 1
+    && I.body.documents.indexed + I.body.documents.pending === I.body.documents.all,
+    JSON.stringify(I.body.documents));
+  check('نمایه: قاعدهٔ «مجوز در نقطهٔ بازیابی» در پاسخ ثبت است',
+    String(I.body.rule).includes('نقطهٔ بازیابی'));
+
+  /* جست‌وجوی ترکیبی: هر سه نوع منبع در نتایج */
+  const S1 = await api('/ai/rag/search', { method: 'POST', token: dt, body: { query: 'تأمین‌کننده' } });
+  const types = new Set(S1.body.items.map((x) => x.sourceType));
+  check('ترکیبی: پرسش «تأمین‌کننده» هم‌زمان سند مخزن + رکورد + یال گراف برمی‌گرداند',
+    S1.status === 200 && types.has('document') && types.has('record') && types.has('graph'),
+    JSON.stringify([...types]));
+  check('ترکیبی: هر نتیجه امتیاز تطبیق و منشأ ثبت‌شده دارد',
+    S1.body.items.every((x) => typeof x.score === 'number' && x.score > 0 && !!x.origin?.source));
+  const docHit = S1.body.items.find((x) => x.sourceType === 'document');
+  check('ترکیبی: منشأ سند مخزن = بارگذاری‌کننده و مهر زمانی',
+    docHit && !!docHit.origin.uploadedBy && !!docHit.origin.at && docHit.url === '/documents');
+
+  /* دانش مشترک با منشأ کامل */
+  const S2 = await api('/ai/rag/search', { method: 'POST', token: dt, body: { query: 'مدل امتیازدهی چطور کار می‌کند' } });
+  const kbHit = S2.body.items.find((x) => x.sourceType === 'knowledge');
+  check('دانش: سند دانشی با منشأ (مخزن دانش + مالک + نسخه) بازیابی می‌شود',
+    kbHit && kbHit.origin.source === 'مخزن دانش SRIP' && !!kbHit.origin.owner && kbHit.origin.version === 1);
+
+  /* مجوز در نقطهٔ بازیابی — سند خارج از محدوده هرگز بازیابی نمی‌شود */
+  const cS = await api('/ai/rag/search', { method: 'POST', token: ct, body: { query: 'راهنمای امتیازدهی معیارها' } });
+  check('مجوز: client سند org-1 را بازیابی نمی‌کند (خارج از سازمانش)',
+    cS.body.items.filter((x) => x.sourceType === 'document' && x.title.includes('راهنمای امتیازدهی')).length === 0);
+  const pS = await api('/ai/rag/search', { method: 'POST', token: ptok3, body: { query: 'الگوی ارزیابی تأمین‌کننده' } });
+  check('مجوز: پارس هیچ سند دنیای دمو را بازیابی نمی‌کند',
+    pS.body.items.filter((x) => x.sourceType === 'document').length === 0);
+  const pS2 = await api('/ai/rag/search', { method: 'POST', token: ptok3, body: { query: 'پارس انرژی' } });
+  check('مجوز: پارس دنیای خودش را بازیابی می‌کند (گراف + رکورد پارس)',
+    pS2.body.items.some((x) => x.sourceType === 'graph' && x.title.includes('پارس انرژی'))
+    && pS2.body.items.some((x) => x.sourceType === 'record'));
+
+  /* سند RESTRICTED فقط برای مالک */
+  const rOwner = await api('/ai/rag/search', { method: 'POST', token: dt, body: { query: 'الگوی ارزیابی تأمین‌کننده' } });
+  check('طبقه‌بندی: سند محدود (RESTRICTED) برای مالک قابل بازیابی است',
+    rOwner.body.items.some((x) => x.sourceType === 'document' && x.title.includes('الگوی ارزیابی')));
+
+  /* صداقت و اعتبارسنجی */
+  const empty = await api('/ai/rag/search', { method: 'POST', token: dt, body: { query: '   ' } });
+  check('پرسش خالی → ۴۰۰', empty.status === 400);
+  const none = await api('/ai/rag/search', { method: 'POST', token: dt, body: { query: 'کوکو-سولی-نو-موجود' } });
+  check('پاسخ صادقانه: هیچ نتیجه‌ای نیست → فهرست خالی با آمار صحیح',
+    none.status === 200 && none.body.items.length === 0 && none.body.stats.matched === 0 && !!none.body.rule);
+  check('آمار جست‌وجو: indexed/matched/retrieved همه حاضرند',
+    typeof S1.body.stats.indexed === 'number' && typeof S1.body.stats.matched === 'number'
+    && S1.body.stats.retrieved === S1.body.items.length);
+}
+
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
 if (failures.length) { console.log(`  Failed: ${failures.join(' | ')}`); }

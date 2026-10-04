@@ -7181,6 +7181,101 @@ function ensureAiCallsSeed(){
       mk('org-pars','pars@srip.local',1,'org-question','موتور محلی SRIP','srip-deterministic','LOCAL',100,450,30,'OK'));
   }
 }
+/* ═══════════ گام ۷.۱ — نمایهٔ معنایی و جست‌وجوی ترکیبی (بخش ۱۹ سند v6) ═══════════
+   نمایهٔ سبکِ قطعی (کلیدواژه + برچسب + طبقه) روی سه منبع: اسناد مجاز مخزن،
+   رکوردهای ساختاریافته و گراف روابط — بدون هیچ سرویس بیرونی.
+   «مجوز در نقطهٔ بازیابی» (۱۹.۴): دامنهٔ هر کاربر همان لحظهٔ پرسش روی نتایج
+   اعمال می‌شود، نه هنگام نمایه‌سازی. منشأ هر مدخل ثبت می‌شود. */
+function aiNormalize(s){return String(s??'').toLowerCase().replace(/[«»()\[\]:؛,.!?؟، \u200c]/g,' ').replace(/\s+/g,' ').trim();}
+function aiTokens(q){return aiNormalize(q).split(' ').filter(w=>w.length>1);}
+function aiOrgIdsOf(rec){
+  const ids=[];
+  if(rec.organizationId) ids.push(rec.organizationId);
+  if(rec.relationshipId){const r=RELS.find(x=>x.id===rec.relationshipId);
+    if(r){ids.push(r.sourceOrganizationId,r.targetOrganizationId);}}
+  return [...new Set(ids.filter(Boolean))];
+}
+const AI_SOURCE_FA={knowledge:'سند دانشی',document:'سند مخزن',record:'رکورد ساختاریافته',graph:'یال گراف روابط'};
+function aiIndexBuild(){
+  const entries=[];
+  /* ۱) مخزن دانش (دانش مشترک محصول — منشأ: تیم محصول) */
+  (DB.knowledge??[]).forEach(a=>entries.push({
+    entryId:`kb:${a.id}`,sourceType:'knowledge',sourceId:a.id,organizationIds:[],shared:true,
+    title:a.title,snippet:String(a.excerpt??'').slice(0,160),
+    keywords:[...(a.tags??[]),...(a.families??[]),a.category,'دانش'],
+    origin:{source:'مخزن دانش SRIP',owner:a.owner??'تیم محصول',slug:a.slug,version:1},url:'/knowledge'}));
+  /* ۲) اسناد مخزن — فقط CLEAN و READY نمایه می‌شوند؛ طبقهٔ محدود فقط برای مالک */
+  (DB.documents??[]).filter(d=>d.scanStatus==='CLEAN'&&d.uploadStatus==='READY').forEach(d=>entries.push({
+    entryId:`doc:${d.id}`,sourceType:'document',sourceId:d.id,organizationIds:[d.organizationId],
+    title:d.name,
+    snippet:`سند ${d.classification==='CONFIDENTIAL'?'محرمانه':d.classification==='RESTRICTED'?'محدود':'داخلی'} — بارگذاری‌کننده: ${d.uploadedBy}`,
+    keywords:[d.name,d.classification,'سند'],classification:d.classification,
+    origin:{source:'مخزن اسناد',uploadedBy:d.uploadedBy,at:d.createdAt,mimeType:d.mimeType,sizeBytes:d.sizeBytes},
+    url:'/documents'}));
+  /* ۳) رکوردهای ساختاریافته */
+  const recDefs=[
+    ['organization',ORGS,o=>[o.id],o=>({title:o.name,snippet:o.type??'',kw:[o.name,o.type]}),'/organizations/'],
+    ['person',PEOPLE,aiOrgIdsOf,p=>({title:`${p.firstName??''} ${p.lastName??''}`.trim(),snippet:p.title??'',kw:[p.firstName,p.lastName,p.title,'شخص']}),'/people/'],
+    ['meeting',MEETINGS,aiOrgIdsOf,m=>({title:m.title,snippet:m.objective??'',kw:[m.title,m.objective,'جلسه']}),'/meetings/'],
+    ['interaction',INTERACTIONS,aiOrgIdsOf,x=>({title:x.subject,snippet:x.outcome??x.type??'',kw:[x.subject,x.outcome,'تعامل']}),'/interactions'],
+    ['opportunity',OPPORTUNITIES,aiOrgIdsOf,o=>({title:o.name,snippet:o.status??'',kw:[o.name,'فرصت']}),'/opportunities/'],
+    ['project',PROJECTS,aiOrgIdsOf,pr=>({title:pr.name,snippet:pr.status??'',kw:[pr.name,'پروژه']}),'/projects/'],
+    ['commitment',COMMITMENTS,aiOrgIdsOf,c=>({title:c.description,snippet:c.status??'',kw:[c.description,'تعهد']}),'/commitments'],
+  ];
+  for(const [rtype,arr,orgs,view,base] of recDefs){
+    for(const rec of arr){
+      const v=view(rec);
+      entries.push({entryId:`${rtype}:${rec.id}`,sourceType:'record',recordType:rtype,sourceId:rec.id,
+        organizationIds:orgs(rec),title:v.title,snippet:String(v.snippet).slice(0,160),
+        keywords:[v.title,...(v.kw??[])],origin:{source:'رکورد ساختاریافته',recordType:rtype},url:base+rec.id});
+    }
+  }
+  /* ۴) گراف روابط — یال سازمان↔سازمان و شخص↔سازمان */
+  RELS.forEach(r=>{
+    const s=orgById(r.sourceOrganizationId),t=orgById(r.targetOrganizationId);
+    entries.push({entryId:`edge:${r.id}`,sourceType:'graph',sourceId:r.id,
+      organizationIds:[r.sourceOrganizationId,r.targetOrganizationId],
+      title:`${s?.name??'?'} ↔ ${t?.name??'?'}`,
+      snippet:`${r.relationshipType??''} ${r.status??''}`.trim(),
+      keywords:[s?.name,t?.name,'رابطه',r.relationshipType,r.status],
+      origin:{source:'گراف روابط',kind:'org-org'},url:`/relationships/${r.id}`});
+  });
+  PEOPLE.forEach(pp=>{
+    const o=orgById(pp.organizationId);
+    entries.push({entryId:`pedge:${pp.id}`,sourceType:'graph',sourceId:pp.id,
+      organizationIds:[pp.organizationId],
+      title:`${pp.firstName??''} ${pp.lastName??''} → ${o?.name??'?'}`,
+      snippet:pp.title??'',keywords:[pp.firstName,pp.lastName,o?.name,'عضویت'],
+      origin:{source:'گراف روابط',kind:'person-org'},url:`/people/${pp.id}`});
+  });
+  return entries;
+}
+/* جست‌وجوی ترکیبی: کلیدواژه (عنوان/متن) + برچسب/طبقه + دامنهٔ گرافی؛
+   مجوز در نقطهٔ بازیابی اعمال می‌شود */
+function aiHybridSearch(req,authUser,query,limit=8){
+  const ids=visibleOrgIds(req);
+  const entries=aiIndexBuild();
+  const tokens=aiTokens(query);
+  const hits=[];
+  for(const e of entries){
+    /* مجوز در نقطهٔ بازیابی — همان لحظه، به تفکیک کاربر/سازمان */
+    const allowed=e.shared||(e.organizationIds??[]).some(id=>ids.includes(id));
+    if(!allowed) continue;
+    if(e.classification==='RESTRICTED'&&!authUser?.isOwner) continue;
+    const hayTitle=aiNormalize(e.title);
+    const hayBody=aiNormalize(`${e.snippet} ${(e.keywords??[]).join(' ')}`);
+    let score=0,matched=0;
+    for(const tk of tokens){
+      if(hayTitle.includes(tk)){score+=4;matched++;}
+      else if(hayBody.includes(tk)){score+=2;matched++;}
+    }
+    if(!matched) continue;
+    if(matched===tokens.length) score+=2;
+    hits.push({...e,score,matchedTokens:matched});
+  }
+  hits.sort((a,b)=>b.score-a.score||String(a.entryId).localeCompare(String(b.entryId)));
+  return {hits:hits.slice(0,limit),totalHits:hits.length,indexed:entries.length};
+}
 const CONTENT_CONTROLS=[
   {key:'coreMessage',title:'هم‌راستایی با پیام هسته'},
   {key:'audience',   title:'شخصی‌سازی برای مخاطب'},
@@ -14531,6 +14626,35 @@ const server=http.createServer(async(req,res)=>{
     const limit=Math.min(Number(q.get('limit')??50)||50,500);
     return json(res,200,{items:list.slice(0,limit),
       rule:'ثبت سابقه (۱۹.۴): پرسش، کاربرد، ارائه‌دهنده/مدل/نسخه، اسناد بازیابی‌شده، زمان پاسخ، هزینهٔ برآوردی و وضعیت هر فراخوانی با شناسهٔ واحد ثبت می‌شود — پاسخ‌ها فقط از دادهٔ مجاز همین مستأجر ساخته شده‌اند.'});
+  }
+
+  /* ─────────────── گام ۷.۱ — نمایهٔ معنایی و جست‌وجوی ترکیبی (/ai/rag/*) ────────── */
+  if(is('/ai/rag/index')&&method==='GET'){
+    if(!hasPerm('ai.use')) return json(res,403,{message:'شما مجوز «فراخوانی درگاه هوش مصنوعی» (ai.use) را ندارید.'});
+    const entries=aiIndexBuild();
+    const byType={};
+    for(const e of entries) byType[e.sourceType]=(byType[e.sourceType]??0)+1;
+    const docs=(DB.documents??[]);
+    return json(res,200,{totals:{all:entries.length,...byType},
+      documents:{all:docs.length,indexed:docs.filter(d=>d.scanStatus==='CLEAN'&&d.uploadStatus==='READY').length,
+        pending:docs.filter(d=>!(d.scanStatus==='CLEAN'&&d.uploadStatus==='READY')).length},
+      sources:AI_SOURCE_FA,
+      rule:'نمایهٔ معنایی سبک و قطعی (کلیدواژه + برچسب + طبقه) روی اسناد مجاز مخزن دانش، رکوردهای ساختاریافته و گراف روابط — بدون سرویس بیرونی. «مجوز در نقطهٔ بازیابی» (۱۹.۴): دامنهٔ هر کاربر همان لحظهٔ پرسش روی نتایج اعمال می‌شود و سند خارج از محدوده هرگز بازیابی نمی‌شود؛ منشأ هر مدخل نمایه‌شده ثبت است.'});
+  }
+  if(is('/ai/rag/search')&&method==='POST'){
+    if(!hasPerm('ai.use')) return json(res,403,{message:'شما مجوز «فراخوانی درگاه هوش مصنوعی» (ai.use) را ندارید.'});
+    const b=await readBody(req);
+    const query=String(b.query??'').trim();
+    if(!query) return json(res,400,{message:'متن پرسش خالی است.'});
+    const limit=Math.min(Number(b.limit??8)||8,25);
+    const t0=Date.now();
+    const {hits,totalHits,indexed}=aiHybridSearch(req,authUser,query,limit);
+    return json(res,200,{query,items:hits.map(h=>({
+      entryId:h.entryId,sourceType:h.sourceType,sourceTypeFa:AI_SOURCE_FA[h.sourceType]??h.sourceType,
+      recordType:h.recordType??null,sourceId:h.sourceId,title:h.title,snippet:h.snippet,url:h.url,
+      score:h.score,matchedTokens:h.matchedTokens,origin:h.origin,shared:!!h.shared})),
+      stats:{indexed,matched:totalHits,retrieved:hits.length,tookMs:Date.now()-t0},
+      rule:'جست‌وجوی ترکیبی روی نمایهٔ قطعی؛ دامنهٔ شما در لحظهٔ بازیابی اعمال شد — نتایج فقط از منابع مجازِ شماست.'});
   }
 
   /* ─────────────── گام ۵.۴ — تقویم خروجی اندیشکده (/program/think-tank) ────────── */

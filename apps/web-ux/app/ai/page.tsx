@@ -44,6 +44,10 @@ function GatewayPanel(){
   const [pv,setPv]=useState<any>(null);
   /* گام ۶.۳ — پایش فنی و کلید توقف */
   const [gw,setGw]=useState<any>(null);
+  /* گام ۷.۱ — نمایهٔ معنایی و جست‌وجوی ترکیبی */
+  const [ragIndex,setRagIndex]=useState<any>(null);
+  const [ragQuery,setRagQuery]=useState('');
+  const [ragResults,setRagResults]=useState<any>(null);
   const [calls,setCalls]=useState<any[]>([]);
   const [usageG,setUsageG]=useState<any>(null);
   const [haltFor,setHaltFor]=useState<any>(null); /* {scope:'GLOBAL'|appKey} */
@@ -58,6 +62,7 @@ function GatewayPanel(){
     apiGet('/ai/gateway').then(setGw).catch(()=>{});
     apiGet('/ai/calls').then((r:any)=>setCalls(r.items??[])).catch(()=>{});
     apiGet('/ai/usage').then((r:any)=>setUsageG(r?.gateway??null)).catch(()=>{});
+    apiGet('/ai/rag/index').then(setRagIndex).catch(()=>{});
   }
   useEffect(()=>{reload();},[]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -115,6 +120,14 @@ function GatewayPanel(){
     setBusyId('preview'); setError('');
     try{ const r=await api('/ai/data-policy/preview',{method:'POST',body:JSON.stringify({text:pvText,mode:pvMode})});
       setPv(r);
+    }catch(x:any){ setError(x.message); } finally{ setBusyId(''); }
+  }
+
+  async function runRagSearch(){
+    if(!ragQuery.trim()) return;
+    setBusyId('rag'); setError('');
+    try{ const r=await api('/ai/rag/search',{method:'POST',body:JSON.stringify({query:ragQuery,limit:10})});
+      setRagResults(r);
     }catch(x:any){ setError(x.message); } finally{ setBusyId(''); }
   }
 
@@ -311,6 +324,59 @@ function GatewayPanel(){
         </div>
       )}
       {policy?.rule && <p className="field-hint">{policy.rule}</p>}
+
+      {/* ═══ گام ۷.۱ — نمایهٔ معنایی و جست‌وجوی ترکیبی ═══ */}
+      <div className="composer-head" style={{marginTop:18}}>
+        <h2><Database size={16}/> {t('نمایهٔ معنایی و جست‌وجوی ترکیبی')}</h2>
+        <span className="chip info">{fa(ragIndex?.totals?.all ?? 0)} {t('مدخل نمایه‌شده')}</span>
+      </div>
+      <div className="ai-quick-chips" aria-label={t('ترکیب نمایهٔ معنایی')}>
+        <span className="chip">{t('سند دانشی')}: {fa(ragIndex?.totals?.knowledge ?? 0)}</span>
+        <span className="chip">{t('سند مخزن')}: {fa(ragIndex?.totals?.document ?? 0)} ({fa(ragIndex?.documents?.indexed ?? 0)} {t('نمایه‌شده')} · {fa(ragIndex?.documents?.pending ?? 0)} {t('در انتظار')})</span>
+        <span className="chip">{t('رکورد ساختاریافته')}: {fa(ragIndex?.totals?.record ?? 0)}</span>
+        <span className="chip">{t('یال گراف روابط')}: {fa(ragIndex?.totals?.graph ?? 0)}</span>
+      </div>
+      <div className="ai-input-row" style={{marginTop:10}}>
+        <input
+          className="as-input"
+          value={ragQuery}
+          onChange={e=>setRagQuery(e.target.value)}
+          onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); runRagSearch(); } }}
+          placeholder={t('جست‌وجوی ترکیبی در اسناد، رکوردها و گراف… (مثلاً: تأمین‌کننده)')}
+          aria-label={t('جست‌وجوی ترکیبی نمایهٔ معنایی')}
+          disabled={busyId==='rag'}
+        />
+        <button className="ai-send-btn" onClick={()=>runRagSearch()} disabled={busyId==='rag'||!ragQuery.trim()}>
+          <Search size={17}/><span>{busyId==='rag'?t('در حال…'):t('بگرد')}</span>
+        </button>
+      </div>
+      {ragResults && (
+        <div className="gw-rag-results" style={{marginTop:10,display:'grid',gap:6}}>
+          <div className="ai-quick-chips">
+            <span className="chip">{t('یافت‌شده')}: {fa(ragResults.stats?.matched ?? 0)}</span>
+            <span className="chip">{t('بازیابی‌شده')}: {fa(ragResults.stats?.retrieved ?? 0)}</span>
+            <span className="chip">{t('از مجموع')} {fa(ragResults.stats?.indexed ?? 0)} {t('مدخل نمایه‌شده')}</span>
+          </div>
+          {(ragResults.items??[]).map((r:any)=>(
+            <div key={r.entryId} className="gw-rag-hit section-card" style={{padding:'10px 12px',gap:6}}>
+              <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+                <span className="chip info">{r.sourceTypeFa}</span>
+                <b style={{fontSize:13}}>{r.title}</b>
+                <span className="chip neutral" title={t('امتیاز تطبیق')}>{t('امتیاز')}: {fa(r.score)}</span>
+                {r.shared && <span className="chip">{t('دانش مشترک محصول')}</span>}
+              </div>
+              {r.snippet && <p className="t-muted" style={{margin:0,fontSize:12}}>{r.snippet}</p>}
+              <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',fontSize:11.5}} className="t-muted">
+                <span>{t('منشأ')}: {r.origin?.source}{r.origin?.owner?` — ${r.origin.owner}`:''}{r.origin?.uploadedBy?` — ${r.origin.uploadedBy}`:''}</span>
+                <Link className="p3-chip" href={r.url}>{t('نمایش منبع')}</Link>
+              </div>
+            </div>
+          ))}
+          {(ragResults.items??[]).length===0 && <p className="t-muted" style={{margin:0}}>{t('چیزی در محدودهٔ مجاز شما یافت نشد.')}</p>}
+          <p className="field-hint" style={{margin:0}}>{ragResults.rule}</p>
+        </div>
+      )}
+      {ragIndex?.rule && !ragResults && <p className="field-hint">{ragIndex.rule}</p>}
 
       {/* ═══ گام ۶.۳ — پایش فنی، داشبورد مصرف و کلید توقف ═══ */}
       <div className="composer-head" style={{marginTop:18}}>

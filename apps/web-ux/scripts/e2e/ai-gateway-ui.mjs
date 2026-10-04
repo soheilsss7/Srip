@@ -193,7 +193,29 @@ try {
   }, { timeout: 30000 });
   ok('خط‌مشی: خاموش‌کردن الگوی کد ملی → فقط آن معاف می‌شود (موبایل همچنان پوشانده)', true);
 
-  /* ── ۸) گام ۶.۳ — داشبورد مصرف و سناریوی توقف ایمن (ماه ۱۲) ── */
+  /* ── ۸) گام ۷.۱ — نمایهٔ معنایی و جست‌وجوی ترکیبی ── */
+  await page.waitForSelector('.gw-rag-hit, .gateway-panel .chip', { timeout: 30000 });
+  const ragIdx = await page.evaluate(() => {
+    const txtG = document.querySelector('.gateway-panel')?.textContent ?? '';
+    return { hasIndex: txtG.includes('نمایهٔ معنایی و جست‌وجوی ترکیبی'),
+      entries: [...document.querySelectorAll('.gateway-panel .chip')].some(c => (c.textContent ?? '').includes('مدخل نمایه‌شده')),
+      sources: txtG.includes('سند دانشی') && txtG.includes('یال گراف روابط') };
+  });
+  ok('نمایهٔ معنایی: کارت نمایه با تفکیک منابع چهارگانه', ragIdx.hasIndex && ragIdx.entries && ragIdx.sources, JSON.stringify(ragIdx));
+  await page.type('input[aria-label="جست‌وجوی ترکیبی نمایهٔ معنایی"]', 'تأمین‌کننده');
+  await page.evaluate(() => [...document.querySelectorAll('.gateway-panel button')].find(b => (b.textContent ?? '').includes('بگرد'))?.click());
+  await page.waitForSelector('.gw-rag-hit', { timeout: 30000 });
+  const ragRes = await page.evaluate(() => {
+    const hits = [...document.querySelectorAll('.gw-rag-hit')];
+    return { count: hits.length,
+      types: hits.map(h => (h.querySelector('.chip')?.textContent ?? '').trim()),
+      hasOrigin: hits.every(h => (h.textContent ?? '').includes('منشأ')),
+      hasLink: hits.every(h => !!h.querySelector('a')) };
+  });
+  ok('جست‌وجوی ترکیبی: نتایج با نوع، منشأ و پیوند منبع — ترکیب چند منبع',
+    ragRes.count >= 3 && new Set(ragRes.types).size >= 2 && ragRes.hasOrigin && ragRes.hasLink, JSON.stringify(ragRes.types));
+
+  /* ── ۹) گام ۶.۳ — داشبورد مصرف و سناریوی توقف ایمن (ماه ۱۲) ── */
   await page.waitForSelector('.gw-call-row', { timeout: 30000 });
   const dash = await page.evaluate(() => ({
     totals: (document.querySelector('.gateway-panel')?.textContent ?? '').includes('فراخوانی‌ها'),
