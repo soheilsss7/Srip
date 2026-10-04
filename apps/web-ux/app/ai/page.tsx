@@ -8,7 +8,7 @@ import IntelHub from '../_components/intel-hub';
 import {
   Sparkles, Search, CalendarCheck, FileText, ListChecks, ShieldCheck, AlertTriangle, Target,
   Lightbulb, Briefcase, Send, History, Cpu, Zap, Database, Clock, Wand2, CheckCircle2, Info,
-  Users, ArrowLeft, Link2, KeyRound, PlugZap, Pencil, Trash2, Plus, Server, Cloud, Copy,
+  Users, ArrowLeft, Link2, KeyRound, PlugZap, Pencil, Trash2, Plus, Server, Cloud, Copy, Activity,
 } from 'lucide-react';
 import { localeTag, lt, t } from '../_lib/i18n';
 
@@ -21,6 +21,7 @@ const AI_MODE_FA=lt<Record<string,string>>({LOCAL:'مسیر لوکال',API_KEY:
 const AI_KIND_FA=lt<Record<string,string>>({BUILTIN:'موتور داخلی (قطعی)',OPENAI_COMPATIBLE:'سازگار-OpenAI',ANTHROPIC:'Anthropic',GEMINI:'Gemini'});
 const AI_STATUS_FA=lt<Record<string,string>>({ACTIVE:'فعال',INACTIVE:'غیرفعال',UNREACHABLE:'در دسترس نیست'});
 const AI_STATUS_CHIP:Record<string,string>={ACTIVE:'success',INACTIVE:'neutral',UNREACHABLE:'danger'};
+const AI_APP_FA=lt<Record<string,string>>({'org-question':'پرسش سازمانی','meeting-assist':'دستیار جلسه','dd-review':'دستیار Due Diligence','opp-priority':'اولویت‌بندی فرصت','next-action':'پیشنهاد اقدام بعدی','content-draft':'تولید محتوا','authority-monitor':'پایش مرجعیت'});
 const emptyProviderForm={name:'',mode:'LOCAL',kind:'OPENAI_COMPATIBLE',baseUrl:'',model:''};
 
 function GatewayPanel(){
@@ -41,6 +42,12 @@ function GatewayPanel(){
   const [pvText,setPvText]=useState('قرارداد محرمانه — کد ملی 1234567890، موبایل 09121234567 و شبا IR123456789012345678901234 در متن.');
   const [pvMode,setPvMode]=useState<'LOCAL'|'API_KEY'>('API_KEY');
   const [pv,setPv]=useState<any>(null);
+  /* گام ۶.۳ — پایش فنی و کلید توقف */
+  const [gw,setGw]=useState<any>(null);
+  const [calls,setCalls]=useState<any[]>([]);
+  const [usageG,setUsageG]=useState<any>(null);
+  const [haltFor,setHaltFor]=useState<any>(null); /* {scope:'GLOBAL'|appKey} */
+  const [haltReason,setHaltReason]=useState('');
 
   function reload(){
     apiGet('/ai/providers').then((r:any)=>{
@@ -48,6 +55,9 @@ function GatewayPanel(){
     }).catch(x=>setError((x as Error).message));
     apiGet('/ai/routing').then((r:any)=>{setRouting(r);setRowDraft({});}).catch(()=>{});
     apiGet('/ai/data-policy').then(setPolicy).catch(()=>{});
+    apiGet('/ai/gateway').then(setGw).catch(()=>{});
+    apiGet('/ai/calls').then((r:any)=>setCalls(r.items??[])).catch(()=>{});
+    apiGet('/ai/usage').then((r:any)=>setUsageG(r?.gateway??null)).catch(()=>{});
   }
   useEffect(()=>{reload();},[]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -105,6 +115,23 @@ function GatewayPanel(){
     setBusyId('preview'); setError('');
     try{ const r=await api('/ai/data-policy/preview',{method:'POST',body:JSON.stringify({text:pvText,mode:pvMode})});
       setPv(r);
+    }catch(x:any){ setError(x.message); } finally{ setBusyId(''); }
+  }
+
+  async function setGateway(body:any){
+    setBusyId('gateway'); setError('');
+    try{ await api('/ai/gateway',{method:'PATCH',body:JSON.stringify(body)}); reload(); }
+    catch(x:any){ setError(x.message); } finally{ setBusyId(''); }
+  }
+  async function submitHalt(){
+    if(!haltFor) return;
+    setBusyId('gateway'); setError('');
+    try{
+      const body=haltFor==='GLOBAL'
+        ?{status:'HALTED',reason:haltReason}
+        :{application:haltFor,halted:true,reason:haltReason};
+      await api('/ai/gateway',{method:'PATCH',body:JSON.stringify(body)});
+      setHaltFor(null); setHaltReason(''); reload();
     }catch(x:any){ setError(x.message); } finally{ setBusyId(''); }
   }
 
@@ -284,6 +311,106 @@ function GatewayPanel(){
         </div>
       )}
       {policy?.rule && <p className="field-hint">{policy.rule}</p>}
+
+      {/* ═══ گام ۶.۳ — پایش فنی، داشبورد مصرف و کلید توقف ═══ */}
+      <div className="composer-head" style={{marginTop:18}}>
+        <h2><Activity size={16}/> {t('پایش فنی و کلید توقف')}</h2>
+        <span className={`chip ${gw?.status==='HALTED'?'danger':'success'}`}>
+          {gw?.status==='HALTED'?t('درگاه متوقف است — بازگشت به فرآیند انسانی'):t('درگاه فعال')}
+        </span>
+      </div>
+      {gw?.status==='HALTED' && (
+        <div className="banner danger" style={{display:'flex',gap:8,alignItems:'center'}}>
+          <AlertTriangle size={14}/>
+          <span>{t('درگاه هوش مصنوعی متوقف است — همهٔ فراخوانی‌های AI پاسخ «بازگشت به فرآیند انسانی» می‌گیرند.')}
+            {gw.reason?` ${t('دلیل')}: ${gw.reason}`:''}{gw.actorEmail?` · ${t('اقدام‌کننده')}: ${gw.actorEmail}`:''}</span>
+        </div>
+      )}
+      <div className="ai-quick-chips" aria-label={t('کلید توقف کاربردها')}>
+        {gw?.status==='HALTED'
+          ?<button className="srip-button primary" onClick={()=>setGateway({status:'ACTIVE'})} disabled={busyId==='gateway'}>{t('فعال‌سازی درگاه')}</button>
+          :<button className="srip-button" style={{borderColor:'var(--srip-danger)',color:'var(--srip-danger)'}} onClick={()=>{setHaltFor('GLOBAL');setHaltReason('');}}>{t('توقف کل درگاه')}</button>}
+        {(gw?.applications??[]).map((a:any)=>(
+          <button key={a.application} type="button" className="ai-quick-chip"
+            style={{opacity:a.halted?1:.6,borderStyle:a.halted?'solid':'dashed',borderColor:a.halted?'var(--srip-danger)':undefined}}
+            aria-pressed={a.halted}
+            onClick={()=>{ if(a.halted) setGateway({application:a.application,halted:false}); else { setHaltFor(a.application); setHaltReason(''); } }}>
+            {a.halted?<AlertTriangle size={12}/>:<ShieldCheck size={12}/>} {a.label}
+          </button>
+        ))}
+      </div>
+      {usageG && (
+        <div style={{marginTop:10,display:'grid',gap:10}}>
+          <div className="ai-quick-chips" aria-label={t('خلاصهٔ مصرف درگاه')}>
+            <span className="chip">{t('فراخوانی‌ها')}: {fa(usageG.totals.calls)}</span>
+            <span className="chip">{t('هزینهٔ برآوردی')}: {fa(usageG.totals.cost)}</span>
+            <span className="chip">{t('میانگین زمان پاسخ')}: {fa(usageG.totals.avgMs)} {t('میلی‌ثانیه')}</span>
+            <span className="chip danger">{t('خطاها')}: {fa(usageG.totals.errors)}</span>
+            <span className="chip warning">{t('توقف‌ها')}: {fa(usageG.totals.halted)}</span>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>{t('کاربرد')}</th><th>{t('فراخوانی‌ها')}</th><th>{t('خطاها')}</th><th>{t('میانگین زمان پاسخ')}</th><th>{t('هزینهٔ برآوردی')}</th></tr></thead>
+              <tbody>
+                {(usageG.byApplication??[]).map((a:any)=>(
+                  <tr key={a.application} className="gw-usage-app"><td className="t-primary">{a.label}</td>
+                    <td>{fa(a.calls)}</td><td>{fa(a.errors)}</td><td>{fa(a.avgMs)} {t('میلی‌ثانیه')}</td><td dir="ltr">{fa(a.cost)}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>{t('ارائه‌دهنده')}</th><th>{t('فراخوانی‌ها')}</th><th>{t('هزینهٔ برآوردی')}</th></tr></thead>
+              <tbody>
+                {(usageG.byProvider??[]).map((a:any)=>(
+                  <tr key={a.providerName} className="gw-usage-prov"><td className="t-primary">{a.providerName}</td>
+                    <td>{fa(a.calls)}</td><td dir="ltr">{fa(a.cost)}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="field-hint" style={{margin:0}}>{usageG.rule}</p>
+        </div>
+      )}
+      <div className="composer-head" style={{marginTop:14}}>
+        <h3 style={{fontSize:13.5}}><History size={14}/> {t('سابقهٔ فراخوانی‌ها (از لاگ درگاه)')}</h3>
+      </div>
+      <div className="table-wrap">
+        <table>
+          <thead><tr><th>{t('زمان')}</th><th>{t('کاربرد')}</th><th>{t('ارائه‌دهنده')}</th><th>{t('مدل')}</th><th>{t('وضعیت')}</th><th>{t('هزینهٔ برآوردی')}</th><th>{t('زمان پاسخ')}</th></tr></thead>
+          <tbody>
+            {calls.slice(0,10).map((c:any)=>(
+              <tr key={c.id} className="gw-call-row">
+                <td className="t-muted" style={{fontSize:11.5,whiteSpace:'nowrap'}} dir="ltr">{new Date(c.at).toLocaleString(localeTag())}</td>
+                <td>{(AI_APP_FA[c.application])??c.application}</td>
+                <td className="t-muted" style={{fontSize:11.5}}>{c.providerName??'—'}</td>
+                <td className="t-muted" style={{fontSize:11.5}} dir="ltr">{c.model??'—'}</td>
+                <td><span className={`chip ${c.status==='OK'?'success':c.status==='HALTED'?'warning':'danger'}`}>{c.status}</span></td>
+                <td dir="ltr">{fa(c.costEstimate)}</td>
+                <td>{fa(c.durationMs)} {t('میلی‌ثانیه')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {gw?.rule && <p className="field-hint">{gw.rule}</p>}
+
+      {/* مودال توقف (کلی یا کاربرد) — دلیل الزامی */}
+      <Modal open={!!haltFor} title={haltFor==='GLOBAL'?t('توقف کل درگاه هوش مصنوعی'):t('توقف کاربرد')} onClose={()=>setHaltFor(null)}
+        description={t('توقف بدون دلیل ثبت نمی‌شود؛ دلیل و اقدام‌کننده در سابقهٔ درگاه ثبت می‌شود (۱۹.۴ سند v6).')}>
+        <form className="form-grid" onSubmit={(e)=>{e.preventDefault();submitHalt();}}>
+          <div className="field full">
+            <label className="field-label">{t('دلیل توقف')}</label>
+            <textarea rows={3} value={haltReason} onChange={e=>setHaltReason(e.target.value)} required
+              placeholder={t('مثلاً: رخداد امنیتی مشهور — تا پایان بررسی، همهٔ فراخوانی‌ها به فرآیند انسانی برمی‌گردد.')} />
+          </div>
+          <div className="form-actions">
+            <button type="button" className="srip-button" onClick={()=>setHaltFor(null)}>{t('انصراف')}</button>
+            <button type="submit" className="srip-button primary" disabled={busyId==='gateway'}>{busyId==='gateway'?t('در حال…'):t('ثبت و توقف')}</button>
+          </div>
+        </form>
+      </Modal>
 
       {/* مودال ثبت/چرخش کلید — نمایش یک‌بار کلید کامل */}
       <Modal open={!!keyFor} title={t('ثبت/چرخش کلید API')} onClose={()=>{setKeyFor(null);setKeyResult(null);}}

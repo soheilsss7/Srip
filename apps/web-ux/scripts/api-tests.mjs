@@ -2108,6 +2108,86 @@ section('گام ۶.۲ — قواعد انتخاب مدل و کنترل داده'
   check('پیش‌نمایش: متن خالی → ۴۰۰', emptyPv.status === 400);
 }
 
+
+/* ═════════════════ گام ۶.۳ — سابقه، پایش فنی و کلید توقف (توقف ایمن ماه ۱۲) ═════════════════ */
+section('گام ۶.۳ — ثبت سابقه، داشبورد مصرف و کلید توقف');
+{
+  const dt = (await login(OWNER.email)).body.accessToken;
+  const ct = (await login(CLIENT.email)).body.accessToken;
+
+  /* وضعیت اولیه + خط پایهٔ لاگ */
+  const G0 = await api('/ai/gateway', { token: dt });
+  check('درگاه: وضعیت ACTIVE + هفت کاربرد با کلید per-کاربرد',
+    G0.status === 200 && G0.body.status === 'ACTIVE' && G0.body.applications.length === 7
+    && G0.body.applications.every((a) => a.halted === false));
+  const C0 = await api('/ai/calls?limit=500', { token: dt });
+  check('سابقه: بذر دمو (۸ فراخوانی) + قاعدهٔ ثبت ۱۹.۴',
+    C0.status === 200 && C0.body.items.length >= 8 && String(C0.body.rule).includes('شناسهٔ واحد'));
+
+  /* ثبت سابقهٔ واقعی از دو مسیر AI موجود */
+  const Q1 = await api('/ai/query', { method: 'POST', token: dt, body: { intent: 'SMART_SEARCH', query: 'تعاملات اخیر با مشتریان کلیدی را نشان بده' } });
+  const A1 = await api('/assistant/ask', { method: 'POST', token: dt, body: { question: 'سلامت این حساب چقدر است؟' } });
+  check('فراخوانی‌های AI موفق', Q1.status === 200 && A1.status === 200);
+  const C1 = await api('/ai/calls?limit=500', { token: dt });
+  const fresh = C1.body.items.slice(0, 2);
+  check('سابقه: دو فراخوانی تازه با شناسهٔ واحد ثبت شد — کاربرد/ارائه‌دهنده/مدل/زمان/هزینه/وضعیت',
+    C1.body.items.length === C0.body.items.length + 2
+    && fresh.every((c) => c.application === 'org-question' && c.providerName === 'موتور محلی SRIP'
+      && c.model === 'srip-deterministic' && typeof c.durationMs === 'number' && c.status === 'OK')
+    && fresh.every((c) => c.costEstimate === 0) && new Set(fresh.map((c) => c.id)).size === 2,
+    JSON.stringify(fresh.map((c) => [c.providerName, c.costEstimate])));
+
+  /* داشبورد مصرف — همهٔ اعداد از لاگ (هیچ عدد دستی) */
+  const U = await api('/ai/usage', { token: dt });
+  check('پایش فنی: مجموع داشبورد = تعداد رکوردهای لاگ (هیچ عدد دستی)',
+    U.status === 200 && U.body.gateway.totals.calls === C1.body.items.length);
+  const oq = U.body.gateway.byApplication.find((a) => a.application === 'org-question');
+  check('پایش فنی: به تفکیک کاربرد (پرسش سازمانی ≥ ۲ فراخوانی تازه) و ارائه‌دهنده',
+    oq.calls >= (C0.body.items.filter((c) => c.application === 'org-question').length) + 2
+    && U.body.gateway.byProvider.some((x) => x.providerName === 'موتور محلی SRIP'));
+
+  /* سناریوی توقف ایمن (ماه ۱۲ v6) — توقف کلی */
+  const H0 = await api('/ai/gateway', { method: 'PATCH', token: dt, body: { status: 'HALTED' } });
+  check('کلید توقف: توقف بدون دلیل → ۴۰۰', H0.status === 400);
+  const H1 = await api('/ai/gateway', { method: 'PATCH', token: dt, body: { status: 'HALTED', reason: 'آزمون سناریوی توقف ایمن — ماه ۱۲ سند v6' } });
+  check('کلید توقف: توقف کلی با دلیل → ثبت اقدام‌کننده',
+    H1.status === 200 && H1.body.status === 'HALTED' && H1.body.actorEmail === 'demo@srip.local'
+    && H1.body.reason.includes('توقف ایمن'));
+  const QH = await api('/ai/query', { method: 'POST', token: dt, body: { intent: 'SMART_SEARCH', query: 'پرسش در حالت توقف' } });
+  check('توقف ایمن: فراخوانی AI → ۵۰۳ «بازگشت به فرآیند انسانی»',
+    QH.status === 503 && QH.body.code === 'AI_HALTED' && QH.body.message.includes('بازگشت به فرآیند انسانی'));
+  const AH = await api('/assistant/ask', { method: 'POST', token: dt, body: { question: 'پرسش آزاد در حالت توقف؟' } });
+  check('توقف ایمن: پرسش آزاد هم → ۵۰۳ همان پیام', AH.status === 503 && AH.body.code === 'AI_HALTED');
+  const C2 = await api('/ai/calls?limit=500', { token: dt });
+  check('توقف ایمن: خودِ توقف‌ها هم در سابقه ثبت می‌شوند (HALTED)',
+    C2.body.items.length === C1.body.items.length + 2
+    && C2.body.items.slice(0, 2).every((c) => c.status === 'HALTED' && String(c.note).includes('توقف')));
+
+  /* توقف per-کاربرد */
+  const R1 = await api('/ai/gateway', { method: 'PATCH', token: dt, body: { status: 'ACTIVE' } });
+  check('کلید توقف: فعال‌سازی مجدد → ACTIVE', R1.status === 200 && R1.body.status === 'ACTIVE');
+  const HA = await api('/ai/gateway', { method: 'PATCH', token: dt, body: { application: 'org-question', halted: true, reason: 'توقف موقت پرسش سازمانی' } });
+  check('کلید توقف per-کاربرد: توقف فقط «پرسش سازمانی» با دلیل',
+    HA.status === 200 && HA.body.changed.halted === true);
+  const QA = await api('/ai/query', { method: 'POST', token: dt, body: { intent: 'SMART_SEARCH', query: 'پرسش با کاربرد متوقف' } });
+  check('کلید توقف per-کاربرد: همان کاربرد → ۵۰۳ با scope=APPLICATION',
+    QA.status === 503 && QA.body.gateway.scope === 'APPLICATION');
+  const RR = await api('/ai/gateway', { method: 'PATCH', token: dt, body: { application: 'org-question', halted: false } });
+  const QR = await api('/ai/query', { method: 'POST', token: dt, body: { intent: 'SMART_SEARCH', query: 'پرسش پس از رفع توقف' } });
+  check('رفع توقف کاربرد → فراخوانی دوباره موفق', RR.status === 200 && QR.status === 200);
+
+  /* RBAC + جداسازی مستأجر */
+  const cG = await api('/ai/gateway', { method: 'PATCH', token: ct, body: { status: 'HALTED', reason: 'x' } });
+  check('کلید توقف: client بدون ai.admin → ۴۰۳ (درگاه دمو دست‌نخورده)', cG.status === 403);
+  const ptok2 = (await api('/auth/login', { method: 'POST', body: { email: 'pars', password: 'pars1234' } })).body?.accessToken;
+  const pG = await api('/ai/gateway', { token: ptok2 });
+  const pC = await api('/ai/calls?limit=500', { token: ptok2 });
+  check('جداسازی مستأجر: درگاه پارس مستقل از دمو (ACTIVE) و سابقه‌اش فقط لاگ خودش',
+    pG.body.status === 'ACTIVE' && pC.body.items.length >= 3
+    && pC.body.items.every((c) => c.organizationId === 'org-pars')
+    && pC.body.items.every((c) => c.user === 'pars@srip.local' || c.id.includes('seed')));
+}
+
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
 if (failures.length) { console.log(`  Failed: ${failures.join(' | ')}`); }

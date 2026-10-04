@@ -3543,6 +3543,8 @@ function loadDb() {
       if (!Array.isArray(DB.aiProviders)) DB.aiProviders = [];
       if (!Array.isArray(DB.aiRouting)) DB.aiRouting = [];
       if (!Array.isArray(DB.aiDataPolicy)) DB.aiDataPolicy = [];
+      if (!Array.isArray(DB.aiCalls)) DB.aiCalls = [];
+      if (!Array.isArray(DB.aiGateway)) DB.aiGateway = [];
     }
   } catch { DB = null; }
   if (!DB) {
@@ -3625,7 +3627,7 @@ function resetDbInPlace(){
   seedNotificationRules(); seedAuditDemo(); seedFeatureFlags(); seedExportLog();
   seedRetention(); seedMasterData(); seedIntegrations(); seedReferralStore();
   seedApprovals(); seedWorkflowStore(); seedPublicsStore(); seedStrategyStore(); seedSecurityEvents(); seedPhase2Store(); seedPhase3Store();
-  seedPrivacyStore(); seedEnterpriseStore(); seedSettingsStore(); seedSessionsStore(); ensureAiProvidersSeed(); ensureAiRoutingSeed();
+  seedPrivacyStore(); seedEnterpriseStore(); seedSettingsStore(); seedSessionsStore(); ensureAiProvidersSeed(); ensureAiRoutingSeed(); ensureAiCallsSeed();
   seedAnalyticsStore(); seedPhase1Extras(); saveDb();
 }
 
@@ -7102,6 +7104,83 @@ function ensureAiRoutingSeed(){
     }
   }
 }
+/* ═══════════ گام ۶.۳ — ثبت سابقه، پایش فنی و کلید توقف (۱۹.۱/۱۹.۴ سند v6) ═══════════
+   هر فراخوانی AI با شناسهٔ واحد در aiCalls ثبت می‌شود (کاربر/کاربرد/ارائه‌دهنده/
+   مدل/زمان/هزینه/وضعیت)؛ داشبورد مصرف همهٔ اعدادش را از همین لاگ می‌سازد — هیچ
+   عدد دستی نیست. کلید توقف کلی و per-کاربرد با دلیل و اقدام‌کننده ثبت می‌شود؛
+   حالت HALTED یعنی «بازگشت به فرآیند انسانی» (توقف ایمن، ماه ۱۲ سند). */
+function aiGatewayStateFor(orgId){
+  return (DB.aiGateway??[]).find(g=>g.organizationId===orgId)
+    ??{organizationId:orgId,status:'ACTIVE',reason:null,actorEmail:null,haltedAt:null,
+      resumedAt:null,haltedApps:{},updatedAt:nowIso()};
+}
+function aiResolveRoute(orgId,application){
+  ensureAiRoutingSeed();
+  const row=(DB.aiRouting??[]).find(r=>r.organizationId===orgId&&r.application===application);
+  const prov=(DB.aiProviders??[]).find(x=>x.id===row?.providerId&&x.organizationId===orgId);
+  return {providerId:prov?.id??null,providerName:prov?.name??'موتور محلی SRIP',
+    model:row?.model??prov?.model??'srip-deterministic',mode:prov?.mode??'LOCAL',
+    providerStatus:prov?.status??'ACTIVE'};
+}
+/* کلید توقف: کلی (HALTED) یا per-کاربرد — پاسخ ۵۰۳ «بازگشت به فرآیند انسانی» */
+function aiHaltCheck(req,application){
+  const orgId=primaryOrgId(currentUser(req))??visibleOrgIds(req)[0]??PROGRAM_ORG_ID;
+  const st=aiGatewayStateFor(orgId);
+  if(st.status==='HALTED') return {halted:true,scope:'GLOBAL',status:st.status,reason:st.reason,orgId};
+  if(st.haltedApps?.[application]) return {halted:true,scope:'APPLICATION',status:'HALTED',reason:st.haltedApps[application]?.reason??st.reason,orgId};
+  return {halted:false,orgId};
+}
+function aiLogCall(req,application,info){
+  const u=currentUser(req);
+  const orgId=info.orgId??primaryOrgId(u)??visibleOrgIds(req)[0]??PROGRAM_ORG_ID;
+  const row={id:`aic-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`,
+    organizationId:orgId,user:u?.email??'anonymous',application,
+    providerId:info.providerId??null,providerName:info.providerName??null,
+    model:info.model??null,modelVersion:info.modelVersion??'demo-v6',
+    docsRetrieved:info.docsRetrieved??0,
+    promptChars:info.promptChars??0,outputChars:info.outputChars??0,
+    durationMs:info.durationMs??0,costEstimate:info.costEstimate??0,
+    status:info.status??'OK',note:info.note??null,at:nowIso()};
+  if(!Array.isArray(DB.aiCalls)) DB.aiCalls=[];
+  DB.aiCalls.unshift(row);
+  if(DB.aiCalls.length>2000) DB.aiCalls.length=2000;
+  saveDb();
+  return row;
+}
+/* هزینهٔ برآوردی: مسیر لوکال صفر؛ مسیر ابری از فرمول قطعی روی اندازهٔ ورودی/خروجی */
+function aiCostEstimate(mode,promptChars,outputChars){
+  if(mode!=='API_KEY') return 0;
+  return Math.round(((promptChars+outputChars)*0.000002+0.0005)*1e6)/1e6;
+}
+function ensureAiCallsSeed(){
+  if(!Array.isArray(DB.aiGateway)) DB.aiGateway=[];
+  if(!Array.isArray(DB.aiCalls)) DB.aiCalls=[];
+  ensureAiRoutingSeed();
+  const mk=(orgId,user,daysAgo,app,provName,model,mode,pc,oc,dur,status)=>{
+    const at=new Date(Date.now()-daysAgo*86400000-3600000).toISOString();
+    return {id:`aic-seed-${orgId}-${app}-${daysAgo}`,organizationId:orgId,user,
+      application:app,providerId:null,providerName:provName,model,modelVersion:'demo-v6',
+      docsRetrieved:app==='org-question'?3:0,promptChars:pc,outputChars:oc,durationMs:dur,
+      costEstimate:aiCostEstimate(mode,pc,oc),status,note:null,at};
+  };
+  if(!DB.aiCalls.some(c=>c.organizationId===PROGRAM_ORG_ID&&c.id.includes('seed'))){
+    DB.aiCalls.push(
+      mk(PROGRAM_ORG_ID,'demo@srip.local',12,'org-question','موتور محلی SRIP','srip-deterministic','LOCAL',95,600,42,'OK'),
+      mk(PROGRAM_ORG_ID,'demo@srip.local',10,'meeting-assist','موتور محلی SRIP','srip-deterministic','LOCAL',800,900,66,'OK'),
+      mk(PROGRAM_ORG_ID,'demo@srip.local',9,'opp-priority','موتور محلی SRIP','srip-deterministic','LOCAL',140,300,25,'OK'),
+      mk(PROGRAM_ORG_ID,'demo@srip.local',8,'org-question','موتور محلی SRIP','srip-deterministic','LOCAL',110,540,38,'OK'),
+      mk(PROGRAM_ORG_ID,'demo@srip.local',6,'content-draft','موتور محلی SRIP','srip-deterministic','LOCAL',350,1200,80,'OK'),
+      mk(PROGRAM_ORG_ID,'demo@srip.local',5,'org-question','ارائه‌دهندهٔ ابری (سازگار-OpenAI)','gpt-4o-mini','API_KEY',120,700,900,'OK'),
+      mk(PROGRAM_ORG_ID,'demo@srip.local',4,'dd-review','موتور محلی SRIP','srip-deterministic','LOCAL',600,400,55,'OK'),
+      mk(PROGRAM_ORG_ID,'demo@srip.local',2,'org-question','موتور محلی SRIP','srip-deterministic','LOCAL',80,300,20,'ERROR'));
+  }
+  if(!DB.aiCalls.some(c=>c.organizationId==='org-pars'&&c.id.includes('seed'))){
+    DB.aiCalls.push(
+      mk('org-pars','pars@srip.local',7,'org-question','موتور محلی SRIP','srip-deterministic','LOCAL',90,500,40,'OK'),
+      mk('org-pars','pars@srip.local',5,'meeting-assist','موتور محلی SRIP','srip-deterministic','LOCAL',700,800,60,'OK'),
+      mk('org-pars','pars@srip.local',1,'org-question','موتور محلی SRIP','srip-deterministic','LOCAL',100,450,30,'OK'));
+  }
+}
 const CONTENT_CONTROLS=[
   {key:'coreMessage',title:'هم‌راستایی با پیام هسته'},
   {key:'audience',   title:'شخصی‌سازی برای مخاطب'},
@@ -8493,16 +8572,61 @@ const server=http.createServer(async(req,res)=>{
     safeguards:['authentication','permission-aware-retrieval','audit','human-confirmation','no-external-model'],
   });
   if(is('/ai/provider-health')) return json(res,200,{ok:false,provider:'external-not-configured',detail:'تماس به مدل خارجی ساخته نشده؛ همهٔ پردازش‌ها روی موتور قطعی داخلی انجام می‌شود.'});
-  if(is('/ai/usage')) return json(res,200,AI_USAGE);
+  if(is('/ai/usage')){
+    /* گام ۶.۳ — پایش فنی: همهٔ اعداد داشبورد مصرف از لاگ aiCalls ساخته می‌شود (هیچ عدد دستی) */
+    ensureAiCallsSeed();
+    const ids=visibleOrgIds(req);
+    const calls=(DB.aiCalls??[]).filter(c=>ids.includes(c.organizationId));
+    const byApp=AI_APPLICATIONS.map(a=>{
+      const rows=calls.filter(c=>c.application===a.key);
+      return {application:a.key,label:a.label,calls:rows.length,errors:rows.filter(c=>c.status==='ERROR').length,
+        halted:rows.filter(c=>c.status==='HALTED').length,
+        avgMs:rows.length?Math.round(rows.reduce((s,c)=>s+(c.durationMs??0),0)/rows.length):0,
+        cost:Math.round(rows.reduce((s,c)=>s+(c.costEstimate??0),0)*1e6)/1e6};
+    }).filter(x=>x.calls>0);
+    const provNames=[...new Set(calls.map(c=>c.providerName).filter(Boolean))];
+    const byProv=provNames.map(n=>{
+      const rows=calls.filter(c=>c.providerName===n);
+      return {providerName:n,calls:rows.length,
+        errors:rows.filter(c=>c.status==='ERROR').length,
+        avgMs:rows.length?Math.round(rows.reduce((s,c)=>s+(c.durationMs??0),0)/rows.length):0,
+        cost:Math.round(rows.reduce((s,c)=>s+(c.costEstimate??0),0)*1e6)/1e6};
+    });
+    const gw={totals:{calls:calls.length,
+        errors:calls.filter(c=>c.status==='ERROR').length,
+        halted:calls.filter(c=>c.status==='HALTED').length,
+        cost:Math.round(calls.reduce((s,c)=>s+(c.costEstimate??0),0)*1e6)/1e6,
+        avgMs:calls.length?Math.round(calls.reduce((s,c)=>s+(c.durationMs??0),0)/calls.length):0},
+      byApplication:byApp,byProvider:byProv,
+      rule:'پایش فنی (لایهٔ هفتم ۱۹.۱): هر فراخوانی با شناسهٔ واحد در سابقهٔ درگاه ثبت می‌شود و داشبورد مصرف — به تفکیک کاربرد و ارائه‌دهنده — فقط از همین لاگ ساخته می‌شود؛ هیچ عدد دستی در کار نیست.'};
+    return json(res,200,{...AI_USAGE,gateway:gw});
+  }
   if(is('/ai/query')&&method==='POST'){
     const b=await readBody(req);
     if(!b.query?.trim()) return json(res,400,{message:'متن پرس‌وجو خالی است.'});
+    /* گام ۶.۳ — کلید توقف: همهٔ فراخوانی‌های AI از درگاه می‌گذرند */
+    const halt=aiHaltCheck(req,'org-question');
+    if(halt.halted){
+      aiLogCall(req,'org-question',{providerName:'—',model:'—',status:'HALTED',
+        promptChars:(b.query??'').length,durationMs:0,orgId:halt.orgId,
+        note:`توقف ${halt.scope==='GLOBAL'?'کلی':'کاربرد'}: ${halt.reason??''}`});
+      return json(res,503,{code:'AI_HALTED',
+        message:'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',
+        gateway:{status:'HALTED',scope:halt.scope,reason:halt.reason}});
+    }
+    const t0=Date.now();
     const intent=b.intent??'SMART_SEARCH';
+    const route=aiResolveRoute(halt.orgId,'org-question');
     const resp=aiQuery(req,intent,b.query);
+    const outChars=JSON.stringify(resp).length;
+    aiLogCall(req,'org-question',{providerId:route.providerId,providerName:route.providerName,
+      model:route.model,mode:route.mode,promptChars:(b.query??'').length,outputChars:outChars,
+      durationMs:Date.now()-t0,costEstimate:aiCostEstimate(route.mode,(b.query??'').length,outChars),
+      status:'OK',docsRetrieved:(resp?.references??resp?.evidence??[]).length||0,orgId:halt.orgId});
     const payload={...resp,usage:{queries:++AI_USAGE._count._all,intent}};
     AI_USAGE._count.byIntent[intent]=(AI_USAGE._count.byIntent[intent]??0)+1;
     AI_USAGE._sum.inputChars+=(b.query??'').length;
-    AI_USAGE._sum.outputChars+=JSON.stringify(resp).length;
+    AI_USAGE._sum.outputChars+=outChars;
     return json(res,200,payload);
   }
   if(is('/ai/executive-brief')) return json(res,200,executiveBrief(req,q.get('weekStart')||undefined));
@@ -14346,6 +14470,69 @@ const server=http.createServer(async(req,res)=>{
         :'مسیر ابری: ورودی پیش از ارسال پوشانده می‌شود و خروجی هم از الگوهای محرمانه پالایش می‌شود.'});
   }
 
+  /* ─────────────── گام ۶.۳ — وضعیت درگاه و کلید توقف (/ai/gateway) + سابقهٔ فراخوانی‌ها (/ai/calls) ────────── */
+  if(is('/ai/gateway')&&method==='GET'){
+    if(!hasPerm('ai.use')) return json(res,403,{message:'شما مجوز «فراخوانی درگاه هوش مصنوعی» (ai.use) را ندارید.'});
+    ensureAiCallsSeed();
+    const ids=visibleOrgIds(req);
+    const orgId=primaryOrgId(authUser)??ids[0]??PROGRAM_ORG_ID;
+    const st=aiGatewayStateFor(orgId);
+    const apps=AI_APPLICATIONS.map(a=>({application:a.key,label:a.label,
+      halted:st.status==='HALTED'||!!st.haltedApps?.[a.key]}));
+    return json(res,200,{...st,applications:apps,
+      rule:'کلید توقف (۱۹.۴): در رخداد امنیتی، افت کیفیت یا رفتار غیرعادی، فراخوانی مدل قابل توقف و بازگشت به فرآیند انسانی است. توقف کلی یا به تفکیک کاربرد، با ثبت دلیل و اقدام‌کننده؛ در حالت HALTED همهٔ فراخوانی‌های AI پاسخ ۵۰۳ «بازگشت به فرآیند انسانی» می‌گیرند.'});
+  }
+  if(is('/ai/gateway')&&method==='PATCH'){
+    if(!hasPerm('ai.admin')) return json(res,403,{message:'شما مجوز «مدیریت درگاه هوش مصنوعی» (ai.admin) را ندارید.'});
+    ensureAiCallsSeed();
+    const b=await readBody(req);
+    const ids=visibleOrgIds(req);
+    const orgId=primaryOrgId(authUser)??ids[0]??PROGRAM_ORG_ID;
+    let st=(DB.aiGateway??[]).find(g=>g.organizationId===orgId);
+    if(!st){ st={organizationId:orgId,status:'ACTIVE',reason:null,actorEmail:null,
+      haltedAt:null,resumedAt:null,haltedApps:{},updatedAt:nowIso()};
+      DB.aiGateway=[...(DB.aiGateway??[]),st]; }
+    const reason=String(b.reason??'').trim();
+    if(b.application!==undefined){
+      /* توقف/فعال‌سازی یک کاربرد خاص */
+      const app=AI_APPLICATIONS.find(a=>a.key===String(b.application??'').trim());
+      if(!app) return json(res,400,{message:'کاربرد نامعتبر است — از فهرست هفت کاربرد سند (۱۹.۲) انتخاب کنید.'});
+      const halted=!!b.halted;
+      if(halted&&!reason) return json(res,400,{message:'توقف کاربرد بدون دلیل ثبت نمی‌شود — دلیل را بنویسید.'});
+      if(halted) st.haltedApps[app.key]={halted:true,reason,actorEmail:authUser?.email??null,at:nowIso()};
+      else delete st.haltedApps[app.key];
+      st.updatedAt=nowIso(); saveDb();
+      audit(req,halted?'HALT_APP':'RESUME_APP','AiGateway',`${orgId}:${app.key}`,'OK',{reason:reason||null});
+      return json(res,200,{...st,changed:{application:app.key,halted}});
+    }
+    const status=String(b.status??'').toUpperCase();
+    if(!['ACTIVE','HALTED'].includes(status)) return json(res,400,{message:'وضعیت درگاه باید ACTIVE یا HALTED باشد.'});
+    if(status==='HALTED'&&!reason) return json(res,400,{message:'توقف درگاه بدون دلیل ثبت نمی‌شود — دلیل را بنویسید.'});
+    st.status=status;
+    st.reason=status==='HALTED'?reason:null;
+    st.actorEmail=authUser?.email??null;
+    if(status==='HALTED') st.haltedAt=nowIso();
+    else st.resumedAt=nowIso();
+    st.updatedAt=nowIso(); saveDb();
+    audit(req,status==='HALTED'?'HALT':'RESUME','AiGateway',orgId,'OK',{reason:reason||null});
+    return json(res,200,{...st,
+      notice:status==='HALTED'
+        ?'درگاه متوقف شد — همهٔ فراخوانی‌های AI از این لحظه پاسخ «بازگشت به فرآیند انسانی» می‌گیرند و همین توقف در سابقهٔ درگاه ثبت می‌شود.'
+        :'درگاه فعال شد — فراخوانی‌ها از سر گرفته می‌شوند.'});
+  }
+  if(is('/ai/calls')&&method==='GET'){
+    if(!hasPerm('ai.use')) return json(res,403,{message:'شما مجوز «فراخوانی درگاه هوش مصنوعی» (ai.use) را ندارید.'});
+    ensureAiCallsSeed();
+    const ids=visibleOrgIds(req);
+    let list=(DB.aiCalls??[]).filter(c=>ids.includes(c.organizationId));
+    if(q.get('application')) list=list.filter(c=>c.application===q.get('application'));
+    if(q.get('status')) list=list.filter(c=>c.status===q.get('status'));
+    if(q.get('providerId')) list=list.filter(c=>c.providerId===q.get('providerId'));
+    const limit=Math.min(Number(q.get('limit')??50)||50,500);
+    return json(res,200,{items:list.slice(0,limit),
+      rule:'ثبت سابقه (۱۹.۴): پرسش، کاربرد، ارائه‌دهنده/مدل/نسخه، اسناد بازیابی‌شده، زمان پاسخ، هزینهٔ برآوردی و وضعیت هر فراخوانی با شناسهٔ واحد ثبت می‌شود — پاسخ‌ها فقط از دادهٔ مجاز همین مستأجر ساخته شده‌اند.'});
+  }
+
   /* ─────────────── گام ۵.۴ — تقویم خروجی اندیشکده (/program/think-tank) ────────── */
   if(is('/program/think-tank')&&method==='GET'){
     if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
@@ -14873,7 +15060,24 @@ const server=http.createServer(async(req,res)=>{
     const question=String(b.question??'').trim();
     if(!question) return json(res,400,{message:'متن پرسش الزامی است.'});
     if(question.length>500) return json(res,400,{message:'پرسش بیش از حد بلند است (حداکثر ۵۰۰ نویسه).'});
+    /* گام ۶.۳ — کلید توقف: پرسش آزاد هم از درگاه می‌گذرد */
+    const halt=aiHaltCheck(req,'org-question');
+    if(halt.halted){
+      aiLogCall(req,'org-question',{providerName:'—',model:'—',status:'HALTED',
+        promptChars:question.length,durationMs:0,orgId:halt.orgId,
+        note:`توقف ${halt.scope==='GLOBAL'?'کلی':'کاربرد'}: ${halt.reason??''}`});
+      return json(res,503,{code:'AI_HALTED',
+        message:'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',
+        gateway:{status:'HALTED',scope:halt.scope,reason:halt.reason}});
+    }
+    const t0=Date.now();
+    const route=aiResolveRoute(halt.orgId,'org-question');
     const out=assistantAsk(req,authUser,question);
+    const outChars=JSON.stringify(out).length;
+    aiLogCall(req,'org-question',{providerId:route.providerId,providerName:route.providerName,
+      model:route.model,mode:route.mode,promptChars:question.length,outputChars:outChars,
+      durationMs:Date.now()-t0,costEstimate:aiCostEstimate(route.mode,question.length,outChars),
+      status:'OK',docsRetrieved:(out?.references??[]).length||0,orgId:halt.orgId});
     audit(req,'ASK','Assistant',out.intent,'OK',{meta:{outOfScope:out.outOfScope}});
     return json(res,200,out);
   }

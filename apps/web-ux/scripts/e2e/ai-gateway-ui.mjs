@@ -192,6 +192,40 @@ try {
     return box && (box.textContent ?? '').includes('1234567890') && (box.textContent ?? '').includes('[موبایل پوشانده شد]');
   }, { timeout: 30000 });
   ok('خط‌مشی: خاموش‌کردن الگوی کد ملی → فقط آن معاف می‌شود (موبایل همچنان پوشانده)', true);
+
+  /* ── ۸) گام ۶.۳ — داشبورد مصرف و سناریوی توقف ایمن (ماه ۱۲) ── */
+  await page.waitForSelector('.gw-call-row', { timeout: 30000 });
+  const dash = await page.evaluate(() => ({
+    totals: (document.querySelector('.gateway-panel')?.textContent ?? '').includes('فراخوانی‌ها'),
+    usageApp: document.querySelectorAll('.gw-usage-app').length,
+    usageProv: document.querySelectorAll('.gw-usage-prov').length,
+    calls: document.querySelectorAll('.gw-call-row').length,
+    active: (document.querySelector('.gateway-panel')?.textContent ?? '').includes('درگاه فعال'),
+  }));
+  ok('پایش فنی: داشبورد مصرف (تفکیک کاربرد/ارائه‌دهنده) و سابقهٔ فراخوانی‌ها از لاگ',
+    dash.totals && dash.usageApp >= 3 && dash.usageProv >= 1 && dash.calls >= 5 && dash.active, JSON.stringify(dash));
+  await page.evaluate(() => [...document.querySelectorAll('.gateway-panel button')].find(b => (b.textContent ?? '').includes('توقف کل درگاه'))?.click());
+  await page.waitForSelector('.modal-card textarea', { timeout: 15000 });
+  await page.type('.modal-card textarea', 'آزمون E2E توقف ایمن — ماه ۱۲ سند');
+  await page.evaluate(() => [...document.querySelectorAll('.modal-card button')].find(b => (b.textContent ?? '').includes('ثبت و توقف'))?.click());
+  await page.waitForFunction(() => (document.querySelector('.gateway-panel')?.textContent ?? '').includes('درگاه متوقف است'), { timeout: 30000 });
+  ok('کلید توقف: توقف کلی با دلیل → بنر «بازگشت به فرآیند انسانی» + دلیل و اقدام‌کننده', true);
+  await page.evaluate(() => [...document.querySelectorAll('.segmented button')].find(b => (b.textContent ?? '').includes('پرسش آزاد'))?.click());
+  await page.waitForSelector('.as-input', { timeout: 15000 });
+  await page.type('.as-input', 'سلامت این حساب چقدر است؟');
+  await page.evaluate(() => [...document.querySelectorAll('button')].find(b => (b.textContent ?? '').trim() === 'بپرس')?.click());
+  await page.waitForFunction(() => (document.querySelector('.error-card')?.textContent ?? '').includes('بازگشت به فرآیند انسانی'), { timeout: 30000 });
+  ok('توقف ایمن: پرسش آزاد در حالت توقف → پیام «بازگشت به فرآیند انسانی» (۵۰۳)', true);
+  await page.evaluate(() => [...document.querySelectorAll('.segmented button')].find(b => (b.textContent ?? '').includes('درگاه و ارائه‌دهنده‌ها'))?.click());
+  await page.waitForSelector('.gateway-panel', { timeout: 15000 });
+  await page.evaluate(() => [...document.querySelectorAll('.gateway-panel button')].find(b => (b.textContent ?? '').includes('فعال‌سازی درگاه'))?.click());
+  await page.waitForFunction(() => [...document.querySelectorAll('.gateway-panel .chip')].some(c => (c.textContent ?? '').includes('درگاه فعال')), { timeout: 30000 });
+  await page.evaluate(() => [...document.querySelectorAll('.segmented button')].find(b => (b.textContent ?? '').includes('پرسش آزاد'))?.click());
+  await page.waitForSelector('.as-input', { timeout: 15000 });
+  await page.type('.as-input', 'وضعیت کلی این حساب چطور است؟');
+  await page.evaluate(() => [...document.querySelectorAll('button')].find(b => (b.textContent ?? '').trim() === 'بپرس')?.click());
+  await page.waitForFunction(() => document.querySelectorAll('.as-turn').length > 0, { timeout: 30000 });
+  ok('فعال‌سازی مجدد: پرسش آزاد دوباره پاسخ می‌گیرد (بازگشت به کار عادی)', true);
 } catch (e) {
   fail++; failures.push(`استثنا: ${e.message}`);
   console.error('  ❌ استثنا:', e.message);
