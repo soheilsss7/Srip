@@ -150,7 +150,8 @@ const assert = (idx, what) => { if (idx < 0) throw new Error(`anchor not found: 
   const c = b + 1; // closing '});' line
   lines.splice(a, c - a + 1,
     "let __bodyText = '';",
-    'const readBody = () => Promise.resolve(__bodyText ? JSON.parse(__bodyText) : {});',
+    'let __bodyJson = null;',
+    'const readBody = () => { if (!__bodyText) return Promise.resolve({}); if (__bodyJson === null) { try { __bodyJson = JSON.parse(__bodyText); } catch { __bodyJson = {}; } } return Promise.resolve(__bodyJson); };',
   );
 }
 
@@ -247,6 +248,7 @@ const assert = (idx, what) => { if (idx < 0) throw new Error(`anchor not found: 
     '  for (const [k, v] of request.headers) headers[k.toLowerCase()] = v;',
     '  const req = { method: request.method, url: path + url.search, headers, socket: { remoteAddress: \'127.0.0.1\' } };',
     "  __bodyText = await request.text().catch(() => '');",
+    "  __bodyJson = null; /* هر درخواست بدنهٔ خودش را دارد — کش بدنه ممنوع */",
     "  __rawHttpBody = __bodyText;",
     '  let __status = 200, __headers = {}, __body = null;',
     '  const res = {',

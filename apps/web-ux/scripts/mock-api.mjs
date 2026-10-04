@@ -6182,7 +6182,7 @@ const json = (res, code, data) => {
 const readBody=(req)=>new Promise((resolve)=>{
   let d='';
   req.on('data',c=>{ d+=c; if(d.length>2e6) req.destroy(); });
-  req.on('end',()=>{ try{ resolve(d?JSON.parse(d):{}); }catch{ resolve({}); } });
+  req.on('end',()=>{ __rawHttpBody=d; try{ resolve(d?JSON.parse(d):{}); }catch{ resolve({}); } });
 });
 const nowIso=()=>new Date().toISOString();
 
@@ -7550,6 +7550,49 @@ function ensureAuthCasesSeed(){
      createdAt:ago(30),enforcedAt:ago(29),closedAt:ago(27)},
   ];
   saveDb();
+}
+/* ═══════════════ گام ۸.۳ — اصالت داده و منشأ محتوا ═══════════════
+   اثرانگشت دیجیتال SHA-256 هر سند هنگام بارگذاری + «ثبت منشأ و مسیر تغییر»
+   در مخزن شواهد (زنجیرهٔ provenance: سند → نسخه → تغییر → کاربر).
+   اثرانگشت دوگانه: Node crypto / WebCrypto (Service Worker). */
+async function documentFingerprint(d){
+  /* شناسهٔ سند عمداً در اثرانگشت نیست: دو سند با فرادادهٔ یکسان → اثرانگشت یکسان (کشف کپی در تطبیق F11) */
+  const payload=`${d.name}|${d.mimeType}|${d.sizeBytes}|${d.classification}`;
+  if(typeof crypto!=='undefined'&&typeof crypto.createHash==='function'){
+    return crypto.createHash('sha256').update(payload).digest('hex');
+  }
+  const subtle=(globalThis.crypto&&globalThis.crypto.subtle)?globalThis.crypto.subtle:null;
+  if(!subtle) return 'unavailable';
+  const buf=await subtle.digest('SHA-256',new TextEncoder().encode(payload));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+const DOC_CHANGES_FA={UPLOADED:'بارگذاری اولیه',CLASSIFIED:'تغییر طبقه‌بندی',RENAMED:'تغییر نام',REINDEXED:'ایندکس محتوا'};
+function docProvenanceNextVersion(docId){
+  return (DB.documentProvenance??[]).filter(r=>r.documentId===docId).reduce((m,r)=>Math.max(m,r.version),0)+1;
+}
+async function docProvenanceAdd(actorEmail,doc,change,note){
+  const v=docProvenanceNextVersion(doc.id);
+  const row={id:`dp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,
+    documentId:doc.id,version:v,change,actor:String(actorEmail??doc.uploadedBy??'—'),
+    at:nowIso(),note:String(note??'').slice(0,300),fingerprint:await documentFingerprint(doc)};
+  DB.documentProvenance=[...(DB.documentProvenance??[]),row];
+  return row;
+}
+/* بذر زنجیرهٔ منشأ برای اسناد seed + اثرانگشت اسناد فاقد آن */
+async function ensureDocumentIntegrity(req){
+  const orgIds=visibleOrgIds(req);
+  const docs=(DB.documents??seedDocuments()).filter(d=>d.organizationId&&orgIds.includes(d.organizationId));
+  let changed=false;
+  for(const d of docs){
+    if(!d.fingerprint){ d.fingerprint=await documentFingerprint(d); changed=true; }
+    if(!(DB.documentProvenance??[]).some(r=>r.documentId===d.id)){
+      const row={id:`dp-seed-${d.id}`,documentId:d.id,version:1,change:'UPLOADED',
+        actor:d.uploadedBy??'—',at:d.createdAt??nowIso(),
+        note:'بارگذاری اولیهٔ سند در مخزن (بذر)',fingerprint:d.fingerprint};
+      DB.documentProvenance=[...(DB.documentProvenance??[]),row]; changed=true;
+    }
+  }
+  if(changed) saveDb();
 }
 function authCaseView(c){
   const rec=F13_ACTIONS[c.recommendedAction]??F13_ACTIONS.LOG_CONTINUE;
@@ -9624,6 +9667,7 @@ const server=http.createServer(async(req,res)=>{
   /* ----------------------------- documents ----------------------------- */
   if(is('/documents')&&method==='GET'){
     const organizationId=q.get('organizationId')??'';
+    await ensureDocumentIntegrity(req);
     let list=(DB.documents??seedDocuments()).map((d)=>({...d}));
     /* اسناد هم مثل بقیهٔ داده درون محدودهٔ مستأجر می‌مانند */
     list=list.filter((d)=>d.organizationId?inScope(req,d.organizationId):false);
@@ -10518,15 +10562,56 @@ const server=http.createServer(async(req,res)=>{
 
   /* ---- documents actions ---- */
   if(is('/documents/upload')&&method==='POST'){
-    const b=await readBody(req).catch(()=>({}));
+    let b={};
+    try{ b=await readBody(req); }catch{ b={}; } /* بدنهٔ multipart فرم مرورگر JSON نیست */
+    if(!b||typeof b!=='object'||Array.isArray(b)) b={};
     const raw=typeof __rawHttpBody==='string'?__rawHttpBody:'';
-    const fname=(raw.match(/filename="([^"]+)"/)||[])[1]||String(b?.name??'سند-'+Date.now()+'.pdf');
+    /* فیلدهای فرم multipart (classification/organizationId) از بدنهٔ خام — در SW و Node یکسان */
+    const mpField=(name)=>{ const m=raw.match(new RegExp('name="'+name+'"\r\n\r\n([^\r]*)')); return m?m[1]:undefined; };
+    const fname=(raw.match(/filename="([^"]+)"/)||[])[1]||String(b?.name??mpField('name')??'سند-'+Date.now()+'.pdf');
     const guess=fname.toLowerCase().endsWith('.pdf')?'application/pdf':fname.toLowerCase().endsWith('.xlsx')?'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':fname.toLowerCase().endsWith('.docx')?'application/vnd.openxmlformats-officedocument.wordprocessingml.document':fname.toLowerCase().endsWith('.csv')?'text/csv':'application/octet-stream';
-    const art={id:'doc-'+(DB.nextId++),name:fname,mimeType:String(b?.mimeType??guess),sizeBytes:Number(b?.sizeBytes)||Math.max(1024,Math.floor(raw.length*(guess==='application/pdf'?2:1))),classification:String(b?.classification??'INTERNAL'),uploadedBy:authUser?.email??'demo@srip.local',organizationId:String(b?.organizationId??'')||null,scanStatus:'CLEAN',uploadStatus:'READY',indexStatus:'PENDING',createdAt:nowIso(),updatedAt:nowIso()};
+    const art={id:`doc-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,name:fname,mimeType:String(b?.mimeType??guess),sizeBytes:Number(b?.sizeBytes)||Math.max(1024,Math.floor(raw.length*(guess==='application/pdf'?2:1))),classification:String(b?.classification??mpField('classification')??'INTERNAL'),uploadedBy:authUser?.email??'demo@srip.local',organizationId:String(b?.organizationId??mpField('organizationId')??'')||primaryOrgId(authUser)||visibleOrgIds(req)[0]||null,scanStatus:'CLEAN',uploadStatus:'READY',indexStatus:'PENDING',createdAt:nowIso(),updatedAt:nowIso()};
+    /* گام ۸.۳ — اثرانگشت SHA-256 هنگام بارگذاری + نخستین حلقهٔ زنجیرهٔ منشأ */
+    art.fingerprint=await documentFingerprint(art);
     DB.documents=[art,...(DB.documents??seedDocuments())];
+    await docProvenanceAdd(authUser?.email,art,'UPLOADED',`بارگذاری اولیه — طبقه‌بندی ${art.classification}`);
     saveDb();
-    audit(req,'CREATE','Document',art.id,'OK',{name:fname,classification:art.classification});
+    audit(req,'CREATE','Document',art.id,'OK',{name:fname,classification:art.classification,fingerprint:art.fingerprint.slice(0,16)+'…'});
     return json(res,201,art);
+  }
+  /* ─────────────── گام ۸.۳ — منشأ و مسیر تغییر سند (مخزن شواهد) ────────── */
+  const docProv=match('/documents/:id/provenance');
+  if(docProv&&method==='GET'){
+    await ensureDocumentIntegrity(req);
+    const doc=(DB.documents??[]).find(d=>d.id===docProv[0]&&d.organizationId&&inScope(req,d.organizationId));
+    if(!doc) return json(res,404,{message:'سند یافت نشد یا خارج از محدودهٔ شماست.'});
+    const chain=(DB.documentProvenance??[]).filter(r=>r.documentId===doc.id)
+      .sort((a,b)=>a.version-b.version)
+      .map(r=>({...r,changeFa:DOC_CHANGES_FA[r.change]??r.change}));
+    const last=chain[chain.length-1];
+    return json(res,200,{document:{id:doc.id,name:doc.name,classification:doc.classification,fingerprint:doc.fingerprint},
+      chain,
+      integrityOk:!last||last.fingerprint===doc.fingerprint,
+      rule:'اثرانگشت دیجیتال SHA-256 هر سند هنگام بارگذاری محاسبه و هر تغییر، حلقهٔ تازه‌ای در زنجیرهٔ «سند → نسخه → تغییر → کاربر» ثبت می‌کند؛ منشأ و مسیر تغییر همیشه قابل بازبینی است (۸.۳).'});
+  }
+  const docRecl=match('/documents/:id/classification');
+  if(docRecl&&method==='PATCH'){
+    /* NB: این روت پیش از تعریف hasPerm در فایل است — چک inline همان منطق */
+    if(!(authUser?.isOwner||(authUser?.permissions??[]).includes('*')||(authUser?.permissions??[]).includes('document.write'))) return json(res,403,{message:'شما مجوز «بارگذاری و ویرایش سند» (document.write) را ندارید.'});
+    await ensureDocumentIntegrity(req);
+    const doc=(DB.documents??[]).find(d=>d.id===docRecl[0]&&d.organizationId&&inScope(req,d.organizationId));
+    if(!doc) return json(res,404,{message:'سند یافت نشد یا خارج از محدودهٔ شماست.'});
+    const b=await readBody(req);
+    const cl=String(b.classification??'').trim();
+    if(!['PUBLIC','INTERNAL','CONFIDENTIAL','RESTRICTED'].includes(cl))
+      return json(res,400,{message:'طبقه‌بندی از فهرست: PUBLIC، INTERNAL، CONFIDENTIAL، RESTRICTED.'});
+    const from=doc.classification;
+    doc.classification=cl; doc.updatedAt=nowIso();
+    doc.fingerprint=await documentFingerprint(doc);
+    const row=await docProvenanceAdd(authUser?.email,doc,'CLASSIFIED',`تغییر طبقه‌بندی از ${from} به ${cl}`);
+    saveDb();
+    audit(req,'UPDATE','Document',doc.id,'CLASSIFY',{from,to:cl,version:row.version});
+    return json(res,200,{...doc,provenance:row});
   }
   const docIndex=match('/documents/:id/index');
   if(docIndex&&method==='POST'){
@@ -14182,7 +14267,28 @@ const server=http.createServer(async(req,res)=>{
     else if(sys.migrationStatus!=='IN_PROGRESS') sys.migrationStatus='IN_PROGRESS';
     saveDb();
     audit(req,'UPDATE','AuditSystem',sys.id,'MIGRATION_STEP',{key:migStep[1],complete:after.complete});
-    return json(res,200,{...sys,steps:after});
+    /* گام ۸.۳ — تطبیق میان منابع در برگهٔ ورود داده F11 (مرحلهٔ «تطبیق رکوردبه‌رکورد»):
+       اسناد هم‌پوشان سازمان و اثرانگشت‌های تکراری بررسی و در پاسخ ثبت می‌شود. */
+    let reconciliation=null;
+    if(migStep[1]==='match'){
+      await ensureDocumentIntegrity(req);
+      const orgIds=visibleOrgIds(req);
+      const orgDocs=(DB.documents??[]).filter(d=>d.organizationId===sys.organizationId&&orgIds.includes(d.organizationId));
+      const byFp={};
+      orgDocs.forEach(d=>{(byFp[d.fingerprint]??=[]).push(d);});
+      const duplicates=Object.entries(byFp).filter(([,v])=>v.length>1)
+        .map(([fp,v])=>({fingerprint:fp,documents:v.map(d=>({id:d.id,name:d.name}))}));
+      const otherSystems=(DB.auditSystems??[]).filter(s=>s.id!==sys.id&&s.organizationId===sys.organizationId&&s.overlap&&s.overlap!=='کم');
+      reconciliation={
+        status:duplicates.length?'MISMATCH':'MATCHED',
+        statusFa:duplicates.length?'مغایرت یافت شد':'تطبیق‌شده',
+        sourcesChecked:orgDocs.length+otherSystems.length,
+        overlappingDocuments:orgDocs.map(d=>({id:d.id,name:d.name,fingerprint:d.fingerprint})),
+        duplicateFingerprints:duplicates,
+        overlappingSystems:otherSystems.map(s=>({id:s.id,name:s.name,overlap:s.overlap})),
+        rule:'تطبیق میان منابع: اسناد هم‌پوشان سازمان و اثرانگشت‌های تکراری پیش از پذیرش انتقال بررسی می‌شوند (F11 مرحلهٔ تطبیق، ۸.۳).'};
+    }
+    return json(res,200,{...sys,steps:after,reconciliation});
   }
 
   /* ─────────────── گام ۲.۳ — اهداف راهبردی سازمان (/program/goals) ──────────

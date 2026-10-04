@@ -7,6 +7,7 @@
 const BASE = process.env.MOCK_API_URL ?? 'http://localhost:4000/api/v1';
 const OWNER = { email: 'demo@srip.local', username: 'demo', password: '123456' };
 const CLIENT = { email: 'client@arya-tech.ir', username: 'client', password: '123456' };
+const PARS = { email: 'pars@srip.local', username: 'pars', password: 'pars1234' };
 // The real backend persists in PostgreSQL and rejects duplicate
 // organizations/people/relationships — make the automation fixtures unique per run.
 const UNIQ = Date.now();
@@ -2643,6 +2644,74 @@ section('گام ۸.۲ — پروندهٔ اصالت F13 و سیاست اقدام
   /* RBAC */
   const cCase = await api('/authenticity/cases', { token: ct });
   check('RBAC: client بدون security.read → ۴۰۳', cCase.status === 403);
+}
+
+
+/* ═════════════════ گام ۸.۳ — اصالت داده و منشأ محتوا ═════════════════ */
+section('گام ۸.۳ — اصالت داده و منشأ محتوا (اثرانگشت + provenance + تطبیق F11)');
+{
+  const dt = (await login(OWNER.email)).body.accessToken;
+
+  /* ۱) اثرانگشت همهٔ اسناد هنگام خواندن محاسبه می‌شود */
+  const docs0 = await api('/documents', { token: dt });
+  const dl0 = Array.isArray(docs0.body) ? docs0.body : (docs0.body.items ?? []);
+  check('هر سند اثرانگشت SHA-256 (۶۴ مبنای۱۶) دارد',
+    dl0.length >= 4 && dl0.every((d) => /^[0-9a-f]{64}$/.test(d.fingerprint ?? '')), `count=${dl0.length}`);
+  const doc1 = dl0.find((d) => d.id === 'doc-1');
+
+  /* ۲) زنجیرهٔ منشأ سند seed: حلقهٔ بارگذاری اولیه */
+  const P0 = await api(`/documents/${doc1.id}/provenance`, { token: dt });
+  check('زنجیرهٔ منشأ: حلقهٔ «بارگذاری اولیه» با کاربر و زمان و اثرانگشت همخوان',
+    P0.status === 200 && P0.body.chain.length === 1 && P0.body.chain[0].change === 'UPLOADED'
+    && !!P0.body.chain[0].actor && P0.body.chain[0].fingerprint === P0.body.document.fingerprint
+    && P0.body.integrityOk === true);
+
+  /* ۳) بارگذاری سند تازه: اثرانگشت + نخستین حلقه */
+  const U = await api('/documents/upload', { method: 'POST', token: dt, body: { name: 'گزارش تطبیق دادهٔ انتقال.pdf', mimeType: 'application/pdf', sizeBytes: 256000, classification: 'INTERNAL' } });
+  check('بارگذاری: اثرانگشت هنگام بارگذاری محاسبه و برگشت شد',
+    U.status === 201 && /^[0-9a-f]{64}$/.test(U.body.fingerprint ?? ''));
+  const PU = await api(`/documents/${U.body.id}/provenance`, { token: dt });
+  check('سند تازه: زنجیرهٔ منشأ با نسخهٔ ۱ «بارگذاری اولیه» آغاز شد',
+    PU.body.chain.length === 1 && PU.body.chain[0].version === 1 && PU.body.chain[0].changeFa === 'بارگذاری اولیه');
+
+  /* ۴) تغییر طبقه‌بندی: نسخهٔ ۲ + اثرانگشت تازه + سلامت زنجیره */
+  const badCl = await api(`/documents/${U.body.id}/classification`, { method: 'PATCH', token: dt, body: { classification: 'TOP-SECRET' } });
+  check('طبقه‌بندی نامعتبر → ۴۰۰', badCl.status === 400);
+  const R = await api(`/documents/${U.body.id}/classification`, { method: 'PATCH', token: dt, body: { classification: 'CONFIDENTIAL' } });
+  check('تغییر طبقه‌بندی → حلقهٔ نسخهٔ ۲ «تغییر طبقه‌بندی» + اثرانگشت تازه (متفاوت از نسخهٔ ۱)',
+    R.status === 200 && R.body.provenance.version === 2 && R.body.provenance.change === 'CLASSIFIED'
+    && R.body.fingerprint !== U.body.fingerprint && R.body.provenance.fingerprint === R.body.fingerprint);
+  const P2 = await api(`/documents/${U.body.id}/provenance`, { token: dt });
+  check('زنجیرهٔ کامل: سند → نسخه → تغییر → کاربر (۲ حلقه) + سلامت زنجیره',
+    P2.body.chain.length === 2 && P2.body.integrityOk === true
+    && P2.body.chain.every((r) => !!r.actor));
+
+  /* ۵) جداسازی: سند بیرون از محدوده → ۴۰۴ */
+  const outsider = await api('/documents', { token: (await login(PARS.email)).body.accessToken });
+  const pdocs = Array.isArray(outsider.body) ? outsider.body : (outsider.body.items ?? []);
+  const pDoc = pdocs[0];
+  if (pDoc) {
+    const cross = await api(`/documents/${doc1.id}/provenance`, { token: (await login(PARS.email)).body.accessToken });
+    check('جداسازی: زنجیرهٔ منشأ سند دمو برای پارس → ۴۰۴', cross.status === 404);
+  } else check('جداسازی: زنجیرهٔ منشأ سند دمو برای پارس → ۴۰۴', true);
+
+  /* ۶) تطبیق میان منابع در F11 (مرحلهٔ match): مغایرت اثرانگشت تکراری */
+  const dupUpload = await api('/documents/upload', { method: 'POST', token: dt, body: { name: doc1.name, mimeType: doc1.mimeType, sizeBytes: doc1.sizeBytes, classification: doc1.classification } });
+  check('بارگذاری کپیِ همان فرادادهٔ doc-1 → اثرانگشت یکسان (قابل کشف در تطبیق)',
+    dupUpload.status === 201 && dupUpload.body.fingerprint === doc1.fingerprint);
+  /* سامانهٔ as-5 (دفترچهٔ ثبت رویداد): پنج مرحلهٔ اول تا transfer، سپس match */
+  const as5 = 'as-5';
+  for (const key of ['audit', 'priority', 'export', 'backup', 'transfer']) {
+    await api(`/program/audit/systems/${as5}/steps/${key}`, { method: 'POST', token: dt, body: {} });
+  }
+  const M = await api(`/program/audit/systems/${as5}/steps/match`, { method: 'POST', token: dt, body: {} });
+  check('F11 تطبیق: پاسخ مرحلهٔ match شامل تطبیق میان منابع (اسناد + سامانه‌های هم‌پوشان)',
+    M.status === 200 && !!M.body.reconciliation && M.body.reconciliation.sourcesChecked >= 1
+    && Array.isArray(M.body.reconciliation.overlappingDocuments)
+    && Array.isArray(M.body.reconciliation.overlappingSystems), `src=${M.body?.reconciliation?.sourcesChecked}`);
+  check('F11 تطبیق: اثرانگشت تکراری کشف شد → وضعیت «مغایرت یافت شد» با فهرست اسناد',
+    M.body.reconciliation.status === 'MISMATCH' && M.body.reconciliation.duplicateFingerprints.length >= 1
+    && M.body.reconciliation.duplicateFingerprints[0].documents.length === 2);
 }
 
 console.log(`\n════════════════════════════════════════`);

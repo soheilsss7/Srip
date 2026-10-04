@@ -2,6 +2,7 @@
 import {useCallback,useEffect,useState} from 'react';
 import {api,apiUpload} from '../../_lib/api';
 import {fa} from '../../_lib/fa';
+import {t} from '../../_lib/i18n';
 import {Badge,Empty,ErrorCard,Loading,Modal,PageHeader} from '../../_components/page-ui';
 import HubTabs from '../../_components/hub-tabs';
 import {BookOpen,FileText,ArrowUpRight} from 'lucide-react';
@@ -15,10 +16,14 @@ export default function Documents(){
  const [file,setFile]=useState<File|null>(null),[classification,setClassification]=useState('INTERNAL');
  const [indexText,setIndexText]=useState<string>(''),[idxFor,setIdxFor]=useState<string>('');
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(''),[error,setError]=useState(''),[notice,setNotice]=useState(''),[uploadOpen,setUploadOpen]=useState(false);
+ /* گام ۸.۳ — منشأ و مسیر تغییر سند (مخزن شواهد) */
+ const [provFor,setProvFor]=useState<string|null>(null),[prov,setProv]=useState<any>(null);
+ async function openProvenance(id:string){setProvFor(id);setProv(null);try{setProv(await api(`/documents/${id}/provenance`))}catch(x){setError((x as Error).message)}}
+ async function reclassify(id:string,classification:string){setBusy('rc'+id);setError('');try{const r:any=await api(`/documents/${id}/classification`,{method:'PATCH',body:JSON.stringify({classification})});setNotice(`${t('طبقه‌بندی تغییر کرد — نسخهٔ')} ${fa(r?.provenance?.version)} ${t('در زنجیرهٔ منشأ ثبت شد.')}`);await load()}catch(x){setError((x as Error).message)}finally{setBusy('')}}
  const load=useCallback(async()=>{setLoading(true);setError('');try{const params=orgId?`?organizationId=${encodeURIComponent(orgId)}`:'';
    const [docsR,statusR]=await Promise.all([api(`/documents${params}`),api('/documents/status')]);setDocs(unwrap(docsR));setStatus(statusR);}catch(x){setError((x as Error).message)}finally{setLoading(false)}},[orgId]);
  useEffect(()=>{load()},[load]);
- async function doUpload(){if(!file){setNotice('یک فایل انتخاب کنید.');return}setBusy('upload');setNotice('');setError('');try{const extra:Record<string,string>={classification};if(orgId)extra.organizationId=orgId;await apiUpload('/documents/upload',file,'file',extra);setFile(null);setUploadOpen(false);setNotice('فایل بارگذاری و اسکن شد.');await load()}catch(x){setError((x as Error).message)}finally{setBusy('')}}
+ async function doUpload(){if(!file){setNotice('یک فایل انتخاب کنید.');return}setBusy('upload');setNotice('');setError('');try{const extra:Record<string,string>={classification};if(orgId)extra.organizationId=orgId;const r:any=await apiUpload('/documents/upload',file,'file',extra);setFile(null);setUploadOpen(false);setNotice(r&&r.fingerprint?`${t('فایل بارگذاری و اسکن شد')} — ${t('اثرانگشت SHA-256:')} ${String(r.fingerprint).slice(0,20)}…`:t('فایل بارگذاری و اسکن شد'));await load()}catch(x){setError((x as Error).message)}finally{setBusy('')}}
  async function download(id:string){setBusy('dl'+id);setError('');try{const r:any=await api(`/documents/${id}/signed-url`);if(r?.url)window.open(r.url,'_blank','noopener');else setError('نشانی امضاشده در دسترس نیست.');}catch(x){setError((x as Error).message)}finally{setBusy('')}}
  async function indexDoc(id:string){if(!indexText.trim()){setNotice('برای ایندکس کردن محتوا، متن را وارد کنید.');return}setBusy('idx'+id);setNotice('');setError('');try{await api(`/documents/${id}/index`,{method:'POST',body:JSON.stringify({text:indexText})});setIdxFor('');setIndexText('');setNotice('محتوا ایندکس شد.');}catch(x){setError((x as Error).message)}finally{setBusy('')}}
  return <main className="feature-page"><PageHeader eyebrow="مرکز دانش / اسناد" title="اسناد و فایل‌ها" description="بارگذاری امن، اسکن بدافزار، ایندکس محتوا و دانلود امضاء‌شده با مجوز سازمانی." actions={<button type="button" className="primary-action" onClick={()=>{setError('');setUploadOpen(true)}} disabled={!!busy}>بارگذاری سند</button>}/>
@@ -36,8 +41,29 @@ export default function Documents(){
  {loading?<Loading/>:docs.length===0?<Empty>سندی در Scope شما نیست.</Empty>:<div className="list">{docs.map(d=><article className="panel compact" key={d.id}><div className="panel-title"><div><strong>{String(d.name).replace(/\.(pdf|docx|xlsx|csv|zip)$/i, '')}</strong><small className="muted">{MIME_FA[d.mimeType] ?? d.mimeType} · {fmtBytes(d.sizeBytes)} · {fa(d.classification)} · {fmtDate(d.createdAt)}</small></div><span><Badge tone={toneFor(d.scanStatus)}>اسکن: {fa(d.scanStatus)}</Badge><Badge tone={toneFor(d.uploadStatus)}>بارگذاری: {fa(d.uploadStatus)}</Badge></span></div><div className="toolbar">
   <button className="secondary-action" disabled={!!busy||d.uploadStatus!=='READY'} onClick={()=>download(d.id)}>{busy==='dl'+d.id?'…':'دانلود'}</button>
   <button className="secondary-action" onClick={()=>{setError('');setIdxFor(d.id)}} disabled={!!busy}>ایندکس</button>
+  <button className="secondary-action" onClick={()=>openProvenance(d.id)} disabled={!!busy}>{t('منشأ و مسیر تغییر')}</button>
+  <select aria-label={`${t('طبقه‌بندی')} ${d.name}`} value={d.classification} disabled={!!busy} onChange={e=>reclassify(d.id,e.target.value)}>
+    {['PUBLIC','INTERNAL','CONFIDENTIAL','RESTRICTED'].map(c=><option key={c} value={c}>{fa(c)}</option>)}
+  </select>
  </div>
+ {d.fingerprint&&<small className="muted" style={{direction:'ltr',display:'block',marginTop:6}}>🔒 SHA-256: {String(d.fingerprint).slice(0,20)}…</small>}
  </article>)}</div>}
+
+ {/* گام ۸.۳ — مودال زنجیرهٔ منشأ */}
+ <Modal open={!!provFor} title={`${t('منشأ و مسیر تغییر')} — ${prov?.document?.name??provFor??''}`} description={prov?.rule} onClose={()=>{setProvFor(null);setProv(null)}}>
+  {prov&&(<div className="list">
+    <div className="panel-title"><div><h2>{t('اثرانگشت دیجیتال')}</h2></div><Badge tone={prov.integrityOk?'success':'danger'}>{prov.integrityOk?t('زنجیره سالم'):t('ناهمخوانی اثرانگشت')}</Badge></div>
+    <small style={{direction:'ltr',display:'block',wordBreak:'break-all'}}>{prov.document?.fingerprint}</small>
+    <div className="list" style={{marginTop:10}}>
+      {(prov.chain??[]).map((r:any)=><div className="listRow" key={r.id}>
+        <span style={{flex:1}}><strong>{`${t('نسخهٔ')} ${fa(r.version)}`} — {r.changeFa}</strong>
+          <small style={{display:'block'}}>{r.actor} · {new Date(r.at).toLocaleString('fa-IR')}</small>
+          <small style={{display:'block',direction:'ltr',opacity:.7}}>{String(r.fingerprint??'').slice(0,24)}…</small>
+          {r.note&&<small style={{display:'block',opacity:.8}}>{r.note}</small>}</span>
+      </div>)}
+    </div>
+  </div>)}
+ </Modal>
  {/* Upload modal */}
  <Modal open={uploadOpen} title="بارگذاری سند" description="فایل انتخاب کنید؛ نوع فایل و پسوند آن اعتبارسنجی و اسکن بدافزار انجام می‌شود." onClose={()=>setUploadOpen(false)}
    footer={<>

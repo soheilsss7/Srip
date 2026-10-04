@@ -1852,5 +1852,15 @@ export const EN_DICT_C: Record<string, string> = {
   'امتیاز': 'Score',
   'اثرانگشت دیجیتال انتشار': 'Publication digital fingerprint',
   'انتخاب سند': 'Select document',
+  /* گام ۸.۳ — اصالت داده و منشأ محتوا */
+  'منشأ و مسیر تغییر': 'Origin & change history',
+  'زنجیره سالم': 'Chain intact',
+  'ناهمخوانی اثرانگشت': 'Fingerprint mismatch',
+  'اثرانگشت دیجیتال': 'Digital fingerprint',
+  'طبقه‌بندی تغییر کرد — نسخهٔ': 'Classification changed — version',
+  'در زنجیرهٔ منشأ ثبت شد.': 'recorded in the provenance chain.',
+  'فایل بارگذاری و اسکن شد': 'File uploaded and scanned',
+  'اثرانگشت SHA-256:': 'SHA-256 fingerprint:',
+  'نسخهٔ': 'Version',
 
 };
