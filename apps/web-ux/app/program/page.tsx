@@ -9,7 +9,7 @@ import {
 } from '../_components/page-ui';
 import {
   Activity, AlertTriangle, ArrowLeft, BookOpen, CheckCircle2, ClipboardList, Gauge, GitBranch,
-  Flag, LayoutDashboard, ListChecks, Package, Plus, RefreshCw, ShieldAlert, Target, TrendingUp, Users, Wallet, X,
+  Flag, LayoutDashboard, ListChecks, Package, Plus, RefreshCw, ShieldAlert, ShieldCheck, Target, TrendingUp, Users, Wallet, X,
 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -69,6 +69,18 @@ const FORM_CATALOG = lt<Array<{ code: string; name: string; status: string; wher
   { code: 'F18', name: 'کارت آماده‌سازی ورود به بازار', status: 'PLANNED', where: 'فاز ۱۰' },
 ]);
 const FORM_STATUS_FA = lt<Record<string, string>>({ HAVE: t('موجود'), PARTIAL: t('موجود — تکمیل در برنامه'), PLANNED: t('در برنامه') });
+/* گام ۵.۶ — دروازه‌های کنترل مشترک (پیوست پ سند v6): G0–G6 با شرط عبور و
+   «اطلاعات ثبت‌شده در SRIP» — چارچوب مرجع؛ هر دروازه در ماژول مربوط به خودش
+   اعمال می‌شود (مثلاً G4 در گردش تأیید محتوا F08 و G6 در گزارش ماهانه). */
+const CONTROL_GATES = lt<Array<{ code: string; name: string; pass: string; registered: string }>>([
+  { code: 'G0', name: 'دامنه', pass: 'موضوع، مالک، محصول و هدف در فهرست دامنه ثبت شده‌اند.', registered: 'شناسهٔ دامنه و مالک' },
+  { code: 'G1', name: 'شواهد', pass: 'اسناد، جلسه، نمایش عملی و منابع لازم برای اظهارنظر فراهم‌اند.', registered: 'شناسهٔ مجموعهٔ شواهد و اثرانگشت دیجیتال' },
+  { code: 'G2', name: 'Due Diligence', pass: 'بررسی فنی و کسب‌وکاری تکمیل و نظر مدیر تیم Y ثبت شده است.', registered: 'شناسهٔ ارزیابی و وضعیت تصویب' },
+  { code: 'G3', name: 'طراحی', pass: 'طرح اجرایی، مخاطب، پیام، ریسک، دسترسی و معیار پذیرش تصویب شده‌اند.', registered: 'شناسهٔ طرح و تأییدکننده' },
+  { code: 'G4', name: 'کیفیت', pass: 'راستی‌آزمایی، کنترل امنیت و حقوق، بررسی منابع و تأیید انسانی انجام شده‌اند.', registered: 'سابقهٔ کنترل کیفیت و شواهد' },
+  { code: 'G5', name: 'اجرا', pass: 'نسخهٔ مصوب اجرا و سابقهٔ آن ثبت شده است.', registered: 'شناسهٔ اجرا و نسخه' },
+  { code: 'G6', name: 'بازبینی', pass: 'نتیجه، خطا و درس‌آموخته ثبت شده‌اند و اقدام بعدی، مالک و مهلت مشخص دارد.', registered: 'شناسهٔ بازبینی و اقدام' },
+]);
 const FORM_STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = { HAVE: 'success', PARTIAL: 'info', PLANNED: 'neutral' };
 const SEASON_STATE_FA = lt<Record<string, string>>({ PASSED: t('دروازه پاس شد'), IN_PROGRESS: t('در جریان'), PENDING: t('در انتظار') });
 const SEASON_STATE_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = { PASSED: 'success', IN_PROGRESS: 'warning', PENDING: 'neutral' };
@@ -520,6 +532,25 @@ export default function ProgramPage() {
               </table>
             </div>
             <p className="field-hint">{t('ماژول‌های پلتفرمی بدون کد سندی: چک‌لیست پروژه صفر · پروندهٔ شناخت · شاخص‌های برنامه · تأیید هزینه · گزارش ماهانه · صورت‌جلسهٔ تحویل.')}</p>
+          </SectionCard>
+
+          {/* ═══════════ گام ۵.۶ — دروازه‌های کنترل مشترک (پیوست پ سند v6) ═══════════ */}
+          <SectionCard className="control-gates" title={t('دروازه‌های کنترل مشترک (G0–G6)')} icon={<ShieldCheck size={17} />}
+            description={t('چارچوب مشترک عبور در همهٔ پروژه‌ها؛ هر دروازه در ماژول مربوط به خودش اعمال می‌شود — مثلاً G4 در گردش تأیید محتوا (F08) و G6 در گزارش ماهانه.')}>
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>{t('دروازه')}</th><th>{t('شرط عبور')}</th><th>{t('اطلاعات ثبت‌شده در SRIP')}</th></tr></thead>
+                <tbody>
+                  {CONTROL_GATES.map((g: any) => (
+                    <tr key={g.code}>
+                      <td className="t-primary">{g.code} — {t(g.name)}</td>
+                      <td>{t(g.pass)}</td>
+                      <td className="t-muted" style={{ fontSize: 11.5 }}>{t(g.registered)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </SectionCard>
         </>
       )}

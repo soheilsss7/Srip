@@ -100,6 +100,24 @@ try {
   ok('کاتالوگ فرم‌ها: کدهای کلیدی (F01/F04/F08/F11/F14/F18) حاضر', cat.fCodes, JSON.stringify(cat.codes.slice(0, 3)));
   ok('کاتالوگ فرم‌ها: نُه موجود + نُه در برنامه + یادداشت ماژول‌های پلتفرمی', cat.have === 9 && cat.planned === 9 && cat.platformNote, `have=${cat.have} planned=${cat.planned}`);
 
+  /* ── ۳.۶) گام ۵.۶ — دروازه‌های کنترل مشترک G0–G6 ── */
+  const gates = await page.evaluate(() => {
+    const card = [...document.querySelectorAll('.section-card')].find(c => (c.querySelector('h2, h3')?.textContent ?? '').includes('دروازه‌های کنترل مشترک'));
+    const rows = card ? [...card.querySelectorAll('tbody tr')] : [];
+    return {
+      found: !!card,
+      rows: rows.length,
+      codes: rows.map(r => (r.querySelector('td')?.textContent ?? '').trim().split(' ')[0]),
+      g2: (card?.textContent ?? '').includes('نظر مدیر تیم Y'),
+      g6: (card?.textContent ?? '').includes('درس‌آموخته'),
+      hasRegistered: rows.every(r => (r.querySelectorAll('td')[2]?.textContent ?? '').length > 3),
+    };
+  });
+  ok('دروازه‌ها: پنل G0–G6 با هفت ردیف و شرط عبور هرکدام',
+    gates.found && gates.rows === 7 && ['G0', 'G2', 'G6'].every(c => gates.codes.includes(c)), `rows=${gates.rows}`);
+  ok('دروازه‌ها: G2 = نظر مدیر تیم Y · G6 = درس‌آموخته + ستون اطلاعات ثبت‌شده',
+    gates.g2 && gates.g6 && gates.hasRegistered);
+
   /* ── ۴) شاخص‌ها: ۱۰ ردیف با مالک و منبع محاسبه ── */
   await page.evaluate(() => { [...document.querySelectorAll('.segmented button')].find(b => (b.textContent ?? '').includes('شاخص‌ها'))?.click(); });
   await new Promise(r => setTimeout(r, 1200));
