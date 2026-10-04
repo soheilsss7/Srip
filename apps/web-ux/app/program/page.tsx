@@ -9,7 +9,7 @@ import {
 } from '../_components/page-ui';
 import {
   Activity, AlertTriangle, ArrowLeft, BookOpen, CheckCircle2, ClipboardList, Gauge, GitBranch,
-  Flag, LayoutDashboard, ListChecks, Package, Plus, RefreshCw, ShieldAlert, Target, TrendingUp, Wallet, X,
+  Flag, LayoutDashboard, ListChecks, Package, Plus, RefreshCw, ShieldAlert, Target, TrendingUp, Users, Wallet, X,
 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -819,6 +819,34 @@ export default function ProgramPage() {
               </table></div>
             ) : <EmptyV4 icon={<ClipboardList size={22} />} title={t('ممیزی کانال‌ها ثبت نشده است')} description={t('تمام کانال‌های ارتباطی فعال — وب‌سایت‌ها، شبکه‌های اجتماعی و خبرنامه‌ها — بررسی می‌شوند.')} />)}
           </SectionCard>
+
+          {/* ═══════════ گام ۵.۳ — چارت هدف تیم (بخش ۲۱.۳ سند v6) ═══════════ */}
+          {(audits.chart ?? []).length > 0 && (
+            <SectionCard className="team-chart" title={t('چارت هدف تیم (v6)')} icon={<Users size={17} />}
+              description={t('عنوان نقش‌ها، لایه، زمان ورود ماه هدف و تعداد نفرات — نقش‌های هوش مصنوعی برجسته شده‌اند.')}>
+              <div className="chip-row" style={{ margin: '0 0 10px' }}>
+                <span className="chip neutral">{t('عنوان نقش')}: {faNum(audits.chart.length)}</span>
+                <span className="chip info">{t('جمع نفرات')}: {faNum(audits.chart.reduce((s: number, r: any) => s + (r.count ?? 1), 0))}</span>
+                <span className="chip success">{t('نقش هوش مصنوعی')}: {faNum(audits.chart.filter((r: any) => r.ai).length)}</span>
+              </div>
+              <div className="table-wrap">
+                <table>
+                  <thead><tr><th>{t('لایه')}</th><th>{t('عنوان نقش')}</th><th>{t('زمان ورود')}</th><th>{t('تعداد')}</th></tr></thead>
+                  <tbody>
+                    {audits.chart.map((r: any, idx: number) => (
+                      <tr key={r.title}>
+                        <td className="t-muted">{idx === 0 || audits.chart[idx - 1].layer !== r.layer ? t(r.layer) : ''}</td>
+                        <td className="t-primary">{t(r.title)}{r.ai ? <span className="chip purple" style={{ marginInlineStart: 6 }}>AI</span> : null}</td>
+                        <td>{t('ماه')} {faNum(r.entryMonth)}</td>
+                        <td>{faNum(r.count)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="field-hint">{audits.chartRule ?? t('زمان ورود، ماه هدف برای فعال‌شدن نقش است و آغاز جذب می‌تواند زودتر انجام شود.')}</p>
+            </SectionCard>
+          )}
         </>
       )}
 

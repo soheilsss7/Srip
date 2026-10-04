@@ -935,7 +935,7 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
   const kpi8 = kp.body.items.find(k => k.id === 'kpi-8');
   const ppl = await api('/people', { token: dt });
   const pplList = Array.isArray(ppl.body) ? ppl.body : ppl.body?.items ?? [];
-  check('شاخص ساختار ۲۵ نفره از دادهٔ اشخاص محاسبه می‌شود (نه عدد دستی)',
+  check('شاخص ساختار ۳۷ نفره (چارت v6) از دادهٔ اشخاص محاسبه می‌شود (نه عدد دستی)',
     kpi8 && pplList.length > 0 && kpi8.value === pplList.filter(p => p.status !== 'INACTIVE').length);
   /* ریسک‌ها — F17 */
   const rk = await api('/program/risks', { token: dt });
@@ -948,7 +948,7 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
   const rNo = await api('/program/risks', { method: 'POST', token: dt, body: { title: 'ریسک بدون مالک تست', probability: 'HIGH', impact: 'HIGH' } });
   check('ثبت ریسک بدون مالک → ۴۰۰ (قاعدهٔ سند)', rNo.status === 400 && String(rNo.body?.message).includes('بدون مالک'));
   const rBad = await api('/program/risks', { method: 'POST', token: dt, body: { title: 'ریسک تست', probability: 'HIGH', impact: 'HIGH', ownerRole: 'نقش ساختگی' } });
-  check('مالک باید یکی از ۲۲ نقش چارت باشد → ۴۰۰', rBad.status === 400);
+  check('مالک باید یکی از ۳۴ نقش چارت v6 باشد → ۴۰۰', rBad.status === 400);
   const rOk = await api('/program/risks', { method: 'POST', token: dt, body: { title: 'ریسک تست خودکار باتری', probability: 'LOW', impact: 'LOW', ownerRole: 'مدیر پروژه', preventive: 'پیشگیری تست', reactive: 'واکنش تست' } });
   check('ثبت ریسک با چهار قلم → ۲۰۱ + درجه پایین', rOk.status === 201 && rOk.body?.grade === 'LOW' && rOk.body?.ownerRole === 'مدیر پروژه');
   const rPatch = await api(`/program/risks/${rOk.body?.id}`, { method: 'PATCH', token: dt, body: { status: 'CLOSED' } });
@@ -1086,12 +1086,21 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
   const dl = await login('demo');
   const dt = dl.body?.accessToken;
 
-  /* تنظیمات دمو = برنامهٔ سند (چارت ۲۲ نقشی، ۴ فصل، هدف ۲۵) */
+  /* تنظیمات دمو = برنامهٔ سند v6 (چارت ۳۴ نقشی/۳۷ نفر، ۴ فصل، هدف ۲۵) */
   const st = await api('/program/settings', { token: dt });
-  check('تنظیمات دمو: چارت ۲۲ نقشی + ۴ فصل با آستانه + هدف ۲۵', st.status === 200
-    && st.body.roles.length === 22 && st.body.seasons.length === 4
+  check('تنظیمات دمو: چارت ۳۴ نقشی + ۴ فصل با آستانه + هدف ۲۵', st.status === 200
+    && st.body.roles.length === 34 && st.body.seasons.length === 4
     && st.body.partnershipTarget === 25
     && st.body.seasons.every(x => typeof x.threshold === 'number'));
+  check('چارت v6 (بخش ۲۱.۳): ۳۴ نقش/۳۷ نفر/۴ لایه با زمان ورود — در تنظیمات',
+    (st.body.chart ?? []).length === 34
+    && st.body.chart.reduce((s, r) => s + (r.count ?? 1), 0) === 37
+    && new Set(st.body.chart.map(r => r.layer)).size === 4
+    && st.body.chart.every(r => r.title && r.layer && Number.isInteger(r.entryMonth)));
+  check('چارت v6: هشت نقش هوش مصنوعی (مهندس یادگیری ماشین، حاکمیت و ریسک AI، …)',
+    st.body.chart.filter(r => r.ai).length === 8
+    && st.body.chart.some(r => r.title === 'مهندس یادگیری ماشین')
+    && st.body.chart.some(r => r.title === 'کارشناس حاکمیت و ریسک هوش مصنوعی'));
   check('فهرست سنجه‌های محاسبهٔ پلتفرم ارائه می‌شود', (st.body.metrics ?? []).length >= 10
     && st.body.metrics.every(m => m.key && m.label && m.unit));
 
@@ -1467,10 +1476,10 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
   check('بحران بدون سخنگو → ۴۰۰', noSpk.status === 400);
   const det = new Date(Date.now() - 3 * 3600000).toISOString();
   const early = new Date(Date.now() - 4 * 3600000).toISOString();
-  const before = await api('/crisis-protocol/crises', { method: 'POST', token: pt, body: { title: 'بحران پاسخ پیش از شناسایی', spokesperson: 'مدیر روابط عمومی', detectedAt: det, firstResponseAt: early } });
+  const before = await api('/crisis-protocol/crises', { method: 'POST', token: pt, body: { title: 'بحران پاسخ پیش از شناسایی', spokesperson: 'مدیر رسانه', detectedAt: det, firstResponseAt: early } });
   check('پاسخ پیش از شناسایی بحران → ۴۰۰', before.status === 400);
   const resp = new Date(Date.now() - 1.5 * 3600000).toISOString();
-  const newCr = await api('/crisis-protocol/crises', { method: 'POST', token: pt, body: { title: 'بحران تست باتری', spokesperson: 'مدیر روابط عمومی', detectedAt: det, firstResponseAt: resp } });
+  const newCr = await api('/crisis-protocol/crises', { method: 'POST', token: pt, body: { title: 'بحران تست باتری', spokesperson: 'مدیر رسانه', detectedAt: det, firstResponseAt: resp } });
   check('ثبت بحران با واکنش ۱.۵ ساعت → در زمان طلایی', newCr.status === 201
     && newCr.body.crises.some(c => c.title === 'بحران تست باتری' && c.withinGolden === true));
   const cid = newCr.body?.crises?.find(c => c.title === 'بحران تست باتری')?.id;
@@ -1479,7 +1488,7 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
     check('رفع بحران پاسخ‌داده → ۲۰۰', resolved.status === 200
       && resolved.body.crises.find(c => c.id === cid).status === 'RESOLVED');
   }
-  const noRespCr = await api('/crisis-protocol/crises', { method: 'POST', token: pt, body: { title: 'بحران بدون پاسخ', spokesperson: 'مدیر روابط عمومی', detectedAt: det } });
+  const noRespCr = await api('/crisis-protocol/crises', { method: 'POST', token: pt, body: { title: 'بحران بدون پاسخ', spokesperson: 'مدیر رسانه', detectedAt: det } });
   const nid = noRespCr.body?.crises?.find(c => c.title === 'بحران بدون پاسخ')?.id;
   if (nid) {
     const badResolve = await api(`/crisis-protocol/crises/${nid}`, { method: 'PATCH', token: pt, body: { status: 'RESOLVED' } });

@@ -6222,10 +6222,49 @@ const PROGRAM_METRICS={
   'goal-composite':{label:'نمرهٔ مرکب هدف راهبردی سازمان (از مؤلفه‌های پایش‌شده)',unit:'score',
     compute:(c)=>{const g=(c.goals??[]).find(x=>x.status==='ACTIVE'&&(x.components??[]).length);return g?goalComposite(g,'m12'):0;}},
 };
-/* تنظیمات برنامهٔ دمو (org-1) — دقیقاً برنامهٔ سند؛ چارت ۲۲ نقشی، چهار فصل با
-   آستانهٔ ۳۰/۴۵/۶۰/۷۵، هدف ۲۵ تفاهم‌نامه و ده شاخص بخش ۲۶ با سنجه‌های محاسبه */
+/* تنظیمات برنامهٔ دمو (org-1) — دقیقاً برنامهٔ سند v6؛ چارت ۳۴ عنوان نقش/۳۷ نفر
+   در چهار لایه (بخش ۲۱.۳) با زمان ورود ماه هدف، چهار فصل با آستانهٔ ۳۰/۴۵/۶۰/۷۵،
+   هدف ۲۵ تفاهم‌نامه و ده شاخص بخش ۲۶ با سنجه‌های محاسبه. نقش‌های هوش مصنوعی
+   با پرچم ai در چارت متمایز می‌شوند (۸ نقش). */
+const PROGRAM_CHART_V6=[
+  {title:'مدیرعامل',layer:'رهبری و حاکمیت',entryMonth:1,count:1},
+  {title:'دستیار مدیرعامل',layer:'رهبری و حاکمیت',entryMonth:1,count:1},
+  {title:'مدیر عملیات',layer:'رهبری و حاکمیت',entryMonth:1,count:1},
+  {title:'مدیر منابع انسانی',layer:'رهبری و حاکمیت',entryMonth:1,count:1},
+  {title:'مدیر مالی',layer:'رهبری و حاکمیت',entryMonth:2,count:1},
+  {title:'مدیر استراتژی',layer:'مدیریت تخصصی',entryMonth:1,count:1},
+  {title:'مدیر حساب',layer:'مدیریت تخصصی',entryMonth:1,count:1},
+  {title:'مدیر توسعه کسب‌وکار',layer:'مدیریت تخصصی',entryMonth:3,count:1},
+  {title:'مدیر پروژه',layer:'مدیریت تخصصی',entryMonth:1,count:1},
+  {title:'مدیر محتوا',layer:'مدیریت تخصصی',entryMonth:1,count:1},
+  {title:'مدیر محصول',layer:'مدیریت تخصصی',entryMonth:2,count:1},
+  {title:'اسکرام مستر',layer:'مدیریت تخصصی',entryMonth:2,count:1},
+  {title:'مدیر رسانه',layer:'مدیریت تخصصی',entryMonth:2,count:1},
+  {title:'مدیر خلاقیت',layer:'مدیریت تخصصی',entryMonth:2,count:1},
+  {title:'مدیر اندیشکده و پژوهش',layer:'مدیریت تخصصی',entryMonth:2,count:1},
+  {title:'مدیر رویداد',layer:'مدیریت تخصصی',entryMonth:3,count:1},
+  {title:'مدیر تحقیق و توسعه',layer:'مدیریت تخصصی',entryMonth:2,count:1},
+  {title:'مهندس نرم‌افزار',layer:'فناوری، داده و اعتماد',entryMonth:2,count:1},
+  {title:'مهندس یادگیری ماشین',layer:'فناوری، داده و اعتماد',entryMonth:2,count:1,ai:true},
+  {title:'مهندس داده',layer:'فناوری، داده و اعتماد',entryMonth:2,count:1},
+  {title:'مهندس یکپارچه‌سازی سامانه‌ها',layer:'فناوری، داده و اعتماد',entryMonth:3,count:1},
+  {title:'کارشناس حاکمیت و ریسک هوش مصنوعی',layer:'فناوری، داده و اعتماد',entryMonth:3,count:1,ai:true},
+  {title:'تحلیلگر حاکمیت و کیفیت داده',layer:'فناوری، داده و اعتماد',entryMonth:3,count:1,ai:true},
+  {title:'تحلیلگر اعتماد و ایمنی',layer:'فناوری، داده و اعتماد',entryMonth:3,count:1,ai:true},
+  {title:'کارشناس پژوهش',layer:'کارشناسی و اجرا',entryMonth:2,count:1},
+  {title:'کارشناس رسانه',layer:'کارشناسی و اجرا',entryMonth:3,count:1},
+  {title:'کارشناس تعاملات',layer:'کارشناسی و اجرا',entryMonth:3,count:3},
+  {title:'طراح گرافیک',layer:'کارشناسی و اجرا',entryMonth:1,count:2},
+  {title:'کارشناس اداری و امور دفتر',layer:'کارشناسی و اجرا',entryMonth:1,count:1},
+  {title:'کارشناس مناقصات',layer:'کارشناسی و اجرا',entryMonth:3,count:1},
+  {title:'متخصص محتوای هوش مصنوعی',layer:'کارشناسی و اجرا',entryMonth:4,count:1,ai:true},
+  {title:'تدوینگر ویدئوی هوش مصنوعی',layer:'کارشناسی و اجرا',entryMonth:5,count:1,ai:true},
+  {title:'ویراستار محتوای هوش مصنوعی',layer:'کارشناسی و اجرا',entryMonth:4,count:1,ai:true},
+  {title:'کارشناس کنترل کیفی محتوا',layer:'کارشناسی و اجرا',entryMonth:4,count:1,ai:true},
+];
 const programDemoSettings=()=>({organizationId:PROGRAM_ORG_ID,
-  roles:['مدیرعامل','دستیار مدیرعامل','مدیر عملیات','مدیر منابع انسانی','مدیر مالی','مدیر استراتژی','مدیر حساب','مدیر توسعه کسب‌وکار','مدیر پروژه','مدیر محتوا','مدیر محصول','اسکرام مستر','مدیر روابط عمومی','مدیر هنری','مدیر اندیشکده و پژوهش','مدیر رویداد','تحلیلگر تحقیقات بازار','کارشناس رسانه و روابط عمومی','کارشناس تعاملات','طراح گرافیک','توسعه‌دهنده','کارشناس اداری و امور دفتر'],
+  roles:PROGRAM_CHART_V6.map(r=>r.title),
+  chart:PROGRAM_CHART_V6,
   seasons:[
     {season:1,title:'شناخت',months:'ماه ۱ تا ۳',threshold:30},
     {season:2,title:'آماده‌سازی',months:'ماه ۴ تا ۶',threshold:45},
@@ -6237,19 +6276,25 @@ const programDemoSettings=()=>({organizationId:PROGRAM_ORG_ID,
     {id:'kpi-1',category:'شناخت و دانش',title:'تکمیل پرونده شناخت هلدینگ و دوازده زیرمجموعه',owner:'مدیر استراتژی',period:'ماه ۳',target:'تکمیل ۱۰۰٪ بخش‌ها',source:'پروندهٔ شناخت ۳۱بخشی (ماژول شناخت) — بخش‌های معتبر (داده + منبع) هلدینگ و زیرمجموعه‌ها',metric:'profile-completeness',unit:'percent',targetValue:100,config:{}},
     {id:'kpi-2',category:'شناخت و دانش',title:'خروجی پژوهشی اندیشکده',owner:'مدیر اندیشکده و پژوهش',period:'ماهانه از ماه ۵',target:'دست‌کم یک یادداشت سیاستی در ماه',source:'مرکز دانش — یادداشت‌های سیاستی ماه جاری',metric:'docs-month',unit:'count',targetValue:1,config:{pattern:'یادداشت سیاستی'}},
     {id:'kpi-3',category:'شناخت و دانش',title:'شاخص مرجعیت هوش مصنوعی (نمرهٔ مرکب نُه مؤلفه)',owner:'مدیر اندیشکده و پژوهش',period:'ماه ۱۲',target:'رسیدن از ۵۵ به ۹۰',source:'هدف راهبردی «مرجعیت هوش مصنوعی» — نمرهٔ مرکب نُه مؤلفهٔ پایش‌شده',metric:'goal-composite',unit:'score',targetValue:90,config:{}},
-    {id:'kpi-4',category:'دارایی و رسانه',title:'انتشار رسانه تخصصی',owner:'مدیر روابط عمومی',period:'ماهانه از ماه ۵',target:'۲۰ خروجی در ماه',source:'عموم‌ها — بازنمایی رسانه‌ای ثبت‌شدهٔ ماه جاری',metric:'media-mentions-month',unit:'count',targetValue:20,config:{}},
+    {id:'kpi-4',category:'دارایی و رسانه',title:'انتشار رسانه تخصصی',owner:'مدیر رسانه',period:'ماهانه از ماه ۵',target:'۲۰ خروجی در ماه',source:'عموم‌ها — بازنمایی رسانه‌ای ثبت‌شدهٔ ماه جاری',metric:'media-mentions-month',unit:'count',targetValue:20,config:{}},
     {id:'kpi-5',category:'دارایی و رسانه',title:'وب‌سایت مرجع و پروفایل شرکتی',owner:'مدیر محصول',period:'ماه ۸',target:'انتشار عمومی هر دو دارایی',source:'لایهٔ آمادگی سازمانی — وضعیت اقلام «وب‌سایت» و «پروفایل شرکت»',metric:'readiness-items-accepted',unit:'count',targetValue:2,config:{labels:['وب‌سایت','پروفایل شرکت']}},
     {id:'kpi-6',category:'دارایی و رسانه',title:'گزارش سالانه هوش مصنوعی',owner:'مدیر اندیشکده و پژوهش',period:'ماه ۱۱',target:'انتشار',source:'مرکز دانش — اسناد «گزارش سالانه»',metric:'docs-total',unit:'count',targetValue:1,config:{pattern:'گزارش سالانه'}},
     {id:'kpi-7',category:'بازار و اکوسیستم',title:'شبکهٔ مشارکت',owner:'مدیر توسعه کسب‌وکار',period:'ماه ۱۲',target:'۲۵ تفاهم‌نامهٔ فعال',source:'ماژول مشارکت‌ها — تفاهم‌نامه‌های فعال (مرحلهٔ تفاهم‌نامه یا فعال)',metric:'active-mous',unit:'count',targetValue:25,config:{}},
-    {id:'kpi-8',category:'سازمان و زیرساخت',title:'تکمیل ساختار ۲۵ نفره',owner:'مدیر منابع انسانی',period:'ماه ۷',target:'۲۵ نفر فعال',source:'اشخاص فعال در محدودهٔ شما',metric:'active-people',unit:'count',targetValue:25,config:{}},
+    {id:'kpi-8',category:'سازمان و زیرساخت',title:'تکمیل ساختار ۳۷ نفره (چارت v6)',owner:'مدیر منابع انسانی',period:'ماه ۷',target:'۳۷ نفر فعال',source:'اشخاص فعال در محدودهٔ شما',metric:'active-people',unit:'count',targetValue:37,config:{}},
     {id:'kpi-9',category:'سازمان و زیرساخت',title:'انتقال داده‌ها به SRIP',owner:'مدیر محصول',period:'ماه ۷',target:'خاموش‌سازی کامل سامانه‌های قدیمی',source:'ممیزی سامانه‌ها — سهم انتقال/خاموش‌سازیِ تکمیل‌شده',metric:'migration-done',unit:'count',targetValue:null,config:{}},
     {id:'kpi-10',category:'سازمان و زیرساخت',title:'گزارش ماهانه به مدیریت هلدینگ',owner:'دستیار مدیرعامل',period:'پایان هر ماه',target:'تحویل به‌موقع ۱۲ گزارش',source:'گزارش ماهانه — ثبت انتشار',metric:'monthly-reports',unit:'count',targetValue:12,config:{}},
   ]});
 function ensureProgramSettings(orgId){
   if(!Array.isArray(DB.programSettings)) DB.programSettings=[];
-  if(!DB.programSettings.some(s=>s.organizationId===orgId)){
+  let row=DB.programSettings.find(s=>s.organizationId===orgId);
+  /* مهاجرت چارت v6 (گام ۵.۳): ردیف دموی persisted بدون chart (چارت ۲۲ نقشی v3)
+     با نسخهٔ ۳۴ نقش/۳۷ نفر v6 جایگزین می‌شود */
+  if(orgId===PROGRAM_ORG_ID&&row&&!Array.isArray(row.chart)){
+    DB.programSettings=DB.programSettings.filter(s=>s.organizationId!==orgId); row=null;
+  }
+  if(!row){
     DB.programSettings.push(orgId===PROGRAM_ORG_ID?programDemoSettings()
-      :{organizationId:orgId,roles:[],seasons:[],partnershipTarget:null,kpis:[]});
+      :{organizationId:orgId,roles:[],chart:[],seasons:[],partnershipTarget:null,kpis:[]});
   }
 }
 function programSettingsOf(orgId){ensureProgramSettings(orgId);return DB.programSettings.find(s=>s.organizationId===orgId);}
@@ -6386,7 +6431,7 @@ function ensureProgramSeed(){
   if(!Array.isArray(DB.risks)||!DB.risks.length){DB.risks=[
     {id:'risk-1',organizationId:PROGRAM_ORG_ID,title:'خروج ناگهانی فرد کلیدی',probability:'MEDIUM',impact:'HIGH',preventive:'برنامهٔ جانشین‌پروری در ممیزی افراد؛ مستندسازی دانش',reactive:'پیشنهاد رقابتی مطابق بازار',ownerRole:'مدیرعامل',status:'IN_PROGRESS',createdAt:ago(45),reviewAt:in90(12),notes:''},
     {id:'risk-2',organizationId:PROGRAM_ORG_ID,title:'همکاری‌نکردن زیرمجموعه در ارائه داده',probability:'MEDIUM',impact:'HIGH',preventive:'حمایت رسمی مدیریت هلدینگ؛ شروع از زیرمجموعه‌های هم‌راستا',reactive:'ثبت موانع در گزارش ماهانه',ownerRole:'مدیر استراتژی',status:'OPEN',createdAt:ago(45),reviewAt:in90(12),notes:''},
-    {id:'risk-3',organizationId:PROGRAM_ORG_ID,title:'بحران رسانه‌ای یا برداشت منفی از خروجی‌ها',probability:'LOW',impact:'HIGH',preventive:'خط‌مشی انتشار و تأیید سه‌مرحله‌ای',reactive:'پروتکل پاسخ‌گویی بیست‌وچهار ساعته',ownerRole:'مدیر روابط عمومی',status:'OPEN',createdAt:ago(40),reviewAt:in90(20),notes:''},
+    {id:'risk-3',organizationId:PROGRAM_ORG_ID,title:'بحران رسانه‌ای یا برداشت منفی از خروجی‌ها',probability:'LOW',impact:'HIGH',preventive:'خط‌مشی انتشار و تأیید سه‌مرحله‌ای',reactive:'پروتکل پاسخ‌گویی بیست‌وچهار ساعته',ownerRole:'مدیر رسانه',status:'OPEN',createdAt:ago(40),reviewAt:in90(20),notes:''},
     {id:'risk-4',organizationId:PROGRAM_ORG_ID,title:'تأخیر در انتقال سامانه‌ها و داده‌ها',probability:'MEDIUM',impact:'MEDIUM',preventive:'اجرای موازی محدود',reactive:'آموزش کوتاه کاربران',ownerRole:'مدیر محصول',status:'IN_PROGRESS',createdAt:ago(38),reviewAt:in90(30),notes:''},
     {id:'risk-5',organizationId:PROGRAM_ORG_ID,title:'از دست رفتن داده در جریان انتقال',probability:'LOW',impact:'HIGH',preventive:'نسخهٔ پشتیبان معتبر پیش از هر انتقال؛ تطبیق رکورد به رکورد',reactive:'سی روز نگهداری سامانهٔ قدیمی',ownerRole:'مدیر محصول',status:'OPEN',createdAt:ago(38),reviewAt:in90(30),notes:''},
     {id:'risk-6',organizationId:PROGRAM_ORG_ID,title:'تأخیر در استخدام نقش‌های تخصصی',probability:'MEDIUM',impact:'MEDIUM',preventive:'بانک استعداد از ماه نخست',reactive:'جذب با پیشنهاد رقابتی؛ برون‌سپاری موقت تولید',ownerRole:'مدیر پروژه',status:'OPEN',createdAt:ago(30),reviewAt:in90(8),notes:''},
@@ -6406,18 +6451,18 @@ function ensureProgramSeed(){
     {organizationId:PROGRAM_ORG_ID,season:1,label:'فصل یک',score:32},{organizationId:PROGRAM_ORG_ID,season:2,label:'فصل دو',score:47}];}
   /* ── ممیزی سه‌گانه (بخش ۲۰/۲۱) — وضعیت پیشنهادی هر قلم ── */
   if(!Array.isArray(DB.auditPeople)||!DB.auditPeople.length){DB.auditPeople=[
-    {id:'ap-1',organizationId:PROGRAM_ORG_ID,role:'مدیر روابط عمومی',duties:'رسانه، بیانیه‌ها و رویداد',manager:'مدیرعامل',capacity:'HIGH',dependencyRisk:'LOW',successor:'دارد',priority:'KEEP',note:'نقطهٔ اتکای ارتباط بیرونی هلدینگ'},
-    {id:'ap-2',organizationId:PROGRAM_ORG_ID,role:'کارشناس رسانه و روابط عمومی',duties:'پایش رسانه و تولید محتوا',manager:'مدیر روابط عمومی',capacity:'MEDIUM',dependencyRisk:'MEDIUM',successor:'ندارد',priority:'KEEP',note:'نیازمند جانشین‌پروری'},
-    {id:'ap-3',organizationId:PROGRAM_ORG_ID,role:'مدیر هنری',duties:'هویت بصری و نظارت بر تولید',manager:'مدیر محتوا',capacity:'LOW',dependencyRisk:'MEDIUM',successor:'ندارد',priority:'REDEFINE',note:'پیشنهاد: ادغام در تیم محتوا'},
-    {id:'ap-4',organizationId:PROGRAM_ORG_ID,role:'توسعه‌دهنده',duties:'نگهداری وب‌سایت و سامانه‌ها',manager:'مدیر محصول',capacity:'HIGH',dependencyRisk:'HIGH',successor:'ندارد',priority:'KEEP',note:'دانش سامانه متمرکز روی یک نفر'},
-    {id:'ap-5',organizationId:PROGRAM_ORG_ID,role:'تحلیلگر تحقیقات بازار',duties:'—',manager:'مدیر توسعه کسب‌وکار',capacity:'—',dependencyRisk:'—',successor:'—',priority:'HIRE',note:'جایگاه خالی — جذب در ماه ۳'},
+    {id:'ap-1',organizationId:PROGRAM_ORG_ID,role:'مدیر رسانه',duties:'رسانه، بیانیه‌ها و رویداد',manager:'مدیرعامل',capacity:'HIGH',dependencyRisk:'LOW',successor:'دارد',priority:'KEEP',note:'نقطهٔ اتکای ارتباط بیرونی هلدینگ'},
+    {id:'ap-2',organizationId:PROGRAM_ORG_ID,role:'کارشناس رسانه',duties:'پایش رسانه و تولید محتوا',manager:'مدیر رسانه',capacity:'MEDIUM',dependencyRisk:'MEDIUM',successor:'ندارد',priority:'KEEP',note:'نیازمند جانشین‌پروری'},
+    {id:'ap-3',organizationId:PROGRAM_ORG_ID,role:'مدیر خلاقیت',duties:'هویت بصری و نظارت بر تولید',manager:'مدیر محتوا',capacity:'LOW',dependencyRisk:'MEDIUM',successor:'ندارد',priority:'REDEFINE',note:'پیشنهاد: ادغام در تیم محتوا'},
+    {id:'ap-4',organizationId:PROGRAM_ORG_ID,role:'مهندس نرم‌افزار',duties:'نگهداری وب‌سایت و سامانه‌ها',manager:'مدیر محصول',capacity:'HIGH',dependencyRisk:'HIGH',successor:'ندارد',priority:'KEEP',note:'دانش سامانه متمرکز روی یک نفر'},
+    {id:'ap-5',organizationId:PROGRAM_ORG_ID,role:'کارشناس پژوهش',duties:'—',manager:'مدیر توسعه کسب‌وکار',capacity:'—',dependencyRisk:'—',successor:'—',priority:'HIRE',note:'جایگاه خالی — جذب در ماه ۲ (چارت v6)'},
   ];}
   if(!Array.isArray(DB.auditSystems)||!DB.auditSystems.length){
     /* گام ۴.۱ — بذر مراحل F11: دو سامانهٔ تکمیل‌شده (هر ۱۰ مرحله)، یکی در میانهٔ راه (۶ مرحله)، یکی شروع‌نشده */
     const migSteps=(keys,base)=>Object.fromEntries(keys.map((k,i)=>[k,new Date(Date.now()-(base-i)*3*86400000).toISOString()]));
     const ALL10=MIGRATION_STEPS.map(s=>s.key);
     DB.auditSystems=[
-    {id:'as-1',organizationId:PROGRAM_ORG_ID,name:'اکسل روابط رسانه‌ای',owner:'کارشناس رسانه و روابط عمومی',data:'حدود ۸۰۰ ردیف مخاطبان',sensitivity:'PUBLIC',backup:'هفتگی دستی',overlap:'SRIP — روابط',migration:'MIGRATE',migrationStatus:'DONE',note:'رکوردها تطبیق و منتقل شد',migrationSteps:migSteps(ALL10,120)},
+    {id:'as-1',organizationId:PROGRAM_ORG_ID,name:'اکسل روابط رسانه‌ای',owner:'کارشناس رسانه',data:'حدود ۸۰۰ ردیف مخاطبان',sensitivity:'PUBLIC',backup:'هفتگی دستی',overlap:'SRIP — روابط',migration:'MIGRATE',migrationStatus:'DONE',note:'رکوردها تطبیق و منتقل شد',migrationSteps:migSteps(ALL10,120)},
     {id:'as-2',organizationId:PROGRAM_ORG_ID,name:'CRM قدیمی فروش',owner:'مدیر حساب',data:'حدود ۳هزار شرکت',sensitivity:'CONFIDENTIAL',backup:'ماهانه',overlap:'SRIP — سازمان‌ها',migration:'SHUTDOWN',migrationStatus:'DONE',note:'خروجی کامل گرفته شد',migrationSteps:migSteps(ALL10,200)},
     {id:'as-3',organizationId:PROGRAM_ORG_ID,name:'درایو مشترک اسناد',owner:'دستیار مدیرعامل',data:'حدود ۱۲۰ گیگابایت',sensitivity:'MIXED',backup:'روزانهٔ خودکار',overlap:'کم',migration:'KEEP',migrationStatus:null,note:'نقطهٔ اشتراک رسمی باقی می‌ماند',migrationSteps:{}},
     {id:'as-4',organizationId:PROGRAM_ORG_ID,name:'گروه پیام‌رسان هماهنگی مدیران',owner:'دستیار مدیرعامل',data:'تصمیم‌ها و ابلاغ‌ها',sensitivity:'INTERNAL',backup:'ندارد',overlap:'SRIP — تعاملات',migration:'MIGRATE',migrationStatus:'IN_PROGRESS',note:'تصمیم‌های کاری به تعاملات SRIP منتقل می‌شود',migrationSteps:migSteps(ALL10.slice(0,6),40)},
@@ -6425,7 +6470,7 @@ function ensureProgramSeed(){
   ];}
   if(!Array.isArray(DB.auditChannels)||!DB.auditChannels.length){DB.auditChannels=[
     {id:'ac-1',organizationId:PROGRAM_ORG_ID,name:'وب‌سایت قدیمی هلدینگ',address:'pars-old.example',owner:'نامشخص',lastActivity:'۶ ماه پیش',brand:'غیرمنطبق',action:'TRANSFER',note:'محتوا به وب‌سایت مرجع جدید منتقل شود'},
-    {id:'ac-2',organizationId:PROGRAM_ORG_ID,name:'صفحهٔ لینکدین',address:'linkedin.com/company/pars',owner:'کارشناس رسانه و روابط عمومی',lastActivity:'هفتهٔ گذشته',brand:'منطبق',action:'ASSIGN_OWNER',note:'مالک مشخص و تقویم انتشار'},
+    {id:'ac-2',organizationId:PROGRAM_ORG_ID,name:'صفحهٔ لینکدین',address:'linkedin.com/company/pars',owner:'کارشناس رسانه',lastActivity:'هفتهٔ گذشته',brand:'منطبق',action:'ASSIGN_OWNER',note:'مالک مشخص و تقویم انتشار'},
     {id:'ac-3',organizationId:PROGRAM_ORG_ID,name:'اینستاگرام',address:'instagram.com/pars',owner:'نامشخص',lastActivity:'۸ ماه پیش',brand:'غیرمنطبق',action:'SHUTDOWN',note:'بی‌مالک و رهاشده — خاموش‌سازی'},
     {id:'ac-4',organizationId:PROGRAM_ORG_ID,name:'خبرنامهٔ ایمیلی',address:'—',owner:'مدیر محتوا',lastActivity:'۲ ماه پیش',brand:'بخشی منطبق',action:'TRANSFER',note:'انتقال به سکوی جدید'},
   ];}
@@ -6556,7 +6601,7 @@ function ensureCompetitorSeed(){
       notes:'عمق تحلیل قوی و گزارش‌های مرجع؛ در رویداد و شبکهٔ مشارکت ضعیف.',ownerRole:'مدیر استراتژی',
       assets:['وب‌سایت','رسانه تخصصی','گزارش تخصصی'],scores:S(75,80,60,40,35,55,45),reviewAt:in90(20),createdAt:ago(40),updatedAt:ago(6)},
     {id:'comp-2',organizationId:COMPETITOR_ORG_ID,isSelf:false,name:'رسانه تحلیل‌گر صنعت',segment:'رسانه تخصصی',
-      notes:'حضور رسانه‌ای گسترده اما بدون داده و مرجعیت سیاستی.',ownerRole:'مدیر روابط عمومی',
+      notes:'حضور رسانه‌ای گسترده اما بدون داده و مرجعیت سیاستی.',ownerRole:'مدیر رسانه',
       assets:['وب‌سایت','رسانه تخصصی'],scores:S(45,50,85,45,55,30,60),reviewAt:in90(25),createdAt:ago(40),updatedAt:ago(8)},
     {id:'comp-3',organizationId:COMPETITOR_ORG_ID,isSelf:false,name:'مرکز مطالعات راهبردی صنعتی',segment:'مرکز مطالعات وابسته به صنعت',
       notes:'شبکهٔ مشارکت و مرجعیت سیاستی قوی؛ خروجی رسانه‌ای کم.',ownerRole:'مدیرعامل',
@@ -6847,11 +6892,11 @@ function ensureEventSeed(){
     E('OWNED','میزگرد اجرایی تصمیم‌گیران بازار',ahead(80),'مدیر رویداد',['register'],{org:'org-pars',kind:'execRoundtable',notes:'گفت‌وگوی سطح بالا با تصمیم‌گیران.'}),
     E('OWNED','رویداد تخصصی «داده در صنعت»',ahead(120),'مدیر رویداد',['register','decision'],{org:'org-pars',kind:'seasonalSpecialty',notes:'تمرکز بر یک حوزهٔ کاربردی خاص.'}),
     /* مسیر ب — حضور بیرونی (شاخص شبکه‌سازی) */
-    E('ATTEND','سخنرانی در کنفرانس ملی هوش مصنوعی',ahead(20),'مدیر روابط عمومی',['register','decision','prepare','sideline'],{org:'org-pars',attendType:'keynote',notes:'نمایش مرجعیت — راهنمای گفتار و تمرین انجام شد.'}),
+    E('ATTEND','سخنرانی در کنفرانس ملی هوش مصنوعی',ahead(20),'مدیر رسانه',['register','decision','prepare','sideline'],{org:'org-pars',attendType:'keynote',notes:'نمایش مرجعیت — راهنمای گفتار و تمرین انجام شد.'}),
     E('ATTEND','غرفه نمایشگاه فناوری و نوآوری',ahead(60),'مدیر توسعه کسب‌وکار',['register','decision'],{org:'org-pars',attendType:'booth',notes:'دیده‌شدن و ثبت تماس — بسته معرفی آماده است.'}),
     /* دنیای دمو */
     E('OWNED','جلسهٔ نمایشی مدیران دمو',ahead(30),'مدیر رویداد',['register','decision'],{org:'org-1',kind:'execRoundtable',notes:'رویداد دمو برای نمایش قابلیت.'}),
-    E('ATTEND','پنل اکوسیستم فناوری',ahead(15),'مدیر روابط عمومی',['register','decision','prepare'],{org:'org-1',attendType:'panel',notes:'حضور دمو با مواضع مصوب.'}),
+    E('ATTEND','پنل اکوسیستم فناوری',ahead(15),'مدیر رسانه',['register','decision','prepare'],{org:'org-1',attendType:'panel',notes:'حضور دمو با مواضع مصوب.'}),
   ];
 }
 function eventsFor(req){
@@ -6868,18 +6913,18 @@ function ensureCrisisSeed(){
     organizationId,spokesperson,backup,goldenHours:CRISIS_GOLDEN_HOURS,
     messages,crises,updatedAt:ago(10)});
   DB.crisisProtocols=[
-    C('org-pars','مدیر روابط عمومی','مدیرعامل',
+    C('org-pars','مدیر رسانه','مدیرعامل',
       [
         {id:'cm-1',title:'بحران کیفیت داده',text:'در حال بررسی دقیق گزارش مطرح‌شده هستیم؛ تا دو ساعت آینده یافته‌های اولیه را اعلام می‌کنیم.',updatedAt:ago(30)},
         {id:'cm-2',title:'بحران رویداد عمومی',text:'رویداد مطرح‌شده را ثبت کرده‌ایم؛ موضع رسمی پس از جمع‌بندی تیم راهبری اعلام می‌شود.',updatedAt:ago(25)},
       ],
       [
-        {id:'cr-1',title:'گزارش نادرست رسانه‌ای دربارهٔ کیفیت داده',detectedAt:hrs(26),spokesperson:'مدیر روابط عمومی',firstResponseAt:hrs(24.5),status:'RESOLVED',resolvedAt:hrs(20),notes:'واکنش در زمان طلایی؛ تکذیبیه با ارجاع به دادهٔ مرجع.'},
-        {id:'cr-2',title:'شکایت مشتری در شبکه‌های اجتماعی',detectedAt:hrs(6),spokesperson:'مدیر روابط عمومی',firstResponseAt:hrs(3),status:'ACTIVE',resolvedAt:null,notes:'پاسخ اولیه دیرتر از زمان طلایی صادر شد؛ در پیگیری.'},
+        {id:'cr-1',title:'گزارش نادرست رسانه‌ای دربارهٔ کیفیت داده',detectedAt:hrs(26),spokesperson:'مدیر رسانه',firstResponseAt:hrs(24.5),status:'RESOLVED',resolvedAt:hrs(20),notes:'واکنش در زمان طلایی؛ تکذیبیه با ارجاع به دادهٔ مرجع.'},
+        {id:'cr-2',title:'شکایت مشتری در شبکه‌های اجتماعی',detectedAt:hrs(6),spokesperson:'مدیر رسانه',firstResponseAt:hrs(3),status:'ACTIVE',resolvedAt:null,notes:'پاسخ اولیه دیرتر از زمان طلایی صادر شد؛ در پیگیری.'},
       ]),
-    C('org-1','مدیر روابط عمومی دمو','مدیر هلدینگ (ناظر)',
+    C('org-1','مدیر رسانه دمو','مدیر هلدینگ (ناظر)',
       [{id:'cm-3',title:'پیام اولیهٔ دمو',text:'متن از پیش آمادهٔ بحران دمو.',updatedAt:ago(12)}],
-      [{id:'cr-3',title:'بحران دمو',detectedAt:ago(3),spokesperson:'مدیر روابط عمومی دمو',firstResponseAt:ago(3),status:'RESOLVED',resolvedAt:ago(2),notes:'بحران نمونهٔ دنیای دمو.'}]),
+      [{id:'cr-3',title:'بحران دمو',detectedAt:ago(3),spokesperson:'مدیر رسانه دمو',firstResponseAt:ago(3),status:'RESOLVED',resolvedAt:ago(2),notes:'بحران نمونهٔ دنیای دمو.'}]),
   ];
 }
 function crisisView(p){
@@ -6984,15 +7029,15 @@ function ensureBrandAssetsSeed(){
     createdAt:ago(120),updatedAt:ago(6)});
   DB.brandAssets=[
     /* جهان واقعی پارس — دارایی‌های برندِ لایه‌های آمادگی (بخش ۱۲ سند) */
-    mk('ba-1','org-pars','برندبوک و راهنمای هویت بصری','۲٫۱','مدیر هنری','مرکز دانش › پوشهٔ برند','ACTIVE',40,50),
-    mk('ba-2','org-pars','هویت بصری (لوگو، پالت، تایپوگرافی)','۳٫۰','مدیر هنری','مرکز دانش › پوشهٔ برند','ACTIVE',40,50),
-    mk('ba-3','org-pars','تصویر رسمی مدیران','۱٫۴','مدیر روابط عمومی','مرکز دانش › پروفایل‌ها','IN_PROGRESS',15,75),
+    mk('ba-1','org-pars','برندبوک و راهنمای هویت بصری','۲٫۱','مدیر خلاقیت','مرکز دانش › پوشهٔ برند','ACTIVE',40,50),
+    mk('ba-2','org-pars','هویت بصری (لوگو، پالت، تایپوگرافی)','۳٫۰','مدیر خلاقیت','مرکز دانش › پوشهٔ برند','ACTIVE',40,50),
+    mk('ba-3','org-pars','تصویر رسمی مدیران','۱٫۴','مدیر رسانه','مرکز دانش › پروفایل‌ها','IN_PROGRESS',15,75),
     mk('ba-4','org-pars','قالب یکدست ارائه','۲٫۰','مدیر محتوا','مرکز دانش › قالب‌ها','IN_PROGRESS',20,70),
     mk('ba-5','org-pars','وب‌سایت هلدینگ','۱٫۹','مدیر محصول','میزبانی پلسک — دامنهٔ اصلی','ACTIVE',-7,97),
     mk('ba-6','org-pars','پروفایل شرکت','۱٫۲','مدیر محصول','مرکز دانش › معرفی','ACTIVE',30,60),
     mk('ba-7','org-pars','پوشهٔ ارائه','۰٫۹','مدیر توسعه کسب‌وکار','درایو تیم توسعه کسب‌وکار','IN_PROGRESS',25,65),
     /* دنیای دمو */
-    mk('ba-d1','org-1','برندبوک نمونه','۱٫۰','مدیر روابط عمومی','مرکز دانش','ACTIVE',60,30),
+    mk('ba-d1','org-1','برندبوک نمونه','۱٫۰','مدیر رسانه','مرکز دانش','ACTIVE',60,30),
     mk('ba-d2','org-1','قالب ارائهٔ نمونه','۰٫۵','مدیر محتوا','درایو تیم محتوا','IN_PROGRESS',10,80),
   ];
 }
@@ -7081,8 +7126,8 @@ function validateExpenseBody(b,chart){
 const DELIVERY_ITEMS=[ /* فهرست تحویل ۲۸.۱ سند — پنج قلم */
   {key:'data-export', title:'دادهٔ کامل روابط، عموم‌ها و فرصت‌ها', form:'خروجی استاندارد و انتقال مالکیت', receiver:'مدیرعامل هلدینگ'},
   {key:'knowledge',   title:'مرکز دانش و مستندات برنامه',           form:'بایگانی دیجیتال کامل',            receiver:'دستیار مدیرعامل'},
-  {key:'brand-assets',title:'رجیستری دارایی برند با نسخه‌ها',       form:'تحویل فایل و دسترسی',             receiver:'مدیر روابط عمومی هلدینگ'},
-  {key:'media-plan',  title:'برنامهٔ رسانه و تقویم انتشار',          form:'سند برنامه و تقویم جاری',         receiver:'مدیر روابط عمومی هلدینگ'},
+  {key:'brand-assets',title:'رجیستری دارایی برند با نسخه‌ها',       form:'تحویل فایل و دسترسی',             receiver:'مدیر رسانه هلدینگ'},
+  {key:'media-plan',  title:'برنامهٔ رسانه و تقویم انتشار',          form:'سند برنامه و تقویم جاری',         receiver:'مدیر رسانه هلدینگ'},
   {key:'training',    title:'آموزش کاربران و راهنمای یک‌صفحه‌ای',    form:'جلسهٔ آموزشی و مستند',            receiver:'مدیر منابع انسانی هلدینگ'},
 ];
 const DELIVERY_STEPS=[ /* فرآیند هفت‌گام تحویل */
@@ -13127,7 +13172,7 @@ const server=http.createServer(async(req,res)=>{
       transparency:'هر مقدار با منبع رسمی، سطح اطمینان، شاهد و تاریخ تأیید انسانی ثبت شده است.'});
   }
 
-  /* ── آیتم ۱۹: کنسول توسعه‌دهنده (کلید API + وب‌هوک) ── */
+  /* ── آیتم ۱۹: کنسول مهندس نرم‌افزار (کلید API + وب‌هوک) ── */
   if(is('/developer/keys')&&method==='GET'){
     if(!hasPerm('integration.read')) return json(res,403,{message:'شما مجوز «یکپارچه‌سازی‌ها» (integration.read) را ندارید.'});
     const orgId=primaryOrgId(authUser)??visibleOrgIds(req)[0]??null;
@@ -13209,7 +13254,7 @@ const server=http.createServer(async(req,res)=>{
     const row=(DB.webhooks??[]).find(w=>w.id===devHook[0]);
     if(!row) return json(res,404,{message:'وب‌هوک یافت نشد.'});
     if(row.organizationId!==(primaryOrgId(authUser)??visibleOrgIds(req)[0]??null)) return json(res,403,{message:'این وب‌هوک متعلق به حساب شما نیست.'});
-    const deliveries=await dispatchWebhooks(row.organizationId,'PUBLIC_SUBMISSION_RECEIVED',{test:true,note:'رویداد آزمایشی از کنسول توسعه‌دهنده',triggeredBy:authUser.id});
+    const deliveries=await dispatchWebhooks(row.organizationId,'PUBLIC_SUBMISSION_RECEIVED',{test:true,note:'رویداد آزمایشی از کنسول مهندس نرم‌افزار',triggeredBy:authUser.id});
     return json(res,200,{webhookId:row.id,sent:deliveries.length,deliveries});
   }
   if(is('/developer/webhook-deliveries')&&method==='GET'){
@@ -13438,7 +13483,11 @@ const server=http.createServer(async(req,res)=>{
   }
   if(is('/program/audits')&&method==='GET'){
     if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
+    /* گام ۵.۳ — چارت هدف v6 (بخش ۲۱.۳): ۳۴ عنوان نقش/۳۷ نفر/۴ لایه با زمان ورود؛ per-tenant */
+    const chartSet=programSettingsFor(req);
     return json(res,200,{...programAuditsFor(req),
+      chart:(chartSet.chart??[]).map(r=>({...r})),
+      chartRule:'چارت هدف تیم (بخش ۲۱.۳ سند v6): زمان ورود، ماه هدف برای فعال‌شدن نقش است و آغاز جذب می‌تواند زودتر انجام شود.',
       rule:'ممیزی ارزیابی صادقانه از وضعیت موجود است؛ خروجی آن ورودی مستقیم بازسازی نقش‌ها و برنامهٔ انتقال داده است (بخش ۲۰/۲۱ سند).',
       migrationRule:'هر سامانهٔ در صف انتقال/خاموش‌سازی، ده مرحلهٔ کنترلی بخش ۲۱ سند را ترتیبی طی می‌کند (F11)؛ سامانه فقط با اتمام هر ده مرحله «تکمیل‌شده» می‌شود.'});
   }
@@ -14167,7 +14216,7 @@ const server=http.createServer(async(req,res)=>{
   if(is('/program/settings')&&method==='GET'){
     if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
     const ps=programSettingsFor(req);
-    return json(res,200,{roles:ps.roles,seasons:ps.seasons,partnershipTarget:ps.partnershipTarget,
+    return json(res,200,{roles:ps.roles,chart:ps.chart??[],seasons:ps.seasons,partnershipTarget:ps.partnershipTarget,
       metrics:Object.entries(PROGRAM_METRICS).map(([key,M])=>({key,label:M.label,unit:M.unit})),
       rule:'نقش‌ها، فصل‌ها، هدف مشارکت و شاخص‌های برنامه دادهٔ سازمان شماست؛ پلتفرم فقط سنجه‌های محاسبه را ارائه می‌کند.'});
   }

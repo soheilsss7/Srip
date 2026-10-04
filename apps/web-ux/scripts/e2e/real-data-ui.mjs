@@ -249,7 +249,7 @@ try {
   ok('تقویم: عنوان «تقویم جلسات و رویدادها»', cal.h1.includes('رویدادها'), cal.h1);
   ok('تقویم: راهنمای دو مسیر رویداد (مالکیت/حضور)', cal.legend >= 2);
   ok('تقویم: رویدادهای پیشِ رو با میزگرد بذر سند', cal.upcomingEvents && cal.evRows >= 4, `rows=${cal.evRows}`);
-  ok('پروتکل بحران: سخنگو + جانشین + طلایی', cal.crisisH2 && cal.spokesperson.includes('مدیر روابط عمومی') && cal.spokesperson.includes('مدیرعامل') && cal.spokesperson.includes('۲'));
+  ok('پروتکل بحران: سخنگو + جانشین + طلایی', cal.crisisH2 && cal.spokesperson.includes('مدیر رسانه') && cal.spokesperson.includes('مدیرعامل') && cal.spokesperson.includes('۲'));
   ok('بحران‌ها: هر دو حالت واکنش (طلایی/دیرتر)', cal.goldenChips.some(c => c.includes('طلایی') && !c.includes('دیرتر')) && cal.goldenChips.some(c => c.includes('دیرتر از طلایی')), JSON.stringify(cal.goldenChips));
   ok('بحران فعال: هشدار در جریان', cal.activeCrisis);
   ok('دکمهٔ «رویداد جدید» (F10) حاضر است', cal.newEventBtn);
@@ -395,14 +395,14 @@ try {
     const inputs = [...document.querySelectorAll('#asset-form input')];
     setVal(inputs.find(i => (i.placeholder ?? '').includes('برندبوک')), name);
     setVal(inputs.find(i => (i.placeholder ?? '').includes('۲٫۱')), '۱٫۰');
-    setVal(inputs.find(i => (i.placeholder ?? '').includes('نقش مالک')), 'مدیر هنری');
+    setVal(inputs.find(i => (i.placeholder ?? '').includes('نقش مالک')), 'مدیر خلاقیت');
     setVal(inputs.find(i => (i.placeholder ?? '').includes('مرکز دانش')), 'مرکز دانش');
   }, assetName);
   await page2.evaluate(() => { [...document.querySelectorAll('button')].find(b => (b.textContent ?? '').trim() === 'ثبت دارایی')?.click(); });
   await new Promise(r => setTimeout(r, 3000));
   const afterCreate = await page2.evaluate((name) => ({
     rows: document.querySelectorAll('.asset-table tbody tr').length,
-    hasNew: [...document.querySelectorAll('.asset-table tbody tr')].some(tr => (tr.textContent ?? '').includes(name) && (tr.textContent ?? '').includes('مدیر هنری')),
+    hasNew: [...document.querySelectorAll('.asset-table tbody tr')].some(tr => (tr.textContent ?? '').includes(name) && (tr.textContent ?? '').includes('مدیر خلاقیت')),
     modalClosed: !document.querySelector('#asset-form'),
   }), assetName);
   ok('F05: ثبت دارایی تازه → ردیف هشتم با مالک', afterCreate.rows === 8 && afterCreate.hasNew && afterCreate.modalClosed, JSON.stringify(afterCreate).slice(0, 90));
