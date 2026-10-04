@@ -5,6 +5,7 @@ import { api } from '../_lib/api';
 import { fa } from '../_lib/fa';
 import { useWorkspace } from '../_components/workspace';
 import { Badge, ErrorCard, Modal, PageHeader, StatCard, Toolbar } from '../_components/page-ui';
+import ExecControls from '../_components/exec-controls';
 import { CheckCircle2, ChevronLeft, FolderKanban, Plus, RefreshCw, Rocket, Search, PauseCircle, ArrowDownWideNarrow, CalendarRange } from 'lucide-react';;
 import { JalaliDateField } from '../_components/jalali-date-field';
 
@@ -337,6 +338,9 @@ export default function ProjectsPage() {
           </div>
         </form>
       </Modal>
+
+      {/* ═══ گام ۱۰.۳ — F01 کنترل اجرای پروژه‌ها ═══ */}
+      <ExecControls />
     </main>
   );
 }

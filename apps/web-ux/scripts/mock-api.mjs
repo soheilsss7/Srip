@@ -8296,6 +8296,66 @@ function gtmCardView(x){
     decisionFa:GTM_DECISION_FA[x.decision]??x.decision};
 }
 
+/* ═══════════ گام ۱۰.۳ — F01 کنترل اجرا + F16 کارت نقش و ورود همکار: بذر و نما ═══════════ */
+const EXEC_STATUS_FA={ON_TRACK:'در مسیر',AT_RISK:'در معرض ریسک',BLOCKED:'بلاک',DONE:'تکمیل'};
+
+function ensureExecControlSeed(){
+  if(!Array.isArray(DB.execControls)) DB.execControls=[];
+  if(DB.execControls.length) return;
+  const AGO=(d)=>new Date(Date.now()-d*86400000).toISOString();
+  const IN=(d)=>new Date(Date.now()+d*86400000).toISOString().slice(0,10);
+  DB.execControls.push(
+    {id:'ec-1',organizationId:PARTNERSHIP_ORG_ID,projectId:'pr-1',code:'P01',
+     goal:'راه‌اندازی پلتفرم بانکداری شرکتی تا پایان سال',scope:'امضای دیجیتال و اتصال به هستهٔ بانکی',outOfScope:'ماژول اعتبارسنجی هوشمند (فاز بعد)',
+     ownerRole:'مدیر محصول',stakeholders:'مدیرعامل بانک پارس، مدیر فناوری، تیم انطباق',dependencies:'دسترسی به محیط آزمونی هستهٔ بانکی',
+     decision:'معماری امضا در کمیتهٔ فنی تصویب شد',nextAction:'اتمام آزمون نفوذ فاز دوم',blocker:'',scopeChange:'افزودن ماژول گزارش‌ساز به دامنه پس از جلسهٔ ۱۴ مهر',
+     deadline:IN(45),status:'ON_TRACK',createdAt:AGO(40),updatedAt:AGO(2)},
+    {id:'ec-2',organizationId:PARTNERSHIP_ORG_ID,projectId:'pr-2',code:'P02',
+     goal:'یکپارچه‌سازی زنجیرهٔ تأمین با البرز',scope:'سامانهٔ سفارش و موجودی',outOfScope:'لجستیک فیزیکی',
+     ownerRole:'مدیرعامل',stakeholders:'مدیر تدارکات البرز، مدیر فناوری',dependencies:'تأیید API از تیم IT البرز (هنوز پاسخ نداده‌اند)',
+     decision:'نمونهٔ اولیه در جلسهٔ مشترک دیده شد',nextAction:'پیگیری تأیید API با جلسهٔ حضوری',blocker:'نبود تأیید API — تیم IT البرز پاسخ نمی‌دهد',
+     scopeChange:'',deadline:IN(30),status:'BLOCKED',createdAt:AGO(25),updatedAt:AGO(3)}
+  );
+  saveDb();
+}
+function execControlView(x){
+  const pr=PROJECTS.find(p=>p.id===x.projectId);
+  return {...x,projectName:pr?.name??x.projectId,statusFa:EXEC_STATUS_FA[x.status]??x.status};
+}
+function ensureRoleCardSeed(){
+  if(!Array.isArray(DB.roleCards)) DB.roleCards=[];
+  if(DB.roleCards.length) return;
+  const AGO=(d)=>new Date(Date.now()-d*86400000).toISOString();
+  DB.roleCards.push(
+    {id:'rc-1',organizationId:PARTNERSHIP_ORG_ID,title:'مدیر محصول',
+     mission:'مالکیت محصول و اولویت‌گذاری نقشهٔ راه بر پایهٔ شواهد مشتری',
+     responsibilities:'مدیریت بک‌لاگ، پذیرش نسخه‌ها، هم‌راستاسازی تیم فنی و بازاریابی',
+     competencies:'تحلیل داده، مصاحبهٔ مشتری، آشنایی با فرآیندهای بنگاهی فارسی',
+     evaluation:'KPI نگه‌داشت مشتری + زمان پاسخ به بازخورد (فصلی)',
+     onboarding:'دو هفتهٔ همراهی با مدیر ارشد محصول + مطالعهٔ سه پروندهٔ مشتری',
+     access:'دسترسی کامل به محصول و داشبوردها؛ بدون دسترسی مالی',
+     goals30:'آشنایی با ۱۰ مشتری کلیدی',goals60:'مالکیت کامل بک‌لاگ',goals90:'انتشار نسخهٔ عمده با پذیرش مشتری',
+     feedback:'بازخورد ماهانه با مدیرعامل؛ پایش ۳۰/۶۰/۹۰',
+     successor:'دستیار مدیر محصول (شش‌ماهه آماده می‌شود)',
+     approved:true,approvedBy:'demo@srip.local',approvedAt:AGO(20),createdAt:AGO(30),updatedAt:AGO(20)},
+    {id:'rc-2',organizationId:PARTNERSHIP_ORG_ID,title:'مدیر اندیشکده و پژوهش',
+     mission:'توسعهٔ پژوهش‌های کاربردی و پیوند با دانشگاه‌ها',
+     responsibilities:'ادارهٔ حلقه‌های پژوهش، داوری دوسویه، انتشار یافته‌ها',
+     competencies:'روش پژوهش، آمار، شبکه‌سازی علمی',
+     evaluation:'تعداد پژوهش تکمیل‌شده با داوری (سالانه)',
+     onboarding:'شرکت در دو حلقهٔ پژوهشی + جلسهٔ معارفه با دانشگاه شریف',
+     access:'داده‌های عمومی پژوهش؛ بدون دادهٔ مشتری',
+     goals30:'راه‌اندازی دو حلقهٔ پژوهشی',goals60:'پیش‌نویس دو طرح پژوهشی',goals90:'داوری مستقل طرح اول',
+     feedback:'جلسهٔ فصلی با مدیرعامل',successor:'—',
+     approved:false,approvedBy:null,approvedAt:null,createdAt:AGO(10),updatedAt:AGO(4)}
+  );
+  saveDb();
+}
+function roleCardView(x){
+  const roles=programSettingsOf(x.organizationId).roles??[];
+  return {...x,inChart:roles.includes(x.title)};
+}
+
 function partnershipsFor(req){
   ensurePartnershipSeed();
   const ids=visibleOrgIds(req);
@@ -16761,6 +16821,131 @@ const server=http.createServer(async(req,res)=>{
     row.updatedAt=nowIso(); saveDb();
     audit(req,'UPDATE','GtmCard',row.id,'OK',{decision:row.decision});
     return json(res,200,gtmCardView(row));
+  }
+
+  /* ─────────────── گام ۱۰.۳ — F01 کنترل اجرا (/exec-controls) ────────── */
+  if(is('/exec-controls')&&method==='GET'){
+    if(!hasPerm('project.read')) return json(res,403,{message:'شما مجوز «مشاهده پروژه‌ها» (project.read) را ندارید.'});
+    ensureExecControlSeed();
+    const items=(DB.execControls??[]).filter(x=>visibleOrgIds(req).includes(x.organizationId))
+      .map(execControlView).sort((a,b)=>String(a.code).localeCompare(String(b.code)));
+    return json(res,200,{items,
+      statuses:Object.fromEntries(Object.entries(EXEC_STATUS_FA)),
+      rule:'کنترل اجرا (F01): هدف، دامنه و خارج از محدوده، مالک، ذی‌نفع، وابستگی، تصمیم، اقدام، مانع، تغییر و مهلت برای هر پروژه؛ وضعیت «بلاک» نیازمند ثبت مانع و «تکمیل» نیازمند تصمیم نهایی است.'});
+  }
+  if(is('/exec-controls')&&method==='POST'){
+    if(!hasPerm('project.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر پروژه» (project.write) را ندارید.'});
+    ensureExecControlSeed();
+    const b=await readBody(req);
+    const projectId=String(b.projectId??'').trim();
+    const pr=scopedProjects(req).find(p=>p.id===projectId);
+    if(!pr) return json(res,400,{message:'پروژهٔ متصل را از فهرست پروژه‌های در محدودهٔ خود انتخاب کنید.'});
+    const goal=String(b.goal??'').trim();
+    if(goal.length<5) return json(res,400,{message:'هدف کنترل اجرا را بنویسید.'});
+    const scope=String(b.scope??'').trim();
+    if(scope.length<3) return json(res,400,{message:'دامنهٔ کنترل اجرا الزامی است — بدون دامنه، کنترل ثبت نمی‌شود.'});
+    const ownerRole=String(b.ownerRole??'').trim();
+    const eChart=programSettingsFor(req).roles;
+    if(!ownerRole||!eChart.includes(ownerRole)) return json(res,400,{message:'مالک کنترل اجرا باید یکی از نقش‌های چارت سازمان شما باشد.'});
+    const deadline=String(b.deadline??'').trim();
+    if(!/^\d{4}-\d{2}-\d{2}/.test(deadline)) return json(res,400,{message:'مهلت کنترل اجرا را در قالب تاریخ مشخص کنید.'});
+    const status=String(b.status??'ON_TRACK').toUpperCase();
+    if(!EXEC_STATUS_FA[status]) return json(res,400,{message:'وضعیت کنترل اجرا نامعتبر است.'});
+    const blocker=String(b.blocker??'').trim();
+    if(status==='BLOCKED'&&!blocker) return json(res,400,{message:'وضعیت «بلاک» نیازمند ثبت مانع است — مانع را بنویسید.'});
+    const decision=String(b.decision??'').trim();
+    if(status==='DONE'&&!decision) return json(res,400,{message:'تکمیل کنترل اجرا نیازمند تصمیم نهایی ثبت‌شده است.'});
+    const n=(DB.execControls??[]).length+1;
+    const row={id:`ec-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,
+      organizationId:primaryOrgId(authUser)??visibleOrgIds(req)[0]??PARTNERSHIP_ORG_ID,
+      projectId,code:`P${String(n).padStart(2,'0')}`,
+      goal:goal.slice(0,300),scope:scope.slice(0,300),outOfScope:String(b.outOfScope??'').trim().slice(0,300),
+      ownerRole,stakeholders:String(b.stakeholders??'').trim().slice(0,300),dependencies:String(b.dependencies??'').trim().slice(0,300),
+      decision:decision.slice(0,400),nextAction:String(b.nextAction??'').trim().slice(0,300),
+      blocker:blocker.slice(0,300),scopeChange:String(b.scopeChange??'').trim().slice(0,300),
+      deadline,status,createdAt:nowIso(),updatedAt:nowIso()};
+    DB.execControls.unshift(row); saveDb();
+    audit(req,'CREATE','ExecControl',row.id,'OK',{project:projectId,code:row.code,status});
+    return json(res,201,execControlView(row));
+  }
+  const ecId=match('/exec-controls/:id');
+  if(ecId&&method==='PATCH'){
+    if(!hasPerm('project.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر پروژه» (project.write) را ندارید.'});
+    ensureExecControlSeed();
+    const row=(DB.execControls??[]).find(x=>x.id===ecId[0]&&visibleOrgIds(req).includes(x.organizationId));
+    if(!row) return json(res,404,{message:'کنترل اجرا یافت نشد یا خارج از محدودهٔ شماست.'});
+    const b=await readBody(req);
+    for(const k of ['goal','scope','outOfScope','stakeholders','dependencies','decision','nextAction','blocker','scopeChange'])
+      if(b[k]!=null) row[k]=String(b[k]).trim().slice(0,400);
+    if(b.projectId!=null){
+      const v=String(b.projectId).trim();
+      if(!scopedProjects(req).some(p=>p.id===v)) return json(res,400,{message:'پروژهٔ متصل یافت نشد یا خارج از محدودهٔ شماست.'});
+      row.projectId=v;
+    }
+    if(b.ownerRole!=null){const v=String(b.ownerRole).trim(); const eChart=programSettingsOf(row.organizationId).roles; if(!eChart.includes(v)) return json(res,400,{message:'مالک کنترل اجرا باید یکی از نقش‌های چارت سازمان شما باشد.'}); row.ownerRole=v;}
+    if(b.deadline!=null){const v=String(b.deadline).trim(); if(!/^\d{4}-\d{2}-\d{2}/.test(v)) return json(res,400,{message:'مهلت کنترل اجرا را در قالب تاریخ مشخص کنید.'}); row.deadline=v;}
+    if(b.status!=null){
+      const v=String(b.status).toUpperCase();
+      if(!EXEC_STATUS_FA[v]) return json(res,400,{message:'وضعیت کنترل اجرا نامعتبر است.'});
+      if(v==='BLOCKED'&&!String(b.blocker??row.blocker??'').trim()) return json(res,400,{message:'وضعیت «بلاک» نیازمند ثبت مانع است — مانع را بنویسید.'});
+      if(v==='DONE'&&!String(b.decision??row.decision??'').trim()) return json(res,400,{message:'تکمیل کنترل اجرا نیازمند تصمیم نهایی ثبت‌شده است.'});
+      row.status=v;
+    }
+    row.updatedAt=nowIso(); saveDb();
+    audit(req,'UPDATE','ExecControl',row.id,'OK',{status:row.status});
+    return json(res,200,execControlView(row));
+  }
+
+  /* ─────────────── گام ۱۰.۳ — F16 کارت نقش و ورود همکار (/role-cards) ────────── */
+  if(is('/role-cards')&&method==='GET'){
+    if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
+    ensureRoleCardSeed();
+    const items=(DB.roleCards??[]).filter(x=>visibleOrgIds(req).includes(x.organizationId))
+      .map(roleCardView).sort((a,b)=>String(a.title).localeCompare(String(b.title),'fa'));
+    return json(res,200,{items,
+      rule:'کارت نقش و ورود همکار (F16): عنوان نقش (الزامی از چارت سازمان)، مأموریت، مسئولیت، شایستگی، ارزیابی، مسیر ورود، دسترسی، اهداف ۳۰/۶۰/۹۰ روزه، بازخورد و جانشین؛ تأیید نهایی فقط با تکمیل هر سه هدف بازه‌ای.'});
+  }
+  if(is('/role-cards')&&method==='POST'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر حاکمیت برنامه» (program.write) را ندارید.'});
+    ensureRoleCardSeed();
+    const b=await readBody(req);
+    const title=String(b.title??'').trim();
+    const rChart=programSettingsFor(req).roles;
+    if(!title||!rChart.includes(title)) return json(res,400,{message:'کارت نقش باید یکی از نقش‌های چارت سازمان باشد — عنوان را از چارت انتخاب کنید.'});
+    if((DB.roleCards??[]).some(x=>x.organizationId===(primaryOrgId(authUser)??visibleOrgIds(req)[0]??PARTNERSHIP_ORG_ID)&&x.title===title))
+      return json(res,409,{message:'برای این نقش از چارت، کارت نقش ثبت شده است — همان را ویرایش کنید.'});
+    const mission=String(b.mission??'').trim();
+    if(mission.length<5) return json(res,400,{message:'مأموریت نقش را بنویسید.'});
+    const row={id:`rc-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,
+      organizationId:primaryOrgId(authUser)??visibleOrgIds(req)[0]??PARTNERSHIP_ORG_ID,title:title,
+      mission:mission.slice(0,300),responsibilities:String(b.responsibilities??'').trim().slice(0,400),
+      competencies:String(b.competencies??'').trim().slice(0,300),evaluation:String(b.evaluation??'').trim().slice(0,300),
+      onboarding:String(b.onboarding??'').trim().slice(0,300),access:String(b.access??'').trim().slice(0,300),
+      goals30:String(b.goals30??'').trim().slice(0,200),goals60:String(b.goals60??'').trim().slice(0,200),goals90:String(b.goals90??'').trim().slice(0,200),
+      feedback:String(b.feedback??'').trim().slice(0,300),successor:String(b.successor??'').trim().slice(0,200),
+      approved:false,approvedBy:null,approvedAt:null,createdAt:nowIso(),updatedAt:nowIso()};
+    DB.roleCards.unshift(row); saveDb();
+    audit(req,'CREATE','RoleCard',row.id,'OK',{title});
+    return json(res,201,roleCardView(row));
+  }
+  const rcId=match('/role-cards/:id');
+  if(rcId&&method==='PATCH'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر حاکمیت برنامه» (program.write) را ندارید.'});
+    ensureRoleCardSeed();
+    const row=(DB.roleCards??[]).find(x=>x.id===rcId[0]&&visibleOrgIds(req).includes(x.organizationId));
+    if(!row) return json(res,404,{message:'کارت نقش یافت نشد یا خارج از محدودهٔ شماست.'});
+    const b=await readBody(req);
+    for(const k of ['mission','responsibilities','competencies','evaluation','onboarding','access','goals30','goals60','goals90','feedback','successor'])
+      if(b[k]!=null) row[k]=String(b[k]).trim().slice(0,400);
+    if(b.approved===true){
+      if(!row.goals30||!row.goals60||!row.goals90)
+        return json(res,400,{message:'تأیید کارت نقش نیازمند اهداف ۳۰، ۶۰ و ۹۰ روزه است — هر سه را تکمیل کنید.'});
+      if(!row.onboarding) return json(res,400,{message:'تأیید کارت نقش نیازمند مسیر ورود همکار است.'});
+      row.approved=true; row.approvedBy=authUser?.email??'—'; row.approvedAt=nowIso();
+    } else if(b.approved===false){ row.approved=false; row.approvedBy=null; row.approvedAt=null; }
+    row.updatedAt=nowIso(); saveDb();
+    audit(req,'UPDATE','RoleCard',row.id,'OK',{approved:row.approved});
+    return json(res,200,roleCardView(row));
   }
 
   /* ── آیتم ۲۱: Web Push (رضایت اعلان ملزم؛ انتقال دمو = polling) ── */

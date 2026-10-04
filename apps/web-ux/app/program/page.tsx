@@ -56,7 +56,7 @@ const PZ_STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral
 /* گام ۵.۱ — کاتالوگ فرم‌های پیوست ب سند v6 (F01–F18) و وضعیت هرکدام در پلتفرم.
    مرجع نگاشت: docs/مسترپلن-v6-سامانه-هوشمند-SRIP.md (بخش ۴ — جدول نگاشت فرم‌ها). */
 const FORM_CATALOG = lt<Array<{ code: string; name: string; status: string; where: string }>>([
-  { code: 'F01', name: 'کنترل اجرا', status: 'PLANNED', where: 'حاکمیت برنامه — فاز ۱۰' },
+  { code: 'F01', name: 'کنترل اجرا', status: 'HAVE', where: 'پروژه‌ها → کنترل اجرا' },
   { code: 'F02', name: 'پروندهٔ Due Diligence', status: 'HAVE', where: 'مشارکت‌ها → پرونده‌های Due Diligence' },
   { code: 'F03', name: 'برگهٔ ممیزی ظرفیت و دارایی', status: 'PLANNED', where: 'ممیزی سه‌گانه — فاز ۱۰' },
   { code: 'F04', name: 'کارت محیط، ذی‌نفع و رقیب', status: 'HAVE', where: 'هوشمندی → پروندهٔ رقیب هفت‌بُعدی' },
@@ -71,7 +71,7 @@ const FORM_CATALOG = lt<Array<{ code: string; name: string; status: string; wher
   { code: 'F13', name: 'پروندهٔ اصالت و تقلب', status: 'PLANNED', where: 'اصالت و ریسک — فاز ۸' },
   { code: 'F14', name: 'جدول پایش ماهانهٔ مرجعیت هوش مصنوعی', status: 'HAVE', where: 'حاکمیت برنامه → اهداف راهبردی' },
   { code: 'F15', name: 'کارت آماده‌سازی سرمایه‌گذار و شریک', status: 'HAVE', where: 'مشارکت‌ها → آماده‌سازی سرمایه‌گذار و شریک' },
-  { code: 'F16', name: 'کارت نقش و ورود همکار', status: 'PLANNED', where: 'فاز ۱۰' },
+  { code: 'F16', name: 'کارت نقش و ورود همکار', status: 'HAVE', where: 'افراد → کارت نقش و ورود همکار' },
   { code: 'F17', name: 'دفتر ثبت ریسک و انتشار هوش مصنوعی', status: 'PARTIAL', where: 'حاکمیت برنامه → ریسک‌ها؛ ستون‌های AI: فاز ۹' },
   { code: 'F18', name: 'کارت آماده‌سازی ورود به بازار', status: 'HAVE', where: 'فرصت‌ها → کارت‌های ورود به بازار' },
 ]);

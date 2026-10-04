@@ -3082,6 +3082,73 @@ section('گام ۱۰.۲ — F09 فرصت مناقصه + F18 کارت ورود ب
   check('F18: RBAC — ثبت کارت ورود فقط با opportunity.write (client → ۴۰۳)', gNoPerm.status === 403);
 }
 
+/* ═════════════════ گام ۱۰.۳ — F01 کنترل اجرا + F16 کارت نقش و ورود همکار ═════════════════ */
+section('گام ۱۰.۳ — F01 کنترل اجرا + F16 کارت نقش و ورود همکار');
+{
+  const dt = (await login(OWNER.email)).body.accessToken;
+  const ct = (await login(CLIENT.email)).body.accessToken;
+
+  /* ── F01 ── */
+  const L = await api('/exec-controls', { token: dt });
+  const items = L.body.items ?? [];
+  check('F01: دو کنترل اجرای بذر متصل به پروژه با کد P01/P02 و وضعیت فارسی',
+    L.status === 200 && items.length === 2 && items.every(x => x.projectName && x.statusFa && /^P\d{2}$/.test(x.code)) && !!L.body.rule,
+    `n=${items.length}`);
+  const ec2 = items.find(x => x.id === 'ec-2');
+  check('F01: کنترل بلاک با مانع و وابستگی ثبت‌شده؛ کنترل در مسیر با تغییر دامنه',
+    ec2.status === 'BLOCKED' && (ec2.blocker ?? '').length > 5
+    && items.find(x => x.id === 'ec-1').status === 'ON_TRACK' && !!items.find(x => x.id === 'ec-1').scopeChange);
+
+  const noProject = await api('/exec-controls', { method: 'POST', token: dt, body: { goal: 'هدف تست', scope: 'دامنه تست', ownerRole: 'مدیرعامل', deadline: '2026-12-01' } });
+  check('F01: کنترل اجرا بدون پروژهٔ متصل → ۴۰۰', noProject.status === 400);
+  const noScope = await api('/exec-controls', { method: 'POST', token: dt, body: { projectId: 'pr-1', goal: 'هدف تست', ownerRole: 'مدیرعامل', deadline: '2026-12-01' } });
+  check('F01: بدون دامنه → ۴۰۰ (دامنه شرط کنترل است)', noScope.status === 400);
+  const blockedNoBlocker = await api('/exec-controls', { method: 'POST', token: dt, body: { projectId: 'pr-1', goal: 'هدف تست', scope: 'دامنه تست', ownerRole: 'مدیرعامل', deadline: '2026-12-01', status: 'BLOCKED' } });
+  check('F01: وضعیت «بلاک» بدون ثبت مانع → ۴۰۰', blockedNoBlocker.status === 400);
+  const doneNoDecision = await api('/exec-controls', { method: 'POST', token: dt, body: { projectId: 'pr-2', goal: 'هدف تست', scope: 'دامنه تست', ownerRole: 'مدیرعامل', deadline: '2026-12-01', status: 'DONE' } });
+  check('F01: وضعیت «تکمیل» بدون تصمیم نهایی → ۴۰۰', doneNoDecision.status === 400);
+  const NE = await api('/exec-controls', { method: 'POST', token: dt, body: { projectId: 'pr-3', goal: 'نسخهٔ دوم داشبورد صندوق', scope: 'گزارش‌های فصلی و پایش پرتفوی', ownerRole: 'مدیر محصول', deadline: '2027-01-15', status: 'AT_RISK', stakeholders: 'مدیر صندوق امید', nextAction: 'بازبینی معماری گزارش‌ساز' } });
+  check('F01: ثبت کنترل تازه → کد خودکار P03 و وضعیت در معرض ریسک',
+    NE.status === 201 && NE.body.code === 'P03' && NE.body.statusFa === 'در معرض ریسک');
+  const upBlock = await api(`/exec-controls/${NE.body.id}`, { method: 'PATCH', token: dt, body: { status: 'BLOCKED', blocker: 'تأخیر در دسترسی دادهٔ صندوق', scopeChange: 'حذف ماژول پیش‌بینی از دامنهٔ فاز اول' } });
+  check('F01: ارتقا به بلاک با مانع + ثبت تغییر دامنه',
+    upBlock.status === 200 && upBlock.body.status === 'BLOCKED' && upBlock.body.scopeChange.includes('ماژول پیش‌بینی'));
+  const cNoPerm = await api('/exec-controls', { method: 'POST', token: ct, body: { projectId: 'pr-1', goal: 'x تست', scope: 'y تست', ownerRole: 'مدیرعامل', deadline: '2026-12-01' } });
+  check('F01: RBAC — ثبت کنترل اجرا فقط با project.write (client → ۴۰۳)', cNoPerm.status === 403);
+
+  /* ── F16 ── */
+  const R = await api('/role-cards', { token: dt });
+  const cards = R.body.items ?? [];
+  check('F16: دو کارت نقش بذر متصل به چارت (inChart) با قاعدهٔ تأیید',
+    R.status === 200 && cards.length === 2 && cards.every(x => x.inChart === true) && !!R.body.rule,
+    `n=${cards.length}`);
+  const rc1 = cards.find(x => x.title === 'مدیر محصول');
+  const rc2 = cards.find(x => x.title === 'مدیر اندیشکده و پژوهش');
+  check('F16: کارت مدیر محصول تأییدشده با اهداف ۳۰/۶۰/۹۰ و جانشین؛ کارت پژوهش در انتظار',
+    rc1.approved === true && rc1.goals30 && rc1.goals60 && rc1.goals90 && rc1.successor
+    && rc2.approved === false);
+
+  const notChart = await api('/role-cards', { method: 'POST', token: dt, body: { title: 'نقش خیالی خارج از چارت', mission: 'مأموریت تست' } });
+  check('F16: عنوان نقش خارج از چارت programSettings → ۴۰۰ (اتصال به چارت)', notChart.status === 400);
+  const dupCard = await api('/role-cards', { method: 'POST', token: dt, body: { title: 'مدیر محصول', mission: 'مأموریت تکراری' } });
+  check('F16: کارت تکراری برای همان نقش چارت → ۴۰۹', dupCard.status === 409);
+  const NR = await api('/role-cards', { method: 'POST', token: dt, body: { title: 'مدیر عملیات', mission: 'مالکیت زیرساخت و امنیت سامانه‌ها', responsibilities: 'زیرساخت، پایش، پاسخ به رخداد', onboarding: 'دو هفته همراهی با تیم عملیات', access: 'دسترسی کامل فنی بدون دسترسی مالی', goals30: 'آشنایی با ۵ سامانهٔ کلیدی', goals60: 'مالکیت چرخهٔ رخداد', goals90: 'گذراندن ممیزی امنیتی', feedback: 'بازخورد فصلی', successor: 'معاون زیرساخت' } });
+  check('F16: ثبت کارت نقش تازه از چارت → ۲۰۱ در انتظار تأیید',
+    NR.status === 201 && NR.body.approved === false && NR.body.inChart === true);
+  const apNoGoals = await api(`/role-cards/${NR.body.id}`, { method: 'PATCH', token: dt, body: { goals90: '', approved: true } });
+  check('F16: تأیید با هدف ۹۰ روزه خالی → ۴۰۰', apNoGoals.status === 400);
+  const apNoOnboard = await api(`/role-cards/${NR.body.id}`, { method: 'PATCH', token: dt, body: { onboarding: '', approved: true } });
+  check('F16: تأیید بدون مسیر ورود همکار → ۴۰۰', apNoOnboard.status === 400);
+  const ap = await api(`/role-cards/${NR.body.id}`, { method: 'PATCH', token: dt, body: { goals90: 'گذراندن ممیزی امنیتی بدون یافتهٔ بحرانی', onboarding: 'دو هفته همراهی با تیم عملیات', approved: true } });
+  check('F16: تأیید نهایی با اهداف کامل + مسیر ورود → ۲۰۰ با تأییدکننده و زمان',
+    ap.status === 200 && ap.body.approved === true && ap.body.approvedBy === OWNER.email && !!ap.body.approvedAt);
+  const cNoRole = await api('/role-cards', { method: 'POST', token: ct, body: { title: 'مدیر محصول', mission: 'مأموریت مشتری' } });
+  check('F16: RBAC — ثبت کارت نقش فقط با program.write (client → ۴۰۳)', cNoRole.status === 403);
+  const cView = await api('/role-cards', { token: ct });
+  check('F16: جداسازی — کارت‌های نقش هلدینگ برای آریا فناوری فهرست نمی‌شود',
+    cView.status === 200 && (cView.body.items ?? []).length === 0);
+}
+
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
 if (failures.length) { console.log(`  Failed: ${failures.join(' | ')}`); }

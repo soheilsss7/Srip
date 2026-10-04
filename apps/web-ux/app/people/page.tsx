@@ -6,6 +6,7 @@ import { fa } from '../_lib/fa';
 import { useWorkspace } from '../_components/workspace';
 import { Card, Badge } from '@srip/design-system';
 import { Modal } from '../_components/page-ui';
+import RoleCards from '../_components/role-cards';
 import { CriteriaBadge, CriteriaIntake, intakePayload, type AnswerMap, type Summary as CriteriaSummary } from '../_components/criteria';
 import {
   Users, Building2, Search, Plus, Crown, Handshake, ChevronLeft, Star,
@@ -414,6 +415,9 @@ export default function PeoplePage() {
           <CriteriaIntake subjectType="PERSON" answers={intake} onChange={setIntake} heading={t('آنچه همین حالا دربارهٔ او می‌دانید (اختیاری)')} />
         </form>
       </Modal>
+
+      {/* ═══ گام ۱۰.۳ — F16 کارت نقش و ورود همکار ═══ */}
+      <RoleCards />
     </>
   );
 }
