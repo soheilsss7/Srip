@@ -7509,6 +7509,60 @@ function ensureAuthSubjects(){
   ];
   saveDb();
 }
+
+/* ═══════════════ گام ۸.۲ — پروندهٔ اصالت F13 + سیاست اقدام (۱۹.۵.۱) ═══════════════
+   هر پرونده: شناسهٔ حساب/منبع/سرور/دستگاه/نشست + نشانه‌ها + امتیاز + نسخهٔ قاعده +
+   اقدام + بازبین + اعتراض و نتیجه. چهار سطح: کم (ثبت و ادامه) · متوسط (شاهد تکمیلی)
+   · بالا (محدودیت موقت + پرونده) · بحرانی (قرنطینه + هشدار).
+   اقدام محدودکننده فقط پس از بازبینی انسانی اعمال می‌شود؛ مسیر اعتراض باز است. */
+const F13_ACTIONS={
+  LOG_CONTINUE:{key:'LOG_CONTINUE',titleFa:'ثبت و ادامه',restrictive:false,level:'LOW'},
+  REQUEST_EVIDENCE:{key:'REQUEST_EVIDENCE',titleFa:'درخواست شاهد تکمیلی',restrictive:false,level:'MEDIUM'},
+  TEMP_RESTRICTION:{key:'TEMP_RESTRICTION',titleFa:'محدودیت موقت + تشکیل پرونده',restrictive:true,level:'HIGH'},
+  QUARANTINE:{key:'QUARANTINE',titleFa:'قرنطینه + هشدار',restrictive:true,level:'CRITICAL'},
+};
+function authActionForLevel(levelKey){
+  if(levelKey==='CRITICAL') return F13_ACTIONS.QUARANTINE;
+  if(levelKey==='HIGH') return F13_ACTIONS.TEMP_RESTRICTION;
+  if(levelKey==='MEDIUM') return F13_ACTIONS.REQUEST_EVIDENCE;
+  return F13_ACTIONS.LOG_CONTINUE;
+}
+function ensureAuthCasesSeed(){
+  ensureAuthSubjects();
+  if(Array.isArray(DB.authCases)) return;
+  const ago=(d)=>new Date(Date.now()-d*86400000).toISOString();
+  DB.authCases=[
+    /* پروندهٔ بازِ خوشهٔ دستگاه (بحرانی — در انتظار بازبینی انسانی) */
+    {id:'ac-1',subjectId:'device-farm-a',subjectType:'DEVICE',subjectLabel:'خوشهٔ دستگاه: محدودهٔ ۱۹۸.۵۱.۱۰۰.۰/۲۴',
+     signalKeys:['device-farm-pattern','rate-burst'],riskScore:58,levelKey:'HIGH',ruleVersion:'auth-risk-v1',
+     recommendedAction:'TEMP_RESTRICTION',enforcedAction:null,
+     status:'OPEN',reviewer:null,reviewNote:'',reviewAt:null,
+     appeal:null,outcome:null,
+     createdAt:ago(3),enforcedAt:null,closedAt:null},
+    /* پروندهٔ بررسی‌شدهٔ کاربر client (سفر ناممکن — رد شد با اعتراض پیروز) */
+    {id:'ac-2',subjectId:'u-2',subjectType:'USER',subjectLabel:'کاربر client@arya-tech.ir',
+     signalKeys:['impossible-travel'],riskScore:35,levelKey:'MEDIUM',ruleVersion:'auth-risk-v1',
+     recommendedAction:'REQUEST_EVIDENCE',enforcedAction:'REQUEST_EVIDENCE',
+     status:'RESOLVED',reviewer:'demo@srip.local',reviewNote:'سفر کاری تأیید شد — نشانه غیرفعال گردید',reviewAt:ago(29),
+     appeal:{filedBy:'client@arya-tech.ir',note:'سفر کاری تهران→استانبول با بلیت ثبت‌شده',filedAt:ago(28),
+       outcome:'UPHELD',outcomeNote:'ادعای کاربر پذیرفته شد؛ محدودیتی اعمال نشده بود',decidedAt:ago(27)},
+     outcome:'NO_RESTRICTION',
+     createdAt:ago(30),enforcedAt:ago(29),closedAt:ago(27)},
+  ];
+  saveDb();
+}
+function authCaseView(c){
+  const rec=F13_ACTIONS[c.recommendedAction]??F13_ACTIONS.LOG_CONTINUE;
+  const enf=c.enforcedAction?F13_ACTIONS[c.enforcedAction]:null;
+  return {...c,
+    recommendedActionFa:rec.titleFa,recommendedRestrictive:rec.restrictive,
+    levelFa:authRiskLevelOf(c.riskScore).titleFa,
+    enforcedActionFa:enf?.titleFa??null,
+    enforcedRestrictive:enf?.restrictive??false,
+    statusFa:{OPEN:'باز',UNDER_REVIEW:'در بازبینی',RESOLVED:'بسته'}[c.status]??c.status,
+    appealOpen:!!c.appeal&&!c.appeal.outcome,
+    rule:'اقدام محدودکننده (محدودیت موقت/قرنطینه) فقط پس از بازبینی انسانی اعمال می‌شود؛ مسیر اعتراض تا تعیین نتیجه باز است (۱۹.۵.۱).'};
+}
 const CONTENT_CONTROLS=[
   {key:'coreMessage',title:'هم‌راستایی با پیام هسته'},
   {key:'audience',   title:'شخصی‌سازی برای مخاطب'},
@@ -15303,6 +15357,138 @@ const server=http.createServer(async(req,res)=>{
     audit(req,'UPDATE','AuthSignal',row.id,'REVIEW',{active:row.active,note:note.slice(0,60)});
     const v=subj?authSubjectView(subj):null;
     return json(res,200,{signal:row,subject:v,risk:v?.risk??null});
+  }
+
+  /* ─────────────── گام ۸.۲ — پروندهٔ اصالت F13 + سیاست اقدام (/authenticity/cases) ────────── */
+  if(is('/authenticity/cases')&&method==='GET'){
+    if(!hasPerm('security.read')) return json(res,403,{message:'شما مجوز «مشاهدهٔ امنیت» (security.read) را ندارید.'});
+    ensureAuthCasesSeed();
+    return json(res,200,{items:DB.authCases.map(authCaseView).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))),
+      levels:AUTH_RISK_LEVELS,actions:Object.values(F13_ACTIONS),
+      stats:{total:DB.authCases.length,open:DB.authCases.filter(c=>c.status==='OPEN').length,
+        underReview:DB.authCases.filter(c=>c.status==='UNDER_REVIEW').length,
+        resolved:DB.authCases.filter(c=>c.status==='RESOLVED').length,
+        appealsOpen:DB.authCases.filter(c=>c.appeal&&!c.appeal.outcome).length},
+      rule:'چهار سطح ۱۹.۵.۱: کم (ثبت و ادامه) · متوسط (شاهد تکمیلی) · بالا (محدودیت موقت + پرونده) · بحرانی (قرنطینه + هشدار). اقدام محدودکننده فقط پس از بازبینی انسانی (دکمهٔ بازبین) اعمال می‌شود؛ مسیر اعتراض تا تعیین نتیجه باز است.'});
+  }
+  const acOpen=match('/authenticity/cases/open');
+  if(acOpen&&method==='POST'){
+    if(!hasPerm('security.write')) return json(res,403,{message:'شما مجوز «ثبت رویداد امنیتی» (security.write) را ندارید.'});
+    ensureAuthCasesSeed();
+    const b=await readBody(req);
+    const subj=(DB.authSubjects??[]).find(s=>s.id===String(b.subjectId??'').trim());
+    if(!subj) return json(res,404,{message:'موضوع پایش یافت نشد.'});
+    if((DB.authCases??[]).some(c=>c.subjectId===subj.id&&c.status!=='RESOLVED'))
+      return json(res,400,{message:'برای این موضوع پروندهٔ بازی وجود دارد — ابتدا نتیجهٔ آن را تعیین کنید.'});
+    const r=authRiskScoreOf(subj);
+    const rec=authActionForLevel(r.level.key);
+    const row={id:`ac-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,
+      subjectId:subj.id,subjectType:subj.type,subjectLabel:subj.label,
+      signalKeys:r.signals.map(s=>s.signalKey),riskScore:r.score,levelKey:r.level.key,ruleVersion:r.ruleVersion,
+      recommendedAction:rec.key,enforcedAction:null,
+      status:'OPEN',reviewer:null,reviewNote:'',reviewAt:null,
+      appeal:null,outcome:null,
+      createdAt:nowIso(),enforcedAt:null,closedAt:null};
+    DB.authCases.push(row); saveDb();
+    audit(req,'CREATE','AuthCase',row.id,'OK',{subject:subj.id,score:r.score,recommended:rec.key});
+    return json(res,201,authCaseView(row));
+  }
+  const acReview=match('/authenticity/cases/:id/review');
+  if(acReview&&method==='POST'){
+    if(!hasPerm('security.write')) return json(res,403,{message:'شما مجوز «ثبت رویداد امنیتی» (security.write) را ندارید.'});
+    ensureAuthCasesSeed();
+    const c=DB.authCases.find(x=>x.id===acReview[0]);
+    if(!c) return json(res,404,{message:'پرونده یافت نشد.'});
+    if(c.status==='RESOLVED') return json(res,400,{message:'پروندهٔ بسته قابل بازبینی نیست.'});
+    const b=await readBody(req);
+    const note=String(b.note??'').trim();
+    if(!note) return json(res,400,{message:'یادداشت بازبین الزامی است — شاهد تصمیم ثبت شود.'});
+    if(!['APPROVE','REJECT'].includes(b.decision)) return json(res,400,{message:'تصمیم بازبین: APPROVE (تأیید اقدام پیشنهادی) یا REJECT (رد).'});
+    c.reviewer=authUser?.email??null; c.reviewNote=note.slice(0,400); c.reviewAt=nowIso();
+    if(b.decision==='APPROVE'){
+      c.status='UNDER_REVIEW';
+      /* تأیید بازبین: اقدام غیرمحدودکننده بلافاصله؛ محدودکننده با enforce جداگانه اعمال می‌شود */
+      const rec=F13_ACTIONS[c.recommendedAction];
+      if(!rec.restrictive){ c.enforcedAction=c.recommendedAction; c.enforcedAt=nowIso(); }
+    } else {
+      c.status='RESOLVED'; c.outcome='REJECTED_BY_REVIEWER'; c.closedAt=nowIso();
+    }
+    saveDb();
+    audit(req,'UPDATE','AuthCase',c.id,'REVIEW',{decision:b.decision,reviewer:c.reviewer});
+    return json(res,200,authCaseView(c));
+  }
+  const acEnforce=match('/authenticity/cases/:id/enforce');
+  if(acEnforce&&method==='POST'){
+    if(!hasPerm('security.write')) return json(res,403,{message:'شما مجوز «ثبت رویداد امنیتی» (security.write) را ندارید.'});
+    ensureAuthCasesSeed();
+    const c=DB.authCases.find(x=>x.id===acEnforce[0]);
+    if(!c) return json(res,404,{message:'پرونده یافت نشد.'});
+    const rec=F13_ACTIONS[c.recommendedAction];
+    if(!rec.restrictive) return json(res,400,{message:'این سطح اقدام محدودکننده ندارد — اقدام پیشنهادی با بازبینی اعمال می‌شود.'});
+    if(!c.reviewer||!c.reviewAt) return json(res,400,{message:'اقدام محدودکننده فقط پس از بازبینی انسانی اعمال می‌شود — ابتدا دکمهٔ بازبین (تأیید با یادداشت).'});
+    if(c.status==='RESOLVED') return json(res,400,{message:'پرونده بسته است.'});
+    c.enforcedAction=c.recommendedAction; c.enforcedAt=nowIso(); c.status='UNDER_REVIEW';
+    saveDb();
+    audit(req,'UPDATE','AuthCase',c.id,'ENFORCE',{action:c.enforcedAction,reviewer:c.reviewer});
+    return json(res,200,authCaseView(c));
+  }
+  const acAppeal=match('/authenticity/cases/:id/appeal');
+  if(acAppeal&&method==='POST'){
+    ensureAuthCasesSeed();
+    const c=DB.authCases.find(x=>x.id===acAppeal[0]);
+    if(!c) return json(res,404,{message:'پرونده یافت نشد.'});
+    if(!c.enforcedAction) return json(res,400,{message:'اعتراض به اقدامِ اعمال‌شده است — هنوز اقدامی اعمال نشده.'});
+    if(c.appeal) return json(res,400,{message:'اعتراضی برای این پرونده ثبت شده است.'});
+    const b=await readBody(req);
+    const note=String(b.note??'').trim();
+    if(!note) return json(res,400,{message:'متن اعتراض الزامی است — ادعا و شاهد آن را بنویسید.'});
+    c.appeal={filedBy:authUser?.email??'anonymous',note:note.slice(0,400),filedAt:nowIso(),outcome:null,outcomeNote:'',decidedAt:null};
+    saveDb();
+    audit(req,'CREATE','AuthCaseAppeal',c.id,'OK',{filedBy:c.appeal.filedBy});
+    return json(res,200,authCaseView(c));
+  }
+  const acAppealRes=match('/authenticity/cases/:id/appeal/resolve');
+  if(acAppealRes&&method==='POST'){
+    if(!hasPerm('security.write')) return json(res,403,{message:'شما مجوز «ثبت رویداد امنیتی» (security.write) را ندارید.'});
+    ensureAuthCasesSeed();
+    const c=DB.authCases.find(x=>x.id===acAppealRes[0]);
+    if(!c) return json(res,404,{message:'پرونده یافت نشد.'});
+    if(!c.appeal) return json(res,400,{message:'اعتراضی ثبت نشده است.'});
+    if(c.appeal.outcome) return json(res,400,{message:'نتیجهٔ اعتراض قبلاً تعیین شده است.'});
+    const b=await readBody(req);
+    if(!['UPHELD','OVERTURNED','ADJUSTED'].includes(b.outcome))
+      return json(res,400,{message:'نتیجهٔ اعتراض: UPHELD (درستی اقدام) · OVERTURNED (ابطال) · ADJUSTED (اصلاح).'});
+    const note=String(b.note??'').trim();
+    if(!note) return json(res,400,{message:'یادداشت نتیجه الزامی است.'});
+    c.appeal.outcome=b.outcome; c.appeal.outcomeNote=note.slice(0,400); c.appeal.decidedAt=nowIso();
+    if(b.outcome==='OVERTURNED'){
+      /* اعتراض پیروز: محدودیت برداشته می‌شود و پرونده بسته می‌شود */
+      c.enforcedAction=null; c.enforcedAt=null; c.status='RESOLVED'; c.outcome='APPEAL_OVERTURNED'; c.closedAt=nowIso();
+    } else if(b.outcome==='ADJUSTED'){
+      c.outcome='APPEAL_ADJUSTED';
+    } else {
+      c.outcome='APPEAL_UPHELD'; c.status='RESOLVED'; c.closedAt=nowIso();
+    }
+    saveDb();
+    audit(req,'UPDATE','AuthCase',c.id,'APPEAL_RESOLVED',{outcome:b.outcome});
+    return json(res,200,authCaseView(c));
+  }
+  const acClose=match('/authenticity/cases/:id/close');
+  if(acClose&&method==='POST'){
+    if(!hasPerm('security.write')) return json(res,403,{message:'شما مجوز «ثبت رویداد امنیتی» (security.write) را ندارید.'});
+    ensureAuthCasesSeed();
+    const c=DB.authCases.find(x=>x.id===acClose[0]);
+    if(!c) return json(res,404,{message:'پرونده یافت نشد.'});
+    if(c.status==='RESOLVED') return json(res,400,{message:'پرونده بسته است.'});
+    if(c.appeal&&!c.appeal.outcome) return json(res,400,{message:'اعتراض باز است — ابتدا نتیجهٔ آن را تعیین کنید.'});
+    const b=await readBody(req);
+    const note=String(b.note??'').trim();
+    if(!note) return json(res,400,{message:'یادداشت بستن پرونده الزامی است.'});
+    c.status='RESOLVED'; c.outcome=c.outcome??'CLOSED'; c.closedAt=nowIso();
+    c.reviewNote=(c.reviewNote?c.reviewNote+' | ':'')+`بستن: ${note.slice(0,200)}`;
+    saveDb();
+    audit(req,'UPDATE','AuthCase',c.id,'CLOSE',{note:note.slice(0,60)});
+    return json(res,200,authCaseView(c));
   }
 
   /* ─────────────── گام ۵.۴ — تقویم خروجی اندیشکده (/program/think-tank) ────────── */

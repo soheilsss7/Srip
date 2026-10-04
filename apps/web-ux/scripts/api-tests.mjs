@@ -2580,6 +2580,71 @@ section('گام ۸.۱ — موتور نشانه‌ها و امتیاز ریسک 
     `score=${du?.risk?.score} signals=${du?.signalCount}`);
 }
 
+
+/* ═════════════════ گام ۸.۲ — پروندهٔ اصالت F13 + سیاست اقدام ═════════════════ */
+section('گام ۸.۲ — پروندهٔ اصالت F13 و سیاست اقدام ۱۹.۵.۱');
+{
+  const dt = (await login(OWNER.email)).body.accessToken;
+  const ct = (await login(CLIENT.email)).body.accessToken;
+
+  const C = await api('/authenticity/cases', { token: dt });
+  check('فهرست پرونده‌ها با اقدام چهارسطحی (چهار اقدام: ثبت/شاهد/محدودیت/قرنطینه)',
+    C.status === 200 && C.body.items.length >= 2
+    && C.body.actions.length === 4
+    && C.body.actions.some(a => a.key === 'LOG_CONTINUE' && !a.restrictive)
+    && C.body.actions.some(a => a.key === 'QUARANTINE' && a.restrictive));
+  const ac1 = C.body.items.find(x => x.id === 'ac-1');
+  check('پروندهٔ باز: خوشهٔ دستگاه با snapshot (نشانه‌ها + امتیاز ۵۸ + نسخهٔ قاعده) و اقدام پیشنهادی محدودیت موقت',
+    ac1.signalKeys.length === 2 && ac1.riskScore === 58 && ac1.ruleVersion === 'auth-risk-v1'
+    && ac1.recommendedAction === 'TEMP_RESTRICTION' && ac1.recommendedRestrictive && !ac1.enforcedAction);
+  const ac2 = C.body.items.find(x => x.id === 'ac-2');
+  check('پروندهٔ بستهٔ نمونه: بازبین + اعتراض با نتیجه + بدون محدودیت',
+    ac2.status === 'RESOLVED' && ac2.reviewer === 'demo@srip.local'
+    && ac2.appeal.outcome === 'UPHELD' && ac2.outcome === 'NO_RESTRICTION');
+
+  /* اقدام محدودکننده فقط پس از بازبینی انسانی */
+  const earlyEnforce = await api('/authenticity/cases/ac-1/enforce', { method: 'POST', token: dt, body: { note: 'زودهنگام' } });
+  check('اعمال محدودیت بدون بازبینی انسانی → ۴۰۰', earlyEnforce.status === 400);
+  const revNoNote = await api('/authenticity/cases/ac-1/review', { method: 'POST', token: dt, body: { decision: 'APPROVE' } });
+  check('بازبینی بدون یادداشت شاهد → ۴۰۰', revNoNote.status === 400);
+  const REV = await api('/authenticity/cases/ac-1/review', { method: 'POST', token: dt, body: { decision: 'APPROVE', note: 'الگوی مزرعهٔ دستگاه با پایش شبکه تأیید شد' } });
+  check('بازبینی انسانی با یادداشت → بازبین ثبت شد، اقدام هنوز اعمال نشده',
+    REV.status === 200 && REV.body.reviewer === 'demo@srip.local' && REV.body.status === 'UNDER_REVIEW' && !REV.body.enforcedAction);
+  const ENF = await api('/authenticity/cases/ac-1/enforce', { method: 'POST', token: dt, body: { note: 'اعمال پس از تأیید بازبین' } });
+  check('اعمال محدودیت پس از بازبینی → محدودیت موقت اعمال‌شده',
+    ENF.status === 200 && ENF.body.enforcedAction === 'TEMP_RESTRICTION' && ENF.body.enforcedRestrictive);
+
+  /* مسیر اعتراض */
+  const apNoNote = await api('/authenticity/cases/ac-1/appeal', { method: 'POST', token: ct, body: {} });
+  check('اعتراض بدون متن → ۴۰۰', apNoNote.status === 400);
+  const AP = await api('/authenticity/cases/ac-1/appeal', { method: 'POST', token: ct, body: { note: 'این دستگاه‌ها ترمینال‌های سازمانی هستند — گواهی‌ها را پیوست می‌کنم' } });
+  check('ثبت اعتراض توسط کاربر موضوع → اعتراض باز',
+    AP.status === 200 && AP.body.appeal.filedBy === 'client@arya-tech.ir' && AP.body.appealOpen === true);
+  const apAgain = await api('/authenticity/cases/ac-1/appeal', { method: 'POST', token: ct, body: { note: 'دوباره' } });
+  check('اعتراض تکراری → ۴۰۰', apAgain.status === 400);
+  const OV = await api('/authenticity/cases/ac-1/appeal/resolve', { method: 'POST', token: dt, body: { outcome: 'OVERTURNED', note: 'مستندات ترمینال‌های سازمانی پذیرفته شد' } });
+  check('ابطال اعتراض پیروز → محدودیت برداشته شد و پرونده بسته شد',
+    OV.status === 200 && OV.body.appeal.outcome === 'OVERTURNED' && !OV.body.enforcedAction
+    && OV.body.status === 'RESOLVED' && OV.body.outcome === 'APPEAL_OVERTURNED');
+
+  /* تشکیل پروندهٔ تازه: snapshot لحظه‌ای + قاعدهٔ پروندهٔ باز تکراری */
+  const dupOpen = await api('/authenticity/cases/open', { method: 'POST', token: dt, body: { subjectId: 'u-1' } });
+  check('تشکیل پرونده برای کاربر دمو (۴۵/متوسط — شامل نشانهٔ خودکار ورود ناموفق ۸.۱) → اقدام پیشنهادی = درخواست شاهد تکمیلی',
+    dupOpen.status === 201 && dupOpen.body.riskScore === 45 && dupOpen.body.levelKey === 'MEDIUM'
+    && dupOpen.body.signalKeys.includes('login-failed-streak')
+    && dupOpen.body.recommendedAction === 'REQUEST_EVIDENCE' && !dupOpen.body.recommendedRestrictive);
+  const dup2 = await api('/authenticity/cases/open', { method: 'POST', token: dt, body: { subjectId: 'u-1' } });
+  check('پروندهٔ بازِ تکراری برای همان موضوع → ۴۰۰', dup2.status === 400);
+  /* اقدام غیرمحدودکننده با تأیید بازبین بلافاصله اعمال می‌شود */
+  const rev2 = await api(`/authenticity/cases/${dupOpen.body.id}/review`, { method: 'POST', token: dt, body: { decision: 'APPROVE', note: 'درخواست شاهد تکمیلی ارسال شد' } });
+  check('اقدام غیرمحدودکننده (متوسط) با تأیید بازبین بلافاصله اعمال شد',
+    rev2.status === 200 && rev2.body.enforcedAction === 'REQUEST_EVIDENCE' && rev2.body.status === 'UNDER_REVIEW');
+
+  /* RBAC */
+  const cCase = await api('/authenticity/cases', { token: ct });
+  check('RBAC: client بدون security.read → ۴۰۳', cCase.status === 403);
+}
+
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
 if (failures.length) { console.log(`  Failed: ${failures.join(' | ')}`); }
