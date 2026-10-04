@@ -75,6 +75,12 @@ export default function CalendarPage() {
   const monthNow = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, '0')}`;
   const emptyContentForm = { title: '', pillar: 'newsroom', pesoGroup: 'OWNED', month: monthNow, ownerRole: 'مدیر محتوا' };
   const [contentForm, setContentForm] = useState(emptyContentForm);
+  /* گام ۷.۵ — دستیار تولید محتوا: پیش‌نویس از بستهٔ منابع + کارت F08 */
+  const [aiDocs, setAiDocs] = useState<any[]>([]);
+  const [aiSources, setAiSources] = useState<string[]>([]);
+  const [aiDraft, setAiDraft] = useState<any>(null);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [f08Form, setF08Form] = useState<any>(null);
   /* گام ۵.۴ — تقویم خروجی اندیشکده (جدول ۱۵.۱ سند v6) */
   const [thinkTank, setThinkTank] = useState<any>(null);
   const [ttFormOpen, setTtFormOpen] = useState(false);
@@ -92,6 +98,8 @@ export default function CalendarPage() {
         api('/program/content').catch(() => null),
         api('/program/think-tank').catch(() => null),
       ]);
+      /* گام ۷.۵ — اسناد مجاز برای «پیش‌نویس از بستهٔ منابع» */
+      try { setAiDocs(unwrap(await api('/documents')) ?? []); } catch {}
       setMeetings(unwrap(ms));
       setEvents(unwrap(evs) ?? []);
       setEvMeta(evs ?? null);
@@ -162,6 +170,42 @@ export default function CalendarPage() {
     try {
       await api('/program/content', { method: 'POST', body: JSON.stringify(contentForm) });
       setContentFormOpen(false); setContentForm(emptyContentForm); await reloadContent();
+    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+  };
+
+  /* گام ۷.۵ — پیشنهاد پیش‌نویس از بستهٔ منابع (AI) و ثبت با تأیید کاربر */
+  const aiToggleSource = (id: string) =>
+    setAiSources(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
+  const aiProposeDraft = async () => {
+    setAiBusy(true); setError(''); setAiDraft(null);
+    try { setAiDraft(await api('/ai/content/draft', { method: 'POST', body: JSON.stringify({ sourceIds: aiSources }) })); }
+    catch (e) { setError((e as Error).message); }
+    finally { setAiBusy(false); }
+  };
+  const aiApplyDraft = async () => {
+    setAiBusy(true); setError('');
+    try {
+      await api('/ai/content/draft/apply', { method: 'POST', body: JSON.stringify({ confirmed: true, draft: aiDraft?.draft, f08Defaults: aiDraft?.f08Defaults }) });
+      setAiDraft(null); setAiSources([]);
+      await reloadContent();
+    } catch (e) { setError((e as Error).message); }
+    finally { setAiBusy(false); }
+  };
+  /* گام ۷.۵ — ذخیرهٔ کارت F08 (فرادادهٔ تولید و کنترل محتوای AI) */
+  const openF08 = (c: any) => setF08Form({
+    aiAssisted: c.f08?.aiAssisted === true, model: c.f08?.model ?? '', modelVersion: c.f08?.modelVersion ?? '',
+    generationPrompt: c.f08?.generationPrompt ?? '', aiShare: c.f08?.aiShare ?? 'PARTIAL',
+    claims: (c.f08?.claims ?? []).join('، '), usageRights: c.f08?.usageRights ?? '',
+    c2paStatus: c.f08?.c2paStatus ?? 'NOT_EMBEDDED', verifier: c.f08?.verifier ?? '', owner: c.f08?.owner ?? '',
+  });
+  const saveF08 = async () => {
+    setBusy(true);
+    try {
+      const upd = await api(`/program/content/${contentSel.id}/f08`, {
+        method: 'PATCH',
+        body: JSON.stringify({ ...f08Form, claims: String(f08Form.claims ?? '').split(/[،,]/).map((s: string) => s.trim()).filter(Boolean) }),
+      });
+      setContentSel(upd); setF08Form(null); await reloadContent();
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
 
@@ -511,6 +555,57 @@ export default function CalendarPage() {
             <span className="chip neutral">{t('پیش‌نویس')}: {faNum(content.stats.draft)}</span>
             <span className="chip neutral">{t('خروجی ماه جاری')}: {faNum(content.stats.thisMonth)}</span>
           </div>
+          {/* ═══ گام ۷.۵ — دستیار تولید محتوا: پیش‌نویس از بستهٔ منابع (فقط پیشنهاد) ═══ */}
+          <div className="ai-content-assistant" style={{ marginBottom: 14 }}>
+            <div className="panel-title">
+              <div>
+                <h2>{t('دستیار تولید محتوا (درگاه هوش مصنوعی)')}</h2>
+                <p>{t('اسناد مجاز را انتخاب کنید تا پیش‌نویس منبع‌دار با افشای هوش مصنوعی ساخته شود — ثبت پیش‌نویس فقط با تأیید شما و انتشار همچنان منوط به گردش تأیید F08.')}</p>
+              </div>
+              <Badge tone="warning">{t('فقط پیشنهاد')}</Badge>
+            </div>
+            {programWritable ? (
+              <>
+                <div className="ai-source-list" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, margin: '8px 0' }}>
+                  {aiDocs.slice(0, 12).map((d: any) => (
+                    <label key={d.id} className={`chip ${aiSources.includes(d.id) ? 'info' : 'neutral'}`} style={{ cursor: 'pointer', display: 'inline-flex', gap: 4, alignItems: 'center' }}>
+                      <input type="checkbox" checked={aiSources.includes(d.id)} onChange={() => aiToggleSource(d.id)} aria-label={`انتخاب سند ${d.name}`} />
+                      {d.name}
+                    </label>
+                  ))}
+                  {!aiDocs.length && <small className="t-muted">{t('سند مجازی در دسترس نیست.')}</small>}
+                </div>
+                <div className="form-actions">
+                  <button type="button" className="srip-button primary" disabled={aiBusy || !aiSources.length} onClick={aiProposeDraft}>
+                    {aiBusy ? t('در حال ساخت…') : t('پیشنهاد پیش‌نویس منبع‌دار')}
+                  </button>
+                </div>
+                {aiDraft && (
+                  <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+                    <div className="field full">
+                      <label className="field-label">{t('عنوان پیشنهادی')}</label>
+                      <input value={aiDraft.draft?.title ?? ''} readOnly aria-label="عنوان پیشنهادی" />
+                    </div>
+                    <div className="field full">
+                      <label className="field-label">{t('متن پیش‌نویس (منبع‌دار)')}</label>
+                      <textarea rows={6} value={aiDraft.draft?.body ?? ''} readOnly aria-label="متن پیش‌نویس" />
+                    </div>
+                    <div className="pmr-badges">
+                      <span className="chip info">{t('مدل')}: {aiDraft.f08Defaults?.model ?? '—'}</span>
+                      <span className="chip neutral">{t('میزان استفاده از AI')}: {t('با کمک هوش مصنوعی')}</span>
+                      <span className="chip neutral">{t('منابع')}: {faNum(aiDraft.sources?.length ?? 0)}</span>
+                    </div>
+                    <p className="field-hint">{aiDraft.approvalRule}</p>
+                    <div className="form-actions">
+                      <button type="button" className="srip-button primary" disabled={aiBusy} onClick={aiApplyDraft}>{t('ثبت پیش‌نویس با تأیید من')}</button>
+                      <button type="button" className="srip-button" disabled={aiBusy} onClick={() => setAiDraft(null)}>{t('دور انداختن')}</button>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : <p className="field-hint">{t('برای پیشنهاد پیش‌نویس، مجوز «ثبت ریسک و به‌روزرسانی آمادگی» لازم است.')}</p>}
+          </div>
+
           <div className="cnt-pillars">
             {content.pillars.map((p: any) => (
               <div key={p.key} className="cnt-pillar">
@@ -719,6 +814,92 @@ export default function CalendarPage() {
               })}
             </div>
             <p className="field-hint">{t('انتشار بدون تأیید کامل ممنوع است — هر چهار کنترل باید تأیید شده باشد؛ سپس «تأییدشده» و آمادهٔ انتشار می‌شود.')}</p>
+
+            {/* گام ۷.۵ — کارت تولید و کنترل محتوای هوش مصنوعی (F08) */}
+            <div className="cnt-f08" style={{ borderTop: '1px dashed var(--card-border-strong)', paddingTop: 10, marginTop: 8 }}>
+              <b className="bp-col-t">{t('کارت تولید و کنترل محتوای هوش مصنوعی (F08)')}</b>
+              {!f08Form ? (
+                <>
+                  <div className="pmr-badges" style={{ margin: '6px 0' }}>
+                    <span className={`chip ${contentSel.f08?.aiAssisted ? 'info' : 'neutral'}`}>{contentSel.f08?.aiAssisted ? t('تولید با کمک هوش مصنوعی') : t('تولید انسانی')}</span>
+                    {!!contentSel.f08?.model && <span className="chip neutral">{t('مدل')}: {contentSel.f08.model}{contentSel.f08.modelVersion ? ` (${contentSel.f08.modelVersion})` : ''}</span>}
+                    {!!contentSel.f08?.aiShare && <span className="chip neutral">{t('میزان استفاده از AI')}: {t(contentSel.f08Fa?.aiShare ?? '')}</span>}
+                    <span className="chip neutral">C2PA: {t(contentSel.f08Fa?.c2paStatus ?? 'جاسازی نشده')}</span>
+                    {!!contentSel.f08?.verifier && <span className="chip neutral">{t('راستی‌آزما')}: {contentSel.f08.verifier}</span>}
+                    {!!contentSel.f08?.owner && <span className="chip neutral">{t('مالک')}: {contentSel.f08.owner}</span>}
+                    {!!contentSel.f08?.claims?.length && <span className="chip warning">{t('ادعاها')}: {faNum(contentSel.f08.claims.length)}</span>}
+                    {!!contentSel.f08?.usageRights && <span className="chip neutral">{t('حقوق استفاده')}: {contentSel.f08.usageRights}</span>}
+                  </div>
+                  {contentSel.f08?.publishFingerprint && (
+                    <p className="field-hint" style={{ direction: 'ltr', textAlign: 'left' }}>
+                      🔒 {t('اثرانگشت دیجیتال انتشار')} (SHA-256): <code>{contentSel.f08.publishFingerprint.value}</code>
+                    </p>
+                  )}
+                  {programWritable && contentSel.status !== 'PUBLISHED' && (
+                    <div className="form-actions">
+                      <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => openF08(contentSel)}>{t('ویرایش کارت F08')}</button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="form-grid" style={{ marginTop: 8 }}>
+                  <div className="field">
+                    <label className="field-label">{t('تولید با کمک هوش مصنوعی؟')}</label>
+                    <select value={f08Form.aiAssisted ? '1' : '0'} onChange={e => setF08Form((f: any) => ({ ...f, aiAssisted: e.target.value === '1' }))} aria-label="تولید با کمک هوش مصنوعی">
+                      <option value="1">{t('بله')}</option>
+                      <option value="0">{t('خیر')}</option>
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label className="field-label">{t('مدل')}</label>
+                    <input value={f08Form.model} onChange={e => setF08Form((f: any) => ({ ...f, model: e.target.value }))} aria-label="مدل هوش مصنوعی" />
+                  </div>
+                  <div className="field">
+                    <label className="field-label">{t('نسخهٔ مدل')}</label>
+                    <input value={f08Form.modelVersion} onChange={e => setF08Form((f: any) => ({ ...f, modelVersion: e.target.value }))} aria-label="نسخهٔ مدل" />
+                  </div>
+                  <div className="field">
+                    <label className="field-label">{t('میزان استفاده از AI')}</label>
+                    <select value={f08Form.aiShare} onChange={e => setF08Form((f: any) => ({ ...f, aiShare: e.target.value }))} aria-label="میزان استفاده از هوش مصنوعی">
+                      <option value="FULL">{t('کاملاً هوش مصنوعی')}</option>
+                      <option value="PARTIAL">{t('با کمک هوش مصنوعی')}</option>
+                      <option value="MINOR">{t('کمکی حداقلی')}</option>
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label className="field-label">{t('وضعیت C2PA')}</label>
+                    <select value={f08Form.c2paStatus} onChange={e => setF08Form((f: any) => ({ ...f, c2paStatus: e.target.value }))} aria-label="وضعیت C2PA">
+                      <option value="NOT_EMBEDDED">{t('جاسازی نشده')}</option>
+                      <option value="EMBEDDED">{t('جاسازی‌شده (C2PA)')}</option>
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label className="field-label">{t('راستی‌آزما')}</label>
+                    <input value={f08Form.verifier} onChange={e => setF08Form((f: any) => ({ ...f, verifier: e.target.value }))} aria-label="راستی‌آزما" />
+                  </div>
+                  <div className="field">
+                    <label className="field-label">{t('مالک')}</label>
+                    <input value={f08Form.owner} onChange={e => setF08Form((f: any) => ({ ...f, owner: e.target.value }))} aria-label="مالک محتوا" />
+                  </div>
+                  <div className="field full">
+                    <label className="field-label">{t('ادعاها (با «،» جدا کنید)')}</label>
+                    <input value={f08Form.claims} onChange={e => setF08Form((f: any) => ({ ...f, claims: e.target.value }))} aria-label="ادعاها" />
+                  </div>
+                  <div className="field full">
+                    <label className="field-label">{t('حقوق استفاده')}</label>
+                    <input value={f08Form.usageRights} onChange={e => setF08Form((f: any) => ({ ...f, usageRights: e.target.value }))} aria-label="حقوق استفاده" />
+                  </div>
+                  <div className="field full">
+                    <label className="field-label">{t('دستور تولید (prompt)')}</label>
+                    <textarea rows={2} value={f08Form.generationPrompt} onChange={e => setF08Form((f: any) => ({ ...f, generationPrompt: e.target.value }))} aria-label="دستور تولید" />
+                  </div>
+                  <div className="form-actions">
+                    <button type="button" className="srip-button" disabled={busy} onClick={() => setF08Form(null)}>{t('انصراف')}</button>
+                    <button type="button" className="srip-button primary" disabled={busy} onClick={saveF08}>{busy ? t('در حال ذخیره…') : t('ذخیرهٔ کارت F08')}</button>
+                  </div>
+                </div>
+              )}
+            </div>
             {programWritable && contentSel.status === 'APPROVED' && (
               <div className="form-actions">
                 <button type="button" className="srip-button primary" disabled={busy} onClick={() => publishContent(contentSel)}>{t('انتشار')}</button>

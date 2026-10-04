@@ -2379,6 +2379,147 @@ section('گام ۷.۳ — دستیار جلسه: پیشنهاد چهارگانه
   check('رفع توقف → دستیار جلسه دوباره پیشنهاد می‌دهد', D2.status === 200 && !!D2.body.draft.summary);
 }
 
+
+/* ═════════════════ گام ۷.۴ — اولویت‌بندی فرصت + پیشنهاد اقدام بعدی ═════════════════ */
+section('گام ۷.۴ — اولویت‌بندی فرصت و پیشنهاد اقدام بعدی');
+{
+  const dt = (await login(OWNER.email)).body.accessToken;
+  const ct = (await login(CLIENT.email)).body.accessToken;
+  const opps = await api('/opportunities', { token: dt });
+  const opp = (opps.body.items ?? opps.body).find((x) => !['WON', 'LOST'].includes(x.status)) ?? (opps.body.items ?? opps.body)[0];
+  check('فرصت دمو برای آزمون موجود است', !!opp?.id);
+
+  /* اولویت‌بندی فرصت — امتیاز + دلیل قابل توضیح، بدون رد/قبول خودکار */
+  const P = await api(`/ai/opportunities/${opp.id}/priority`, { method: 'POST', token: dt });
+  check('اولویت‌بندی: امتیاز ۰–۱۰۰ + سه عامل برتر با جزئیات و وزن',
+    P.status === 200 && P.body.score >= 0 && P.body.score <= 100
+    && P.body.factors.length === 3
+    && P.body.factors.every((f) => !!f.label && typeof f.score === 'number' && typeof f.weight === 'number'),
+    JSON.stringify(P.body?.factors?.map((f) => f.key)));
+  check('اولویت‌بندی: دلیل قابل توضیح از داده (ارزش/احتمال/تازگی تعامل) + منبع فرصت',
+    P.body.reason.includes('سه عامل برتر') && P.body.factors.some((f) => f.key === 'value')
+    && P.body.factors.some((f) => f.key === 'probability') && P.body.factors.some((f) => f.key === 'recency')
+    && P.body.sources[0].url.includes('/opportunities/'));
+  check('اولویت‌بندی: «بدون رد یا قبول خودکار» تصریح شده',
+    P.body.decisionRule.includes('بدون رد یا قبول خودکار'));
+  const badOpp = await api('/ai/opportunities/none/priority', { method: 'POST', token: dt });
+  check('اولویت‌بندی: فرصت ناموجود → ۴۰۴', badOpp.status === 404);
+
+  /* پیشنهاد اقدام بعدی روی تعامل */
+  const inters = await api('/interactions', { token: dt });
+  const inter = (inters.body.items ?? inters.body)[0];
+  check('تعامل دمو برای آزمون موجود است', !!inter?.id);
+  const N = await api(`/ai/interactions/${inter.id}/next-action`, { method: 'POST', token: dt });
+  check('اقدام بعدی: اقدام + پیام پیشنهادی + مهلت + مبنا از داده',
+    N.status === 200 && N.body.proposal.actionTitle.length > 5 && N.body.proposal.message.length > 20
+    && !!N.body.proposal.dueAt && typeof N.body.proposal.basis.overdueCommitments === 'number');
+  check('اقدام بعدی: قاعدهٔ «ثبت و ارسال فقط با تأیید کاربر»',
+    N.body.requiresApproval === true && N.body.approvalRule.includes('تأیید کاربر'));
+
+  /* بدون تأیید ثبت نمی‌شود؛ با تأیید اقدام واقعی ساخته می‌شود */
+  const noConf = await api(`/ai/interactions/${inter.id}/next-action/apply`, { method: 'POST', token: dt, body: { proposal: N.body.proposal } });
+  check('بدون تأیید: apply بدون confirmed → ۴۰۰', noConf.status === 400);
+  const beforeActs = (await api('/actions', { token: dt })).body.length;
+  const A = await api(`/ai/interactions/${inter.id}/next-action/apply`, { method: 'POST', token: dt, body: { confirmed: true, proposal: N.body.proposal } });
+  const afterActs = (await api('/actions', { token: dt })).body.length;
+  check('ثبت با تأیید: اقدام OPEN با مهلت پیشنهادی ساخته شد + تأییدکننده در ممیزی',
+    A.status === 200 && !!A.body.actionId && A.body.confirmedBy === 'demo@srip.local'
+    && afterActs === beforeActs + 1);
+
+  /* RBAC + کلید توقف */
+  const ptok5 = (await api('/auth/login', { method: 'POST', body: { email: 'pars', password: 'pars1234' } })).body?.accessToken;
+  const pPri = await api(`/ai/opportunities/${opp.id}/priority`, { method: 'POST', token: ptok5 });
+  check('RBAC: پارس فرصت دمو را نمی‌بیند → ۴۰۴ (خارج از محدوده)', pPri.status === 404);
+  const cApply = await api(`/ai/interactions/${inter.id}/next-action/apply`, { method: 'POST', token: ct, body: { confirmed: true, proposal: N.body.proposal } });
+  check('RBAC: client بدون action.write/محدوده → ۴۰۳/۴۰۴', [403, 404].includes(cApply.status));
+  await api('/ai/gateway', { method: 'PATCH', token: dt, body: { application: 'opp-priority', halted: true, reason: 'آزمون توقف ۷.۴' } });
+  const H = await api(`/ai/opportunities/${opp.id}/priority`, { method: 'POST', token: dt });
+  check('کلید توقف: کاربرد اولویت‌بندی متوقف → ۵۰۳', H.status === 503);
+  await api('/ai/gateway', { method: 'PATCH', token: dt, body: { application: 'opp-priority', halted: false } });
+  const P2 = await api(`/ai/opportunities/${opp.id}/priority`, { method: 'POST', token: dt });
+  check('رفع توقف → اولویت‌بندی دوباره کار می‌کند', P2.status === 200 && typeof P2.body.score === 'number');
+}
+
+
+/* ═════════════════ گام ۷.۵ — دستیار تولید محتوا + F08 کامل ═════════════════ */
+section('گام ۷.۵ — دستیار تولید محتوا و کارت F08');
+{
+  const dt = (await login(OWNER.email)).body.accessToken;
+  const ct = (await login(CLIENT.email)).body.accessToken;
+
+  /* پیش‌نویس از بستهٔ منابع */
+  const docs = await api('/documents', { token: dt });
+  const docList = Array.isArray(docs.body) ? docs.body : (docs.body.items ?? []);
+  check('اسناد مجاز برای بستهٔ منابع موجودند', docList.length >= 2, `count=${docList.length}`);
+  const empty = await api('/ai/content/draft', { method: 'POST', token: dt, body: { sourceIds: [] } });
+  check('بستهٔ منابع خالی → ۴۰۰', empty.status === 400);
+  const badDoc = await api('/ai/content/draft', { method: 'POST', token: dt, body: { sourceIds: ['doc-none'] } });
+  check('سند خارج از محدوده/ناموجود → ۴۰۰', badDoc.status === 400);
+  const D = await api('/ai/content/draft', { method: 'POST', token: dt, body: { sourceIds: docList.slice(0, 2).map((d) => d.id) } });
+  check('پیش‌نویس منبع‌دار: عنوان + متن با ارجاع [۱] + افشای هوش مصنوعی',
+    D.status === 200 && D.body.draft.title.length > 5
+    && D.body.draft.body.includes('[۱]') && D.body.draft.body.includes('افشای هوش مصنوعی')
+    && D.body.draft.citations.length === 2,
+    JSON.stringify(D.body?.draft?.title));
+  check('پیش‌نویس: پیش‌فرض‌های F08 (مدل/دستور/سهم PARTIAL) + قاعدهٔ تأیید + منابع سند',
+    D.body.f08Defaults.aiAssisted === true && !!D.body.f08Defaults.model && !!D.body.f08Defaults.generationPrompt
+    && D.body.f08Defaults.aiShare === 'PARTIAL' && D.body.f08Defaults.sources.length === 2
+    && D.body.requiresApproval === true && D.body.sources[0].sourceTypeFa === 'سند مخزن');
+
+  /* ثبت فقط با تأیید کاربر */
+  const noConf = await api('/ai/content/draft/apply', { method: 'POST', token: dt, body: { draft: D.body.draft } });
+  check('apply بدون confirmed → ۴۰۰', noConf.status === 400);
+  const A = await api('/ai/content/draft/apply', { method: 'POST', token: dt, body: { confirmed: true, draft: D.body.draft, f08Defaults: D.body.f08Defaults } });
+  check('ثبت با تأیید: خروجی DRAFT با کارت F08 (aiAssisted + مدل + منابع)',
+    A.status === 200 && !!A.body.contentId && A.body.confirmedBy === 'demo@srip.local'
+    && A.body.content.status === 'DRAFT' && A.body.content.f08.aiAssisted === true
+    && A.body.content.f08.sources.length === 2 && A.body.content.f08.model.length > 0);
+  const cid = A.body.contentId;
+
+  /* ویرایش کارت F08: فیلدهای کامل */
+  const badShare = await api(`/program/content/${cid}/f08`, { method: 'PATCH', token: dt, body: { aiShare: 'X' } });
+  check('میزان استفادهٔ نامعتبر → ۴۰۰', badShare.status === 400);
+  const F = await api(`/program/content/${cid}/f08`, { method: 'PATCH', token: dt, body: {
+    model: 'gpt-demo-4o', modelVersion: '2026-10', generationPrompt: 'پیش‌نویس از بستهٔ منابع',
+    aiShare: 'PARTIAL', claims: ['ادعای یک', 'ادعای دو'], usageRights: 'استفادهٔ داخلی',
+    c2paStatus: 'EMBEDDED', verifier: 'راستی‌آزما محمدی', owner: 'مدیر محتوا' } });
+  check('کارت F08 کامل: مدل/نسخه/دستور/سهم/ادعاها/حقوق/C2PA/راستی‌آزما/مالک + برچسب فارسی',
+    F.status === 200 && F.body.f08.model === 'gpt-demo-4o' && F.body.f08.modelVersion === '2026-10'
+    && F.body.f08.claims.length === 2 && F.body.f08.usageRights === 'استفادهٔ داخلی'
+    && F.body.f08.c2paStatus === 'EMBEDDED' && F.body.f08Fa.c2paStatus === 'جاسازی‌شده (C2PA)'
+    && F.body.f08Fa.aiShare === 'با کمک هوش مصنوعی' && F.body.f08.verifier === 'راستی‌آزما محمدی');
+
+  /* انتشار بدون تأیید کامل ممنوع؛ با AI ناقص ممنوع؛ سپس اثرانگشت SHA-256 */
+  const early = await api(`/program/content/${cid}/publish`, { method: 'POST', token: dt });
+  check('انتشار بدون چهار کنترل → ۴۰۰', early.status === 400);
+  const controls = await api('/program/content', { token: dt });
+  const ctlList = controls.body.controls ?? [];
+  for (const c of ctlList) await api(`/program/content/${cid}/controls/${c.key}`, { method: 'POST', token: dt, body: { ok: true } });
+  const bare = await api(`/program/content/${cid}/f08`, { method: 'PATCH', token: dt, body: { generationPrompt: '' } });
+  check('خروجی تأییدشده با کارت AI ناقص (بدون دستور تولید) → انتشار ۴۰۰',
+    bare.status === 200 && (await api(`/program/content/${cid}/publish`, { method: 'POST', token: dt })).status === 400);
+  await api(`/program/content/${cid}/f08`, { method: 'PATCH', token: dt, body: { generationPrompt: 'پیش‌نویس از بستهٔ منابع' } });
+  const P = await api(`/program/content/${cid}/publish`, { method: 'POST', token: dt });
+  check('انتشار موفق: اثرانگشت دیجیتال SHA-256 (۶۴ مبنای۱۶) + قفل کارت پس از انتشار',
+    P.status === 200 && P.body.status === 'PUBLISHED'
+    && P.body.f08.publishFingerprint.algorithm === 'SHA-256'
+    && /^[0-9a-f]{64}$/.test(P.body.f08.publishFingerprint.value ?? '')
+    && (await api(`/program/content/${cid}/f08`, { method: 'PATCH', token: dt, body: { model: 'x' } })).status === 400);
+
+  /* RBAC + توقف + لاگ */
+  const cDraft = await api('/ai/content/draft', { method: 'POST', token: ct, body: { sourceIds: docList.slice(0, 1).map((d) => d.id) } });
+  check('RBAC: client بدون ai.use/اسناد → ۴۰۳/۴۰۰', [403, 400].includes(cDraft.status), `status=${cDraft.status}`);
+  await api('/ai/gateway', { method: 'PATCH', token: dt, body: { application: 'content-draft', halted: true, reason: 'آزمون توقف ۷.۵' } });
+  const H = await api('/ai/content/draft', { method: 'POST', token: dt, body: { sourceIds: docList.slice(0, 1).map((d) => d.id) } });
+  check('کلید توقف: کاربرد دستیار محتوا متوقف → ۵۰۳', H.status === 503);
+  await api('/ai/gateway', { method: 'PATCH', token: dt, body: { application: 'content-draft', halted: false } });
+  const calls = await api('/ai/calls', { token: dt });
+  const cl = Array.isArray(calls.body) ? calls.body : (calls.body.items ?? []);
+  check('لاگ aiCalls با کاربرد content-assist (پیشنهاد + ثبت)',
+    cl.some((x) => x.application === 'content-draft' && x.status === 'OK')
+    && cl.some((x) => x.application === 'content-draft' && (x.note ?? '').includes('تأیید کاربر')));
+}
+
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
 if (failures.length) { console.log(`  Failed: ${failures.join(' | ')}`); }

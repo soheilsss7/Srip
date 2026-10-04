@@ -19,7 +19,7 @@ const PORT = Number(process.env.MOCK_API_PORT || 4000);
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.10.02.06';
+const DEMO_MOCK_VERSION = '2026.10.04.01';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -7299,6 +7299,93 @@ function aiMeetingAssistDraft(transcript){
     sentenceCount:sents.length,
     engineNote:'استخراج قطعی از متن جلسه — فقط پیشنهاد؛ ویرایش کنید و با تأیید صاحب جلسه ثبت کنید.'};
 }
+/* ═══════════ گام ۷.۴ — اولویت‌بندی فرصت + پیشنهاد اقدام بعدی ═══════════
+   امتیاز + «دلیل قابل توضیح» (سه عامل برتر از داده) — بدون رد یا قبول خودکار.
+   پیشنهاد اقدام بعدی روی تعامل: اقدام/پیام/مهلت — ثبت فقط با تأیید کاربر. */
+function aiOppValueTier(v){
+  if(v>=1e10) return 100; if(v>=1e9) return 80; if(v>=1e8) return 60;
+  if(v>=1e7) return 40; if(v>0) return 20; return 0;
+}
+function aiLastInteractionDays(relId){
+  const rows=INTERACTIONS.filter(x=>!x.deletedAt&&x.relationshipId===relId);
+  if(!rows.length) return null;
+  const last=Math.max(...rows.map(x=>new Date(x.occurredAt??x.createdAt??Date.now()).getTime()));
+  return Math.max(0,Math.round((Date.now()-last)/86400000));
+}
+function aiOpportunityPriority(o){
+  const value=Number(o.value??0), prob=Number(o.probability??0);
+  const valueScore=aiOppValueTier(value);
+  const days=aiLastInteractionDays(o.relationshipId);
+  const recScore=days==null?30:days<=7?100:days<=30?80:days<=90?50:20;
+  const score=Math.round(valueScore*0.4+prob*0.4+recScore*0.2);
+  const factors=[
+    {key:'value',label:'ارزش فرصت',detail:`ارزش ثبت‌شده ${faN(value)} ریال`,score:valueScore,weight:40},
+    {key:'probability',label:'احتمال موفقیت',detail:`احتمال ${faN(prob)}٪`,score:prob,weight:40},
+    {key:'recency',label:'تازگی تعامل',detail:days==null?'تعاملی روی رابطهٔ این فرصت ثبت نشده':`آخرین تعامل ${faN(days)} روز پیش`,score:recScore,weight:20},
+  ].sort((a,b)=>b.score-a.score);
+  return {score,factors: factors.slice(0,3),
+    reason:`سه عامل برتر — ${factors.slice(0,3).map(f=>`${f.label} (${f.score} از ۱۰۰، وزن ${faN(f.weight)}٪)`).join(' · ')}`};
+}
+function aiNextActionProposal(inter){
+  const rel=inter.relationshipId?RELS.find(r=>r.id===inter.relationshipId):null;
+  const relName=rel?`${orgById(rel.sourceOrganizationId)?.name??''} ↔ ${orgById(rel.targetOrganizationId)?.name??''}`:'—';
+  const overdue=rel?COMMITMENTS.filter(c=>c.relationshipId===rel.id&&['OPEN','OVERDUE'].includes(c.status)&&c.dueAt&&new Date(c.dueAt).getTime()<Date.now()):[];
+  const openActs=rel?ACTIONS.filter(a=>a.relationshipId===rel.id&&['OPEN','IN_PROGRESS','BLOCKED'].includes(a.status)):[];
+  const days=inter.relationshipId?aiLastInteractionDays(inter.relationshipId):null;
+  const urgent=overdue.length>0;
+  const dueDays=urgent?3:14;
+  const dueAt=new Date(Date.now()+dueDays*86400000).toISOString();
+  const actionTitle=urgent
+    ?`پیگیری فوری ${faN(overdue.length)} تعهد معوق رابطهٔ ${relName}`
+    :`پیگیری پس از «${String(inter.subject).slice(0,50)}»`;
+  const message=urgent
+    ?`با سلام؛ طبق آخرین تعامل، ${faN(overdue.length)} تعهد رابطهٔ ${relName} از موعد گذشته است. خواهشمندیم وضعیت را بررسی و تا مهلت اعلام‌شده پاسخ دهید.`
+    :`با سلام؛ پیرو تعامل «${String(inter.subject).slice(0,60)}»، آمادهٔ ادامهٔ همکاری هستیم. پیشنهاد می‌کنیم جلسهٔ بعدی را برای پیشبرد موضوع هماهنگ کنیم.`;
+  return {actionTitle,message,dueAt,dueDays,
+    basis:{overdueCommitments:overdue.length,openActions:openActs.length,
+      daysSinceLastInteraction:days,relationship:relName}};
+}
+/* ═══════════════ گام ۷.۵ — دستیار تولید محتوا + فیلدهای کامل F08 ═══════════════
+   «پیش‌نویس از بستهٔ منابع»: انتخاب اسناد مجاز → پیش‌نویس منبع‌دار با افشای AI.
+   F08: مدل/نسخه · دستور تولید · میزان استفاده از AI · ادعاها · حقوق استفاده ·
+   وضعیت C2PA · راستی‌آزما · مالک/تأیید · اثرانگشت دیجیتال انتشار (SHA-256، بند ۱۶.۲). */
+const F08_AI_SHARE_FA={FULL:'کاملاً هوش مصنوعی',PARTIAL:'با کمک هوش مصنوعی',MINOR:'کمکی حداقلی'};
+const F08_C2PA_FA={NOT_EMBEDDED:'جاسازی نشده',EMBEDDED:'جاسازی‌شده (C2PA)'};
+function contentF08(c){
+  const f=c.f08??{};
+  return {aiAssisted:f.aiAssisted===true,model:String(f.model??''),modelVersion:String(f.modelVersion??''),
+    generationPrompt:String(f.generationPrompt??''),aiShare:f.aiShare??null,
+    claims:Array.isArray(f.claims)?f.claims:[],
+    usageRights:String(f.usageRights??''),c2paStatus:f.c2paStatus??'NOT_EMBEDDED',
+    verifier:String(f.verifier??''),owner:String(f.owner??''),approvedBy:String(f.approvedBy??''),approvedAt:f.approvedAt??null,
+    sources:Array.isArray(f.sources)?f.sources:[],
+    publishFingerprint:f.publishFingerprint??null};
+}
+/* اثرانگشت SHA-256 دوگانه: در Node از ماژول crypto، در Service Worker از WebCrypto (async) */
+async function contentFingerprint(row){
+  const ok=CONTENT_CONTROLS.map(x=>`${x.key}:${row.controls?.[x.key]?.ok===true?1:0}`).join('|');
+  const payload=`${row.id}|${row.title}|${row.month}|${row.pillar}|${row.ownerRole}|${row.publishedAt}|${ok}`;
+  if(typeof crypto!=='undefined'&&typeof crypto.createHash==='function'){
+    return crypto.createHash('sha256').update(payload).digest('hex');
+  }
+  const subtle=(globalThis.crypto&&globalThis.crypto.subtle)?globalThis.crypto.subtle:null;
+  if(!subtle) return 'unavailable';
+  const buf=await subtle.digest('SHA-256',new TextEncoder().encode(payload));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function aiContentDraftFrom(docs,pillar){
+  const p=MEDIA_PILLARS.find(x=>x.key===pillar)??MEDIA_PILLARS[0];
+  const now=new Date(); const month=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const title=`گزیدهٔ منابع: ${docs[0].name.replace(/\.[a-z0-9]+$/i,'').slice(0,50)}${docs.length>1?` و ${faN(docs.length-1)} سند دیگر`:''}`;
+  const body=[
+    `بر اساس ستون «${p.title}» (ریتم ${p.rhythm})، این پیش‌نویس فقط از بستهٔ منابع مجاز انتخابی ساخته شده است.`,
+    ...docs.slice(0,5).map((d,i)=>`نکتهٔ ${faN(i+1)} — از سند «${d.name}» (طبقه‌بندی ${d.classification??'داخلی'}): محتوای کلیدی این سند به اختصار بازگو و ارجاع داده می‌شود [${faN(i+1)}].`),
+    `جمع‌بندی: چارچوب پیام از منابع فوق برداشت شده و پیش از انتشار باید گردش تأیید سه‌مرحله‌ای F08 را بگذراند.`,
+    'افشای هوش مصنوعی: این پیش‌نویس با کمک درگاه هوش مصنوعی از منابع مجاز تولید شده است؛ پیش از انتشار، بازبینی و تأیید انسانی الزامی است (سطح اختیار ۱۹.۲ سند v6).',
+  ].join('\n\n');
+  return {title,pillar:p.key,month,body,
+    citations:docs.slice(0,5).map((d,i)=>({n:i+1,documentId:d.id,name:d.name}))};
+}
 const CONTENT_CONTROLS=[
   {key:'coreMessage',title:'هم‌راستایی با پیام هسته'},
   {key:'audience',   title:'شخصی‌سازی برای مخاطب'},
@@ -7348,7 +7435,10 @@ function contentView(c){
     pesoGroup:c.pesoGroup??'OWNED',pesoTitle:PESO_GROUPS.find(g=>g.key===(c.pesoGroup??'OWNED'))?.title??'تحت مالکیت',
     pillarRhythm:MEDIA_PILLARS.find(p=>p.key===c.pillar)?.rhythm??'',
     controlsView:ctr,okControls:okCount,totalControls:CONTENT_CONTROLS.length,
-    canPublish:c.status==='APPROVED'};
+    canPublish:c.status==='APPROVED',
+    f08:contentF08(c),
+    f08Fa:{aiShare:F08_AI_SHARE_FA[c.f08?.aiShare]??null,c2paStatus:F08_C2PA_FA[c.f08?.c2paStatus]??F08_C2PA_FA.NOT_EMBEDDED},
+    f08Complete:!!(c.f08?.aiAssisted?(c.f08?.model&&c.f08?.generationPrompt&&c.f08?.usageRights&&c.f08?.verifier):true)};
 }
 function validateContentBody(b){
   const title=String(b.title??'').trim();
@@ -14342,9 +14432,100 @@ const server=http.createServer(async(req,res)=>{
     if(row.status==='PUBLISHED') return json(res,400,{message:'این خروجی قبلاً منتشر شده است.'});
     const missing=CONTENT_CONTROLS.filter(x=>!row.controls?.[x.key]?.ok);
     if(missing.length) return json(res,400,{message:`انتشار بدون تأیید کامل ممنوع است — کنترل‌های ثبت‌نشده یا ناموفق: ${missing.map(x=>x.title).join('، ')}.`});
-    row.status='PUBLISHED'; row.publishedAt=nowIso(); row.updatedAt=nowIso(); saveDb();
-    audit(req,'UPDATE','Content',row.id,'PUBLISH',{title:row.title.slice(0,60)});
+    /* گام ۷.۵ — انتشار محتوای دارای AI بدون کارت F08 کامل ممنوع (مدل + دستور تولید) */
+    if(row.f08?.aiAssisted===true&&(!row.f08.model||!row.f08.generationPrompt))
+      return json(res,400,{message:'کارت تولید و کنترل محتوای هوش مصنوعی (F08) ناقص است — مدل و دستور تولید باید ثبت شده باشد.'});
+    row.status='PUBLISHED'; row.publishedAt=nowIso(); row.updatedAt=nowIso();
+    /* گام ۷.۵/۱۶.۲ — اثرانگشت دیجیتال انتشار (SHA-256) روی نسخهٔ منتشرشده */
+    row.f08={...(row.f08??{})};
+    row.f08.publishFingerprint={algorithm:'SHA-256',value:await contentFingerprint(row),at:row.publishedAt,note:'اثرانگشت نسخهٔ منتشرشده — تغییر هر جزء، مقدار را عوض می‌کند.'};
+    saveDb();
+    audit(req,'UPDATE','Content',row.id,'PUBLISH',{title:row.title.slice(0,60),fingerprint:row.f08.publishFingerprint.value.slice(0,16)+'…'});
     return json(res,200,contentView(row));
+  }
+  /* ─────────────── گام ۷.۵ — کارت F08: ویرایش فرادادهٔ تولید و کنترل محتوای AI ────────── */
+  const f08Reg=match('/program/content/:id/f08');
+  if(f08Reg&&method==='PATCH'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
+    const row=contentFor(req).find(c=>c.id===f08Reg[0]);
+    if(!row) return json(res,404,{message:'خروجی محتوایی یافت نشد یا خارج از محدودهٔ شماست.'});
+    if(row.status==='PUBLISHED') return json(res,400,{message:'خروجی منتشرشده قابل تغییر نیست — اثرانگشت انتشار قفل شده است.'});
+    const b=await readBody(req);
+    const cur=contentF08(row);
+    const aiShare=b.aiShare==null?cur.aiShare:String(b.aiShare).trim();
+    const c2pa=b.c2paStatus==null?cur.c2paStatus:String(b.c2paStatus).trim();
+    if(aiShare!=null&&!F08_AI_SHARE_FA[aiShare]) return json(res,400,{message:'میزان استفاده از هوش مصنوعی از فهرست: کاملاً هوش مصنوعی (FULL)، با کمک هوش مصنوعی (PARTIAL)، کمکی حداقلی (MINOR).'});
+    if(!F08_C2PA_FA[c2pa]) return json(res,400,{message:'وضعیت C2PA از فهرست: جاسازی‌شده (EMBEDDED) یا جاسازی نشده (NOT_EMBEDDED).'});
+    row.f08={aiAssisted:b.aiAssisted==null?cur.aiAssisted:b.aiAssisted===true,
+      model:b.model==null?cur.model:String(b.model).trim().slice(0,80),
+      modelVersion:b.modelVersion==null?cur.modelVersion:String(b.modelVersion).trim().slice(0,40),
+      generationPrompt:b.generationPrompt==null?cur.generationPrompt:String(b.generationPrompt).trim().slice(0,2000),
+      aiShare,claims:b.claims==null?cur.claims:(Array.isArray(b.claims)?b.claims.map(x=>String(x).trim().slice(0,160)).filter(Boolean):[]),
+      usageRights:b.usageRights==null?cur.usageRights:String(b.usageRights).trim().slice(0,500),
+      c2paStatus:c2pa,verifier:b.verifier==null?cur.verifier:String(b.verifier).trim().slice(0,120),
+      owner:b.owner==null?cur.owner:String(b.owner).trim().slice(0,120),
+      approvedBy:cur.approvedBy,approvedAt:cur.approvedAt,sources:cur.sources,
+      publishFingerprint:cur.publishFingerprint};
+    row.updatedAt=nowIso(); saveDb();
+    audit(req,'UPDATE','Content',row.id,'F08',{aiAssisted:row.f08.aiAssisted,model:row.f08.model.slice(0,40),aiShare:row.f08.aiShare,c2paStatus:row.f08.c2paStatus});
+    return json(res,200,contentView(row));
+  }
+  /* ─────────────── گام ۷.۵ — دستیار تولید محتوا: پیش‌نویس از بستهٔ منابع ────────── */
+  const aiCDraft=match('/ai/content/draft');
+  if(aiCDraft&&method==='POST'&&!path.endsWith('/apply')){
+    if(!hasPerm('ai.use')) return json(res,403,{message:'شما مجوز «فراخوانی درگاه هوش مصنوعی» (ai.use) را ندارید.'});
+    const halt=aiHaltCheck(req,'content-draft');
+    if(halt.halted){
+      aiLogCall(req,'content-draft',{providerName:'—',model:'—',status:'HALTED',promptChars:0,durationMs:0,orgId:halt.orgId,note:`توقف: ${halt.reason??''}`});
+      return json(res,503,{code:'AI_HALTED',message:'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',gateway:{status:'HALTED',scope:halt.scope,reason:halt.reason}});
+    }
+    const orgIds=visibleOrgIds(req);
+    const docsIn=(DB.documents??[]).filter(d=>d.organizationId&&orgIds.includes(d.organizationId));
+    const b=await readBody(req);
+    const ids=Array.isArray(b.sourceIds)?b.sourceIds.map(x=>String(x)):[];
+    if(!ids.length) return json(res,400,{message:'بستهٔ منابع خالی است — حداقل یک سند مجاز انتخاب کنید.'});
+    const docs=ids.map(id=>docsIn.find(d=>d.id===id));
+    if(docs.some(d=>!d)) return json(res,400,{message:'برخی اسناد انتخابی یافت نشد یا مجاز نیستند — فقط اسناد درون محدودهٔ شما.'});
+    const pillar=MEDIA_PILLARS.some(x=>x.key===String(b.pillar??'').trim())?String(b.pillar).trim():'newsroom';
+    const t0=Date.now();
+    const route=aiResolveRoute(halt.orgId,'content-draft');
+    const draft=aiContentDraftFrom(docs,pillar);
+    aiLogCall(req,'content-draft',{providerId:route.providerId,providerName:route.providerName,model:route.model,
+      mode:route.mode,promptChars:ids.join().length,outputChars:draft.body.length,durationMs:Date.now()-t0,
+      costEstimate:0,status:'OK',docsRetrieved:docs.length,orgId:halt.orgId});
+    return json(res,200,{draft,
+      f08Defaults:{aiAssisted:true,model:route.model,modelVersion:String(route.providerName),
+        generationPrompt:`ساخت پیش‌نویس از بستهٔ منابع انتخابی (${faN(docs.length)} سند، ستون ${pillar})`,
+        aiShare:'PARTIAL',c2paStatus:'NOT_EMBEDDED',sources:ids},
+      requiresApproval:true,
+      approvalRule:'ثبت پیش‌نویس فقط با تأیید کاربر (سطح اختیار ۱۹.۲ سند v6)؛ پیش‌نویس ثبت‌شده همچنان گردش تأیید F08 را می‌گذراند.',
+      engine:route.providerName,
+      sources:docs.map(d=>({sourceTypeFa:'سند مخزن',title:d.name,url:'/documents',documentId:d.id})),
+      disclaimer:'فقط پیشنهاد — تولید از منابع مجاز؛ پیش از انتشار، بازبینی و تأیید انسانی الزامی است.'});
+  }
+  const aiCDraftApply=match('/ai/content/draft/apply');
+  if(aiCDraftApply&&method==='POST'){
+    if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید — ثبت پیش‌نویس محتوا نیاز به آن دارد.'});
+    const halt=aiHaltCheck(req,'content-draft');
+    if(halt.halted) return json(res,503,{code:'AI_HALTED',message:'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',gateway:{status:'HALTED',scope:halt.scope,reason:halt.reason}});
+    const b=await readBody(req);
+    if(b.confirmed!==true) return json(res,400,{message:'بدون تأیید کاربر چیزی ثبت نمی‌شود — گاهی confirmed=true لازم است (۱۹.۲).'});
+    const d=b.draft??{};
+    const err=validateContentBody({title:d.title,pillar:d.pillar,month:d.month});
+    if(err) return json(res,400,err);
+    const f=contentF08({f08:{...(b.f08Defaults??{}),...(b.f08??{})}});
+    const row={id:`pc-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,
+      organizationId:primaryOrgId(authUser)??visibleOrgIds(req)[0]??PROGRAM_ORG_ID,
+      pillar:String(d.pillar).trim(),pesoGroup:'OWNED',
+      title:String(d.title).trim(),month:String(d.month).trim(),
+      ownerRole:f.owner||'مدیر محتوا',body:String(d.body??'').slice(0,8000),citations:d.citations??[],
+      status:'DRAFT',controls:{},publishedAt:null,f08:{...f,aiAssisted:true},createdAt:nowIso(),updatedAt:nowIso()};
+    DB.programContent.push(row); saveDb();
+    audit(req,'APPLY','ContentAssistant',row.id,'OK',{title:row.title.slice(0,60),sources:f.sources.length,confirmedBy:authUser?.email??null});
+    aiLogCall(req,'content-draft',{providerName:'—',model:'—',status:'OK',promptChars:0,outputChars:0,
+      durationMs:0,orgId:halt.orgId,docsRetrieved:0,note:`ثبت پیش‌نویس با تأیید کاربر: ${authUser?.email??''}`});
+    return json(res,200,{contentId:row.id,confirmedBy:authUser?.email??null,content:contentView(row),
+      rule:'پیش‌نویس منبع‌دار ثبت شد؛ انتشار همچنان منوط به گردش تأیید سه‌مرحله‌ای F08 است.'});
   }
 
   /* ─────────────── گام ۶.۱ — درگاه هوش مصنوعی: ارائه‌دهنده‌ها (/ai/providers) ────────── */
@@ -14853,6 +15034,78 @@ const server=http.createServer(async(req,res)=>{
       type:'SYSTEM',priority:'information',isRead:false,createdAt:nowIso()});
     return json(res,200,{...created,confirmedBy:authUser?.email??null,
       rule:'سطح اختیار ۱۹.۲: خروجی دستیار فقط پیشنهاد بود؛ ثبت نهایی با تأیید صاحب جلسه انجام و در ممیزی ثبت شد.'});
+  }
+
+  /* ─────────────── گام ۷.۴ — اولویت‌بندی فرصت + پیشنهاد اقدام بعدی ────────── */
+  const aiOppPri=match('/ai/opportunities/:id/priority');
+  if(aiOppPri&&method==='POST'){
+    if(!hasPerm('ai.use')) return json(res,403,{message:'شما مجوز «فراخوانی درگاه هوش مصنوعی» (ai.use) را ندارید.'});
+    const o=OPPORTUNITIES.find(x=>x.id===aiOppPri[0]);
+    if(!o||!scopedOpps(req).some(s=>s.id===o.id)) return json(res,404,{message:'فرصت یافت نشد یا خارج از محدودهٔ شماست.'});
+    const halt=aiHaltCheck(req,'opp-priority');
+    if(halt.halted){
+      aiLogCall(req,'opp-priority',{providerName:'—',model:'—',status:'HALTED',promptChars:0,durationMs:0,orgId:halt.orgId,note:`توقف: ${halt.reason??''}`});
+      return json(res,503,{code:'AI_HALTED',message:'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',gateway:{status:'HALTED',scope:halt.scope,reason:halt.reason}});
+    }
+    const t0=Date.now();
+    const route=aiResolveRoute(halt.orgId,'opp-priority');
+    const pr=aiOpportunityPriority(o);
+    aiLogCall(req,'opp-priority',{providerId:route.providerId,providerName:route.providerName,model:route.model,
+      mode:route.mode,promptChars:0,outputChars:JSON.stringify(pr).length,durationMs:Date.now()-t0,
+      costEstimate:0,status:'OK',docsRetrieved:1,orgId:halt.orgId});
+    return json(res,200,{opportunityId:o.id,name:o.name,...pr,
+      decisionRule:'بدون رد یا قبول خودکار — امتیاز و دلیل قابل توضیح فقط برای تصمیم انسانی است (سطح اختیار ۱۹.۲ سند v6).',
+      engine:route.providerName,
+      sources:[{sourceTypeFa:'رکورد ساختاریافته',title:`فرصت: ${o.name}`,url:`/opportunities/${o.id}`}],
+      disclaimer:'فقط پیشنهاد'});
+  }
+  const aiNextAct=match('/ai/interactions/:id/next-action');
+  if(aiNextAct&&method==='POST'&&!path.endsWith('/apply')){
+    if(!hasPerm('ai.use')) return json(res,403,{message:'شما مجوز «فراخوانی درگاه هوش مصنوعی» (ai.use) را ندارید.'});
+    const inter=INTERACTIONS.find(x=>x.id===aiNextAct[0]&&!x.deletedAt);
+    if(!inter||!scopedInteractions(req).some(s=>s.id===inter.id)) return json(res,404,{message:'تعامل یافت نشد یا خارج از محدودهٔ شماست.'});
+    const halt=aiHaltCheck(req,'next-action');
+    if(halt.halted){
+      aiLogCall(req,'next-action',{providerName:'—',model:'—',status:'HALTED',promptChars:0,durationMs:0,orgId:halt.orgId,note:`توقف: ${halt.reason??''}`});
+      return json(res,503,{code:'AI_HALTED',message:'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',gateway:{status:'HALTED',scope:halt.scope,reason:halt.reason}});
+    }
+    const t0=Date.now();
+    const route=aiResolveRoute(halt.orgId,'next-action');
+    const proposal=aiNextActionProposal(inter);
+    aiLogCall(req,'next-action',{providerId:route.providerId,providerName:route.providerName,model:route.model,
+      mode:route.mode,promptChars:0,outputChars:JSON.stringify(proposal).length,durationMs:Date.now()-t0,
+      costEstimate:0,status:'OK',docsRetrieved:1,orgId:halt.orgId});
+    return json(res,200,{interactionId:inter.id,subject:inter.subject,proposal,
+      requiresApproval:true,
+      approvalRule:'ثبت و ارسال فقط با تأیید کاربر (سطح اختیار ۱۹.۲ سند v6) — بدون تأیید، هیچ اقدامی ثبت نمی‌شود.',
+      engine:route.providerName,
+      sources:[{sourceTypeFa:'رکورد ساختاریافته',title:`تعامل: ${inter.subject}`,url:'/interactions'}],
+      disclaimer:'فقط پیشنهاد'});
+  }
+  const aiNextActApply=match('/ai/interactions/:id/next-action/apply');
+  if(aiNextActApply&&method==='POST'){
+    if(!hasPerm('action.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر اقدام» (action.write) را ندارید — ثبت فقط با تأیید کاربر.'});
+    const inter=INTERACTIONS.find(x=>x.id===aiNextActApply[0]&&!x.deletedAt);
+    if(!inter||!scopedInteractions(req).some(s=>s.id===inter.id)) return json(res,404,{message:'تعامل یافت نشد یا خارج از محدودهٔ شماست.'});
+    const halt=aiHaltCheck(req,'next-action');
+    if(halt.halted) return json(res,503,{code:'AI_HALTED',message:'درگاه هوش مصنوعی متوقف است — بازگشت به فرآیند انسانی.',gateway:{status:'HALTED',scope:halt.scope,reason:halt.reason}});
+    const b=await readBody(req);
+    if(b.confirmed!==true) return json(res,400,{message:'بدون تأیید کاربر چیزی ثبت نمی‌شود — گاهی confirmed=true لازم است (۱۹.۲).'});
+    const pr=b.proposal??{};
+    const title=String(pr.actionTitle??'').trim();
+    if(!title) return json(res,400,{message:'عنوان اقدام پیشنهادی خالی است.'});
+    const row={id:`a-${Date.now()}-${Math.random().toString(36).slice(2,5)}`,title:title.slice(0,140),
+      status:'OPEN',priority:String(pr.dueDays??14)<=3?'HIGH':'MEDIUM',
+      dueAt:pr.dueAt??null,description:'از پیشنهاد اقدام بعدی (تأیید کاربر)',
+      reminderAt:null,meetingId:null,outcome:null,ownerId:null,
+      relationshipId:inter.relationshipId??null,organizationId:inter.organizationId??null,
+      createdBy:authUser?.id??null};
+    ACTIONS.push(row); saveDb();
+    audit(req,'APPLY','NextActionAssistant',inter.id,'OK',{actionId:row.id,confirmedBy:authUser?.email??null});
+    aiLogCall(req,'next-action',{providerName:'—',model:'—',status:'OK',promptChars:0,outputChars:0,
+      durationMs:0,orgId:halt.orgId,docsRetrieved:0,note:`ثبت با تأیید کاربر: ${authUser?.email??''}`});
+    return json(res,200,{actionId:row.id,confirmedBy:authUser?.email??null,
+      rule:'پیشنهاد فقط پیشنهاد بود؛ اقدام با تأیید کاربر ثبت و در ممیزی مهر شد.'});
   }
 
   /* ─────────────── گام ۵.۴ — تقویم خروجی اندیشکده (/program/think-tank) ────────── */
