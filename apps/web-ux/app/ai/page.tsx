@@ -1,16 +1,253 @@
 'use client';
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { api, apiGet } from '../_lib/api';
 import { fa } from '../_lib/fa';
-import { PageHeader, Segmented } from '../_components/page-ui';
+import { PageHeader, Segmented, Modal } from '../_components/page-ui';
 import IntelHub from '../_components/intel-hub';
 import {
   Sparkles, Search, CalendarCheck, FileText, ListChecks, ShieldCheck, AlertTriangle, Target,
   Lightbulb, Briefcase, Send, History, Cpu, Zap, Database, Clock, Wand2, CheckCircle2, Info,
-  Users, ArrowLeft, Link2,
+  Users, ArrowLeft, Link2, KeyRound, PlugZap, Pencil, Trash2, Plus, Server, Cloud, Copy,
 } from 'lucide-react';
 import { localeTag, lt, t } from '../_lib/i18n';
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   گام ۶.۱ — پنل «درگاه هوش مصنوعی»: ارائه‌دهنده‌های per-tenant با دو مسیر
+   لوکال (بدون هیچ سرویس بیرونی) و کلید API. کلید فقط یک‌بار هنگام ثبت/چرخش
+   نمایش داده می‌شود و پس از آن تنها ۴ رقم آخر دیده می‌شود (۱۹.۱ و ۱۹.۴ سند v6).
+   ═══════════════════════════════════════════════════════════════════════ */
+const AI_MODE_FA=lt<Record<string,string>>({LOCAL:'مسیر لوکال',API_KEY:'مسیر کلید API'});
+const AI_KIND_FA=lt<Record<string,string>>({BUILTIN:'موتور داخلی (قطعی)',OPENAI_COMPATIBLE:'سازگار-OpenAI',ANTHROPIC:'Anthropic',GEMINI:'Gemini'});
+const AI_STATUS_FA=lt<Record<string,string>>({ACTIVE:'فعال',INACTIVE:'غیرفعال',UNREACHABLE:'در دسترس نیست'});
+const AI_STATUS_CHIP:Record<string,string>={ACTIVE:'success',INACTIVE:'neutral',UNREACHABLE:'danger'};
+const emptyProviderForm={name:'',mode:'LOCAL',kind:'OPENAI_COMPATIBLE',baseUrl:'',model:''};
+
+function GatewayPanel(){
+  const [providers,setProviders]=useState<any[]>([]);
+  const [rule,setRule]=useState('');
+  const [error,setError]=useState('');
+  const [health,setHealth]=useState<Record<string,any>>({});
+  const [busyId,setBusyId]=useState('');
+  const [keyFor,setKeyFor]=useState<any>(null);
+  const [keyInput,setKeyInput]=useState('');
+  const [keyResult,setKeyResult]=useState<any>(null);
+  const [editFor,setEditFor]=useState<any>(null);
+  const [createForm,setCreateForm]=useState<any>(null);
+
+  function reload(){
+    apiGet('/ai/providers').then((r:any)=>{
+      setProviders(r.items??[]); setRule(String(r.rule??''));
+    }).catch(x=>setError((x as Error).message));
+  }
+  useEffect(()=>{reload();},[]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function runHealth(p:any){
+    setBusyId(p.id); setError('');
+    try{ const r=await api(`/ai/providers/${p.id}/health`,{method:'POST'});
+      setHealth(h=>({...h,[p.id]:r})); reload();
+    }catch(x:any){ setError(x.message); } finally{ setBusyId(''); }
+  }
+  async function saveKey(){
+    setBusyId('key'); setError('');
+    try{
+      const r=await api(`/ai/providers/${keyFor.id}/key`,{method:'POST',body:JSON.stringify({key:keyInput})});
+      setKeyResult(r); setKeyInput(''); reload();
+    }catch(x:any){ setError(x.message); } finally{ setBusyId(''); }
+  }
+  async function saveEdit(){
+    setBusyId('edit'); setError('');
+    try{
+      await api(`/ai/providers/${editFor.id}`,{method:'PATCH',body:JSON.stringify({
+        name:editFor.name,baseUrl:editFor.baseUrl,model:editFor.model})});
+      setEditFor(null); reload();
+    }catch(x:any){ setError(x.message); } finally{ setBusyId(''); }
+  }
+  async function createProvider(){
+    setBusyId('create'); setError('');
+    try{
+      await api('/ai/providers',{method:'POST',body:JSON.stringify(createForm)});
+      setCreateForm(null); reload();
+    }catch(x:any){ setError(x.message); } finally{ setBusyId(''); }
+  }
+  async function removeProvider(p:any){
+    setBusyId(p.id); setError('');
+    try{ await api(`/ai/providers/${p.id}`,{method:'DELETE'}); reload(); }
+    catch(x:any){ setError(x.message); } finally{ setBusyId(''); }
+  }
+
+  const active=providers.filter(p=>p.status==='ACTIVE').length;
+  const unreachable=providers.filter(p=>p.status==='UNREACHABLE').length;
+  const inactive=providers.filter(p=>p.status==='INACTIVE').length;
+
+  return (
+    <div className="ai-composer gateway-panel">
+      <div className="composer-head">
+        <h2><Server size={16}/> {t('درگاه هوش مصنوعی — دو مسیر')}</h2>
+        <span className="chip success"><CheckCircle2 size={12}/> {t('مسیر لوکال همیشه در دسترس')}</span>
+      </div>
+      <p className="ai-hint" style={{margin:0}}>
+        <Info size={12}/> {t('هیچ جزئی از سامانه مستقیم به مدل وصل نمی‌شود؛ همه‌چیز از درگاه می‌گذرد. مسیر لوکال (موتور داخلی قطعی یا Ollama و هر endpoint سازگار-OpenAI روی دستگاه) بدون هیچ سرویس بیرونی کار می‌کند و مسیر کلید API، ارائه‌دهندهٔ ابری را با کلید محفوظ اضافه می‌کند.')}
+      </p>
+      {error && <div className="banner error" role="alert" style={{display:'flex',gap:8,alignItems:'center'}}><AlertTriangle size={14}/> {error}</div>}
+
+      <div className="ai-quick-chips" aria-label={t('خلاصهٔ وضعیت درگاه')}>
+        <span className="chip success">{t('فعال')}: {fa(active)}</span>
+        <span className="chip neutral">{t('غیرفعال')}: {fa(inactive)}</span>
+        <span className="chip danger">{t('در دسترس نیست')}: {fa(unreachable)}</span>
+        <button className="ai-quick-chip" style={{borderStyle:'dashed'}} onClick={()=>setCreateForm({...emptyProviderForm})}>
+          <Plus size={12}/> {t('افزودن ارائه‌دهنده')}
+        </button>
+      </div>
+
+      <div className="table-wrap">
+        <table>
+          <thead><tr>
+            <th>{t('ارائه‌دهنده')}</th><th>{t('مسیر')}</th><th>{t('نوع')}</th>
+            <th>{t('نشانی و مدل')}</th><th>{t('وضعیت')}</th><th>{t('کلید')}</th><th>{t('عملیات')}</th>
+          </tr></thead>
+          <tbody>
+            {providers.map((p:any)=>(
+              <Fragment key={p.id}>
+                <tr className="gw-row" data-provider={p.id}>
+                  <td className="t-primary">{p.name}{p.builtin && <span className="chip info" style={{marginInlineStart:6}}>{t('همیشه فعال — حذف نمی‌شود')}</span>}</td>
+                  <td><span className={`chip ${p.mode==='LOCAL'?'info':'purple'}`}>{p.mode==='LOCAL'?<Server size={11}/>:<Cloud size={11}/>} {AI_MODE_FA[p.mode]??p.mode}</span></td>
+                  <td>{AI_KIND_FA[p.kind]??p.kind}</td>
+                  <td className="t-muted" style={{fontSize:11.5}}>
+                    {p.baseUrl??t('بدون شبکه — داخل مرورگر')}
+                    {p.model?` · ${p.model}`:''}
+                  </td>
+                  <td><span className={`chip ${AI_STATUS_CHIP[p.status]??'neutral'}`}>{AI_STATUS_FA[p.status]??p.status}</span></td>
+                  <td className="t-muted">{p.mode==='API_KEY'?(p.hasKey?`••••${p.keyLast4}`:t('ثبت نشده')):t('—')}</td>
+                  <td>
+                    <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+                      <button className="btn btn-ghost btn-sm" onClick={()=>runHealth(p)} disabled={busyId===p.id} title={t('آزمون اتصال')}><PlugZap size={13}/> {busyId===p.id?t('…'):t('آزمون اتصال')}</button>
+                      {p.mode==='API_KEY' && <button className="btn btn-ghost btn-sm" onClick={()=>{setKeyFor(p);setKeyResult(null);setKeyInput('');}} title={t('ثبت/چرخش کلید')}><KeyRound size={13}/> {t('کلید')}</button>}
+                      {!p.builtin && <button className="btn btn-ghost btn-sm" onClick={()=>setEditFor({...p})} title={t('ویرایش')}><Pencil size={13}/></button>}
+                      {!p.builtin && <button className="btn btn-ghost btn-sm" onClick={()=>removeProvider(p)} disabled={busyId===p.id} title={t('حذف')}><Trash2 size={13}/></button>}
+                    </div>
+                  </td>
+                </tr>
+                {health[p.id] && (
+                  <tr className="gw-health-row"><td colSpan={7}>
+                    <div className={`banner ${health[p.id].ok?'success':'error'}`} style={{display:'flex',gap:8,alignItems:'flex-start',margin:0}}>
+                      {health[p.id].ok?<CheckCircle2 size={14}/>:<AlertTriangle size={14}/>}
+                      <span>
+                        <b>{t('آزمون اتصال')} «{p.name}»:</b> {health[p.id].ok?t('موفق'):t('ناموفق')}
+                        {health[p.id].ok?` — ${fa((health[p.id].models??[]).length)} ${t('مدل')}`:''}
+                        {` (${fa(health[p.id].latencyMs ?? 0)}${t('میلی‌ثانیه')})`}
+                        {(health[p.id].models??[]).length>0 && <span className="t-muted" style={{marginInlineStart:6}}>{(health[p.id].models??[]).join(' · ')}</span>}
+                        <span className="t-muted" style={{display:'block',marginTop:2}}>{health[p.id].detail}</span>
+                      </span>
+                    </div>
+                  </td></tr>
+                )}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {rule && <p className="field-hint">{rule}</p>}
+
+      {/* مودال ثبت/چرخش کلید — نمایش یک‌بار کلید کامل */}
+      <Modal open={!!keyFor} title={t('ثبت/چرخش کلید API')} onClose={()=>{setKeyFor(null);setKeyResult(null);}}
+        description={keyFor?`${keyFor.name} — ${keyFor.baseUrl}`:undefined}>
+        {keyResult ? (
+          <div>
+            <div className="banner warning" style={{display:'flex',gap:8}}>
+              <AlertTriangle size={14}/>
+              <span>{keyResult.notice}</span>
+            </div>
+            <div className="gw-onetime-key" style={{margin:'10px 0',padding:12,border:'1px dashed var(--srip-amber)',borderRadius:10,fontFamily:'monospace',direction:'ltr',textAlign:'left',fontSize:14,wordBreak:'break-all'}}>
+              {keyResult.key}
+            </div>
+            <div className="form-actions">
+              <button type="button" className="srip-button" onClick={()=>{try{navigator.clipboard?.writeText(String(keyResult.key));}catch{} }}><Copy size={14}/> {t('کپی کلید')}</button>
+              <button type="button" className="srip-button primary" onClick={()=>{setKeyFor(null);setKeyResult(null);}}>{t('ذخیره کردم — بستن')}</button>
+            </div>
+          </div>
+        ) : (
+          <form className="form-grid" onSubmit={(e)=>{e.preventDefault();saveKey();}}>
+            <div className="field full">
+              <label className="field-label">{t('کلید API')}</label>
+              <input value={keyInput} onChange={e=>setKeyInput(e.target.value)} dir="ltr"
+                placeholder="sk-…" required minLength={8} aria-label={t('کلید API')} />
+            </div>
+            <p className="field-hint">{t('کلید فقط همین یک‌بار نمایش داده می‌شود و سپس تنها ۴ رقم آخر نگه داشته می‌شود؛ کلید کامل هرگز ذخیره یا بازگردانی نمی‌شود.')}</p>
+            <div className="form-actions">
+              <button type="button" className="srip-button" onClick={()=>setKeyFor(null)}>{t('انصراف')}</button>
+              <button type="submit" className="srip-button primary" disabled={busyId==='key'}>{busyId==='key'?t('در حال…'):t('ثبت کلید')}</button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* مودال ویرایش ارائه‌دهنده */}
+      <Modal open={!!editFor} title={t('ویرایش ارائه‌دهنده')} onClose={()=>setEditFor(null)}>
+        {editFor && (
+          <form className="form-grid" onSubmit={(e)=>{e.preventDefault();saveEdit();}}>
+            <div className="field full">
+              <label className="field-label">{t('نام ارائه‌دهنده')}</label>
+              <input value={editFor.name??''} onChange={e=>setEditFor((f:any)=>({...f,name:e.target.value}))} required minLength={3} />
+            </div>
+            <div className="field full">
+              <label className="field-label">{t('نشانی (Base URL)')}</label>
+              <input value={editFor.baseUrl??''} onChange={e=>setEditFor((f:any)=>({...f,baseUrl:e.target.value}))} dir="ltr" required placeholder="http://localhost:11434/v1" />
+            </div>
+            <div className="field full">
+              <label className="field-label">{t('مدل پیش‌فرض')}</label>
+              <input value={editFor.model??''} onChange={e=>setEditFor((f:any)=>({...f,model:e.target.value}))} dir="ltr" placeholder="llama3.1" />
+            </div>
+            <div className="form-actions">
+              <button type="button" className="srip-button" onClick={()=>setEditFor(null)}>{t('انصراف')}</button>
+              <button type="submit" className="srip-button primary" disabled={busyId==='edit'}>{busyId==='edit'?t('در حال…'):t('ذخیره')}</button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* مودال ارائه‌دهندهٔ جدید */}
+      <Modal open={!!createForm} title={t('ارائه‌دهندهٔ جدید')} onClose={()=>setCreateForm(null)}
+        description={t('مسیر لوکال بدون سرویس بیرونی و بدون کلید کار می‌کند؛ مسیر کلید API پس از ثبت کلید فعال می‌شود.')}>
+        {createForm && (
+          <form className="form-grid" onSubmit={(e)=>{e.preventDefault();createProvider();}}>
+            <div className="field full">
+              <label className="field-label">{t('نام ارائه‌دهنده')}</label>
+              <input value={createForm.name} onChange={e=>setCreateForm((f:any)=>({...f,name:e.target.value}))} required minLength={3} placeholder={t('مثلاً: Ollama سرور سازمان')} />
+            </div>
+            <div className="field">
+              <label className="field-label">{t('مسیر')}</label>
+              <select value={createForm.mode} onChange={e=>setCreateForm((f:any)=>({...f,mode:e.target.value}))}>
+                <option value="LOCAL">{t('مسیر لوکال (بدون سرویس بیرونی)')}</option>
+                <option value="API_KEY">{t('مسیر کلید API')}</option>
+              </select>
+            </div>
+            <div className="field">
+              <label className="field-label">{t('نوع')}</label>
+              <select value={createForm.kind} onChange={e=>setCreateForm((f:any)=>({...f,kind:e.target.value}))}>
+                <option value="OPENAI_COMPATIBLE">{AI_KIND_FA.OPENAI_COMPATIBLE}</option>
+                <option value="ANTHROPIC">{AI_KIND_FA.ANTHROPIC}</option>
+                <option value="GEMINI">{AI_KIND_FA.GEMINI}</option>
+              </select>
+            </div>
+            <div className="field full">
+              <label className="field-label">{t('نشانی (Base URL)')}</label>
+              <input value={createForm.baseUrl} onChange={e=>setCreateForm((f:any)=>({...f,baseUrl:e.target.value}))} dir="ltr" required placeholder="http://localhost:11434/v1" />
+            </div>
+            <div className="field full">
+              <label className="field-label">{t('مدل پیش‌فرض (اختیاری)')}</label>
+              <input value={createForm.model} onChange={e=>setCreateForm((f:any)=>({...f,model:e.target.value}))} dir="ltr" placeholder="llama3.1" />
+            </div>
+            <div className="form-actions">
+              <button type="button" className="srip-button" onClick={()=>setCreateForm(null)}>{t('انصراف')}</button>
+              <button type="submit" className="srip-button primary" disabled={busyId==='create'}>{busyId==='create'?t('در حال…'):t('ثبت ارائه‌دهنده')}</button>
+            </div>
+          </form>
+        )}
+      </Modal>
+    </div>
+  );
+}
 
 /* ---------------------------------------------------------------------------
    Deterministic intelligence model — works fully without any LLM.
@@ -101,7 +338,7 @@ export default function AI(){
   const [showMeta,setShowMeta]=useState(false);
   const resultRef=useRef<HTMLDivElement>(null);
   /* فاز ۳/۲۲: پرسش‌وپاسخ آزاد به زبان طبیعی — همان لایهٔ MCP برای انسان */
-  const [mode,setMode]=useState<'FREE'|'STRUCT'>('FREE');
+  const [mode,setMode]=useState<'FREE'|'STRUCT'|'GATEWAY'>('FREE');
   const [freeQ,setFreeQ]=useState('');
   const [chat,setChat]=useState<Array<{q:string;a:any}>>([]);
   const [freeBusy,setFreeBusy]=useState(false);
@@ -248,7 +485,7 @@ export default function AI(){
         <div className="ai-main">
           <div style={{marginBottom:12}}>
             <Segmented
-              options={[{value:'FREE',label:t('پرسش آزاد (زبان طبیعی)')},{value:'STRUCT',label:t('قابلیت‌های آماده')}]}
+              options={[{value:'FREE',label:t('پرسش آزاد (زبان طبیعی)')},{value:'STRUCT',label:t('قابلیت‌های آماده')},{value:'GATEWAY',label:t('درگاه و ارائه‌دهنده‌ها')}]}
               value={mode} onChange={(v)=>setMode(v)} />
           </div>
           {mode==='FREE' ? (
@@ -305,6 +542,8 @@ export default function AI(){
                 <Info size={12}/> پاسخ‌ها فقط از دادهٔ واقعی همین مستأجر و با ارجاع به رکورد منبع ساخته می‌شوند؛ برای خارج از دامنه صادقانه «نمی‌دانم» گفته می‌شود.
               </div>
             </div>
+          ) : mode==='GATEWAY' ? (
+            <GatewayPanel/>
           ) : (
           <div className="ai-composer">
             <div className="composer-head">

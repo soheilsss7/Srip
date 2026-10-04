@@ -1949,6 +1949,92 @@ section('گام ۴.۶ — پروژه صفر: چک‌لیست پروژه صفر')
     parsAgain.body.stats.done === 20 && parsAgain.body.passed === true);
 }
 
+
+/* ═════════════════ گام ۶.۱ — درگاه هوش مصنوعی: ارائه‌دهنده‌های دوگانه ═════════════════ */
+section('گام ۶.۱ — درگاه هوش مصنوعی (لوکال + کلید API)');
+{
+  const dt = (await login(OWNER.email)).body.accessToken;
+  const ct = (await login(CLIENT.email)).body.accessToken;
+
+  /* سه بذر بخش ۳.۳ مسترپلن */
+  const L = await api('/ai/providers', { token: dt });
+  check('درگاه: سه بذر (موتور محلی SRIP + Ollama + ابری)', L.status === 200 && L.body.items.length === 3
+    && L.body.items.some((p) => p.kind === 'BUILTIN') && L.body.items.filter((p) => p.mode === 'LOCAL').length === 2
+    && L.body.items.filter((p) => p.mode === 'API_KEY').length === 1, JSON.stringify(L.body.items?.map((p) => p.name)));
+  const local = L.body.items.find((p) => p.kind === 'BUILTIN');
+  const ollama = L.body.items.find((p) => p.name.includes('Ollama'));
+  const cloud = L.body.items.find((p) => p.mode === 'API_KEY');
+  check('درگاه: مسیر لوکال — موتور داخلی ACTIVE بدون کلید؛ Ollama UNREACHABLE با نشانی ۱۱۴۳۴',
+    local.status === 'ACTIVE' && local.keyLast4 === null && ollama.status === 'UNREACHABLE'
+    && String(ollama.baseUrl).includes('localhost:11434'));
+  check('درگاه: ابری بدون کلید → INACTIVE و rule درگاه برمی‌گردد',
+    cloud.status === 'INACTIVE' && cloud.hasKey === false && String(L.body.rule ?? '').includes('درگاه'));
+
+  /* کلید: نمایش یک‌بار + ماسک دائمی ۴ رقم */
+  const K = await api(`/ai/providers/${cloud.id}/key`, { method: 'POST', token: dt, body: { key: 'sk-demo-1234' } });
+  check('کلید: پاسخ ثبت، کلید کامل را فقط یک‌بار برمی‌گرداند', K.status === 200 && K.body.key === 'sk-demo-1234'
+    && K.body.provider.keyLast4 === '1234' && K.body.provider.status === 'ACTIVE' && !!K.body.notice);
+  const L2 = await api('/ai/providers', { token: dt });
+  check('کلید: در GET بعدی کلید کامل نیست — فقط ۴ رقم آخر', JSON.stringify(L2.body).includes('sk-demo-1234') === false
+    && L2.body.items.find((p) => p.id === cloud.id).keyLast4 === '1234');
+  const KR = await api(`/ai/providers/${cloud.id}/key`, { method: 'POST', token: dt, body: { key: 'sk-rotated-987654' } });
+  check('کلید: چرخش → ماسک ۴ رقم جدید', KR.status === 200 && KR.body.provider.keyLast4 === '7654');
+  const KShort = await api(`/ai/providers/${cloud.id}/key`, { method: 'POST', token: dt, body: { key: 'ab12' } });
+  check('کلید: کوتاه‌تر از ۸ نویسه → ۴۰۰', KShort.status === 400);
+  const KLocal = await api(`/ai/providers/${local.id}/key`, { method: 'POST', token: dt, body: { key: 'sk-local-1234' } });
+  check('کلید: روی مسیر لوکال → ۴۰۰ (لوکال بدون کلید کار می‌کند)', KLocal.status === 400);
+
+  /* آزمون اتصال (health + فهرست مدل‌ها) */
+  const H1 = await api(`/ai/providers/${local.id}/health`, { method: 'POST', token: dt });
+  check('آزمون اتصال: موتور داخلی → موفق با مدل srip-deterministic و بدون شبکه',
+    H1.status === 200 && H1.body.ok === true && H1.body.models.includes('srip-deterministic'));
+  const H2 = await api(`/ai/providers/${ollama.id}/health`, { method: 'POST', token: dt });
+  check('آزمون اتصال: Ollama در محیط تست → UNREACHABLE (الگوی کاربر واقعی)',
+    H2.status === 200 && H2.body.ok === false && H2.body.status === 'UNREACHABLE' && H2.body.provider.status === 'UNREACHABLE');
+  const H3 = await api(`/ai/providers/${cloud.id}/health`, { method: 'POST', token: dt });
+  check('آزمون اتصال: ابری با کلید → موفق با فهرست مدل‌ها',
+    H3.status === 200 && H3.body.ok === true && H3.body.models.length >= 2 && H3.body.provider.status === 'ACTIVE');
+
+  /* CRUD + اعتبارسنجی */
+  const cBad = await api('/ai/providers', { method: 'POST', token: dt, body: { name: 'ab', mode: 'LOCAL', kind: 'OPENAI_COMPATIBLE', baseUrl: 'http://x/v1' } });
+  check('ایجاد: نام کوتاه → ۴۰۰', cBad.status === 400);
+  const cMode = await api('/ai/providers', { method: 'POST', token: dt, body: { name: 'درست است', mode: 'XYZ', kind: 'OPENAI_COMPATIBLE', baseUrl: 'http://x/v1' } });
+  check('ایجاد: mode نامعتبر → ۴۰۰', cMode.status === 400);
+  const cBuiltin = await api('/ai/providers', { method: 'POST', token: dt, body: { name: 'دومین موتور', mode: 'LOCAL', kind: 'BUILTIN', baseUrl: 'http://x/v1' } });
+  check('ایجاد: BUILTIN فقط از بذر سامانه → ۴۰۰', cBuiltin.status === 400);
+  const cUrl = await api('/ai/providers', { method: 'POST', token: dt, body: { name: 'بدون نشانی', mode: 'LOCAL', kind: 'OPENAI_COMPATIBLE', baseUrl: 'ftp://x' } });
+  check('ایجاد: نشانی غیر http(s) → ۴۰۰', cUrl.status === 400);
+  const created = await api('/ai/providers', { method: 'POST', token: dt, body: { name: 'درگاه تست خودکار', mode: 'API_KEY', kind: 'ANTHROPIC', baseUrl: 'https://api.test.example/v1', model: 'claude-sonnet-4' } });
+  check('ایجاد: ارائه‌دهندهٔ جدید → 201 و INACTIVE تا ثبت کلید', created.status === 201 && created.body.status === 'INACTIVE' && created.body.kind === 'ANTHROPIC');
+  const hNoKey = await api(`/ai/providers/${created.body.id}/health`, { method: 'POST', token: dt });
+  check('آزمون اتصال بدون کلید → ۴۰۰ «ابتدا کلید ثبت کنید»', hNoKey.status === 400 && String(hNoKey.body.message).includes('کلید'));
+  const upd = await api(`/ai/providers/${created.body.id}`, { method: 'PATCH', token: dt, body: { name: 'درگاه تست (ویرایش)', baseUrl: 'https://api2.test.example/v1' } });
+  check('ویرایش: نام و نشانی → 200', upd.status === 200 && upd.body.name === 'درگاه تست (ویرایش)' && upd.body.baseUrl === 'https://api2.test.example/v1');
+  const updLocal = await api(`/ai/providers/${local.id}`, { method: 'PATCH', token: dt, body: { name: 'تغییر ممنوع' } });
+  check('ویرایش: موتور داخلی قابل ویرایش نیست → ۴۰۰', updLocal.status === 400);
+  const delBuiltin = await api(`/ai/providers/${local.id}`, { method: 'DELETE', token: dt });
+  check('حذف: موتور داخلی حذف نمی‌شود → ۴۰۰', delBuiltin.status === 400);
+  const del = await api(`/ai/providers/${created.body.id}`, { method: 'DELETE', token: dt });
+  check('حذف: ارائه‌دهندهٔ دلخواه → 200', del.status === 200 && del.body.deleted === created.body.id);
+
+  /* RBAC + جداسازی مستأجر */
+  const cGet = await api('/ai/providers', { token: ct });
+  check('RBAC: client با ai.use فهرست را می‌بیند — اما مستأجرش ارائه‌دهنده‌ای ندارد (per-tenant)',
+    cGet.status === 200 && cGet.body.items.length === 0);
+  const cPost = await api('/ai/providers', { method: 'POST', token: ct, body: { name: 'غیرمجاز', mode: 'LOCAL', kind: 'OPENAI_COMPATIBLE', baseUrl: 'http://x/v1' } });
+  check('RBAC: client بدون ai.admin → ایجاد ۴۰۳', cPost.status === 403);
+  const cKey = await api(`/ai/providers/${cloud.id}/key`, { method: 'POST', token: ct, body: { key: 'sk-hack-12345' } });
+  check('RBAC: client بدون ai.admin → ثبت کلید ۴۰۳ (و کلید دمو دست‌نخورده)', cKey.status === 403);
+  const cHealth = await api(`/ai/providers/${cloud.id}/health`, { method: 'POST', token: ct });
+  check('RBAC: client بدون ai.admin → آزمون اتصال ۴۰۳', cHealth.status === 403);
+
+  /* پارس: مستأجر واقعی بذر مستقل خودش را دارد */
+  const ptok = (await api('/auth/login', { method: 'POST', body: { email: 'pars', password: 'pars1234' } })).body?.accessToken;
+  const pL = await api('/ai/providers', { token: ptok });
+  check('جداسازی مستأجر: پارس سه ارائه‌دهندهٔ مستقل خودش را می‌بیند (نه دنیای دمو)',
+    pL.status === 200 && pL.body.items.length === 3 && pL.body.items.every((p) => p.id.includes('org-pars')));
+}
+
 console.log(`\n════════════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
 if (failures.length) { console.log(`  Failed: ${failures.join(' | ')}`); }

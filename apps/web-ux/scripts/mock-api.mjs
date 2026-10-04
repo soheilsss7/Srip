@@ -727,7 +727,7 @@ const SEED_USERS = {
   'client@arya-tech.ir': {
     id:'u-2', email:'client@arya-tech.ir', username:'client', name:'سارا محمدی', password:'123456',
     memberships:[{id:'mb-2',organizationId:'org-2',organizationName:'آریا فناوری',role:'RELATIONSHIP_MANAGER',department:'فروش',dataScope:'ORGANIZATION',accessScope:'ORGANIZATION',isPrimary:true}],
-    permissions:['dashboard.read','program.read','partnership.read','organization.read','person.read','relationship.read','meeting.read','interaction.read','action.read','commitment.read','project.read','opportunity.read','network.read','ai.query','ai.executive_brief','recommendation.read','report.read','مجوز خروجی گزارش','approval.request','approval.read','search.read','notification.read','document.read','calendar.read','help.read','privacy.read','privacy.access','privacy.export','privacy.erase','enterprise.read','feature_flag.read','analytics.read','analytics.write'],
+    permissions:['dashboard.read','program.read','partnership.read','organization.read','person.read','relationship.read','meeting.read','interaction.read','action.read','commitment.read','project.read','opportunity.read','network.read','ai.query','ai.executive_brief','ai.use','recommendation.read','report.read','مجوز خروجی گزارش','approval.request','approval.read','search.read','notification.read','document.read','calendar.read','help.read','privacy.read','privacy.access','privacy.export','privacy.erase','enterprise.read','feature_flag.read','analytics.read','analytics.write'],
     accessibleOrganizationIds:['org-2'],
     isOwner:false,
     isActive:true,
@@ -3540,6 +3540,7 @@ function loadDb() {
       if (!DB.meetingIntelLabels) DB.meetingIntelLabels = {};
       if (!DB.compliance) DB.compliance = seedComplianceStore();
       if (!Array.isArray(DB.knowledgeTransfers)) DB.knowledgeTransfers = [];
+      if (!Array.isArray(DB.aiProviders)) DB.aiProviders = [];
     }
   } catch { DB = null; }
   if (!DB) {
@@ -3550,7 +3551,7 @@ function loadDb() {
       assessments: seedCriteriaAssessments(), criteriaManual: [], knowledge: seedKnowledge(), documents: seedDocuments(),
       scoreSnapshots: seedScoreSnapshots(), accountPlans: seedAccountPlans(), careerEvents: seedCareerEvents(),
       calibrationSettings: seedCalibrationSettings(), nbaExecutions: [], edgeSuggestionAccepts: [],
-      pulseSurveys: [], meetingIntelLabels: {}, compliance: seedComplianceStore(), knowledgeTransfers: [] };
+      pulseSurveys: [], meetingIntelLabels: {}, compliance: seedComplianceStore(), knowledgeTransfers: [], aiProviders: [] };
   }
   // seed identities with real scrypt hashes (kept on disk afterwards)
   for (const [email, u] of Object.entries(SEED_USERS)) {
@@ -3622,7 +3623,7 @@ function resetDbInPlace(){
   seedNotificationRules(); seedAuditDemo(); seedFeatureFlags(); seedExportLog();
   seedRetention(); seedMasterData(); seedIntegrations(); seedReferralStore();
   seedApprovals(); seedWorkflowStore(); seedPublicsStore(); seedStrategyStore(); seedSecurityEvents(); seedPhase2Store(); seedPhase3Store();
-  seedPrivacyStore(); seedEnterpriseStore(); seedSettingsStore(); seedSessionsStore();
+  seedPrivacyStore(); seedEnterpriseStore(); seedSettingsStore(); seedSessionsStore(); ensureAiProvidersSeed();
   seedAnalyticsStore(); seedPhase1Extras(); saveDb();
 }
 
@@ -3642,12 +3643,12 @@ function audit(req, action, entity, entityId, outcome = 'OK', meta = {}) {
 
 /* --------------------------- admin: RBAC catalog & access recompute ----- */
 const ROLE_LABELS_ADMIN={SUPER_ADMIN:'مدیر کل سیستم',HOLDING_ADMIN:'مدیر هلدینگ',HOLDING_EXECUTIVE:'مدیر ارشد هلدینگ',SUBSIDIARY_ADMIN:'مدیر شرکت',SUBSIDIARY_EXECUTIVE:'مدیر ارشد شرکت',RELATIONSHIP_MANAGER:'مدیر روابط',PROJECT_MANAGER:'مدیر پروژه',ANALYST:'تحلیلگر',STANDARD_USER:'کاربر استاندارد',READ_ONLY:'فقط خواندنی'};
-const R_READ=['dashboard.read','publics.read','strategy.read','organization.read','person.read','relationship.read','network.read','interaction.read','meeting.read','action.read','commitment.read','project.read','opportunity.read','recommendation.read','report.read','document.read','notification.read','search.read','calendar.read','help.read','user.read','session.read','analytics.read','ai.query','ai.executive_brief','program.read','partnership.read'];
+const R_READ=['dashboard.read','publics.read','strategy.read','organization.read','person.read','relationship.read','network.read','interaction.read','meeting.read','action.read','commitment.read','project.read','opportunity.read','recommendation.read','report.read','document.read','notification.read','search.read','calendar.read','help.read','user.read','session.read','analytics.read','ai.query','ai.executive_brief','ai.use','program.read','partnership.read'];
 const R_WRITE=['strategy.write','publics.write','person.write','relationship.write','interaction.write','meeting.write','action.write','commitment.write','project.write','opportunity.write','recommendation.تأیید','document.write','data.manage','program.write','partnership.write'];
-const R_READONLY_PERMS=R_READ.filter(p=>!['ai.query','ai.executive_brief','analytics.read','recommendation.read'].includes(p));
+const R_READONLY_PERMS=R_READ.filter(p=>!['ai.query','ai.executive_brief','ai.use','analytics.read','recommendation.read'].includes(p));
 const ROLE_CATALOG=[
   {key:'SUPER_ADMIN',name:ROLE_LABELS_ADMIN.SUPER_ADMIN,description:'مالک سامانه — دسترسی کامل، غیرقابل واگذاری.',holding:true,perms:['*']},
-  {key:'HOLDING_ADMIN',name:ROLE_LABELS_ADMIN.HOLDING_ADMIN,description:'مدیریت هلدینگ و همهٔ شرکت‌های زیرمجموعه.',holding:true,perms:[...R_READ,...R_WRITE,'metrics.read']},
+  {key:'HOLDING_ADMIN',name:ROLE_LABELS_ADMIN.HOLDING_ADMIN,description:'مدیریت هلدینگ و همهٔ شرکت‌های زیرمجموعه.',holding:true,perms:[...R_READ,...R_WRITE,'metrics.read','ai.admin']},
   {key:'HOLDING_EXECUTIVE',name:ROLE_LABELS_ADMIN.HOLDING_EXECUTIVE,description:'مدیریت ارشد هلدینگ — دید کامل زیرمجموعه‌ها.',holding:true,perms:[...R_READ,'metrics.read']},
   {key:'SUBSIDIARY_ADMIN',name:ROLE_LABELS_ADMIN.SUBSIDIARY_ADMIN,description:'مدیریت شرکت — عملیات و دسترسی‌های شرکت.',holding:false,perms:[...R_READ,...R_WRITE,'metrics.read']},
   {key:'SUBSIDIARY_EXECUTIVE',name:ROLE_LABELS_ADMIN.SUBSIDIARY_EXECUTIVE,description:'مدیریت ارشد شرکت — دید کامل شرکت.',holding:false,perms:[...R_READ,'metrics.read']},
@@ -3677,6 +3678,7 @@ const P_DEFS=[
   ['Publics','publics.read','مشاهده عموم‌ها'],['Publics','publics.write','مدیریت عموم‌ها'],
   ['Strategy','strategy.read','مشاهده تحلیل راهبردی'],['Strategy','strategy.write','مدیریت تحلیل راهبردی'],
   ['Intelligence','analytics.read','تحلیل و هوشمندی'],['Intelligence','analytics.write','ثبت رویداد و نتیجهٔ سنجش'],['Intelligence','ai.query','پرس‌وجوی هوشمند'],['Intelligence','ai.executive_brief','گزارش راهبردی هوش مصنوعی'],
+  ['Intelligence','ai.use','فراخوانی درگاه هوش مصنوعی'],['Intelligence','ai.admin','مدیریت درگاه هوش مصنوعی (ارائه‌دهنده‌ها، کلیدها و مسیریابی)'],
   ['Intelligence','recommendation.read','مشاهده پیشنهادها'],['Intelligence','recommendation.تأیید','تأیید پیشنهاد'],['Intelligence','report.read','مشاهده و خروجی گزارش‌ها'],
   ['Knowledge','document.read','مشاهده اسناد'],['Knowledge','document.write','بارگذاری و ویرایش سند'],
   ['Knowledge','search.read','جستجوی سراسری'],['Knowledge','notification.read','مشاهده اعلان‌ها'],['Knowledge','help.read','مشاهده راهنما'],
@@ -6990,6 +6992,34 @@ function ensureThinkTankSeed(){
   }
   if(!DB.thinkTankPlan.some(r=>r.organizationId==='org-1')){
     DB.thinkTankPlan.push({id:'tt-d1',organizationId:'org-1',outputKey:'policy-note',month:'2027-01',note:'دمو: نخستین یادداشت سیاستی',createdAt:nowIso()});
+  }
+}
+/* ═══════════ گام ۶.۱ — درگاه هوش مصنوعی: ارائه‌دهنده‌های per-tenant ═══════════
+   معماری دوگانه (خواستهٔ مالک): مسیر لوکال (بدون هیچ سرویس بیرونی) + مسیر کلید API.
+   هیچ جزئی از سامانه مستقیم به مدل وصل نمی‌شود (۱۹.۱ v6) — همه‌چیز از این درگاه
+   می‌گذرد. کلید فقط یک‌بار در پاسخِ ثبت/چرخش نمایش داده می‌شود؛ کلید کامل هرگز
+   ذخیره یا بازگردانی نمی‌شود و پس از آن تنها ۴ رقم آخر نگه داشته می‌شود. */
+const AI_PROVIDER_MODES=['LOCAL','API_KEY'];
+const AI_PROVIDER_KINDS=['BUILTIN','OPENAI_COMPATIBLE','ANTHROPIC','GEMINI'];
+const AI_GATEWAY_ORGS=[PROGRAM_ORG_ID,'org-pars'];
+function aiProviderView(p){
+  return {id:p.id,organizationId:p.organizationId,name:p.name,mode:p.mode,kind:p.kind,
+    baseUrl:p.baseUrl??null,model:p.model??null,status:p.status,hasKey:!!p.keyLast4,
+    keyLast4:p.keyLast4??null,keySetAt:p.keySetAt??null,builtin:!!p.builtin,
+    createdAt:p.createdAt,updatedAt:p.updatedAt};
+}
+function ensureAiProvidersSeed(){
+  if(!Array.isArray(DB.aiProviders)) DB.aiProviders=[];
+  for(const orgId of AI_GATEWAY_ORGS){
+    if(DB.aiProviders.some(p=>p.organizationId===orgId)) continue;
+    const at=nowIso();
+    DB.aiProviders.push(
+      {id:`aip-${orgId}-local`,organizationId:orgId,name:'موتور محلی SRIP',mode:'LOCAL',kind:'BUILTIN',
+        baseUrl:null,model:'srip-deterministic',status:'ACTIVE',keyLast4:null,keySetAt:null,builtin:true,createdAt:at,updatedAt:at},
+      {id:`aip-${orgId}-ollama`,organizationId:orgId,name:'Ollama روی این دستگاه',mode:'LOCAL',kind:'OPENAI_COMPATIBLE',
+        baseUrl:'http://localhost:11434/v1',model:'llama3.1',status:'UNREACHABLE',keyLast4:null,keySetAt:null,builtin:false,createdAt:at,updatedAt:at},
+      {id:`aip-${orgId}-cloud`,organizationId:orgId,name:'ارائه‌دهندهٔ ابری (سازگار-OpenAI)',mode:'API_KEY',kind:'OPENAI_COMPATIBLE',
+        baseUrl:'https://api.cloud-demo.example/v1',model:'gpt-4o-mini',status:'INACTIVE',keyLast4:null,keySetAt:null,builtin:false,createdAt:at,updatedAt:at});
   }
 }
 const CONTENT_CONTROLS=[
@@ -13993,6 +14023,131 @@ const server=http.createServer(async(req,res)=>{
     row.status='PUBLISHED'; row.publishedAt=nowIso(); row.updatedAt=nowIso(); saveDb();
     audit(req,'UPDATE','Content',row.id,'PUBLISH',{title:row.title.slice(0,60)});
     return json(res,200,contentView(row));
+  }
+
+  /* ─────────────── گام ۶.۱ — درگاه هوش مصنوعی: ارائه‌دهنده‌ها (/ai/providers) ────────── */
+  if(is('/ai/providers')&&method==='GET'){
+    if(!hasPerm('ai.use')) return json(res,403,{message:'شما مجوز «فراخوانی درگاه هوش مصنوعی» (ai.use) را ندارید.'});
+    ensureAiProvidersSeed();
+    const ids=visibleOrgIds(req);
+    const items=DB.aiProviders.filter(p=>ids.includes(p.organizationId)).map(aiProviderView);
+    return json(res,200,{items,
+      rule:'هیچ جزئی از سامانه مستقیم به مدل وصل نمی‌شود؛ همهٔ فراخوانی‌ها از درگاه per-tenant می‌گذرد (۱۹.۱ سند v6). مسیر لوکال بدون هیچ سرویس بیرونی کار می‌کند و کلید API فقط یک‌بار نمایش داده و سپس تنها با ۴ رقم آخر نگه داشته می‌شود.'});
+  }
+  if(is('/ai/providers')&&method==='POST'){
+    if(!hasPerm('ai.admin')) return json(res,403,{message:'شما مجوز «مدیریت درگاه هوش مصنوعی» (ai.admin) را ندارید.'});
+    ensureAiProvidersSeed();
+    const b=await readBody(req);
+    const name=String(b.name??'').trim();
+    const mode=String(b.mode??'').toUpperCase();
+    const kind=String(b.kind??'OPENAI_COMPATIBLE').toUpperCase();
+    const baseUrl=String(b.baseUrl??'').trim();
+    const model=String(b.model??'').trim()||null;
+    if(name.length<3) return json(res,400,{message:'نام ارائه‌دهنده حداقل ۳ نویسه باشد.'});
+    if(!AI_PROVIDER_MODES.includes(mode)) return json(res,400,{message:'نوع اتصال باید LOCAL (لوکال) یا API_KEY (کلید API) باشد.'});
+    if(kind==='BUILTIN') return json(res,400,{message:'موتور داخلی SRIP از طریق بذر سامانه ساخته می‌شود و قابل افزودن دستی نیست.'});
+    if(!AI_PROVIDER_KINDS.includes(kind)) return json(res,400,{message:'نوع ارائه‌دهنده باید OPENAI_COMPATIBLE، ANTHROPIC یا GEMINI باشد.'});
+    if(!/^https?:\/\/.+/.test(baseUrl)) return json(res,400,{message:'نشانی (Base URL) ارائه‌دهنده را به شکل http(s)://… وارد کنید.'});
+    const row={id:`aip-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`,
+      organizationId:primaryOrgId(authUser)??visibleOrgIds(req)[0]??PROGRAM_ORG_ID,
+      name,mode,kind,baseUrl,model,status:'INACTIVE',keyLast4:null,keySetAt:null,builtin:false,
+      createdAt:nowIso(),updatedAt:nowIso()};
+    DB.aiProviders.push(row); saveDb();
+    audit(req,'CREATE','AiProvider',row.id,'OK',{name:row.name.slice(0,60),mode:row.mode,kind:row.kind});
+    return json(res,201,aiProviderView(row));
+  }
+  const aiProvId=match('/ai/providers/:id');
+  if(aiProvId&&method==='PATCH'){
+    if(!hasPerm('ai.admin')) return json(res,403,{message:'شما مجوز «مدیریت درگاه هوش مصنوعی» (ai.admin) را ندارید.'});
+    ensureAiProvidersSeed();
+    const p=DB.aiProviders.find(x=>x.id===aiProvId[0]&&visibleOrgIds(req).includes(x.organizationId));
+    if(!p) return json(res,404,{message:'ارائه‌دهنده یافت نشد یا خارج از محدودهٔ شماست.'});
+    if(p.builtin) return json(res,400,{message:'موتور داخلی SRIP قابل ویرایش نیست — همیشه فعال و بدون کلید است.'});
+    const b=await readBody(req);
+    if(b.name!==undefined){const n=String(b.name).trim();if(n.length<3) return json(res,400,{message:'نام ارائه‌دهنده حداقل ۳ نویسه باشد.'});p.name=n;}
+    if(b.baseUrl!==undefined){const u=String(b.baseUrl).trim();if(!/^https?:\/\/.+/.test(u)) return json(res,400,{message:'نشانی (Base URL) به شکل http(s)://… باشد.'});p.baseUrl=u;}
+    if(b.model!==undefined) p.model=String(b.model).trim()||null;
+    p.updatedAt=nowIso(); saveDb();
+    audit(req,'UPDATE','AiProvider',p.id,'OK',{});
+    return json(res,200,aiProviderView(p));
+  }
+  if(aiProvId&&method==='DELETE'){
+    if(!hasPerm('ai.admin')) return json(res,403,{message:'شما مجوز «مدیریت درگاه هوش مصنوعی» (ai.admin) را ندارید.'});
+    ensureAiProvidersSeed();
+    const idx=DB.aiProviders.findIndex(x=>x.id===aiProvId[0]&&visibleOrgIds(req).includes(x.organizationId));
+    if(idx<0) return json(res,404,{message:'ارائه‌دهنده یافت نشد یا خارج از محدودهٔ شماست.'});
+    if(DB.aiProviders[idx].builtin) return json(res,400,{message:'موتور محلی SRIP همیشه فعال است و حذف نمی‌شود — مسیر لوکال تضمین برنامه است.'});
+    const [gone]=DB.aiProviders.splice(idx,1); saveDb();
+    audit(req,'DELETE','AiProvider',gone.id,'OK',{name:gone.name.slice(0,60)});
+    return json(res,200,{deleted:gone.id});
+  }
+  const aiProvKey=match('/ai/providers/:id/key');
+  if(aiProvKey&&method==='POST'){
+    if(!hasPerm('ai.admin')) return json(res,403,{message:'شما مجوز «مدیریت درگاه هوش مصنوعی» (ai.admin) را ندارید.'});
+    ensureAiProvidersSeed();
+    const p=DB.aiProviders.find(x=>x.id===aiProvKey[0]&&visibleOrgIds(req).includes(x.organizationId));
+    if(!p) return json(res,404,{message:'ارائه‌دهنده یافت نشد یا خارج از محدودهٔ شماست.'});
+    if(p.mode!=='API_KEY') return json(res,400,{message:'کلید فقط برای ارائه‌دهنده‌های «کلید API» ثبت می‌شود؛ مسیر لوکال بدون کلید کار می‌کند.'});
+    const b=await readBody(req);
+    const key=String(b.key??'').trim();
+    if(key.length<8) return json(res,400,{message:'کلید دست‌کم ۸ نویسه باشد.'});
+    p.keyLast4=key.slice(-4);
+    p.keySetAt=nowIso();
+    p.status='ACTIVE'; /* ثبت/چرخش کلید = فعال‌سازی مسیر ابری */
+    p.updatedAt=nowIso(); saveDb();
+    audit(req,'KEY_ROTATE','AiProvider',p.id,'OK',{keyLast4:p.keyLast4});
+    /* کلید کامل فقط همین یک‌بار در پاسخ برمی‌گردد و هرگز ذخیره نمی‌شود */
+    return json(res,200,{provider:aiProviderView(p),key,
+      notice:'این کلید فقط همین یک‌بار نمایش داده می‌شود؛ از این پس تنها ۴ رقم آخر نگه داشته می‌شود.'});
+  }
+  const aiProvHealth=match('/ai/providers/:id/health');
+  if(aiProvHealth&&method==='POST'){
+    if(!hasPerm('ai.admin')) return json(res,403,{message:'شما مجوز «مدیریت درگاه هوش مصنوعی» (ai.admin) را ندارید.'});
+    ensureAiProvidersSeed();
+    const p=DB.aiProviders.find(x=>x.id===aiProvHealth[0]&&visibleOrgIds(req).includes(x.organizationId));
+    if(!p) return json(res,404,{message:'ارائه‌دهنده یافت نشد یا خارج از محدودهٔ شماست.'});
+    const t0=Date.now();
+    if(p.kind==='BUILTIN'){
+      p.status='ACTIVE'; p.updatedAt=nowIso(); saveDb();
+      audit(req,'HEALTH','AiProvider',p.id,'OK',{ok:true});
+      return json(res,200,{ok:true,status:'ACTIVE',models:['srip-deterministic'],latencyMs:Date.now()-t0,
+        detail:'موتور داخلی قطعی SRIP — بدون شبکه و بدون سرویس بیرونی؛ همیشه در دسترس.',
+        provider:aiProviderView(p)});
+    }
+    if(p.mode==='API_KEY'){
+      if(!p.keyLast4) return json(res,400,{message:'ابتدا کلید API این ارائه‌دهنده را ثبت کنید، سپس آزمون اتصال را اجرا کنید.'});
+      /* مسیر ابری در دمو از سمت سرور شبیه‌سازی می‌شود (بدون تماس واقعی بیرون) */
+      const models=p.kind==='ANTHROPIC'?['claude-sonnet-4','claude-haiku-4']
+        :p.kind==='GEMINI'?['gemini-2.0-flash','gemini-1.5-pro']
+        :['gpt-4o-mini','gpt-4o','gpt-4.1-mini'];
+      p.status='ACTIVE'; p.updatedAt=nowIso(); saveDb();
+      audit(req,'HEALTH','AiProvider',p.id,'OK',{ok:true});
+      return json(res,200,{ok:true,status:'ACTIVE',models,
+        latencyMs:120+(p.id.length*7)%80,
+        detail:'اتصال ابری (شبیه‌سازی‌شدهٔ سمت سرور در دمو) موفق بود و فهرست مدل‌ها دریافت شد.',
+        provider:aiProviderView(p)});
+    }
+    /* مسیر لوکالِ سازگار-OpenAI (مثل Ollama): تماس واقعی با ۱.۵ ثانیه مهلت */
+    try{
+      const ctrl=new AbortController();
+      const timer=setTimeout(()=>ctrl.abort(),1500);
+      const resp=await fetch(`${String(p.baseUrl).replace(/\/$/,'')}/models`,{signal:ctrl.signal});
+      clearTimeout(timer);
+      if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data=await resp.json();
+      const models=Array.isArray(data?.data)?data.data.map(m=>String(m?.id??'')).filter(Boolean):[];
+      p.status='ACTIVE'; p.updatedAt=nowIso(); saveDb();
+      audit(req,'HEALTH','AiProvider',p.id,'OK',{ok:true});
+      return json(res,200,{ok:true,status:'ACTIVE',models:models.length?models:['(بدون مدل)'],
+        latencyMs:Date.now()-t0,detail:'اتصال لوکال برقرار شد و فهرست مدل‌ها دریافت شد.',
+        provider:aiProviderView(p)});
+    }catch(e){
+      p.status='UNREACHABLE'; p.updatedAt=nowIso(); saveDb();
+      audit(req,'HEALTH','AiProvider',p.id,'FAIL',{ok:false});
+      return json(res,200,{ok:false,status:'UNREACHABLE',models:[],latencyMs:Date.now()-t0,
+        detail:`اتصال به ${p.baseUrl} برقرار نشد (مهلت ۱.۵ ثانیه). اگر Ollama است، مطمئن شوید روی همین نشانی اجرا می‌شود.`,
+        provider:aiProviderView(p)});
+    }
   }
 
   /* ─────────────── گام ۵.۴ — تقویم خروجی اندیشکده (/program/think-tank) ────────── */
