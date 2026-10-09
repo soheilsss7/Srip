@@ -38,6 +38,9 @@ createServer(async (req, res) => {
     // API fallback for non-SW browsers/preview — mirrors what public/sw.js answers.
     if (urlPath.startsWith('/api/v1')) return proxyApi(req, res, urlPath);
     if (urlPath === '/' || urlPath === '') urlPath = '/index.html';
+    /* فونت ریشه‌مطلق CSS (url(/fonts/…)) — در استقرار ریشهٔ Plesk از خود سایت
+       سرو می‌شود؛ اینجا هم به نسخهٔ داخل اپ نگاشت می‌کنیم تا رفتار یکسان باشد. */
+    if (urlPath.startsWith('/fonts/')) urlPath = '/srip2' + urlPath;
     let file = join(ROOT, normalize(urlPath));
     // try exact, then .html (clean URLs like /people -> people.html), then dir/index.html
     let st;
@@ -50,8 +53,19 @@ createServer(async (req, res) => {
     res.writeHead(200, { 'Content-Type': MIME[extname(file)] ?? 'application/octet-stream', 'Cache-Control': 'no-cache' });
     res.end(buf);
   } catch (e) {
+    /* مثل GitHub Pages و ErrorDocument 404 /404.html در Plesk:
+       مسیر گمشده → 404.html اپ (که با منطق Not-found هوشمند به /view هدایت می‌کند) */
+    const wantsHtml = String(req.headers.accept ?? '').includes('text/html');
+    if (wantsHtml) {
+      try {
+        const buf = await readFile(join(ROOT, 'srip2', '404.html'));
+        res.writeHead(404, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-cache' });
+        res.end(buf);
+        return;
+      } catch {}
+    }
     console.error('[404]', req.url, e?.message ?? e);
     res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end('Not found');
   }
-}).listen(8931, '0.0.0.0', () => console.log('preview on :8931 serving /Srip'));
+}).listen(Number(process.env.PREVIEW_PORT || 8931), '0.0.0.0', () => console.log(`preview on :${process.env.PREVIEW_PORT || 8931} serving /Srip`));

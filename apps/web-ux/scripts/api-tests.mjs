@@ -2710,7 +2710,7 @@ section('گام ۸.۳ — اصالت داده و منشأ محتوا (اثران
     && Array.isArray(M.body.reconciliation.overlappingDocuments)
     && Array.isArray(M.body.reconciliation.overlappingSystems), `src=${M.body?.reconciliation?.sourcesChecked}`);
   check('F11 تطبیق: اثرانگشت تکراری کشف شد → وضعیت «مغایرت یافت شد» با فهرست اسناد',
-    M.body.reconciliation.status === 'MISMATCH' && M.body.reconciliation.duplicateFingerprints.length >= 1
+    M.body?.reconciliation?.status === 'MISMATCH' && M.body.reconciliation.duplicateFingerprints.length >= 1
     && M.body.reconciliation.duplicateFingerprints[0].documents.length === 2);
 }
 
