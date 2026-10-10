@@ -80,13 +80,13 @@ const FORM_STATUS_FA = lt<Record<string, string>>({ HAVE: t('موجود'), PARTI
    «اطلاعات ثبت‌شده در SRIP» — چارچوب مرجع؛ هر دروازه در ماژول مربوط به خودش
    اعمال می‌شود (مثلاً G4 در گردش تأیید محتوا F08 و G6 در گزارش ماهانه). */
 const CONTROL_GATES = lt<Array<{ code: string; name: string; pass: string; registered: string }>>([
-  { code: 'G0', name: 'دامنه', pass: 'موضوع، مالک، محصول و هدف در فهرست دامنه ثبت شده‌اند.', registered: 'شناسهٔ دامنه و مالک' },
+  { code: 'G0', name: 'دامنه', pass: 'موضوع، مسئول، محصول و هدف در فهرست دامنه ثبت شده‌اند.', registered: 'شناسهٔ دامنه و مسئول' },
   { code: 'G1', name: 'شواهد', pass: 'اسناد، جلسه، نمایش عملی و منابع لازم برای اظهارنظر فراهم‌اند.', registered: 'شناسهٔ مجموعهٔ شواهد و اثرانگشت دیجیتال' },
   { code: 'G2', name: 'Due Diligence', pass: 'بررسی فنی و کسب‌وکاری تکمیل و نظر مدیر تیم Y ثبت شده است.', registered: 'شناسهٔ ارزیابی و وضعیت تصویب' },
   { code: 'G3', name: 'طراحی', pass: 'طرح اجرایی، مخاطب، پیام، ریسک، دسترسی و معیار پذیرش تصویب شده‌اند.', registered: 'شناسهٔ طرح و تأییدکننده' },
   { code: 'G4', name: 'کیفیت', pass: 'راستی‌آزمایی، کنترل امنیت و حقوق، بررسی منابع و تأیید انسانی انجام شده‌اند.', registered: 'سابقهٔ کنترل کیفیت و شواهد' },
   { code: 'G5', name: 'اجرا', pass: 'نسخهٔ مصوب اجرا و سابقهٔ آن ثبت شده است.', registered: 'شناسهٔ اجرا و نسخه' },
-  { code: 'G6', name: 'بازبینی', pass: 'نتیجه، خطا و درس‌آموخته ثبت شده‌اند و اقدام بعدی، مالک و مهلت مشخص دارد.', registered: 'شناسهٔ بازبینی و اقدام' },
+  { code: 'G6', name: 'بازبینی', pass: 'نتیجه، خطا و درس‌آموخته ثبت شده‌اند و اقدام بعدی، مسئول و مهلت مشخص دارد.', registered: 'شناسهٔ بازبینی و اقدام' },
 ]);
 const FORM_STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = { HAVE: 'success', PARTIAL: 'info', PLANNED: 'neutral' };
 const SEASON_STATE_FA = lt<Record<string, string>>({ PASSED: t('دروازه پاس شد'), IN_PROGRESS: t('در جریان'), PENDING: t('در انتظار') });
@@ -684,7 +684,7 @@ export default function ProgramPage() {
               <div className="table-wrap">
                 <table>
                   <thead>
-                    <tr><th>{t('ریسک')}</th><th>{t('احتمال')}</th><th>{t('اثر')}</th><th>{t('درجه')}</th><th>{t('مالک')}</th><th>{t('وضعیت')}</th><th>{t('بازبینی')}</th></tr>
+                    <tr><th>{t('ریسک')}</th><th>{t('احتمال')}</th><th>{t('اثر')}</th><th>{t('درجه')}</th><th>{t('مسئول')}</th><th>{t('وضعیت')}</th><th>{t('بازبینی')}</th></tr>
                   </thead>
                   <tbody>
                     {risks.items.map((r: any) => (
@@ -1022,7 +1022,7 @@ export default function ProgramPage() {
 
       {/* ═══════════ مودال: جزئیات ریسک ═══════════ */}
       <Modal open={!!riskDetail} title={riskDetail?.title ?? ''} onClose={() => setRiskDetail(null)}
-        description={`${t('احتمال')}: ${riskDetail ? LEVEL_FA[riskDetail.probability] : ''} · ${t('اثر')}: ${riskDetail ? LEVEL_FA[riskDetail.impact] : ''} · ${t('مالک')}: ${riskDetail?.ownerRole ?? ''}`}
+        description={`${t('احتمال')}: ${riskDetail ? LEVEL_FA[riskDetail.probability] : ''} · ${t('اثر')}: ${riskDetail ? LEVEL_FA[riskDetail.impact] : ''} · ${t('مسئول')}: ${riskDetail?.ownerRole ?? ''}`}
         footer={writable && riskDetail && riskDetail.status !== 'CLOSED' ? (
           <button className="srip-button" disabled={busy} onClick={() => setRiskStatus(riskDetail.id, 'CLOSED')}><CheckCircle2 size={14} /> {t('بستن ریسک')}</button>
         ) : null}>
@@ -1070,7 +1070,7 @@ export default function ProgramPage() {
 
       {/* ═══════════ مودال: ریسک جدید (بخش ۲۳) ═══════════ */}
       <Modal open={createOpen} title={t('ثبت ریسک جدید')} onClose={() => setCreateOpen(false)}
-        description={t('ریسک بدون مالک ثبت نمی‌شود — مالک یکی از نقش‌های چارت برنامه است.')}
+        description={t('ریسک بدون مسئول ثبت نمی‌شود — مسئول یکی از نقش‌های چارت برنامه است.')}
         footer={<>
           <button className="srip-button" onClick={() => setCreateOpen(false)}><X size={14} /> {t('انصراف')}</button>
           <button type="submit" form="risk-create-form" className="srip-button primary" disabled={busy}>{busy ? t('در حال ذخیره…') : t('ثبت ریسک')}</button>
@@ -1095,7 +1095,7 @@ export default function ProgramPage() {
             </label>
           </div>
           <label className="field">
-            <span>{t('مالک ریسک')} *</span>
+            <span>{t('مسئول ریسک')} *</span>
             {(risks?.roles ?? []).length ? (
               <select value={form.ownerRole} onChange={(e) => setForm(f => ({ ...f, ownerRole: e.target.value }))} required>
                 <option value="">{t('انتخاب کنید…')}</option>
@@ -1103,7 +1103,7 @@ export default function ProgramPage() {
               </select>
             ) : (
               <input value={form.ownerRole} onChange={(e) => setForm(f => ({ ...f, ownerRole: e.target.value }))} required
-                placeholder={t('نقش مالک — چارت سازمان در تنظیمات برنامه تعریف نشده')} />
+                placeholder={t('نقش مسئول — چارت سازمان در تنظیمات برنامه تعریف نشده')} />
             )}
           </label>
           <label className="field">
@@ -1420,7 +1420,7 @@ export default function ProgramPage() {
               </select>
             ) : (
               <input value={assetForm.ownerRole} onChange={(e) => setAssetForm(f => ({ ...f, ownerRole: e.target.value }))} required
-                placeholder={t('نقش مالک — چارت سازمان در تنظیمات برنامه تعریف نشده')} />
+                placeholder={t('نقش مسئول — چارت سازمان در تنظیمات برنامه تعریف نشده')} />
             )}
           </label>
           <div className="field-pair">

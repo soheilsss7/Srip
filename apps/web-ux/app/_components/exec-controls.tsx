@@ -65,7 +65,7 @@ export default function ExecControls() {
         <div className="table-wrap">
           <table>
             <thead><tr>
-              <th>{t('کد/پروژه')}</th><th>{t('هدف')}</th><th>{t('مالک')}</th><th>{t('مهلت')}</th>
+              <th>{t('کد/پروژه')}</th><th>{t('هدف')}</th><th>{t('مسئول')}</th><th>{t('مهلت')}</th>
               <th>{t('تغییر دامنه')}</th><th>{t('وضعیت')}</th><th></th>
             </tr></thead>
             <tbody>

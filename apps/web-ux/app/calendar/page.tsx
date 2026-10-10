@@ -646,7 +646,7 @@ export default function CalendarPage() {
           <div className="panel-title">
             <div>
               <h2>{t('تقویم خروجی اندیشکده (v6)')}</h2>
-              <p>{t('زمان هر خروجی صریح است؛ تاریخ دقیق انتشار در تقویم SRIP ثبت و هر تغییر با علت و مالک اصلاح می‌شود.')}</p>
+              <p>{t('زمان هر خروجی صریح است؛ تاریخ دقیق انتشار در تقویم SRIP ثبت و هر تغییر با علت و مسئول اصلاح می‌شود.')}</p>
             </div>
             <div className="toolbar">
               {programWritable && <button className="btn btn-ghost btn-sm" onClick={() => { setTtForm(emptyTtForm); setTtFormOpen(true); }}>{t('ثبت در تقویم')}</button>}
@@ -879,7 +879,7 @@ export default function CalendarPage() {
                   </div>
                   <div className="field">
                     <label className="field-label">{t('مالک')}</label>
-                    <input value={f08Form.owner} onChange={e => setF08Form((f: any) => ({ ...f, owner: e.target.value }))} aria-label="مالک محتوا" />
+                    <input value={f08Form.owner} onChange={e => setF08Form((f: any) => ({ ...f, owner: e.target.value }))} aria-label="مسئول محتوا" />
                   </div>
                   <div className="field full">
                     <label className="field-label">{t('ادعاها (با «،» جدا کنید)')}</label>

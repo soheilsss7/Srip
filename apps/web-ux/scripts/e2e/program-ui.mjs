@@ -1,7 +1,7 @@
 /* ============================================================================
    program-ui.mjs — باتری E2E هاب «حاکمیت برنامه» (گام ۲.۱ مسترپلن)
    چک‌ها: ناوبری و هدر · تب نمای کلی (فصل‌ها/دروازه/روند) · شاخص‌ها (۱۰ ردیف
-   با مالک/هدف/منبع محاسبه) · ریسک‌ها (بنر، ماتریس، جدول، ثبت بدون مالک → خطا،
+   با مالک/هدف/منبع محاسبه) · ریسک‌ها (بنر، ماتریس، جدول، ثبت بدون مسئول → خطا،
    ثبت با مالک → ردیف جدید) · آمادگی (۶ لایه، لایهٔ رابطه از دادهٔ زنده، چرخش
    وضعیت قلم) · ممیزی سه‌گانه (سه ساب‌تب + مودال جزئیات) · بدون خطای کنسول.
    اجرا:  LD_LIBRARY_PATH="$PWD/.e2e-browser/nss" UI_BASE=http://localhost:4100/Srip/srip2 node scripts/e2e/program-ui.mjs
@@ -184,7 +184,7 @@ try {
   await page.keyboard.press('Escape');
   await new Promise(r => setTimeout(r, 400));
 
-  /* ثبت ریسک: اول عنوان، بدون مالک → خطای قاعدهٔ سند */
+  /* ثبت ریسک: اول عنوان، بدون مسئول → خطای قاعدهٔ سند */
   await page.evaluate(() => { [...document.querySelectorAll('button')].find(b => (b.textContent ?? '').includes('ریسک جدید'))?.click(); });
   await new Promise(r => setTimeout(r, 500));
   const modalOpen = await page.evaluate(() => !!document.querySelector('.modal-card'));
@@ -193,7 +193,7 @@ try {
   await page.evaluate(() => { const f = document.querySelector('#risk-create-form'); if (f) f.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
   await new Promise(r => setTimeout(r, 1200));
   const noOwner = await page.evaluate(() => (document.querySelector('.modal-card .alert-banner, .modal-card [role=alert]')?.textContent ?? ''));
-  ok('ثبت ریسک بدون مالک → پیام «ریسک بدون مالک ثبت نمی‌شود»', noOwner.includes('بدون مالک'), `msg=${noOwner.slice(0, 60)}`);
+  ok('ثبت ریسک بدون مسئول → پیام «ریسک بدون مسئول ثبت نمی‌شود»', noOwner.includes('بدون مسئول'), `msg=${noOwner.slice(0, 60)}`);
   /* با مالک → ثبت موفق و ردیف جدید */
   /* سِلکت مالک = سِلکتی که گزینهٔ نقش چارت را دارد (فرم ۹.۲ سِلکت «کاربرد AI» هم دارد) */
   const ownerSel = await page.evaluateHandle(() =>
@@ -488,7 +488,7 @@ try {
   await new Promise(r => setTimeout(r, 2000));
 
   /* ── ۸) بدون خطای کنسول در کل جریان ──
-     استثنا: پاسخ ۴۰۰ تستِ منفیِ «ریسک بدون مالک» — عمداً توسط سرور رد می‌شود */
+     استثنا: پاسخ ۴۰۰ تستِ منفیِ «ریسک بدون مسئول» — عمداً توسط سرور رد می‌شود */
   const realErrs = errs.filter(e => !e.includes('status of 400'));
   ok('بدون خطای کنسول در هاب حاکمیت برنامه', realErrs.length === 0, realErrs.slice(0, 3).join('؛'));
 

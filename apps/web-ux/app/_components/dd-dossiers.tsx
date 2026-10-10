@@ -104,7 +104,7 @@ export default function DdDossiers() {
         <div className="table-wrap">
           <table>
             <thead><tr>
-              <th>{t('موضوع بررسی')}</th><th>{t('مالک')}</th><th>{t('محورهای پذیرفته‌شده')}</th>
+              <th>{t('موضوع بررسی')}</th><th>{t('مسئول')}</th><th>{t('محورهای پذیرفته‌شده')}</th>
               <th>{t('نظر مدیر تیم Y')}</th><th>{t('وضعیت تصویب (G2)')}</th><th></th>
             </tr></thead>
             <tbody>
@@ -125,7 +125,7 @@ export default function DdDossiers() {
 
       {/* جزئیات پرونده: محورها + حق پاسخ + تیم Y + تصویب */}
       <Modal open={!!detail} title={`${t('پروندهٔ Due Diligence')} — ${detail?.subjectName ?? ''}`}
-        description={detail ? `${t('مالک')}: ${detail.ownerRole} · ${faNum(detail.acceptedAxes)}/${faNum(detail.totalAxes)} ${t('محور پذیرفته‌شده')}` : undefined}
+        description={detail ? `${t('مسئول')}: ${detail.ownerRole} · ${faNum(detail.acceptedAxes)}/${faNum(detail.totalAxes)} ${t('محور پذیرفته‌شده')}` : undefined}
         onClose={() => setDetail(null)}>
         {detail && (<div className="list">
           {cats.map(cat => (
@@ -216,7 +216,7 @@ export default function DdDossiers() {
               <option value="">{t('انتخاب کنید…')}</option>
               {orgs.map((o: any) => <option key={o.id} value={o.id}>{o.name}</option>)}
             </select></label>
-          <label className="field"><span>{t('مالک پرونده')} *</span>
+          <label className="field"><span>{t('مسئول پرونده')} *</span>
             <select value={form.ownerRole} onChange={(e) => setForm((f) => ({ ...f, ownerRole: e.target.value }))} required>
               <option value="">{t('انتخاب کنید…')}</option>
               {roles.map((r: string) => <option key={r} value={r}>{r}</option>)}

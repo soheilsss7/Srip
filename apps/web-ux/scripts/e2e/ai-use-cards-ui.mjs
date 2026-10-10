@@ -1,6 +1,6 @@
 /* ============================================================================
    ai-use-cards-ui.mjs — باتری E2E گام ۹.۱: F12 کارت کاربرد و ارزیابی AI
-   ورود demo → /ai → جدول هشت کارت F12 → جزئیات کارت (۱۳ ستون) →
+   ورود demo → /ai → جدول هشت کارت F12 (هفت کاربرد سند v14 + اصالت) → جزئیات کارت (۱۳ ستون) →
    ثبت اجرای آزمون FAIL → تصمیم انتشار «مشروط» → پوشش کاربردهای فعال.
    ============================================================================ */
 import puppeteer from 'puppeteer-core';
@@ -38,7 +38,7 @@ try {
   await new Promise(r => setTimeout(r, 2500));
   await page.evaluate(() => localStorage.setItem('srip2_tour_done', '1'));
 
-  /* ── ۱) جدول هشت کارت F12 (زیر تب «درگاه و ارائه‌دهنده‌ها») ── */
+  /* ── ۱) جدول هشت کارت F12 — هفت کاربرد سند v14 + کاربرد پلتفرمی اصالت (زیر تب «درگاه و ارائه‌دهنده‌ها») ── */
   try { await page.goto(`${BASE}/ai`, { waitUntil: 'networkidle0', timeout: 90000 }); } catch {}
   await page.waitForSelector('.segmented button', { timeout: 30000 });
   await page.evaluate(() => [...document.querySelectorAll('.segmented button')]
@@ -46,7 +46,7 @@ try {
   await page.waitForSelector('tr[data-f12]', { timeout: 60000 });
   await new Promise(r => setTimeout(r, 1200));
   const rows = await page.evaluate(() => [...document.querySelectorAll('tr[data-f12]')].map(tr => tr.textContent ?? ''));
-  ok('جدول F12 با هر هشت کاربرد جدول ۱۹.۲ (هفت کاربرد درگاه + تشخیص اصالت)', rows.length === 8, `n=${rows.length}`);
+  ok('جدول F12 با هر هفت کاربرد جدول ۱۹.۲ سند v14 + کاربرد پلتفرمی اصالت (مجموعاً هشت کارت)', rows.length === 8, `n=${rows.length}`);
   ok('سطح اختیار هر کاربرد در جدول کنار آن دیده می‌شود (جست‌وجوی سازمانی: «فقط پیشنهاد»)',
     rows.some(r => r.includes('فقط پیشنهاد')) && rows.some(r => r.includes('اقدام محدودکننده فقط پس از بازبینی انسانی')));
 

@@ -946,8 +946,8 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
     && (r.preventive || r.reactive)));
   check('ریسک‌ها: درجه از احتمال×اثر (متوسط×بالا = درجه بالا)',
     rk.body.items.filter(r => r.probability === 'MEDIUM' && r.impact === 'HIGH').every(r => r.grade === 'HIGH'));
-  const rNo = await api('/program/risks', { method: 'POST', token: dt, body: { title: 'ریسک بدون مالک تست', probability: 'HIGH', impact: 'HIGH' } });
-  check('ثبت ریسک بدون مالک → ۴۰۰ (قاعدهٔ سند)', rNo.status === 400 && String(rNo.body?.message).includes('بدون مالک'));
+  const rNo = await api('/program/risks', { method: 'POST', token: dt, body: { title: 'ریسک بدون مسئول تست', probability: 'HIGH', impact: 'HIGH' } });
+  check('ثبت ریسک بدون مسئول → ۴۰۰ (قاعدهٔ سند)', rNo.status === 400 && String(rNo.body?.message).includes('بدون مسئول'));
   const rBad = await api('/program/risks', { method: 'POST', token: dt, body: { title: 'ریسک تست', probability: 'HIGH', impact: 'HIGH', ownerRole: 'نقش ساختگی' } });
   check('مسئول باید یکی از ۳۳ نقش چارت v14 باشد → ۴۰۰', rBad.status === 400);
   const rOk = await api('/program/risks', { method: 'POST', token: dt, body: { title: 'ریسک تست خودکار باتری', probability: 'LOW', impact: 'LOW', ownerRole: 'مدیر پروژه', preventive: 'پیشگیری تست', reactive: 'واکنش تست' } });
@@ -1392,7 +1392,7 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
     const pars = await api('/organizations/org-pars/knowledge', { token: pt });
     check('پارس: پروندهٔ هلدینگ در مرحلهٔ تحلیل با بخش‌های معتبر', pars.status === 200
       && pars.body.stage === 'analysis' && pars.body.stats.valid >= 15);
-    check('پارس: مالک پرونده = مدیر استراتژی (ماژول شناخت)', pars.body.ownerRole === 'مدیر استراتژی');
+    check('پارس: مسئول پرونده = مدیر استراتژی (ماژول شناخت)', pars.body.ownerRole === 'مدیر استراتژی');
     const edu = await api('/organizations/org-pars-02/knowledge', { token: pt });
     check('پروندهٔ ۹۰روزه: بازبینی ۱۰۰ روز پیش → منقضی', edu.status === 200 && edu.body.reviewState === 'EXPIRED' && edu.body.daysLeft < 0);
     const eduRev = await api('/organizations/org-pars-02/knowledge/review', { method: 'POST', token: pt });
@@ -2717,16 +2717,16 @@ section('گام ۸.۳ — اصالت داده و منشأ محتوا (اثران
 }
 
 /* ═════════════════ گام ۹.۱ — F12 کارت کاربرد و ارزیابی AI ═════════════════ */
-section('گام ۹.۱ — F12 کارت کاربرد و ارزیابی AI (رجیستری هشت کاربرد ۱۹.۲)');
+section('گام ۹.۱ — F12 کارت کاربرد و ارزیابی AI (کاربردهای ۱۹.۲ v14 + اصالت پلتفرمی)');
 {
   const dt = (await login(OWNER.email)).body.accessToken;
   const ct = (await login(CLIENT.email)).body.accessToken;
 
-  /* ۱) رجیستری هشت کاربرد با هر سیزده ستون */
+  /* ۱) رجیستری هشت کارت (هفت کاربرد ۱۹.۲ سند v14 + کاربرد پلتفرمی اصالت) با هر سیزده ستون */
   const R = await api('/ai/use-cases', { token: dt });
   const items = R.body.items ?? [];
   const cols = ['problem', 'user', 'allowedData', 'model', 'tool', 'retrieval', 'authority', 'testSet', 'sourceReliance', 'security', 'humanConfirm', 'releaseDecision', 'rollback'];
-  check('F12: رجیستری هشت کاربرد جدول ۱۹.۲ (هفت کاربرد درگاه + تشخیص اصالت)',
+  check('F12: رجیستری هشت کارت — هفت کاربرد جدول ۱۹.۲ سند v14 + کاربرد پلتفرمی اصالت',
     R.status === 200 && items.length === 8, `n=${items.length}`);
   check('F12: هر کارت هر سیزده ستون (مسئله تا بازگشت ایمن) را دارد',
     items.every(c => cols.every(k => c[k] != null && c[k] !== '')));

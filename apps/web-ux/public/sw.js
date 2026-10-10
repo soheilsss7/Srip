@@ -7872,7 +7872,7 @@ const nowIso=()=>new Date().toISOString();
 /* ═══════════════════════════════════════════════════════════════════════════
    گام ۲.۱ مسترپلن — «حاکمیت برنامه» (سند عملیاتی هلدینگ پارس نسخهٔ ۳)
    بخش ۱۲/۱۳: آمادگی شش‌لایهٔ وزن‌دار + دروازهٔ فصل · بخش ۲۰/۲۱: ممیزی سه‌گانه
-   بخش ۲۳ سند v14: ریجستری ریسک (ریسک بدون مالک ثبت نمی‌شود)
+   بخش ۲۳ سند v14: ریجستری ریسک (ریسک بدون مسئول ثبت نمی‌شود)
    بخش ۲۶/ماژول شاخص‌ها: شاخص‌های مالک‌دار — «عدد دستی وارد داشبورد نمی‌شود»؛ هر شاخص
    از دادهٔ زندهٔ ماژول‌ها محاسبه می‌شود.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -8829,7 +8829,7 @@ function aiRiskFields(b,partial){
   const out={};
   for(const k of keys){
     if(!(k in (b??{}))) continue;
-    if(k==='useCase'){ const u=String(b.useCase??'').trim(); if(u&&!AI_F12_USE_CASES.some(s=>s.key===u)) return {err:'مورد استفادهٔ AI باید یکی از هشت کاربرد جدول ۱۹.۲ باشد.'}; out.useCase=u; }
+    if(k==='useCase'){ const u=String(b.useCase??'').trim(); if(u&&!AI_F12_USE_CASES.some(s=>s.key===u)) return {err:'مورد استفادهٔ AI باید یکی از هفت کاربرد جدول ۱۹.۲ سند v14 باشد (به‌علاوهٔ کاربرد پلتفرمی اصالت).'}; out.useCase=u; }
     else if(k==='releaseDecision'){ const d=String(b.releaseDecision??'').toUpperCase(); if(d&&!['APPROVED','CONDITIONAL','REJECTED'].includes(d)) return {err:'تصمیم انتشار باید تأیید/مشروط/رد باشد.'}; out.releaseDecision=d; }
     else if(k==='stopped'){ out.stopped=!!b.stopped; }
     else if(k==='version'){ out.version=String(b.version??'').trim().slice(0,40); }
@@ -8838,7 +8838,7 @@ function aiRiskFields(b,partial){
   return {err:null,ai:out};
 }
 /* ═══════════ گام ۹.۱ — F12 کارت کاربرد و ارزیابی AI (۱۹.۲/۱۹.۳ سند v6) ═══════════
-   رجیستری هشت کاربرد AI جدول ۱۹.۲ با هر سیزده ستون؛ ستون «مدل» زنده از مسیریابی
+   رجیستری کاربردهای AI — هفت کاربرد ۱۹.۲ سند v14 + کاربرد پلتفرمی اصالت با هر سیزده ستون؛ ستون «مدل» زنده از مسیریابی
    درگاه خوانده می‌شود (عدد/متن دستی نیست) و «تشخیص اصالت» به‌عنوان کاربردِ موتور
    قواعد قطعی (۸.۱) خارج از مسیریابی، کارت خودش را دارد. */
 const AI_F12_AUTHORITY={
@@ -8857,9 +8857,9 @@ const AI_F12_USE_CASES=[
   {key:'dd-review',problem:'بررسی منظم محورهای Due Diligence در برابر سوالات استاندارد',user:'کاربران مجاز پروندهٔ DD',allowedData:'سوالات استاندارد DD + پاسخ‌ها و شواهد پیوست پروندهٔ در محدوده',tool:'پنل پروندهٔ Due Diligence',retrieval:'چرخهٔ پرسش–پاسخ ساختاریافته روی پروندهٔ DD',testSet:{name:'محورهای ۶.۲.۱/۶.۲.۲ سند',cases:9},sourceReliance:'کامل — وضعیت هر محور از پاسخ‌ها و شواهد ثبت‌شده محاسبه می‌شود',security:'محدودهٔ سازمانی + مجوز دسترسی به پرونده + ثبت کامل تغییرات',humanConfirm:'نظر نهایی صرفاً انسانی — دستیار فقط پیش‌نویس و جمع‌بندی می‌سازد',rollback:'پروندهٔ DD بدون جمع‌بندی دستیار معتبر می‌ماند؛ توقف per-کاربرد'},
   {key:'opp-priority',problem:'رتبه‌بندی فرصت‌ها با معیارهای متعدد',user:'مدیران فرصت و فروش',allowedData:'فرصت‌ها، ارزش پلکانی، احتمال و تعاملات رابطهٔ مرتبط در محدوده',tool:'پنل اولویت‌بندی هوشمند در صفحهٔ فرصت',retrieval:'محاسبهٔ وزنی روی دادهٔ زندهٔ فرصت و آخرین تعامل رابطه',testSet:{name:'فرصت‌های نمونه با امتیاز معلوم',cases:10},sourceReliance:'کامل — امتیاز و دلیل سه‌عاملی از دادهٔ خود فرصت محاسبه می‌شود',security:'بدون خروج داده — محاسبهٔ درون‌سازانه و قطعی',humanConfirm:'بدون رد/قبول خودکار — امتیاز فقط مرتب‌سازی و دلیل می‌دهد',rollback:'مرتب‌سازی دستی همیشه در دسترس است؛ توقف per-کاربرد'},
   {key:'next-action',problem:'پیشنهاد گام بعدی روی تعامل/تعهد/اقدام',user:'کاربران تعامل و تعهد',allowedData:'تعامل، تعهد و اقدام‌های مرتبط در محدوده',tool:'کارت پیشنهاد اقدام بعدی روی تعامل',retrieval:'قواعد قطعی مهلت و وضعیت روی دادهٔ زندهٔ تعامل',testSet:{name:'سناریوهای مهلت و وضعیت',cases:6},sourceReliance:'کامل — پیشنهاد از وضعیت و مهلت رکورد محاسبه می‌شود',security:'بدون خروج داده — قواعد درون‌سامانه',humanConfirm:'ارسال/ثبت فقط با تأیید کاربر (۱۹.۲)',rollback:'اقدام دستی از مسیر معمول همیشه ممکن است؛ توقف per-کاربرد'},
-  {key:'content-draft',problem:'پیش‌نویس محتوای منبع‌دار از بستهٔ اسناد مجاز',user:'تیم رسانه و محتوا',allowedData:'فقط اسناد انتخاب‌شدهٔ مجاز در محدوده (چک‌باکس)',tool:'پنل دستیار تولید محتوا در رسانهٔ تقویم',retrieval:'بستهٔ اسناد مجاز کاربر + قالب انتشار نه‌گامی',testSet:{name:'پیش‌نویس‌های نمونه با برچسب سهم AI',cases:7},sourceReliance:'کامل — ادعاها به سند منبع پیوند می‌خورند؛ سهم AI اعلام می‌شود',security:'پوشاندن الگوهای محرمانه + مرز داده و دستور + کارت F08 کامل',humanConfirm:'انتشار صرفاً انسانی با C2PA و اثرانگشت SHA-256 انتشار (۷.۵)',rollback:'پیش‌نویس منتشرنشده قابل دورریز است؛ توقف per-کاربرد'},
+  {key:'content-draft',problem:'پیش‌نویس محتوای منبع‌دار از بستهٔ اسناد مجاز',user:'تیم رسانه و محتوا',allowedData:'فقط اسناد انتخاب‌شدهٔ مجاز در محدوده (چک‌باکس)',tool:'پنل دستیار تولید محتوا در رسانهٔ تقویم',retrieval:'بستهٔ اسناد مجاز کاربر + قالب انتشار هشت‌گامی (۱۶.۲ سند v14)',testSet:{name:'پیش‌نویس‌های نمونه با برچسب سهم AI',cases:7},sourceReliance:'کامل — ادعاها به سند منبع پیوند می‌خورند؛ سهم AI اعلام می‌شود',security:'پوشاندن الگوهای محرمانه + مرز داده و دستور + کارت F08 کامل',humanConfirm:'انتشار صرفاً انسانی با C2PA و اثرانگشت SHA-256 انتشار (۷.۵)',rollback:'پیش‌نویس منتشرنشده قابل دورریز است؛ توقف per-کاربرد'},
   {key:'authority-monitor',problem:'پایش جایگاه مرجعیت در برابر رقبا',user:'مدیر اندیشکده و پژوهش',allowedData:'رقیبان هفت‌بُعدی و نظرسنجی‌های عمومی در محدوده',tool:'پنل پایش مرجعیت هوش مصنوعی',retrieval:'دادهٔ رقیب/نظرسنجی + معیارهای پایش ماهانه',testSet:{name:'دوره‌های پایش نمونه',cases:5},sourceReliance:'کامل — نتیجهٔ پایش از دادهٔ رقیب و نظرسنجی محاسبه می‌شود',security:'محدودهٔ سازمانی + دادهٔ عمومی/در محدوده',humanConfirm:'ثبت نتیجهٔ پایش با تأیید مدیر اندیشکده (۱۹.۲)',rollback:'پایش دستی با راهنمای ۲۵ سؤال ممکن است؛ توقف per-کاربرد'},
-  {key:'authenticity',problem:'تشخیص حساب/منبع/سرور جعلی و ریسک اصالت',user:'تحلیلگر اعتماد و ایمنی + مالک',allowedData:'رویدادهای امنیتی، نشست‌ها و دستگاه‌های در محدوده',tool:'موتور نشانه‌ها و پرونده‌های اصالت (ماژول پلتفرمی) در هوشمندی',retrieval:'کاتالوگ ۱۶ نشانهٔ وزن‌دار روی دادهٔ زندهٔ امنیتی',testSet:{name:'سناریوهای نشانه و امتیاز (۸.۱)',cases:16},sourceReliance:'کامل — امتیاز ریسک قطعی از نشانه‌های فعال با دلیل و شاهد',security:'دسترسی فقط برای نقش تحلیلگر/مالک + snapshot نسخهٔ قاعده در پرونده',humanConfirm:'اقدام محدودکننده فقط پس از بازبینی انسانی (۸.۲/۱۹.۵.۱)',rollback:'پرونده بدون اقدام باز می‌ماند؛ رفع محدودیت با ابطال اعتراض'},
+  {key:'authenticity',problem:'تشخیص حساب/منبع/سرور جعلی و ریسک اصالت',user:'تحلیلگر حاکمیت و کیفیت داده + مسئول',allowedData:'رویدادهای امنیتی، نشست‌ها و دستگاه‌های در محدوده',tool:'موتور نشانه‌ها و پرونده‌های اصالت (ماژول پلتفرمی) در هوشمندی',retrieval:'کاتالوگ ۱۶ نشانهٔ وزن‌دار روی دادهٔ زندهٔ امنیتی',testSet:{name:'سناریوهای نشانه و امتیاز (۸.۱)',cases:16},sourceReliance:'کامل — امتیاز ریسک قطعی از نشانه‌های فعال با دلیل و شاهد',security:'دسترسی فقط برای نقش تحلیلگر/مالک + snapshot نسخهٔ قاعده در پرونده',humanConfirm:'اقدام محدودکننده فقط پس از بازبینی انسانی (۸.۲)',rollback:'پرونده بدون اقدام باز می‌ماند؛ رفع محدودیت با ابطال اعتراض'},
 ];
 function ensureAiUseCaseCardsFor(orgId){
   if(!Array.isArray(DB.aiUseCases)) DB.aiUseCases=[];
@@ -9162,7 +9162,7 @@ function aiNextActionProposal(inter){
 /* ═══════════════ گام ۷.۵ — دستیار تولید محتوا + فیلدهای کامل F08 ═══════════════
    «پیش‌نویس از بستهٔ منابع»: انتخاب اسناد مجاز → پیش‌نویس منبع‌دار با افشای AI.
    F08: مدل/نسخه · دستور تولید · میزان استفاده از AI · ادعاها · حقوق استفاده ·
-   وضعیت C2PA · راستی‌آزما · مالک/تأیید · اثرانگشت دیجیتال انتشار (SHA-256، بند ۱۶.۲). */
+   وضعیت C2PA · راستی‌آزما · مسئول/تأیید · اثرانگشت دیجیتال انتشار (SHA-256). */
 const F08_AI_SHARE_FA={FULL:'کاملاً هوش مصنوعی',PARTIAL:'با کمک هوش مصنوعی',MINOR:'کمکی حداقلی'};
 const F08_C2PA_FA={NOT_EMBEDDED:'جاسازی نشده',EMBEDDED:'جاسازی‌شده (C2PA)'};
 function contentF08(c){
@@ -16284,7 +16284,7 @@ async function __handler(req, res) {
         closed:all.filter(r=>r.status==='CLOSED').length,
         highOpen:all.filter(r=>r.status!=='CLOSED'&&riskGrade(r)==='HIGH').length},
       roles:programSettingsFor(req).roles,levels:RISK_LEVEL_FA,statuses:RISK_STATUS_FA,
-      rule:'هر ریسک با چهار قلم بنیادی ثبت می‌شود و ریسک بدون مالک، ثبت‌شده محسوب نمی‌گردد (بخش ۲۵ سند).'});
+      rule:'هر ریسک با چهار قلم بنیادی ثبت می‌شود و ریسک بدون مسئول، ثبت‌شده محسوب نمی‌گردد (بخش ۲۳ سند v14).'});
   }
   if(is('/program/risks')&&method==='POST'){
     if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
@@ -16295,9 +16295,9 @@ async function __handler(req, res) {
     const probability=String(b.probability??'').toUpperCase(),impact=String(b.impact??'').toUpperCase();
     if(!RISK_LEVEL_FA[probability]||!RISK_LEVEL_FA[impact]) return json(res,400,{message:'احتمال و اثر هرکدام باید یکی از مقادیر پایین/متوسط/بالا باشد.'});
     const ownerRole=String(b.ownerRole??'').trim();
-    if(!ownerRole) return json(res,400,{message:'ریسک بدون مالک ثبت نمی‌شود (بخش ۲۵ سند).'});
+    if(!ownerRole) return json(res,400,{message:'ریسک بدون مسئول ثبت نمی‌شود (بخش ۲۳ سند v14).'});
     const riskChart=programSettingsFor(req).roles;
-    if(riskChart.length&&!riskChart.includes(ownerRole)) return json(res,400,{message:'مالک ریسک باید یکی از نقش‌های چارت سازمان شما باشد.'});
+    if(riskChart.length&&!riskChart.includes(ownerRole)) return json(res,400,{message:'مسئول ریسک باید یکی از نقش‌های چارت سازمان شما باشد.'});
     /* گام ۹.۲ — ثبت ریسک AI با ستون‌های هشت‌گانه (اختیاری) */
     let ai=null;
     if(b.ai&&typeof b.ai==='object'){
@@ -16326,7 +16326,7 @@ async function __handler(req, res) {
     if(b.title!=null){const t=String(b.title).trim(); if(t.length<3) return json(res,400,{message:'عنوان ریسک را بنویسید (حداقل ۳ نویسه).'}); row.title=t;}
     if(b.probability!=null){const p=String(b.probability).toUpperCase(); if(!RISK_LEVEL_FA[p]) return json(res,400,{message:'احتمال باید پایین/متوسط/بالا باشد.'}); row.probability=p;}
     if(b.impact!=null){const i=String(b.impact).toUpperCase(); if(!RISK_LEVEL_FA[i]) return json(res,400,{message:'اثر باید پایین/متوسط/بالا باشد.'}); row.impact=i;}
-    if(b.ownerRole!=null){const o=String(b.ownerRole).trim(); if(!o) return json(res,400,{message:'ریسک بدون مالک ثبت نمی‌شود (بخش ۲۵ سند).'}); const rChart=programSettingsOf(row.organizationId).roles; if(rChart.length&&!rChart.includes(o)) return json(res,400,{message:'مالک ریسک باید یکی از نقش‌های چارت سازمان شما باشد.'}); row.ownerRole=o;}
+    if(b.ownerRole!=null){const o=String(b.ownerRole).trim(); if(!o) return json(res,400,{message:'ریسک بدون مسئول ثبت نمی‌شود (بخش ۲۳ سند v14).'}); const rChart=programSettingsOf(row.organizationId).roles; if(rChart.length&&!rChart.includes(o)) return json(res,400,{message:'مسئول ریسک باید یکی از نقش‌های چارت سازمان شما باشد.'}); row.ownerRole=o;}
     if(b.status!=null){const st=String(b.status).toUpperCase(); if(!RISK_STATUS_FA[st]) return json(res,400,{message:'وضعیت باید باز/در اقدام/بسته باشد.'}); row.status=st;}
     for(const k of ['preventive','reactive','notes']) if(b[k]!=null) row[k]=String(b[k]).trim();
     if(b.reviewAt!=null) row.reviewAt=String(b.reviewAt);
@@ -17217,7 +17217,7 @@ async function __handler(req, res) {
     ensureAiRoutingSeed();
     const b=await readBody(req);
     const app=AI_F12_USE_CASES.find(s=>s.key===String(b.application??'').trim());
-    if(!app) return json(res,400,{message:'کاربرد نامعتبر است — از فهرست هشت کاربرد جدول ۱۹.۲ انتخاب کنید.'});
+    if(!app) return json(res,400,{message:'کاربرد نامعتبر است — از فهرست هفت کاربرد جدول ۱۹.۲ سند v14 (به‌علاوهٔ کاربرد پلتفرمی اصالت) انتخاب کنید.'});
     const orgId=primaryOrgId(authUser)??visibleOrgIds(req)[0]??PROGRAM_ORG_ID;
     ensureAiUseCaseCardsFor(orgId);
     if((DB.aiUseCases??[]).some(c=>c.organizationId===orgId&&c.application===app.key))
@@ -17317,7 +17317,7 @@ async function __handler(req, res) {
     if(b.limitations!=null) card.limitations=String(b.limitations).trim().slice(0,400);
     if(Array.isArray(b.useCases)){
       const bad=b.useCases.find(k=>!AI_F12_USE_CASES.some(s=>s.key===k));
-      if(bad) return json(res,400,{message:`کاربرد «${bad}» در فهرست هشت کاربرد ۱۹.۲ نیست.`});
+      if(bad) return json(res,400,{message:`کاربرد «${bad}» در فهرست هفت کاربرد ۱۹.۲ سند v14 (به‌علاوهٔ کاربرد پلتفرمی اصالت) نیست.`});
       card.useCases=b.useCases;
     }
     card.updatedAt=nowIso(); saveDb();
@@ -17868,7 +17868,7 @@ async function __handler(req, res) {
     const outputs=THINK_TANK_OUTPUTS.map(o=>({...o,
       registered:items.filter(r=>r.outputKey===o.key).length}));
     return json(res,200,{outputs,items,
-      rule:'زمان هر خروجی اندیشکده در جدول صریح است؛ تاریخ دقیق انتشار در تقویم SRIP ثبت و هر تغییر با علت و مالک اصلاح می‌شود (بخش ۱۵.۱ سند v14).'});
+      rule:'زمان هر خروجی اندیشکده در جدول صریح است؛ تاریخ دقیق انتشار در تقویم SRIP ثبت و هر تغییر با علت و مسئول اصلاح می‌شود (بخش ۱۵.۱ سند v14).'});
   }
   if(is('/program/think-tank')&&method==='POST'){
     if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
@@ -18323,7 +18323,7 @@ async function __handler(req, res) {
     const ownerRole=String(b.ownerRole??'').trim();
     if(!ownerRole) return json(res,400,{message:'پروندهٔ DD بدون مالک ثبت نمی‌شود.'});
     const dChart=programSettingsFor(req).roles;
-    if(dChart.length&&!dChart.includes(ownerRole)) return json(res,400,{message:'مالک پرونده باید یکی از نقش‌های چارت سازمان شما باشد.'});
+    if(dChart.length&&!dChart.includes(ownerRole)) return json(res,400,{message:'مسئول پرونده باید یکی از نقش‌های چارت سازمان شما باشد.'});
     const row={id:`dd-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,
       organizationId:primaryOrgId(authUser)??visibleOrgIds(req)[0]??PARTNERSHIP_ORG_ID,
       subjectOrgId,ownerRole,status:'DRAFT',
@@ -18636,7 +18636,7 @@ async function __handler(req, res) {
     if(scope.length<3) return json(res,400,{message:'دامنهٔ کنترل اجرا الزامی است — بدون دامنه، کنترل ثبت نمی‌شود.'});
     const ownerRole=String(b.ownerRole??'').trim();
     const eChart=programSettingsFor(req).roles;
-    if(!ownerRole||!eChart.includes(ownerRole)) return json(res,400,{message:'مالک کنترل اجرا باید یکی از نقش‌های چارت سازمان شما باشد.'});
+    if(!ownerRole||!eChart.includes(ownerRole)) return json(res,400,{message:'مسئول کنترل اجرا باید یکی از نقش‌های چارت سازمان شما باشد.'});
     const deadline=String(b.deadline??'').trim();
     if(!/^\d{4}-\d{2}-\d{2}/.test(deadline)) return json(res,400,{message:'مهلت کنترل اجرا را در قالب تاریخ مشخص کنید.'});
     const status=String(b.status??'ON_TRACK').toUpperCase();
@@ -18672,7 +18672,7 @@ async function __handler(req, res) {
       if(!scopedProjects(req).some(p=>p.id===v)) return json(res,400,{message:'پروژهٔ متصل یافت نشد یا خارج از محدودهٔ شماست.'});
       row.projectId=v;
     }
-    if(b.ownerRole!=null){const v=String(b.ownerRole).trim(); const eChart=programSettingsOf(row.organizationId).roles; if(!eChart.includes(v)) return json(res,400,{message:'مالک کنترل اجرا باید یکی از نقش‌های چارت سازمان شما باشد.'}); row.ownerRole=v;}
+    if(b.ownerRole!=null){const v=String(b.ownerRole).trim(); const eChart=programSettingsOf(row.organizationId).roles; if(!eChart.includes(v)) return json(res,400,{message:'مسئول کنترل اجرا باید یکی از نقش‌های چارت سازمان شما باشد.'}); row.ownerRole=v;}
     if(b.deadline!=null){const v=String(b.deadline).trim(); if(!/^\d{4}-\d{2}-\d{2}/.test(v)) return json(res,400,{message:'مهلت کنترل اجرا را در قالب تاریخ مشخص کنید.'}); row.deadline=v;}
     if(b.status!=null){
       const v=String(b.status).toUpperCase();
