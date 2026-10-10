@@ -294,6 +294,42 @@ section('دادهٔ اولیهٔ واقعی — aroun / شرکت x / هلدین�
   check('گراف: یال‌های ساختاری پارس↔۱۲ حوزه + مشتری x', parsEdges.length === 13, `parsEdges=${parsEdges.length}`);
 }
 
+/* ═════════════════ گام ۱۳.۲ — نقشهٔ عموم‌ها روی عضو (فیلدهای ۸.۳.۱ سند v14) ═════════════════ */
+section('گام ۱۳.۲ — فیلدهای نقشهٔ عموم‌ها روی عضو (۸.۳.۱ v14)');
+{
+  const dl = await login('demo');
+  const dt = dl.body?.accessToken;
+  /* بذر دمو: عضو میانجی پیوست با فیلدهای کامل */
+  const mm = await api('/publics/members?orgId=org-1', { token: dt });
+  const mmList = Array.isArray(mm.body) ? mm.body : (mm.body?.items ?? []);
+  const pm15 = mmList.find(m => m.id === 'PM-H-015');
+  check('بذر v14: عضو میانجی پیوست با موضوع/آگاهی/دروگیری/پیام/شاهد/مجرا/مسئول/اقدام بعدی',
+    !!pm15 && pm15.awareness === 'FULL' && pm15.awarenessFa === 'کامل' && pm15.engagementFa === 'زیاد'
+    && !!pm15.topic && !!pm15.message && !!pm15.evidence && !!pm15.channel && pm15.ownerRole === 'مدیر رسانه' && !!pm15.nextAction);
+  check('بذر v14: سه عضو دیگر با فیلدهای واقع‌نما (زومیت/ایسنا/صادقی)',
+    mmList.filter(m => ['PM-H-004', 'PM-H-013', 'PM-H-014'].includes(m.id) && m.awareness && m.engagement).length === 3);
+  /* ثبت عضو تازه با فیلدهای v14 */
+  const badAw = await api('/publics/members', { method: 'POST', token: dt, body: { orgId: 'org-1', groupId: 'h-m2', sourceType: 'media', sourceId: 'm-6', awareness: 'SOME' } });
+  check('ثبت عضو با سطح آگاهی نامعتبر → ۴۰۰', badAw.status === 400 && String(badAw.body?.message).includes('سطح آگاهی'));
+  const badEng = await api('/publics/members', { method: 'POST', token: dt, body: { orgId: 'org-1', groupId: 'h-m2', sourceType: 'media', sourceId: 'm-6', engagement: 'WILD' } });
+  check('ثبت عضو با میزان درگیری نامعتبر → ۴۰۰', badEng.status === 400 && String(badEng.body?.message).includes('میزان درگیری'));
+  const created = await api('/publics/members', { method: 'POST', token: dt, body: { orgId: 'org-1', groupId: 'h-m2', sourceType: 'media', sourceId: 'm-6',
+    topic: 'گزارش سالانه هوش مصنوعی', awareness: 'PARTIAL', engagement: 'MEDIUM', ownerRole: 'مدیر رسانه',
+    message: 'دعوت به پوشش گزارش سالانه', evidence: 'نسخهٔ پیش‌انتشار گزارش', channel: 'مکاتبه رسمی', nextAction: 'ارسال بستهٔ خبری' } });
+  check('ثبت عضو با فیلدهای v14 → ۲۰۱ + برچسب‌های فارسی', created.status === 201
+    && created.body?.awarenessFa === 'جزئی' && created.body?.engagementFa === 'متوسط' && created.body?.topic === 'گزارش سالانه هوش مصنوعی');
+  const mid = created.body?.id;
+  /* PATCH: مسئول خارج از چارت → ۴۰۰؛ معتبر → ۲۰۰ */
+  const badOwner = await api(`/publics/members/${mid}`, { method: 'PATCH', token: dt, body: { ownerRole: 'نقش ساختگی' } });
+  check('مسئول خارج از چارت سازمان → ۴۰۰ (اعتبارسنجی مثل ریسک)', badOwner.status === 400 && String(badOwner.body?.message).includes('مسئول عموم'));
+  const okOwner = await api(`/publics/members/${mid}`, { method: 'PATCH', token: dt, body: { ownerRole: 'مدیر استراتژی', awareness: 'FULL', actionConstraint: 'نیاز به پیش‌نویس آماده' } });
+  check('به‌روزرسانی فیلدهای v14 → ۲۰۰ (مسئول از چارت + آگاهی کامل + محدودیت اقدام)',
+    okOwner.status === 200 && okOwner.body?.ownerRole === 'مدیر استراتژی' && okOwner.body?.awarenessFa === 'کامل' && okOwner.body?.actionConstraint === 'نیاز به پیش‌نویس آماده');
+  /* پاک‌سازی عضو تستی */
+  const del = await api(`/publics/members/${mid}`, { method: 'DELETE', token: dt });
+  check('حذف عضو تستی → ۲۰۰', del.status === 200);
+}
+
 /* ===================== 8. TENANT ISOLATION (جداسازی مستأجران) ===================== */
 section('جداسازی محیط شرکت‌ها — دمو فقط در دمو');
 {

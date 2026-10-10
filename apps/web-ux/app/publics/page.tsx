@@ -54,6 +54,10 @@ type MemberView = {
   linkageFa?: string | null; stageFa?: string | null; stanceFa?: string | null; kanal?: string | null;
   signals?: number; suggested?: { linkage: string; stage: string; power: number; interest: number; stance: string };
   stanceHistory?: StanceHistoryEntry[];
+  /* فاز ۱۳.۲ — فیلدهای نقشهٔ عموم‌ها (۸.۳.۱ سند v14) */
+  topic?: string | null; awareness?: string | null; awarenessFa?: string | null; engagement?: string | null; engagementFa?: string | null;
+  actionConstraint?: string | null; networkEffect?: string | null; trustedSource?: string | null; message?: string | null;
+  evidence?: string | null; channel?: string | null; ownerRole?: string | null; nextAction?: string | null;
 };
 type StanceHistoryEntry = {
   at: string; fromStance: string; toStance: string; cause: string;
@@ -560,7 +564,8 @@ export default function PublicsPage() {
 
   /* assess */
   const [assessFor, setAssessFor] = useState<MemberView | null>(null);
-  const [assessForm, setAssessForm] = useState({ stage: 'AWARE', linkage: 'DIFFUSED', power: 50, interest: 50, stance: 'OBSERVER', note: '', assess: true });
+  const [assessForm, setAssessForm] = useState({ stage: 'AWARE', linkage: 'DIFFUSED', power: 50, interest: 50, stance: 'OBSERVER', note: '', assess: true,
+    topic: '', awareness: '', engagement: '', actionConstraint: '', networkEffect: '', trustedSource: '', message: '', evidence: '', channel: '', ownerRole: '', nextAction: '' });
 
   /* self form */
   /* media form */
@@ -734,6 +739,10 @@ export default function PublicsPage() {
     setAssessForm({
       stage: m.stage, linkage: m.linkage, power: m.power, interest: m.interest,
       stance: m.stance, note: m.note ?? '', assess: true,
+      topic: m.topic ?? '', awareness: m.awareness ?? '', engagement: m.engagement ?? '',
+      actionConstraint: m.actionConstraint ?? '', networkEffect: m.networkEffect ?? '', trustedSource: m.trustedSource ?? '',
+      message: m.message ?? '', evidence: m.evidence ?? '', channel: m.channel ?? '',
+      ownerRole: m.ownerRole ?? '', nextAction: m.nextAction ?? '',
     });
   };
   const stanceOf = (p: number, i: number) => (p >= 60 && i >= 60 ? 'KEY_PLAYER' : p >= 60 ? 'INFLUENCER' : i >= 60 ? 'SUPPORTER' : 'OBSERVER');
@@ -1076,6 +1085,7 @@ export default function PublicsPage() {
                           </button>
                         </th>
                         <th>مرحله</th>
+                        <th>آگاهی / درگیری</th>
                         <th>پیوند</th>
                         <th>
                           <button type="button" onClick={() => setMSort(s => ({ key: 'reviewDue', dir: s.key === 'reviewDue' && s.dir === -1 ? 1 : -1 }))} title="مرتب‌سازی بر پایهٔ سررسید بازبینی" style={{ all: 'unset', cursor: 'pointer', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
@@ -1120,6 +1130,13 @@ export default function PublicsPage() {
                               {m.signals != null && <div className="t-muted" style={{ fontSize: 10.5 }}>{fmtNum(m.signals)} سیگنال ۹۰ روز اخیر</div>}
                             </td>
                             <td><Badge tone={STAGE_TONE[m.stage] ?? 'neutral'}>{m.stageFa ?? m.stage}</Badge></td>
+                            <td>
+                              <div style={{ display: 'grid', gap: 3, justifyItems: 'start' }}>
+                                <Badge tone={m.awareness === 'FULL' ? 'success' : m.awareness === 'PARTIAL' ? 'info' : 'neutral'}>{m.awarenessFa ?? '—'}</Badge>
+                                <span className="t-muted" style={{ fontSize: 10.5 }}>دروگیری: {m.engagementFa ?? '—'}</span>
+                              </div>
+                              {m.ownerRole && <div className="t-muted" style={{ fontSize: 10.5, marginTop: 2 }}>مسئول: {m.ownerRole}</div>}
+                            </td>
                             <td><Badge tone="info">{m.linkageFa ?? m.linkage}</Badge></td>
                             <td>
                               <span className="t-muted" style={{ fontSize: 11 }}>{fmtDT(m.reviewDue)}</span>
@@ -1605,6 +1622,67 @@ export default function PublicsPage() {
           <div className="field full">
             <label className="field-label">یادداشت ارزیابی</label>
             <textarea value={assessForm.note} onChange={e => setAssessForm(f => ({ ...f, note: e.target.value }))} placeholder="دلیل تغییر مرحله یا موضع…" />
+          </div>
+          {/* فاز ۱۳.۲ — نقشهٔ عموم‌ها روی عضو (۸.۳.۱ سند v14) */}
+          <div className="field full" style={{ marginTop: 8 }}>
+            <label className="field-label">نقشهٔ عموم‌ها (۸.۳.۱ سند v14) — موضوع، آگاهی، درگیری و کارت تعامل</label>
+            <span className="field-hint">عضویت در بیش از یک عموم مجاز است؛ پیام، شاهد و مسیر تعامل بر پایهٔ موضوع تعیین می‌شود.</span>
+          </div>
+          <div className="form-grid" data-v14="publics-member">
+            <div className="field full">
+              <label className="field-label">موضوع (تصمیم، گزارش، رویداد یا مسئلهٔ مشخص)</label>
+              <input data-vi="topic" value={assessForm.topic} onChange={e => setAssessForm(f => ({ ...f, topic: e.target.value }))} placeholder="مثلاً: مرجعیت هوش مصنوعی کشور" />
+            </div>
+            <div className="field">
+              <label className="field-label">سطح آگاهی</label>
+              <select data-vi="awareness" value={assessForm.awareness} onChange={e => setAssessForm(f => ({ ...f, awareness: e.target.value }))}>
+                <option value="">— ثبت‌نشده —</option>
+                <option value="NONE">ناآگاه</option>
+                <option value="PARTIAL">جزئی</option>
+                <option value="FULL">کامل</option>
+              </select>
+            </div>
+            <div className="field">
+              <label className="field-label">میزان درگیری</label>
+              <select data-vi="engagement" value={assessForm.engagement} onChange={e => setAssessForm(f => ({ ...f, engagement: e.target.value }))}>
+                <option value="">— ثبت‌نشده —</option>
+                <option value="LOW">کم</option>
+                <option value="MEDIUM">متوسط</option>
+                <option value="HIGH">زیاد</option>
+              </select>
+            </div>
+            <div className="field full">
+              <label className="field-label">محدودیت اقدام</label>
+              <input data-vi="actionConstraint" value={assessForm.actionConstraint} onChange={e => setAssessForm(f => ({ ...f, actionConstraint: e.target.value }))} placeholder="مانع اقدام این گروه (مثلاً چرخهٔ انتشار کند)" />
+            </div>
+            <div className="field">
+              <label className="field-label">شبکهٔ اثر</label>
+              <input data-vi="networkEffect" value={assessForm.networkEffect} onChange={e => setAssessForm(f => ({ ...f, networkEffect: e.target.value }))} placeholder="این گروه بر کدام شبکه اثر می‌گذارد؟" />
+            </div>
+            <div className="field">
+              <label className="field-label">منبع مورد اعتماد</label>
+              <input data-vi="trustedSource" value={assessForm.trustedSource} onChange={e => setAssessForm(f => ({ ...f, trustedSource: e.target.value }))} placeholder="چه منبعی برای این گروه معتبر است؟" />
+            </div>
+            <div className="field full">
+              <label className="field-label">پیام قابل اثبات</label>
+              <input data-vi="message" value={assessForm.message} onChange={e => setAssessForm(f => ({ ...f, message: e.target.value }))} placeholder="پیامی که با شاهد قابل اثبات است" />
+            </div>
+            <div className="field">
+              <label className="field-label">شاهد</label>
+              <input data-vi="evidence" value={assessForm.evidence} onChange={e => setAssessForm(f => ({ ...f, evidence: e.target.value }))} placeholder="سند یا رویداد پشتیبان پیام" />
+            </div>
+            <div className="field">
+              <label className="field-label">مجرا (کانال)</label>
+              <input data-vi="channel" value={assessForm.channel} onChange={e => setAssessForm(f => ({ ...f, channel: e.target.value }))} placeholder="مثلاً: مکاتبه رسمی" />
+            </div>
+            <div className="field">
+              <label className="field-label">مسئول (از چارت سازمان)</label>
+              <input data-vi="ownerRole" value={assessForm.ownerRole} onChange={e => setAssessForm(f => ({ ...f, ownerRole: e.target.value }))} placeholder="نقش چارت — مثل: مدیر رسانه" />
+            </div>
+            <div className="field">
+              <label className="field-label">اقدام بعدی</label>
+              <input data-vi="nextAction" value={assessForm.nextAction} onChange={e => setAssessForm(f => ({ ...f, nextAction: e.target.value }))} placeholder="اقدام قابل پیگیری بعدی" />
+            </div>
           </div>
         </div>
       </Modal>

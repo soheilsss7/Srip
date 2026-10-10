@@ -131,6 +131,37 @@ try {
   }));
   ok('members: گزینهٔ «میانجی» در سِلکت مرحلهٔ ارزیابی', await page.evaluate(() =>
     [...document.querySelectorAll('select option')].some(o => o.value === 'MEDIATOR' && (o.textContent ?? '').includes('میانجی'))));
+  /* فاز ۱۳.۲ — فیلدهای نقشهٔ عموم‌ها روی عضو (۸.۳.۱ v14) */
+  ok('members: ستون «آگاهی / درگیری» در جدول', await page.evaluate(() =>
+    [...document.querySelectorAll('.table-wrap thead th')].some(th => (th.textContent ?? '').includes('آگاهی / درگیری'))));
+  ok('members: نشان آگاهی + مسئول روی ردیف زومیت (کامل + مدیر رسانه)', await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('.table-wrap tbody tr')];
+    return rows.some(r => (r.textContent ?? '').includes('زومیت') && (r.textContent ?? '').includes('کامل') && (r.textContent ?? '').includes('مسئول: مدیر رسانه'));
+  }));
+  /* مودال ارزیابی: بخش v14 با فیلدها و مقادیر بذر */
+  await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('.table-wrap tbody tr')];
+    const row = rows.find(r => (r.textContent ?? '').includes('پیوست'));
+    const btn = row?.querySelector('button[title="ارزیابی و به‌روزرسانی"]');
+    if (btn) btn.click();
+  });
+  await new Promise(r => setTimeout(r, 700));
+  const v14modal = await page.evaluate(() => {
+    const modal = document.querySelector('.modal-card');
+    const wrap = modal?.querySelector('[data-v14="publics-member"]');
+    return {
+      open: !!modal, section: !!wrap,
+      topic: (wrap?.querySelector('[data-vi="topic"]')?.value ?? ''),
+      awareness: (wrap?.querySelector('[data-vi="awareness"]')?.value ?? ''),
+      ownerRole: (wrap?.querySelector('[data-vi="ownerRole"]')?.value ?? ''),
+      labels: [...(wrap?.querySelectorAll('.field-label') ?? [])].map(l => (l.textContent ?? '').trim()).join('|'),
+    };
+  });
+  ok('ارزیابی: بخش «نقشهٔ عموم‌ها (۸.۳.۱ v14)» با همهٔ فیلدها', v14modal.open && v14modal.section
+    && ['موضوع', 'سطح آگاهی', 'میزان درگیری', 'محدودیت اقدام', 'شبکهٔ اثر', 'منبع مورد اعتماد', 'پیام قابل اثبات', 'شاهد', 'مجرا (کانال)', 'مسئول (از چارت سازمان)', 'اقدام بعدی'].every(l => v14modal.labels.includes(l)));
+  ok('ارزیابی: مقادیر بذر v14 در فرم (موضوع/آگاهی کامل/مسئول مدیر رسانه)', v14modal.topic.length > 3 && v14modal.awareness === 'FULL' && v14modal.ownerRole === 'مدیر رسانه');
+  await page.evaluate(() => { const b = [...document.querySelectorAll('.modal-card button')].find(x => (x.textContent ?? '').includes('انصراف')); if (b) b.click(); });
+  await new Promise(r => setTimeout(r, 400));
 
   // 5) add member
   await clickByText('button', 'افزودن عضو');

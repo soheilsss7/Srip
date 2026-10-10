@@ -4723,6 +4723,24 @@ const WFLOW_TRIGGER_FA = { MANUAL:'دستی', RELATIONSHIP_CREATED:'ایجاد �
 /* ====================== Publics (عموم‌ها) — کاتالوگ و قالب‌ها ====================== */
 const PUBLIC_LINKAGE_FA = {"ENABLING": "فعال‌کننده", "FUNCTIONAL_INPUT": "کارکردی-ورودی", "FUNCTIONAL_OUTPUT": "کارکردی-خروجی", "NORMATIVE": "هنجاری", "DIFFUSED": "پراکنده"};
 const PUBLIC_STAGE_FA = {"NON_PUBLIC": "غیرعموم", "LATENT": "نهفته", "AWARE": "آگاه", "ACTIVE": "فعال", "MEDIATOR": "میانجی"}; /* فاز ۱۳.۱ — وضعیت چهارم ۸.۳.۱ سند v14 */
+/* فاز ۱۳.۲ — فیلدهای نقشهٔ عموم‌ها روی عضو (۸.۳.۱/۸.۳.۳ سند v14): موضوع، سطح آگاهی،
+   میزان درگیری، محدودیت اقدام، شبکهٔ اثر، منبع مورد اعتماد، پیام، شاهد، مجرا، مسئول، اقدام بعدی */
+const PUBLIC_AWARENESS_FA={NONE:'ناآگاه',PARTIAL:'جزئی',FULL:'کامل'};
+const PUBLIC_ENGAGEMENT_FA={LOW:'کم',MEDIUM:'متوسط',HIGH:'زیاد'};
+const PUBLIC_MEMBER_TEXT_FIELDS=['topic','actionConstraint','networkEffect','trustedSource','message','evidence','channel','nextAction'];
+function publicMemberV14Apply(b,m){
+  const patch={};
+  if(b.awareness!==undefined){ const v=b.awareness===''?null:b.awareness; if(v!==null&&!PUBLIC_AWARENESS_FA[v]) return 'سطح آگاهی معتبر نیست: NONE / PARTIAL / FULL.'; patch.awareness=v; }
+  if(b.engagement!==undefined){ const v=b.engagement===''?null:b.engagement; if(v!==null&&!PUBLIC_ENGAGEMENT_FA[v]) return 'میزان درگیری معتبر نیست: LOW / MEDIUM / HIGH.'; patch.engagement=v; }
+  for(const k of PUBLIC_MEMBER_TEXT_FIELDS){ if(b[k]!==undefined) patch[k]=String(b[k]??'').trim().slice(0,400); }
+  if(b.ownerRole!==undefined){
+    const o=String(b.ownerRole??'').trim();
+    if(o){ const chart=programSettingsOf(m.orgId).roles; if(chart.length&&!chart.includes(o)) return 'مسئول عموم باید یکی از نقش‌های چارت سازمان شما باشد.'; }
+    patch.ownerRole=o;
+  }
+  Object.assign(m,patch);
+  return null;
+}
 const PUBLIC_STANCE_FA = {"KEY_PLAYER": "بازیگر کلیدی", "INFLUENCER": "تأثیرگذار", "SUPPORTER": "حامی", "OBSERVER": "ناظر"};
 const PUBLIC_CATEGORY_FA = {"INTERNAL": "داخلی", "INSTITUTIONAL": "نهادی و حاکمیتی", "ACADEMIC": "علمی، دانشگاهی و پژوهشی", "ECONOMIC": "اقتصادی و سرمایه‌گذاری", "MEDIA": "رسانه‌ای و عمومی", "ECOSYSTEM": "اکوسیستم فناوری و صنعت"};
 const PUBLIC_CATEGORY_ORDER = ["INTERNAL", "INSTITUTIONAL", "ACADEMIC", "ECONOMIC", "MEDIA", "ECOSYSTEM"];
@@ -5176,6 +5194,41 @@ function seedPublicsStore(){
          (بازیگر کلیدیِ غایب) در دمو دیده شود؛ مسیر پیشنهادی از رابطهٔ r-11 (سازمان بورس) می‌آید. */
     ];
     DB.publicsMembers.push(...arr);
+    /* فاز ۱۳.۲ — دادهٔ واقع‌نمای فیلدهای نقشهٔ عموم‌ها (۸.۳.۱ سند v14) روی چهار عضو:
+       میانجی (پیوست) · فعال (زومیت) · آگاه (ایسنا) · نهفته (پردیس) */
+    const V14=(id,f)=>{const x=DB.publicsMembers.find(m=>m.id===id); if(x) Object.assign(x,f);};
+    V14('PM-H-004',{topic:'مرجعیت هوش مصنوعی کشور',awareness:'FULL',engagement:'HIGH',
+      actionConstraint:'بدون محدودیت — درخواست مصاحبه فعالانه پاسخ داده می‌شود',
+      networkEffect:'بازنشر اخبار هلدینگ در شبکهٔ فناوری و استارتاپی',
+      trustedSource:'گزارش مرجع و آرشیو مطبوعاتی هلدینگ',
+      message:'روایت متخصصانهٔ زیرمجموعه‌های فناور هلدینگ',
+      evidence:'سه پوشش تحلیلی در شش‌ماههٔ گذشته',
+      channel:'مکاتبه رسمی و گفت‌وگوی تخصصی',
+      ownerRole:'مدیر رسانه',nextAction:'دعوت به میزگرد فصل دوم'});
+    V14('PM-H-015',{topic:'سیاست‌گذاری و حکمرانی هوش مصنوعی',awareness:'FULL',engagement:'HIGH',
+      actionConstraint:'انتشار فقط پس از راستی‌آزمایی منبع رسمی',
+      networkEffect:'انتقال تفسیر سیاست‌گذاری به شبکهٔ فعالان و نهادها',
+      trustedSource:'یادداشت سیاستی و گزارش فصلی برنامه',
+      message:'جایگاه هلدینگ در شکل‌گیری سیاست‌گذاری هوش مصنوعی',
+      evidence:'استناد دوبارهٔ نشریات تحلیلی به پوشش‌های قبلی',
+      channel:'مکاتبه رسمی و نشست سیاست‌گذاری',
+      ownerRole:'مدیر رسانه',nextAction:'ارائهٔ بستهٔ منبع و دسترسی سریع به متخصص'});
+    V14('PM-H-013',{topic:'اخبار علمی زیرمجموعه‌های هلدینگ',awareness:'PARTIAL',engagement:'LOW',
+      actionConstraint:'چرخهٔ انتشار خبری کند؛ نیاز به پیش‌نویس آماده',
+      networkEffect:'پل دانشگاه و رسانه برای اخبار علمی',
+      trustedSource:'دانشگاه‌ها و پژوهشگران همکار',
+      message:'نتایج پژوهش‌های مشترک هلدینگ و دانشگاه',
+      evidence:'دو استناد علمی در سال گذشته',
+      channel:'ایمیل تحریریهٔ علمی',
+      ownerRole:'مدیر اندیشکده و پژوهش',nextAction:'ارسال پیش‌نویس خبر علمی آماده'});
+    V14('PM-H-014',{topic:'اکوسیستم فناوری و رویدادهای تخصصی',awareness:'PARTIAL',engagement:'MEDIUM',
+      actionConstraint:'مستعد روایت مستقل؛ پیام باید مستند باشد',
+      networkEffect:'معرفی هلدینگ به شبکهٔ سرمایه‌گذاران و بنیان‌گذاران',
+      trustedSource:'نمایش عملی محصول و گزارش مرجع',
+      message:'تجربهٔ واقعی کاربرد محصولات هوش مصنوعی هلدینگ',
+      evidence:'سخنرانی مشترک در کنفرانس ملی',
+      channel:'رویداد تخصصی و شبکهٔ حضوری',
+      ownerRole:'مدیر رویداد',nextAction:'دعوت به روز نمایش محصول (فقط با DD مصوب)'});
     // پیشنهاد پیوند/قدرت-علاقه با موتور فقط برای ورودی‌های بدون مقدار (بدون بازنویسی کاربر)
     for(const m of DB.publicsMembers){ const sug=pubSuggester(m); m.linkage=m.linkage??sug.linkage; m.stance=m.stance??sug.stance; }
   }
@@ -5390,6 +5443,7 @@ function pubMemberView(m){
     sourceLabel:m.sourceType==='organization'?'سازمان':m.sourceType==='person'?'شخص':m.sourceType==='relationship'?'رابطه':'رسانه',
     groupFa:g.fa??null,categoryId:g.cat??null,categoryFa:g.cat?PUBLIC_CATEGORY_FA[g.cat]:null,
     linkageFa:PUBLIC_LINKAGE_FA[m.linkage]??null,stageFa:PUBLIC_STAGE_FA[m.stage]??null,stanceFa:PUBLIC_STANCE_FA[m.stance]??null,
+    awarenessFa:PUBLIC_AWARENESS_FA[m.awareness]??null,engagementFa:PUBLIC_ENGAGEMENT_FA[m.engagement]??null,
     kanal:g.kanal??null,signals:sug.signals,suggested:{linkage:sug.linkage,stage:sug.stage,power:sug.power,interest:sug.interest,stance:sug.stance},
     stanceHistory:Array.isArray(m.stanceHistory)?m.stanceHistory:[]};
 }
@@ -13153,6 +13207,8 @@ const server=http.createServer(async(req,res)=>{
       linkage:b.linkage??sug.linkage,stage:b.stage??sug.stage,power:Number.isFinite(Number(b.power))?Number(b.power):sug.power,
       interest:Number.isFinite(Number(b.interest))?Number(b.interest):sug.interest,stance:b.stance??sug.stance,
       note:String(b.note??''),assessedAt:nowIso(),reviewDue:new Date(Date.now()+(Number(self.reviewIntervalDays)||90)*86400000).toISOString()};
+    const v14err=publicMemberV14Apply(b,row);
+    if(v14err) return json(res,400,{message:v14err});
     DB.publicsMembers.push(row);
     const ctx={publicMember:pubMemberView(row),groupId,orgId,sourceType,sourceId};
     await autoRunWorkflows('PublicMember',row.id,'PUBLIC_MEMBER_ADDED',ctx,`pm-added:${row.id}`);
@@ -13190,6 +13246,8 @@ const server=http.createServer(async(req,res)=>{
     if(b.power!==undefined){ const v=Number(b.power); if(!Number.isFinite(v)||v<0||v>100) return json(res,400,{message:'قدرت باید عددی بین ۰ تا ۱۰۰ باشد.'}); m.power=v; }
     if(b.interest!==undefined){ const v=Number(b.interest); if(!Number.isFinite(v)||v<0||v>100) return json(res,400,{message:'علاقه باید عددی بین ۰ تا ۱۰۰ باشد.'}); m.interest=v; }
     if(b.note!==undefined) m.note=String(b.note).slice(0,240);
+    const v14err=publicMemberV14Apply(b,m);
+    if(v14err) return json(res,400,{message:v14err});
     if(b.power!==undefined||b.interest!==undefined||b.stage!==undefined) m.stance=pubStanceOf(m.power,m.interest);
     /* تاریخچهٔ موضع + علت (الگوی Squivr/ArcSight: «چه چیزی واکنش درگیرد») */
     if(m.stance!==before.stance){
