@@ -101,10 +101,16 @@ try {
       kinds: t.includes('رقیب') && t.includes('عموم‌ها'),
       alertOn: t.includes('فعال'),
       flowCol: t.includes('وضعیت گردش F05'),
+      titleV14: (s?.querySelector('h2')?.textContent ?? '').includes('کارت محیط، ذی‌نفع، عموم و رقیب (F04)'),
+      pubCol: [...(s?.querySelectorAll('thead th') ?? [])].some(th => (th.textContent ?? '').includes('وضعیت عموم / رفتار')),
+      env2row: (() => { const r = s?.querySelector('tr[data-env="env-2"]'); const x = r?.textContent ?? ''; return x.includes('آگاه') && x.includes('جست‌وجو') && x.includes('جزئی'); })(),
     };
   });
   ok('F04: دو کارت بذر (رقیب مصوب با هشدار فعال + عمومی پیش‌نویس) با ستون گردش F05',
     env.count === 2 && env.kinds && env.alertOn && env.flowCol, JSON.stringify(env));
+  ok('F04 v14: عنوان «کارت محیط، ذی‌نفع، عموم و رقیب» + ستون «وضعیت عموم / رفتار»',
+    env.titleV14 && env.pubCol, JSON.stringify({ title: env.titleV14, col: env.pubCol }));
+  ok('F04 v14: ردیف عمومی بذر (env-2) با وضعیت آگاه، رفتار جست‌وجو و آگاهی جزئی', env.env2row);
 
   /* کارت تازه → تصویب → فعال‌سازی هشدار */
   await page.evaluate(() => [...document.querySelectorAll('section[data-f04] button')].find(b => (b.textContent ?? '').includes('کارت محیط جدید'))?.click());
@@ -142,6 +148,52 @@ try {
     return row && (row.textContent ?? '').includes('فعال') && !(row.textContent ?? '').includes('فعال‌سازی هشدار');
   }, { timeout: 30000 });
   ok('F04: هشدار پس از تصویب فعال شد (چیپ فعال)', true);
+
+  /* فاز ۱۳.۳ — فرم کارت عمومی با فیلدهای ۸.۳.۱ سند v14 */
+  await page.evaluate(() => [...document.querySelectorAll('section[data-f04] button')].find(b => (b.textContent ?? '').includes('کارت محیط جدید'))?.click());
+  await page.waitForSelector('.modal-backdrop form#env-form', { timeout: 30000 });
+  await page.evaluate(() => {
+    const form = document.querySelector('.modal-backdrop form#env-form');
+    const set = (el, v, ev) => { Object.getOwnPropertyDescriptor(el.tagName === 'SELECT' ? window.HTMLSelectElement.prototype : window.HTMLInputElement.prototype, 'value').set.call(el, v); el.dispatchEvent(new Event(ev, { bubbles: true })); };
+    set(form.querySelector('select'), 'PUBLIC', 'change');
+  });
+  await new Promise(r => setTimeout(r, 400));
+  const pubFields = await page.evaluate(() => {
+    const form = document.querySelector('.modal-backdrop form#env-form');
+    return {
+      visible: !!form?.querySelector('[data-ei="commonIssue"]'),
+      all: ['commonIssue', 'publicStatus', 'awareness', 'engagement', 'commBehavior', 'actionConstraint'].every(k => !!form?.querySelector(`[data-ei="${k}"]`)),
+    };
+  });
+  ok('F04 v14: انتخاب «عموم‌ها» → فیلدهای ۸.۳.۱ (مسئلهٔ مشترک، وضعیت، آگاهی، درگیری، رفتار، محدودیت)', pubFields.visible && pubFields.all, JSON.stringify(pubFields));
+  await page.evaluate(() => {
+    const form = document.querySelector('.modal-backdrop form#env-form');
+    const set = (el, v, ev) => { Object.getOwnPropertyDescriptor(el.tagName === 'SELECT' ? window.HTMLSelectElement.prototype : window.HTMLInputElement.prototype, 'value').set.call(el, v); el.dispatchEvent(new Event(ev, { bubbles: true })); };
+    const inputs = form.querySelectorAll('input');
+    set(inputs[0], 'مسئلهٔ حقوقی', 'input'); /* نوع اطلاعات */
+    set(inputs[1], 'نشانهٔ تغییر تست عمومی', 'input'); /* نشانهٔ تغییر */
+    set(inputs[2], 'منبع تست', 'input'); /* منبع */
+    set(form.querySelector('[data-ei="commonIssue"]'), 'شفافیت دادهٔ صنعت', 'input');
+    set(form.querySelector('[data-ei="publicStatus"]'), 'LATENT', 'change');
+    set(form.querySelector('[data-ei="awareness"]'), 'NONE', 'change');
+    set(form.querySelector('[data-ei="engagement"]'), 'LOW', 'change');
+    set(form.querySelector('[data-ei="commBehavior"]'), 'RECEIVE', 'change');
+  });
+  await new Promise(r => setTimeout(r, 400));
+  await page.evaluate(() => [...document.querySelectorAll('.modal-backdrop button')].find(b => (b.textContent ?? '').includes('ذخیرهٔ کارت محیط'))?.click());
+  /* ردیف جدید را با «نوع اطلاعات» پیدا می‌کنیم (مسئلهٔ مشترک فقط در فرم است، نه جدول) */
+  await page.waitForFunction(() => {
+    const rows = [...document.querySelectorAll('section[data-f04] tbody tr')];
+    return rows.some(tr => (tr.textContent ?? '').includes('مسئلهٔ حقوقی'));
+  }, { timeout: 30000 }).then(() => true).catch(() => false);
+  const pubRow = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('section[data-f04] tbody tr')];
+    const r = rows.find(tr => (tr.textContent ?? '').includes('مسئلهٔ حقوقی'));
+    const x = r?.textContent ?? '';
+    return { found: !!r, status: x.includes('نهفته'), comm: x.includes('دریافت'), aware: x.includes('ناآگاه'), isPublic: x.includes('عموم‌ها') };
+  });
+  ok('F04 v14: ثبت کارت عمومی کامل → ردیف با وضعیت نهفته، آگاهی ناآگاه و رفتار دریافت',
+    pubRow.found && pubRow.status && pubRow.comm && pubRow.aware, JSON.stringify(pubRow));
 
   /* ── ۳) F07 در راهبرد ── */
   try { await page.goto(`${BASE}/strategy`, { waitUntil: 'networkidle0', timeout: 90000 }); } catch {}

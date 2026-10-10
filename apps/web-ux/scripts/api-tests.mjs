@@ -330,6 +330,47 @@ section('گام ۱۳.۲ — فیلدهای نقشهٔ عموم‌ها روی ع�
   check('حذف عضو تستی → ۲۰۰', del.status === 200);
 }
 
+/* ═════════════════ گام ۱۳.۳ — F04 کارت محیط، ذی‌نفع، عموم و رقیب (۸.۳.۱ v14) ═════════════════ */
+section('گام ۱۳.۳ — F04 گسترش‌یافته: فیلدهای عمومی کارت محیط (۸.۳.۱ v14)');
+{
+  const dl = await login('demo');
+  const dt = dl.body?.accessToken;
+  /* بذر: env-2 عمومی با فیلدهای v14 */
+  const L = await api('/env-stakeholder-cards', { token: dt });
+  const env2 = (L.body?.items ?? []).find(x => x.id === 'env-2');
+  check('بذر F04: کارت عمومی env-2 با مسئلهٔ مشترک/وضعیت چهارگانه/آگاهی/دروگیری/محدودیت/رفتار',
+    !!env2 && env2.kind === 'PUBLIC' && !!env2.commonIssue
+    && env2.publicStatus === 'AWARE' && env2.publicStatusFa === 'آگاه'
+    && env2.awarenessFa === 'جزئی' && env2.engagementFa === 'متوسط'
+    && !!env2.actionConstraint && env2.commBehaviorFa === 'جست‌وجو');
+  check('قاعدهٔ F04 v14: عنوان «کارت محیط، ذی‌نفع، عموم و رقیب» + الزامات عمومی',
+    String(L.body?.rule ?? '').includes('کارت محیط، ذی‌نفع، عموم و رقیب') && String(L.body?.rule ?? '').includes('مسئلهٔ مشترک'));
+  /* اقلام الزامی فقط برای kind=PUBLIC */
+  const noIssue = await api('/env-stakeholder-cards', { method: 'POST', token: dt, body: { kind: 'PUBLIC', infoType: 'تغییر مقرراتی', changeSignal: 'نشانهٔ تغییر تست باتری', source: 'منبع تست', importance: 'HIGH', power: 'MEDIUM', publicStatus: 'AWARE', awareness: 'PARTIAL', engagement: 'LOW', commBehavior: 'RECEIVE' } });
+  check('کارت عمومی بدون «مسئلهٔ مشترک» → ۴۰۰', noIssue.status === 400 && String(noIssue.body?.message).includes('مسئلهٔ مشترک'));
+  const badStatus = await api('/env-stakeholder-cards', { method: 'POST', token: dt, body: { kind: 'PUBLIC', infoType: 'تغییر مقرراتی', changeSignal: 'نشانهٔ تغییر تست باتری', source: 'منبع تست', importance: 'HIGH', commonIssue: 'مسئلهٔ مشترک تست', publicStatus: 'SLEEPING', awareness: 'PARTIAL', engagement: 'LOW', commBehavior: 'RECEIVE' } });
+  check('وضعیت عموم نامعتبر → ۴۰۰ (چهارگانهٔ v14)', badStatus.status === 400 && String(badStatus.body?.message).includes('وضعیت عموم'));
+  const badComm = await api('/env-stakeholder-cards', { method: 'POST', token: dt, body: { kind: 'PUBLIC', infoType: 'تغییر مقرراتی', changeSignal: 'نشانهٔ تغییر تست باتری', source: 'منبع تست', importance: 'HIGH', commonIssue: 'مسئلهٔ مشترک تست', publicStatus: 'MEDIATOR', awareness: 'FULL', engagement: 'HIGH', commBehavior: 'BROADCAST' } });
+  check('رفتار ارتباطی نامعتبر → ۴۰۰ (دریافت/جست‌وجو/بازنشر/اقدام)', badComm.status === 400 && String(badComm.body?.message).includes('رفتار ارتباطی'));
+  /* کارت غیرعمومی بدون فیلدهای عمومی → ۲۰۱ (الزام فقط برای PUBLIC) */
+  const stakeholder = await api('/env-stakeholder-cards', { method: 'POST', token: dt, body: { kind: 'STAKEHOLDER', infoType: 'انتظار ذی‌نفع', changeSignal: 'نشانهٔ تغییر تست باتری', source: 'منبع تست', importance: 'MEDIUM' } });
+  check('کارت ذی‌نفع بدون فیلدهای عمومی → ۲۰۱ (الزام فقط برای عموم‌ها)', stakeholder.status === 201 && stakeholder.body?.commonIssue === '');
+  /* ثبت کامل عمومی → ۲۰۱ */
+  const pub = await api('/env-stakeholder-cards', { method: 'POST', token: dt, body: { kind: 'PUBLIC', infoType: 'مسئلهٔ حقوقی', changeSignal: 'نشانهٔ تغییر تست باتری', source: 'منبع تست', importance: 'HIGH', commonIssue: 'شفافیت دادهٔ صنعت', publicStatus: 'LATENT', awareness: 'NONE', engagement: 'LOW', actionConstraint: 'نبود ساختار جمعی', commBehavior: 'RECEIVE' } });
+  check('کارت عمومی کامل → ۲۰۱ با برچسب‌های فارسی (نهفته/ناآگاه/دریافت)',
+    pub.status === 201 && pub.body?.publicStatusFa === 'نهفته' && pub.body?.awarenessFa === 'ناآگاه' && pub.body?.commBehaviorFa === 'دریافت');
+  /* تبدیل کارت ذی‌نفع به عمومی بدون اقلام → ۴۰۰؛ با اقلام → ۲۰۰ */
+  const toPub = await api(`/env-stakeholder-cards/${stakeholder.body?.id}`, { method: 'PATCH', token: dt, body: { kind: 'PUBLIC' } });
+  check('تبدیل کارت به «عموم‌ها» بدون اقلام الزامی → ۴۰۰', toPub.status === 400 && String(toPub.body?.message).includes('مسئلهٔ مشترک'));
+  const toPubOk = await api(`/env-stakeholder-cards/${stakeholder.body?.id}`, { method: 'PATCH', token: dt, body: { kind: 'PUBLIC', commonIssue: 'مسئلهٔ مشترک تست', publicStatus: 'ACTIVE', awareness: 'FULL', engagement: 'HIGH', commBehavior: 'ACT' } });
+  check('تبدیل به «عموم‌ها» با اقلام کامل → ۲۰۰ (فعال/کامل/اقدام)', toPubOk.status === 200 && toPubOk.body?.publicStatusFa === 'فعال' && toPubOk.body?.commBehaviorFa === 'اقدام');
+  /* برگشت به ذی‌نفع → فیلدهای عمومی پاک می‌شوند */
+  const back = await api(`/env-stakeholder-cards/${stakeholder.body?.id}`, { method: 'PATCH', token: dt, body: { kind: 'STAKEHOLDER' } });
+  check('برگشت به «ذی‌نفع» → فیلدهای عمومی پاک شدند', back.status === 200 && back.body?.publicStatus == null && back.body?.commonIssue === '');
+  /* یادداشت: ماژول env حذف ردیف ندارد؛ کارت‌های تستی با «بازنشانی دادهٔ دمو بین باتری‌ها»
+     (قرارداد --reset) پاک می‌شوند — همان الگوی بقیهٔ ماژول‌های بدون DELETE. */
+}
+
 /* ===================== 8. TENANT ISOLATION (جداسازی مستأجران) ===================== */
 section('جداسازی محیط شرکت‌ها — دمو فقط در دمو');
 {
@@ -3220,10 +3261,12 @@ section('گام ۱۰.۴ — F03 ممیزی ظرفیت + F04 محیط/ذی‌نف
   /* ── F04 ── */
   const E = await api('/env-stakeholder-cards', { token: dt });
   const eitems = E.body.items ?? [];
-  check('F04: دو کارت بذر (رقیب مصوب با هشدار + عمومی پیش‌نویس) — ادغام عموم‌ها و رقیب',
-    E.status === 200 && eitems.length === 2
-    && eitems.find(x => x.kind === 'COMPETITOR').status === 'APPROVED' && eitems.find(x => x.kind === 'COMPETITOR').alert === true
-    && eitems.find(x => x.kind === 'PUBLIC').status === 'DRAFT' && !!E.body.rule);
+  const env1 = eitems.find(x => x.id === 'env-1'), env2b = eitems.find(x => x.id === 'env-2');
+  check('F04: کارت‌های بذر (رقیب مصوب با هشدار + عمومی پیش‌نویس) — ادغام عموم‌ها و رقیب',
+    E.status === 200 && !!env1 && !!env2b
+    && env1.status === 'APPROVED' && env1.alert === true
+    && env2b.kind === 'PUBLIC' && env2b.status === 'DRAFT'
+    && env2b.publicStatus === 'AWARE' && !!env2b.commonIssue && !!E.body.rule);
 
   const noSignal = await api('/env-stakeholder-cards', { method: 'POST', token: dt, body: { kind: 'STAKEHOLDER', infoType: 'موضع ذی‌نفع', source: 'جلسهٔ行业协会' } });
   check('F04: کارت بدون نشانهٔ تغییر → ۴۰۰', noSignal.status === 400);

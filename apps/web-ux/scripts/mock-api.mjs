@@ -8438,6 +8438,30 @@ const CAP_MATURITY_FA={BASIC:'پایه',GOOD:'خوب',ADVANCED:'پیشرفته'}
 const CAP_RISK_FA={LOW:'کم',MEDIUM:'متوسط',HIGH:'بالا'};
 const CAP_KIND_FA={PERSON:'فرد',ASSET:'دارایی'};
 const ENV_KIND_FA={PUBLIC:'عموم‌ها',STAKEHOLDER:'ذی‌نفع',COMPETITOR:'رقیب'};
+/* فاز ۱۳.۳ — فیلدهای عمومی F04 (۸.۳.۱ سند v14): فقط برای kind=PUBLIC الزامی‌اند */
+const ENV_PUBLIC_STATUS_FA={LATENT:'نهفته',AWARE:'آگاه',ACTIVE:'فعال',MEDIATOR:'میانجی'};
+const ENV_COMM_BEHAVIOR_FA={RECEIVE:'دریافت',SEARCH:'جست‌وجو',RESHARE:'بازنشر',ACT:'اقدام'};
+function envPublicFieldsApply(b,row){
+  if(row.kind!=='PUBLIC'){ /* کارت غیرعمومی: فیلدهای عمومی پاک می‌شوند */
+    if(b.kind!==undefined||b.commonIssue!==undefined){ row.commonIssue=''; row.publicStatus=null; row.awareness=null; row.engagement=null; row.actionConstraint=''; row.commBehavior=null; }
+    return null;
+  }
+  const patch={};
+  if(b.commonIssue!==undefined) patch.commonIssue=String(b.commonIssue??'').trim().slice(0,400);
+  if(b.publicStatus!==undefined) patch.publicStatus=b.publicStatus===''?null:String(b.publicStatus).toUpperCase();
+  if(b.awareness!==undefined) patch.awareness=b.awareness===''?null:String(b.awareness).toUpperCase();
+  if(b.engagement!==undefined) patch.engagement=b.engagement===''?null:String(b.engagement).toUpperCase();
+  if(b.actionConstraint!==undefined) patch.actionConstraint=String(b.actionConstraint??'').trim().slice(0,400);
+  if(b.commBehavior!==undefined) patch.commBehavior=b.commBehavior===''?null:String(b.commBehavior).toUpperCase();
+  Object.assign(row,patch);
+  /* اقلام الزامی عمومی — فقط برای kind=PUBLIC (۸.۳.۱ سند v14) */
+  if(!String(row.commonIssue??'').trim()||String(row.commonIssue).trim().length<3) return 'کارت عمومی بدون «مسئلهٔ مشترک» ثبت نمی‌شود (۸.۳.۱ سند v14).';
+  if(!ENV_PUBLIC_STATUS_FA[row.publicStatus]) return 'وضعیت عموم را انتخاب کنید: نهفته / آگاه / فعال / میانجی.';
+  if(!PUBLIC_AWARENESS_FA[row.awareness]) return 'سطح آگاهی عموم را انتخاب کنید: NONE / PARTIAL / FULL.';
+  if(!PUBLIC_ENGAGEMENT_FA[row.engagement]) return 'میزان درگیری عموم را انتخاب کنید: LOW / MEDIUM / HIGH.';
+  if(!ENV_COMM_BEHAVIOR_FA[row.commBehavior]) return 'رفتار ارتباطی عموم را انتخاب کنید: دریافت / جست‌وجو / بازنشر / اقدام.';
+  return null;
+}
 const ENV_STATUS_FA={DRAFT:'پیش‌نویس',PENDING:'در انتظار تصویب',APPROVED:'مصوب',REJECTED:'ردشده'};
 const ENV_IMPORTANCE_FA={HIGH:'زیاد',MEDIUM:'متوسط',LOW:'کم'};
 const RES_STATUS_FA={DRAFT:'پیش‌نویس',IN_REVIEW:'در داوری',PUBLISHED:'منتشرشده'};
@@ -8483,13 +8507,20 @@ function ensureEnvCardSeed(){
      source:'اطلاعیهٔ رسمی بورس',importance:'MEDIUM',position:'فرصت رگولاتوری برای دادهٔ ساخت‌یافته',
      power:'HIGH',message:'ورود زودهنگام با گزارش تحلیلی طبقه‌بندی',
      competitorEvidence:'',scenario:'ابلاغ رسمی تا پایان فصل و موج گزارش‌های تفسیری',
+     /* فاز ۱۳.۳ — فیلدهای عمومی ۸.۳.۱ سند v14 */
+     commonIssue:'شفافیت طبقه‌بندی صنایع و دسترسی به دادهٔ ساخت‌یافته',
+     publicStatus:'AWARE',awareness:'PARTIAL',engagement:'MEDIUM',
+     actionConstraint:'نیازمند تفسیر رسمی بورس پیش از هر موضع‌گیری',
+     commBehavior:'SEARCH',
      alert:false,status:'DRAFT',approvedBy:null,approvedAt:null,
      createdAt:AGO(5),updatedAt:AGO(5)}
   );
   saveDb();
 }
 function envCardView(x){
-  return {...x,kindFa:ENV_KIND_FA[x.kind],statusFa:ENV_STATUS_FA[x.status],importanceFa:ENV_IMPORTANCE_FA[x.importance]};
+  return {...x,kindFa:ENV_KIND_FA[x.kind],statusFa:ENV_STATUS_FA[x.status],importanceFa:ENV_IMPORTANCE_FA[x.importance],
+    publicStatusFa:ENV_PUBLIC_STATUS_FA[x.publicStatus]??null,commBehaviorFa:ENV_COMM_BEHAVIOR_FA[x.commBehavior]??null,
+    awarenessFa:PUBLIC_AWARENESS_FA[x.awareness]??null,engagementFa:PUBLIC_ENGAGEMENT_FA[x.engagement]??null};
 }
 const RES_ORG_ID=PARTNERSHIP_ORG_ID;
 function ensureResearchPlanSeed(){
@@ -17183,7 +17214,7 @@ const server=http.createServer(async(req,res)=>{
     const items=(DB.envCards??[]).filter(x=>visibleOrgIds(req).includes(x.organizationId))
       .map(envCardView).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));
     return json(res,200,{items,
-      rule:'کارت محیط، ذی‌نفع و رقیب (F04): ادغام عموم‌ها و رقیب — نوع اطلاعات، نشانهٔ تغییر، منبع، اهمیت، موضع، قدرت، پیام، شواهد رقیب، سناریو و هشدار؛ فعال‌سازی هشدار فقط پس از تصویب در گردش F05 (درخواست و تصویب).'});
+      rule:'کارت محیط، ذی‌نفع، عموم و رقیب (F04): ادغام عموم‌ها و رقیب — نوع اطلاعات، نشانهٔ تغییر، منبع، اهمیت، موضع، قدرت، پیام، شواهد رقیب، سناریو و هشدار؛ برای کارت «عموم‌ها» مسئلهٔ مشترک، وضعیت چهارگانه (نهفته/آگاه/فعال/میانجی)، آگاهی، درگیری، محدودیت اقدام و رفتار ارتباطی الزامی است (۸.۳.۱ سند v14)؛ فعال‌سازی هشدار فقط پس از تصویب در گردش F05.'});
   }
   if(is('/env-stakeholder-cards')&&method==='POST'){
     if(!hasPerm('publics.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر عموم‌ها» (publics.write) را ندارید.'});
@@ -17209,7 +17240,10 @@ const server=http.createServer(async(req,res)=>{
       message:String(b.message??'').trim().slice(0,300),
       competitorEvidence:String(b.competitorEvidence??'').trim().slice(0,400),
       scenario:String(b.scenario??'').trim().slice(0,400),alert:false,
+      commonIssue:'',publicStatus:null,awareness:null,engagement:null,actionConstraint:'',commBehavior:null,
       status:'DRAFT',approvedBy:null,approvedAt:null,createdAt:nowIso(),updatedAt:nowIso()};
+    const pubErr=envPublicFieldsApply(b,row);
+    if(pubErr) return json(res,400,{message:pubErr});
     DB.envCards.unshift(row); saveDb();
     audit(req,'CREATE','EnvCard',row.id,'OK',{kind,infoType});
     return json(res,201,envCardView(row));
@@ -17238,6 +17272,8 @@ const server=http.createServer(async(req,res)=>{
     if(b.importance!=null){const v=String(b.importance).toUpperCase(); if(!ENV_IMPORTANCE_FA[v]) return json(res,400,{message:'اهمیت نامعتبر است.'}); row.importance=v;}
     if(b.power!=null){const v=String(b.power).toUpperCase(); if(!ENV_IMPORTANCE_FA[v]) return json(res,400,{message:'قدرت نامعتبر است.'}); row.power=v;}
     if(b.kind!=null){const v=String(b.kind).toUpperCase(); if(!ENV_KIND_FA[v]) return json(res,400,{message:'نوع کارت نامعتبر است.'}); row.kind=v;}
+    const pubErr=envPublicFieldsApply(b,row);
+    if(pubErr) return json(res,400,{message:pubErr});
     if(b.alert===true){
       if(row.status!=='APPROVED') return json(res,400,{message:'هشدار فقط پس از تصویب کارت در گردش F05 فعال می‌شود — ابتدا کارت را به تصویب برسانید.'});
       row.alert=true;
