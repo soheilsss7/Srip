@@ -137,7 +137,16 @@ try {
   ok('شناسنامه: فرم ویرایش (مأموریت)', await waitForText('مأموریت سازمان'));
   await page.goto(`${BASE}/publics`, { waitUntil: 'networkidle0', timeout: 60000 });
   await new Promise(r => setTimeout(r, 900));
-  ok('groups count 105', await waitForText('۱۰۵'));
+  ok('groups count 116 (۱۰۵ قالب + ۱۱ عموم v14)', await waitForText('۱۱۶'));
+  /* فاز ۱۳.۵ — نقشهٔ ۱۱ عموم v14 + دستهٔ بین‌المللی */
+  ok('فیلتر دستهٔ «بین‌المللی» موجود (هفتمین دسته)', await page.evaluate(() =>
+    !![...document.querySelectorAll('select option')].find(o => (o.textContent ?? '').trim() === 'بین\u200cالمللی')));
+  const intlGroup = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('.table-wrap tbody tr')];
+    const r = rows.find(tr => (tr.textContent ?? '').includes('شرکای بین\u200cالمللی'));
+    return !!r && (r.textContent ?? '').includes('بین\u200cالمللی');
+  });
+  ok('گروه «مراکز پژوهشی، … و شرکای بین‌المللی» (v14-g11) در نقشه با دستهٔ بین‌المللی', intlGroup);
 
   // 4) members tab
   await clickByText('button[role="tab"]', 'اعضا و ارزیابی');
@@ -148,7 +157,7 @@ try {
   ok('members: ستون قابل مرتب‌سازی نفوذ/حمایت', await page.evaluate(() => [...document.querySelectorAll('th button')].some(b => (b.textContent ?? '').includes('نفوذ / حمایت'))));
   ok('members: نوار سنجهٔ نفوذ/حمایت در جدول', await page.evaluate(() => (document.body.textContent ?? '').includes('نفوذ') && (document.body.textContent ?? '').includes('حمایت')));
   const memberRows0 = await page.evaluate(() => document.querySelectorAll('.table-wrap tbody tr').length);
-  ok('seed members 15', memberRows0 === 15, 'rows=' + memberRows0);
+  ok('seed members 17 (۱۵ + میانجی و نهفتهٔ v14)', memberRows0 === 17, 'rows=' + memberRows0);
   ok('members: وضعیت میانجی (۸.۳.۱ v14) در جدول — ردیف پیوست', await page.evaluate(() => {
     const rows = [...document.querySelectorAll('.table-wrap tbody tr')];
     return rows.some(r => (r.textContent ?? '').includes('میانجی') && (r.textContent ?? '').includes('پیوست'));
@@ -217,7 +226,7 @@ try {
 ok('add member flash', addFlash);
   await new Promise(r => setTimeout(r, 900));
   const memberRows1 = await page.evaluate(() => document.querySelectorAll('.table-wrap tbody tr').length);
-  ok('member count 16', memberRows1 === 16, 'rows=' + memberRows1);
+  ok('member count 18', memberRows1 === 18, 'rows=' + memberRows1);
 
   // 6) assess the newly added member (first row with ارزیابی button = h-n2 added last → check last row)
   await page.evaluate(() => {
@@ -249,7 +258,7 @@ ok('add member flash', addFlash);
   const covOk = await page.waitForFunction(() => {
     const t = [...document.querySelectorAll('button[role="tab"]')].find(x => (x.textContent ?? '').includes('پوشش'));
     const body = document.body.textContent ?? '';
-    return !!t && t.className.includes('active') && body.includes('۱۰۵') && body.includes('٪ پوشش');
+    return !!t && t.className.includes('active') && body.includes('۱۱۶') && body.includes('٪ پوشش');
   }, { timeout: 35000 }).then(() => true).catch(() => false);
   ok('coverage totals', covOk);
   ok('هیت‌مپ پوشش عمومی (جدول منبع×دسته)', await waitForText('هیت‌مپ پوشش عمومی'));
@@ -278,7 +287,7 @@ ok('add member flash', addFlash);
   ok('group deactivated', await page.evaluate(() => (document.querySelector('tr[data-gid="h-m5"]')?.textContent ?? '').includes('غیرفعال')));
   await clickByText('button[role="tab"]', 'پوشش');
   await new Promise(r => setTimeout(r, 900));
-  ok('coverage 104 after deactivate', await page.evaluate(() => (document.body.textContent ?? '').includes('۱۰۴')));
+  ok('coverage 115 after deactivate (۱۱۶−۱)', await page.evaluate(() => (document.body.textContent ?? '').includes('۱۱۵')));
   await clickByText('button[role="tab"]', 'گروه‌ها');
   await new Promise(r => setTimeout(r, 900));
   await page.evaluate(() => { const b = document.querySelector('tr[data-gid="h-m5"] button[data-act="restore"]'); if (b) b.click(); });
@@ -286,7 +295,7 @@ ok('add member flash', addFlash);
   ok('group restored', await page.evaluate(() => { const t = document.querySelector('tr[data-gid="h-m5"]')?.textContent ?? ''; return t.includes('فعال') && !t.includes('غیرفعال'); }));
   await clickByText('button[role="tab"]', 'پوشش');
   await new Promise(r => setTimeout(r, 900));
-  ok('coverage 105 after restore', await page.evaluate(() => (document.body.textContent ?? '').includes('۱۰۵')));
+  ok('coverage 116 after restore', await page.evaluate(() => (document.body.textContent ?? '').includes('۱۱۶')));
   await clickByText('button[role="tab"]', 'گروه‌ها');
   await new Promise(r => setTimeout(r, 900));
   await clickByText('button', 'گروه جدید');

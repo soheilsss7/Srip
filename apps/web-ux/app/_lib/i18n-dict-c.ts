@@ -988,6 +988,7 @@ export const EN_DICT_C: Record<string, string> = {
   'فصل‌های برنامه تعریف نشده است': 'Program seasons are not defined',
   'فصل‌های برنامه در تنظیمات سازمان تعریف نشده است': 'Program seasons are not defined in organization settings',
   'نقش مسئول — چارت سازمان در تنظیمات برنامه تعریف نشده': 'Owner role — organization chart not defined in program settings',
+  'نقش مالک — چارت سازمان در تنظیمات برنامه تعریف نشده': 'Owner role — organization chart not defined in program settings',
   'هدف ثبت‌شده در تنظیمات برنامهٔ سازمان': 'Target registered in the organization’s program settings',
   'هدف مشارکت در تنظیمات برنامه ثبت نشده است': 'No partnership target registered in program settings',
   'هنوز شاخصی ثبت نشده است': 'No indicator registered yet',

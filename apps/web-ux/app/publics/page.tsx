@@ -8,7 +8,7 @@ import {
   Building2, Users2, Radar, AlertTriangle, Download, FileJson, FileSpreadsheet,
   Plus, RefreshCw, Trash2, SlidersHorizontal, Megaphone, Newspaper, Target, Eye, Heart,
   CheckCircle2, ChevronLeft, Layers, Landmark, GraduationCap, Briefcase, Newspaper as News2, Cpu,
-  Copy, Sparkles, UserPlus, Pencil, RotateCcw, Power, Grid3x3, History, TrendingDown,
+  Copy, Sparkles, UserPlus, Pencil, RotateCcw, Power, Grid3x3, History, TrendingDown, Globe,
   Radio, ClipboardList, Search,
 } from 'lucide-react';
 
@@ -99,10 +99,11 @@ type RelMini = { id: string; sourceOrganization?: { name?: string } | null; targ
 const CAT_ICONS: Record<string, React.ReactNode> = {
   INTERNAL: <Users2 size={14} />, INSTITUTIONAL: <Landmark size={14} />, ACADEMIC: <GraduationCap size={14} />,
   ECONOMIC: <Briefcase size={14} />, MEDIA: <News2 size={14} />, ECOSYSTEM: <Cpu size={14} />,
+  INTERNATIONAL: <Globe size={14} />,
 };
 const CAT_COLORS: Record<string, string> = {
   INTERNAL: '#0f9b8e', INSTITUTIONAL: '#7c3aed', ACADEMIC: '#2563eb', ECONOMIC: '#d97706',
-  MEDIA: '#dc2626', ECOSYSTEM: '#16a34a',
+  MEDIA: '#dc2626', ECOSYSTEM: '#16a34a', INTERNATIONAL: '#0891b2',
 };
 const STANCE_TONE: Record<string, 'success' | 'info' | 'warning' | 'danger' | 'neutral'> = {
   KEY_PLAYER: 'success', INFLUENCER: 'warning', SUPPORTER: 'info', OBSERVER: 'neutral',

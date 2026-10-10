@@ -1420,7 +1420,7 @@ export default function ProgramPage() {
               </select>
             ) : (
               <input value={assetForm.ownerRole} onChange={(e) => setAssetForm(f => ({ ...f, ownerRole: e.target.value }))} required
-                placeholder={t('نقش مسئول — چارت سازمان در تنظیمات برنامه تعریف نشده')} />
+                placeholder={t('نقش مالک — چارت سازمان در تنظیمات برنامه تعریف نشده')} />
             )}
           </label>
           <div className="field-pair">

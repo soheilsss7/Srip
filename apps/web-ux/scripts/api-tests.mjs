@@ -283,7 +283,7 @@ section('دادهٔ اولیهٔ واقعی — aroun / شرکت x / هلدین�
     mList.some(m => m.stage === 'MEDIATOR' && m.stageFa === 'میانجی' && String(m.sourceName ?? '').includes('مهر')));
   const cov = await api(`/publics/coverage?orgId=${parsId}`, { token: t });
   const covRows = cov.body?.byCategory ?? [];
-  check('پوشش ۶ دستهٔ عموم محاسبه می‌شود', covRows.length === 6);
+  check('پوشش ۷ دستهٔ عموم (شامل بین‌المللی — فاز ۱۳.۵) محاسبه می‌شود', covRows.length === 7);
   check('شکاف‌های واقعی دیده می‌شوند (گروه‌های بدون نهاد نام‌برده)', covRows.some(r => (r.gapGroups ?? []).length > 0));
 
   // گراف شبکه: گره‌های پارس + نهادها
@@ -369,6 +369,38 @@ section('گام ۱۳.۳ — F04 گسترش‌یافته: فیلدهای عموم
   check('برگشت به «ذی‌نفع» → فیلدهای عمومی پاک شدند', back.status === 200 && back.body?.publicStatus == null && back.body?.commonIssue === '');
   /* یادداشت: ماژول env حذف ردیف ندارد؛ کارت‌های تستی با «بازنشانی دادهٔ دمو بین باتری‌ها»
      (قرارداد --reset) پاک می‌شوند — همان الگوی بقیهٔ ماژول‌های بدون DELETE. */
+
+/* ═════════════════ گام ۱۳.۵ — نقشهٔ ۱۱ عموم v14 و دستهٔ بین‌المللی ═════════════════ */
+section('گام ۱۳.۵ — نقشهٔ ۱۱ عموم سند v14 (۸.۳.۱) + دستهٔ بین‌المللی');
+{
+  const dl = await login('demo');
+  const dt = dl.body?.accessToken;
+  /* کاتالوگ: هفت دسته + fa */
+  const cat = await api('/publics/catalog', { token: dt });
+  const intl = (cat.body?.categories ?? []).find(c => c.id === 'INTERNATIONAL');
+  check('کاتالوگ v14: هفت دسته + دستهٔ «بین‌المللی»', cat.body?.version >= 3 && (cat.body?.categories ?? []).length === 7
+    && intl?.fa === 'بین\u200cالمللی');
+  /* گروه‌های v14 برای org-1: ۱۱ گروه سفارشی با مسئله/انتظار/دارایی/مسئول */
+  const g = await api('/publics/groups/org-1', { token: dt });
+  const gItems = g.body?.groups ?? [];
+  const v14 = gItems.filter(x => String(x.id ?? '').startsWith('v14-g'));
+  check('نقشهٔ v14: ۱۱ گروه سفارشی (v14-g1…g11) برای هلدینگ دمو', v14.length === 11, `n=${v14.length}`);
+  const g1 = v14.find(x => x.id === 'v14-g1');
+  const g11 = v14.find(x => x.id === 'v14-g11');
+  check('نقشهٔ v14: ستون‌های سند روی گروه (مسئلهٔ مشترک/انتظار از مرجع/دارایی و تعامل/مسئول از چارت)',
+    !!g1 && !!g1.commonIssue && !!g1.expectation && !!g1.interactionAsset && g1.ownerRole === 'مدیر حساب');
+  check('نقشهٔ v14: عموم بین‌المللی (v14-g11) در دستهٔ INTERNATIONAL با مسئول از چارت',
+    !!g11 && g11.cat === 'INTERNATIONAL' && g11.ownerRole === 'مدیر توسعه کسب\u200cوکار');
+  /* اعضای نمونه: میانجی + نهفته با فیلدهای ۱۳.۲ */
+  const mm = await api('/publics/members?orgId=org-1', { token: dt });
+  const mmList = Array.isArray(mm.body) ? mm.body : (mm.body?.items ?? []);
+  const m16 = mmList.find(m => m.id === 'PM-H-016');
+  const m17 = mmList.find(m => m.id === 'PM-H-017');
+  check('عضو میانجی بین‌المللی (PM-H-016): stage=میانجی + موضوع/شاهد/مسئول با ارجاع به فاز ۱۴',
+    !!m16 && m16.stage === 'MEDIATOR' && m16.groupId === 'v14-g11' && !!m16.topic && m16.ownerRole === 'مدیر توسعه کسب\u200cوکار' && String(m16.nextAction ?? '').includes('فاز ۱۴'));
+  check('عضو نهفته (PM-H-017): stage=نهفته + آگاهی NONE + محدودیت اقدام',
+    !!m17 && m17.stage === 'LATENT' && m17.awareness === 'NONE' && !!m17.actionConstraint);
+}
 }
 
 /* ===================== 8. TENANT ISOLATION (جداسازی مستأجران) ===================== */
