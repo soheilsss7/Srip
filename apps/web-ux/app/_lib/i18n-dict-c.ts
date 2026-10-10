@@ -1485,8 +1485,8 @@ export const EN_DICT_C: Record<string, string> = {
   'ساختار پرداخت پروژه\u200cای': 'Project-based payment structure',
   'بیمه و امور پرسنلی': 'Insurance & personnel affairs',
 
-  /* ═══ گام ۵.۳ — چارت هدف تیم v6 (بخش ۲۱.۳): ۳۴ نقش/۳۷ نفر/۴ لایه ═══ */
-  'چارت هدف تیم (v6)': 'Target team chart (v6)',
+  /* ═══ گام ۵.۳ (فاز ۱۲.۲) — چارت هدف تیم v14 (جدول ۲۱.۳): ۳۳ نقش/۳۶ نفر/۴ لایه ═══ */
+  'چارت هدف تیم (v14)': 'Target team chart (v14)',
   'عنوان نقش\u200cها، لایه، زمان ورود ماه هدف و تعداد نفرات — نقش\u200cهای هوش مصنوعی برجسته شده\u200cاند.': 'Role titles, layer, target entry month and headcount — AI roles are highlighted.',
   'زمان ورود، ماه هدف برای فعال\u200cشدن نقش است و آغاز جذب می\u200cتواند زودتر انجام شود.': 'Entry time is the target month for the role to become active; recruiting may start earlier.',
   'عنوان نقش': 'Role title',
@@ -1495,7 +1495,7 @@ export const EN_DICT_C: Record<string, string> = {
   'زمان ورود': 'Entry time',
   'رهبری و حاکمیت': 'Leadership & governance',
   'مدیریت تخصصی': 'Specialist management',
-  'فناوری، داده و اعتماد': 'Technology, data & trust',
+  'فناوری و داده': 'Technology & data',
   'کارشناسی و اجرا': 'Specialist & execution',
   'مدیرعامل': 'CEO',
   'دستیار مدیرعامل': 'Executive assistant',

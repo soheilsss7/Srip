@@ -257,7 +257,7 @@ try {
   const auCh = await page.evaluate(() => document.querySelectorAll('.table-wrap tbody tr').length);
   ok('ممیزی: تب کانال‌ها', auCh >= 4, `rows=${auCh}`);
 
-  /* ── ۷.۵) گام ۵.۳ — چارت هدف تیم v6 (بخش ۲۱.۳) ── */
+  /* ── ۷.۵) گام ۵.۳ — چارت هدف تیم v14 (جدول ۲۱.۳) ── */
   const chart = await page.evaluate(() => {
     const card = [...document.querySelectorAll('.section-card')].find(c => (c.querySelector('h2')?.textContent ?? '').includes('چارت هدف تیم'));
     const rows = card ? [...card.querySelectorAll('tbody tr')] : [];
@@ -269,13 +269,17 @@ try {
       aiBadges: card ? card.querySelectorAll('.chip.purple').length : 0,
       layers: new Set(rows.map(r => (r.querySelectorAll('td')[0]?.textContent ?? '').trim()).filter(Boolean)).size,
       mlEng: (card?.textContent ?? '').includes('مهندس یادگیری ماشین'),
+      intl: (card?.textContent ?? '').includes('کارشناس امور بین‌الملل'),
+      noRemoved: !(card?.textContent ?? '').includes('اعتماد و ایمنی') && !(card?.textContent ?? '').includes('ریسک هوش مصنوعی'),
+      techLayer: (card?.textContent ?? '').includes('فناوری و داده'),
       note: (card?.querySelector('.field-hint')?.textContent ?? '').includes('ماه هدف'),
     };
   });
-  ok('چارت v6: کارت با ۳۴ عنوان نقش و ۳۷ نفر در چهار لایه',
-    chart.found && chart.rows === 34 && chart.headcount === 37 && chart.layers === 4, `rows=${chart.rows} ppl=${chart.headcount} layers=${chart.layers}`);
-  ok('چارت v6: هشت نقش هوش مصنوعی با نشان AI (شامل مهندس یادگیری ماشین)', chart.aiBadges === 8 && chart.mlEng, `ai=${chart.aiBadges}`);
-  ok('چارت v6: قاعدهٔ زمان ورود (ماه هدف) زیر جدول', chart.note);
+  ok('چارت v14 (جدول ۲۱.۳): کارت با ۳۳ عنوان نقش و ۳۶ نفر در چهار لایه',
+    chart.found && chart.rows === 33 && chart.headcount === 36 && chart.layers === 4, `rows=${chart.rows} ppl=${chart.headcount} layers=${chart.layers}`);
+  ok('چارت v14: شش نقش هوش مصنوعی با نشان AI (شامل مهندس یادگیری ماشین)', chart.aiBadges === 6 && chart.mlEng, `ai=${chart.aiBadges}`);
+  ok('چارت v14: لایهٔ ۳ «فناوری و داده» + کارشناس امور بین‌الملل (ماه ۳)؛ نقش‌های حذف‌شده absent', chart.techLayer && chart.intl && chart.noRemoved);
+  ok('چارت v14: قاعدهٔ زمان ورود (ماه هدف) زیر جدول', chart.note);
   await page.click('.table-wrap tbody tr');
   await new Promise(r => setTimeout(r, 600));
   const auModal = await page.evaluate(() => ({

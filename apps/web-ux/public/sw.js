@@ -7911,10 +7911,10 @@ const PROGRAM_METRICS={
   'goal-composite':{label:'نمرهٔ مرکب هدف راهبردی سازمان (از مؤلفه‌های پایش‌شده)',unit:'score',
     compute:(c)=>{const g=(c.goals??[]).find(x=>x.status==='ACTIVE'&&(x.components??[]).length);return g?goalComposite(g,'m12'):0;}},
 };
-/* تنظیمات برنامهٔ دمو (org-1) — دقیقاً برنامهٔ سند v6؛ چارت ۳۴ عنوان نقش/۳۷ نفر
-   در چهار لایه (بخش ۲۱.۳) با زمان ورود ماه هدف، چهار فصل با آستانهٔ ۳۰/۴۵/۶۰/۷۵،
-   هدف ۲۵ تفاهم‌نامه و ده شاخص بخش ۲۶ با سنجه‌های محاسبه. نقش‌های هوش مصنوعی
-   با پرچم ai در چارت متمایز می‌شوند (۸ نقش). */
+/* تنظیمات برنامهٔ دمو (org-1) — دقیقاً برنامهٔ سند v14؛ چارت ۳۳ عنوان نقش/۳۶ نفر
+   در چهار لایه (جدول ۲۱.۳ v14: لایهٔ ۳ «فناوری و داده» ۵ نقش؛ + کارشناس امور بین‌الملل ماه ۳)
+   با زمان ورود ماه هدف، چهار فصل با آستانهٔ ۳۰/۴۵/۶۰/۷۵، هدف ۲۵ تفاهم‌نامه و ده شاخص
+   بخش ۲۶ با سنجه‌های محاسبه. نقش‌های هوش مصنوعی با پرچم ai متمایز می‌شوند (۶ نقش). */
 const PROGRAM_CHART_V6=[
   {title:'مدیرعامل',layer:'رهبری و حاکمیت',entryMonth:1,count:1},
   {title:'دستیار مدیرعامل',layer:'رهبری و حاکمیت',entryMonth:1,count:1},
@@ -7933,16 +7933,15 @@ const PROGRAM_CHART_V6=[
   {title:'مدیر اندیشکده و پژوهش',layer:'مدیریت تخصصی',entryMonth:2,count:1},
   {title:'مدیر رویداد',layer:'مدیریت تخصصی',entryMonth:3,count:1},
   {title:'مدیر تحقیق و توسعه',layer:'مدیریت تخصصی',entryMonth:2,count:1},
-  {title:'مهندس نرم‌افزار',layer:'فناوری، داده و اعتماد',entryMonth:2,count:1},
-  {title:'مهندس یادگیری ماشین',layer:'فناوری، داده و اعتماد',entryMonth:2,count:1,ai:true},
-  {title:'مهندس داده',layer:'فناوری، داده و اعتماد',entryMonth:2,count:1},
-  {title:'مهندس یکپارچه‌سازی سامانه‌ها',layer:'فناوری، داده و اعتماد',entryMonth:3,count:1},
-  {title:'کارشناس حاکمیت و ریسک هوش مصنوعی',layer:'فناوری، داده و اعتماد',entryMonth:3,count:1,ai:true},
-  {title:'تحلیلگر حاکمیت و کیفیت داده',layer:'فناوری، داده و اعتماد',entryMonth:3,count:1,ai:true},
-  {title:'تحلیلگر اعتماد و ایمنی',layer:'فناوری، داده و اعتماد',entryMonth:3,count:1,ai:true},
+  {title:'مهندس نرم‌افزار',layer:'فناوری و داده',entryMonth:2,count:1},
+  {title:'مهندس یادگیری ماشین',layer:'فناوری و داده',entryMonth:2,count:1,ai:true},
+  {title:'مهندس داده',layer:'فناوری و داده',entryMonth:2,count:1},
+  {title:'مهندس یکپارچه‌سازی سامانه‌ها',layer:'فناوری و داده',entryMonth:3,count:1},
+  {title:'تحلیلگر حاکمیت و کیفیت داده',layer:'فناوری و داده',entryMonth:3,count:1,ai:true},
   {title:'کارشناس پژوهش',layer:'کارشناسی و اجرا',entryMonth:2,count:1},
   {title:'کارشناس رسانه',layer:'کارشناسی و اجرا',entryMonth:3,count:1},
   {title:'کارشناس تعاملات',layer:'کارشناسی و اجرا',entryMonth:3,count:3},
+  {title:'کارشناس امور بین‌الملل',layer:'کارشناسی و اجرا',entryMonth:3,count:1},
   {title:'طراح گرافیک',layer:'کارشناسی و اجرا',entryMonth:1,count:2},
   {title:'کارشناس اداری و امور دفتر',layer:'کارشناسی و اجرا',entryMonth:1,count:1},
   {title:'کارشناس مناقصات',layer:'کارشناسی و اجرا',entryMonth:3,count:1},
@@ -7951,7 +7950,7 @@ const PROGRAM_CHART_V6=[
   {title:'ویراستار محتوای هوش مصنوعی',layer:'کارشناسی و اجرا',entryMonth:4,count:1,ai:true},
   {title:'کارشناس کنترل کیفی محتوا',layer:'کارشناسی و اجرا',entryMonth:4,count:1,ai:true},
 ];
-const programDemoSettings=()=>({organizationId:PROGRAM_ORG_ID,
+const programDemoSettings=()=>({organizationId:PROGRAM_ORG_ID,chartVersion:14,
   roles:PROGRAM_CHART_V6.map(r=>r.title),
   chart:PROGRAM_CHART_V6,
   seasons:[
@@ -7969,10 +7968,24 @@ const programDemoSettings=()=>({organizationId:PROGRAM_ORG_ID,
     {id:'kpi-5',category:'دارایی و رسانه',title:'وب‌سایت مرجع و پروفایل شرکتی',owner:'مدیر محصول',period:'ماه ۸',target:'انتشار عمومی هر دو دارایی',source:'لایهٔ آمادگی سازمانی — وضعیت اقلام «وب‌سایت» و «پروفایل شرکت»',metric:'readiness-items-accepted',unit:'count',targetValue:2,config:{labels:['وب‌سایت','پروفایل شرکت']}},
     {id:'kpi-6',category:'دارایی و رسانه',title:'گزارش سالانه هوش مصنوعی',owner:'مدیر اندیشکده و پژوهش',period:'ماه ۱۱',target:'انتشار',source:'مرکز دانش — اسناد «گزارش سالانه»',metric:'docs-total',unit:'count',targetValue:1,config:{pattern:'گزارش سالانه'}},
     {id:'kpi-7',category:'بازار و اکوسیستم',title:'شبکهٔ مشارکت',owner:'مدیر توسعه کسب‌وکار',period:'ماه ۱۲',target:'۲۵ تفاهم‌نامهٔ فعال',source:'ماژول مشارکت‌ها — تفاهم‌نامه‌های فعال (مرحلهٔ تفاهم‌نامه یا فعال)',metric:'active-mous',unit:'count',targetValue:25,config:{}},
-    {id:'kpi-8',category:'سازمان و زیرساخت',title:'تکمیل ساختار ۳۷ نفره (چارت v6)',owner:'مدیر منابع انسانی',period:'ماه ۷',target:'۳۷ نفر فعال',source:'اشخاص فعال در محدودهٔ شما',metric:'active-people',unit:'count',targetValue:37,config:{}},
+    {id:'kpi-8',category:'سازمان و زیرساخت',title:'تکمیل ساختار ۳۶ نفره (چارت v14)',owner:'مدیر منابع انسانی',period:'ماه ۷',target:'۳۶ نفر فعال',source:'اشخاص فعال در محدودهٔ شما',metric:'active-people',unit:'count',targetValue:36,config:{}},
     {id:'kpi-9',category:'سازمان و زیرساخت',title:'انتقال داده‌ها به SRIP',owner:'مدیر محصول',period:'ماه ۷',target:'خاموش‌سازی کامل سامانه‌های قدیمی',source:'ممیزی سامانه‌ها — سهم انتقال/خاموش‌سازیِ تکمیل‌شده',metric:'migration-done',unit:'count',targetValue:null,config:{}},
     {id:'kpi-10',category:'سازمان و زیرساخت',title:'گزارش ماهانه به مدیریت هلدینگ',owner:'دستیار مدیرعامل',period:'پایان هر ماه',target:'تحویل به‌موقع ۱۲ گزارش',source:'گزارش ماهانه — ثبت انتشار',metric:'monthly-reports',unit:'count',targetValue:12,config:{}},
   ]});
+/* فاز ۱۲.۲ — نقش‌های حذف‌شدهٔ چارت v14 در داده‌های موجود به معادل‌های مجاز نگاشت می‌شوند:
+   «تحلیلگر اعتماد و ایمنی» → «تحلیلگر حاکمیت و کیفیت داده»؛
+   «کارشناس حاکمیت و ریسک هوش مصنوعی» → «مهندس یادگیری ماشین» */
+const CHART_ROLE_MAP_V14={'تحلیلگر اعتماد و ایمنی':'تحلیلگر حاکمیت و کیفیت داده','کارشناس حاکمیت و ریسک هوش مصنوعی':'مهندس یادگیری ماشین'};
+function migrateRemovedChartRoles(){
+  const fix=(v)=>typeof v==='string'&&CHART_ROLE_MAP_V14[v]?CHART_ROLE_MAP_V14[v]:v;
+  (DB.risks??[]).forEach(r=>{r.ownerRole=fix(r.ownerRole);});
+  (DB.programSettings??[]).forEach(s=>{(s.kpis??[]).forEach(k=>{k.owner=fix(k.owner);});});
+  (DB.execControls??[]).forEach(c=>{c.ownerRole=fix(c.ownerRole);});
+  /* کارت نقش نگاشت‌شده اگر هم‌عنوانِ کارت موجود شد (تکراری) حذف می‌شود تا قاعدهٔ یکتایی نقش بماند */
+  const cards=(DB.roleCards??[]).map(c=>({...c,title:fix(c.title)}));
+  const seen=new Set();
+  DB.roleCards=cards.filter(c=>{const k=c.organizationId+'|'+c.title; if(seen.has(k)) return false; seen.add(k); return true;});
+}
 function ensureProgramSettings(orgId){
   if(!Array.isArray(DB.programSettings)) DB.programSettings=[];
   let row=DB.programSettings.find(s=>s.organizationId===orgId);
@@ -7981,9 +7994,17 @@ function ensureProgramSettings(orgId){
   if(orgId===PROGRAM_ORG_ID&&row&&!Array.isArray(row.chart)){
     DB.programSettings=DB.programSettings.filter(s=>s.organizationId!==orgId); row=null;
   }
+  /* مهاجرت چارت v14 (فاز ۱۲.۲): ردیف دموی persisted بدون نشان chartVersion:14 با بذر
+     ۳۳ نقش/۳۶ نفر v14 جایگزین می‌شود؛ ردیف مستأجر واقعی فقط نشان می‌گیرد و چارت خودش می‌ماند */
+  if(row&&row.chartVersion!==14){
+    migrateRemovedChartRoles();
+    if(orgId===PROGRAM_ORG_ID){
+      DB.programSettings=DB.programSettings.filter(s=>s.organizationId!==orgId); row=null;
+    } else { row.chartVersion=14; }
+  }
   if(!row){
     DB.programSettings.push(orgId===PROGRAM_ORG_ID?programDemoSettings()
-      :{organizationId:orgId,roles:[],chart:[],seasons:[],partnershipTarget:null,kpis:[]});
+      :{organizationId:orgId,chartVersion:14,roles:[],chart:[],seasons:[],partnershipTarget:null,kpis:[]});
   }
 }
 function programSettingsOf(orgId){ensureProgramSettings(orgId);return DB.programSettings.find(s=>s.organizationId===orgId);}
@@ -8153,7 +8174,7 @@ function ensureProgramSeed(){
     {id:'ap-2',organizationId:PROGRAM_ORG_ID,role:'کارشناس رسانه',duties:'پایش رسانه و تولید محتوا',manager:'مدیر رسانه',capacity:'MEDIUM',dependencyRisk:'MEDIUM',successor:'ندارد',priority:'KEEP',note:'نیازمند جانشین‌پروری'},
     {id:'ap-3',organizationId:PROGRAM_ORG_ID,role:'مدیر خلاقیت',duties:'هویت بصری و نظارت بر تولید',manager:'مدیر محتوا',capacity:'LOW',dependencyRisk:'MEDIUM',successor:'ندارد',priority:'REDEFINE',note:'پیشنهاد: ادغام در تیم محتوا'},
     {id:'ap-4',organizationId:PROGRAM_ORG_ID,role:'مهندس نرم‌افزار',duties:'نگهداری وب‌سایت و سامانه‌ها',manager:'مدیر محصول',capacity:'HIGH',dependencyRisk:'HIGH',successor:'ندارد',priority:'KEEP',note:'دانش سامانه متمرکز روی یک نفر'},
-    {id:'ap-5',organizationId:PROGRAM_ORG_ID,role:'کارشناس پژوهش',duties:'—',manager:'مدیر توسعه کسب‌وکار',capacity:'—',dependencyRisk:'—',successor:'—',priority:'HIRE',note:'جایگاه خالی — جذب در ماه ۲ (چارت v6)'},
+    {id:'ap-5',organizationId:PROGRAM_ORG_ID,role:'کارشناس پژوهش',duties:'—',manager:'مدیر توسعه کسب‌وکار',capacity:'—',dependencyRisk:'—',successor:'—',priority:'HIRE',note:'جایگاه خالی — جذب در ماه ۲ (چارت v14)'},
   ];}
   if(!Array.isArray(DB.auditSystems)||!DB.auditSystems.length){
     /* گام ۴.۱ — بذر مراحل F11: دو سامانهٔ تکمیل‌شده (هر ۱۰ مرحله)، یکی در میانهٔ راه (۶ مرحله)، یکی شروع‌نشده */
@@ -16344,7 +16365,7 @@ async function __handler(req, res) {
   }
   if(is('/program/audits')&&method==='GET'){
     if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
-    /* گام ۵.۳ — چارت هدف v6 (بخش ۲۱.۳): ۳۴ عنوان نقش/۳۷ نفر/۴ لایه با زمان ورود؛ per-tenant */
+    /* گام ۵.۳ (به‌روزشدهٔ فاز ۱۲.۲) — چارت هدف v14 (جدول ۲۱.۳): ۳۳ عنوان نقش/۳۶ نفر/۴ لایه با زمان ورود؛ per-tenant */
     const chartSet=programSettingsFor(req);
     return json(res,200,{...programAuditsFor(req),
       chart:(chartSet.chart??[]).map(r=>({...r})),

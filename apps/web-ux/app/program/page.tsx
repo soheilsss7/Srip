@@ -877,7 +877,7 @@ export default function ProgramPage() {
 
           {/* ═══════════ گام ۵.۳ — چارت هدف تیم (بخش ۲۱.۳ سند v14) ═══════════ */}
           {(audits.chart ?? []).length > 0 && (
-            <SectionCard className="team-chart" title={t('چارت هدف تیم (v6)')} icon={<Users size={17} />}
+            <SectionCard className="team-chart" title={t('چارت هدف تیم (v14)')} icon={<Users size={17} />}
               description={t('عنوان نقش‌ها، لایه، زمان ورود ماه هدف و تعداد نفرات — نقش‌های هوش مصنوعی برجسته شده‌اند.')}>
               <div className="chip-row" style={{ margin: '0 0 10px' }}>
                 <span className="chip neutral">{t('عنوان نقش')}: {faNum(audits.chart.length)}</span>
