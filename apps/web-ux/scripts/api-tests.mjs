@@ -938,7 +938,7 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
   const pplList = Array.isArray(ppl.body) ? ppl.body : ppl.body?.items ?? [];
   check('شاخص ساختار ۳۷ نفره (چارت v6) از دادهٔ اشخاص محاسبه می‌شود (نه عدد دستی)',
     kpi8 && pplList.length > 0 && kpi8.value === pplList.filter(p => p.status !== 'INACTIVE').length);
-  /* ریسک‌ها — F17 */
+  /* ریسک‌ها — ماژول پلتفرمی */
   const rk = await api('/program/risks', { token: dt });
   check('ریسک‌ها: ۹ ریسک بذری سند + خلاصه و ماتریس', rk.status === 200 && rk.body?.items?.length >= 9
     && rk.body.summary && Array.isArray(rk.body.matrix) && rk.body.matrix.length === 3);
@@ -1039,7 +1039,7 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
   check('فیلتر مرحله (?stage=ACTIVE)', st.status === 200 && st.body.items.length === sm.byStage.ACTIVE
     && st.body.items.every(x => x.stage === 'ACTIVE'));
 
-  /* قواعد ثبت (F15 سند) */
+  /* قواعد ثبت (F14 سند) */
   const noOwner = await api('/partnerships', { method: 'POST', token: dt, body: { partnerOrgId: 'org-4', type: 'راهبردی' } });
   check('ثبت بدون مالک → ۴۰۰ «مشارکت بدون مالک ثبت نمی‌شود»', noOwner.status === 400 && String(noOwner.body?.message).includes('بدون مالک'));
   const noPartner = await api('/partnerships', { method: 'POST', token: dt, body: { type: 'راهبردی', ownerRole: 'مدیرعامل' } });
@@ -1057,7 +1057,7 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
 
   if (pid) {
     const actBad = await api(`/partnerships/${pid}`, { method: 'PATCH', token: dt, body: { stage: 'ACTIVE' } });
-    check('فعال‌سازی بدون قرارداد → ۴۰۰ (F15 سند)', actBad.status === 400 && String(actBad.body?.message).includes('قرارداد'));
+    check('فعال‌سازی بدون قرارداد → ۴۰۰ (F14 سند)', actBad.status === 400 && String(actBad.body?.message).includes('قرارداد'));
     const badStage = await api(`/partnerships/${pid}`, { method: 'PATCH', token: dt, body: { stage: 'DRAFT' } });
     check('مرحلهٔ نامعتبر → ۴۰۰', badStage.status === 400);
     const withContract = await api(`/partnerships/${pid}`, { method: 'PATCH', token: dt, body: { contractName: 'تفاهم‌نامهٔ پژوهشی بورس' } });
@@ -1412,7 +1412,7 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
   check('kpi-1 از پوشش زندهٔ پروندهٔ شناخت محاسبه می‌شود', k1 && k1.value === expect
     && String(k1.source).includes('پروندهٔ شناخت'), `value=${k1?.value} expected=${expect}`);
 }
-/* ═════════════════ گام ۲.۶ — معماری رویدادها + پروتکل بحران (بخش ۱۷ سند؛ F10 و F15) ═════════════════ */
+/* ═════════════════ گام ۲.۶ — معماری رویدادها + پروتکل بحران (بخش ۱۷ سند؛ F10 و F14) ═════════════════ */
 {
   const pl = await login('pars', 'pars1234');
   const pt = pl.body?.accessToken;
@@ -2582,8 +2582,8 @@ section('گام ۸.۱ — موتور نشانه‌ها و امتیاز ریسک 
 }
 
 
-/* ═════════════════ گام ۸.۲ — پروندهٔ اصالت F13 + سیاست اقدام ═════════════════ */
-section('گام ۸.۲ — پروندهٔ اصالت F13 و سیاست اقدام ۱۹.۵.۱');
+/* ═════════════════ گام ۸.۲ — پروندهٔ اصالت (ماژول پلتفرمی) + سیاست اقدام ═════════════════ */
+section('گام ۸.۲ — پروندهٔ اصالت (ماژول پلتفرمی) و سیاست اقدام ۱۹.۵.۱');
 {
   const dt = (await login(OWNER.email)).body.accessToken;
   const ct = (await login(CLIENT.email)).body.accessToken;
@@ -2798,8 +2798,8 @@ section('گام ۹.۱ — F12 کارت کاربرد و ارزیابی AI (رجی
     clientPatch.status === 403, `s=${clientPatch.status}`);
 }
 
-/* ═════════════════ گام ۹.۲ — F17 دفتر ثبت ریسک و انتشار AI ═════════════════ */
-section('گام ۹.۲ — F17 دفتر ثبت ریسک و انتشار AI (ستون‌های AI + شناسنامهٔ مدل)');
+/* ═════════════════ گام ۹.۲ — دفتر ثبت ریسک و انتشار AI (ماژول پلتفرمی) ═════════════════ */
+section('گام ۹.۲ — دفتر ثبت ریسک و انتشار AI (ماژول پلتفرمی) (ستون‌های AI + شناسنامهٔ مدل)');
 {
   const dt = (await login(OWNER.email)).body.accessToken;
   const ct = (await login(CLIENT.email)).body.accessToken;
@@ -2807,51 +2807,51 @@ section('گام ۹.۲ — F17 دفتر ثبت ریسک و انتشار AI (ست�
   /* ۱) شناسنامهٔ مدل متصل به ارائه‌دهنده */
   const MC = await api('/ai/model-cards', { token: dt });
   const cards = MC.body.items ?? [];
-  check('F17: برای هر ارائه‌دهندهٔ سازمان اصلی شناسنامهٔ مدل (مدل/نسخه/منشأ/محدودیت‌ها) هست',
+  check('AI: برای هر ارائه‌دهندهٔ سازمان اصلی شناسنامهٔ مدل (مدل/نسخه/منشأ/محدودیت‌ها) هست',
     MC.status === 200 && cards.length === 3 && cards.every(c => c.model && c.version && c.originFa && c.limitations),
     `n=${cards.length}`);
-  check('F17: شناسنامه به ارائه‌دهنده وصل است — نام و وضعیت زنده',
+  check('AI: شناسنامه به ارائه‌دهنده وصل است — نام و وضعیت زنده',
     cards.some(c => c.providerName === 'موتور محلی SRIP' && c.providerStatus === 'ACTIVE'));
 
   /* ۲) اعتبارسنجی شناسنامه */
   const dup = await api('/ai/model-cards', { method: 'POST', token: dt, body: { providerId: cards[0].providerId, model: cards[0].model } });
-  check('F17: شناسنامهٔ تکراری برای همان ارائه‌دهنده/مدل → ۴۰۹', dup.status === 409);
+  check('AI: شناسنامهٔ تکراری برای همان ارائه‌دهنده/مدل → ۴۰۹', dup.status === 409);
   const badProv = await api('/ai/model-cards', { method: 'POST', token: dt, body: { providerId: 'aip-org-2-local' } });
-  check('F17: ارائه‌دهندهٔ بیرون از محدوده → ۴۰۰', badProv.status === 400);
+  check('AI: ارائه‌دهندهٔ بیرون از محدوده → ۴۰۰', badProv.status === 400);
   const up = await api(`/ai/model-cards/${cards[0].id}`, { method: 'PATCH', token: dt, body: { limitations: 'محدودیت تازهٔ آزمون', version: 'v9.2-test' } });
-  check('F17: به‌روزرسانی نسخه/محدودیت‌های شناسنامه ثبت شد',
+  check('AI: به‌روزرسانی نسخه/محدودیت‌های شناسنامه ثبت شد',
     up.status === 200 && up.body.version === 'v9.2-test' && up.body.limitations === 'محدودیت تازهٔ آزمون');
 
-  /* ۳) ریسک‌های AI در رجیستری ریسک (F17 توسعه) */
+  /* ۳) ریسک‌های AI در رجیستری ریسک (ماژول پلتفرمی) */
   const RK = await api('/program/risks', { token: dt });
   const rkItems = Array.isArray(RK.body) ? RK.body : (RK.body.items ?? []);
   const aiR = rkItems.filter(r => r.kind === 'AI');
-  check('F17: ریسک‌های AI بذر با هر هشت ستون (مورد استفاده تا توقف)',
+  check('AI: ریسک‌های AI بذر با هر هشت ستون (مورد استفاده تا توقف)',
     aiR.length === 2 && aiR.every(r => ['useCase', 'testRun', 'finding', 'version', 'releaseDecision', 'limitation', 'review', 'stopped'].every(k => k in (r.ai ?? {}))),
     `n=${aiR.length}`);
 
   /* ۴) اعتبارسنجی ریسک AI */
   const badAi = await api('/program/risks', { method: 'POST', token: dt, body: { title: 'ریسک AI تست', probability: 'LOW', impact: 'MEDIUM', ownerRole: 'مدیرعامل', ai: { useCase: 'xyz' } } });
-  check('F17: مورد استفادهٔ AI نامعتبر → ۴۰۰', badAi.status === 400);
+  check('AI: مورد استفادهٔ AI نامعتبر → ۴۰۰', badAi.status === 400);
   const badDec = await api('/program/risks', { method: 'POST', token: dt, body: { title: 'ریسک AI تست ۲', probability: 'LOW', impact: 'MEDIUM', ownerRole: 'مدیرعامل', ai: { useCase: 'org-question', releaseDecision: 'XXX' } } });
-  check('F17: تصمیم انتشار نامعتبر → ۴۰۰', badDec.status === 400);
+  check('AI: تصمیم انتشار نامعتبر → ۴۰۰', badDec.status === 400);
   const noPerm = await api('/program/risks', { method: 'POST', token: ct, body: { title: 'ریسک AI مشتری', probability: 'LOW', impact: 'LOW', ownerRole: 'مدیرعامل', ai: { useCase: 'org-question' } } });
-  check('F17: RBAC — ثبت ریسک AI هم فقط با program.write (client → ۴۰۳)', noPerm.status === 403);
+  check('AI: RBAC — ثبت ریسک AI هم فقط با program.write (client → ۴۰۳)', noPerm.status === 403);
 
   /* ۵) ثبت و به‌روزرسانی ریسک AI */
   const okAi = await api('/program/risks', { method: 'POST', token: dt, body: { title: 'اتکای بیش‌ازحد به پیشنهاد اولویت‌بندی', probability: 'MEDIUM', impact: 'MEDIUM', ownerRole: 'مدیر محصول', preventive: 'برچسب «فقط پیشنهاد» همیشه کنار خروجی', ai: { useCase: 'opp-priority', finding: 'امتیاز فقط مرتب‌سازی می‌دهد؛ تصمیم با کاربر است', version: 'demo-v6', releaseDecision: 'CONDITIONAL' } } });
-  check('F17: ثبت ریسک AI با ستون‌های هشت‌گانه → ۲۰۱',
+  check('AI: ثبت ریسک AI با ستون‌های هشت‌گانه → ۲۰۱',
     okAi.status === 201 && okAi.body.kind === 'AI' && okAi.body.ai.useCase === 'opp-priority');
   const stop = await api(`/program/risks/${okAi.body.id}`, { method: 'PATCH', token: dt, body: { ai: { releaseDecision: 'REJECTED', stopped: true } } });
-  check('F17: تصمیم انتشار «رد» + پرچم توقف روی ریسک AI ثبت شد',
+  check('AI: تصمیم انتشار «رد» + پرچم توقف روی ریسک AI ثبت شد',
     stop.status === 200 && stop.body.ai.releaseDecision === 'REJECTED' && stop.body.ai.stopped === true);
 
   /* ۶) جداسازی شناسنامه */
   const cMC = await api('/ai/model-cards', { token: ct });
-  check('F17: جداسازی — آریا فناوری ارائه‌دهنده‌ای ندارد → بدون شناسنامهٔ هلدینگ',
+  check('AI: جداسازی — آریا فناوری ارائه‌دهنده‌ای ندارد → بدون شناسنامهٔ هلدینگ',
     cMC.status === 200 && (cMC.body.items ?? []).length === 0);
   const cPatch = await api(`/ai/model-cards/${cards[0].id}`, { method: 'PATCH', token: ct, body: { limitations: 'x' } });
-  check('F17: ویرایش شناسنامه فقط با ai.admin (client → ۴۰۳/۴۰۴)',
+  check('AI: ویرایش شناسنامه فقط با ai.admin (client → ۴۰۳/۴۰۴)',
     cPatch.status === 403 || cPatch.status === 404, `s=${cPatch.status}`);
 }
 
@@ -2921,8 +2921,8 @@ section('گام ۹.۳ — آزمون‌های امنیتی ۱۹.۴ (تزریق �
     `sw=${sw.status} engine=${after.body?.engine} eq=${after.body?.answer === before.body?.answer}`);
 }
 
-/* ═════════════════ گام ۱۰.۱ — F02 پروندهٔ DD + F15 آماده‌سازی سرمایه‌گذار و شریک ═════════════════ */
-section('گام ۱۰.۱ — F02 پروندهٔ Due Diligence + F15 کارت آماده‌سازی (G2)');
+/* ═════════════════ گام ۱۰.۱ — F02 پروندهٔ DD + F14 آماده‌سازی سرمایه‌گذار و شریک ═════════════════ */
+section('گام ۱۰.۱ — F02 پروندهٔ Due Diligence + F14 کارت آماده‌سازی (G2)');
 {
   const dt = (await login(OWNER.email)).body.accessToken;
   const ct = (await login(CLIENT.email)).body.accessToken;
@@ -2985,33 +2985,33 @@ section('گام ۱۰.۱ — F02 پروندهٔ Due Diligence + F15 کارت آم
   check('F02: پس از پذیرش همهٔ محورها + نظر تیم Y → تصویب (G2 باز شد)',
     done.status === 200 && done.body.status === 'APPROVED' && done.body.g2Ready === true);
 
-  /* ── F15 ── */
+  /* ── F14 ── */
   const P = await api('/readiness-packs', { token: dt });
   const packs = P.body.items ?? [];
-  check('F15: کارت‌های بذر متصل به مشارکت — وضعیت DD و تعهدها زنده',
+  check('F14: کارت‌های بذر متصل به مشارکت — وضعیت DD و تعهدها زنده',
     P.status === 200 && packs.length === 2
     && packs.every(p => p.partnerName && p.commitments?.ours && p.ddStatus),
     `n=${packs.length}`);
   const rp1 = packs.find(p => p.id === 'rp-1');
-  check('F15: وضعیت DD زنده از پروندهٔ متصل (تصویب‌شده ۱۲/۱۲ + آمادهٔ G2)',
+  check('F14: وضعیت DD زنده از پروندهٔ متصل (تصویب‌شده ۱۲/۱۲ + آمادهٔ G2)',
     rp1.ddStatus.status === 'APPROVED' && rp1.ddStatus.acceptedAxes === 12 && rp1.ddStatus.g2Ready === true);
 
   const noLink = await api('/readiness-packs', { method: 'POST', token: dt, body: { subject: 'کارت بدون اتصال', ownerRole: 'مدیرعامل' } });
-  check('F15: کارت باید به مشارکت یا فرصت متصل باشد → ۴۰۰', noLink.status === 400);
+  check('F14: کارت باید به مشارکت یا فرصت متصل باشد → ۴۰۰', noLink.status === 400);
   const badPt = await api('/readiness-packs', { method: 'POST', token: dt, body: { subject: 'کارت با مشارکت نادرست', partnershipId: 'pt-999', ownerRole: 'مدیرعامل' } });
-  check('F15: مشارکت نامعتبر/خارج از محدوده → ۴۰۰', badPt.status === 400);
+  check('F14: مشارکت نامعتبر/خارج از محدوده → ۴۰۰', badPt.status === 400);
   const NP = await api('/readiness-packs', { method: 'POST', token: dt, body: { subject: 'آماده‌سازی عرضه به بورس', partnershipId: 'pt-7', ownerRole: 'مدیر توسعه کسب‌وکار', relationshipGoal: 'تسهیل دادهٔ معاملاتی', nextAction: 'جلسهٔ معرفی با مدیر فناوری بورس' } });
-  check('F15: ثبت کارت متصل به مشارکت → ۲۰۱ (بدون DD → وضعیت «بدون پروندهٔ DD»)',
+  check('F14: ثبت کارت متصل به مشارکت → ۲۰۱ (بدون DD → وضعیت «بدون پروندهٔ DD»)',
     NP.status === 201 && NP.body.ddStatus === null && NP.body.ddStatusFa === 'بدون پروندهٔ DD');
   const UP = await api(`/readiness-packs/${NP.body.id}`, { method: 'PATCH', token: dt, body: { nextAction: 'ارسال پیش‌نویس تفاهم‌نامه تا پایان هفته' } });
-  check('F15: به‌روزرسانی اقدام بعدی کارت', UP.status === 200 && UP.body.nextAction.includes('پایان هفته'));
+  check('F14: به‌روزرسانی اقدام بعدی کارت', UP.status === 200 && UP.body.nextAction.includes('پایان هفته'));
   const cView = await api('/readiness-packs', { token: ct });
-  check('F15: جداسازی — کارت‌های هلدینگ برای آریا فناوری فهرست نمی‌شود',
+  check('F14: جداسازی — کارت‌های هلدینگ برای آریا فناوری فهرست نمی‌شود',
     cView.status === 200 && (cView.body.items ?? []).length === 0);
 }
 
-/* ═════════════════ گام ۱۰.۲ — F09 فرصت مناقصه + F18 کارت ورود به بازار ═════════════════ */
-section('گام ۱۰.۲ — F09 فرصت مناقصه + F18 کارت ورود به بازار');
+/* ═════════════════ گام ۱۰.۲ — F09 فرصت مناقصه + F16 کارت ورود به بازار ═════════════════ */
+section('گام ۱۰.۲ — F09 فرصت مناقصه + F16 کارت ورود به بازار');
 {
   const dt = (await login(OWNER.email)).body.accessToken;
   const ct = (await login(CLIENT.email)).body.accessToken;
@@ -3052,38 +3052,38 @@ section('گام ۱۰.۲ — F09 فرصت مناقصه + F18 کارت ورود ب
   check('F09: جداسازی — مناقصات هلدینگ برای آریا فناوری فهرست نمی‌شود',
     cView.status === 200 && (cView.body.items ?? []).length === 0);
 
-  /* ── F18 ── */
+  /* ── F16 ── */
   const G = await api('/gtm-cards', { token: dt });
   const cards = G.body.items ?? [];
-  check('F18: دو کارت بذر با وضعیت DD زنده از پروندهٔ متصل',
+  check('F16: دو کارت بذر با وضعیت DD زنده از پروندهٔ متصل',
     G.status === 200 && cards.length === 2 && cards.every(x => x.ddStatus && x.ddStatusFa) && !!G.body.rule,
     `n=${cards.length}`);
   const gtm1 = cards.find(x => x.id === 'gtm-1');
   const gtm2 = cards.find(x => x.id === 'gtm-2');
-  check('F18: کارت GO متصل به DD تصویب‌شده؛ کارت پایلوت متصل به DD در بررسی',
+  check('F16: کارت GO متصل به DD تصویب‌شده؛ کارت پایلوت متصل به DD در بررسی',
     gtm1.decision === 'GO' && gtm1.ddStatus.status === 'APPROVED' && gtm1.ddStatus.g2Ready === true
     && gtm2.decision === 'PILOT' && gtm2.ddStatus.status === 'IN_REVIEW');
 
   const noProduct = await api('/gtm-cards', { method: 'POST', token: dt, body: { product: 'ab' } });
-  check('F18: کارت بدون نام محصول معتبر → ۴۰۰', noProduct.status === 400);
+  check('F16: کارت بدون نام محصول معتبر → ۴۰۰', noProduct.status === 400);
   const badDossier = await api('/gtm-cards', { method: 'POST', token: dt, body: { product: 'محصول تست', dossierId: 'dd-999' } });
-  check('F18: پروندهٔ DD نامعتبر → ۴۰۰', badDossier.status === 400);
+  check('F16: پروندهٔ DD نامعتبر → ۴۰۰', badDossier.status === 400);
   const goGate = await api('/gtm-cards', { method: 'POST', token: dt, body: { product: 'محصول بدون DD', decision: 'GO' } });
-  check('F18: گرهٔ تصمیم — GO بدون پروندهٔ DD متصل → ۴۰۰', goGate.status === 400);
+  check('F16: گرهٔ تصمیم — GO بدون پروندهٔ DD متصل → ۴۰۰', goGate.status === 400);
   const goNotApproved = await api('/gtm-cards', { method: 'POST', token: dt, body: { product: 'محصول با DD ناقص', dossierId: 'dd-2', decision: 'GO' } });
-  check('F18: گرهٔ تصمیم — GO با DD تصویب‌نشده → ۴۰۰', goNotApproved.status === 400);
+  check('F16: گرهٔ تصمیم — GO با DD تصویب‌نشده → ۴۰۰', goNotApproved.status === 400);
   const NG = await api('/gtm-cards', { method: 'POST', token: dt, body: { product: 'داشبورد تحلیلی بورس', dossierId: 'dd-1', idealCustomer: 'کارگزاری‌های متوسط', pricing: 'اشتراک ماهانه', channels: 'فروش مستقیم', decision: 'PENDING' } });
-  check('F18: ثبت کارت متصل به DD تصویب‌شده → ۲۰۱ با وضعیت DD زنده',
+  check('F16: ثبت کارت متصل به DD تصویب‌شده → ۲۰۱ با وضعیت DD زنده',
     NG.status === 201 && NG.body.ddStatus.status === 'APPROVED');
   const goAfter = await api(`/gtm-cards/${NG.body.id}`, { method: 'PATCH', token: dt, body: { decision: 'GO' } });
-  check('F18: ارتقای تصمیم همان کارت به GO (DD متصل تصویب‌شده) → ۲۰۰',
+  check('F16: ارتقای تصمیم همان کارت به GO (DD متصل تصویب‌شده) → ۲۰۰',
     goAfter.status === 200 && goAfter.body.decision === 'GO' && goAfter.body.decisionFa === 'ورود (GO)');
   const gNoPerm = await api('/gtm-cards', { method: 'POST', token: ct, body: { product: 'محصول مشتری' } });
-  check('F18: RBAC — ثبت کارت ورود فقط با opportunity.write (client → ۴۰۳)', gNoPerm.status === 403);
+  check('F16: RBAC — ثبت کارت ورود فقط با opportunity.write (client → ۴۰۳)', gNoPerm.status === 403);
 }
 
-/* ═════════════════ گام ۱۰.۳ — F01 کنترل اجرا + F16 کارت نقش و ورود همکار ═════════════════ */
-section('گام ۱۰.۳ — F01 کنترل اجرا + F16 کارت نقش و ورود همکار');
+/* ═════════════════ گام ۱۰.۳ — F01 کنترل اجرا + F15 کارت نقش و ورود همکار ═════════════════ */
+section('گام ۱۰.۳ — F01 کنترل اجرا + F15 کارت نقش و ورود همکار');
 {
   const dt = (await login(OWNER.email)).body.accessToken;
   const ct = (await login(CLIENT.email)).body.accessToken;
@@ -3116,36 +3116,36 @@ section('گام ۱۰.۳ — F01 کنترل اجرا + F16 کارت نقش و و�
   const cNoPerm = await api('/exec-controls', { method: 'POST', token: ct, body: { projectId: 'pr-1', goal: 'x تست', scope: 'y تست', ownerRole: 'مدیرعامل', deadline: '2026-12-01' } });
   check('F01: RBAC — ثبت کنترل اجرا فقط با project.write (client → ۴۰۳)', cNoPerm.status === 403);
 
-  /* ── F16 ── */
+  /* ── F15 ── */
   const R = await api('/role-cards', { token: dt });
   const cards = R.body.items ?? [];
-  check('F16: دو کارت نقش بذر متصل به چارت (inChart) با قاعدهٔ تأیید',
+  check('F15: دو کارت نقش بذر متصل به چارت (inChart) با قاعدهٔ تأیید',
     R.status === 200 && cards.length === 2 && cards.every(x => x.inChart === true) && !!R.body.rule,
     `n=${cards.length}`);
   const rc1 = cards.find(x => x.title === 'مدیر محصول');
   const rc2 = cards.find(x => x.title === 'مدیر اندیشکده و پژوهش');
-  check('F16: کارت مدیر محصول تأییدشده با اهداف ۳۰/۶۰/۹۰ و جانشین؛ کارت پژوهش در انتظار',
+  check('F15: کارت مدیر محصول تأییدشده با اهداف ۳۰/۶۰/۹۰ و جانشین؛ کارت پژوهش در انتظار',
     rc1.approved === true && rc1.goals30 && rc1.goals60 && rc1.goals90 && rc1.successor
     && rc2.approved === false);
 
   const notChart = await api('/role-cards', { method: 'POST', token: dt, body: { title: 'نقش خیالی خارج از چارت', mission: 'مأموریت تست' } });
-  check('F16: عنوان نقش خارج از چارت programSettings → ۴۰۰ (اتصال به چارت)', notChart.status === 400);
+  check('F15: عنوان نقش خارج از چارت programSettings → ۴۰۰ (اتصال به چارت)', notChart.status === 400);
   const dupCard = await api('/role-cards', { method: 'POST', token: dt, body: { title: 'مدیر محصول', mission: 'مأموریت تکراری' } });
-  check('F16: کارت تکراری برای همان نقش چارت → ۴۰۹', dupCard.status === 409);
+  check('F15: کارت تکراری برای همان نقش چارت → ۴۰۹', dupCard.status === 409);
   const NR = await api('/role-cards', { method: 'POST', token: dt, body: { title: 'مدیر عملیات', mission: 'مالکیت زیرساخت و امنیت سامانه‌ها', responsibilities: 'زیرساخت، پایش، پاسخ به رخداد', onboarding: 'دو هفته همراهی با تیم عملیات', access: 'دسترسی کامل فنی بدون دسترسی مالی', goals30: 'آشنایی با ۵ سامانهٔ کلیدی', goals60: 'مالکیت چرخهٔ رخداد', goals90: 'گذراندن ممیزی امنیتی', feedback: 'بازخورد فصلی', successor: 'معاون زیرساخت' } });
-  check('F16: ثبت کارت نقش تازه از چارت → ۲۰۱ در انتظار تأیید',
+  check('F15: ثبت کارت نقش تازه از چارت → ۲۰۱ در انتظار تأیید',
     NR.status === 201 && NR.body.approved === false && NR.body.inChart === true);
   const apNoGoals = await api(`/role-cards/${NR.body.id}`, { method: 'PATCH', token: dt, body: { goals90: '', approved: true } });
-  check('F16: تأیید با هدف ۹۰ روزه خالی → ۴۰۰', apNoGoals.status === 400);
+  check('F15: تأیید با هدف ۹۰ روزه خالی → ۴۰۰', apNoGoals.status === 400);
   const apNoOnboard = await api(`/role-cards/${NR.body.id}`, { method: 'PATCH', token: dt, body: { onboarding: '', approved: true } });
-  check('F16: تأیید بدون مسیر ورود همکار → ۴۰۰', apNoOnboard.status === 400);
+  check('F15: تأیید بدون مسیر ورود همکار → ۴۰۰', apNoOnboard.status === 400);
   const ap = await api(`/role-cards/${NR.body.id}`, { method: 'PATCH', token: dt, body: { goals90: 'گذراندن ممیزی امنیتی بدون یافتهٔ بحرانی', onboarding: 'دو هفته همراهی با تیم عملیات', approved: true } });
-  check('F16: تأیید نهایی با اهداف کامل + مسیر ورود → ۲۰۰ با تأییدکننده و زمان',
+  check('F15: تأیید نهایی با اهداف کامل + مسیر ورود → ۲۰۰ با تأییدکننده و زمان',
     ap.status === 200 && ap.body.approved === true && ap.body.approvedBy === OWNER.email && !!ap.body.approvedAt);
   const cNoRole = await api('/role-cards', { method: 'POST', token: ct, body: { title: 'مدیر محصول', mission: 'مأموریت مشتری' } });
-  check('F16: RBAC — ثبت کارت نقش فقط با program.write (client → ۴۰۳)', cNoRole.status === 403);
+  check('F15: RBAC — ثبت کارت نقش فقط با program.write (client → ۴۰۳)', cNoRole.status === 403);
   const cView = await api('/role-cards', { token: ct });
-  check('F16: جداسازی — کارت‌های نقش هلدینگ برای آریا فناوری فهرست نمی‌شود',
+  check('F15: جداسازی — کارت‌های نقش هلدینگ برای آریا فناوری فهرست نمی‌شود',
     cView.status === 200 && (cView.body.items ?? []).length === 0);
 }
 

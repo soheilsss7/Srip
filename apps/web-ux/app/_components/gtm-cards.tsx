@@ -1,6 +1,6 @@
 'use client';
 /* ═══════════════════════════════════════════════════════════════════════════
-   گام ۱۰.۲ — F18 کارت آماده‌سازی ورود به بازار (کامپوننت)
+   گام ۱۰.۲ — F16 کارت آماده‌سازی ورود به بازار (کامپوننت)
    محصول · وضعیت DD (زنده از پروندهٔ متصل) · مشتری ایدئال · ارزش پیشنهادی ·
    بسته‌بندی · قیمت‌گذاری · کانال · شریک · اجرای آزمایشی · شواهد مشتری · تصمیم
    (قاعدهٔ سرور: تصمیم GO فقط با پروندهٔ DD متصلِ تصویب‌شده).
@@ -47,9 +47,9 @@ export default function GtmCards() {
 
   const items = data?.items ?? [];
   return (
-    <section className="section-card" data-f18>
+    <section className="section-card" data-f16>
       <div className="section-head">
-        <h2><Rocket size={17} /> {t('کارت‌های ورود به بازار (F18)')}</h2>
+        <h2><Rocket size={17} /> {t('کارت‌های ورود به بازار (F16)')}</h2>
         {writable && <button className="srip-button primary" onClick={() => { setFormError(''); setEdit({ ...EMPTY }); }}><Plus size={14} /> {t('کارت ورود جدید')}</button>}
       </div>
       <p className="section-desc">{data?.rule}</p>

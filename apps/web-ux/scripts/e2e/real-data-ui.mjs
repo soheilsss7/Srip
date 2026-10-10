@@ -232,7 +232,7 @@ try {
   const revTxt = await page2.evaluate(() => document.body.textContent ?? '');
   ok('ثبت بازبینی → اعتبار ۹۰ روزهٔ تازه', revTxt.includes('۹۰ روز مانده تا بازبینی'));
 
-  /* ═══ گام ۲.۶ — رویدادها در تقویم + پروتکل بحران (بخش ۱۷ سند؛ F10 و F15) ═══ */
+  /* ═══ گام ۲.۶ — رویدادها در تقویم + پروتکل بحران (بخش ۱۷ سند؛ F10 و F14) ═══ */
   await page2.goto(`${BASE}/calendar`, { waitUntil: 'networkidle0', timeout: 90000 });
   await new Promise(r => setTimeout(r, 3500));
   const cal = await page2.evaluate(() => ({

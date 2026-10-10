@@ -569,7 +569,7 @@ export default function IntelligencePage() {
           {/* گام ۸.۱ — اصالت و ریسک: موتور نشانه‌ها و امتیاز ریسک (۱۹.۵) */}
           <AuthenticityRisk canSecurityRead={can('security.read')} canSecurityWrite={can('security.write')} />
         <EnvStakeholderCards />
-          {/* گام ۸.۲ — پرونده‌های اصالت F13 + سیاست اقدام چهارسطحی (۱۹.۵.۱) */}
+          {/* گام ۸.۲ — پرونده‌های اصالت (ماژول پلتفرمی) + سیاست اقدام چهارسطحی (۱۹.۵.۱) */}
           <AuthenticityCases canSecurityRead={can('security.read')} canSecurityWrite={can('security.write')} />
         </>
       )}

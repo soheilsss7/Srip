@@ -195,7 +195,7 @@ export default function DdDossiers() {
 
           {/* وضعیت تصویب G2 */}
           <div className="section-head"><h3><ClipboardCheck size={15} /> {t('وضعیت تصویب (G2)')}</h3></div>
-          <p className="muted">{t('شرط تصویب: پذیرش همهٔ محورها + ثبت نظر مدیر تیم Y — دروازهٔ G2 سند v6.')}</p>
+          <p className="muted">{t('شرط تصویب: پذیرش همهٔ محورها + ثبت نظر مدیر تیم Y — دروازهٔ G2 سند v14.')}</p>
           {writable && detail.status !== 'APPROVED' && (<div style={{ display: 'flex', gap: 8 }}>
             <button className="srip-button primary" disabled={busy === 'dec'} onClick={() => decide('APPROVED')}>{t('تصویب پرونده')}</button>
             <button className="srip-button" disabled={busy === 'dec'} onClick={() => decide('REJECTED')}>{t('رد پرونده')}</button>

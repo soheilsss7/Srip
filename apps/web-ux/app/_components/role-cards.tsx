@@ -1,6 +1,6 @@
 'use client';
 /* ═══════════════════════════════════════════════════════════════════════════
-   گام ۱۰.۳ — F16 کارت نقش و ورود همکار (کامپوننت)
+   گام ۱۰.۳ — F15 کارت نقش و ورود همکار (کامپوننت)
    عنوان نقش (از چارت سازمان) · مأموریت · مسئولیت · شایستگی · ارزیابی ·
    مسیر ورود · دسترسی · اهداف ۳۰/۶۰/۹۰ · بازخورد · جانشین · تأیید نهایی
    (قاعدهٔ سرور: تأیید فقط با تکمیل هر سه هدف بازه‌ای + مسیر ورود).
@@ -52,9 +52,9 @@ export default function RoleCards() {
   const items = data?.items ?? [];
   const withCard = new Set(items.map((x: any) => x.title));
   return (
-    <section className="section-card" data-f16>
+    <section className="section-card" data-f15>
       <div className="section-head">
-        <h2><UserCog size={17} /> {t('کارت نقش و ورود همکار (F16)')}</h2>
+        <h2><UserCog size={17} /> {t('کارت نقش و ورود همکار (F15)')}</h2>
         {writable && <button className="srip-button primary" onClick={() => { setFormError(''); setEdit({ ...EMPTY }); }}><Plus size={14} /> {t('کارت نقش جدید')}</button>}
       </div>
       <p className="section-desc">{data?.rule}</p>

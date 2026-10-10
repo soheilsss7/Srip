@@ -1,6 +1,6 @@
 /* ============================================================================
-   authenticity-cases-ui.mjs — باتری E2E گام ۸.۲: پروندهٔ اصالت F13
-   ورود demo → /intelligence → پنل «پرونده‌های اصالت (F13)» → پروندهٔ باز خوشهٔ
+   authenticity-cases-ui.mjs — باتری E2E گام ۸.۲: پروندهٔ اصالت (ماژول پلتفرمی)
+   ورود demo → /intelligence → پنل «پرونده‌های اصالت (ماژول پلتفرمی)» → پروندهٔ باز خوشهٔ
    دستگاه → بازبینی انسانی (تأیید با یادداشت) → اعمال محدودیت → اعتراض →
    ابطال (OVERTURNED) → بسته شدن.
    ============================================================================ */
@@ -58,7 +58,7 @@ try {
 
   try { await page.goto(`${BASE}/intelligence`, { waitUntil: 'networkidle0', timeout: 60000 }); } catch {}
   await page.waitForSelector('.authenticity-cases', { timeout: 30000 });
-  ok('پنل «پرونده‌های اصالت (F13)» زیر پنل اصالت و ریسک', true);
+  ok('پنل «پرونده‌های اصالت (ماژول پلتفرمی)» زیر پنل اصالت و ریسک', true);
   const head = await page.evaluate(() => {
     const t = document.querySelector('.authenticity-cases')?.textContent ?? '';
     return { levels: t.includes('قرنطینه + هشدار') && t.includes('ثبت و ادامه'),

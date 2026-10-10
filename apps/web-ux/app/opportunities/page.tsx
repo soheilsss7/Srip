@@ -421,7 +421,7 @@ export default function OpportunitiesPage() {
         </form>
       </Modal>
 
-      {/* ═══ گام ۱۰.۲ — F09 فرصت‌های مناقصه + F18 کارت‌های ورود به بازار ═══ */}
+      {/* ═══ گام ۱۰.۲ — F09 فرصت‌های مناقصه + F16 کارت‌های ورود به بازار ═══ */}
       <TenderOpportunities />
       <GtmCards />
     </main>

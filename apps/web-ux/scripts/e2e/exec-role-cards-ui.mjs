@@ -1,5 +1,5 @@
 /* ============================================================================
-   exec-role-cards-ui.mjs — باتری E2E گام ۱۰.۳: F01 کنترل اجرا + F16 کارت نقش
+   exec-role-cards-ui.mjs — باتری E2E گام ۱۰.۳: F01 کنترل اجرا + F15 کارت نقش
    ورود demo → /projects (کنترل اجرا: جدول + قواعد بلاک/تکمیل) → /people
    (کارت نقش: چارت + تأیید نهایی با اهداف ۳۰/۶۰/۹۰).
    ============================================================================ */
@@ -95,9 +95,9 @@ try {
 
   /* ── ۳) بخش کارت نقش در افراد ── */
   try { await page.goto(`${BASE}/people`, { waitUntil: 'networkidle0', timeout: 90000 }); } catch {}
-  await page.waitForSelector('section[data-f16] tbody tr', { timeout: 60000 });
+  await page.waitForSelector('section[data-f15] tbody tr', { timeout: 60000 });
   const rc = await page.evaluate(() => {
-    const s = document.querySelector('section[data-f16]');
+    const s = document.querySelector('section[data-f15]');
     const t = s?.textContent ?? '';
     return {
       count: s?.querySelectorAll('tbody tr').length,
@@ -106,11 +106,11 @@ try {
       approveBtn: [...(s?.querySelectorAll('button') ?? [])].some(b => (b.textContent ?? '').includes('تأیید نهایی')),
     };
   });
-  ok('F16: دو کارت نقش بذر؛ یکی تأییدشده و یکی با دکمهٔ «تأیید نهایی»',
+  ok('F15: دو کارت نقش بذر؛ یکی تأییدشده و یکی با دکمهٔ «تأیید نهایی»',
     rc.count === 2 && rc.approved && rc.goals && rc.approveBtn, JSON.stringify(rc));
 
   /* ── ۴) کارت تازه با اهداف ناقص: تأیید → خطا؛ تکمیل → تأیید ── */
-  await page.evaluate(() => [...document.querySelectorAll('section[data-f16] button')].find(b => (b.textContent ?? '').includes('کارت نقش جدید'))?.click());
+  await page.evaluate(() => [...document.querySelectorAll('section[data-f15] button')].find(b => (b.textContent ?? '').includes('کارت نقش جدید'))?.click());
   await page.waitForSelector('.modal-backdrop form#rc-form', { timeout: 30000 });
   await page.evaluate(() => {
     const form = document.querySelector('.modal-backdrop form#rc-form');
@@ -126,17 +126,17 @@ try {
   });
   await new Promise(r => setTimeout(r, 400));
   await page.evaluate(() => [...document.querySelectorAll('.modal-backdrop button')].find(b => (b.textContent ?? '').includes('ذخیرهٔ کارت نقش'))?.click());
-  await page.waitForFunction(() => document.querySelectorAll('section[data-f16] tbody tr').length === 3, { timeout: 30000 });
-  ok('F16: کارت نقش تازه از چارت (اهداف ۶۰/۹۰ خالی) ثبت شد', true);
+  await page.waitForFunction(() => document.querySelectorAll('section[data-f15] tbody tr').length === 3, { timeout: 30000 });
+  ok('F15: کارت نقش تازه از چارت (اهداف ۶۰/۹۰ خالی) ثبت شد', true);
   await page.evaluate(() => {
-    const row = [...document.querySelectorAll('section[data-f16] tbody tr')].find(tr => (tr.textContent ?? '').includes('ناقص'));
+    const row = [...document.querySelectorAll('section[data-f15] tbody tr')].find(tr => (tr.textContent ?? '').includes('ناقص'));
     [...(row?.querySelectorAll('button') ?? [])].find(b => (b.textContent ?? '').includes('تأیید نهایی'))?.click();
   });
-  await page.waitForFunction(() => (document.querySelector('section[data-f16]')?.textContent ?? '').includes('نیازمند اهداف ۳۰، ۶۰ و ۹۰'), { timeout: 30000 });
-  ok('F16: تأیید نهایی با اهداف ناقص → پیام خطای سرور', true);
+  await page.waitForFunction(() => (document.querySelector('section[data-f15]')?.textContent ?? '').includes('نیازمند اهداف ۳۰، ۶۰ و ۹۰'), { timeout: 30000 });
+  ok('F15: تأیید نهایی با اهداف ناقص → پیام خطای سرور', true);
   /* تکمیل هدف ۶۰/۹۰ از فرم ویرایش و تأیید */
   await page.evaluate(() => {
-    const row = [...document.querySelectorAll('section[data-f16] tbody tr')].find(tr => (tr.textContent ?? '').includes('ناقص'));
+    const row = [...document.querySelectorAll('section[data-f15] tbody tr')].find(tr => (tr.textContent ?? '').includes('ناقص'));
     [...(row?.querySelectorAll('button') ?? [])].find(b => (b.textContent ?? '').includes('ویرایش'))?.click();
   });
   await page.waitForSelector('.modal-backdrop form#rc-form', { timeout: 30000 });
@@ -154,15 +154,15 @@ try {
   await new Promise(r => setTimeout(r, 800));
   await page.evaluate(() => {
     /* کارت تازه (اهدافش تازه کامل شد) آخرین ردیف جدول است — آخرین دکمهٔ تأیید */
-    const btns = [...document.querySelectorAll('section[data-f16] tbody button')].filter(b => (b.textContent ?? '').includes('تأیید نهایی'));
+    const btns = [...document.querySelectorAll('section[data-f15] tbody button')].filter(b => (b.textContent ?? '').includes('تأیید نهایی'));
     btns[btns.length - 1]?.click();
   });
   await page.waitForFunction(() => {
-    const rows = document.querySelectorAll('section[data-f16] tbody tr');
+    const rows = document.querySelectorAll('section[data-f15] tbody tr');
     const approved = [...rows].filter(tr => (tr.textContent ?? '').includes('تأییدشده')).length;
     return rows.length === 3 && approved === 2 && ![...rows].some(tr => (tr.textContent ?? '').includes('ناقص'));
   }, { timeout: 30000 });
-  ok('F16: پس از تکمیل اهداف ۶۰/۹۰، تأیید نهایی کارت تازه ثبت شد (دو تأییدشده، بدون کارت ناقص)', true);
+  ok('F15: پس از تکمیل اهداف ۶۰/۹۰، تأیید نهایی کارت تازه ثبت شد (دو تأییدشده، بدون کارت ناقص)', true);
 } catch (e) {
   fail++; failures.push(`استثنا: ${e.message}`);
   console.error('  ❌ استثنا:', e.message);

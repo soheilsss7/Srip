@@ -416,7 +416,7 @@ export default function PeoplePage() {
         </form>
       </Modal>
 
-      {/* ═══ گام ۱۰.۳ — F16 کارت نقش و ورود همکار ═══ */}
+      {/* ═══ گام ۱۰.۳ — F15 کارت نقش و ورود همکار ═══ */}
       <RoleCards />
     </>
   );

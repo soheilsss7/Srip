@@ -1,7 +1,7 @@
 /* ============================================================================
-   dd-f02-f15-ui.mjs — باتری E2E گام ۱۰.۱: F02 پروندهٔ DD + F15 آماده‌سازی
+   dd-f02-f15-ui.mjs — باتری E2E گام ۱۰.۱: F02 پروندهٔ DD + F14 آماده‌سازی
    ورود demo → /partnerships → پرونده‌های DD (جدول + محورها + حق پاسخ + تیم Y +
-   گرهٔ G2) → کارت‌های F15 (وضعیت DD زنده + ایجاد کارت متصل).
+   گرهٔ G2) → کارت‌های F14 (وضعیت DD زنده + ایجاد کارت متصل).
    ============================================================================ */
 import puppeteer from 'puppeteer-core';
 import { dirname, join, resolve } from 'node:path';
@@ -43,11 +43,11 @@ try {
   await new Promise(r => setTimeout(r, 2500));
   await page.evaluate(() => localStorage.setItem('srip2_tour_done', '1'));
 
-  /* ── ۱) بخش‌های F02/F15 در مشارکت‌ها ── */
+  /* ── ۱) بخش‌های F02/F14 در مشارکت‌ها ── */
   try { await page.goto(`${BASE}/partnerships`, { waitUntil: 'networkidle0', timeout: 90000 }); } catch {}
   await page.waitForSelector('section[data-f02]', { timeout: 60000 });
-  const hasF15 = await page.evaluate(() => !!document.querySelector('section[data-f15]'));
-  ok('صفحهٔ مشارکت‌ها: بخش F02 (پرونده‌های Due Diligence) و F15 (آماده‌سازی) هر دو حاضرند', hasF15);
+  const hasF14 = await page.evaluate(() => !!document.querySelector('section[data-f14]'));
+  ok('صفحهٔ مشارکت‌ها: بخش F02 (پرونده‌های Due Diligence) و F14 (آماده‌سازی) هر دو حاضرند', hasF14);
 
   /* ── ۲) جدول پرونده‌ها ── */
   await page.waitForFunction(() => (document.querySelector('section[data-f02]')?.textContent ?? '').includes('تصویب‌شده'), { timeout: 30000 });
@@ -121,22 +121,22 @@ try {
   await page.keyboard.press('Escape');
   await new Promise(r => setTimeout(r, 500));
 
-  /* ── ۵) F15: کارت‌ها با وضعیت DD زنده ── */
-  await page.waitForSelector('section[data-f15] tbody tr', { timeout: 30000 });
+  /* ── ۵) F14: کارت‌ها با وضعیت DD زنده ── */
+  await page.waitForSelector('section[data-f14] tbody tr', { timeout: 30000 });
   const packs = await page.evaluate(() => {
-    const t = document.querySelector('section[data-f15]')?.textContent ?? '';
+    const t = document.querySelector('section[data-f14]')?.textContent ?? '';
     return {
-      count: document.querySelectorAll('section[data-f15] tbody tr').length,
+      count: document.querySelectorAll('section[data-f14] tbody tr').length,
       live: t.includes('تصویب‌شده — 12/12 محور') || t.includes('در بررسی — 1/12'),
       goal: t.includes('هدف رابطه'),
       next: t.includes('اقدام بعدی'),
     };
   });
-  ok('F15: کارت‌های آماده‌سازی با «وضعیت DD (زنده)» از پروندهٔ متصل + هدف رابطه و اقدام بعدی',
+  ok('F14: کارت‌های آماده‌سازی با «وضعیت DD (زنده)» از پروندهٔ متصل + هدف رابطه و اقدام بعدی',
     packs.count === 2 && packs.live && packs.goal && packs.next, JSON.stringify(packs));
 
-  /* ── ۶) ایجاد کارت F15 متصل به مشارکت ── */
-  await page.evaluate(() => [...document.querySelectorAll('section[data-f15] button')].find(b => (b.textContent ?? '').includes('کارت آماده‌سازی جدید'))?.click());
+  /* ── ۶) ایجاد کارت F14 متصل به مشارکت ── */
+  await page.evaluate(() => [...document.querySelectorAll('section[data-f14] button')].find(b => (b.textContent ?? '').includes('کارت آماده‌سازی جدید'))?.click());
   await page.waitForSelector('.modal-backdrop form#rp-form', { timeout: 30000 });
   await page.evaluate(() => {
     const form = document.querySelector('.modal-backdrop form#rp-form');
@@ -168,8 +168,8 @@ try {
   });
   await new Promise(r => setTimeout(r, 300));
   await page.evaluate(() => [...document.querySelectorAll('.modal-backdrop button')].find(b => (b.textContent ?? '').includes('ذخیرهٔ کارت'))?.click());
-  await page.waitForFunction(() => (document.querySelector('section[data-f15]')?.textContent ?? '').includes('آماده‌سازی عرضهٔ داده به بورس'), { timeout: 30000 });
-  ok('F15: ایجاد کارت متصل به مشارکت → در جدول با وضعیت «بدون پروندهٔ DD» ظاهر شد', true);
+  await page.waitForFunction(() => (document.querySelector('section[data-f14]')?.textContent ?? '').includes('آماده‌سازی عرضهٔ داده به بورس'), { timeout: 30000 });
+  ok('F14: ایجاد کارت متصل به مشارکت → در جدول با وضعیت «بدون پروندهٔ DD» ظاهر شد', true);
 } catch (e) {
   fail++; failures.push(`استثنا: ${e.message}`);
   console.error('  ❌ استثنا:', e.message);
@@ -177,6 +177,6 @@ try {
   await browser.close();
 }
 
-console.log(`\nDD-F02-F15-UI: ${pass} PASS / ${fail} FAIL`);
+console.log(`\nDD-F02-F14-UI: ${pass} PASS / ${fail} FAIL`);
 if (failures.length) console.log('  Failed:', failures.join(' | '));
 process.exit(fail > 0 ? 1 : 0);

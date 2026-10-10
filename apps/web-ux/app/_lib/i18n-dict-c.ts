@@ -1418,9 +1418,11 @@ export const EN_DICT_C: Record<string, string> = {
   'بودجهٔ سالانه و جریان نقدی': 'Annual budget and cash flow',
   'ساختار گزارش مالی': 'Financial reporting structure',
 
-  /* ═══ گام ۵.۱ — کاتالوگ فرم‌های سند v6 (F01–F18) ═══ */
-  'کاتالوگ فرم\u200cهای سند (F01–F18)': 'Catalog of document forms (F01–F18)',
-  'نگاشت هجده فرم عملیاتی پیوست ب سند v6 به ماژول\u200cهای پلتفرم؛ فرم\u200cهای بدون معادل سندی، ماژول پلتفرمی\u200cاند و کد نمی\u200cگیرند.': 'Mapping the 18 operational forms of document v6 appendix B to platform modules; modules with no document equivalent are platform modules and carry no code.',
+  /* ═══ گام ۵.۱ — کاتالوگ فرم‌های سند v6 (F01–F16) ═══ */
+  'کاتالوگ فرم\u200cهای سند (F01–F17)': 'Catalog of document forms (F01–F17)',
+  'نگاشت هفده فرم عملیاتی پیوست ب سند v14 به ماژول\u200cهای پلتفرم؛ فرم\u200cهای بدون معادل سندی، ماژول پلتفرمی\u200cاند و کد نمی\u200cگیرند.': 'Mapping the seventeen operational forms of Appendix B of the v14 document to platform modules; forms with no document equivalent are platform modules and carry no code.',
+  'ماژول\u200cهای پلتفرمی بدون کد سندی: پرونده\u200cاصالت و تقلب · دفتر ثبت ریسک و انتشار هوش مصنوعی · چک\u200cلیست پروژه صفر · پرونده\u200cشناخت · شاخص\u200cهای برنامه · تأیید هزینه · گزارش ماهانه · صورت\u200cجلسه\u200cتحویل.': 'Platform modules without a document code: authenticity & fraud cases · AI risk & release registry · project-zero checklist · knowledge profile · program KPIs · expense approval · monthly report · handover minutes.',
+  'چک\u200cلیست پروژه صفر (ماژول پلتفرمی)': 'Project-zero checklist (platform module)',
   'کد': 'Code',
   'فرم': 'Form',
   'وضعیت در پلتفرم': 'Status in platform',
@@ -1589,10 +1591,10 @@ export const EN_DICT_C: Record<string, string> = {
   '۹۰ دقیقه و صورت\u200cجلسهٔ تحلیلی': '90 minutes with analytical minutes',
   'گروه رسانه\u200cای از فهرست PESO انتخاب شود: تحت مالکیت، اشتراکی، اکتسابی یا پولی.': 'Choose the media group from the PESO list: owned, shared, earned or paid.',
   'خروجی اندیشکده از فهرست هفت\u200cگانهٔ جدول ۱۵.۱ سند انتخاب شود.': 'Choose the think tank output from the seven-item table 15.1 of the document.',
-  'زمان هر خروجی اندیشکده در جدول صریح است؛ تاریخ دقیق انتشار در تقویم SRIP ثبت و هر تغییر با علت و مالک اصلاح می\u200cشود (بخش ۱۵.۱ سند v6).': 'Each think tank output has an explicit timeline; exact publication dates are registered in the SRIP calendar and every change is corrected with reason and owner (document v6 section 15.1).',
+  'زمان هر خروجی اندیشکده در جدول صریح است؛ تاریخ دقیق انتشار در تقویم SRIP ثبت و هر تغییر با علت و مالک اصلاح می\u200cشود (بخش ۱۵.۱ سند v14).': 'Each think tank output has an explicit timeline; exact publication dates are registered in the SRIP calendar and every change is corrected with reason and owner (document v6 section 15.1).',
 
-  /* ═══ گام ۵.۵ — مرجعیت v6 (بخش ۱۸) + F14 + لایهٔ «ورود» ═══ */
-  'جدول پایش ماهانهٔ مرجعیت (F14)': 'Monthly authority monitoring table (F14)',
+  /* ═══ گام ۵.۵ — مرجعیت v6 (بخش ۱۸) + F13 + لایهٔ «ورود» ═══ */
+  'جدول پایش ماهانهٔ مرجعیت (F13)': 'Monthly authority monitoring table (F13)',
   'مرجعیت هوش مصنوعی فناوران پارس ایرانیان': 'AI authority of Pars Iranian AI Innovators',
   'دقت بازنمایی فناوران پارس ایرانیان در پاسخ\u200cهای هوش مصنوعی': 'Accuracy of Pars Iranian AI Innovators\\u2019 representation in AI responses',
   'سؤالات اختصاصی درباره فناوران هوش مصنوعی پارس ایرانیان': 'Specific questions about Pars Iranian AI Innovators',
@@ -1607,7 +1609,7 @@ export const EN_DICT_C: Record<string, string> = {
   'آیا فناوران هوش مصنوعی پارس ایرانیان مرجع معتبر هوش مصنوعی در ایران محسوب می\u200cشود؟': 'Is Pars Iranian AI Innovators considered a credible AI authority in Iran?',
   'ورود': 'Market entry',
   'تصویب نقشهٔ اقدام بر پایه Due Diligence': 'Action map approved based on Due Diligence',
-  'مرجعیت، ادعا نیست؛ جایگاهی است که با اعتبار منبع، کیفیت داده، تداوم حضور و استنادپذیری ساخته می\u200cشود و باید سنجیده شود (بخش ۱۸ سند v6). ابزار عملیاتی، راهنمای پایش مرجعیت با ۲۵ سؤال در سه دسته و جدول پایش ماهانه است؛ نتیجهٔ پایش هم شاخص مرجعیت را تغذیه می\u200cکند و هم اقدام\u200cهای اصلاحی محتوا و وب\u200cسایت مرجع را تعیین می\u200cکند.': 'Authority is not a claim; it is a position built on source credibility, data quality, sustained presence and citability, and it must be measured (document v6 section 18). Its operational tool is the authority monitoring guide with 25 questions in three categories and a monthly monitoring table; monitoring results feed the authority index and set corrective actions for content and the reference website.',
+  'مرجعیت، ادعا نیست؛ جایگاهی است که با اعتبار منبع، کیفیت داده، تداوم حضور و استنادپذیری ساخته می\u200cشود و باید سنجیده شود (بخش ۱۸ سند v14). ابزار عملیاتی، راهنمای پایش مرجعیت با ۲۵ سؤال در سه دسته و جدول پایش ماهانه است؛ نتیجهٔ پایش هم شاخص مرجعیت را تغذیه می\u200cکند و هم اقدام\u200cهای اصلاحی محتوا و وب\u200cسایت مرجع را تعیین می\u200cکند.': 'Authority is not a claim; it is a position built on source credibility, data quality, sustained presence and citability, and it must be measured (document v6 section 18). Its operational tool is the authority monitoring guide with 25 questions in three categories and a monthly monitoring table; monitoring results feed the authority index and set corrective actions for content and the reference website.',
 
   /* ═══ گام ۵.۶ — دروازه‌های کنترل مشترک (پیوست پ سند v6) ═══ */
   'دروازه\u200cهای کنترل مشترک (G0–G6)': 'Shared control gates (G0–G6)',
@@ -1714,7 +1716,7 @@ export const EN_DICT_C: Record<string, string> = {
   'زمان پاسخ': 'Response time',
   'توقف کل درگاه هوش مصنوعی': 'Halt the entire AI gateway',
   'توقف کاربرد': 'Halt application',
-  'توقف بدون دلیل ثبت نمی\u200cشود؛ دلیل و اقدام\u200cکننده در سابقهٔ درگاه ثبت می\u200cشود (۱۹.۴ سند v6).': 'Halting requires a reason; the reason and the actor are recorded in the gateway history (v6 §19.4).',
+  'توقف بدون دلیل ثبت نمی\u200cشود؛ دلیل و اقدام\u200cکننده در سابقهٔ درگاه ثبت می\u200cشود (۱۹.۴ سند v14).': 'Halting requires a reason; the reason and the actor are recorded in the gateway history (v6 §19.4).',
   'دلیل توقف': 'Halt reason',
   'مثلاً: رخداد امنیتی مشهور — تا پایان بررسی، همهٔ فراخوانی\u200cها به فرآیند انسانی برمی\u200cگردد.': 'e.g. Known security incident — until the review completes, all calls return to the human process.',
   'ثبت و توقف': 'Record & halt',
@@ -1808,8 +1810,8 @@ export const EN_DICT_C: Record<string, string> = {
   'درخواست شاهد تکمیلی': 'Request additional evidence',
   'محدودیت موقت + تشکیل پرونده': 'Temporary restriction + open case',
   'قرنطینه + هشدار': 'Quarantine + alert',
-  /* ═══ گام ۸.۲ — پرونده‌های اصالت F13 ═══ */
-  'پرونده‌های اصالت (F13)': 'Authenticity cases (F13)',
+  /* ═══ گام ۸.۲ — پرونده‌های اصالت (ماژول پلتفرمی) ═══ */
+  'پرونده‌های اصالت (ماژول پلتفرمی)': 'Authenticity cases (platform module)',
   'چهار سطح ۱۹.۵.۱: کم (ثبت و ادامه) · متوسط (شاهد تکمیلی) · بالا (محدودیت موقت + پرونده) · بحرانی (قرنطینه + هشدار) — اقدام محدودکننده فقط پس از بازبینی انسانی.':
     'Four levels (19.5.1): Low (log & continue) · Medium (additional evidence) · High (temporary restriction + case) · Critical (quarantine + alert) — restrictive action only after human review.',
   'اعتراض باز': 'Open appeals',
@@ -1890,7 +1892,7 @@ export const EN_DICT_C: Record<string, string> = {
   'قبول': 'Pass',
   'مردود': 'Fail',
   'متوقف': 'Paused',
-  /* گام ۹.۲ — F17 دفتر ثبت ریسک و انتشار AI + شناسنامهٔ مدل */
+  /* گام ۹.۲ — دفتر ثبت ریسک و انتشار AI (ماژول پلتفرمی) + شناسنامهٔ مدل */
   'شناسنامهٔ مدل — متصل به ارائه‌دهنده': 'Model card — linked to the provider',
   'مدل · نسخه · منشأ · محدودیت‌ها': 'Model · Version · Origin · Limitations',
   'محدودیت‌ها': 'Limitations',
@@ -1898,7 +1900,7 @@ export const EN_DICT_C: Record<string, string> = {
   'ارائه‌دهنده (زنده)': 'Provider (live)',
   'شناسنامهٔ مدل': 'Model card',
   'ذخیرهٔ شناسنامهٔ مدل': 'Save model card',
-  'ستون‌های AI (F17)': 'AI columns (F17)',
+  'ستون‌های AI (ماژول پلتفرمی)': 'AI columns (platform module)',
   'مورد استفاده': 'Use case',
   'آزمون': 'Test',
   'یافته': 'Finding',
@@ -1934,7 +1936,7 @@ export const EN_DICT_C: Record<string, string> = {
   'یادداشت (الزامی)': 'Note (required)',
   'ثبت‌کننده': 'Recorded by',
   'ثبت نظر تیم Y': 'Record Team Y opinion',
-  'شرط تصویب: پذیرش همهٔ محورها + ثبت نظر مدیر تیم Y — دروازهٔ G2 سند v6.': 'Approval requires all axes accepted + Team Y manager opinion — gate G2.',
+  'شرط تصویب: پذیرش همهٔ محورها + ثبت نظر مدیر تیم Y — دروازهٔ G2 سند v14.': 'Approval requires all axes accepted + Team Y manager opinion — gate G2.',
   'تصویب پرونده': 'Approve dossier',
   'رد پرونده': 'Reject dossier',
   'پروندهٔ DD ثبت نشده است': 'No DD dossier recorded',
@@ -1945,8 +1947,8 @@ export const EN_DICT_C: Record<string, string> = {
   'محور پذیرفته‌شده': 'accepted axes',
   'موضوع': 'Subject',
   'در بررسی': 'In review',
-  /* گام ۱۰.۱ — F15 کارت آماده‌سازی سرمایه‌گذار و شریک */
-  'آماده‌سازی سرمایه‌گذار و شریک (F15)': 'Investor & partner readiness (F15)',
+  /* گام ۱۰.۱ — F14 کارت آماده‌سازی سرمایه‌گذار و شریک */
+  'آماده‌سازی سرمایه‌گذار و شریک (F14)': 'Investor & partner readiness (F14)',
   'کارت آماده‌سازی جدید': 'New readiness card',
   'اتصال': 'Linked to',
   'وضعیت DD (زنده)': 'DD status (live)',
@@ -1994,8 +1996,8 @@ export const EN_DICT_C: Record<string, string> = {
   'درس‌آموخته': 'Lessons learned',
   'درس‌آموخته (برای ثبت نتیجه الزامی)': 'Lessons learned (required to record outcome)',
   'ثبت نتیجه (برد/باخت) فقط پس از «ارسال شد» و همراه درس‌آموخته ممکن است.': 'Outcome (won/lost) can only be recorded after submission and with lessons learned.',
-  /* گام ۱۰.۲ — F18 کارت ورود به بازار */
-  'کارت‌های ورود به بازار (F18)': 'Go-to-market cards (F18)',
+  /* گام ۱۰.۲ — F16 کارت ورود به بازار */
+  'کارت‌های ورود به بازار (F16)': 'Go-to-market cards (F16)',
   'کارت ورود جدید': 'New GTM card',
   'کارت ورود به بازار ثبت نشده است': 'No go-to-market card recorded',
   'برای هر محصولِ در آستانهٔ ورود، کارت با مشتری ایدئال، قیمت‌گذاری، کانال و اجرای آزمایشی بسازید.': 'For each product nearing launch, build a card with ideal customer, pricing, channel and pilot.',
@@ -2053,7 +2055,7 @@ export const EN_DICT_C: Record<string, string> = {
   'کارت دارد': 'has card',
   'کارت نقش ثبت نشده است': 'No role card recorded',
   'کارت نقش جدید': 'New role card',
-  'کارت نقش و ورود همکار (F16)': 'Role card & collaborator onboarding (F16)',
+  'کارت نقش و ورود همکار (F15)': 'Role card & collaborator onboarding (F15)',
   'کد/پروژه': 'Code/Project',
   'کنترل اجرا (F01)': 'Execution control (F01)',
   'کنترل اجرا ثبت نشده است': 'No execution control recorded',

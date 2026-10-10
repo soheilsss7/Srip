@@ -53,7 +53,7 @@ function GatewayPanel(){
   const [f12For,setF12For]=useState<any>(null); /* کارت باز‌شده */
   const [f12Run,setF12Run]=useState<any>(null); /* فرم اجرای آزمون */
   const [f12Dec,setF12Dec]=useState<any>(null); /* فرم تصمیم انتشار */
-  /* گام ۹.۲ — شناسنامهٔ مدل (F17) */
+  /* گام ۹.۲ — شناسنامهٔ مدل (ماژول پلتفرمی) */
   const [modelCards,setModelCards]=useState<any>(null);
   const [mcEdit,setMcEdit]=useState<any>(null);
   /* گام ۷.۱ — نمایهٔ معنایی و جست‌وجوی ترکیبی */
@@ -404,7 +404,7 @@ function GatewayPanel(){
         </div>)}
       </Modal>
 
-      {/* ═══ گام ۹.۲ — شناسنامهٔ مدل (F17) ═══ */}
+      {/* ═══ گام ۹.۲ — شناسنامهٔ مدل (ماژول پلتفرمی) ═══ */}
       <div className="composer-head" style={{marginTop:18}}>
         <h2><FileText size={16}/> {t('شناسنامهٔ مدل — متصل به ارائه‌دهنده')}</h2>
         <span className="chip neutral">{t('مدل · نسخه · منشأ · محدودیت‌ها')}</span>
@@ -642,7 +642,7 @@ function GatewayPanel(){
 
       {/* مودال توقف (کلی یا کاربرد) — دلیل الزامی */}
       <Modal open={!!haltFor} title={haltFor==='GLOBAL'?t('توقف کل درگاه هوش مصنوعی'):t('توقف کاربرد')} onClose={()=>setHaltFor(null)}
-        description={t('توقف بدون دلیل ثبت نمی‌شود؛ دلیل و اقدام‌کننده در سابقهٔ درگاه ثبت می‌شود (۱۹.۴ سند v6).')}>
+        description={t('توقف بدون دلیل ثبت نمی‌شود؛ دلیل و اقدام‌کننده در سابقهٔ درگاه ثبت می‌شود (۱۹.۴ سند v14).')}>
         <form className="form-grid" onSubmit={(e)=>{e.preventDefault();submitHalt();}}>
           <div className="field full">
             <label className="field-label">{t('دلیل توقف')}</label>

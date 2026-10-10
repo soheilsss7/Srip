@@ -15,14 +15,14 @@ import {
 
 /* ═══════════════════════════════════════════════════════════════════════════
    گام ۲.۱ مسترپلن — هاب «حاکمیت برنامه»
-   شاخص‌های مالک‌دار (ماژول شاخص‌ها / جدول بخش ۲۶) · ریجستری ریسک (F17 / بخش ۲۵)
+   شاخص‌های مالک‌دار (ماژول شاخص‌ها / جدول بخش ۲۶) · ریجستری ریسک (ماژول پلتفرمی / بخش ۲۳)
    نمرهٔ آمادگی شش‌لایهٔ وزن‌دار (بخش ۱۲/۱۳) · ممیزی سه‌گانه (بخش ۲۰/۲۱)
    قاعدهٔ ثابت سند: مقدار هر شاخص از دادهٔ زندهٔ ماژول‌ها محاسبه می‌شود؛
    عدد دستی وارد داشبورد نمی‌شود و ریسک بدون مالک ثبت نمی‌گردد.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const LEVEL_FA: Record<string, string> = { LOW: t('پایین'), MEDIUM: t('متوسط'), HIGH: t('بالا') };
-/* گام ۹.۲ — F17: ستون‌های AI روی ریسک (مورد استفاده تا توقف) */
+/* گام ۹.۲ — ستون‌های AI روی ریسک (مورد استفاده تا توقف) */
 const AI_USECASE_FA: Record<string, string> = {
   'org-question': 'جست‌وجوی سازمانی', 'meeting-assist': 'دستیار جلسه', 'dd-review': 'دستیار Due Diligence',
   'opp-priority': 'اولویت‌بندی فرصت', 'next-action': 'پیشنهاد اقدام بعدی', 'content-draft': 'تولید محتوا',
@@ -54,7 +54,7 @@ const faMoney = (v: number | string) => new Intl.NumberFormat(localeTag()).forma
 /* گام ۴.۶ — پروژه صفر: چک‌لیست پروژه صفر (نمای کلی) */
 const PZ_STATUS_FA = lt<Record<string, string>>({ PENDING: t('در انتظار'), IN_PROGRESS: t('در جریان'), DONE: t('انجام‌شده') });
 const PZ_STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> = { PENDING: 'neutral', IN_PROGRESS: 'warning', DONE: 'success' };
-/* گام ۵.۱ — کاتالوگ فرم‌های پیوست ب سند v6 (F01–F18) و وضعیت هرکدام در پلتفرم.
+/* گام ۵.۱ — کاتالوگ فرم‌های پیوست ب سند v6 (F01–F16) و وضعیت هرکدام در پلتفرم.
    مرجع نگاشت: docs/مسترپلن-v6-سامانه-هوشمند-SRIP.md (بخش ۴ — جدول نگاشت فرم‌ها). */
 const FORM_CATALOG = lt<Array<{ code: string; name: string; status: string; where: string }>>([
   { code: 'F01', name: 'کنترل اجرا', status: 'HAVE', where: 'پروژه‌ها → کنترل اجرا' },
@@ -64,17 +64,16 @@ const FORM_CATALOG = lt<Array<{ code: string; name: string; status: string; wher
   { code: 'F05', name: 'درخواست و تصویب دارایی برند', status: 'HAVE', where: 'حاکمیت برنامه → تب آمادگی' },
   { code: 'F06', name: 'فرم صفحه و انتشار PESO', status: 'HAVE', where: 'تقویم → رسانه تخصصی' },
   { code: 'F07', name: 'طرح پژوهش و داوری', status: 'HAVE', where: 'راهبرد → طرح پژوهش و داوری' },
-  { code: 'F08', name: 'کارت تولید و کنترل محتوای هوش مصنوعی', status: 'PARTIAL', where: 'تقویم → گردش تأیید محتوا؛ فیلدهای AI: فاز ۷' },
+  { code: 'F08', name: 'کارت تولید و کنترل محتوای هوش مصنوعی', status: 'HAVE', where: 'تقویم → گردش تأیید محتوا' },
   { code: 'F09', name: 'فرصت مناقصه', status: 'HAVE', where: 'فرصت‌ها → فرصت‌های مناقصه' },
   { code: 'F10', name: 'طرح اجرایی و گزارش رویداد', status: 'HAVE', where: 'تقویم → رویدادها' },
   { code: 'F11', name: 'برگهٔ ورود و تطبیق داده', status: 'HAVE', where: 'ممیزی سه‌گانه → مراحل انتقال' },
-  { code: 'F12', name: 'کارت کاربرد و ارزیابی هوش مصنوعی', status: 'PLANNED', where: 'درگاه هوش مصنوعی — فاز ۹' },
-  { code: 'F13', name: 'پروندهٔ اصالت و تقلب', status: 'PLANNED', where: 'اصالت و ریسک — فاز ۸' },
-  { code: 'F14', name: 'جدول پایش ماهانهٔ مرجعیت هوش مصنوعی', status: 'HAVE', where: 'حاکمیت برنامه → اهداف راهبردی' },
-  { code: 'F15', name: 'کارت آماده‌سازی سرمایه‌گذار و شریک', status: 'HAVE', where: 'مشارکت‌ها → آماده‌سازی سرمایه‌گذار و شریک' },
-  { code: 'F16', name: 'کارت نقش و ورود همکار', status: 'HAVE', where: 'افراد → کارت نقش و ورود همکار' },
-  { code: 'F17', name: 'دفتر ثبت ریسک و انتشار هوش مصنوعی', status: 'PARTIAL', where: 'حاکمیت برنامه → ریسک‌ها؛ ستون‌های AI: فاز ۹' },
-  { code: 'F18', name: 'کارت آماده‌سازی ورود به بازار', status: 'HAVE', where: 'فرصت‌ها → کارت‌های ورود به بازار' },
+  { code: 'F12', name: 'کارت کاربرد و ارزیابی هوش مصنوعی', status: 'HAVE', where: 'درگاه هوش مصنوعی → کارت کاربرد AI' },
+  { code: 'F13', name: 'جدول پایش ماهانهٔ مرجعیت هوش مصنوعی', status: 'HAVE', where: 'حاکمیت برنامه → اهداف راهبردی' },
+  { code: 'F14', name: 'کارت آماده‌سازی سرمایه‌گذار و شریک', status: 'HAVE', where: 'مشارکت‌ها → آماده‌سازی سرمایه‌گذار و شریک' },
+  { code: 'F15', name: 'کارت نقش و ورود همکار', status: 'HAVE', where: 'افراد → کارت نقش و ورود همکار' },
+  { code: 'F16', name: 'کارت آماده‌سازی ورود به بازار', status: 'HAVE', where: 'فرصت‌ها → کارت‌های ورود به بازار' },
+  { code: 'F17', name: 'ارتباطات بین‌المللی', status: 'PLANNED', where: 'ارتباطات بین‌المللی — فاز ۱۴' },
 ]);
 const FORM_STATUS_FA = lt<Record<string, string>>({ HAVE: t('موجود'), PARTIAL: t('موجود — تکمیل در برنامه'), PLANNED: t('در برنامه') });
 /* گام ۵.۶ — دروازه‌های کنترل مشترک (پیوست پ سند v6): G0–G6 با شرط عبور و
@@ -534,8 +533,8 @@ export default function ProgramPage() {
           </SectionCard>
 
           {/* ═══════════ گام ۵.۱ — کاتالوگ فرم‌های سند v6 (پیوست ب) ═══════════ */}
-          <SectionCard className="form-catalog" title={t('کاتالوگ فرم‌های سند (F01–F18)')} icon={<BookOpen size={17} />}
-            description={t('نگاشت هجده فرم عملیاتی پیوست ب سند v6 به ماژول‌های پلتفرم؛ فرم‌های بدون معادل سندی، ماژول پلتفرمی‌اند و کد نمی‌گیرند.')}>
+          <SectionCard className="form-catalog" title={t('کاتالوگ فرم‌های سند (F01–F17)')} icon={<BookOpen size={17} />}
+            description={t('نگاشت هفده فرم عملیاتی پیوست ب سند v14 به ماژول‌های پلتفرم؛ فرم‌های بدون معادل سندی، ماژول پلتفرمی‌اند و کد نمی‌گیرند.')}>
             <div className="table-wrap">
               <table>
                 <thead>
@@ -553,7 +552,7 @@ export default function ProgramPage() {
                 </tbody>
               </table>
             </div>
-            <p className="field-hint">{t('ماژول‌های پلتفرمی بدون کد سندی: چک‌لیست پروژه صفر · پروندهٔ شناخت · شاخص‌های برنامه · تأیید هزینه · گزارش ماهانه · صورت‌جلسهٔ تحویل.')}</p>
+            <p className="field-hint">{t('ماژول‌های پلتفرمی بدون کد سندی: پروندهٔ اصالت و تقلب · دفتر ثبت ریسک و انتشار هوش مصنوعی · چک‌لیست پروژه صفر · پروندهٔ شناخت · شاخص‌های برنامه · تأیید هزینه · گزارش ماهانه · صورت‌جلسهٔ تحویل.')}</p>
           </SectionCard>
 
           {/* ═══════════ گام ۵.۶ — دروازه‌های کنترل مشترک (پیوست پ سند v6) ═══════════ */}
@@ -627,7 +626,7 @@ export default function ProgramPage() {
         </>
       )}
 
-      {/* ═══════════ تب ریسک‌ها — F17 / بخش ۲۵ سند ═══════════ */}
+      {/* ═══════════ تب ریسک‌ها — بخش ۲۳ سند v14 (ماژول پلتفرمی) ═══════════ */}
       {tab === 'risks' && risks && (
         <>
           {(risks.summary.highOpen > 0) && (
@@ -876,7 +875,7 @@ export default function ProgramPage() {
           {/* ═══ گام ۱۰.۴ — F03 گسترش ممیزی سه‌گانه به فرد/دارایی ═══ */}
           <CapacityAudits />
 
-          {/* ═══════════ گام ۵.۳ — چارت هدف تیم (بخش ۲۱.۳ سند v6) ═══════════ */}
+          {/* ═══════════ گام ۵.۳ — چارت هدف تیم (بخش ۲۱.۳ سند v14) ═══════════ */}
           {(audits.chart ?? []).length > 0 && (
             <SectionCard className="team-chart" title={t('چارت هدف تیم (v6)')} icon={<Users size={17} />}
               description={t('عنوان نقش‌ها، لایه، زمان ورود ماه هدف و تعداد نفرات — نقش‌های هوش مصنوعی برجسته شده‌اند.')}>
@@ -987,7 +986,7 @@ export default function ProgramPage() {
                     </div>
                   </SectionCard>
 
-                  <SectionCard title={t('جدول پایش ماهانهٔ مرجعیت (F14)')} icon={<Activity size={17} />}
+                  <SectionCard title={t('جدول پایش ماهانهٔ مرجعیت (F13)')} icon={<Activity size={17} />}
                     description={t('نتیجهٔ هر پایش با اقدام اصلاحی ثبت می‌شود.')}
                     actions={writable ? (
                       <button className="srip-button primary" onClick={() => { setMonOpen(true); setMonError(''); }}><Plus size={14} /> {t('ثبت پایش')}</button>
@@ -1034,10 +1033,10 @@ export default function ProgramPage() {
             <div><b>{t('وضعیت')}</b><p><StatusBadge tone={RISK_STATUS_TONE[riskDetail.status]}>{RISK_STATUS_FA[riskDetail.status]}</StatusBadge></p></div>
             <div><b>{t('تاریخ بازبینی بعدی')}</b><p>{faDate(riskDetail.reviewAt)}</p></div>
             {riskDetail.notes ? <div><b>{t('یادداشت')}</b><p>{riskDetail.notes}</p></div> : null}
-            {/* گام ۹.۲ — ستون‌های هشت‌گانهٔ AI (F17) */}
+            {/* گام ۹.۲ — ستون‌های هشت‌گانهٔ AI (ماژول پلتفرمی) */}
             {riskDetail.kind === 'AI' && riskDetail.ai && (
               <div style={{ gridColumn: '1 / -1' }}>
-                <b>{t('ستون‌های AI (F17)')}</b>
+                <b>{t('ستون‌های AI (ماژول پلتفرمی)')}</b>
                 <div className="detail-grid" style={{ marginTop: 6 }}>
                   <div><b>{t('مورد استفاده')}</b><p>{AI_USECASE_FA[riskDetail.ai.useCase] ?? riskDetail.ai.useCase ?? '—'}</p></div>
                   <div><b>{t('آزمون')}</b><p>{riskDetail.ai.testRun || '—'}</p></div>
@@ -1069,7 +1068,7 @@ export default function ProgramPage() {
         )}
       </Modal>
 
-      {/* ═══════════ مودال: ریسک جدید (F17) ═══════════ */}
+      {/* ═══════════ مودال: ریسک جدید (بخش ۲۳) ═══════════ */}
       <Modal open={createOpen} title={t('ثبت ریسک جدید')} onClose={() => setCreateOpen(false)}
         description={t('ریسک بدون مالک ثبت نمی‌شود — مالک یکی از نقش‌های چارت برنامه است.')}
         footer={<>
@@ -1117,7 +1116,7 @@ export default function ProgramPage() {
           </label>
           {formError ? <div className="alert-banner danger" role="alert"><AlertTriangle size={16} /><span>{formError}</span></div> : null}
         
-          {/* گام ۹.۲ — F17: ریسک AI (اختیاری) */}
+          {/* گام ۹.۲ — ریسک AI (اختیاری) */}
           <label className="field">
             <span>{t('کاربرد AI (اختیاری — ریسک را به کاربرد ۱۹.۲ وصل می‌کند)')}</span>
             <select value={(form as any).aiUseCase ?? ''} onChange={(e) => setForm(f => ({ ...f, aiUseCase: e.target.value } as any))}>

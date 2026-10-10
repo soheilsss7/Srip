@@ -7872,7 +7872,7 @@ const nowIso=()=>new Date().toISOString();
 /* ═══════════════════════════════════════════════════════════════════════════
    گام ۲.۱ مسترپلن — «حاکمیت برنامه» (سند عملیاتی هلدینگ پارس نسخهٔ ۳)
    بخش ۱۲/۱۳: آمادگی شش‌لایهٔ وزن‌دار + دروازهٔ فصل · بخش ۲۰/۲۱: ممیزی سه‌گانه
-   بخش ۲۵/F17: ریجستری ریسک (ریسک بدون مالک ثبت نمی‌شود)
+   بخش ۲۳ سند v14: ریجستری ریسک (ریسک بدون مالک ثبت نمی‌شود)
    بخش ۲۶/ماژول شاخص‌ها: شاخص‌های مالک‌دار — «عدد دستی وارد داشبورد نمی‌شود»؛ هر شاخص
    از دادهٔ زندهٔ ماژول‌ها محاسبه می‌شود.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -8003,7 +8003,7 @@ function ensureGoalsSeed(){
   const C=(n,title,method,target6,target12,value,unit)=>({id:`gc-${n}`,order:n,title,method,target6,target12,value,unit});
   DB.goals=[{id:'goal-ai-authority',organizationId:PROGRAM_ORG_ID,
     title:'مرجعیت هوش مصنوعی فناوران پارس ایرانیان',owner:'مدیر اندیشکده و پژوهش',status:'ACTIVE',
-    description:'مرجعیت، ادعا نیست؛ جایگاهی است که با اعتبار منبع، کیفیت داده، تداوم حضور و استنادپذیری ساخته می‌شود و باید سنجیده شود (بخش ۱۸ سند v6). ابزار عملیاتی، راهنمای پایش مرجعیت با ۲۵ سؤال در سه دسته و جدول پایش ماهانه است؛ نتیجهٔ پایش هم شاخص مرجعیت را تغذیه می‌کند و هم اقدام‌های اصلاحی محتوا و وب‌سایت مرجع را تعیین می‌کند.',
+    description:'مرجعیت، ادعا نیست؛ جایگاهی است که با اعتبار منبع، کیفیت داده، تداوم حضور و استنادپذیری ساخته می‌شود و باید سنجیده شود (بخش ۱۸ سند v14). ابزار عملیاتی، راهنمای پایش مرجعیت با ۲۵ سؤال در سه دسته و جدول پایش ماهانه است؛ نتیجهٔ پایش هم شاخص مرجعیت را تغذیه می‌کند و هم اقدام‌های اصلاحی محتوا و وب‌سایت مرجع را تعیین می‌کند.',
     components:[
       C(1,'تعداد منابع معتبر ارجاع‌دهنده','شمارش منابع مستقل معتبر',15,40,22,'count'),
       C(2,'تعداد گزارش‌های مرجع منتشرشده','شمارش گزارش‌های اعتبارسنجی‌شده',4,10,6,'count'),
@@ -8129,7 +8129,7 @@ function ensureProgramSeed(){
     {id:'risk-7',organizationId:PROGRAM_ORG_ID,title:'خزش محدوده و درخواست‌های بیرون از برنامه',probability:'HIGH',impact:'MEDIUM',preventive:'قاعدهٔ کنترل محدوده',reactive:'هر درخواست جدید فقط از طریق تغییر رسمی برنامه',ownerRole:'مدیر پروژه',status:'OPEN',createdAt:ago(30),reviewAt:in90(8),notes:''},
     {id:'risk-8',organizationId:PROGRAM_ORG_ID,title:'پیشی‌گرفتن رقبا در انتشار مرجعیت',probability:'MEDIUM',impact:'MEDIUM',preventive:'تقویم انتشار پیوسته؛ تقدم گزارش سالانه',reactive:'پایش ماهانهٔ رقبا',ownerRole:'مدیر اندیشکده و پژوهش',status:'IN_PROGRESS',createdAt:ago(20),reviewAt:in90(15),notes:''},
     {id:'risk-9',organizationId:PROGRAM_ORG_ID,title:'تغییر اولویت مدیریت هلدینگ در میانهٔ برنامه',probability:'LOW',impact:'HIGH',preventive:'گزارش ماهانهٔ شفاف؛ بازنگری فصلی با صورت‌جلسه',reactive:'حفظ هستهٔ ثابت برنامه',ownerRole:'مدیرعامل',status:'CLOSED',createdAt:ago(60),reviewAt:in90(40),notes:'در بازنگری فصل گذشته بسته شد.'},
-    /* گام ۹.۲ — F17: ریسک‌های AI با ستون‌های هشت‌گانه (مورد استفاده تا توقف) */
+    /* گام ۹.۲ — ریسک‌های AI با ستون‌های هشت‌گانه (مورد استفاده تا توقف) */
     {id:'risk-ai-1',organizationId:PROGRAM_ORG_ID,kind:'AI',title:'تزریق دستور از طریق سند بازیابی‌شده در پرسش سازمانی',probability:'LOW',impact:'HIGH',preventive:'مرز داده و دستور (بلوک غیرقابل اعتماد BEGIN-DATA/END-DATA)',reactive:'توقف per-کاربرد و بازگشت به پاسخ انسانی',ownerRole:'مدیر محصول',status:'IN_PROGRESS',createdAt:ago(25),reviewAt:in90(20),notes:'آزمون ۱۹.۴ در باتری api هر تغییر کد اجرا می‌شود.',
       ai:{useCase:'org-question',testRun:'باتری api — چک تزریق دستور',finding:'پیلود داخل سند بازیابی‌شده در بلوک داده می‌ماند و دستور سامانه را عوض نمی‌کند',version:'demo-v6',releaseDecision:'CONDITIONAL',limitation:'خروجی فقط از منابع بازیابی‌شده؛ پاسخ بدون منبع نمایش داده نمی‌شود',review:'با هر تغییر موتور بازیابی',stopped:false}},
     {id:'risk-ai-2',organizationId:PROGRAM_ORG_ID,kind:'AI',title:'نشت الگوی محرمانه در خروجی مدل ابری',probability:'LOW',impact:'HIGH',preventive:'پوشاندن ورودی پیش از ارسال ابری + پالایش خروجی در همهٔ مسیرها',reactive:'قطع کلید ارائه‌دهنده و توقف مسیر ابری',ownerRole:'مدیر فناوری اطلاعات',status:'OPEN',createdAt:ago(20),reviewAt:in90(25),notes:'',
@@ -8517,7 +8517,7 @@ function ensureKnowledgeSeed(){
   ];
 }
 
-/* ═══════════════ گام ۲.۶ — معماری رویدادها + پروتکل بحران (بخش ۱۷ سند؛ F10 و F15) ═══════════════
+/* ═══════════════ گام ۲.۶ — معماری رویدادها + پروتکل بحران (بخش ۱۷ سند؛ F10 و F14) ═══════════════
    رویدادها دو مسیر مستقل دارند: مسیر الف «تحت مالکیت» (سرمایه‌گذاری سنگین، شاخص
    مرجعیت) و مسیر ب «حضور در رویداد بیرونی» (سرمایه‌گذاری سبک، شاخص شبکه‌سازی).
    خروجی این محور، تدوین و نگهداری تقویم رویدادهای سالانه است که هر دو مسیر را
@@ -8714,7 +8714,7 @@ function ensureAiProvidersSeed(){
         baseUrl:'https://api.cloud-demo.example/v1',model:'gpt-4o-mini',status:'INACTIVE',keyLast4:null,keySetAt:null,builtin:false,createdAt:at,updatedAt:at});
   }
 }
-/* ═══════════ گام ۶.۲ — قواعد انتخاب مدل و کنترل داده (۱۹.۴ سند v6) ═══════════
+/* ═══════════ گام ۶.۲ — قواعد انتخاب مدل و کنترل داده (۱۹.۴ سند v14) ═══════════
    مسیریابی کاربرد→ارائه‌دهنده/مدل با جایگزین (پیش‌فرض لوکال-اول، ابری جایگزین) ·
    پوشاندن دادهٔ محرمانه فقط پیش از ارسال ابری (مسیر لوکال معاف) ·
    مرز داده و دستور: محتوای بازیابی‌شده در بلوک دادهٔ جدا با علامت‌گذاری صریح ·
@@ -8797,7 +8797,7 @@ function ensureAiRoutingSeed(){
    مدل/زمان/هزینه/وضعیت)؛ داشبورد مصرف همهٔ اعدادش را از همین لاگ می‌سازد — هیچ
    عدد دستی نیست. کلید توقف کلی و per-کاربرد با دلیل و اقدام‌کننده ثبت می‌شود؛
    حالت HALTED یعنی «بازگشت به فرآیند انسانی» (توقف ایمن، ماه ۱۲ سند). */
-/* ═══════════ گام ۹.۲ — F17 دفتر ثبت ریسک و انتشار AI ═══════════
+/* ═══════════ گام ۹.۲ — دفتر ثبت ریسک و انتشار AI (ماژول پلتفرمی) ═══════════
    ستون‌های هشت‌گانهٔ AI روی ریسک: مورد استفاده · آزمون · یافته · نسخه ·
    تصمیم انتشار · محدودیت · بازبینی · توقف. اعتبارسنجی مشترک POST/PATCH. */
 const AI_RISK_RELEASE_FA={APPROVED:'تأیید',CONDITIONAL:'مشروط',REJECTED:'رد'};
@@ -8838,7 +8838,7 @@ const AI_F12_USE_CASES=[
   {key:'next-action',problem:'پیشنهاد گام بعدی روی تعامل/تعهد/اقدام',user:'کاربران تعامل و تعهد',allowedData:'تعامل، تعهد و اقدام‌های مرتبط در محدوده',tool:'کارت پیشنهاد اقدام بعدی روی تعامل',retrieval:'قواعد قطعی مهلت و وضعیت روی دادهٔ زندهٔ تعامل',testSet:{name:'سناریوهای مهلت و وضعیت',cases:6},sourceReliance:'کامل — پیشنهاد از وضعیت و مهلت رکورد محاسبه می‌شود',security:'بدون خروج داده — قواعد درون‌سامانه',humanConfirm:'ارسال/ثبت فقط با تأیید کاربر (۱۹.۲)',rollback:'اقدام دستی از مسیر معمول همیشه ممکن است؛ توقف per-کاربرد'},
   {key:'content-draft',problem:'پیش‌نویس محتوای منبع‌دار از بستهٔ اسناد مجاز',user:'تیم رسانه و محتوا',allowedData:'فقط اسناد انتخاب‌شدهٔ مجاز در محدوده (چک‌باکس)',tool:'پنل دستیار تولید محتوا در رسانهٔ تقویم',retrieval:'بستهٔ اسناد مجاز کاربر + قالب انتشار نه‌گامی',testSet:{name:'پیش‌نویس‌های نمونه با برچسب سهم AI',cases:7},sourceReliance:'کامل — ادعاها به سند منبع پیوند می‌خورند؛ سهم AI اعلام می‌شود',security:'پوشاندن الگوهای محرمانه + مرز داده و دستور + کارت F08 کامل',humanConfirm:'انتشار صرفاً انسانی با C2PA و اثرانگشت SHA-256 انتشار (۷.۵)',rollback:'پیش‌نویس منتشرنشده قابل دورریز است؛ توقف per-کاربرد'},
   {key:'authority-monitor',problem:'پایش جایگاه مرجعیت در برابر رقبا',user:'مدیر اندیشکده و پژوهش',allowedData:'رقیبان هفت‌بُعدی و نظرسنجی‌های عمومی در محدوده',tool:'پنل پایش مرجعیت هوش مصنوعی',retrieval:'دادهٔ رقیب/نظرسنجی + معیارهای پایش ماهانه',testSet:{name:'دوره‌های پایش نمونه',cases:5},sourceReliance:'کامل — نتیجهٔ پایش از دادهٔ رقیب و نظرسنجی محاسبه می‌شود',security:'محدودهٔ سازمانی + دادهٔ عمومی/در محدوده',humanConfirm:'ثبت نتیجهٔ پایش با تأیید مدیر اندیشکده (۱۹.۲)',rollback:'پایش دستی با راهنمای ۲۵ سؤال ممکن است؛ توقف per-کاربرد'},
-  {key:'authenticity',problem:'تشخیص حساب/منبع/سرور جعلی و ریسک اصالت',user:'تحلیلگر اعتماد و ایمنی + مالک',allowedData:'رویدادهای امنیتی، نشست‌ها و دستگاه‌های در محدوده',tool:'موتور نشانه‌ها و پرونده‌های اصالت (F13) در هوشمندی',retrieval:'کاتالوگ ۱۶ نشانهٔ وزن‌دار روی دادهٔ زندهٔ امنیتی',testSet:{name:'سناریوهای نشانه و امتیاز (۸.۱)',cases:16},sourceReliance:'کامل — امتیاز ریسک قطعی از نشانه‌های فعال با دلیل و شاهد',security:'دسترسی فقط برای نقش تحلیلگر/مالک + snapshot نسخهٔ قاعده در پرونده',humanConfirm:'اقدام محدودکننده فقط پس از بازبینی انسانی (۸.۲/۱۹.۵.۱)',rollback:'پرونده بدون اقدام باز می‌ماند؛ رفع محدودیت با ابطال اعتراض'},
+  {key:'authenticity',problem:'تشخیص حساب/منبع/سرور جعلی و ریسک اصالت',user:'تحلیلگر اعتماد و ایمنی + مالک',allowedData:'رویدادهای امنیتی، نشست‌ها و دستگاه‌های در محدوده',tool:'موتور نشانه‌ها و پرونده‌های اصالت (ماژول پلتفرمی) در هوشمندی',retrieval:'کاتالوگ ۱۶ نشانهٔ وزن‌دار روی دادهٔ زندهٔ امنیتی',testSet:{name:'سناریوهای نشانه و امتیاز (۸.۱)',cases:16},sourceReliance:'کامل — امتیاز ریسک قطعی از نشانه‌های فعال با دلیل و شاهد',security:'دسترسی فقط برای نقش تحلیلگر/مالک + snapshot نسخهٔ قاعده در پرونده',humanConfirm:'اقدام محدودکننده فقط پس از بازبینی انسانی (۸.۲/۱۹.۵.۱)',rollback:'پرونده بدون اقدام باز می‌ماند؛ رفع محدودیت با ابطال اعتراض'},
 ];
 function ensureAiUseCaseCardsFor(orgId){
   if(!Array.isArray(DB.aiUseCases)) DB.aiUseCases=[];
@@ -9174,7 +9174,7 @@ function aiContentDraftFrom(docs,pillar){
     `بر اساس ستون «${p.title}» (ریتم ${p.rhythm})، این پیش‌نویس فقط از بستهٔ منابع مجاز انتخابی ساخته شده است.`,
     ...docs.slice(0,5).map((d,i)=>`نکتهٔ ${faN(i+1)} — از سند «${d.name}» (طبقه‌بندی ${d.classification??'داخلی'}): محتوای کلیدی این سند به اختصار بازگو و ارجاع داده می‌شود [${faN(i+1)}].`),
     `جمع‌بندی: چارچوب پیام از منابع فوق برداشت شده و پیش از انتشار باید گردش تأیید سه‌مرحله‌ای F08 را بگذراند.`,
-    'افشای هوش مصنوعی: این پیش‌نویس با کمک درگاه هوش مصنوعی از منابع مجاز تولید شده است؛ پیش از انتشار، بازبینی و تأیید انسانی الزامی است (سطح اختیار ۱۹.۲ سند v6).',
+    'افشای هوش مصنوعی: این پیش‌نویس با کمک درگاه هوش مصنوعی از منابع مجاز تولید شده است؛ پیش از انتشار، بازبینی و تأیید انسانی الزامی است (سطح اختیار ۱۹.۲ سند v14).',
   ].join('\n\n');
   return {title,pillar:p.key,month,body,
     citations:docs.slice(0,5).map((d,i)=>({n:i+1,documentId:d.id,name:d.name}))};
@@ -9250,7 +9250,7 @@ function authRiskScoreOf(subject){
     reason,
     families:families.map(f=>({key:f,titleFa:AUTH_FAMILY_FA[f]??f,
       count:signals.filter(s=>{const d=AUTH_SIGNAL_CATALOG.find(c=>c.key===s.signalKey);return d&&d.family===f;}).length})),
-    rule:'امتیاز ریسک قطعی از ترکیب وزن‌دار نشانه‌های ثبت‌شده محاسبه می‌شود؛ خروجی همیشه «امتیاز + دلیل + شاهد» است، نه برچسب قطعی (سند v6، ۱۹.۵).',
+    rule:'امتیاز ریسک قطعی از ترکیب وزن‌دار نشانه‌های ثبت‌شده محاسبه می‌شود؛ خروجی همیشه «امتیاز + دلیل + شاهد» است، نه برچسب قطعی (سند v14، ۱۹.۵).',
     ruleVersion:'auth-risk-v1'};
 }
 function authSubjectView(s){
@@ -9303,7 +9303,7 @@ function ensureAuthSubjects(){
   saveDb();
 }
 
-/* ═══════════════ گام ۸.۲ — پروندهٔ اصالت F13 + سیاست اقدام (۱۹.۵.۱) ═══════════════
+/* ═══════════════ گام ۸.۲ — پروندهٔ اصالت (ماژول پلتفرمی) + سیاست اقدام (۱۹.۵.۱) ═══════════════
    هر پرونده: شناسهٔ حساب/منبع/سرور/دستگاه/نشست + نشانه‌ها + امتیاز + نسخهٔ قاعده +
    اقدام + بازبین + اعتراض و نتیجه. چهار سطح: کم (ثبت و ادامه) · متوسط (شاهد تکمیلی)
    · بالا (محدودیت موقت + پرونده) · بحرانی (قرنطینه + هشدار).
@@ -9830,10 +9830,10 @@ function ensurePartnershipSeed(){
     {id:'pt-9',organizationId:PARTNERSHIP_ORG_ID,partnerOrgId:'org-5',type:'رویدادی',stage:'ENDED',ownerRole:'مدیر رویداد',ourCommitments:'برگزاری وبینار مشترک',theirCommitments:'معرفی به شبکهٔ پیمانکاران',contractName:'قرارداد وبینار مشترک',contractSignedAt:ago(300),relationshipId:'r-3',opportunityId:'o-2',reviewAt:ago(10),createdAt:ago(320),updatedAt:ago(10),notes:'پایان موفق؛ امکان تمدید در برنامهٔ سال دوم.'},
   ];
 }
-/* ═══════════ گام ۱۰.۱ — F02 پروندهٔ Due Diligence + F15 آماده‌سازی سرمایه‌گذار و شریک ═══════════
+/* ═══════════ گام ۱۰.۱ — F02 پروندهٔ Due Diligence + F14 آماده‌سازی سرمایه‌گذار و شریک ═══════════
    F02: محورهای ۶.۲.۱ (فنی) و ۶.۲.۲ (کسب‌وکاری) با پاسخ/شاهد/نقص · حق پاسخ طرف مقابل ·
    نظر مدیر تیم Y · وضعیت تصویب G2 (شرط: تکمیل همهٔ محورها + نظر تیم Y).
-   F15: کارت آماده‌سازی متصل به مشارکت/فرصت — وضعیت DD و تعهدها زنده محاسبه می‌شوند. */
+   F14: کارت آماده‌سازی متصل به مشارکت/فرصت — وضعیت DD و تعهدها زنده محاسبه می‌شوند. */
 const DD_AXIS_STATUS_FA={NOT_STARTED:'شروع‌نشده',IN_PROGRESS:'در جریان',ACCEPTED:'پذیرفته‌شده'};
 const DOSSIER_STATUS_FA={DRAFT:'پیش‌نویس',IN_REVIEW:'در بررسی',APPROVED:'تصویب‌شده',REJECTED:'ردشده'};
 const TEAM_Y_OPINION_FA={APPROVE:'تأیید',CONDITIONS:'مشروط',REJECT:'رد'};
@@ -9917,7 +9917,7 @@ function readinessPackView(x,req){
     ddStatus:dd?{dossierId:dd.id,status:dd.status,statusFa:dd.statusFa,acceptedAxes:dd.acceptedAxes,totalAxes:dd.totalAxes,g2Ready:dd.g2Ready}:null,
     ddStatusFa:dd?`${dd.statusFa} — ${dd.acceptedAxes}/${dd.totalAxes} محور`:'بدون پروندهٔ DD'};
 }
-/* ═══════════ گام ۱۰.۲ — F09 فرصت مناقصه + F18 کارت ورود به بازار: ثابت‌ها، بذر و نما ═══════════ */
+/* ═══════════ گام ۱۰.۲ — F09 فرصت مناقصه + F16 کارت ورود به بازار: ثابت‌ها، بذر و نما ═══════════ */
 const TENDER_DECISION_FA={JOIN:'می‌کنیم',CONDITIONAL:'مشروط',DECLINE:'می‌کنیم — منصرف',UNDECIDED:'هنوز نامشخص'}; /* تصمیم شرکت */
 const TENDER_SUBMIT_FA={NOT_SUBMITTED:'ارسال نشده',PREPARING:'در حال آماده‌سازی',SUBMITTED:'ارسال شد',WITHDRAWN:'بازپس‌گیری'};
 const TENDER_OUTCOME_FA={PENDING:'در انتظار',WON:'برد',LOST:'باخت'};
@@ -9979,7 +9979,7 @@ function gtmCardView(x){
     decisionFa:GTM_DECISION_FA[x.decision]??x.decision};
 }
 
-/* ═══════════ گام ۱۰.۳ — F01 کنترل اجرا + F16 کارت نقش و ورود همکار: بذر و نما ═══════════ */
+/* ═══════════ گام ۱۰.۳ — F01 کنترل اجرا + F15 کارت نقش و ورود همکار: بذر و نما ═══════════ */
 const EXEC_STATUS_FA={ON_TRACK:'در مسیر',AT_RISK:'در معرض ریسک',BLOCKED:'بلاک',DONE:'تکمیل'};
 
 function ensureExecControlSeed(){
@@ -10062,7 +10062,7 @@ function ensureCapacityAuditSeed(){
     {id:'ca-2',organizationId:PROGRAM_ORG_ID,kind:'PERSON',subject:'کارشناس ارشد داده',
      maturity:'GOOD',access:'دسترسی به انبار داده و داشبوردها',dependency:'تنها فرد آشنا با خط دادهٔ تاریخی',
      evidence:'مصاحبهٔ ممیزی + سابقهٔ پروژه‌ها',gap:'نبود جانشین و مستندات ناکافی',
-     risk:'MEDIUM',action:'جذب دستیار داده و مستندسازی خط داده (پیوند با F16)',
+     risk:'MEDIUM',action:'جذب دستیار داده و مستندسازی خط داده (پیوند با F15)',
      createdAt:AGO(18),updatedAt:AGO(6)}
   );
   saveDb();
@@ -16277,7 +16277,7 @@ async function __handler(req, res) {
     if(!ownerRole) return json(res,400,{message:'ریسک بدون مالک ثبت نمی‌شود (بخش ۲۵ سند).'});
     const riskChart=programSettingsFor(req).roles;
     if(riskChart.length&&!riskChart.includes(ownerRole)) return json(res,400,{message:'مالک ریسک باید یکی از نقش‌های چارت سازمان شما باشد.'});
-    /* گام ۹.۲ — F17: ثبت ریسک AI با ستون‌های هشت‌گانه (اختیاری) */
+    /* گام ۹.۲ — ثبت ریسک AI با ستون‌های هشت‌گانه (اختیاری) */
     let ai=null;
     if(b.ai&&typeof b.ai==='object'){
       const v=aiRiskFields(b.ai,false);
@@ -16348,7 +16348,7 @@ async function __handler(req, res) {
     const chartSet=programSettingsFor(req);
     return json(res,200,{...programAuditsFor(req),
       chart:(chartSet.chart??[]).map(r=>({...r})),
-      chartRule:'چارت هدف تیم (بخش ۲۱.۳ سند v6): زمان ورود، ماه هدف برای فعال‌شدن نقش است و آغاز جذب می‌تواند زودتر انجام شود.',
+      chartRule:'چارت هدف تیم (بخش ۲۱.۳ سند v14): زمان ورود، ماه هدف برای فعال‌شدن نقش است و آغاز جذب می‌تواند زودتر انجام شود.',
       rule:'ممیزی ارزیابی صادقانه از وضعیت موجود است؛ خروجی آن ورودی مستقیم بازسازی نقش‌ها و برنامهٔ انتقال داده است (بخش ۲۰/۲۱ سند).',
       migrationRule:'هر سامانهٔ در صف انتقال/خاموش‌سازی، ده مرحلهٔ کنترلی بخش ۲۱ سند را ترتیبی طی می‌کند (F11)؛ سامانه فقط با اتمام هر ده مرحله «تکمیل‌شده» می‌شود.'});
   }
@@ -16898,7 +16898,7 @@ async function __handler(req, res) {
         generationPrompt:`ساخت پیش‌نویس از بستهٔ منابع انتخابی (${faN(docs.length)} سند، ستون ${pillar})`,
         aiShare:'PARTIAL',c2paStatus:'NOT_EMBEDDED',sources:ids},
       requiresApproval:true,
-      approvalRule:'ثبت پیش‌نویس فقط با تأیید کاربر (سطح اختیار ۱۹.۲ سند v6)؛ پیش‌نویس ثبت‌شده همچنان گردش تأیید F08 را می‌گذراند.',
+      approvalRule:'ثبت پیش‌نویس فقط با تأیید کاربر (سطح اختیار ۱۹.۲ سند v14)؛ پیش‌نویس ثبت‌شده همچنان گردش تأیید F08 را می‌گذراند.',
       engine:route.providerName,
       sources:docs.map(d=>({sourceTypeFa:'سند مخزن',title:d.name,url:'/documents',documentId:d.id})),
       disclaimer:'فقط پیشنهاد — تولید از منابع مجاز؛ پیش از انتشار، بازبینی و تأیید انسانی الزامی است.'});
@@ -16935,7 +16935,7 @@ async function __handler(req, res) {
     const ids=visibleOrgIds(req);
     const items=DB.aiProviders.filter(p=>ids.includes(p.organizationId)).map(aiProviderView);
     return json(res,200,{items,
-      rule:'هیچ جزئی از سامانه مستقیم به مدل وصل نمی‌شود؛ همهٔ فراخوانی‌ها از درگاه per-tenant می‌گذرد (۱۹.۱ سند v6). مسیر لوکال بدون هیچ سرویس بیرونی کار می‌کند و کلید API فقط یک‌بار نمایش داده و سپس تنها با ۴ رقم آخر نگه داشته می‌شود.'});
+      rule:'هیچ جزئی از سامانه مستقیم به مدل وصل نمی‌شود؛ همهٔ فراخوانی‌ها از درگاه per-tenant می‌گذرد (۱۹.۱ سند v14). مسیر لوکال بدون هیچ سرویس بیرونی کار می‌کند و کلید API فقط یک‌بار نمایش داده و سپس تنها با ۴ رقم آخر نگه داشته می‌شود.'});
   }
   if(is('/ai/providers')&&method==='POST'){
     if(!hasPerm('ai.admin')) return json(res,403,{message:'شما مجوز «مدیریت درگاه هوش مصنوعی» (ai.admin) را ندارید.'});
@@ -17074,7 +17074,7 @@ async function __handler(req, res) {
         usable:primary?.status==='ACTIVE'||fallback?.status==='ACTIVE'};
     });
     return json(res,200,{items,providers:providers.map(aiProviderView),
-      rule:'سیاست پیش‌فرض: لوکال اول، ابری جایگزین — قابل تغییر per-tenant. هر کاربرد AI یک ارائه‌دهنده/مدل اصلی و یک مسیر جایگزین دارد؛ مسیر عملاً در دسترس است اگر اصلی یا جایگزین ACTIVE باشد (قواعد انتخاب مدل، ۱۹.۴ سند v6).'});
+      rule:'سیاست پیش‌فرض: لوکال اول، ابری جایگزین — قابل تغییر per-tenant. هر کاربرد AI یک ارائه‌دهنده/مدل اصلی و یک مسیر جایگزین دارد؛ مسیر عملاً در دسترس است اگر اصلی یا جایگزین ACTIVE باشد (قواعد انتخاب مدل، ۱۹.۴ سند v14).'});
   }
   if(is('/ai/routing')&&method==='PATCH'){
     if(!hasPerm('ai.admin')) return json(res,403,{message:'شما مجوز «مدیریت درگاه هوش مصنوعی» (ai.admin) را ندارید.'});
@@ -17189,7 +17189,7 @@ async function __handler(req, res) {
     const missing=[...new Set(routedApps.filter(a=>!covered.has(a)))];
     return json(res,200,{items:cards,
       coverage:{gatewayApplications:new Set(routedApps).size,covered:covered.size,missing},
-      rule:'هر کاربرد فعال درگاه هوش مصنوعی باید یک کارت F12 (کاربرد و ارزیابی AI) داشته باشد؛ ستون مدل زنده از مسیریابی خوانده می‌شود و تصمیم انتشار/آزمون/بازگشت ایمن در همین کارت ثبت می‌شود (۱۹.۲/۱۹.۳ سند v6).'});
+      rule:'هر کاربرد فعال درگاه هوش مصنوعی باید یک کارت F12 (کاربرد و ارزیابی AI) داشته باشد؛ ستون مدل زنده از مسیریابی خوانده می‌شود و تصمیم انتشار/آزمون/بازگشت ایمن در همین کارت ثبت می‌شود (۱۹.۲/۱۹.۳ سند v14).'});
   }
   if(is('/ai/use-cases')&&method==='POST'){
     if(!hasPerm('ai.admin')) return json(res,403,{message:'شما مجوز «مدیریت درگاه هوش مصنوعی» (ai.admin) را ندارید.'});
@@ -17265,7 +17265,7 @@ async function __handler(req, res) {
     const prim=primaryOrgId(authUser)??ids[0]??null;
     const items=(DB.aiModelCards??[]).filter(c=>c.organizationId===prim).map(aiModelCardView);
     return json(res,200,{items,
-      rule:'هر ارائه‌دهندهٔ هوش مصنوعی یک شناسنامهٔ مدل مستقل دارد: مدل، نسخه، منشأ و محدودیت‌ها — متصل به ارائه‌دهنده و با وضعیت زندهٔ آن (F17 / ۱۹.۴ سند v6).'});
+      rule:'هر ارائه‌دهندهٔ هوش مصنوعی یک شناسنامهٔ مدل مستقل دارد: مدل، نسخه، منشأ و محدودیت‌ها — متصل به ارائه‌دهنده و با وضعیت زندهٔ آن (ماژول پلتفرمی).'});
   }
   if(is('/ai/model-cards')&&method==='POST'){
     if(!hasPerm('ai.admin')) return json(res,403,{message:'شما مجوز «مدیریت درگاه هوش مصنوعی» (ai.admin) را ندارید.'});
@@ -17508,7 +17508,7 @@ async function __handler(req, res) {
       status:'OK',docsRetrieved:1,orgId:halt.orgId});
     return json(res,200,{draft,
       requiresApproval:true,
-      approvalRule:'ثبت پس از تأیید صاحب جلسه (سطح اختیار ۱۹.۲ سند v6) — بدون تأیید، هیچ چیزی ثبت نمی‌شود.',
+      approvalRule:'ثبت پس از تأیید صاحب جلسه (سطح اختیار ۱۹.۲ سند v14) — بدون تأیید، هیچ چیزی ثبت نمی‌شود.',
       engine:route.providerName,engineFa:route.mode==='LOCAL'?'موتور قطعی (بدون مدل بیرونی)':`ارائه‌دهنده: ${route.providerName}`,
       sources:[{sourceTypeFa:'جلسه',title:m.title,url:`/meetings/${m.id}`}],
       disclaimer:'فقط پیشنهاد — ویرایش کنید و سپس با تأیید ثبت کنید.'});
@@ -17593,7 +17593,7 @@ async function __handler(req, res) {
       mode:route.mode,promptChars:0,outputChars:JSON.stringify(pr).length,durationMs:Date.now()-t0,
       costEstimate:0,status:'OK',docsRetrieved:1,orgId:halt.orgId});
     return json(res,200,{opportunityId:o.id,name:o.name,...pr,
-      decisionRule:'بدون رد یا قبول خودکار — امتیاز و دلیل قابل توضیح فقط برای تصمیم انسانی است (سطح اختیار ۱۹.۲ سند v6).',
+      decisionRule:'بدون رد یا قبول خودکار — امتیاز و دلیل قابل توضیح فقط برای تصمیم انسانی است (سطح اختیار ۱۹.۲ سند v14).',
       engine:route.providerName,
       sources:[{sourceTypeFa:'رکورد ساختاریافته',title:`فرصت: ${o.name}`,url:`/opportunities/${o.id}`}],
       disclaimer:'فقط پیشنهاد'});
@@ -17616,7 +17616,7 @@ async function __handler(req, res) {
       costEstimate:0,status:'OK',docsRetrieved:1,orgId:halt.orgId});
     return json(res,200,{interactionId:inter.id,subject:inter.subject,proposal,
       requiresApproval:true,
-      approvalRule:'ثبت و ارسال فقط با تأیید کاربر (سطح اختیار ۱۹.۲ سند v6) — بدون تأیید، هیچ اقدامی ثبت نمی‌شود.',
+      approvalRule:'ثبت و ارسال فقط با تأیید کاربر (سطح اختیار ۱۹.۲ سند v14) — بدون تأیید، هیچ اقدامی ثبت نمی‌شود.',
       engine:route.providerName,
       sources:[{sourceTypeFa:'رکورد ساختاریافته',title:`تعامل: ${inter.subject}`,url:'/interactions'}],
       disclaimer:'فقط پیشنهاد'});
@@ -17706,7 +17706,7 @@ async function __handler(req, res) {
     return json(res,200,{signal:row,subject:v,risk:v?.risk??null});
   }
 
-  /* ─────────────── گام ۸.۲ — پروندهٔ اصالت F13 + سیاست اقدام (/authenticity/cases) ────────── */
+  /* ─────────────── گام ۸.۲ — پروندهٔ اصالت (ماژول پلتفرمی) + سیاست اقدام (/authenticity/cases) ────────── */
   if(is('/authenticity/cases')&&method==='GET'){
     if(!hasPerm('security.read')) return json(res,403,{message:'شما مجوز «مشاهدهٔ امنیت» (security.read) را ندارید.'});
     ensureAuthCasesSeed();
@@ -17847,7 +17847,7 @@ async function __handler(req, res) {
     const outputs=THINK_TANK_OUTPUTS.map(o=>({...o,
       registered:items.filter(r=>r.outputKey===o.key).length}));
     return json(res,200,{outputs,items,
-      rule:'زمان هر خروجی اندیشکده در جدول صریح است؛ تاریخ دقیق انتشار در تقویم SRIP ثبت و هر تغییر با علت و مالک اصلاح می‌شود (بخش ۱۵.۱ سند v6).'});
+      rule:'زمان هر خروجی اندیشکده در جدول صریح است؛ تاریخ دقیق انتشار در تقویم SRIP ثبت و هر تغییر با علت و مالک اصلاح می‌شود (بخش ۱۵.۱ سند v14).'});
   }
   if(is('/program/think-tank')&&method==='POST'){
     if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
@@ -18213,7 +18213,7 @@ async function __handler(req, res) {
 
   /* ─────────────── گام ۲.۲ مسترپلن — ماژول مشارکت (/partnerships) ──────────
      خط لولهٔ چهارسطحی مذاکره → تفاهم‌نامه → فعال → پایان؛ قاعدهٔ سند:
-     فعال‌سازی مشارکت بدون قرارداد ثبت نمی‌شود (F15 — مذاکره تا فعال‌سازی). */
+     فعال‌سازی مشارکت بدون قرارداد ثبت نمی‌شود (F14 — مذاکره تا فعال‌سازی). */
   if(is('/partnerships')&&method==='GET'){
     if(!hasPerm('partnership.read')) return json(res,403,{message:'شما مجوز «مشاهده مشارکت‌ها» (partnership.read) را ندارید.'});
     const rows=partnershipsFor(req);
@@ -18222,7 +18222,7 @@ async function __handler(req, res) {
     return json(res,200,{items:filtered.map(partnershipView),summary:partnershipSummary(rows,programSettingsFor(req).partnershipTarget),
       stages:PARTNERSHIP_STAGES.map(st=>({key:st,label:PARTNERSHIP_STAGE_FA[st]})),
       types:PARTNERSHIP_TYPES,roles:programSettingsFor(req).roles,
-      rule:'فعال‌سازی مشارکت بدون قرارداد ثبت نمی‌شود (F15 سند — مذاکره تا فعال‌سازی).',generatedAt:nowIso()});
+      rule:'فعال‌سازی مشارکت بدون قرارداد ثبت نمی‌شود (F14 سند — مذاکره تا فعال‌سازی).',generatedAt:nowIso()});
   }
   if(is('/partnerships')&&method==='POST'){
     if(!hasPerm('partnership.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر مشارکت» (partnership.write) را ندارید.'});
@@ -18242,7 +18242,7 @@ async function __handler(req, res) {
     const oppId=String(b.opportunityId??'').trim()||null;
     if(oppId&&!OPPORTUNITIES.some(o=>o.id===oppId)) return json(res,400,{message:'فرصت انتخاب‌شده یافت نشد.'});
     const contractName=String(b.contractName??'').trim()||null;
-    const stage='NEGOTIATION'; /* هر مشارکت تازه از مذاکره آغاز می‌شود (F15) */
+    const stage='NEGOTIATION'; /* هر مشارکت تازه از مذاکره آغاز می‌شود (F14) */
     const row={id:`pt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`,
       organizationId:primaryOrgId(authUser)??visibleOrgIds(req)[0]??PARTNERSHIP_ORG_ID,
       partnerOrgId,type,stage,ownerRole,
@@ -18271,7 +18271,7 @@ async function __handler(req, res) {
     if(b.stage!=null){
       const v=String(b.stage).toUpperCase();
       if(!PARTNERSHIP_STAGE_FA[v]) return json(res,400,{message:'مرحلهٔ مشارکت باید مذاکره، تفاهم‌نامه، فعال یا پایان باشد.'});
-      if(v==='ACTIVE'&&!row.contractName) return json(res,400,{message:'فعال‌سازی مشارکت بدون قرارداد ثبت نمی‌شود (F15 سند — مذاکره تا فعال‌سازی).'});
+      if(v==='ACTIVE'&&!row.contractName) return json(res,400,{message:'فعال‌سازی مشارکت بدون قرارداد ثبت نمی‌شود (F14 سند — مذاکره تا فعال‌سازی).'});
       row.stage=v;
     }
     for(const k of ['ourCommitments','theirCommitments','notes']) if(b[k]!=null) row[k]=String(b[k]).trim();
@@ -18388,7 +18388,7 @@ async function __handler(req, res) {
     return json(res,200,dossierView(d));
   }
 
-  /* ─────────────── گام ۱۰.۱ — F15 کارت آماده‌سازی سرمایه‌گذار و شریک (/readiness-packs) ────────── */
+  /* ─────────────── گام ۱۰.۱ — F14 کارت آماده‌سازی سرمایه‌گذار و شریک (/readiness-packs) ────────── */
   if(is('/readiness-packs')&&method==='GET'){
     if(!hasPerm('partnership.read')) return json(res,403,{message:'شما مجوز «مشاهده مشارکت‌ها» (partnership.read) را ندارید.'});
     ensurePartnershipSeed(); ensureDossierSeed(); ensureReadinessPackSeed();
@@ -18396,7 +18396,7 @@ async function __handler(req, res) {
     const items=(DB.readinessPacks??[]).filter(x=>ids.includes(x.organizationId))
       .map(x=>readinessPackView(x,req)).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));
     return json(res,200,{items,
-      rule:'کارت آماده‌سازی سرمایه‌گذار و شریک (F15): موضوع، هدف رابطه، شواهد، فهرست هدف، طرح جلسه و اقدام بعدی — متصل به مشارکت/فرصت موجود؛ «وضعیت DD» و «تعهدها» زنده از پروندهٔ DD و مشارکت متصل خوانده می‌شوند و دستی ثبت نمی‌شوند.'});
+      rule:'کارت آماده‌سازی سرمایه‌گذار و شریک (F14): موضوع، هدف رابطه، شواهد، فهرست هدف، طرح جلسه و اقدام بعدی — متصل به مشارکت/فرصت موجود؛ «وضعیت DD» و «تعهدها» زنده از پروندهٔ DD و مشارکت متصل خوانده می‌شوند و دستی ثبت نمی‌شوند.'});
   }
   if(is('/readiness-packs')&&method==='POST'){
     if(!hasPerm('partnership.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر مشارکت» (partnership.write) را ندارید.'});
@@ -18413,7 +18413,7 @@ async function __handler(req, res) {
     if(ptId&&!(DB.partnerships??[]).some(p=>p.id===ptId&&ids.includes(p.organizationId))) return json(res,400,{message:'مشارکت انتخاب‌شده یافت نشد یا خارج از محدودهٔ شماست.'});
     const opId=String(b.opportunityId??'').trim()||null;
     if(opId&&!OPPORTUNITIES.some(o=>o.id===opId)) return json(res,400,{message:'فرصت انتخاب‌شده یافت نشد.'});
-    if(!ptId&&!opId) return json(res,400,{message:'کارت F15 باید به یک مشارکت یا فرصت موجود متصل باشد.'});
+    if(!ptId&&!opId) return json(res,400,{message:'کارت F14 باید به یک مشارکت یا فرصت موجود متصل باشد.'});
     const row={id:`rp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,
       organizationId:primaryOrgId(authUser)??ids[0]??PARTNERSHIP_ORG_ID,
       subject,partnershipId:ptId,opportunityId:opId,ownerRole,
@@ -18520,7 +18520,7 @@ async function __handler(req, res) {
     return json(res,200,tenderView(row));
   }
 
-  /* ─────────────── گام ۱۰.۲ — F18 کارت ورود به بازار (/gtm-cards) ────────── */
+  /* ─────────────── گام ۱۰.۲ — F16 کارت ورود به بازار (/gtm-cards) ────────── */
   if(is('/gtm-cards')&&method==='GET'){
     if(!hasPerm('opportunity.read')) return json(res,403,{message:'شما مجوز «مشاهده فرصت‌ها» (opportunity.read) را ندارید.'});
     ensureDossierSeed(); ensureGtmCardSeed();
@@ -18528,7 +18528,7 @@ async function __handler(req, res) {
       .map(gtmCardView).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));
     return json(res,200,{items,
       decisions:Object.fromEntries(Object.entries(GTM_DECISION_FA)),
-      rule:'کارت ورود به بازار (F18): محصول، وضعیت DD (زنده از پروندهٔ متصل)، مشتری ایدئال، ارزش پیشنهادی، بسته‌بندی، قیمت‌گذاری، کانال، شریک، اجرای آزمایشی و شواهد مشتری؛ تصمیم ورود (GO) فقط با پروندهٔ DD تصویب‌شده باز می‌شود.'});
+      rule:'کارت ورود به بازار (F16): محصول، وضعیت DD (زنده از پروندهٔ متصل)، مشتری ایدئال، ارزش پیشنهادی، بسته‌بندی، قیمت‌گذاری، کانال، شریک، اجرای آزمایشی و شواهد مشتری؛ تصمیم ورود (GO) فقط با پروندهٔ DD تصویب‌شده باز می‌شود.'});
   }
   if(is('/gtm-cards')&&method==='POST'){
     if(!hasPerm('opportunity.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر فرصت» (opportunity.write) را ندارید.'});
@@ -18665,14 +18665,14 @@ async function __handler(req, res) {
     return json(res,200,execControlView(row));
   }
 
-  /* ─────────────── گام ۱۰.۳ — F16 کارت نقش و ورود همکار (/role-cards) ────────── */
+  /* ─────────────── گام ۱۰.۳ — F15 کارت نقش و ورود همکار (/role-cards) ────────── */
   if(is('/role-cards')&&method==='GET'){
     if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
     ensureRoleCardSeed();
     const items=(DB.roleCards??[]).filter(x=>visibleOrgIds(req).includes(x.organizationId))
       .map(roleCardView).sort((a,b)=>String(a.title).localeCompare(String(b.title),'fa'));
     return json(res,200,{items,
-      rule:'کارت نقش و ورود همکار (F16): عنوان نقش (الزامی از چارت سازمان)، مأموریت، مسئولیت، شایستگی، ارزیابی، مسیر ورود، دسترسی، اهداف ۳۰/۶۰/۹۰ روزه، بازخورد و جانشین؛ تأیید نهایی فقط با تکمیل هر سه هدف بازه‌ای.'});
+      rule:'کارت نقش و ورود همکار (F15): عنوان نقش (الزامی از چارت سازمان)، مأموریت، مسئولیت، شایستگی، ارزیابی، مسیر ورود، دسترسی، اهداف ۳۰/۶۰/۹۰ روزه، بازخورد و جانشین؛ تأیید نهایی فقط با تکمیل هر سه هدف بازه‌ای.'});
   }
   if(is('/role-cards')&&method==='POST'){
     if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر حاکمیت برنامه» (program.write) را ندارید.'});
@@ -18856,7 +18856,7 @@ async function __handler(req, res) {
     const items=(DB.researchPlans??[]).filter(x=>visibleOrgIds(req).includes(x.organizationId))
       .map(researchPlanView).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));
     return json(res,200,{items,
-      rule:'طرح پژوهش و داوری (F07): پرسش، دامنه، روش، نمونه، منابع، محدودیت، تعارض، دو داور مستقل، اصلاحات و نسخه — انتشار فقط با تأیید هر دو داور مستقل (حلقهٔ ۱۵.۳ سند v6).'});
+      rule:'طرح پژوهش و داوری (F07): پرسش، دامنه، روش، نمونه، منابع، محدودیت، تعارض، دو داور مستقل، اصلاحات و نسخه — انتشار فقط با تأیید هر دو داور مستقل (حلقهٔ ۱۵.۳ سند v14).'});
   }
   if(is('/research-plans')&&method==='POST'){
     if(!hasPerm('strategy.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر راهبرد» (strategy.write) را ندارید.'});

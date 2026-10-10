@@ -93,12 +93,12 @@ try {
       have: chips.filter(c => c.startsWith('موجود')).length,
       planned: chips.filter(c => c === 'در برنامه').length,
       platformNote: (card?.querySelector('.field-hint')?.textContent ?? '').includes('ماژول‌های پلتفرمی'),
-      fCodes: ['F01', 'F04', 'F08', 'F11', 'F14', 'F18'].every(c => codes.includes(c)),
+      fCodes: ['F01', 'F04', 'F08', 'F11', 'F13', 'F16'].every(c => codes.includes(c)),
     };
   });
-  ok('کاتالوگ فرم‌ها: کارت با هجده ردیف F01–F18', cat.found && cat.rows === 18, `rows=${cat.rows}`);
-  ok('کاتالوگ فرم‌ها: کدهای کلیدی (F01/F04/F08/F11/F14/F18) حاضر', cat.fCodes, JSON.stringify(cat.codes.slice(0, 3)));
-  ok('کاتالوگ فرم‌ها: شانزده موجود + دو در برنامه + یادداشت ماژول‌های پلتفرمی', cat.have === 16 && cat.planned === 2 && cat.platformNote, `have=${cat.have} planned=${cat.planned}`);
+  ok('کاتالوگ فرم‌ها: کارت با هفده ردیف F01–F17', cat.found && cat.rows === 17, `rows=${cat.rows}`);
+  ok('کاتالوگ فرم‌ها: کدهای کلیدی (F01/F04/F08/F11/F13/F16) حاضر', cat.fCodes, JSON.stringify(cat.codes.slice(0, 3)));
+  ok('کاتالوگ فرم‌ها: شانزده موجود + یک در برنامه (F17 بین‌المللی — فاز ۱۴) + یادداشت ماژول‌های پلتفرمی', cat.have === 16 && cat.planned === 1 && cat.platformNote, `have=${cat.have} planned=${cat.planned}`);
 
   /* ── ۳.۶) گام ۵.۶ — دروازه‌های کنترل مشترک G0–G6 ── */
   const gates = await page.evaluate(() => {
@@ -306,10 +306,10 @@ try {
     title: (document.querySelector('.stat-grid .stat-card, .section-card')?.textContent ?? document.body.textContent ?? ''),
     hasVcQ: (document.body.textContent ?? '').includes('۱۲ VC و شرکت\u200cهای سرمایه گذاری\u200cشده آن\u200cها چه محصولاتی دارند؟'),
     hasOrgName: (document.body.textContent ?? '').includes('فناوران پارس ایرانیان'),
-    f14: [...document.querySelectorAll('h2, h3')].some(h => (h.textContent ?? '').includes('جدول پایش ماهانهٔ مرجعیت (F14)')),
+    f13: [...document.querySelectorAll('h2, h3')].some(h => (h.textContent ?? '').includes('جدول پایش ماهانهٔ مرجعیت (F13)')),
   }));
   ok('گام ۵.۵ — هدف v6: نام «فناوران پارس ایرانیان» + سؤال ۱۲ VC', goalV6.hasVcQ && goalV6.hasOrgName, JSON.stringify({ vc: goalV6.hasVcQ, name: goalV6.hasOrgName }));
-  ok('گام ۵.۵ — برچسب F14 روی جدول پایش ماهانهٔ مرجعیت', goalV6.f14);
+  ok('گام ۵.۵ — برچسب F13 روی جدول پایش ماهانهٔ مرجعیت', goalV6.f13);
   /* ثبت پایش جدید → ردیف */
   await page.evaluate(() => { [...document.querySelectorAll('button')].find(b => (b.textContent ?? '').includes('ثبت پایش'))?.click(); });
   await new Promise(r => setTimeout(r, 700));

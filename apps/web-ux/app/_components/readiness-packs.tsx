@@ -1,6 +1,6 @@
 'use client';
 /* ═══════════════════════════════════════════════════════════════════════════
-   گام ۱۰.۱ — F15 کارت آماده‌سازی سرمایه‌گذار و شریک (کامپوننت)
+   گام ۱۰.۱ — F14 کارت آماده‌سازی سرمایه‌گذار و شریک (کامپوننت)
    موضوع · وضعیت DD (زنده از پروندهٔ DD متصل) · هدف رابطه · شواهد · فهرست هدف ·
    طرح جلسه · تعهدها (زنده از مشارکت) · اقدام بعدی — متصل به مشارکت/فرصت موجود.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -52,9 +52,9 @@ export default function ReadinessPacks() {
 
   const items = data?.items ?? [];
   return (
-    <section className="section-card" data-f15>
+    <section className="section-card" data-f14>
       <div className="section-head">
-        <h2><Handshake size={17} /> {t('آماده‌سازی سرمایه‌گذار و شریک (F15)')}</h2>
+        <h2><Handshake size={17} /> {t('آماده‌سازی سرمایه‌گذار و شریک (F14)')}</h2>
         {writable && <button className="srip-button primary" onClick={() => { setFormError(''); setEdit({ ...EMPTY }); }}><Plus size={14} /> {t('کارت آماده‌سازی جدید')}</button>}
       </div>
       <p className="section-desc">{data?.rule}</p>

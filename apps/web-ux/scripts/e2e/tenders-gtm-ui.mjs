@@ -1,5 +1,5 @@
 /* ============================================================================
-   tenders-gtm-ui.mjs — باتری E2E گام ۱۰.۲: F09 فرصت مناقصه + F18 کارت ورود
+   tenders-gtm-ui.mjs — باتری E2E گام ۱۰.۲: F09 فرصت مناقصه + F16 کارت ورود
    ورود demo → /opportunities → مناقصات (جدول + قواعد نتیجه/درس‌آموخته) →
    کارت‌های ورود به بازار (وضعیت DD زنده + گرهٔ تصمیم GO).
    ============================================================================ */
@@ -38,11 +38,11 @@ try {
   await new Promise(r => setTimeout(r, 2500));
   await page.evaluate(() => localStorage.setItem('srip2_tour_done', '1'));
 
-  /* ── ۱) بخش‌های F09/F18 در فرصت‌ها ── */
+  /* ── ۱) بخش‌های F09/F16 در فرصت‌ها ── */
   try { await page.goto(`${BASE}/opportunities`, { waitUntil: 'networkidle0', timeout: 90000 }); } catch {}
   await page.waitForSelector('section[data-f09]', { timeout: 60000 });
-  const hasF18 = await page.evaluate(() => !!document.querySelector('section[data-f18]'));
-  ok('صفحهٔ فرصت‌ها: بخش F09 (مناقصات) و F18 (کارت‌های ورود به بازار) هر دو حاضرند', hasF18);
+  const hasF16 = await page.evaluate(() => !!document.querySelector('section[data-f16]'));
+  ok('صفحهٔ فرصت‌ها: بخش F09 (مناقصات) و F16 (کارت‌های ورود به بازار) هر دو حاضرند', hasF16);
 
   /* ── ۲) جدول مناقصات ── */
   await page.waitForFunction(() => (document.querySelector('section[data-f09]')?.textContent ?? '').includes('برد'), { timeout: 30000 });
@@ -103,22 +103,22 @@ try {
   await page.keyboard.press('Escape');
   await new Promise(r => setTimeout(r, 600));
 
-  /* ── ۵) F18: کارت‌ها با وضعیت DD زنده ── */
-  await page.waitForSelector('section[data-f18] tbody tr', { timeout: 30000 });
+  /* ── ۵) F16: کارت‌ها با وضعیت DD زنده ── */
+  await page.waitForSelector('section[data-f16] tbody tr', { timeout: 30000 });
   const gtm = await page.evaluate(() => {
-    const t = document.querySelector('section[data-f18]')?.textContent ?? '';
+    const t = document.querySelector('section[data-f16]')?.textContent ?? '';
     return {
-      count: document.querySelectorAll('section[data-f18] tbody tr').length,
+      count: document.querySelectorAll('section[data-f16] tbody tr').length,
       liveDD: t.includes('تصویب‌شده — ۱۲/۱۲ محور') && t.includes('در بررسی — ۱/۱۲ محور'),
       go: t.includes('ورود (GO)'),
       pilot: t.includes('اجرای آزمایشی'),
     };
   });
-  ok('F18: دو کارت بذر با وضعیت DD زنده (تصویب‌شده ۱۲/۱۲ و در بررسی ۱/۱۲) و تصمیم‌ها',
+  ok('F16: دو کارت بذر با وضعیت DD زنده (تصویب‌شده ۱۲/۱۲ و در بررسی ۱/۱۲) و تصمیم‌ها',
     gtm.count === 2 && gtm.liveDD && gtm.go && gtm.pilot, JSON.stringify(gtm));
 
   /* ── ۶) گرهٔ GO: کارت جدید بدون DD → ۴۰۰؛ با DD تصویب‌شده → ۲۰۱ ── */
-  await page.evaluate(() => [...document.querySelectorAll('section[data-f18] button')].find(b => (b.textContent ?? '').includes('کارت ورود جدید'))?.click());
+  await page.evaluate(() => [...document.querySelectorAll('section[data-f16] button')].find(b => (b.textContent ?? '').includes('کارت ورود جدید'))?.click());
   await page.waitForSelector('.modal-backdrop form#gtm-form', { timeout: 30000 });
   await page.evaluate(() => {
     const form = document.querySelector('.modal-backdrop form#gtm-form');
@@ -133,7 +133,7 @@ try {
   await new Promise(r => setTimeout(r, 300));
   await page.evaluate(() => [...document.querySelectorAll('.modal-backdrop button')].find(b => (b.textContent ?? '').includes('ذخیرهٔ کارت ورود'))?.click());
   await page.waitForFunction(() => (document.querySelector('.modal-backdrop')?.textContent ?? '').includes('تصمیم ورود (GO) نیازمند'), { timeout: 30000 });
-  ok('F18: گرهٔ تصمیم — GO بدون پروندهٔ DD متصل → پیام خطای سرور', true);
+  ok('F16: گرهٔ تصمیم — GO بدون پروندهٔ DD متصل → پیام خطای سرور', true);
   /* اتصال dd-1 و ذخیره */
   await page.evaluate(() => {
     const sels = document.querySelectorAll('.modal-backdrop form#gtm-form select');
@@ -144,8 +144,8 @@ try {
   });
   await new Promise(r => setTimeout(r, 300));
   await page.evaluate(() => [...document.querySelectorAll('.modal-backdrop button')].find(b => (b.textContent ?? '').includes('ذخیرهٔ کارت ورود'))?.click());
-  await page.waitForFunction(() => (document.querySelector('section[data-f18]')?.textContent ?? '').includes('داشبورد تحلیلی بورس'), { timeout: 30000 });
-  ok('F18: کارت متصل به DD تصویب‌شده با تصمیم GO ثبت شد و در جدول ظاهر شد', true);
+  await page.waitForFunction(() => (document.querySelector('section[data-f16]')?.textContent ?? '').includes('داشبورد تحلیلی بورس'), { timeout: 30000 });
+  ok('F16: کارت متصل به DD تصویب‌شده با تصمیم GO ثبت شد و در جدول ظاهر شد', true);
 } catch (e) {
   fail++; failures.push(`استثنا: ${e.message}`);
   console.error('  ❌ استثنا:', e.message);
