@@ -65,6 +65,30 @@ try {
   // 2) open publics hub — شناسنامه به پروفایل سازمان منتقل شده؛ تب پیش‌فرض «گروه‌ها»
   await page.goto(`${BASE}/publics`, { waitUntil: 'networkidle0', timeout: 60000 });
   ok('hub header', await waitForText('نقشهٔ عموم‌ها'));
+  /* فاز ۱۳.۴ — پنل شناسایی و اولویت‌بندی (۸.۳.۲/۸.۳.۳ سند v14) */
+  const statusV14 = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('tr[data-status-v14]')];
+    const card = document.querySelector('.publics-status-v14');
+    const txt = (card?.textContent ?? '');
+    return {
+      four: ['نهفته', 'آگاه', 'فعال', 'میانجی'].every(s => rows.some(r => (r.getAttribute('data-status-v14') === s))),
+      n: rows.length,
+      cols: ['تعریف عملیاتی', 'نشانهٔ قابل ثبت', 'کنش ارتباطی'].every(c => txt.includes(c)),
+    };
+  });
+  ok('پنل ۸.۳.۲: جدول وضعیت چهارتانه (نهفته/آگاه/فعال/میانجی) با تعریف، نشانه و کنش', statusV14.four && statusV14.n === 4 && statusV14.cols, JSON.stringify(statusV14));
+  const flowV14 = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('tr[data-flow-v14]')];
+    const card = document.querySelector('.publics-flow-v14');
+    const txt = (card?.textContent ?? '');
+    return {
+      n: rows.length,
+      ends: txt.includes('بازبینی ماهانه عموم‌های فعال و میانجی'),
+      noQuota: txt.includes('سهمیهٔ ثابت'),
+      fields: txt.includes('سطح آگاهی') && txt.includes('منبع مورد اعتماد') && txt.includes('اقدام بعدی'),
+    };
+  });
+  ok('پنل ۸.۳.۳: گردش هفت‌مرحله‌ای + قاعدهٔ اولویت (بدون سهمیهٔ ثابت) + فیلدهای نقشه', flowV14.n === 7 && flowV14.ends && flowV14.noQuota && flowV14.fields, JSON.stringify(flowV14));
   ok('بدون تب شناسنامه (منتقل‌شده به پروفایل سازمان)', await page.evaluate(() => ![...document.querySelectorAll('button[role="tab"]')].some(b => (b.textContent ?? '').includes('شناسنامه'))));
   ok('تب پیش‌فرض: گروه‌ها', await page.evaluate(() => [...document.querySelectorAll('button[role="tab"]')].some(b => (b.textContent ?? '').includes('گروه‌ها') && b.className.includes('active'))));
   ok('بدون تب تکراری «پوشش» (ادغام در هیت‌مپ)', await page.evaluate(() => ![...document.querySelectorAll('button[role="tab"]')].some(b => (b.textContent ?? '').trim() === 'پوشش')));

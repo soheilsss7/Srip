@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import { api, apiBlob, unwrapList } from '../_lib/api';
+import { lt, t } from '../_lib/i18n';
 import { useWorkspace } from '../_components/workspace';
 import { Badge, ErrorCard, Loading, Modal, PageHeader, SectionCard, StatCard, StatusBadge, Toolbar } from '../_components/page-ui';
 import {
@@ -109,6 +110,23 @@ const STANCE_TONE: Record<string, 'success' | 'info' | 'warning' | 'danger' | 'n
 const STAGE_TONE: Record<string, 'success' | 'info' | 'warning' | 'danger' | 'neutral'> = {
   ACTIVE: 'success', AWARE: 'info', LATENT: 'warning', NON_PUBLIC: 'neutral', MEDIATOR: 'info',
 };
+
+/* ═══ فاز ۱۳.۴ — وضعیت هر عموم (جدول ۸.۳.۲ سند v14) و روش شناسایی (۸.۳.۳) ═══ */
+const PUBLIC_STATUS_V14 = lt<Array<{ status: string; def: string; sign: string; action: string }>>([
+  { status: 'نهفته', def: 'گروه با موضوع یا پیامد مشترک ارتباط دارد، اما هنوز این ارتباط یا اهمیت آن را تشخیص نداده است.', sign: 'نبود جست‌وجو یا واکنش، شناخت پایین و نبود اقدام با وجود ارتباط قابل اثبات', action: 'توضیح مسئله و ارتباط آن با نیاز گروه، محتوای روشن و دعوت محدود به شناخت بیشتر' },
+  { status: 'آگاه', def: 'گروه موضوع و ارتباط خود را می‌شناسد، اما هنوز جست‌وجوی منظم، بازنشر یا اقدام سازمان‌یافته ندارد.', sign: 'پرسش، مشاهده محتوا، حضور محدود یا درخواست توضیح بدون اقدام مستمر', action: 'ارائه شواهد، پاسخ به پرسش، کاهش مانع مشارکت و پیشنهاد اقدام مشخص' },
+  { status: 'فعال', def: 'گروه اطلاعات را جست‌وجو یا تولید می‌کند، درباره موضوع موضع می‌گیرد و می‌تواند همکاری، حمایت، نقد یا اقدام ایجاد کند.', sign: 'تولید یا بازنشر محتوا، مطالبه پاسخ، مشارکت، استناد، همکاری یا نقد مستمر', action: 'گفت‌وگوی مستقیم، دسترسی به منبع و متخصص، ثبت تعهد و پیگیری نتیجه' },
+  { status: 'میانجی', def: 'گروه اطلاعات را برای عموم‌های دیگر انتخاب، تفسیر، اعتبارسنجی یا توزیع می‌کند.', sign: 'استناد، پوشش رسانه‌ای، داوری، آموزش، تحلیل یا انتقال پیام به شبکه دیگر', action: 'بسته منبع، دسترسی سریع، پاسخ دقیق، امکان راستی‌آزمایی و ثبت بازنمایی' },
+]);
+const PUBLIC_FLOW_V14 = lt<Array<{ n: string; step: string; output: string }>>([
+  { n: '۱', step: 'تعریف موضوع مشخص شامل تصمیم، گزارش، محصول، رویداد، فرصت، تغییر یا مسئله', output: 'شناسه موضوع، دامنه، شواهد و مسئول' },
+  { n: '۲', step: 'شناسایی گروه‌هایی که با موضوع رابطه، پیامد، فرصت یا مسئله مشترک دارند', output: 'فهرست عموم‌ها و دلیل ارتباط هر گروه' },
+  { n: '۳', step: 'ثبت سطح آگاهی، میزان درگیری، محدودیت اقدام و رفتار دریافت، جست‌وجو، بازنشر یا اقدام', output: 'وضعیت نهفته، آگاه، فعال یا نقش میانجی همراه با شاهد' },
+  { n: '۴', step: 'ثبت موضع حمایتی، خنثی، پرسشگر یا منتقد و شبکه‌هایی که بر گروه اثر می‌گذارند', output: 'موضع، منابع مورد اعتماد، افراد اثرگذار و پیوند میان عموم‌ها' },
+  { n: '۵', step: 'تعیین پیام قابل اثبات، شاهد، کانال، تناوب، پاسخ مورد انتظار و اقدام بعدی', output: 'کارت تعامل مصوب و قابل پیگیری' },
+  { n: '۶', step: 'اجرای تعامل، شنیدن پرسش و نقد، ثبت پاسخ، تعهد، اصلاح و نتیجه', output: 'سابقه تعامل و تغییر وضعیت عموم' },
+  { n: '۷', step: 'بازبینی ماهانه عموم‌های فعال و میانجی و بازبینی فصلی سایر عموم‌ها', output: 'نقشه به‌روز، اولویت دوره بعد و اقدام اصلاحی' },
+]);
 const MEDIA_TYPE_OPTIONS = [
   ['TECH_MEDIA', 'رسانه تخصصی فناوری'], ['ECONOMIC_MEDIA', 'رسانه اقتصادی'], ['GENERAL_MEDIA', 'رسانه عمومی'],
   ['INFLUENCER', 'اینفلوئنسر/خبرنگار'], ['OTHER', 'سایر'],
@@ -1224,7 +1242,46 @@ export default function PublicsPage() {
                   </table>
                 </div>
               </SectionCard>
+            {/* ---------------- فاز ۱۳.۴ — وضعیت هر عموم (۸.۳.۲ سند v14) ---------------- */}
+          <SectionCard className="publics-status-v14" title={t('وضعیت هر عموم (۸.۳.۲ سند v14)')} icon={<Radar size={15} />}
+            description={t('وضعیت هر عموم برای یک موضوع مشخص تعیین می‌شود و با تغییر مسئله، شواهد، تجربه یا شبکهٔ ارتباطی قابل تغییر است؛ عنوان عموم به‌تنهایی وضعیت آن را تعیین نمی‌کند.')}>
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>{t('وضعیت')}</th><th>{t('تعریف عملیاتی')}</th><th>{t('نشانهٔ قابل ثبت')}</th><th>{t('کنش ارتباطی')}</th></tr></thead>
+                <tbody>
+                  {PUBLIC_STATUS_V14.map((r: { status: string; def: string; sign: string; action: string }) => (
+                    <tr key={r.status} data-status-v14={r.status}>
+                      <td><Badge tone={STAGE_TONE[r.status === 'نهفته' ? 'LATENT' : r.status === 'آگاه' ? 'AWARE' : r.status === 'فعال' ? 'ACTIVE' : 'MEDIATOR'] ?? 'neutral'}>{r.status}</Badge></td>
+                      <td className="t-muted" style={{ maxWidth: 300 }}>{r.def}</td>
+                      <td className="t-muted" style={{ maxWidth: 240 }}>{r.sign}</td>
+                      <td className="t-muted" style={{ maxWidth: 260 }}>{r.action}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
+          </SectionCard>
+
+          {/* ---------------- فاز ۱۳.۴ — روش شناسایی و اولویت‌بندی (۸.۳.۳ سند v14) ---------------- */}
+          <SectionCard className="publics-flow-v14" title={t('روش شناسایی و اولویت‌بندی عموم‌ها (۸.۳.۳ سند v14)')} icon={<Target size={15} />}
+            description={t('عموم اولویت‌دار گروهی است که اهمیت موضوع، سطح آگاهی یا درگیری، امکان اقدام، نقش میانجی یا اثر آن بر ساخته‌شدن مرجعیت، رسیدگی منظم را ضروری می‌کند؛ پیش از ثبت خط مبنا، سهمیهٔ ثابت برای تعداد عموم‌ها یا تعامل‌ها تعیین نمی‌شود.')}>
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>{t('مرحله')}</th><th>{t('اقدام')}</th><th>{t('خروجی قابل ثبت')}</th></tr></thead>
+                <tbody>
+                  {PUBLIC_FLOW_V14.map((s: { n: string; step: string; output: string }) => (
+                    <tr key={s.n} data-flow-v14={s.n}>
+                      <td className="t-primary">{s.n}</td>
+                      <td className="t-muted" style={{ maxWidth: 380 }}>{s.step}</td>
+                      <td className="t-muted" style={{ maxWidth: 260 }}>{s.output}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="field-hint">{t('نقشهٔ عموم‌ها در SRIP با موضوع، گروه، وضعیت، سطح آگاهی، میزان درگیری، محدودیت اقدام، موضع، شبکه اثر، منبع مورد اعتماد، پیام، شاهد، کانال، مسئول، اقدام بعدی و تاریخ بازبینی ثبت می‌شود.')}</p>
+          </SectionCard>
+        </div>
           )}
 
           {/* ---------------- پوشش ---------------- */}
