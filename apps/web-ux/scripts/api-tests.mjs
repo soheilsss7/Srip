@@ -276,6 +276,11 @@ section('دادهٔ اولیهٔ واقعی — aroun / شرکت x / هلدین�
   const members = await api(`/publics/members?orgId=${parsId}`, { token: t });
   const mList = Array.isArray(members.body) ? members.body : (members.body?.data ?? members.body?.items ?? []);
   check('اعضای عموم‌های پارس: ۱۰۰+ نهاد واقعی', mList.length >= 100, `count=${mList.length}`);
+  const pubCat = await api('/publics/catalog', { token: t });
+  check('کاتالوگ عموم‌ها v14: وضعیت چهارم «میانجی» (۸.۳.۱)', pubCat.status === 200
+    && pubCat.body?.stages?.MEDIATOR === 'میانجی' && Object.keys(pubCat.body?.stages ?? {}).length === 5);
+  check('عضو دموی میانجی: خبرگزاری مهر از عموم رسانه‌ای پارس با stageFa=میانجی',
+    mList.some(m => m.stage === 'MEDIATOR' && m.stageFa === 'میانجی' && String(m.sourceName ?? '').includes('مهر')));
   const cov = await api(`/publics/coverage?orgId=${parsId}`, { token: t });
   const covRows = cov.body?.byCategory ?? [];
   check('پوشش ۶ دستهٔ عموم محاسبه می‌شود', covRows.length === 6);

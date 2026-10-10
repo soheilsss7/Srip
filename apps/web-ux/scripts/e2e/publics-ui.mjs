@@ -124,7 +124,13 @@ try {
   ok('members: ستون قابل مرتب‌سازی نفوذ/حمایت', await page.evaluate(() => [...document.querySelectorAll('th button')].some(b => (b.textContent ?? '').includes('نفوذ / حمایت'))));
   ok('members: نوار سنجهٔ نفوذ/حمایت در جدول', await page.evaluate(() => (document.body.textContent ?? '').includes('نفوذ') && (document.body.textContent ?? '').includes('حمایت')));
   const memberRows0 = await page.evaluate(() => document.querySelectorAll('.table-wrap tbody tr').length);
-  ok('seed members 14', memberRows0 === 14, 'rows=' + memberRows0);
+  ok('seed members 15', memberRows0 === 15, 'rows=' + memberRows0);
+  ok('members: وضعیت میانجی (۸.۳.۱ v14) در جدول — ردیف پیوست', await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('.table-wrap tbody tr')];
+    return rows.some(r => (r.textContent ?? '').includes('میانجی') && (r.textContent ?? '').includes('پیوست'));
+  }));
+  ok('members: گزینهٔ «میانجی» در سِلکت مرحلهٔ ارزیابی', await page.evaluate(() =>
+    [...document.querySelectorAll('select option')].some(o => o.value === 'MEDIATOR' && (o.textContent ?? '').includes('میانجی'))));
 
   // 5) add member
   await clickByText('button', 'افزودن عضو');
@@ -156,7 +162,7 @@ try {
 ok('add member flash', addFlash);
   await new Promise(r => setTimeout(r, 900));
   const memberRows1 = await page.evaluate(() => document.querySelectorAll('.table-wrap tbody tr').length);
-  ok('member count 15', memberRows1 === 15, 'rows=' + memberRows1);
+  ok('member count 16', memberRows1 === 16, 'rows=' + memberRows1);
 
   // 6) assess the newly added member (first row with ارزیابی button = h-n2 added last → check last row)
   await page.evaluate(() => {

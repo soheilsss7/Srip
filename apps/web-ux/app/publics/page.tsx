@@ -103,7 +103,7 @@ const STANCE_TONE: Record<string, 'success' | 'info' | 'warning' | 'danger' | 'n
   KEY_PLAYER: 'success', INFLUENCER: 'warning', SUPPORTER: 'info', OBSERVER: 'neutral',
 };
 const STAGE_TONE: Record<string, 'success' | 'info' | 'warning' | 'danger' | 'neutral'> = {
-  ACTIVE: 'success', AWARE: 'info', LATENT: 'warning', NON_PUBLIC: 'neutral',
+  ACTIVE: 'success', AWARE: 'info', LATENT: 'warning', NON_PUBLIC: 'neutral', MEDIATOR: 'info',
 };
 const MEDIA_TYPE_OPTIONS = [
   ['TECH_MEDIA', 'رسانه تخصصی فناوری'], ['ECONOMIC_MEDIA', 'رسانه اقتصادی'], ['GENERAL_MEDIA', 'رسانه عمومی'],
