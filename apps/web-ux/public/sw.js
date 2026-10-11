@@ -5470,7 +5470,7 @@ function intlValidate(x,creating){
     if(!x.ddDossierId) return 'ارتباط محصول‌محور بدون پروندهٔ Due Diligence متصل مجاز نیست؛ ابتدا پروندهٔ DD همان موضوع را متصل کنید.';
     if(!dd) return 'پروندهٔ Due Diligence متصل یافت نشد.';
     if(dd.status!=='APPROVED') return 'ارتباط محصول‌محور فقط پس از تصویب پروندهٔ Due Diligence همان موضوع مجاز است؛ وضعیت فعلی پرونده: '+(DOSSIER_STATUS_FA[dd.status]??dd.status)+'.';
-    if(dd.teamY?.opinion!=='APPROVE') return 'نظر کارشناسی مدیر تیم Y برای پروندهٔ DD ثبت نشده است؛ ثبت نظر پیش از ارتباط محصول‌محور الزامی است.';
+    if(!['CONTINUE','CONTINUE_CONDITIONAL'].includes(dd.teamY?.opinion)) return 'نظر کارشناسی مدیر تیم Y (ادامه یا ادامه مشروط) برای پروندهٔ DD ثبت نشده است؛ ثبت نظر پیش از ارتباط محصول‌محور الزامی است.';
   }
   if(x.dataSharePerm&&x.dataSharePerm!=='NONE'){
     if(x.identity!=='VERIFIED') return 'پیش از تبادل اطلاعات حساس، هویت و اختیار طرف ارتباط و بررسی حقوقی باید کامل باشد.';
@@ -10152,8 +10152,11 @@ function ensurePartnershipSeed(){
    نظر مدیر تیم Y · وضعیت تصویب G2 (شرط: تکمیل همهٔ محورها + نظر تیم Y).
    F14: کارت آماده‌سازی متصل به مشارکت/فرصت — وضعیت DD و تعهدها زنده محاسبه می‌شوند. */
 const DD_AXIS_STATUS_FA={NOT_STARTED:'شروع‌نشده',IN_PROGRESS:'در جریان',ACCEPTED:'پذیرفته‌شده'};
-const DOSSIER_STATUS_FA={DRAFT:'پیش‌نویس',IN_REVIEW:'در بررسی',APPROVED:'تصویب‌شده',REJECTED:'ردشده'};
-const TEAM_Y_OPINION_FA={APPROVE:'تأیید',CONDITIONS:'مشروط',REJECT:'رد'};
+const DOSSIER_STATUS_FA={DRAFT:'پیش‌نویس',IN_REVIEW:'در بررسی',APPROVED:'تصویب‌شده',REJECTED:'ردشده',CANNOT_OPINE:'عدم امکان اظهارنظر'};
+const DD_BLOCKER_FA={NO_DATA:'عدم دسترسی به داده',NO_ACCESS:'عدم دسترسی',UNRESOLVED_CONFLICT:'تعارض حل‌نشده',NON_COOPERATION:'عدم همکاری'};
+const DD_CANNOT_OPINE_RULE='تا رفع مانع و تصویب گزارش، هیچ توصیهٔ ورود به بازار یا معرفی رسمی صادر نمی‌شود.';
+const TEAM_Y_OPINION_FA={CONTINUE:'ادامه',CONTINUE_CONDITIONAL:'ادامه مشروط',STOP:'توقف',FURTHER_REVIEW:'نیاز به بررسی تکمیلی'};
+const TEAM_Y_MIG={APPROVE:'CONTINUE',CONDITIONS:'CONTINUE_CONDITIONAL',REJECT:'STOP'}; /* مهاجرت persisted → چهارگانهٔ v14 */
 const DD_AXES=[
   {key:'product-arch',cat:'621',title:'محصول و معماری'},
   {key:'code-data',cat:'621',title:'کد و داده'},
@@ -10167,10 +10170,16 @@ const DD_AXES=[
   {key:'fit',cat:'622',title:'تناسب محصول–بازار'},
   {key:'economics',cat:'622',title:'اقتصاد واحد کسب‌وکار'},
   {key:'competition',cat:'622',title:'رقابت'},
+  /* فاز ۱۵ (۶.۲.۲ سند v14) — سه محور کسب‌وکاری جدید → مجموع ۱۵ محور */
+  {key:'sales-gtm',cat:'622',title:'فروش و توسعه بازار'},
+  {key:'team-governance',cat:'622',title:'تیم و حاکمیت'},
+  {key:'legal-risk',cat:'622',title:'حقوقی و ریسک'},
 ];
 const DD_AXIS_CAT_FA={'621':'محورهای ۶.۲.۱ — فنی و محصول','622':'محورهای ۶.۲.۲ — کسب‌وکار'};
 function ensureDossierSeed(){
   if(!Array.isArray(DB.dossiers)) DB.dossiers=[];
+  /* فاز ۱۵.۲ — مهاجرت نظر تیم Y persisted به چهارگانهٔ v14 */
+  (DB.dossiers??[]).forEach(d=>{ if(d.teamY&&TEAM_Y_MIG[d.teamY.opinion]) d.teamY.opinion=TEAM_Y_MIG[d.teamY.opinion]; });
   if(DB.dossiers.length) return;
   const AGO=(d)=>new Date(Date.now()-d*86400000).toISOString();
   const ax=(over={})=>Object.fromEntries(DD_AXES.map(a=>[a.key,{answer:'',evidence:'',gap:'',status:'NOT_STARTED',response:null,responseAt:null,...(over[a.key]??{})}]));
@@ -10187,13 +10196,21 @@ function ensureDossierSeed(){
        'market':{answer:'شرکت‌های زیرمجموعه هلدینگ‌ها',evidence:'تحلیل بازار',gap:'',status:'ACCEPTED'},
        'fit':{answer:'تناسب با فرآیند ارتباط‌محور هلدینگ‌ها',evidence:'پایلوت دو ماهه',gap:'',status:'ACCEPTED'},
        'economics':{answer:'اشتراک سالانه + سرخط موفقیت در ۱۸ ماه',evidence:'مدل مالی',gap:'',status:'ACCEPTED'},
-       'competition':{answer:'بدون رقیب داخلی هم‌تراز؛ CRMهای عمومی جایگزین نیستند',evidence:'تحلیل رقبا',gap:'',status:'ACCEPTED'}}),
-     teamY:{opinion:'APPROVE',note:'بررسی فنی و کسب‌وکاری تکمیل است؛ شروع هم‌سرمایه‌گذاری تایید می‌شود.',by:'demo@srip.local',at:AGO(10)},
+       'competition':{answer:'بدون رقیب داخلی هم‌تراز؛ CRMهای عمومی جایگزین نیستند',evidence:'تحلیل رقبا',gap:'',status:'ACCEPTED'},
+       'sales-gtm':{answer:'فروش مستقیم سازمانی + شرکای پیاده‌سازی؛ قیف سه‌مرحله‌ای با سرخط ۹۰ روزه',evidence:'طرح فروش + گزارش قیف دو فصل',gap:'',status:'ACCEPTED'},
+       'team-governance':{answer:'هیئت‌مدیرهٔ مستقل، کمیتهٔ حسابرسی و جلسات فصلی؛ کلیدهای دسترسی تفکیک‌شده',evidence:'اساس‌نامه + صورت‌جلسات + گزارش دسترسی',gap:'',status:'ACCEPTED'},
+       'legal-risk':{answer:'قرارداد استاندارد با شرط تحریم و مرجع حل اختلاف؛ دعوای جاری ثبت نشده',evidence:'نظر کتبی مشاور حقوقی',gap:'بیمهٔ مسئولیت حرفه‌ای هنوز تکمیل نشده',status:'ACCEPTED'}}),
+     teamY:{opinion:'CONTINUE',note:'بررسی فنی و کسب‌وکاری تکمیل است؛ ادامهٔ هم‌سرمایه‌گذاری توصیه می‌شود.',by:'demo@srip.local',at:AGO(10)},
      createdAt:AGO(60),updatedAt:AGO(10)},
     {id:'dd-2',organizationId:PARTNERSHIP_ORG_ID,subjectOrgId:'org-8',ownerRole:'مدیر اندیشکده و پژوهش',
      status:'IN_REVIEW',axes:ax({'product-arch':{answer:'سامانهٔ استاندارد استان با دادهٔ رسمی',evidence:'نمونهٔ اولیه',gap:'مقیاس‌پذیری دادهٔ استانی آزموده نشده',status:'IN_PROGRESS'},
        'problem':{answer:'نبود پایش یکپارچهٔ دادهٔ استانی',evidence:'درخواست رسمی استانداری',gap:'',status:'ACCEPTED'}}),
-     teamY:null,createdAt:AGO(20),updatedAt:AGO(5)});
+     teamY:null,createdAt:AGO(20),updatedAt:AGO(5)},
+    /* فاز ۱۵.۳ — بذر «عدم امکان اظهارنظر»: مانع داده + g2Ready همیشه false */
+    {id:'dd-3',organizationId:PARTNERSHIP_ORG_ID,subjectOrgId:'org-9',ownerRole:'مدیر تحقیق و توسعه',
+     status:'CANNOT_OPINE',blocker:'NO_DATA',blockerNote:'دادهٔ مالی و فنی سازمان موضوع پس از دو یادآوری رسمی ارائه نشده است؛ مهلت پاسخ در صورت‌جلسهٔ گذشته ثبت شده.',
+     axes:ax({'problem':{answer:'ادعای نیاز بازار بدون سند پشتیبان',evidence:'یادداشت اولیهٔ ملاقات',gap:'دادهٔ مالی و عملیاتی ارائه نشده',status:'IN_PROGRESS'}}),
+     teamY:null,createdAt:AGO(15),updatedAt:AGO(2)});
 }
 function dossierView(d){
   const axes=DD_AXES.map(a=>({key:a.key,cat:a.cat,catFa:DD_AXIS_CAT_FA[a.cat],title:a.title,...(d.axes?.[a.key]??{answer:'',evidence:'',gap:'',status:'NOT_STARTED',response:null,responseAt:null}),
@@ -10202,7 +10219,10 @@ function dossierView(d){
   const org=ORGS.find(o=>o.id===d.subjectOrgId);
   return {...d,subjectName:org?.name??d.subjectOrgId,subjectType:org?.type??null,
     axes,acceptedAxes:accepted,totalAxes:axes.length,
-    ddComplete:accepted===axes.length,g2Ready:accepted===axes.length&&!!d.teamY,
+    ddComplete:accepted===axes.length,
+    g2Ready:d.status==='CANNOT_OPINE'?false:accepted===axes.length&&!!d.teamY,
+    blockerFa:d.blocker?DD_BLOCKER_FA[d.blocker]??d.blocker:null,
+    cannotOpineRule:d.status==='CANNOT_OPINE'?DD_CANNOT_OPINE_RULE:null,
     statusFa:DOSSIER_STATUS_FA[d.status]??d.status,
     teamYFa:d.teamY?{...d.teamY,opinionFa:TEAM_Y_OPINION_FA[d.teamY.opinion]??d.teamY.opinion}:null};
 }
@@ -18808,7 +18828,8 @@ async function __handler(req, res) {
     return json(res,200,{items,
       axes:DD_AXES.map(a=>({key:a.key,cat:a.cat,catFa:DD_AXIS_CAT_FA[a.cat],title:a.title})),
       statuses:Object.fromEntries(Object.entries(DOSSIER_STATUS_FA)),
-      rule:'پروندهٔ Due Diligence (F02): دوازده محور استاندارد ۶.۲.۱ (فنی) و ۶.۲.۲ (کسب‌وکاری)؛ هر محور با پاسخ، شاهد و نقص. طرف مقابل حق پاسخ به یافته‌ها دارد و تصویب (G2) فقط با پذیرش همهٔ محورها + ثبت نظر مدیر تیم Y ممکن است.'});
+      blockers:Object.fromEntries(Object.entries(DD_BLOCKER_FA)),
+      rule:'پروندهٔ Due Diligence (F02): پانزده محور استاندارد ۶.۲.۱ (فنی) و ۶.۲.۲ (کسب‌وکاری)؛ هر محور با پاسخ، شاهد و نقص. طرف مقابل حق پاسخ به یافته‌ها دارد و تصویب (G2) فقط با پذیرش همهٔ محورها + ثبت نظر مدیر تیم Y ممکن است. در صورت مانع داده/دسترسی، وضعیت «عدم امکان اظهارنظر» با شرح مانع ثبت می‌شود و تا رفع مانع هیچ توصیهٔ ورود به بازار صادر نمی‌شود. موضوع بررسی می‌تواند محصول، محصول جانبی (خروجی ثانویهٔ قابل‌عرضه از همان زیرساخت)، VC یا شرکت سرمایه‌گذاری‌شده باشد (۶.۲ سند v14).'});
   }
   if(is('/dossiers')&&method==='POST'){
     if(!hasPerm('partnership.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر مشارکت» (partnership.write) را ندارید.'});
@@ -18844,7 +18865,7 @@ async function __handler(req, res) {
     const d=(DB.dossiers??[]).find(x=>x.id===ddAx[0]&&visibleOrgIds(req).includes(x.organizationId));
     if(!d) return json(res,404,{message:'پروندهٔ DD یافت نشد یا خارج از محدودهٔ شماست.'});
     const axis=DD_AXES.find(a=>a.key===ddAx[1]);
-    if(!axis) return json(res,400,{message:'محور نامعتبر است — از فهرست دوازده محور ۶.۲.۱/۶.۲.۲ انتخاب کنید.'});
+    if(!axis) return json(res,400,{message:'محور نامعتبر است — از فهرست پانزده محور ۶.۲.۱/۶.۲.۲ انتخاب کنید.'});
     d.axes=d.axes??{};
     d.axes[axis.key]=d.axes[axis.key]??{answer:'',evidence:'',gap:'',status:'NOT_STARTED',response:null,responseAt:null};
     const b=await readBody(req);
@@ -18879,12 +18900,40 @@ async function __handler(req, res) {
     if(!d) return json(res,404,{message:'پروندهٔ DD یافت نشد یا خارج از محدودهٔ شماست.'});
     const b=await readBody(req);
     const opinion=String(b.opinion??'').toUpperCase();
-    if(!TEAM_Y_OPINION_FA[opinion]) return json(res,400,{message:'نظر مدیر تیم Y باید تأیید/مشروط/رد باشد.'});
+    if(!TEAM_Y_OPINION_FA[opinion]) return json(res,400,{message:'نظر مدیر تیم Y باید یکی از چهار حالت باشد: ادامه / ادامه مشروط / توقف / نیاز به بررسی تکمیلی.'});
     const note=String(b.note??'').trim();
     if(!note) return json(res,400,{message:'نظر مدیر تیم Y بدون یادداشت ثبت نمی‌شود — دلیل را بنویسید.'});
     d.teamY={opinion,note:note.slice(0,500),by:authUser?.email??'—',at:nowIso()};
     d.updatedAt=nowIso(); saveDb();
     audit(req,'TEAM_Y','Dossier',d.id,'OK',{opinion});
+    return json(res,200,dossierView(d));
+  }
+  /* فاز ۱۵.۳ — ثبت مانع (فقط از IN_REVIEW) و رفع مانع (بازگشت به IN_REVIEW) */
+  const ddBlk=match('/dossiers/:id/blocker');
+  if(ddBlk&&method==='POST'){
+    if(!hasPerm('partnership.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر مشارکت» (partnership.write) را ندارید.'});
+    ensureDossierSeed();
+    const d=(DB.dossiers??[]).find(x=>x.id===ddBlk[0]&&visibleOrgIds(req).includes(x.organizationId));
+    if(!d) return json(res,404,{message:'پروندهٔ DD یافت نشد یا خارج از محدودهٔ شماست.'});
+    if(d.status!=='IN_REVIEW') return json(res,400,{message:'ثبت مانع فقط از وضعیت «در بررسی» ممکن است؛ ابتدا پرونده را به بررسی ببرید.'});
+    const b=await readBody(req);
+    const blocker=String(b.blocker??'').toUpperCase();
+    if(!DD_BLOCKER_FA[blocker]) return json(res,400,{message:'مانع را انتخاب کنید: عدم دسترسی به داده / عدم دسترسی / تعارض حل‌نشده / عدم همکاری.'});
+    const note=String(b.blockerNote??'').trim();
+    if(!note) return json(res,400,{message:'شرح مانع الزامی است — منشأ، مهلت داده‌شده و تلاش‌های انجام‌شده را بنویسید.'});
+    d.status='CANNOT_OPINE'; d.blocker=blocker; d.blockerNote=note.slice(0,500); d.updatedAt=nowIso();
+    saveDb(); audit(req,'BLOCKER','Dossier',d.id,'OK',{blocker});
+    return json(res,200,dossierView(d));
+  }
+  const ddUnblk=match('/dossiers/:id/unblock');
+  if(ddUnblk&&method==='POST'){
+    if(!hasPerm('partnership.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر مشارکت» (partnership.write) را ندارید.'});
+    ensureDossierSeed();
+    const d=(DB.dossiers??[]).find(x=>x.id===ddUnblk[0]&&visibleOrgIds(req).includes(x.organizationId));
+    if(!d) return json(res,404,{message:'پروندهٔ DD یافت نشد یا خارج از محدودهٔ شماست.'});
+    if(d.status!=='CANNOT_OPINE') return json(res,400,{message:'رفع مانع فقط برای پروندهٔ «عدم امکان اظهارنظر» ممکن است.'});
+    d.status='IN_REVIEW'; d.blocker=null; d.blockerNote=null; d.updatedAt=nowIso();
+    saveDb(); audit(req,'UNBLOCK','Dossier',d.id,'OK',{});
     return json(res,200,dossierView(d));
   }
   const ddAp=match('/dossiers/:id/approval');
@@ -18898,8 +18947,10 @@ async function __handler(req, res) {
     if(!['APPROVED','REJECTED'].includes(decision)) return json(res,400,{message:'وضعیت تصویب باید تصویب‌شده یا ردشده باشد.'});
     const view=dossierView(d);
     /* شرط G2: تصویب فقط با پذیرش همهٔ محورها + نظر مدیر تیم Y */
+    if(d.status==='CANNOT_OPINE') return json(res,400,{message:'پرونده در وضعیت «عدم امکان اظهارنظر» است — تا رفع مانع و تصویب گزارش، هیچ توصیهٔ ورود به بازار یا معرفی رسمی صادر نمی‌شود.'});
     if(decision==='APPROVED'&&!view.ddComplete) return json(res,400,{message:`دروازهٔ G2 باز نیست — ${faN(view.acceptedAxes)} از ${faN(view.totalAxes)} محور پذیرفته شده؛ همهٔ محورها باید پذیرفته شوند.`});
     if(decision==='APPROVED'&&!d.teamY) return json(res,400,{message:'دروازهٔ G2 باز نیست — نظر مدیر تیم Y هنوز ثبت نشده است.'});
+    if(decision==='APPROVED'&&d.teamY?.opinion==='STOP') return json(res,400,{message:'نظر مدیر تیم Y «توقف» است؛ تصمیم نهایی توقف سرمایه‌گذاری با مرجع مجاز در فناوران هوش مصنوعی پارس ایرانیان است.'});
     d.status=decision; d.updatedAt=nowIso(); saveDb();
     audit(req,'APPROVAL','Dossier',d.id,'OK',{decision});
     return json(res,200,dossierView(d));

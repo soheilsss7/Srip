@@ -53,11 +53,13 @@ try {
   await page.waitForFunction(() => (document.querySelector('section[data-f02]')?.textContent ?? '').includes('تصویب‌شده'), { timeout: 30000 });
   const ddRows = await page.evaluate(() => ({
     count: document.querySelectorAll('section[data-f02] tbody tr').length,
-    g2: (document.querySelector('section[data-f02]')?.textContent ?? '').includes('۱۲ / ۱۲'),
+    g2: (document.querySelector('section[data-f02]')?.textContent ?? '').includes('۱۵ / ۱۵'),
     teamY: (document.querySelector('section[data-f02]')?.textContent ?? '').includes('نظر مدیر تیم Y'),
+    co: (document.querySelector('section[data-f02]')?.textContent ?? '').includes('عدم امکان اظهارنظر'),
+    opinion: (document.querySelector('section[data-f02]')?.textContent ?? '').includes('ادامه'),
   }));
-  ok('F02: دو پروندهٔ بذر؛ پروندهٔ تصویب‌شده ۱۲/۱۲ محور با ستون نظر تیم Y و وضعیت G2',
-    ddRows.count === 2 && ddRows.g2 && ddRows.teamY, JSON.stringify(ddRows));
+  ok('F02: سه پروندهٔ بذر؛ پروندهٔ تصویب‌شده ۱۵/۱۵ محور + نظر چهارگانه + پروندهٔ «عدم امکان اظهارنظر»',
+    ddRows.count === 3 && ddRows.g2 && ddRows.teamY && ddRows.co && ddRows.opinion, JSON.stringify(ddRows));
 
   /* ── ۳) جزئیات: محورها + حق پاسخ ── */
   await page.evaluate(() => {
@@ -75,8 +77,8 @@ try {
       g2: t.includes('وضعیت تصویب (G2)'),
     };
   });
-  ok('F02: جزئیات پرونده — دوازده محور در دو گروه ۶.۲.۱/۶.۲.۲ + حق پاسخ ثبت‌شده + بخش تیم Y و G2',
-    axes.n === 12 && axes.cats && axes.respond && axes.teamY && axes.g2, JSON.stringify(axes));
+  ok('F02: جزئیات پرونده — پانزده محور در دو گروه ۶.۲.۱/۶.۲.۲ (سه محور جدید v14) + حق پاسخ ثبت‌شده + بخش تیم Y و G2',
+    axes.n === 15 && axes.cats && axes.respond && axes.teamY && axes.g2, JSON.stringify(axes));
 
   /* ── ۴) ویرایش محور + گرهٔ G2 ── */
   await page.evaluate(() => { document.querySelector('.modal-backdrop details[data-axis="security"]')?.setAttribute('open', ''); });
@@ -95,7 +97,7 @@ try {
       const sel = document.querySelectorAll('.modal-backdrop select');
       const target = sel[sel.length - 1]; /* سِلکت نظر تیم Y (آخرین سِلکت مودال) */
       const d = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value').set;
-      d.call(target, 'CONDITIONS');
+      d.call(target, 'CONTINUE_CONDITIONAL');
       target.dispatchEvent(new Event('change', { bubbles: true }));
     });
     await new Promise(r => setTimeout(r, 300));
@@ -110,8 +112,8 @@ try {
     if (noteSet) {
       await new Promise(r => setTimeout(r, 300));
       await page.evaluate(() => [...document.querySelectorAll('.modal-backdrop button')].find(b => (b.textContent ?? '').includes('ثبت نظر تیم Y'))?.click());
-      await page.waitForFunction(() => (document.querySelector('.modal-backdrop')?.textContent ?? '').includes('مشروط'), { timeout: 30000 });
-      ok('F02: ثبت نظر مدیر تیم Y (مشروط) از فرم — در جزئیات ظاهر شد', true);
+      await page.waitForFunction(() => (document.querySelector('.modal-backdrop')?.textContent ?? '').includes('ادامه مشروط'), { timeout: 30000 });
+      ok('F02: ثبت نظر مدیر تیم Y (ادامه مشروط — چهارگانهٔ v14) از فرم — در جزئیات ظاهر شد', true);
     }
     /* تلاش برای تصویب → خطای گرهٔ G2 (محورها کامل نیستند) */
     await page.evaluate(() => [...document.querySelectorAll('.modal-backdrop button')].find(b => (b.textContent ?? '').includes('تصویب پرونده'))?.click());
@@ -121,13 +123,43 @@ try {
   await page.keyboard.press('Escape');
   await new Promise(r => setTimeout(r, 500));
 
+  /* ── فاز ۱۵.۳ — پروندهٔ «عدم امکان اظهارنظر»: بنر مانع + رفع مانع ── */
+  await page.evaluate(() => {
+    const row = [...document.querySelectorAll('section[data-f02] tbody tr')].find(tr => (tr.querySelector('td:last-child') ?? tr).textContent === '' || true);
+    const tr = [...document.querySelectorAll('section[data-f02] tbody tr')].find(r2 => (r2.textContent ?? '').includes('عدم امکان اظهارنظر'));
+    tr?.click();
+  });
+  const coOk = await page.evaluate(() => {
+    const t = document.querySelector('.modal-backdrop')?.textContent ?? '';
+    return {
+      banner: !!document.querySelector('[data-dd-blocker]'),
+      blocker: t.includes('عدم دسترسی به داده'),
+      rule: t.includes('هیچ توصیهٔ ورود به بازار'),
+      unblock: !!document.querySelector('[data-dd-unblock]'),
+    };
+  });
+  ok('F02 ۱۵.۳: پروندهٔ «عدم امکان اظهارنظر» — بنر قرمز مانع + شرح + قاعدهٔ توصیه + دکمهٔ رفع مانع',
+    coOk.banner && coOk.blocker && coOk.rule && coOk.unblock, JSON.stringify(coOk));
+  await page.evaluate(() => { (document.querySelector('[data-dd-unblock]') ?? {})?.click?.(); });
+  let unblkOk = false;
+  try {
+    await page.waitForFunction(() => {
+      const t = document.querySelector('.modal-backdrop')?.textContent ?? '';
+      return t.includes('در بررسی') && !document.querySelector('[data-dd-blocker]');
+    }, { timeout: 20000 });
+    unblkOk = true;
+  } catch { unblkOk = false; }
+  ok('F02 ۱۵.۳: رفع مانع → بازگشت پرونده به «در بررسی»', unblkOk);
+  await page.keyboard.press('Escape');
+  await new Promise(r => setTimeout(r, 500));
+
   /* ── ۵) F14: کارت‌ها با وضعیت DD زنده ── */
   await page.waitForSelector('section[data-f14] tbody tr', { timeout: 30000 });
   const packs = await page.evaluate(() => {
     const t = document.querySelector('section[data-f14]')?.textContent ?? '';
     return {
       count: document.querySelectorAll('section[data-f14] tbody tr').length,
-      live: t.includes('تصویب‌شده — 12/12 محور') || t.includes('در بررسی — 1/12'),
+      live: t.includes('تصویب‌شده — 15/15 محور') || t.includes('در بررسی — 1/15'),
       goal: t.includes('هدف رابطه'),
       next: t.includes('اقدام بعدی'),
     };

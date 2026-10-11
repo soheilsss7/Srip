@@ -3047,14 +3047,17 @@ section('گام ۱۰.۱ — F02 پروندهٔ Due Diligence + F14 کارت آم
   /* ── F02 ── */
   const L = await api('/dossiers', { token: dt });
   const items = L.body.items ?? [];
-  check('F02: دو پروندهٔ بذر با دوازده محور ۶.۲.۱/۶.۲.۲ و نمای محاسبه‌شده',
-    L.status === 200 && items.length === 2 && (L.body.axes ?? []).length === 12
-    && items.every(d => d.totalAxes === 12 && typeof d.acceptedAxes === 'number' && typeof d.g2Ready === 'boolean'),
+  check('F02: سه پروندهٔ بذر با پانزده محور ۶.۲.۱/۶.۲.۲ (سه محور جدید v14) و نمای محاسبه‌شده',
+    L.status === 200 && items.length === 3 && (L.body.axes ?? []).length === 15
+    && (L.body.axes ?? []).some(a => a.key === 'sales-gtm') && (L.body.axes ?? []).some(a => a.key === 'team-governance') && (L.body.axes ?? []).some(a => a.key === 'legal-risk')
+    && items.every(d => d.totalAxes === 15 && typeof d.acceptedAxes === 'number' && typeof d.g2Ready === 'boolean'),
     `n=${items.length} axes=${(L.body.axes ?? []).length}`);
   const dd1 = items.find(d => d.id === 'dd-1');
   const dd2 = items.find(d => d.id === 'dd-2');
-  check('F02: بذر تصویب‌شده با همهٔ محورها پذیرفته + نظر تیم Y → g2Ready',
-    dd1.status === 'APPROVED' && dd1.acceptedAxes === 12 && dd1.g2Ready === true && dd1.teamY?.opinion === 'APPROVE');
+  check('F02: بذر تصویب‌شده ۱۵/۱۵ محور + دو محور جدید پر و یک محور با خلأ (بیمه) + نظر تیم Y → g2Ready',
+    dd1.status === 'APPROVED' && dd1.acceptedAxes === 15 && dd1.g2Ready === true && dd1.teamY?.opinion === 'CONTINUE'
+    && dd1.axes.find(a => a.key === 'sales-gtm')?.status === 'ACCEPTED' && dd1.axes.find(a => a.key === 'team-governance')?.status === 'ACCEPTED'
+    && dd1.axes.find(a => a.key === 'legal-risk')?.gap?.includes('بیمه'));
 
   /* client مجوز partnership.read دارد — جداسازی سازمانی + RBAC نوشتن */
   const cView1 = await api('/dossiers', { token: ct });
@@ -3068,8 +3071,8 @@ section('گام ۱۰.۱ — F02 پروندهٔ Due Diligence + F14 کارت آم
   const noOwner = await api('/dossiers', { method: 'POST', token: dt, body: { subjectOrgId: 'org-4' } });
   check('F02: پرونده بدون مالک → ۴۰۰', noOwner.status === 400);
   const ND = await api('/dossiers', { method: 'POST', token: dt, body: { subjectOrgId: 'org-4', ownerRole: 'مدیرعامل' } });
-  check('F02: باز کردن پروندهٔ تازه → دوازده محور شروع‌نشده + وضعیت پیش‌نویس',
-    ND.status === 201 && ND.body.totalAxes === 12 && ND.body.acceptedAxes === 0 && ND.body.status === 'DRAFT');
+  check('F02: باز کردن پروندهٔ تازه → پانزده محور شروع‌نشده + وضعیت پیش‌نویس',
+    ND.status === 201 && ND.body.totalAxes === 15 && ND.body.acceptedAxes === 0 && ND.body.status === 'DRAFT');
 
   /* قاعدهٔ G2 */
   const early = await api(`/dossiers/${ND.body.id}/approval`, { method: 'POST', token: dt, body: { decision: 'APPROVED' } });
@@ -3088,19 +3091,50 @@ section('گام ۱۰.۱ — F02 پروندهٔ Due Diligence + F14 کارت آم
     && !!resp.body.axes.find(a => a.key === 'security')?.responseAt);
 
   /* نظر تیم Y + تصویب */
-  const tyNoNote = await api(`/dossiers/${ND.body.id}/team-y`, { method: 'POST', token: dt, body: { opinion: 'APPROVE' } });
+  const tyLegacy = await api(`/dossiers/${ND.body.id}/team-y`, { method: 'POST', token: dt, body: { opinion: 'APPROVE', note: 'قدیمی' } });
+  check('F02: نظر تیم Y چهارگانهٔ v14 — مقدار قدیمی (APPROVE) → ۴۰۰',
+    tyLegacy.status === 400 && tyLegacy.body.message.includes('چهار حالت'));
+  const tyNoNote = await api(`/dossiers/${ND.body.id}/team-y`, { method: 'POST', token: dt, body: { opinion: 'CONTINUE' } });
   check('F02: نظر تیم Y بدون یادداشت → ۴۰۰', tyNoNote.status === 400);
-  const ty = await api(`/dossiers/${ND.body.id}/team-y`, { method: 'POST', token: dt, body: { opinion: 'CONDITIONS', note: 'با شرط تکمیل محورهای باقی‌مانده' } });
-  check('F02: نظر مدیر تیم Y (مشروط) ثبت شد', ty.status === 200 && ty.body.teamYFa?.opinionFa === 'مشروط');
+  const ty = await api(`/dossiers/${ND.body.id}/team-y`, { method: 'POST', token: dt, body: { opinion: 'CONTINUE_CONDITIONAL', note: 'با شرط تکمیل محورهای باقی‌مانده' } });
+  check('F02: نظر مدیر تیم Y (ادامه مشروط) ثبت شد — چهارگانهٔ v14', ty.status === 200 && ty.body.teamYFa?.opinionFa === 'ادامه مشروط');
   const stillNo = await api(`/dossiers/${ND.body.id}/approval`, { method: 'POST', token: dt, body: { decision: 'APPROVED' } });
   check('F02: گرهٔ G2 — با نظر تیم Y اما بدون تکمیل محورها هنوز ۴۰۰', stillNo.status === 400);
   /* تکمیل بقیهٔ محورها با شاهد */
   for (const a of (L.body.axes ?? []).filter(x => x.key !== 'security')) {
     await api(`/dossiers/${ND.body.id}/axes/${a.key}`, { method: 'PATCH', token: dt, body: { answer: `پاسخ ${a.title}`, evidence: `شاهد ${a.title}`, status: 'ACCEPTED' } });
   }
+  /* فاز ۱۵.۲ — نظر «توقف»: تصویب ممنوع؛ تصمیم نهایی با مرجع مجاز */
+  const tyStop = await api(`/dossiers/${ND.body.id}/team-y`, { method: 'POST', token: dt, body: { opinion: 'STOP', note: 'شواهد بازار کافی نیست' } });
+  const stopGate = await api(`/dossiers/${ND.body.id}/approval`, { method: 'POST', token: dt, body: { decision: 'APPROVED' } });
+  check('F02: نظر «توقف» → تصویب ۴۰۰ (تصمیم نهایی توقف با مرجع مجاز فناوران)',
+    tyStop.status === 200 && stopGate.status === 400 && stopGate.body.message.includes('مرجع مجاز'));
+  await api(`/dossiers/${ND.body.id}/team-y`, { method: 'POST', token: dt, body: { opinion: 'CONTINUE_CONDITIONAL', note: 'با شرط تکمیل محورهای باقی‌مانده' } });
   const done = await api(`/dossiers/${ND.body.id}/approval`, { method: 'POST', token: dt, body: { decision: 'APPROVED' } });
   check('F02: پس از پذیرش همهٔ محورها + نظر تیم Y → تصویب (G2 باز شد)',
     done.status === 200 && done.body.status === 'APPROVED' && done.body.g2Ready === true);
+
+  /* ── فاز ۱۵.۳ — «عدم امکان اظهارنظر» + مانع داده ── */
+  const dd3 = items.find(d => d.id === 'dd-3');
+  check('F02 ۱۵.۳: بذر عدم امکان اظهارنظر — مانع «عدم دسترسی به داده» + شرح + g2Ready همیشه false + قاعدهٔ توصیه',
+    dd3?.status === 'CANNOT_OPINE' && dd3.statusFa === 'عدم امکان اظهارنظر' && dd3.blockerFa === 'عدم دسترسی به داده'
+    && !!dd3.blockerNote && dd3.g2Ready === false && !!dd3.cannotOpineRule?.includes('ورود به بازار'));
+  const coApprove = await api(`/dossiers/dd-3/approval`, { method: 'POST', token: dt, body: { decision: 'APPROVED' } });
+  check('F02 ۱۵.۳: تصویب پروندهٔ «عدم امکان اظهارنظر» → ۴۰۰ (هیچ توصیهٔ ورود به بازار صادر نمی‌شود)',
+    coApprove.status === 400 && coApprove.body.message.includes('عدم امکان اظهارنظر'));
+  const blkWrongState = await api(`/dossiers/${ND.body.id}/blocker`, { method: 'POST', token: dt, body: { blocker: 'NO_DATA', blockerNote: 'شرح' } });
+  check('F02 ۱۵.۳: ثبت مانع فقط از وضعیت «در بررسی» (پروندهٔ مصوب → ۴۰۰)',
+    blkWrongState.status === 400 && blkWrongState.body.message.includes('در بررسی'));
+  const blkNoNote = await api(`/dossiers/dd-2/blocker`, { method: 'POST', token: dt, body: { blocker: 'NO_DATA' } });
+  const blkBad = await api(`/dossiers/dd-2/blocker`, { method: 'POST', token: dt, body: { blocker: 'WHATEVER', blockerNote: 'شرح' } });
+  check('F02 ۱۵.۳: مانع بدون شرح یا با مقدار نامعتبر → ۴۰۰',
+    blkNoNote.status === 400 && blkBad.status === 400);
+  const blk = await api(`/dossiers/dd-2/blocker`, { method: 'POST', token: dt, body: { blocker: 'NON_COOPERATION', blockerNote: 'سازمان موضوع پس از دو یادآوری پاسخ نداد؛ مهلت در صورت‌جلسهٔ ثبت است.' } });
+  check('F02 ۱۵.۳: ثبت مانع روی dd-2 → عدم امکان اظهارنظر با g2Ready=false',
+    blk.status === 200 && blk.body.status === 'CANNOT_OPINE' && blk.body.blockerFa === 'عدم همکاری' && blk.body.g2Ready === false);
+  const unblk = await api(`/dossiers/dd-2/unblock`, { method: 'POST', token: dt, body: {} });
+  check('F02 ۱۵.۳: رفع مانع → بازگشت به «در بررسی» و پاک شدن مانع',
+    unblk.status === 200 && unblk.body.status === 'IN_REVIEW' && unblk.body.blocker == null && unblk.body.blockerFa == null);
 
   /* ── F14 ── */
   const P = await api('/readiness-packs', { token: dt });
@@ -3110,8 +3144,8 @@ section('گام ۱۰.۱ — F02 پروندهٔ Due Diligence + F14 کارت آم
     && packs.every(p => p.partnerName && p.commitments?.ours && p.ddStatus),
     `n=${packs.length}`);
   const rp1 = packs.find(p => p.id === 'rp-1');
-  check('F14: وضعیت DD زنده از پروندهٔ متصل (تصویب‌شده ۱۲/۱۲ + آمادهٔ G2)',
-    rp1.ddStatus.status === 'APPROVED' && rp1.ddStatus.acceptedAxes === 12 && rp1.ddStatus.g2Ready === true);
+  check('F14: وضعیت DD زنده از پروندهٔ متصل (تصویب‌شده ۱۵/۱۵ + آمادهٔ G2)',
+    rp1.ddStatus.status === 'APPROVED' && rp1.ddStatus.acceptedAxes === 15 && rp1.ddStatus.g2Ready === true);
 
   const noLink = await api('/readiness-packs', { method: 'POST', token: dt, body: { subject: 'کارت بدون اتصال', ownerRole: 'مدیرعامل' } });
   check('F14: کارت باید به مشارکت یا فرصت متصل باشد → ۴۰۰', noLink.status === 400);

@@ -2282,4 +2282,22 @@ export const EN_DICT_C: Record<string, string> = {
   'کل پرونده\u200cها': 'All dossiers',
   'گذرنده': 'Passed',
   'گروه هدف': 'Target group',
+
+  'ادامه': 'Continue',
+  'ادامه مشروط': 'Continue with conditions',
+  'برای هر سرمایه\u200cگذار یا شریک، پروندهٔ بررسی با پانزده محور ۶.۲.۱ و ۶.۲.۲ باز کنید.': 'Open a review dossier with the fifteen 6.2.1/6.2.2 axes for each investor or partner.',
+  'تصمیم نهایی توقف سرمایه\u200cگذاری با مرجع مجاز در فناوران هوش مصنوعی پارس ایرانیان است.': 'The final decision to halt investment rests with the authorized representative of Pars Iranians AI Developers.',
+  'تعارض حل\u200cنشده': 'Unresolved conflict',
+  'ثبت مانع': 'Record blocker',
+  'ثبت مانع داده (عدم امکان اظهارنظر)': 'Record data blocker (cannot opine)',
+  'رفع مانع — بازگشت به بررسی': 'Remove blocker — return to review',
+  'شرح مانع (الزامی)': 'Blocker description (required)',
+  'عدم امکان اظهارنظر': 'Cannot opine',
+  'عدم دسترسی': 'No access',
+  'عدم دسترسی به داده': 'No access to data',
+  'عدم همکاری': 'Non-cooperation',
+  'نیاز به بررسی تکمیلی': 'Further review needed',
+  'پانزده محور استاندارد ۶.۲.۱ و ۶.۲.۲ به\u200cصورت خودکار باز می\u200cشوند.': 'The fifteen standard 6.2.1/6.2.2 axes open automatically.',
+
+  'وضعیت فعلی پرونده': 'Current dossier status',
 };

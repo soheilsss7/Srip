@@ -1,9 +1,10 @@
 'use client';
 /* ═══════════════════════════════════════════════════════════════════════════
-   گام ۱۰.۱ — F02 پروندهٔ Due Diligence (کامپوننت)
-   دوازده محور استاندارد ۶.۲.۱ (فنی) و ۶.۲.۲ (کسب‌وکاری) با پاسخ/شاهد/نقص ·
-   حق پاسخ طرف مقابل · نظر مدیر تیم Y · وضعیت تصویب G2
-   (شرط سرور: تصویب فقط با پذیرش همهٔ محورها + نظر تیم Y).
+   گام ۱۰.۱ — F02 پروندهٔ Due Diligence (کامپوننت) · فاز ۱۵ سند v14
+   پانزده محور استاندارد ۶.۲.۱ (فنی) و ۶.۲.۲ (کسب‌وکاری) با پاسخ/شاهد/نقص ·
+   حق پاسخ طرف مقابل · نظر چهارگانهٔ مدیر تیم Y (ادامه/ادامه مشروط/توقف/بررسی تکمیلی) ·
+   وضعیت تصویب G2 · «عدم امکان اظهارنظر» با ثبت مانع داده/دسترسی (تا رفع مانع
+   هیچ توصیهٔ ورود به بازار صادر نمی‌شود) · موضوع = محصول/محصول جانبی/VC/شرکت (۶.۲).
    ═══════════════════════════════════════════════════════════════════════════ */
 import { useCallback, useEffect, useState } from 'react';
 import { api, apiGet, unwrapList } from '../_lib/api';
@@ -15,9 +16,11 @@ import { useWorkspace } from './workspace';
 
 const AX_STATUS_FA: Record<string, string> = { NOT_STARTED: t('شروع‌نشده'), IN_PROGRESS: t('در جریان'), ACCEPTED: t('پذیرفته‌شده') };
 const AX_TONE: Record<string, 'success' | 'warning' | 'neutral'> = { NOT_STARTED: 'neutral', IN_PROGRESS: 'warning', ACCEPTED: 'success' };
-const STATUS_FA: Record<string, string> = { DRAFT: t('پیش‌نویس'), IN_REVIEW: t('در بررسی'), APPROVED: t('تصویب‌شده'), REJECTED: t('ردشده') };
-const STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> = { DRAFT: 'neutral', IN_REVIEW: 'warning', APPROVED: 'success', REJECTED: 'danger' };
-const OPINION_FA: Record<string, string> = { APPROVE: t('تأیید'), CONDITIONS: t('مشروط'), REJECT: t('رد') };
+const STATUS_FA: Record<string, string> = { DRAFT: t('پیش‌نویس'), IN_REVIEW: t('در بررسی'), APPROVED: t('تصویب‌شده'), REJECTED: t('ردشده'), CANNOT_OPINE: t('عدم امکان اظهارنظر') };
+const STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> = { DRAFT: 'neutral', IN_REVIEW: 'warning', APPROVED: 'success', REJECTED: 'danger', CANNOT_OPINE: 'danger' };
+const OPINION_FA: Record<string, string> = { CONTINUE: t('ادامه'), CONTINUE_CONDITIONAL: t('ادامه مشروط'), STOP: t('توقف'), FURTHER_REVIEW: t('نیاز به بررسی تکمیلی') };
+const OPINION_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = { CONTINUE: 'success', CONTINUE_CONDITIONAL: 'warning', STOP: 'danger', FURTHER_REVIEW: 'info' };
+const BLOCKER_FA: Record<string, string> = { NO_DATA: t('عدم دسترسی به داده'), NO_ACCESS: t('عدم دسترسی'), UNRESOLVED_CONFLICT: t('تعارض حل‌نشده'), NON_COOPERATION: t('عدم همکاری') };
 
 export default function DdDossiers() {
   const { can } = useWorkspace();
@@ -35,6 +38,7 @@ export default function DdDossiers() {
   const [axisDraft, setAxisDraft] = useState<Record<string, any>>({});
   const [respDraft, setRespDraft] = useState<Record<string, string>>({});
   const [tyDraft, setTyDraft] = useState<any>(null);
+  const [blkDraft, setBlkDraft] = useState<any>({ blocker: 'NO_DATA', blockerNote: '' });
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -86,6 +90,24 @@ export default function DdDossiers() {
     } catch (x) { setError((x as Error).message); } finally { setBusy(''); }
   }
 
+  /* فاز ۱۵.۳ — ثبت مانع (عدم امکان اظهارنظر) و رفع مانع */
+  async function saveBlocker() {
+    if (!detail) return;
+    setBusy('blk'); setFormError('');
+    try {
+      const r: any = await api(`/dossiers/${detail.id}/blocker`, { method: 'POST', body: JSON.stringify(blkDraft) });
+      setDetail(r); await reload();
+    } catch (x) { setFormError((x as Error).message); } finally { setBusy(''); }
+  }
+  async function unblock() {
+    if (!detail) return;
+    setBusy('unblk'); setFormError('');
+    try {
+      const r: any = await api(`/dossiers/${detail.id}/unblock`, { method: 'POST', body: JSON.stringify({}) });
+      setDetail(r); await reload();
+    } catch (x) { setFormError((x as Error).message); } finally { setBusy(''); }
+  }
+
   const items = data?.items ?? [];
   const cats = ['621', '622'];
 
@@ -99,7 +121,7 @@ export default function DdDossiers() {
       <ErrorCard message={error} />
       {loading ? <Loading /> : items.length === 0 ? (
         <EmptyV4 icon={<FileSearch size={22} />} title={t('پروندهٔ DD ثبت نشده است')}
-          description={t('برای هر سرمایه‌گذار یا شریک، پروندهٔ بررسی با دوازده محور ۶.۲.۱ و ۶.۲.۲ باز کنید.')} />
+          description={t('برای هر سرمایه‌گذار یا شریک، پروندهٔ بررسی با پانزده محور ۶.۲.۱ و ۶.۲.۲ باز کنید.')} />
       ) : (
         <div className="table-wrap">
           <table>
@@ -113,7 +135,7 @@ export default function DdDossiers() {
                   <td className="t-primary">{d.subjectName}</td>
                   <td>{d.ownerRole}</td>
                   <td>{faNum(d.acceptedAxes)} / {faNum(d.totalAxes)}{d.ddComplete ? <span className="chip success" style={{ marginInlineStart: 6 }}>{t('تکمیل')}</span> : null}</td>
-                  <td>{d.teamY ? <Badge tone={d.teamY.opinion === 'APPROVE' ? 'success' : d.teamY.opinion === 'CONDITIONS' ? 'warning' : 'danger'}>{OPINION_FA[d.teamY.opinion]}</Badge> : <span className="chip neutral">{t('ثبت نشده')}</span>}</td>
+                  <td>{d.teamY ? <Badge tone={OPINION_TONE[d.teamY.opinion] ?? 'neutral'}>{OPINION_FA[d.teamY.opinion]}</Badge> : <span className="chip neutral">{t('ثبت نشده')}</span>}</td>
                   <td><StatusBadge tone={STATUS_TONE[d.status]}>{STATUS_FA[d.status]}</StatusBadge></td>
                   <td><button className="srip-button" onClick={(e) => { e.stopPropagation(); setDetail(d); setAxisDraft({}); setRespDraft({}); setTyDraft(null); }}>{t('محورها')}</button></td>
                 </tr>
@@ -176,7 +198,7 @@ export default function DdDossiers() {
           <div className="section-head"><h3><ShieldCheck size={15} /> {t('نظر مدیر تیم Y')}</h3></div>
           {detail.teamY ? (
             <div className="detail-grid">
-              <div><b>{t('نظر')}</b><p><Badge tone={detail.teamY.opinion === 'APPROVE' ? 'success' : detail.teamY.opinion === 'CONDITIONS' ? 'warning' : 'danger'}>{OPINION_FA[detail.teamY.opinion]}</Badge></p></div>
+              <div><b>{t('نظر')}</b><p><Badge tone={OPINION_TONE[detail.teamY.opinion] ?? 'neutral'}>{OPINION_FA[detail.teamY.opinion]}</Badge></p></div>
               <div><b>{t('یادداشت')}</b><p>{detail.teamY.note}</p></div>
               <div><b>{t('ثبت‌کننده')}</b><p>{detail.teamY.by}</p></div>
             </div>
@@ -193,9 +215,34 @@ export default function DdDossiers() {
             </div>
           ) : <p className="muted">{t('ثبت نشده')}</p>}
 
+          {/* فاز ۱۵.۳ — مانع و «عدم امکان اظهارنظر» */}
+          {detail.status === 'CANNOT_OPINE' && (
+            <div className="status-banner danger" data-dd-blocker role="alert">
+              <b>{t('عدم امکان اظهارنظر')}</b> — {t('مانع')}: {detail.blockerFa ?? detail.blocker}
+              <p>{detail.blockerNote}</p>
+              <p className="muted small">{detail.cannotOpineRule}</p>
+              {writable && <button className="srip-button" data-dd-unblock disabled={busy === 'unblk'} onClick={unblock}>{busy === 'unblk' ? t('…') : t('رفع مانع — بازگشت به بررسی')}</button>}
+            </div>
+          )}
+          {writable && detail.status === 'IN_REVIEW' && (
+            <details className="axis-row" data-dd-blocker-form style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '8px 10px', marginBottom: 6 }}>
+              <summary style={{ cursor: 'pointer' }}><b>{t('ثبت مانع داده (عدم امکان اظهارنظر)')}</b></summary>
+              <div className="form-grid" style={{ marginTop: 8 }}>
+                <label className="field"><span>{t('مانع')}</span>
+                  <select value={blkDraft.blocker} onChange={(e) => setBlkDraft((b: any) => ({ ...b, blocker: e.target.value }))}>
+                    {Object.entries(BLOCKER_FA).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+                  </select></label>
+                <label className="field"><span>{t('شرح مانع (الزامی)')}</span>
+                  <input value={blkDraft.blockerNote} data-dd-blocker-note onChange={(e) => setBlkDraft((b: any) => ({ ...b, blockerNote: e.target.value }))} /></label>
+                <div className="field"><button className="srip-button" data-dd-blocker-submit disabled={!blkDraft.blockerNote?.trim() || busy === 'blk'} onClick={saveBlocker}>{busy === 'blk' ? t('…') : t('ثبت مانع')}</button></div>
+              </div>
+            </details>
+          )}
+
           {/* وضعیت تصویب G2 */}
           <div className="section-head"><h3><ClipboardCheck size={15} /> {t('وضعیت تصویب (G2)')}</h3></div>
-          <p className="muted">{t('شرط تصویب: پذیرش همهٔ محورها + ثبت نظر مدیر تیم Y — دروازهٔ G2 سند v14.')}</p>
+          <p className="muted">{t('شرط تصویب: پذیرش همهٔ محورها + ثبت نظر مدیر تیم Y — دروازهٔ G2 سند v14.')}{t('تصمیم نهایی توقف سرمایه‌گذاری با مرجع مجاز در فناوران هوش مصنوعی پارس ایرانیان است.')}</p>
+          <p className="muted" data-dd-status>{t('وضعیت فعلی پرونده')}: <StatusBadge tone={STATUS_TONE[detail.status] ?? 'neutral'}>{STATUS_FA[detail.status] ?? detail.status}</StatusBadge>{detail.blockerFa ? ` · ${t('مانع')}: ${detail.blockerFa}` : ''}</p>
           {writable && detail.status !== 'APPROVED' && (<div style={{ display: 'flex', gap: 8 }}>
             <button className="srip-button primary" disabled={busy === 'dec'} onClick={() => decide('APPROVED')}>{t('تصویب پرونده')}</button>
             <button className="srip-button" disabled={busy === 'dec'} onClick={() => decide('REJECTED')}>{t('رد پرونده')}</button>
@@ -205,7 +252,7 @@ export default function DdDossiers() {
 
       {/* ایجاد پروندهٔ DD */}
       <Modal open={createOpen} title={t('پروندهٔ DD جدید')} onClose={() => setCreateOpen(false)}
-        description={t('دوازده محور استاندارد ۶.۲.۱ و ۶.۲.۲ به‌صورت خودکار باز می‌شوند.')}
+        description={t('پانزده محور استاندارد ۶.۲.۱ و ۶.۲.۲ به‌صورت خودکار باز می‌شوند.')}
         footer={<>
           <button className="srip-button" onClick={() => setCreateOpen(false)}><X size={14} /> {t('انصراف')}</button>
           <button type="submit" form="dd-create-form" className="srip-button primary" disabled={busy === 'create'}>{busy === 'create' ? t('در حال ذخیره…') : t('باز کردن پرونده')}</button>
