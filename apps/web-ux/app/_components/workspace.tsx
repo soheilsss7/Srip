@@ -96,6 +96,7 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   '/relationships': <Share2 size={16}/>,
   '/network': <Network size={16}/>,
   '/publics': <Radar size={16}/>,
+  '/international': <Globe size={16}/>,
   '/strategy': <Target size={16}/>,
 
   '/interactions': <MessagesSquare size={16}/>,

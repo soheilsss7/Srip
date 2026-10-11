@@ -41,6 +41,7 @@ export const NAV_ZONES: readonly NavZone[] = lt([
     ['/organizations', t('سازمان‌ها'), 'organization.read'],
     ['/people', t('اشخاص'), 'person.read'],
     ['/directory', t('دیتابیس روابط بیرونی'), 'organization.read'],
+    ['/international', t('ارتباطات بین‌المللی'), 'international.read'],
   ]],
   [t('روابط'), t('وضعیت پیوندها و شبکه'), [ /* ۸ آیتم — سقف قانون Miller (گام ۲.۲ مسترپلن)؛ آیتم نهم = شکستن به دو Workspace */
     ['/relationships', t('روابط'), 'relationship.read'],
@@ -148,7 +149,7 @@ export const NAV_PERMISSION_MAP: Record<string, string> = {
   '/recommendations': 'recommendation.read', '/reports': 'report.read', '/documents': 'document.read',
   '/requirements': 'project.read', '/approvals': 'approval.read', '/data-exchange': 'report.read',
   '/settings': 'user.read', '/sessions': 'session.read', '/data-management': 'data.quality.read',
-  '/workflows': 'workflow.read', '/publics': 'publics.read', '/strategy': 'strategy.read',
+  '/workflows': 'workflow.read', '/publics': 'publics.read', '/strategy': 'strategy.read', '/international': 'international.read',
   '/gis': 'organization.read', '/portal': 'publics.read', '/mcp': 'analytics.read', '/imports': 'interaction.write',
   '/enrichment': 'organization.read', '/developers': 'integration.read', '/qbr': 'analytics.read',
   '/notifications': 'dashboard.read', '/program': 'program.read',
@@ -220,5 +221,6 @@ export const GLOSS: Record<string, string> = lt({
   '/data-management': t('مرکز داده: کیفیت، ورود و حاکمیت داده در یک نگاه'),
   '/workflows': t('زنجیره‌های خودکار تصمیم، اجرا و تأییدها'),
   '/publics': t('نقشهٔ عموم‌ها: بازیگران اثرگذار، ماتریس نفوذ×حمایت و شکاف‌های پوشش'),
+  '/international': t('ارتباطات بین‌المللی: پروندهٔ F17، گروه‌های هدف، کنترل حقوقی و پایش ماهانه'),
   '/strategy': t('تحلیل رقابت و تعامل راهبردی'),
 });

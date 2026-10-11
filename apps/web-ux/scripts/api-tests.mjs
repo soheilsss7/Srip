@@ -1653,8 +1653,9 @@ section('گام ۲.۷ — گزارش ماهانهٔ استاندارد (ماژو
     pmr2.statusFa === 'ارائه‌شده' && pmr3.statusFa === 'پیش‌نویس' && pmr2.dueAt.startsWith('2026-10-05') && pmr2.onTime === true);
   check('بخش زندهٔ شاخص‌ها از داشبورد (نه عدد دستی) — ۱۰ شاخص با مقدار و وضعیت',
     (pmr2.live.kpis ?? []).length === 10 && pmr2.live.kpis.every(k => k.valueLabel && k.status));
-  check('بخش زندهٔ ریسک‌های درجه بالا — ۳ ریسک با مالک نقش',
-    (pmr2.live.highRisks ?? []).length === 3 && pmr2.live.highRisks.every(r => r.title && r.ownerRole));
+  check('بخش زندهٔ ریسک‌های درجه بالا — ۵ ریسک با مالک نقش (۳ برنامه + ۲ بین‌المللی فاز ۱۴)',
+    (pmr2.live.highRisks ?? []).length === 5 && pmr2.live.highRisks.every(r => r.title && r.ownerRole)
+      && pmr2.live.highRisks.some(r => r.id === 'risk-intl-1') && pmr2.live.highRisks.some(r => r.id === 'risk-intl-2'));
   check('انحراف ثبت‌شدهٔ pmr-2 با هر سه قلم (علت/اثر بر مسیر بحرانی/اقدام جبرانی)',
     pmr2.deviations.length === 1 && !!(pmr2.deviations[0].cause && pmr2.deviations[0].criticalPathImpact && pmr2.deviations[0].mitigation));
   check('قاعدهٔ انحراف در پاسخ سرور آمده است', String(list.body.rule).includes('دو هفته'));
@@ -3350,6 +3351,102 @@ section('گام ۱۰.۴ — F03 ممیزی ظرفیت + F04 محیط/ذی‌نف
   const cViewR = await api('/research-plans', { token: ct });
   check('F07: RBAC — مشاهدهٔ طرح پژوهش فقط با strategy.read (client بدون مجوز → ۴۰۳)',
     cViewR.status === 403);
+}
+
+/* ═══ فاز ۱۴ — ارتباطات بین‌المللی (۱۰.۶ + F17/P17) ═══ */
+{
+  const dl = await login(OWNER.email);
+  const dt = dl.body?.accessToken;
+  const cl = await login(CLIENT.email, CLIENT.password);
+  const ct = cl.body?.accessToken;
+
+  const OV = await api('/international/overview', { token: dt });
+  check('F17: نمای کلی — شش گروه هدف ۱۰.۶.۱ + کشورهای اولویت‌دار با دلیل + ۵ قاعدهٔ کنترل + ۵ معیار پایش',
+    OV.status === 200 && (OV.body.targetGroups ?? []).length === 6 && (OV.body.priorityCountries ?? []).length === 3
+      && (OV.body.rules ?? []).length === 5 && (OV.body.reviewCriteria ?? []).length === 5
+      && OV.body.targetGroups.some((g) => g.key === 'INVESTOR' && g.goal.includes('گفت‌وگوی مستند'))
+      && OV.body.priorityCountries.every((c) => !!c.country && !!c.reason));
+
+  const L = await api('/international/contacts', { token: dt });
+  const items = L.body?.items ?? [];
+  const sum = L.body?.summary ?? {};
+  check('F17: بذر ۴ پرونده (دانشگاه/استانداردگذاری/سرمایه‌گذار ارجاع‌شده/ردشده) + خلاصهٔ وضعیت',
+    L.status === 200 && items.length === 4 && sum.total === 4
+      && items.some((x) => x.id === 'intl-1' && x.identityFa === 'تأییدشده' && x.targetGroupFa.includes('دانشگاه'))
+      && items.some((x) => x.id === 'intl-2' && x.identity === 'IN_REVIEW')
+      && items.some((x) => x.id === 'intl-4' && x.identity === 'REJECTED' && x.status === 'CLOSED')
+      && sum.referred === 1);
+
+  const D3 = await api('/international/contacts/intl-3', { token: dt });
+  check('F17: وضعیت DD خودکار از پروندهٔ متصل (intl-3 → dd-1 مصوب) + ارجاع ثبت‌شده به F14',
+    D3.status === 200 && D3.body.ddStatus === 'APPROVED' && D3.body.ddStatusFa === 'تصویب‌شده'
+      && D3.body.referral?.packId === 'rp-1' && D3.body.referralFa?.includes('F14')
+      && D3.body.dataSharePerm === 'LIMITED' && D3.body.legalReview === 'PASSED');
+
+  const cList = await api('/international/contacts', { token: ct });
+  check('F17: RBAC — مشاهده فقط با international.read (client بدون نقش سازمانی → ۴۰۳)', cList.status === 403);
+  const cPost = await api('/international/contacts', { method: 'POST', token: ct, body: { country: 'x', orgName: 'y', purpose: 'z', ownerRole: 'w', message: 'm' } });
+  check('F17: RBAC — ثبت پرونده فقط با international.write (client → ۴۰۳)', cPost.status === 403);
+  const cOv = await api('/international/overview', { token: ct });
+  check('F17: RBAC — نمای کلی هم محافظت‌شده (client → ۴۰۳)', cOv.status === 403);
+
+  const noDD = await api('/international/contacts', { method: 'POST', token: dt, body: { country: 'فرانسه', orgName: 'نهاد آزمون', purpose: 'معرفی', ownerRole: 'مدیرعامل', message: 'پیام', messageType: 'PRODUCT', textVersions: [{ lang: 'fa', role: 'REFERENCE', text: 'متن' }] } });
+  check('F17: قاعدهٔ ۱ — پیام محصول‌محور بدون پروندهٔ DD متصل → ۴۰۰', noDD.status === 400 && noDD.body.message.includes('Due Diligence'));
+  const pendDD = await api('/international/contacts', { method: 'POST', token: dt, body: { country: 'فرانسه', orgName: 'نهاد آزمون', purpose: 'معرفی', ownerRole: 'مدیرعامل', message: 'پیام', messageType: 'PRODUCT', ddDossierId: 'dd-2', textVersions: [{ lang: 'fa', role: 'REFERENCE', text: 'متن' }] } });
+  check('F17: قاعدهٔ ۱ — پیام محصول‌محور با DD غیرمصوب (dd-2) → ۴۰۰', pendDD.status === 400 && pendDD.body.message.includes('تصویب'));
+
+  const badShare = await api('/international/contacts/intl-2', { method: 'PATCH', token: dt, body: { dataSharePerm: 'LIMITED' } });
+  check('F17: قاعدهٔ ۲ — اشتراک داده بدون هویت تأییدشده و بررسی حقوقی گذرنده → ۴۰۰',
+    badShare.status === 400 && badShare.body.message.includes('پیش از تبادل اطلاعات حساس'));
+
+  const badTr = await api('/international/contacts/intl-1', { method: 'PATCH', token: dt, body: { textVersion: { lang: 'de', role: 'TRANSLATION', text: 'Anfrage' } } });
+  check('F17: قاعدهٔ ۳ — ترجمه بدون بازبین تخصصی → ۴۰۰ (متن فارسی مرجع می‌ماند)',
+    badTr.status === 400 && badTr.body.message.includes('متن فارسی مرجع'));
+
+  const NC = await api('/international/contacts', { method: 'POST', token: dt, body: { country: 'سنگاپور', market: 'اکوسیستم داده', targetGroup: 'EXPERT', orgName: 'شبکهٔ حرفه‌ای داده', contactName: 'دکتر لی', source: 'رویداد منطقه‌ای', purpose: 'یافتن داور و مشاور متناسب', ownerRole: 'مدیر استراتژی', message: 'درخواست معرفی داور مستقل', evidence: 'سند رویداد', textVersions: [{ lang: 'fa', role: 'REFERENCE', text: 'درخواست معرفی داور مستقل.' }], nextAction: 'تماس ویدئویی' } });
+  check('F17: ثبت پروندهٔ عمومی معتبر → ۲۰۱ با هویت بررسی‌نشده و وضعیت باز',
+    NC.status === 201 && NC.body.identity === 'UNVERIFIED' && NC.body.status === 'OPEN' && NC.body.messageType === 'GENERAL');
+
+  const upId = await api(`/international/contacts/${NC.body.id}`, { method: 'PATCH', token: dt, body: { identity: 'VERIFIED', identityNote: 'اسناد رسمی تطبیق شد', legalReview: 'PASSED', dataSharePerm: 'LIMITED', status: 'IN_PROGRESS' } });
+  check('F17: ارتقای هویت + بررسی حقوقی گذرنده سپس اشتراک دادهٔ محدود → ۲۰۰',
+    upId.status === 200 && upId.body.identityFa === 'تأییدشده' && upId.body.dataSharePermFa === 'محدود' && upId.body.statusFa === 'در جریان');
+
+  const corr = await api(`/international/contacts/${NC.body.id}`, { method: 'PATCH', token: dt, body: { correspondence: { type: 'MEETING', summary: 'جلسهٔ ویدئویی ۳۰ دقیقه‌ای؛ توافق بر ارسال سند تخصصی.' } } });
+  check('F17: افزودن مکاتبه/جلسه به پرونده (سابقهٔ F17)', corr.status === 200 && (corr.body.correspondences ?? []).length === 1 && corr.body.correspondences[0].type === 'MEETING');
+  const tver = await api(`/international/contacts/${NC.body.id}`, { method: 'PATCH', token: dt, body: { textVersion: { lang: 'en', role: 'TRANSLATION', text: 'Request for independent referee introduction.', reviewer: 'مدیر محتوا' } } });
+  check('F17: افزودن ترجمهٔ بازبینی‌شده پس از نسخهٔ مرجع فارسی → ۲۰۰',
+    tver.status === 200 && (tver.body.textVersions ?? []).length === 2 && tver.body.textVersions[1].reviewer === 'مدیر محتوا');
+
+  const noPack = await api(`/international/contacts/${NC.body.id}/referral`, { method: 'POST', token: dt, body: {} });
+  check('F17: قاعدهٔ ۴ — ارجاع فرصت بدون انتخاب کارت F14 → ۴۰۰', noPack.status === 400 && noPack.body.message.includes('F14'));
+  const ref = await api(`/international/contacts/${NC.body.id}/referral`, { method: 'POST', token: dt, body: { packId: 'rp-2' } });
+  check('F17: ارجاع فرصت واجد شرایط به کارت F14 → ۲۰۰ (فروش فقط با مرجع مجاز)',
+    ref.status === 200 && ref.body.referral?.packId === 'rp-2' && ref.body.referralFa?.includes('F14'));
+
+  const RV = await api('/international/reviews', { token: dt });
+  const rvs = RV.body?.items ?? [];
+  check('F17: پایش ماهانهٔ ۱۰.۶.۴ — دو ماه بذر با پنج معیار و خط مبنا',
+    RV.status === 200 && rvs.length === 2 && RV.body.baselineExists === true
+      && rvs[0].isBaseline === true && rvs[1].isBaseline === false
+      && rvs.every((r) => (r.criteria ?? []).length === 5) && !!rvs[1].target);
+  const dupBase = await api('/international/reviews', { method: 'POST', token: dt, body: { month: 'ماه X', isBaseline: true, criteria: [] } });
+  check('F17: قاعدهٔ خط مبنا — ثبت خط مبنا برای بار دوم → ۴۰۰', dupBase.status === 400 && dupBase.body.message.includes('خط مبنا'));
+  const NRv = await api('/international/reviews', { method: 'POST', token: dt, body: { month: 'ماه سوم', target: 'رسیدن به ۴ از ۴ احراز هویت', criteria: [
+    { key: 'stakeholder-map', value: '۳ کشور؛ خلأ ۱ نهاد', evidence: 'گزارش' },
+    { key: 'counterparty-validation', value: '۴ از ۴', evidence: 'پرونده‌ها' },
+    { key: 'multilingual-readiness', value: '۳ ترجمهٔ بازبینی‌شده', evidence: 'پرونده‌ها' },
+    { key: 'followup-quality', value: '۸۵٪ به‌موقع', evidence: 'گزارش' },
+    { key: 'qualified-opportunities', value: '۲ فرصت فعال', evidence: 'ارجاع‌ها' } ] } });
+  check('F17: ثبت ماه پایش متابع با هدف کمی و پنج شاهد → ۲۰۱',
+    NRv.status === 201 && NRv.body.isBaseline === false && NRv.body.criteria.length === 5 && !!NRv.body.target);
+
+  const del = await api(`/international/contacts/${NC.body.id}`, { method: 'DELETE', token: dt });
+  check('F17: حذف پروندهٔ آزمون → ۲۰۰', del.status === 200);
+
+  const csv = await api('/international/export?format=csv', { token: dt, raw: true });
+  const csvText = await csv.text();
+  check('F17: خروجی CSV پرونده‌ها با سرستون‌های F17',
+    csv.status === 200 && csvText.includes('شناسه') && csvText.includes('کشور') && csvText.includes('هویت') && csvText.includes('وضعیت DD'));
 }
 
 console.log(`\n════════════════════════════════════════`);

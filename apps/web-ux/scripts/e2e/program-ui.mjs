@@ -373,7 +373,7 @@ try {
     pmr2.secs.length === 5 && pmr2.secs[0].includes('خلاصهٔ مدیریتی') && pmr2.secs[1].includes('شاخص‌های کلیدی') && pmr2.secs[2].includes('ریسک‌های درجه بالا') && pmr2.secs[3].includes('انحراف') && pmr2.secs[4].includes('برنامهٔ ماه آینده'), JSON.stringify(pmr2.secs));
   ok('شاخص‌های زندهٔ بخش ۲۶: همهٔ شاخص‌ها به‌صورت چیپ رنگی با مقدار محاسبه‌شده',
     pmr2.kpis >= 10 && pmr2.kpiTones === pmr2.kpis, `kpis=${pmr2.kpis}`);
-  ok('ریسک‌های درجه بالای زنده: ۳ ریسک با مالک نقش', pmr2.risks.length === 3 && pmr2.risks.every(r => r.length > 8), JSON.stringify(pmr2.risks).slice(0, 90));
+  ok('ریسک‌های درجه بالای زنده: ۵ ریسک با مالک نقش (۳ برنامه + ۲ بین‌المللی فاز ۱۴)', pmr2.risks.length === 5 && pmr2.risks.every(r => r.length > 8) && pmr2.risks.some(r => r.includes('محرمانگی')) && pmr2.risks.some(r => r.includes('Due Diligence') || r.includes('محصول‌محور')), JSON.stringify(pmr2.risks).slice(0, 120));
   ok('انحراف شهریور با سه قلم (علت/اثر بر مسیر بحرانی/اقدام جبرانی)',
     pmr2.dev.includes('وب‌سایت مرجع') && pmr2.dev.includes('علت') && pmr2.dev.includes('مسیر بحرانی') && pmr2.dev.includes('جبرانی'), pmr2.dev.slice(0, 80));
   ok('گزارش ارائه‌شده به‌موقع است و دکمهٔ ارائه ندارد (قفل پس از ارائه)', pmr2.onTime && pmr2.noSubmit);
