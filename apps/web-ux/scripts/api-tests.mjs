@@ -1056,16 +1056,27 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
   const rk = await api('/program/risks', { token: dt });
   check('ریسک‌ها: ۹ ریسک بذری سند + خلاصه و ماتریس', rk.status === 200 && rk.body?.items?.length >= 9
     && rk.body.summary && Array.isArray(rk.body.matrix) && rk.body.matrix.length === 3);
-  check('ریسک‌ها: هر ریسک چهار قلم بنیادی دارد', rk.body.items.every(r => r.probability && r.impact && r.ownerRole
-    && (r.preventive || r.reactive)));
+  check('ریسک‌ها: هر ریسک پنج قلم بنیادی (احتمال/اثر/نشانهٔ هشدار/مسئول/پاسخ) + مهلت بازبینی دارد (بخش ۲۳ v14)',
+    rk.body.items.every(r => r.probability && r.impact && r.ownerRole && r.earlyWarning && (r.preventive || r.reactive) && !!r.reviewAt)
+    && rk.body.items.filter(r => r.status !== 'CLOSED').every(r => new Date(r.reviewAt).getTime() > Date.now()));
+  check('ریسک‌ها: قاعدهٔ متن بخش ۲۳ v14 — «موارد بحرانی همان روز، موارد بالا در گزارش هفتگی»',
+    String(rk.body.rule).includes('همان روز') && String(rk.body.rule).includes('گزارش هفتگی'));
+  check('ریسک‌ها: ۴ ریسک بین‌المللی v14 با نشانهٔ هشدار و مسئول چارت',
+    ['risk-intl-1','risk-intl-2','risk-intl-3','risk-intl-4'].every(id => rk.body.items.some(r => r.id === id && r.earlyWarning && r.ownerRole))
+    && rk.body.items.some(r => r.id === 'risk-intl-2' && r.title.includes('هویت و اختیار نمایندگی'))
+    && rk.body.items.some(r => r.id === 'risk-intl-4' && r.title.includes('سفر خارجی')));
   check('ریسک‌ها: درجه از احتمال×اثر (متوسط×بالا = درجه بالا)',
     rk.body.items.filter(r => r.probability === 'MEDIUM' && r.impact === 'HIGH').every(r => r.grade === 'HIGH'));
   const rNo = await api('/program/risks', { method: 'POST', token: dt, body: { title: 'ریسک بدون مسئول تست', probability: 'HIGH', impact: 'HIGH' } });
   check('ثبت ریسک بدون مسئول → ۴۰۰ (قاعدهٔ سند)', rNo.status === 400 && String(rNo.body?.message).includes('بدون مسئول'));
-  const rBad = await api('/program/risks', { method: 'POST', token: dt, body: { title: 'ریسک تست', probability: 'HIGH', impact: 'HIGH', ownerRole: 'نقش ساختگی' } });
+  const rBad = await api('/program/risks', { method: 'POST', token: dt, body: { title: 'ریسک تست', probability: 'HIGH', impact: 'HIGH', ownerRole: 'نقش ساختگی', earlyWarning: 'نشانه تست', reviewAt: new Date(Date.now() + 30 * 86400000).toISOString() } });
   check('مسئول باید یکی از ۳۳ نقش چارت v14 باشد → ۴۰۰', rBad.status === 400);
-  const rOk = await api('/program/risks', { method: 'POST', token: dt, body: { title: 'ریسک تست خودکار باتری', probability: 'LOW', impact: 'LOW', ownerRole: 'مدیر پروژه', preventive: 'پیشگیری تست', reactive: 'واکنش تست' } });
-  check('ثبت ریسک با چهار قلم → ۲۰۱ + درجه پایین', rOk.status === 201 && rOk.body?.grade === 'LOW' && rOk.body?.ownerRole === 'مدیر پروژه');
+  const rNoWarn = await api('/program/risks', { method: 'POST', token: dt, body: { title: 'ریسک بدون نشانهٔ هشدار', probability: 'LOW', impact: 'LOW', ownerRole: 'مدیر پروژه', reviewAt: new Date(Date.now() + 30 * 86400000).toISOString() } });
+  check('ثبت ریسک بدون نشانهٔ هشدار → ۴۰۰ (بخش ۲۳ v14)', rNoWarn.status === 400 && String(rNoWarn.body?.message).includes('نشانهٔ هشدار'));
+  const rPastDue = await api('/program/risks', { method: 'POST', token: dt, body: { title: 'ریسک با مهلت گذشته', probability: 'LOW', impact: 'LOW', ownerRole: 'مدیر پروژه', earlyWarning: 'نشانه تست', reviewAt: new Date(Date.now() - 5 * 86400000).toISOString() } });
+  check('مهلت بازبینی گذشته → ۴۰۰ (ریسک بدون مسئول و مهلت معتبر نیست)', rPastDue.status === 400 && String(rPastDue.body?.message).includes('آینده'));
+  const rOk = await api('/program/risks', { method: 'POST', token: dt, body: { title: 'ریسک تست خودکار باتری', probability: 'LOW', impact: 'LOW', ownerRole: 'مدیر پروژه', earlyWarning: 'نشانهٔ تست باتری', reviewAt: new Date(Date.now() + 45 * 86400000).toISOString(), preventive: 'پیشگیری تست', reactive: 'واکنش تست' } });
+  check('ثبت ریسک با پنج قلم + مهلت آینده → ۲۰۱ + درجه پایین', rOk.status === 201 && rOk.body?.grade === 'LOW' && rOk.body?.ownerRole === 'مدیر پروژه' && !!rOk.body?.earlyWarning && new Date(rOk.body.reviewAt).getTime() > Date.now());
   const rPatch = await api(`/program/risks/${rOk.body?.id}`, { method: 'PATCH', token: dt, body: { status: 'CLOSED' } });
   check('بستن ریسک → ۲۰۰', rPatch.status === 200 && rPatch.body?.status === 'CLOSED');
   const r404 = await api('/program/risks/risk-none', { method: 'PATCH', token: dt, body: { status: 'CLOSED' } });
@@ -1245,7 +1256,7 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
   /* ویرایش تنظیمات: نقش تازه در چارت → مالکِ همان نقش پذیرفته می‌شود */
   const pSet = await api('/program/settings', { method: 'PATCH', token: dt, body: { roles: [...st.body.roles, 'نقش تست باتری'] } });
   check('افزودن نقش به چارت سازمان → ۲۰۰', pSet.status === 200 && pSet.body.roles.includes('نقش تست باتری'));
-  const rNewRole = await api('/program/risks', { method: 'POST', token: dt, body: { title: 'ریسک با نقش تازه', probability: 'LOW', impact: 'LOW', ownerRole: 'نقش تست باتری' } });
+  const rNewRole = await api('/program/risks', { method: 'POST', token: dt, body: { title: 'ریسک با نقش تازه', probability: 'LOW', impact: 'LOW', ownerRole: 'نقش تست باتری', earlyWarning: 'نشانه تست', reviewAt: new Date(Date.now() + 30 * 86400000).toISOString() } });
   check('مالکِ نقشِ تازه‌اضافه‌شده پذیرفته می‌شود', rNewRole.status === 201);
   const pBad = await api('/program/settings', { method: 'PATCH', token: dt, body: { seasons: [{ season: 0, title: 'خارج', threshold: 130 }] } });
   check('فصل نامعتبر (شماره/آستانه) → ۴۰۰', pBad.status === 400);
@@ -1264,7 +1275,7 @@ section('فاز ۴ — دیتابیس روابط بیرونی (RelSci/TSC): کا
     const pp2 = await api('/partnerships', { token: pt2 });
     check('مستأجر پارس → هدف مشارکت تهی و پیشرفت نامشخص', pp2.status === 200
       && pp2.body.summary.target === null && pp2.body.summary.progress === null);
-    const rFree = await api('/program/risks', { method: 'POST', token: pt2, body: { title: 'ریسک مستأجر بدون چارت', probability: 'LOW', impact: 'LOW', ownerRole: 'هر نقشی' } });
+    const rFree = await api('/program/risks', { method: 'POST', token: pt2, body: { title: 'ریسک مستأجر بدون چارت', probability: 'LOW', impact: 'LOW', ownerRole: 'هر نقشی', earlyWarning: 'نشانه تست', reviewAt: new Date(Date.now() + 30 * 86400000).toISOString() } });
     check('چارت خالی → مالک آزاد پذیرفته می‌شود (قاعدهٔ «بدون مالک» همچنان برقرار)', rFree.status === 201);
   }
 
@@ -2956,7 +2967,7 @@ section('گام ۹.۲ — دفتر ثبت ریسک و انتشار AI (ماژو�
   check('AI: RBAC — ثبت ریسک AI هم فقط با program.write (client → ۴۰۳)', noPerm.status === 403);
 
   /* ۵) ثبت و به‌روزرسانی ریسک AI */
-  const okAi = await api('/program/risks', { method: 'POST', token: dt, body: { title: 'اتکای بیش‌ازحد به پیشنهاد اولویت‌بندی', probability: 'MEDIUM', impact: 'MEDIUM', ownerRole: 'مدیر محصول', preventive: 'برچسب «فقط پیشنهاد» همیشه کنار خروجی', ai: { useCase: 'opp-priority', finding: 'امتیاز فقط مرتب‌سازی می‌دهد؛ تصمیم با کاربر است', version: 'demo-v6', releaseDecision: 'CONDITIONAL' } } });
+  const okAi = await api('/program/risks', { method: 'POST', token: dt, body: { title: 'اتکای بیش‌ازحد به پیشنهاد اولویت‌بندی', probability: 'MEDIUM', impact: 'MEDIUM', ownerRole: 'مدیر محصول', earlyWarning: 'تصمیم بدون ثبت دلیل شخصی روی پیشنهاد', reviewAt: new Date(Date.now() + 30 * 86400000).toISOString(), preventive: 'برچسب «فقط پیشنهاد» همیشه کنار خروجی', ai: { useCase: 'opp-priority', finding: 'امتیاز فقط مرتب‌سازی می‌دهد؛ تصمیم با کاربر است', version: 'demo-v6', releaseDecision: 'CONDITIONAL' } } });
   check('AI: ثبت ریسک AI با ستون‌های هشت‌گانه → ۲۰۱',
     okAi.status === 201 && okAi.body.kind === 'AI' && okAi.body.ai.useCase === 'opp-priority');
   const stop = await api(`/program/risks/${okAi.body.id}`, { method: 'PATCH', token: dt, body: { ai: { releaseDecision: 'REJECTED', stopped: true } } });

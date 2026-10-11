@@ -458,7 +458,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                     <ShieldCheck size={14}/> {aiBusy === 'apply' ? 'در حال ثبت…' : 'ثبت با تأیید صاحب جلسه'}
                   </button>
                   <button className="secondary-action" onClick={() => setAiDraft(null)} disabled={!!aiBusy}>دور انداختن پیش‌نویس</button>
-                  <small className="empty-state" style={{ margin: 0 }}>بدون تأیید، هیچ چیزی ثبت نمی‌شود (سطح اختیار ۱۹.۲ سند v6).</small>
+                  <small className="empty-state" style={{ margin: 0 }}>بدون تأیید، هیچ چیزی ثبت نمی‌شود (سطح اختیار ۱۹.۲ سند v14).</small>
                 </div>
               </div>
             )}

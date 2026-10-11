@@ -2300,4 +2300,9 @@ export const EN_DICT_C: Record<string, string> = {
   'پانزده محور استاندارد ۶.۲.۱ و ۶.۲.۲ به\u200cصورت خودکار باز می\u200cشوند.': 'The fifteen standard 6.2.1/6.2.2 axes open automatically.',
 
   'وضعیت فعلی پرونده': 'Current dossier status',
+
+  'ریسک بدون مسئول و مهلت معتبر نیست — نشانهٔ هشدار و مهلت بازبینی الزامی است (بخش ۲۳ سند v14).': 'A risk without an owner and a valid due date is invalid — early-warning sign and review due date are required (section 23, v14 document).',
+  'مهلت بازبینی': 'Review due date',
+  'نشانهٔ هشدار': 'Early-warning sign',
+  'چه نشانه\u200cای هشدار می\u200cدهد که این ریسک در حال وقوع است؟': 'What sign indicates this risk is materializing?',
 };

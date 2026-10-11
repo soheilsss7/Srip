@@ -8432,25 +8432,25 @@ function ensureProgramSeed(){
   const in90=(d)=>new Date(Date.now()+d*86400000).toISOString();
   /* ── ریجستری ریسک — ۹ ریسک فهرست سند (بخش ۲۵) ── */
   if(!Array.isArray(DB.risks)||!DB.risks.length){DB.risks=[
-    {id:'risk-1',organizationId:PROGRAM_ORG_ID,title:'خروج ناگهانی فرد کلیدی',probability:'MEDIUM',impact:'HIGH',preventive:'برنامهٔ جانشین‌پروری در ممیزی افراد؛ مستندسازی دانش',reactive:'پیشنهاد رقابتی مطابق بازار',ownerRole:'مدیرعامل',status:'IN_PROGRESS',createdAt:ago(45),reviewAt:in90(12),notes:''},
-    {id:'risk-2',organizationId:PROGRAM_ORG_ID,title:'همکاری‌نکردن زیرمجموعه در ارائه داده',probability:'MEDIUM',impact:'HIGH',preventive:'حمایت رسمی مدیریت هلدینگ؛ شروع از زیرمجموعه‌های هم‌راستا',reactive:'ثبت موانع در گزارش ماهانه',ownerRole:'مدیر استراتژی',status:'OPEN',createdAt:ago(45),reviewAt:in90(12),notes:''},
-    {id:'risk-3',organizationId:PROGRAM_ORG_ID,title:'بحران رسانه‌ای یا برداشت منفی از خروجی‌ها',probability:'LOW',impact:'HIGH',preventive:'خط‌مشی انتشار و تأیید سه‌مرحله‌ای',reactive:'پروتکل پاسخ‌گویی بیست‌وچهار ساعته',ownerRole:'مدیر رسانه',status:'OPEN',createdAt:ago(40),reviewAt:in90(20),notes:''},
-    {id:'risk-4',organizationId:PROGRAM_ORG_ID,title:'تأخیر در انتقال سامانه‌ها و داده‌ها',probability:'MEDIUM',impact:'MEDIUM',preventive:'اجرای موازی محدود',reactive:'آموزش کوتاه کاربران',ownerRole:'مدیر محصول',status:'IN_PROGRESS',createdAt:ago(38),reviewAt:in90(30),notes:''},
-    {id:'risk-5',organizationId:PROGRAM_ORG_ID,title:'از دست رفتن داده در جریان انتقال',probability:'LOW',impact:'HIGH',preventive:'نسخهٔ پشتیبان معتبر پیش از هر انتقال؛ تطبیق رکورد به رکورد',reactive:'سی روز نگهداری سامانهٔ قدیمی',ownerRole:'مدیر محصول',status:'OPEN',createdAt:ago(38),reviewAt:in90(30),notes:''},
-    {id:'risk-6',organizationId:PROGRAM_ORG_ID,title:'تأخیر در استخدام نقش‌های تخصصی',probability:'MEDIUM',impact:'MEDIUM',preventive:'بانک استعداد از ماه نخست',reactive:'جذب با پیشنهاد رقابتی؛ برون‌سپاری موقت تولید',ownerRole:'مدیر پروژه',status:'OPEN',createdAt:ago(30),reviewAt:in90(8),notes:''},
-    {id:'risk-7',organizationId:PROGRAM_ORG_ID,title:'خزش محدوده و درخواست‌های بیرون از برنامه',probability:'HIGH',impact:'MEDIUM',preventive:'قاعدهٔ کنترل محدوده',reactive:'هر درخواست جدید فقط از طریق تغییر رسمی برنامه',ownerRole:'مدیر پروژه',status:'OPEN',createdAt:ago(30),reviewAt:in90(8),notes:''},
-    {id:'risk-8',organizationId:PROGRAM_ORG_ID,title:'پیشی‌گرفتن رقبا در انتشار مرجعیت',probability:'MEDIUM',impact:'MEDIUM',preventive:'تقویم انتشار پیوسته؛ تقدم گزارش سالانه',reactive:'پایش ماهانهٔ رقبا',ownerRole:'مدیر اندیشکده و پژوهش',status:'IN_PROGRESS',createdAt:ago(20),reviewAt:in90(15),notes:''},
-    {id:'risk-9',organizationId:PROGRAM_ORG_ID,title:'تغییر اولویت مدیریت هلدینگ در میانهٔ برنامه',probability:'LOW',impact:'HIGH',preventive:'گزارش ماهانهٔ شفاف؛ بازنگری فصلی با صورت‌جلسه',reactive:'حفظ هستهٔ ثابت برنامه',ownerRole:'مدیرعامل',status:'CLOSED',createdAt:ago(60),reviewAt:in90(40),notes:'در بازنگری فصل گذشته بسته شد.'},
+    {id:'risk-1',organizationId:PROGRAM_ORG_ID,title:'خروج ناگهانی فرد کلیدی',probability:'MEDIUM',impact:'HIGH',preventive:'برنامهٔ جانشین‌پروری در ممیزی افراد؛ مستندسازی دانش',reactive:'پیشنهاد رقابتی مطابق بازار',earlyWarning:'استعفای اعلام‌نشده یا کاهش ناگهانی مشارکت فرد کلیدی در جلسات',ownerRole:'مدیرعامل',status:'IN_PROGRESS',createdAt:ago(45),reviewAt:in90(12),notes:''},
+    {id:'risk-2',organizationId:PROGRAM_ORG_ID,title:'همکاری‌نکردن زیرمجموعه در ارائه داده',probability:'MEDIUM',impact:'HIGH',preventive:'حمایت رسمی مدیریت هلدینگ؛ شروع از زیرمجموعه‌های هم‌راستا',reactive:'ثبت موانع در گزارش ماهانه',earlyWarning:'دیرکرد بیش از دو هفته‌ای در پاسخ به درخواست‌های رسمی داده',ownerRole:'مدیر استراتژی',status:'OPEN',createdAt:ago(45),reviewAt:in90(12),notes:''},
+    {id:'risk-3',organizationId:PROGRAM_ORG_ID,title:'بحران رسانه‌ای یا برداشت منفی از خروجی‌ها',probability:'LOW',impact:'HIGH',preventive:'خط‌مشی انتشار و تأیید سه‌مرحله‌ای',reactive:'پروتکل پاسخ‌گویی بیست‌وچهار ساعته',earlyWarning:'افزایش بازتاب منفی رسانه‌ای یا پرسش‌های هماهنگ‌نشده',ownerRole:'مدیر رسانه',status:'OPEN',createdAt:ago(40),reviewAt:in90(20),notes:''},
+    {id:'risk-4',organizationId:PROGRAM_ORG_ID,title:'تأخیر در انتقال سامانه‌ها و داده‌ها',probability:'MEDIUM',impact:'MEDIUM',preventive:'اجرای موازی محدود',reactive:'آموزش کوتاه کاربران',earlyWarning:'انحراف بیش از دو هفته از نقشهٔ انتقال سامانه‌ها',ownerRole:'مدیر محصول',status:'IN_PROGRESS',createdAt:ago(38),reviewAt:in90(30),notes:''},
+    {id:'risk-5',organizationId:PROGRAM_ORG_ID,title:'از دست رفتن داده در جریان انتقال',probability:'LOW',impact:'HIGH',preventive:'نسخهٔ پشتیبان معتبر پیش از هر انتقال؛ تطبیق رکورد به رکورد',reactive:'سی روز نگهداری سامانهٔ قدیمی',earlyWarning:'مغایرت شمار رکورد بین مبدأ و مقصد پس از هر موج انتقال',ownerRole:'مدیر محصول',status:'OPEN',createdAt:ago(38),reviewAt:in90(30),notes:''},
+    {id:'risk-6',organizationId:PROGRAM_ORG_ID,title:'تأخیر در استخدام نقش‌های تخصصی',probability:'MEDIUM',impact:'MEDIUM',preventive:'بانک استعداد از ماه نخست',reactive:'جذب با پیشنهاد رقابتی؛ برون‌سپاری موقت تولید',earlyWarning:'خالی ماندن نقش تخصصی بیش از ۴۵ روز با وجود آگهی فعال',ownerRole:'مدیر پروژه',status:'OPEN',createdAt:ago(30),reviewAt:in90(8),notes:''},
+    {id:'risk-7',organizationId:PROGRAM_ORG_ID,title:'خزش محدوده و درخواست‌های بیرون از برنامه',probability:'HIGH',impact:'MEDIUM',preventive:'قاعدهٔ کنترل محدوده',reactive:'هر درخواست جدید فقط از طریق تغییر رسمی برنامه',earlyWarning:'دو تغییر محدوده یا بیشتر در یک فصل بدون صورت‌جلسهٔ رسمی',ownerRole:'مدیر پروژه',status:'OPEN',createdAt:ago(30),reviewAt:in90(8),notes:''},
+    {id:'risk-8',organizationId:PROGRAM_ORG_ID,title:'پیشی‌گرفتن رقبا در انتشار مرجعیت',probability:'MEDIUM',impact:'MEDIUM',preventive:'تقویم انتشار پیوسته؛ تقدم گزارش سالانه',reactive:'پایش ماهانهٔ رقبا',earlyWarning:'انتشار رقیب در موضوع نشست مرجع برنامه با فاصلهٔ کم',ownerRole:'مدیر اندیشکده و پژوهش',status:'IN_PROGRESS',createdAt:ago(20),reviewAt:in90(15),notes:''},
+    {id:'risk-9',organizationId:PROGRAM_ORG_ID,title:'تغییر اولویت مدیریت هلدینگ در میانهٔ برنامه',probability:'LOW',impact:'HIGH',preventive:'گزارش ماهانهٔ شفاف؛ بازنگری فصلی با صورت‌جلسه',reactive:'حفظ هستهٔ ثابت برنامه',earlyWarning:'لغو یا تعویق جلسات فصلی مدیریت هلدینگ دو بار پیاپی',ownerRole:'مدیرعامل',status:'CLOSED',createdAt:ago(60),reviewAt:in90(40),notes:'در بازنگری فصل گذشته بسته شد.'},
     /* گام ۹.۲ — ریسک‌های AI با ستون‌های هشت‌گانه (مورد استفاده تا توقف) */
-    {id:'risk-ai-1',organizationId:PROGRAM_ORG_ID,kind:'AI',title:'تزریق دستور از طریق سند بازیابی‌شده در پرسش سازمانی',probability:'LOW',impact:'HIGH',preventive:'مرز داده و دستور (بلوک غیرقابل اعتماد BEGIN-DATA/END-DATA)',reactive:'توقف per-کاربرد و بازگشت به پاسخ انسانی',ownerRole:'مدیر محصول',status:'IN_PROGRESS',createdAt:ago(25),reviewAt:in90(20),notes:'آزمون ۱۹.۴ در باتری api هر تغییر کد اجرا می‌شود.',
+    {id:'risk-ai-1',organizationId:PROGRAM_ORG_ID,kind:'AI',title:'تزریق دستور از طریق سند بازیابی‌شده در پرسش سازمانی',probability:'LOW',impact:'HIGH',preventive:'مرز داده و دستور (بلوک غیرقابل اعتماد BEGIN-DATA/END-DATA)',reactive:'توقف per-کاربرد و بازگشت به پاسخ انسانی',earlyWarning:'پاسخ مدل با ارجاع به دستورهای داخل سند بازیابی‌شده',ownerRole:'مدیر محصول',status:'IN_PROGRESS',createdAt:ago(25),reviewAt:in90(20),notes:'آزمون ۱۹.۴ در باتری api هر تغییر کد اجرا می‌شود.',
       ai:{useCase:'org-question',testRun:'باتری api — چک تزریق دستور',finding:'پیلود داخل سند بازیابی‌شده در بلوک داده می‌ماند و دستور سامانه را عوض نمی‌کند',version:'demo-v6',releaseDecision:'CONDITIONAL',limitation:'خروجی فقط از منابع بازیابی‌شده؛ پاسخ بدون منبع نمایش داده نمی‌شود',review:'با هر تغییر موتور بازیابی',stopped:false}},
-    {id:'risk-ai-2',organizationId:PROGRAM_ORG_ID,kind:'AI',title:'نشت الگوی محرمانه در خروجی مدل ابری',probability:'LOW',impact:'HIGH',preventive:'پوشاندن ورودی پیش از ارسال ابری + پالایش خروجی در همهٔ مسیرها',reactive:'قطع کلید ارائه‌دهنده و توقف مسیر ابری',ownerRole:'مدیر فناوری اطلاعات',status:'OPEN',createdAt:ago(20),reviewAt:in90(25),notes:'',
+    {id:'risk-ai-2',organizationId:PROGRAM_ORG_ID,kind:'AI',title:'نشت الگوی محرمانه در خروجی مدل ابری',probability:'LOW',impact:'HIGH',preventive:'پوشاندن ورودی پیش از ارسال ابری + پالایش خروجی در همهٔ مسیرها',reactive:'قطع کلید ارائه‌دهنده و توقف مسیر ابری',earlyWarning:'هشدار پایش دربارهٔ ورودی حاوی الگوی محرمانه پیش از ارسال ابری',ownerRole:'مدیر فناوری اطلاعات',status:'OPEN',createdAt:ago(20),reviewAt:in90(25),notes:'',
       ai:{useCase:'content-draft',testRun:'باتری api — چک نشت داده',finding:'الگوهای محرمانه در خروجی پالایش می‌شوند؛ مسیر لوکال معاف از خروج داده',version:'demo-v6',releaseDecision:'APPROVED',limitation:'مسیر ابری فقط با کلید ثبت‌شده و پس از پوشاندن؛ مسیر لوکال اول است',review:'ماهانه در کمیتهٔ امنیت',stopped:false}},
     /* فاز ۱۴ — ریسک‌های بین‌المللی (بخش ۲۳ سند v14 + ۱۰.۶) با نشانهٔ هشدار و مسئول از چارت v14 */
     {id:'risk-intl-1',organizationId:PROGRAM_ORG_ID,kind:'INTERNATIONAL',title:'نقض محرمانگی در مکاتبه یا تبادل داده با طرف خارجی',probability:'MEDIUM',impact:'HIGH',earlyWarning:'درخواست اطلاعات حساس پیش از تأیید هویت یا بررسی حقوقی در پروندهٔ F17',preventive:'سطح‌بندی محرمانگی و مجوز اشتراک داده در هر پرونده؛ دروازهٔ هویت تأییدشده + بررسی حقوقی گذرنده پیش از تبادل',reactive:'توقف فوری تبادل داده، اطلاع مشاور حقوقی و ثبت در بازبینی ماهانهٔ بین‌المللی',ownerRole:'مدیرعامل',status:'OPEN',createdAt:ago(15),reviewAt:in90(15),notes:''},
-    {id:'risk-intl-2',organizationId:PROGRAM_ORG_ID,kind:'INTERNATIONAL',title:'ارتباط محصول‌محور پیش از تصویب Due Diligence همان موضوع',probability:'MEDIUM',impact:'HIGH',earlyWarning:'ثبت پیام PRODUCT بدون پروندهٔ DD مصوب یا بدون نظر مدیر تیم Y',preventive:'دروازهٔ سخت سرور در مسیر F17؛ اتصال اجباری پروندهٔ DD مصوب برای پیام محصول‌محور',reactive:'ابطال پیام، عذرخواهی مستند و بازآموزی مسئول پیگیری',ownerRole:'مدیر توسعه کسب‌وکار',status:'OPEN',createdAt:ago(15),reviewAt:in90(15),notes:''},
+    {id:'risk-intl-2',organizationId:PROGRAM_ORG_ID,kind:'INTERNATIONAL',title:'تعامل با طرف خارجی بدون بررسی هویت و اختیار نمایندگی',probability:'MEDIUM',impact:'HIGH',earlyWarning:'پیشنهاد جلسه، تعهد یا تبادل اطلاعات پیش از تأیید هویت در پروندهٔ F17',preventive:'دروازهٔ هویت VERIFIED + بررسی حقوقی گذرنده پیش از هر تبادل؛ الزام ثبت پروندهٔ F17 برای هر طرف ارتباط',reactive:'توقف تعامل، ثبت در بازبینی ماهانهٔ بین‌المللی و اطلاع مسئول پیگیری',ownerRole:'مدیر توسعه کسب‌وکار',status:'OPEN',createdAt:ago(15),reviewAt:in90(15),notes:''},
     {id:'risk-intl-3',organizationId:PROGRAM_ORG_ID,kind:'INTERNATIONAL',title:'ترجمه‌ی نادقیق یا ادعای فراتر از متن تأییدشده در محتوای چندزبانه',probability:'MEDIUM',impact:'MEDIUM',earlyWarning:'نسخهٔ ترجمه بدون بازبین تخصصی یا اختلاف ادعا با نسخهٔ مرجع فارسی',preventive:'نسخهٔ مرجع فارسی الزامی + بازبین ترجمه در هر نسخهٔ زبان دیگر',reactive:'اصلاح نسخه، ثبت منشأ شاهد و اطلاع گیرندهٔ نهایی',ownerRole:'مدیر محتوا',status:'OPEN',createdAt:ago(15),reviewAt:in90(20),notes:''},
-    {id:'risk-intl-4',organizationId:PROGRAM_ORG_ID,kind:'INTERNATIONAL',title:'محدودیت تحریم، کنترل صادرات یا انتقال داده در بازار اولویت‌دار',probability:'LOW',impact:'HIGH',earlyWarning:'هشدار مشاور حقوقی دربارهٔ تغییر مقررات کشور هدف یا درخواست انتقال دادهٔ جدید',preventive:'بررسی حقوقی پیش از هر تبادل؛ ثبت محدودیت‌های هر کشور در نقشهٔ بازارها',reactive:'توقف مسیر آن کشور تا بازبینی حقوقی و به‌روزرسانی دلیل اولویت',ownerRole:'مدیر استراتژی',status:'OPEN',createdAt:ago(15),reviewAt:in90(25),notes:''},
+    {id:'risk-intl-4',organizationId:PROGRAM_ORG_ID,kind:'INTERNATIONAL',title:'تعهد یا هزینهٔ سفر خارجی بدون تصویب مستقل',probability:'LOW',impact:'HIGH',earlyWarning:'درخواست رزرو یا تعهد هزینهٔ سفر/حضور در رویداد پیش از تصویب مستقل هدف سفر',preventive:'قاعدهٔ ۱۰.۶.۳: حضور خارجی فقط برای هدف مشخص، پس از تصویب مستقل و با ارزیابی جداگانه؛ هیچ رویداد سالانه‌ای خودکار تعریف نمی‌شود',reactive:'لغو تعهد، ثبت در گزارش ماهانه و بازبینی فرآیند تصویب',ownerRole:'مدیر استراتژی',status:'OPEN',createdAt:ago(15),reviewAt:in90(25),notes:''},
   ];}
   /* ── آمادگی شش‌لایه — اجزا و معیار پذیرش از جدول بخش ۱۲ سند؛ وزن‌ها بر پایهٔ
         تأکید سند (بازار = مهم‌ترین محصول؛ رابطه = دادهٔ زندهٔ SRIP).
@@ -16800,7 +16800,7 @@ async function __handler(req, res) {
         closed:all.filter(r=>r.status==='CLOSED').length,
         highOpen:all.filter(r=>r.status!=='CLOSED'&&riskGrade(r)==='HIGH').length},
       roles:programSettingsFor(req).roles,levels:RISK_LEVEL_FA,statuses:RISK_STATUS_FA,
-      rule:'هر ریسک با چهار قلم بنیادی ثبت می‌شود و ریسک بدون مسئول، ثبت‌شده محسوب نمی‌گردد (بخش ۲۳ سند v14).'});
+      rule:'هر ریسک با احتمال، اثر، نشانهٔ هشدار، اقدام پیشگیرانه، برنامه واکنش، مسئول مربوطه و مهلت بازبینی ثبت می‌شود؛ ریسک بدون مسئول و مهلت معتبر نیست. موارد بحرانی همان روز و موارد بالا در گزارش هفتگی پیگیری می‌شوند (بخش ۲۳ سند v14).'});
   }
   if(is('/program/risks')&&method==='POST'){
     if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
@@ -16812,6 +16812,14 @@ async function __handler(req, res) {
     if(!RISK_LEVEL_FA[probability]||!RISK_LEVEL_FA[impact]) return json(res,400,{message:'احتمال و اثر هرکدام باید یکی از مقادیر پایین/متوسط/بالا باشد.'});
     const ownerRole=String(b.ownerRole??'').trim();
     if(!ownerRole) return json(res,400,{message:'ریسک بدون مسئول ثبت نمی‌شود (بخش ۲۳ سند v14).'});
+    /* فاز ۱۶.۱ — نشانهٔ هشدار و مهلت بازبینی الزامی (بخش ۲۳ سند v14) */
+    const earlyWarning=String(b.earlyWarning??'').trim();
+    if(!earlyWarning) return json(res,400,{message:'نشانهٔ هشدار ریسک را بنویسید — ریسک بدون نشانهٔ هشدار قابل پایش نیست (بخش ۲۳ سند v14).'});
+    const reviewAtRaw=String(b.reviewAt??'').trim();
+    if(!reviewAtRaw) return json(res,400,{message:'مهلت بازبینی ریسک الزامی است — ریسک بدون مسئول و مهلت معتبر نیست.'});
+    const reviewAtD=new Date(reviewAtRaw);
+    if(Number.isNaN(reviewAtD.getTime())) return json(res,400,{message:'قالب مهلت بازبینی معتبر نیست.'});
+    if(reviewAtD.getTime()<=Date.now()) return json(res,400,{message:'مهلت بازبینی باید تاریخ آینده باشد — ریسک بدون مسئول و مهلت معتبر نیست.'});
     const riskChart=programSettingsFor(req).roles;
     if(riskChart.length&&!riskChart.includes(ownerRole)) return json(res,400,{message:'مسئول ریسک باید یکی از نقش‌های چارت سازمان شما باشد.'});
     /* گام ۹.۲ — ثبت ریسک AI با ستون‌های هشت‌گانه (اختیاری) */
@@ -16823,10 +16831,10 @@ async function __handler(req, res) {
     }
     const row={id:`risk-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`,
       organizationId:primaryOrgId(authUser)??visibleOrgIds(req)[0]??PROGRAM_ORG_ID,
-      title,probability,impact,
+      title,probability,impact,earlyWarning,
       preventive:String(b.preventive??'').trim(),reactive:String(b.reactive??'').trim(),
       ownerRole,status:'OPEN',createdAt:nowIso(),
-      reviewAt:new Date(Date.now()+90*86400000).toISOString(),notes:String(b.notes??'').trim(),
+      reviewAt:reviewAtD.toISOString(),notes:String(b.notes??'').trim(),
       ...(ai?{kind:'AI',ai}:{})};
     DB.risks.unshift(row); saveDb();
     audit(req,'CREATE','Risk',row.id,'OK',{title:row.title,ownerRole,...(ai?{aiUseCase:ai.useCase}:{})});
@@ -16844,8 +16852,14 @@ async function __handler(req, res) {
     if(b.impact!=null){const i=String(b.impact).toUpperCase(); if(!RISK_LEVEL_FA[i]) return json(res,400,{message:'اثر باید پایین/متوسط/بالا باشد.'}); row.impact=i;}
     if(b.ownerRole!=null){const o=String(b.ownerRole).trim(); if(!o) return json(res,400,{message:'ریسک بدون مسئول ثبت نمی‌شود (بخش ۲۳ سند v14).'}); const rChart=programSettingsOf(row.organizationId).roles; if(rChart.length&&!rChart.includes(o)) return json(res,400,{message:'مسئول ریسک باید یکی از نقش‌های چارت سازمان شما باشد.'}); row.ownerRole=o;}
     if(b.status!=null){const st=String(b.status).toUpperCase(); if(!RISK_STATUS_FA[st]) return json(res,400,{message:'وضعیت باید باز/در اقدام/بسته باشد.'}); row.status=st;}
-    for(const k of ['preventive','reactive','notes']) if(b[k]!=null) row[k]=String(b[k]).trim();
-    if(b.reviewAt!=null) row.reviewAt=String(b.reviewAt);
+    for(const k of ['preventive','reactive','notes','earlyWarning']) if(b[k]!=null) row[k]=String(b[k]).trim();
+    if(b.earlyWarning!=null&&!String(b.earlyWarning).trim()) return json(res,400,{message:'نشانهٔ هشدار ریسک را بنویسید — ریسک بدون نشانهٔ هشدار قابل پایش نیست (بخش ۲۳ سند v14).'});
+    if(b.reviewAt!=null){
+      const d=new Date(String(b.reviewAt));
+      if(Number.isNaN(d.getTime())) return json(res,400,{message:'قالب مهلت بازبینی معتبر نیست.'});
+      if(d.getTime()<=Date.now()) return json(res,400,{message:'مهلت بازبینی باید تاریخ آینده باشد — ریسک بدون مسئول و مهلت معتبر نیست.'});
+      row.reviewAt=d.toISOString();
+    }
     /* گام ۹.۲ — به‌روزرسانی ستون‌های AI ریسک (تصمیم انتشار/توقف/…) */
     if(b.ai&&typeof b.ai==='object'){
       const v=aiRiskFields(b.ai,true);

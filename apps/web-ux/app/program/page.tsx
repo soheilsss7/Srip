@@ -110,7 +110,7 @@ export default function ProgramPage() {
   const [riskFilter, setRiskFilter] = useState<{ status: string; grade: string }>({ status: '', grade: '' });
   const [riskDetail, setRiskDetail] = useState<any | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const [form, setForm] = useState({ title: '', probability: 'MEDIUM', impact: 'MEDIUM', preventive: '', reactive: '', ownerRole: '', notes: '' });
+  const [form, setForm] = useState({ title: '', probability: 'MEDIUM', impact: 'MEDIUM', preventive: '', reactive: '', ownerRole: '', notes: '', earlyWarning: '', reviewAt: '' });
   const [formError, setFormError] = useState('');
   const [auditTab, setAuditTab] = useState('people');
   const [auditDetail, setAuditDetail] = useState<any | null>(null);
@@ -197,7 +197,7 @@ export default function ProgramPage() {
       if ((form as any).aiUseCase) payload.ai = { useCase: (form as any).aiUseCase, finding: (form as any).aiFinding ?? '' };
       await api('/program/risks', { method: 'POST', body: JSON.stringify(payload) });
       setCreateOpen(false);
-      setForm({ title: '', probability: 'MEDIUM', impact: 'MEDIUM', preventive: '', reactive: '', ownerRole: '', notes: '', aiUseCase: '', aiFinding: '' } as any);
+      setForm({ title: '', probability: 'MEDIUM', impact: 'MEDIUM', preventive: '', reactive: '', ownerRole: '', notes: '', earlyWarning: '', reviewAt: '', aiUseCase: '', aiFinding: '' } as any);
       reloadRisks();
     } catch (x) { setFormError((x as Error).message); }
     finally { setBusy(false); }
@@ -1028,6 +1028,7 @@ export default function ProgramPage() {
         ) : null}>
         {riskDetail && (
           <div className="detail-grid">
+            <div><b>{t('نشانهٔ هشدار')}</b><p>{riskDetail.earlyWarning || '—'}</p></div>
             <div><b>{t('پاسخ پیشگیرانه')}</b><p>{riskDetail.preventive || '—'}</p></div>
             <div><b>{t('پاسخ واکنشی')}</b><p>{riskDetail.reactive || '—'}</p></div>
             <div><b>{t('وضعیت')}</b><p><StatusBadge tone={RISK_STATUS_TONE[riskDetail.status]}>{RISK_STATUS_FA[riskDetail.status]}</StatusBadge></p></div>
@@ -1070,7 +1071,7 @@ export default function ProgramPage() {
 
       {/* ═══════════ مودال: ریسک جدید (بخش ۲۳) ═══════════ */}
       <Modal open={createOpen} title={t('ثبت ریسک جدید')} onClose={() => setCreateOpen(false)}
-        description={t('ریسک بدون مسئول ثبت نمی‌شود — مسئول یکی از نقش‌های چارت برنامه است.')}
+        description={t('ریسک بدون مسئول و مهلت معتبر نیست — نشانهٔ هشدار و مهلت بازبینی الزامی است (بخش ۲۳ سند v14).')}
         footer={<>
           <button className="srip-button" onClick={() => setCreateOpen(false)}><X size={14} /> {t('انصراف')}</button>
           <button type="submit" form="risk-create-form" className="srip-button primary" disabled={busy}>{busy ? t('در حال ذخیره…') : t('ثبت ریسک')}</button>
@@ -1105,6 +1106,15 @@ export default function ProgramPage() {
               <input value={form.ownerRole} onChange={(e) => setForm(f => ({ ...f, ownerRole: e.target.value }))} required
                 placeholder={t('نقش مسئول — چارت سازمان در تنظیمات برنامه تعریف نشده')} />
             )}
+          </label>
+          <label className="field">
+            <span>{t('نشانهٔ هشدار')} *</span>
+            <input value={form.earlyWarning} data-risk-f="earlyWarning" onChange={(e) => setForm(f => ({ ...f, earlyWarning: e.target.value }))} required
+              placeholder={t('چه نشانه‌ای هشدار می‌دهد که این ریسک در حال وقوع است؟')} />
+          </label>
+          <label className="field">
+            <span>{t('مهلت بازبینی')} *</span>
+            <input type="date" value={form.reviewAt} data-risk-f="reviewAt" onChange={(e) => setForm(f => ({ ...f, reviewAt: e.target.value }))} required />
           </label>
           <label className="field">
             <span>{t('پاسخ پیشگیرانه')}</span>

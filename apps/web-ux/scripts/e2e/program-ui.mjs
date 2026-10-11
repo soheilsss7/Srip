@@ -179,8 +179,10 @@ try {
     title: (document.querySelector('.modal-head h3, .modal-card h3, .modal-title')?.textContent ?? document.querySelector('.modal-card')?.textContent ?? '').slice(0, 60),
     hasPreventive: (document.querySelector('.modal-card')?.textContent ?? '').includes('پاسخ پیشگیرانه'),
     hasReactive: (document.querySelector('.modal-card')?.textContent ?? '').includes('پاسخ واکنشی'),
+    hasWarning: (document.querySelector('.modal-card')?.textContent ?? '').includes('نشانهٔ هشدار'),
   }));
-  ok('ریسک‌ها: مودال جزئیات با چهار قلم', detail.open && detail.hasPreventive && detail.hasReactive, JSON.stringify(detail).slice(0, 80));
+  ok('ریسک‌ها: مودال جزئیات با نشانهٔ هشدار + پاسخ پیشگیرانه/واکنشی (بخش ۲۳ v14)',
+    detail.open && detail.hasPreventive && detail.hasReactive && detail.hasWarning, JSON.stringify(detail).slice(0, 80));
   await page.keyboard.press('Escape');
   await new Promise(r => setTimeout(r, 400));
 
@@ -200,13 +202,30 @@ try {
     [...document.querySelectorAll('.modal-card select')].find(s => [...s.options].some(o => (o.textContent ?? '') === 'مدیر پروژه')));
   await ownerSel.asElement().select('مدیر پروژه');
   await new Promise(r => setTimeout(r, 300));
+  /* فاز ۱۶.۱ — نشانهٔ هشدار + مهلت بازبینی الزامی */
+  const noWarn = await (async () => {
+    await page.evaluate(() => { const f = document.querySelector('#risk-create-form'); if (f) f.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+    await new Promise(r => setTimeout(r, 1200));
+    return page.evaluate(() => (document.querySelector('.modal-card .alert-banner, .modal-card [role=alert]')?.textContent ?? ''));
+  })();
+  ok('ثبت ریسک بدون نشانهٔ هشدار → پیام «نشانهٔ هشدار ریسک را بنویسید» (بخش ۲۳ v14)', noWarn.includes('نشانهٔ هشدار'), `msg=${noWarn.slice(0, 60)}`);
+  await page.type('[data-risk-f="earlyWarning"]', 'نشانهٔ تست باتری UI');
+  await new Promise(r => setTimeout(r, 200));
+  await page.evaluate(() => {
+    const el = document.querySelector('[data-risk-f="reviewAt"]');
+    const d = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    d.call(el, new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10));
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await new Promise(r => setTimeout(r, 300));
   await page.evaluate(() => { const f = document.querySelector('#risk-create-form'); if (f) f.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
   await new Promise(r => setTimeout(r, 2000));
   const created = await page.evaluate(() => {
     const rows = [...document.querySelectorAll('.table-wrap tbody tr')].map(r => (r.textContent ?? ''));
     return { closed: !document.querySelector('.modal-card'), found: rows.some(x => x.includes('ریسک تست باتری مرورگر')), count: rows.length };
   });
-  ok('ثبت ریسک با مالک → مودال بسته و ردیف جدید در رجیستری', created.closed && created.found, JSON.stringify(created).slice(0, 80));
+  ok('ثبت ریسک با مالک + نشانهٔ هشدار + مهلت آینده → مودال بسته و ردیف جدید در رجیستری', created.closed && created.found, JSON.stringify(created).slice(0, 80));
 
   /* ── ۶) آمادگی: ۶ لایه + لایهٔ رابطه از دادهٔ زنده + چرخش وضعیت ── */
   await page.evaluate(() => { [...document.querySelectorAll('.segmented button')].find(b => (b.textContent ?? '').includes('آمادگی بازار'))?.click(); });
@@ -373,7 +392,7 @@ try {
     pmr2.secs.length === 5 && pmr2.secs[0].includes('خلاصهٔ مدیریتی') && pmr2.secs[1].includes('شاخص‌های کلیدی') && pmr2.secs[2].includes('ریسک‌های درجه بالا') && pmr2.secs[3].includes('انحراف') && pmr2.secs[4].includes('برنامهٔ ماه آینده'), JSON.stringify(pmr2.secs));
   ok('شاخص‌های زندهٔ بخش ۲۶: همهٔ شاخص‌ها به‌صورت چیپ رنگی با مقدار محاسبه‌شده',
     pmr2.kpis >= 10 && pmr2.kpiTones === pmr2.kpis, `kpis=${pmr2.kpis}`);
-  ok('ریسک‌های درجه بالای زنده: ۵ ریسک با مالک نقش (۳ برنامه + ۲ بین‌المللی فاز ۱۴)', pmr2.risks.length === 5 && pmr2.risks.every(r => r.length > 8) && pmr2.risks.some(r => r.includes('محرمانگی')) && pmr2.risks.some(r => r.includes('Due Diligence') || r.includes('محصول‌محور')), JSON.stringify(pmr2.risks).slice(0, 120));
+  ok('ریسک‌های درجه بالای زنده: ۵ ریسک با مالک نقش (۳ برنامه + ۲ بین‌المللی فاز ۱۴)', pmr2.risks.length === 5 && pmr2.risks.every(r => r.length > 8) && pmr2.risks.some(r => r.includes('محرمانگی')) && pmr2.risks.some(r => r.includes('هویت و اختیار نمایندگی')), JSON.stringify(pmr2.risks).slice(0, 120));
   ok('انحراف شهریور با سه قلم (علت/اثر بر مسیر بحرانی/اقدام جبرانی)',
     pmr2.dev.includes('وب‌سایت مرجع') && pmr2.dev.includes('علت') && pmr2.dev.includes('مسیر بحرانی') && pmr2.dev.includes('جبرانی'), pmr2.dev.slice(0, 80));
   ok('گزارش ارائه‌شده به‌موقع است و دکمهٔ ارائه ندارد (قفل پس از ارائه)', pmr2.onTime && pmr2.noSubmit);

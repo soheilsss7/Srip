@@ -20,6 +20,7 @@ const ROUTES = [
   '/settings', '/sessions', '/notifications', '/documents', '/requirements',
   '/calendar', '/approvals', '/backend-coverage', '/workspace', '/authorization',
   '/help', '/data-exchange', '/reports',
+  '/publics', '/strategy', '/partnerships', '/program', '/international', /* فاز ۱۴+ */
 ];
 
 const seen = new Set();
@@ -43,8 +44,14 @@ console.log(`\nPages OK: ${pageOk}  Fail: ${pageFail}`);
 console.log(`Unique internal hrefs found: ${hrefs.size}`);
 let linkOk = 0, linkFail = 0; const dead = [];
 const list = [...hrefs].filter(h => !['/not-found-check-xyz'].includes(h)).slice(0, 150);
+/* ۱۶.۲ — href های HTML با basePath (مثل /Srip/srip2/login) آمده‌اند؛ برای جلوگیری از دوبل‌شدنِ sub-path نرمال می‌شوند */
+const _o = new URL(ORIGIN);
+const _sub = _o.pathname.replace(/\/+$/, '');
 for (const href of list) {
-  const code = await fetch(ORIGIN + href, { redirect: 'follow' }).then(r => r.status).catch(() => 0);
+  let _p = href;
+  if (_sub && _p === _sub) _p = '/';
+  else if (_sub && _p.startsWith(_sub + '/')) _p = _p.slice(_sub.length);
+  const code = await fetch(ORIGIN + _p, { redirect: 'follow' }).then(r => r.status).catch(() => 0);
   if (code === 200) linkOk++;
   else { linkFail++; dead.push(`${href}→${code}`); }
 }

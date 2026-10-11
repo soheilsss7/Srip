@@ -240,7 +240,7 @@ export default function InteractionsPage() {
                 <CheckCircle2 size={14}/> ثبت اقدام با تأیید من
               </button>
               <button type="button" className="secondary-action" onClick={() => setAiProposal(null)} disabled={aiBusy}>دور انداختن</button>
-              <small className="subtitle" style={{ margin: 0 }}>بدون تأیید، هیچ اقدامی ثبت نمی‌شود (سطح اختیار ۱۹.۲ سند v6).</small>
+              <small className="subtitle" style={{ margin: 0 }}>بدون تأیید، هیچ اقدامی ثبت نمی‌شود (سطح اختیار ۱۹.۲ سند v14).</small>
             </div>
           </div>
         )}
