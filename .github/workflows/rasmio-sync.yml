@@ -1,0 +1,35 @@
+name: rasmio graph capture
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      RASMIO_PHONE: ${{ secrets.RASMIO_PHONE }}
+      OTP_BRANCH: arena/01a08a50-srip
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: install
+        working-directory: scripts/rasmio
+        run: npm install --no-audit --no-fund
+      - name: run robot
+        working-directory: scripts/rasmio
+        run: node capture.mjs
+      - name: save output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rasmio-capture
+          retention-days: 1
+          path: |
+            scripts/rasmio/out/
+            scripts/rasmio/shots/
