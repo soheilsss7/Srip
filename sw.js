@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.10.05.01';
+const DEMO_MOCK_VERSION = '2026.10.11.01';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -2036,6 +2036,17 @@ let PERSON_ORGS = [
   { personId:'p-1', organizationId:'org-4', roleTitle:'مشاور راهبردی', department:'—', isPrimary:false, status:'ACTIVE' },
   { personId:'p-7', organizationId:'org-2', roleTitle:'مدیر محصول', department:'فنی', isPrimary:true, status:'ACTIVE' },
 ];
+
+/* ۱۷.۱ (مسترپلن فاز ۱۷): تصویر بذر خام first-run — seedهای ماژول در طول عمر پروسه
+   mutate می‌شوند (اتصال دیتابیس بیرونی ORGS.push می‌زند، امتیاز رابطه در RELS کم می‌شود،
+   NOTIFICATIONS.unshift و…). resetDbInPlace باید از این تصویر کپیِ تازه بگیرد، نه مرجع آلوده. */
+const SEED_PRISTINE = {
+  orgs: structuredClone(ORGS), people: structuredClone(PEOPLE), rels: structuredClone(RELS),
+  meetings: structuredClone(MEETINGS), actions: structuredClone(ACTIONS), commitments: structuredClone(COMMITMENTS),
+  projects: structuredClone(PROJECTS), projectExtra: structuredClone(PROJECT_EXTRA), opportunities: structuredClone(OPPORTUNITIES),
+  interactions: structuredClone(INTERACTIONS), notifications: structuredClone(NOTIFICATIONS),
+  recs: structuredClone(RECS), aiUsage: structuredClone(AI_USAGE), personOrgs: structuredClone(PERSON_ORGS),
+};
 
 const TYPE_KEYS = {
   FOLLOW_UP:'پیگیری', MEETING:'جلسه', INTRODUCTION:'معرفی', RELATIONSHIP_REPAIR:'ترمیم رابطه',
@@ -4274,7 +4285,8 @@ function seedKnowledge() {
   return [
     kb('kb-start', '5-minute-first-score', 'در پنج دقیقه به اولین امتیاز معیارها برسید', 'مسیر کوتاه از ورود تا داشتن یک امتیاز قابل اتکا برای نخستین رابطه؛ جایی که باید بروید و هر عدد یعنی چه.', 'GETTING_STARTED', ['شروع', 'امتیاز', 'گام‌به‌گام'], ['STRATEGIC', 'RELIABILITY'], 4, 'تیم محصول',
       '۱) یک سازمان و سپس یک رابطه بسازید (منوی «روابط» → «رابطهٔ جدید»). هنگام ساخت، پرسش‌نامهٔ اختیاری معیارها ظاهر می‌شود؛ آریا فناوری را با پترو صنعت وصل کنید. \n۲) به صفحهٔ همان رابطه بروید. کارت «امتیاز معیارها» عدد، پوشش اطلاعات و اطمینان را نشان می‌دهد. اگر تازه شروع کرده‌اید برچسب «داده کافی نیست» را می‌بینید — این طبیعی است و عمداً عددی نمی‌سازد. \n۳) روی «ثبت ارزیابی» بزنید و تنها پرسش‌هایی را پاسخ دهید که مطمئن هستید. هر پاسخ «ناشناخته» را از بین نمی‌برد؛ فقط آن معیار را روشن می‌کند. \n۴) تعامل‌ها، جلسه‌ها، تعهدها و فرصت‌های همان رابطه به‌صورت خودکار به‌عنوان «رفتار واقعی» وارد مدل می‌شوند و سهم مشاهده‌شده را بالا می‌برند. \n۵) برای رتبه‌بندی، پوشش باید به آستانهٔ تعریف‌شده (پیش‌فرض ۴۰٪) برسد. زیر آن، رکورد صادقانه «قابل مقایسه نیست» می‌ماند.', { views: 312, helpful: 41 }), kb('kb-scoring-model', 'how-scoring-works', 'مدل امتیازدهی دقیقاً چطور کار می‌کند؟', 'وزن خانواده‌ها، قطبیت هر معیار، سقف‌های دروازه و نقش اطمینان — تا بتوانید عدد را بخوانید، نه فقط ببینید.', 'SCORING', ['وزن‌ها', 'دروازه', 'اطمینان'], ['STRATEGIC', 'VALUE', 'CAPABILITY', 'RELIABILITY', 'ACCESS', 'FINANCIAL', 'RISK', 'NETWORK'], 6, 'تیم محصول', 'هر رابطه، سازمان، شخص و فرصت از یک کاتالوگ معیار امتیاز می‌گیرد: هر معیار به یک خانواده تعلق دارد (راهبردی، ارزش، توانمندی، قابلیت اعتماد، دسترسی، مالی، ریسک، شبکه) و وزن ۱ تا ۳ دارد. \nامتیاز هر خانواده، میانگین وزن‌دار معیارهای پاسخ‌داده‌شدهٔ همان خانواده است؛ سپس خانواده‌ها با وزن سازمانی (قابل تغییر در «مدیریت → معیارها») ترکیب می‌شوند. خانوادۀ بدون داده در تقسیم وزن حساب نمی‌شود تا «نبودِ اطلاعات» خودش نمره نشود. \nقطبیت مهم است: معیارهای ریسک (منفی) بالاتر بودن یعنی بدتر؛ معیارهای مثبت (مثبت) بالاتر یعنی بهتر. هر دو به مقیاس ۰ تا ۱۰۰ نگاشت می‌شوند. \nدروازهٔ ریسک (دروازه) از میانگین‌گیری مستثناست: اگر شرطش فعال شود، سقف امتیاز را تحمیل می‌کند — مثلاً «سقف ۴۰». این یعنی یک معیار بحرانی را چند معیار خوب «جبران» نمی‌کنند. \nدر نهایت، امتیاز بدون اطمینان ارائه نمی‌شود: پوشش (چند درصد از وزن مدل داده دارد؟) و اطمینان (کیفیت و تازگی پاسخ‌ها) کنار هر عدد می‌آیند و امتیاز رتبه‌بندی = امتیاز × (۰٫۷ + ۰٫۳ × اطمینان).', { views: 540, helpful: 86 }), kb('kb-manual', 'manual-override', 'تنظیم دستی امتیاز: چه وقت، چرا و تا کجا؟', 'وقتی دانش شما از مدل جلوتر است؛ چطور با ±۲۵ و دلیلِ الزامی این کار را بکنید و مدل را دست‌نخورده نگه دارید.', 'SCORING', ['دستی', 'ممیزی'], ['RISK', 'STRATEGIC'], 3, 'تیم محصول', 'مدل بر شواهد ساخته می‌شود؛ اما گاهی شما چیزی می‌دانید که هنوز در سیستم ثبت نشده — مانند امضای اولیهٔ قرارداد. برای همین در کارت «امتیاز معیارها» دکمهٔ «تنظیم دستی» است. \nجابه‌جایی فقط تا ±۲۵ نقطه مجاز است (عدد بزرگ‌تر یعنی احتمالاً باید دادهٔ اصلی را ثبت کنید نه امتیاز را تکان دهید). دلیل تنظیم الزامی است؛ چون در ممیزی ثبت می‌شود و بعداً باید قابل بازبینی باشد. \nانقضا را انتخاب کنید (۳۰/۹۰/۱۸۰ روز یا دائمی). پس از انقضا، امتیاز خودکار به مدل برمی‌گردد و نشان «دستی» از روی نشان‌ها برداشته می‌شود. \nهر جا «دستی» می‌بینید، یعنی امتیاز موثر = مدل ± جابه‌جایی؛ مبنای مدل هرگز بازنویسی نمی‌شود. نشان «تنظیم دستی منقضی» هم هشدار می‌دهد که جابه‌جایی دیگر اعمال نمی‌شود.', { views: 198, helpful: 33 }), kb('kb-verdict', 'verdict-ladder', 'نردبان حکم: هر برچسب یعنی چه اقدامی؟', 'قابل اتکا، پیش‌نویس، داده کافی نیست، ضعیف و پرچم بحرانی — نقشهٔ اقدام هر وضعیت.', 'SCORING', ['حکم', 'اقدام'], [], 4, 'تیم محصول', 'پرچم بحرانی: یک دروازهٔ ریسک فعال است. تا جمع‌شدن آن، هیچ رتبه‌بندی و مقایسه‌ای انجام نشود؛ اول اقدام کنید. \nداده کافی نیست (پوشش زیر ۲۵٪): تصویر ساخته نشده. عددی که می‌بینید صرفاً پرسش‌های جواب‌داده است؛ مبنای تصمیم نگیرید. \nپیش‌نویس ارزیابی (اطمینان زیر ۴۰٪): شواهد کم یا کهنه است. چند پاسخ مستند می‌تواند امتیاز را به‌شکل معنادار جابه‌جا کند — روی «ثبت ارزیابی» تمرکز کنید. \nقابل اتکا / قوی: شواهد کافی است. اینجا مقایسهٔ رتبه‌ای و تصمیم‌گیری مجاز است. «قوی» یعنی امتیاز ۷۵+ با اطمینان ۶۵+. \nضعیف: شواهد کافی و وضعیت نامطلوب — نیازمند اقدام. به «نقاط ضعف» در همان کارت نگاه کنید: سه معیاری که بیشترین اثر منفی را دارند آنجا فهرست شده‌اند.', { views: 260, helpful: 51 }), kb('kb-coverage', 'coverage-honesty', 'چرا «داده کافی نیست» درست‌تر از یک عدد خوش‌بینانه است؟', 'فلسفهٔ ناشناخته‌ها: پاسخ‌ندادن صفر حساب نمی‌شود؛ و چرا این تصمیم، امتیاز را قابل اعتمادتر می‌کند.', 'SCORING', ['پوشش', 'ناشناخته'], [], 4, 'تیم محصول', 'در این مدل، معیار بی‌پاسخ هرگز صفر فرض نمی‌شود. معیار بی‌پاسخ در «ناشناخته» می‌ماند، وزن‌ش در تقسیم حذف می‌شود و در عوض پوشش و اطمینان پایین می‌آید. \nنتیجه: یک رابطه با پنج پاسخ خوب اما پوشش ۲۰٪ هرگز «قابل اتکا» رتبه نمی‌گیرد؛ برچسب‌اش صادقانه «داده کافی نیست» است. اگر ناشناخته‌ها صفر بودند، هر رکورد نیمه‌پر با عددی نیمه‌واقعی در مقایسه‌های بالایی می‌نشست. \nدروازهٔ رتبه‌بندی (پیش‌فرض ۴۰٪ پوشش) و حداقل اطمینان ۳۵٪ همین را سخت‌گیرانه اجرا می‌کنند. به‌جای بالا بردن عدد، روی «معیارهای بدون داده» کار کنید — کارت امتیاز دقیقاً می‌گوید کدام‌ها بیشترین وزن را دارند. \nاگر ۲۴۰ نویسه دلیل نیاز نیست؛ فقط یک پاسخ کوتاه و دقیق. امتیاز، خلاصهٔ کیفیت دادهٔ شماست.', { views: 174, helpful: 29 }), kb('kb-families', 'families-and-evidence', 'هشت خانوادهٔ معیار و شواهد هر کدام', 'چرا هر خانواده وجود دارد، به چه پژوهشی وصل است و چه رفتاری در سیستم آن را «مشاهده» می‌کند.', 'SCORING', ['خانواده‌ها', 'شواهد'], ['STRATEGIC', 'VALUE', 'CAPABILITY', 'RELIABILITY', 'ACCESS', 'FINANCIAL', 'RISK', 'NETWORK'], 7, 'تیم محصول', 'اهمیت و هم‌راستایی راهبردی: برجستگی شریک، تناسب با استراتژی و قدرت ذی‌نفع (پایه: میتچل 1997). شاهد در سیستم: نوع رابطه، وضعیت، نقش سازمان در پروژه‌های مشترک. \nارزش اقتصادی: ارزش فعلی رابطه و چرخهٔ عمر آن. شاهد: ارزش فرصت‌ها و قراردادهای متصل. \nتوانمندی عملیاتی: کیفیت تحویل، ظرفیت، خدمت پس از فروش. شاهد: نتیجهٔ تعامل‌ها، جلسه‌ها و اقداماتِ خاتمه‌یافته. \nقابلیت اعتماد: ثبات رفتاری و پایبندی به قول‌ها. شاهد: تعهدهای سرموعد یا عقب‌افتاده. \nدسترسی و نفوذ: دسترسی به تصمیم‌گیرنده. شاهد: معرفی‌ها و نقش اشخاص کلیدی. \nمالی و منابع، ریسک و انطباق، شبکه و موقعیت: از وضعیت مالی، پرچم‌های ریسک، مسیرهای شبکه و مرکزیت استفاده می‌شود. هر معیار در کاتالوگ «منبع» دارد و طول عمر پاسخ‌اش (نیمه‌عمر) تعیین می‌کند چه وقت کهنه می‌شود.', { views: 233, helpful: 44 }), kb('kb-workflows', 'workflows-approvals', 'گردش‌کار و تأییدها: چه چیزی لازم است تأیید شود؟', 'اجراهای خودکار، قواعد تأیید و اینکه هر اقدام چه زمانی به «تأیید» گیر می‌کند.', 'PROCESS', ['گردش‌کار', 'تأیید'], [], 5, 'تیم محصول', 'گردش‌کارها، اقدام‌های خودکار روی رویدادها هستند (مثلاً ساخت رابطه یا وعدهٔ قرارداد). وضعیت اجرا را در «گردش‌کار و تأییدها → اجراها» ببینید. \nهر قاعده‌ای که روی «تأیید» بایستد، در صف «تأییدها» می‌آید و تا تصمیم کاربرِ دارای مجوز، اجرا متوقف می‌ماند — این عمدی است تا کارهای حساس بی‌اجازه نگذرند. \nخروجی گزارش‌ها هم همین‌طور است: «دریافت فایل» یک درخواست تأیید ثبت می‌کند و فایل واقعی پس از تأیید در صفحهٔ تأییدها صادر می‌شود. اگر پیام «ابتدا تأیید درخواست» دیدید، سراغ تأییدها بروید. \nاشخاص بدون مجوز، تنها می‌توانند اجراهایی را ببینند که در محدودهٔ سازمانی‌شان است؛ مالک سامانه همه‌چیز را می‌بیند.', { views: 121, helpful: 18 }), kb('kb-security', 'data-security', 'امنیت داده: طبقه‌بندی، تأیید دومرحله‌ای و نشست‌ها', 'مدارک واقعی: طبقه‌بندی اسناد، تأیید دومرحله‌ای، احراز هویت، نشست‌ها و رویدادهای امنیتی.', 'SECURITY', ['تأیید دومرحله‌ای', 'طبقه‌بندی', 'نشست'], [], 5, 'تیم محصول', 'ورود با تأیید دومرحله‌ای محافظت می‌شود؛ دستگاه‌های تأییدشده و کدهای بازیابی در «امنیت → دستگاه‌های من» مدیریت می‌شوند. در دمو، هر کد شش‌رقمی پذیرفته می‌شود. \nاسناد چهار طبقه دارند: داخلی، محرمانه، محدود و عمومی. بارگذاری با اعتبارسنجی نوع فایل/پسوند، قرنطینه و اسکن بدافزار همراه است؛ وضعیت هر فایل کنارش می‌آید. \nنشست‌های فعال خود را در «نشست‌های من» ببینید و از راه دور ببندید. رویدادهای ورود ناموفق، قفل حساب، تلاش بدون مجوز و صادرات در «امنیت → رویدادها» ثبت می‌شوند. \nنکتهٔ مهم: در حالت دمو (سرویس میزبانی استاتیک) همه‌چیز در مرورگر شما اجرا می‌شود و داده‌ها برای همان نشست است؛ هیچ داده‌ای به سرور واقعی نمی‌رود.', { views: 149, helpful: 22 }), kb('kb-intel', 'reading-intelligence', 'خواندن هوشمندی: سیگنال‌ها، فرصت‌ها و پوشش راهبردی', 'چهار بخش صفحهٔ هوشمندی یعنی چه و هر کدام به کدام اقدام ختم می‌شود.', 'ANALYTICS', ['هوشمندی', 'ریسک', 'فرصت'], ['RISK', 'STRATEGIC'], 6, 'تیم محصول', 'سیگنال‌های ریسک از دادهٔ واقعی ساخته می‌شوند: اقدام عقب‌افتاده، تعهد عقب‌افتاده، اقدام مسدود، سلامت پایین و تعامل کهنه. شدت بالا (۶۰+) یعنی فوری؛ بالای ۴۰ متوسط، زیر آن ملایم. تأخیر بیش از دو برابر، شدت را بالا می‌برد. \nتشخیص فرصت دو نوع است: پیگیری (فرصتِ بازِ روی رابطه) و رشد (رابطه‌ای با امتیاز فرصت ۶۰+ ولی بدون فرصت باز) — یعنی به‌جای فهرست پیوندها، به بازار رشد واقعی اشاره می‌کند. \nپوشش راهبردی، روابط استراتژیک (امتیاز راهبردی ۶۰+) را با وضعیت عملیاتی‌شان مقایسه می‌کند: اقدام باز، تعهد باز یا اقدام بعدیِ آینده. شکاف‌ها را با بدون اقدام باز و سلامت پایین می‌بیند. \nستون «معیارها» در همین جدول، امتیاز شاخص هر رابطه را به امتیاز معیارها وصل می‌کند — همان عددی که در صفحهٔ رابطه می‌بینید.', { views: 205, helpful: 37 }), kb('kb-reports', 'reports-and-export', 'گزارش‌ها و خروجی: چه مجوزی لازم است؟', 'نقشهٔ گزارش‌ها، فرمت‌ها، محدودیت متن ساختاریافته برای مدیران و جریان تأیید خروجی.', 'PROCESS', ['گزارش', 'خروجی', 'مجوز'], [], 4, 'تیم محصول', 'گزارش‌ها بر اساس محدودهٔ سازمانی شما ساخته می‌شوند و همان‌جا می‌توانید فایل جدولی/XLSX/گزارش رنگی داشته باشید. \nفرمت متن ساختاریافته مخصوص مدیران سازمانی است؛ فایل جدولی برای بقیهٔ کاربران دارای مجوز خروجی. بدون مجوز خروجی گزارش، دکمهٔ خروجی کار نمی‌کند. \nجریان تأیید: ابتدا «دریافت فایل» (ثبت درخواست)، بعد در «تأییدها» تأیید، سپس دوباره تلاش کنید. هر خروجی در لاگ تحویل و رویدادهای امنیتی ثبت می‌شود. \nدر دمو، خروجی فایل جدولی واقعی تولید می‌شود ولی صفحهٔ گسترده/سند به فایل جدولی برمی‌گردند تا بدون سرور افزوده هم کار کنند.', { views: 96, helpful: 14 }), kb('kb-network', 'network-spof', 'شبکه: مرکزیت، پل‌ها و نقطهٔ شکست واحد', 'چرا یک گره «مرکزیت» بالا یا «نقطهٔ شکست واحد» می‌گیرد و چرا این برای شما مهم است.', 'ANALYTICS', ['شبکه', 'ریسک'], ['NETWORK', 'RISK'], 4, 'تیم محصول', 'مرکزیت شبکه، گره‌هایی را نشان می‌دهد که بیشترین پیوند را دارند — آنها کانون ارتباط شما هستند؛ از دست دادن‌شان گران است. \nپل‌های ارتباطی اشخاصی هستند که دو خوشهٔ متفاوت را به هم می‌رسانند؛ معمولاً مدیرانی که در چند وضعیت نقش دارند. \nنقطهٔ شکست واحد  گره‌ای است که حذف آن شبکه را از هم باز می‌کند. اگر همان گره با پیوندهای پرریسک همراه باشد، بالاترین اولویت اقدام را دارد: حداقل یک مسیر جایگزین بسازید. \nبه یاد داشته باشید که امتیازهای این صفحه با امتیازهای معیاریِ همان گره یکی نیستند؛ اعداد شبکه ساختاری‌اند و اعداد معیار، کیفیت رابطه را می‌سنجند.', { views: 158, helpful: 26 }), kb('kb-ai', 'ai-and-brief', 'بریف اجرایی و دستیار: کجا به عددها اعتماد کنیم؟', 'تفاوت خلاصهٔ خودکار با امتیاز معیارها و مرز اعتماد در خروجی هوش مصنوعی.', 'ANALYTICS', ['هوش مصنوعی', 'بریف'], [], 4, 'تیم محصول', 'دستیار هوشمند و بریف اجرایی، متن را از همان دادهٔ ساخت‌یافته می‌سازند؛ اطلاعات جدید به پایگاه داده اضافه نمی‌کنند. برای همین قبل از اعتماد، سند مرتبط را چک کنید. \nعددهای بریف (میانگین سلامت، ریسک، فرصت) از دادهٔ واقعی و با محدودهٔ سازمانی محاسبه می‌شوند، ولی «تفسیر» متن خودکار است. \nبه‌عنوان قاعدهٔ سرانگشتی: هر جا «امتیاز معیارها» را می‌بینید، همان عدد مقیاس ۰–۱۰۰ با پوشش و اطمینان است؛ هر جا درصد یا شمارش در بریف است، منبع‌اش به دادهٔ خام وصل است. \nاگر متن بریف با امتیاز معیارها نخواند، اول پوشش را چک کنید— معمولاً دلیلش دادهٔ ناقص است نه اشتباه مدل.', { views: 172, helpful: 25 }),
-  kb('kb-publics', 'publics-map', 'نقشهٔ عموم‌ها: شش دسته، شناسنامه و شکاف‌ها', 'خوانش هاب عموم‌ها: الگوی سازمان، ماتریس قدرت و علاقه، پوشش دسته‌ها، شکاف بحرانی و مسیر پیشنهادی.', 'ANALYTICS', ['عموم‌ها', 'شکاف', 'شناسنامه'], ['STRATEGIC', 'NETWORK'], 5, 'تیم محصول', '«عموم‌ها» ذی‌نفعان اثرگذار بیرون از روابط قراردادی‌اند؛ نقشهٔ آن‌ها در شش دسته ساخته می‌شود: داخلی، نهادی و حاکمیتی، علمی و دانشگاهی، اقتصادی و سرمایه‌گذاری، رسانه‌ای و عمومی، و اکوسیستم فناوری و صنعت. \nتب «شناسنامهٔ سازمان» نوع شرکت را تعیین می‌کند و الگوی همان نوع، فهرست گروه‌های هدف را می‌سازد؛ «اعضا و ارزیابی» هر عموم را با پیوند (مثلاً فعال‌کننده یا کارکردی-خروجی)، مرحلهٔ بلوغ (نهفته تا فعال)، موضع (ناظر تا بازیگر کلیدی) و قدرت/علاقه ثبت می‌کند و همان دو عدد، جایگاه گره را در ماتریس ۲×۲ می‌دهد. \n«پوشش» به تفکیک دسته نشان می‌دهد چند گروه هدف عضو دارند و کدام دسته خالی است؛ «شکاف‌ها و اقدام» شکاف‌های بحرانی (بازیگر کلیدیِ غایب یا عقب‌مانده) را با اقدام پیشنهادی و مسیر پیشنهادی روی شبکهٔ واقعی روابط نشان می‌دهد. \nگره‌های گراف شبکه با رنگ دستهٔ عموم‌ها و حلقهٔ طلایی «خودِ شرکت» برچسب می‌خورند؛ فیلتر دسته در همان صفحه گراف را تفکیک می‌کند. خلاصهٔ مدیریتی یک‌صفحه‌ای برای هیئت‌مدیره از همین داده ساخته می‌شود و خروجی JSON/CSV/Excel قابل دانلود است. \nمحرک‌های خودکار (PUBLIC_MEMBER_ADDED، PUBLIC_STAGE_CHANGED، PUBLIC_GAP_DETECTED، PUBLIC_REVIEW_DUE، MEDIA_CREATED) گردش‌کار می‌سازند و اقدام و اعلان واقعی ثبت می‌کنند.', { views: 87, helpful: 12 }),
+  kb('kb-publics', 'publics-map', 'نقشهٔ عموم‌ها: هفت دسته، شناسنامه و شکاف‌ها', 'خوانش هاب عموم‌ها: الگوی سازمان، ماتریس قدرت و علاقه، پوشش دسته‌ها، شکاف بحرانی و مسیر پیشنهادی.', 'ANALYTICS', ['عموم‌ها', 'شکاف', 'شناسنامه'], ['STRATEGIC', 'NETWORK'], 5, 'تیم محصول', '«عموم‌ها» ذی‌نفعان اثرگذار بیرون از روابط قراردادی‌اند؛ نقشهٔ آن‌ها در هفت دسته ساخته می‌شود: داخلی، نهادی و حاکمیتی، علمی و دانشگاهی، اقتصادی و سرمایه‌گذاری، رسانه‌ای و عمومی، اکوسیستم فناوری و صنعت، و بین‌المللی (سند v14). \nتب «شناسنامهٔ سازمان» نوع شرکت را تعیین می‌کند و الگوی همان نوع، فهرست گروه‌های هدف را می‌سازد؛ «اعضا و ارزیابی» هر عموم را با پیوند (مثلاً فعال‌کننده یا کارکردی-خروجی)، مرحلهٔ بلوغ (نهفته، آگاه، فعال و میانجی)، موضع (ناظر تا بازیگر کلیدی) و قدرت/علاقه ثبت می‌کند و همان دو عدد، جایگاه گره را در ماتریس ۲×۲ می‌دهد؛ نقشهٔ سند v14 علاوه بر آن موضوع، سطح آگاهی، میزان درگیری، محدودیت اقدام، شبکهٔ اثر، منبع مورد اعتماد، پیام، شاهد، کانال، مسئول، اقدام بعدی و تاریخ بازبینی را ثبت می‌کند (۸.۳.۱). \n«پوشش» به تفکیک دسته نشان می‌دهد چند گروه هدف عضو دارند و کدام دسته خالی است؛ «شکاف‌ها و اقدام» شکاف‌های بحرانی (بازیگر کلیدیِ غایب یا عقب‌مانده) را با اقدام پیشنهادی و مسیر پیشنهادی روی شبکهٔ واقعی روابط نشان می‌دهد. \nگره‌های گراف شبکه با رنگ دستهٔ عموم‌ها و حلقهٔ طلایی «خودِ شرکت» برچسب می‌خورند؛ فیلتر دسته در همان صفحه گراف را تفکیک می‌کند. خلاصهٔ مدیریتی یک‌صفحه‌ای برای هیئت‌مدیره از همین داده ساخته می‌شود و خروجی JSON/CSV/Excel قابل دانلود است. \nمحرک‌های خودکار (PUBLIC_MEMBER_ADDED، PUBLIC_STAGE_CHANGED، PUBLIC_GAP_DETECTED، PUBLIC_REVIEW_DUE، MEDIA_CREATED) گردش‌کار می‌سازند و اقدام و اعلان واقعی ثبت می‌کنند.', { views: 87, helpful: 12 }),
+    kb('kb-international', 'international-engagement', 'ارتباطات بین‌المللی: پرونده‌ی F17، شش گروه هدف و پایش ماهانه', 'ماژول بین‌المللی: دامنه پس از دروازه‌ی Due Diligence، هویت طرف ارتباط، متن مرجع فارسی، کنترل حقوقی و ارجاع فرصت به F14.', 'PROCESS', ['بین‌المللی', 'F17', 'Due Diligence'], ['STRATEGIC', 'RISK'], 6, 'تیم محصول', 'ارتباطات بین‌المللی برای معرفی مستند فناوران، تقویت مرجعیت هوش مصنوعی کشور و ایجاد رابطه‌ی حرفه‌ای با طرف‌های خارجی طراحی می‌شود؛ دامنه پس از عبور هر موضوع از دروازه‌ی Due Diligence تعریف می‌شود و فهرست‌سازی بی‌هدف یا انتشار یکسان برای همه‌کشورها انجام نمی‌شود (۱۰.۶). \\nهر پرونده (F17) کشور و بازار، گروه هدف از شش دسته (دانشگاه‌ها و مراکز پژوهشی، نهادهای استانداردگذاری، شرکت‌های فناوری، سرمایه‌گذاران، رسانه‌ها و خبرگان)، هویت و اختیار نمایندگی طرف ارتباط، پیام با نسخه‌ی مرجع فارسی، محرمانگی و مجوز اشتراک داده، بررسی حقوقی و مالی، سابقه‌ی مکاتبه و جلسه، تعهدها، مسئول و اقدام بعدی را ثبت می‌کند. \\nچهار قاعده‌ی سخت: ۱) پیام محصول‌محور فقط با پرونده‌ی Due Diligence مصوب و نظر مدیر تیم Y؛ ۲) اشتراک داده فقط پس از هویت تأییدشده و بررسی حقوقی گذرنده؛ ۳) ترجمه فقط با نسخه‌ی مرجع فارسی و بازبین تخصصی؛ ۴) فروش و نهایی‌سازی فقط با مرجع مجاز — فرصت واجد شرایط با دکمه‌ی ارجاع به کارت F14 می‌رود. \\nاز ماه ۳، پرونده هر ماه با پنج معیار (پوشش نقشه، اعتبارسنجی طرف‌ها، آمادگی چندزبانه، کیفیت پیگیری، فرصت‌های واجد شرایط) بازبینی می‌شود؛ ماه نخست خط مبناست و پیش از آن سهمیه‌ی تماس یا جلسه فرض نمی‌شود. خروجی JSON/CSV قابل دانلود است.', { views: 41, helpful: 8 }),
     kb('kb-alerts', 'unified-alerts', 'هشدارهای یکپارچه: یک زنگوله برای همهٔ ماژول‌ها', 'صفحهٔ هشدارها همهٔ سیگنال‌های روابط، عموم‌ها، اقدام/تعهد، جلسات، گردش کار، کیفیت داده، امنیت و پایش را در یک نگاه فیلترپذیر می‌آورد.', 'PROCESS', ['هشدار', 'هشدار یکپارچه', 'اولویت'], [], 4, 'تیم محصول', 'پیش از این هر ماژول نوار هشدار خودش را داشت؛ حالا همهٔ تشخیص‌ها به شکل واحد (ماژول + شدت + دلیل + اقدام پیشنهادی) در «هوش ← هشدارها» می‌آیند. \\nشدت‌ها سه سطح‌اند: بحرانی (اقدام فوری — مثل تعهد عقب‌افتاده یا اجرای شکست‌خوردهٔ گردش کار)، هشدار (اقدام نزدیک — مثل شکاف بازیگر کلیدی در عموم‌ها یا ریسک رابطه) و اطلاع (بازبینی — مثل جلسهٔ بدون نتیجهٔ ثبت‌شده). \\nهر هشدار «چرا» صادر شده را می‌گوید و دکمهٔ اقدام مستقیم به موجودیت مربوط می‌برد. هشدارهای حل‌شده با ثبت پایدار از فهرست خارج می‌شوند. \\nمنطق تشخیص هیچ ماژولی تغییر نکرده؛ فقط خروجی‌ها یکجا جمع می‌شوند (ADR-0007).', { views: 64, helpful: 11 }),
     kb('kb-composite', 'entity-composite-score', 'امتیاز مرکب: یک عدد برای مقایسهٔ همهٔ روابط', 'فرمول شفاف و نسخه‌دار که هشت فاکتور رابطه را به یک عدد ۰ تا ۱۰۰ می‌رساند؛ تفکیک کامل در صفحهٔ رابطه.', 'SCORING', ['امتیاز مرکب', 'فرمول', 'وزن‌ها'], ['STRATEGIC', 'RISK', 'RELIABILITY'], 4, 'تیم محصول', 'فهرست روابط فقط «امتیاز مرکب» را نشان می‌دهد؛ در صفحهٔ رابطه تب «تفکیک امتیاز» هشت فاکتور با وزن هرکدام باز می‌شود. \\nفرمول: میانگین وزنیِ فاکتورها — سلامت ۲۵٪، ریسک ۲۰٪ (معکوس؛ ریسک بیشتر = امتیاز کمتر)، راهبردی ۱۵٪، اعتماد ۱۵٪، تعامل ۱۰٪، نفوذ ۵٪، فرصت ۵٪ و تاب‌آوری ۵٪. \\nنسخهٔ فرمول (formulaVersion) کنار امتیاز می‌آید تا تغییر وزن‌ها در طول زمان قابل ردیابی باشد. همان فرمول و همان وزن‌ها در API واقعی (apps/api) و این دمو اجرا می‌شود — یک منبع حقیقت (ADR-0006).', { views: 58, helpful: 13 }),
     kb('kb-strategy', 'strategy-hub', 'تحلیل راهبردی: سناریو، تعادل، شبیه‌سازی', 'هاب تحلیل راهبردی چطور خوانده شود: سناریو، ماتریس عایدی، تعادل نش، شبیه‌سازی تکراری، پیش‌بینی و واکنش.', 'ANALYTICS', ['راهبرد', 'تعادل نش', 'شبیه‌سازی', 'رقبا'], ['STRATEGIC', 'VALUE'], 6, 'تیم محصول', '«تحلیل راهبردی» رقابت و تعامل راهبردی را تحلیل می‌کند. \\nتب «نمای کلی» سناریوها و قالب‌های کلاسیک (معمای زندانی، شکار گوزن، تقابل، هماهنگی، سکهٔ مشابه، بازدارندگی ورود، جنگ قیمت) را نشان می‌دهد؛ «رقبا» طرف‌ها را از سازمان‌های سامانه یا دستی تعریف می‌کند. \\n«اتصال داده» دادهٔ هر پلتفرم دیگر را با قالب JSON/CSV و اعتبارسنجی سطر‌به‌سطر وارد می‌کند؛ «شبیه‌سازی» ماتریس عایدی، بهترین‌پاسخ‌ها، تعادل نش خالص و مختلط (۲×۲)، حذف غلبه، مسیر تعادل درخت ترتیبی و شبیه‌سازی تکراری بذردار را اجرا می‌کند. \\n«پیش‌بینی و واکنش» حرکت بعدی رقیب را از تاریخچه پیش‌بینی و بهترین پاسخ را توصیه می‌کند؛ «خروجی» بریف یک‌صفحه‌ای و دانلود JSON/CSV/Excel می‌دهد. \\nمحرک‌های خودکار (STRATEGY_SCENARIO_CREATED، STRATEGY_SIMULATED، STRATEGY_PREDICTED، STRATEGY_IMPORT_COMPLETED) گردش‌کار می‌سازند و اقدام و اعلان واقعی ثبت می‌کنند.', { views: 41, helpful: 9 }), ]; }  
@@ -5293,6 +5305,15 @@ let USERS = null;
 
 /* P3: بازنشانی درجا (E2E/دمو) — همان seedهای راه‌اندازی، بدون دست‌کاری دیسک */
 function resetDbInPlace(){
+  /* ۱۷.۱: بازنشانی واقعی — seedهای ماژول را از تصویر بذر first-run (SEED_PRISTINE) کپیِ
+     تازه می‌گیریم و نرخ‌محدودِ فرّای مسیرهای عمومی (PHASE2_RATE) را صفر می‌کنیم تا
+     dev/reset معادل restart --reset باشد، حتی وقتی پروسه مدت‌ها درخواست خورده است. */
+  ORGS=structuredClone(SEED_PRISTINE.orgs); PEOPLE=structuredClone(SEED_PRISTINE.people); RELS=structuredClone(SEED_PRISTINE.rels);
+  MEETINGS=structuredClone(SEED_PRISTINE.meetings); ACTIONS=structuredClone(SEED_PRISTINE.actions); COMMITMENTS=structuredClone(SEED_PRISTINE.commitments);
+  PROJECTS=structuredClone(SEED_PRISTINE.projects); PROJECT_EXTRA=structuredClone(SEED_PRISTINE.projectExtra); OPPORTUNITIES=structuredClone(SEED_PRISTINE.opportunities);
+  INTERACTIONS=structuredClone(SEED_PRISTINE.interactions); NOTIFICATIONS=structuredClone(SEED_PRISTINE.notifications); RECS=structuredClone(SEED_PRISTINE.recs);
+  AI_USAGE=structuredClone(SEED_PRISTINE.aiUsage); PERSON_ORGS=structuredClone(SEED_PRISTINE.personOrgs);
+  PHASE2_RATE.clear();
   DB = { version: 2, users: {}, orgs: ORGS, people: PEOPLE, rels: RELS, meetings: MEETINGS,
     actions: ACTIONS, commitments: COMMITMENTS, projects: PROJECTS, projectExtra: PROJECT_EXTRA,
     opportunities: OPPORTUNITIES, interactions: INTERACTIONS, notifications: NOTIFICATIONS,
@@ -5330,10 +5351,165 @@ function audit(req, action, entity, entityId, outcome = 'OK', meta = {}) {
   if (DB.audit.length > 500) DB.audit.length = 500;
 }
 
+/* ═══════════════ فاز ۱۴ — ارتباطات بین‌المللی (۱۰.۶ + F17/P17 سند v14) ═══════════════ */
+const INTL_ORG_ID='org-1'; /* دادهٔ دمو (هم‌ارزش PARTNERSHIP_ORG_ID که پایین‌تر تعریف می‌شود)؛ مست‌أجر واقعی دادهٔ خودش را می‌سازد */
+const INTL_TARGET_GROUPS=[
+  {key:'UNIVERSITY',label:'دانشگاه‌ها و مراکز پژوهشی',goal:'شناسایی زمینهٔ پژوهش مشترک، تبادل دانش و همکاری علمی',output:'نقشهٔ مرکز، موضوع همکاری، سابقهٔ تماس و گام بعدی'},
+  {key:'STANDARD_BODY',label:'نهادهای تخصصی و شبکه‌های استانداردگذاری',goal:'شناخت چارچوب‌ها و فرصت‌های مشارکت حرفه‌ای در حوزهٔ هوش مصنوعی',output:'پروندهٔ نهاد، موضوع، الزامات و مسیر ارتباط'},
+  {key:'TECH_COMPANY',label:'شرکت‌های فناوری و شرکای بالقوه',goal:'بررسی تناسب فنی، داده‌ای و عملیاتی برای همکاری مشخص',output:'پروندهٔ طرف ارتباط، تناسب، ریسک و فرصت ارزیابی‌شده'},
+  {key:'INVESTOR',label:'سرمایه‌گذاران و بازیگران تأمین مالی',goal:'آماده‌سازی گفت‌وگوی مستند و فرصت‌های واجد شرایط',output:'بستهٔ شواهد، هدف جلسه و اقدام بعدی'},
+  {key:'MEDIA',label:'رسانه‌ها و مجامع تخصصی',goal:'ارائهٔ دیدگاه‌های مستند و دسترسی به منابع و خبرگان',output:'محتوای تأییدشده، منبع، مخاطب و سابقهٔ انتشار'},
+  {key:'EXPERT',label:'خبرگان و شبکه‌های حرفه‌ای بین‌المللی',goal:'یافتن متخصص، داور، مشاور یا همکار پژوهشی متناسب با نیاز',output:'پروندهٔ تخصص، موضوع همکاری و وضعیت پیگیری'},
+];
+const INTL_PRIORITY_COUNTRIES=[
+  {country:'امارات متحده عربی',reason:'هاب سرمایه‌گذاری منطقه‌ای و مجاورت اجرایی؛ نیاز زبانی: انگلیسی؛ محدودیت اجرا: سازوکار پرداخت و انتقال داده.'},
+  {country:'آلمان',reason:'مرجع استانداردگذاری صنعتی و بازار سازمانی هوش مصنوعی؛ نیاز زبانی: آلمانی/انگلیسی؛ محدودیت اجرا: الزامات حفاظت داده.'},
+  {country:'سنگاپور',reason:'اکوسیستم بالغ هوش مصنوعی و رویدادهای تخصصی؛ نیاز زبانی: انگلیسی؛ محدودیت اجرا: فاصلهٔ اجرایی و هزینهٔ حضور.'},
+];
+const INTL_CONTROL_RULES=[
+  'ارتباط محصول‌محور تا تکمیل Due Diligence همان موضوع و ثبت نظر کارشناسی مدیر تیم Y مجاز نیست؛ هر پیام دربارهٔ محصول، شرکت سرمایه‌گذاری‌شده، قابلیت یا نتیجه باید به شواهد مصوب متصل باشد.',
+  'هویت، اختیار نمایندگی، پیشینه و تناسب طرف ارتباط پیش از تبادل اطلاعات حساس یا ایجاد تعهد بررسی می‌شود.',
+  'محتوای فارسی مرجع می‌ماند؛ نسخهٔ انگلیسی یا زبان دیگر فقط پس از تطبیق با منبع تأییدشده، بازبینی تخصصی و ثبت نسخه آمادهٔ استفاده می‌شود.',
+  'اطلاعات محرمانه فقط بر پایهٔ سطح دسترسی، مجوز مالک داده و سازوکار قراردادی مصوب مبادله می‌شود؛ ثبت تعامل به‌معنای مجوز افشای داده نیست.',
+  'فروش و نهایی‌سازی فرصت — از جمله مذاکرهٔ نهایی، پذیرش تعهد حقوقی یا مالی و امضای قرارداد — فقط با مرجع مجاز فناوران هوش مصنوعی پارس ایرانیان انجام می‌شود.',
+];
+const INTL_REVIEW_CRITERIA=[
+  {key:'stakeholder-map',label:'پوشش نقشهٔ ذی‌نفعان اولویت‌دار',expected:'کشور، گروه هدف، منبع، تاریخ، دلیل اولویت و خلأ اطلاعاتی'},
+  {key:'counterparty-validation',label:'اعتبارسنجی طرف‌های ارتباط',expected:'منبع احراز، تناسب، وضعیت بررسی حقوقی و محدودیت‌های شناخته‌شده'},
+  {key:'multilingual-readiness',label:'آمادگی محتوای چندزبانه',expected:'نسخهٔ مرجع، نسخهٔ ترجمه‌شده، بازبین، منبع ادعا و سابقهٔ تصویب'},
+  {key:'followup-quality',label:'کیفیت پیگیری',expected:'صورت‌جلسه، اقدام بعدی، مسئول، مهلت و درصد پیگیری‌های به‌موقع'},
+  {key:'qualified-opportunities',label:'فرصت‌های واجد شرایط',expected:'پروندهٔ شواهد، وضعیت Due Diligence، تصمیم ارجاع و نتیجهٔ پیگیری'},
+];
+const INTL_IDENTITY_FA={UNVERIFIED:'بررسی‌نشده',IN_REVIEW:'در حال بررسی',VERIFIED:'تأییدشده',REJECTED:'ردشده'};
+const INTL_STATUS_FA={OPEN:'باز',IN_PROGRESS:'در جریان',CLOSED:'بسته'};
+const INTL_CONF_FA={PUBLIC:'عمومی',LIMITED:'محدود',CONFIDENTIAL:'محرمانه'};
+const INTL_SHARE_FA={NONE:'بدون اشتراک',LIMITED:'محدود',FULL:'کامل'};
+const INTL_REVIEW_FA={PENDING:'در انتظار',PASSED:'گذرنده',FAILED:'ناموفق'};
+const INTL_MSGTYPE_FA={GENERAL:'عمومی',PRODUCT:'محصول‌محور'};
+const INTL_LINK_FA={ORG:'سازمان',RELATION:'رابطه',PERSON:'شخص',NONE:'—'};
+const INTL_TGT_FA=Object.fromEntries(INTL_TARGET_GROUPS.map(g=>[g.key,g.label]));
+function ensureInternationalSeed(){
+  ensureDossierSeed(); ensureReadinessPackSeed(); /* ddStatus و بستهٔ F14 ارجاع باید از بذر پایه آماده باشند */
+  if(!Array.isArray(DB.intlContacts)) DB.intlContacts=[];
+  if(!Array.isArray(DB.intlReviews)) DB.intlReviews=[];
+  if(DB.intlContacts.length) return;
+  const AGO=(d)=>new Date(Date.now()-d*86400000).toISOString();
+  const IN=(d)=>new Date(Date.now()+d*86400000).toISOString();
+  DB.intlContacts.push(
+    {id:'intl-1',organizationId:INTL_ORG_ID,country:'سوئیس',market:'پژوهش و آموزش هوش مصنوعی اروپا',targetGroup:'UNIVERSITY',
+     orgName:'مرکز هوش مصنوعی دانشگاه فدرال زوریخ',contactName:'دکتر آنا مولر — مسئول همکاری‌های بین‌المللی',source:'معرفی رسمی از طریق شبکهٔ پژوهشی',
+     identity:'VERIFIED',identityNote:'نام رسمی و سمت در پرتال مرکز و مکاتبهٔ اداری تطبیق شد.',
+     purpose:'زمینه‌یابی پژوهش مشترک دربارهٔ ارزیابی مدل‌های زبانی فارسی',
+     linkType:'NONE',linkRef:null,ddDossierId:null,
+     message:'درخواست جلسه برای بررسی امکان تعریف پروژهٔ مشترک ارزیابی مدل‌های زبانی فارسی',messageType:'GENERAL',
+     evidence:'مستند معرفی فناوران + خلاصهٔ مقایسهٔ مدل‌ها',lang:'fa',
+     textVersions:[{lang:'fa',role:'REFERENCE',text:'درخواست همکاری پژوهشی مشترک در حوزهٔ ارزیابی مدل‌های زبانی فارسی.',reviewer:null,approvedAt:AGO(40)},
+       {lang:'en',role:'TRANSLATION',text:'Request for joint research collaboration on Persian language model evaluation.',reviewer:'مدیر اندیشکده و پژوهش',approvedAt:AGO(35)}],
+     confidentiality:'LIMITED',dataSharePerm:'NONE',legalReview:'PASSED',financialReview:'PENDING',
+     correspondences:[{at:AGO(38),type:'EMAIL',summary:'ایمیل معرفی و درخواست جلسهٔ آنلاین ارسال شد.',by:'demo@srip.local'},
+       {at:AGO(30),type:'MEETING',summary:'جلسهٔ آنلاین ۴۵ دقیقه‌ای؛ توافق بر تهیهٔ سند موضوعی مشترک.',by:'demo@srip.local'}],
+     commitments:'فقط توافق بر تبادل سند موضوعی؛ بدون تعهد حقوقی یا مالی.',
+     opportunityId:null,ownerRole:'مدیر اندیشکده و پژوهش',
+     nextAction:'ارسال پیش‌نویس سند موضوعی مشترک',dueAt:IN(6),referral:null,
+     reviewOutcome:'ادامهٔ گفت‌وگو پس از تکمیل سند موضوعی',reviewAt:IN(20),status:'IN_PROGRESS',createdAt:AGO(45),updatedAt:AGO(3)},
+    {id:'intl-2',organizationId:INTL_ORG_ID,country:'سوئیس',market:'استانداردگذاری و چارچوب‌های حرفه‌ای',targetGroup:'STANDARD_BODY',
+     orgName:'کمیتهٔ فنی هوش مصنوعی — گروه کاری بین‌المللی',contactName:'دفتر هماهنگی کمیته',source:'پایش نشست‌ها و اسناد عمومی کمیته',
+     identity:'IN_REVIEW',identityNote:'نام نمایندهٔ محلی در حال تطبیق با دبیرخانه است.',
+     purpose:'شناخت الزامات مشارکت حرفه‌ای در تهیهٔ سند راهنمای ارزیابی سامانه‌های هوش مصنوعی',
+     linkType:'NONE',linkRef:null,ddDossierId:null,
+     message:'درخواست اطلاعات دربارهٔ مسیر مشارکت ناظر در گروه کاری',messageType:'GENERAL',
+     evidence:'سند عمومی فراخوان مشارکت',lang:'fa',
+     textVersions:[{lang:'fa',role:'REFERENCE',text:'درخواست اطلاعات دربارهٔ مسیر مشارکت ناظر در گروه کاری سند راهنما.',reviewer:null,approvedAt:AGO(28)}],
+     confidentiality:'PUBLIC',dataSharePerm:'NONE',legalReview:'PENDING',financialReview:'PENDING',
+     correspondences:[{at:AGO(26),type:'EMAIL',summary:'ایمیل اولیه ارسال شد؛ پاسخ دبیرخانه در انتظار.',by:'demo@srip.local'}],
+     commitments:null,opportunityId:null,ownerRole:'مدیر استراتژی',
+     nextAction:'پیگیری پاسخ دبیرخانه',dueAt:IN(12),referral:null,
+     reviewOutcome:null,reviewAt:IN(25),status:'OPEN',createdAt:AGO(30),updatedAt:AGO(8)},
+    {id:'intl-3',organizationId:INTL_ORG_ID,country:'امارات متحده عربی',market:'سرمایه‌گذاری خطرپذیر منطقه‌ای',targetGroup:'INVESTOR',
+     orgName:'صندوق سرمایه‌گذاری خطرپذیر خلیج فارس',contactName:'مدیر سرمایه‌گذاری — بخش فناوری‌های داده‌محور',source:'ارائه در رویداد منطقه‌ای اکوسیستم داده',
+     identity:'VERIFIED',identityNote:'اسناد ثبت شرکت و مجوز صندوق از منبع رسمی احراز شد.',
+     purpose:'گفت‌وگوی مستند دربارهٔ فرصت هم‌سرمایه‌گذاری در محصول داده‌محور هلدینگ',
+     linkType:'ORG',linkRef:'org-7',ddDossierId:'dd-1',
+     message:'معرفی محصول سامانهٔ هوشمند عملیات هلدینگ بر پایهٔ پروندهٔ Due Diligence مصوب و شواهد پیادگی',messageType:'PRODUCT',
+     evidence:'پروندهٔ dd-1 مصوب + کارت F14 آماده‌سازی سرمایه‌گذار',lang:'fa',
+     textVersions:[{lang:'fa',role:'REFERENCE',text:'معرفی مستند محصول و پیشنهاد جلسهٔ بررسی فرصت هم‌سرمایه‌گذاری.',reviewer:null,approvedAt:AGO(20)},
+       {lang:'en',role:'TRANSLATION',text:'Evidence-based product introduction and investment readiness meeting proposal.',reviewer:'مدیرعامل',approvedAt:AGO(15)}],
+     confidentiality:'CONFIDENTIAL',dataSharePerm:'LIMITED',legalReview:'PASSED',financialReview:'PASSED',
+     correspondences:[{at:AGO(18),type:'EMAIL',summary:'بستهٔ شواهد عمومی ارسال شد.',by:'demo@srip.local'},
+       {at:AGO(9),type:'MEETING',summary:'جلسهٔ حضوری در دبی؛ درخواست دریافت پروندهٔ فنی کامل.',by:'demo@srip.local'}],
+     commitments:'توافق‌نامهٔ محرمانگی امضا شد؛ هیچ تعهد مالی پذیرفته نشده است.',
+     opportunityId:null,ownerRole:'مدیرعامل',
+     nextAction:'ارجاع فرصت به کارت F14 برای آماده‌سازی بستهٔ جلسهٔ بعدی',dueAt:IN(4),
+     referral:{decision:'REFERRED',packId:'rp-1',at:AGO(8)},
+     reviewOutcome:'فرصت واجد شرایط؛ پیگیری از مسیر F14 ادامه می‌یابد.',reviewAt:IN(15),status:'IN_PROGRESS',createdAt:AGO(25),updatedAt:AGO(2)},
+    {id:'intl-4',organizationId:INTL_ORG_ID,country:'آلمان',market:'شرکت‌های فناوری صنعتی',targetGroup:'TECH_COMPANY',
+     orgName:'شرکت نرم‌افزاری صنعتی راین',contactName:'نمایندهٔ تجاری (بدون سمت رسمی)',source:'پیام مستقیم در شبکهٔ حرفه‌ای',
+     identity:'REJECTED',identityNote:'اختیار نمایندگی احراز نشد؛ نام شرکت در آگهی‌های رسمی تطبیق نشد.',
+     purpose:'پیشنهاد همکاری فنی مبهم بدون سند پشتیبان',
+     linkType:'NONE',linkRef:null,ddDossierId:null,
+     message:'پاسخ محتاطانه و درخواست سند رسمی نمایندگی',messageType:'GENERAL',evidence:null,lang:'fa',
+     textVersions:[{lang:'fa',role:'REFERENCE',text:'درخواست ارائهٔ سند رسمی نمایندگی پیش از هر گفت‌وگو.',reviewer:null,approvedAt:AGO(50)}],
+     confidentiality:'PUBLIC',dataSharePerm:'NONE',legalReview:'FAILED',financialReview:'PENDING',
+     correspondences:[{at:AGO(49),type:'EMAIL',summary:'درخواست سند نمایندگی ارسال شد؛ پاسخ قانع‌کننده دریافت نشد.',by:'demo@srip.local'}],
+     commitments:null,opportunityId:null,ownerRole:'مدیر توسعه کسب‌وکار',
+     nextAction:null,dueAt:null,referral:null,
+     reviewOutcome:'عدم تطبیق اختیار نمایندگی؛ ارتباط متوقف و در بایگانی کنترل حقوقی ثبت شد.',reviewAt:AGO(40),status:'CLOSED',createdAt:AGO(55),updatedAt:AGO(40)}
+  );
+  DB.intlReviews.push(
+    {id:'intl-rv-1',organizationId:INTL_ORG_ID,month:'خط مبنا — ماه نخست',isBaseline:true,at:AGO(35),
+     criteria:INTL_REVIEW_CRITERIA.map((c,i)=>({key:c.key,value:['۳ کشور با دلیل انتخاب ثبت شد','۲ از ۴ طرف ارتباط احراز شد','هر ۴ پرونده نسخهٔ مرجع فارسی دارد','۶۰٪ پیگیری‌ها به‌موقع','۱ فرصت با پروندهٔ شواهد ناقص'][i],evidence:'گزارش ماه نخست ارتباطات بین‌المللی'}))},
+    {id:'intl-rv-2',organizationId:INTL_ORG_ID,month:'ماه دوم',isBaseline:false,target:'افزایش احراز هویت به ۳ از ۴ و تکمیل پروندهٔ شواهد فرصت',at:AGO(5),
+     criteria:INTL_REVIEW_CRITERIA.map((c,i)=>({key:c.key,value:['۳ کشور؛ خلأ اطلاعاتی ۲ نهاد ثبت شد','۳ از ۴ طرف احراز شد','۲ نسخهٔ ترجمه‌شده با بازبین تأیید شد','۷۵٪ پیگیری‌ها به‌موقع','۲ فرصت واجد شرایط؛ ۱ ارجاع به F14'][i],evidence:'گزارش ماه دوم + صورت‌جلسهٔ بازبینی'}))}
+  );
+}
+function intlContactView(x){
+  const dd=(DB.dossiers??[]).find(d=>d.id===x.ddDossierId)??null;
+  return {...x,
+    targetGroupFa:INTL_TGT_FA[x.targetGroup]??x.targetGroup,
+    identityFa:INTL_IDENTITY_FA[x.identity]??x.identity,
+    statusFa:INTL_STATUS_FA[x.status]??x.status,
+    confidentialityFa:INTL_CONF_FA[x.confidentiality]??x.confidentiality,
+    dataSharePermFa:INTL_SHARE_FA[x.dataSharePerm]??x.dataSharePerm,
+    legalReviewFa:INTL_REVIEW_FA[x.legalReview]??x.legalReview,
+    financialReviewFa:INTL_REVIEW_FA[x.financialReview]??x.financialReview,
+    messageTypeFa:INTL_MSGTYPE_FA[x.messageType]??x.messageType,
+    linkTypeFa:INTL_LINK_FA[x.linkType]??x.linkType,
+    ddStatus:dd?.status??null,ddStatusFa:dd?DOSSIER_STATUS_FA[dd.status]??dd.status:null,
+    referralFa:x.referral?.decision==='REFERRED'?'ارجاع‌شده به کارت F14 (آماده‌سازی سرمایه‌گذار و شریک)':null};
+}
+/* قواعد ۴۰۰ فاز ۱۴ — پیش از ثبت/ویرایش پروندهٔ F17 اعمال می‌شود */
+function intlValidate(x,creating){
+  if(creating){
+    if(!x.country||!x.orgName||!x.purpose||!x.ownerRole) return 'کشور و بازار، نام نهاد، هدف تعامل و مسئول پیگیری الزامی است.';
+    if(!x.message||!x.messageType) return 'پیام و نوع آن الزامی است (F17).';
+    if(!Array.isArray(x.textVersions)||!x.textVersions.length) return 'حداقل یک نسخهٔ متنی برای پیام لازم است.';
+    if(!(x.textVersions??[]).some(v=>v&&v.role==='REFERENCE'&&v.lang==='fa')) return 'نسخهٔ مرجع فارسی پیام الزامی است.';
+  }
+  if(x.messageType==='PRODUCT'){
+    const dd=(DB.dossiers??[]).find(d=>d.id===x.ddDossierId);
+    if(!x.ddDossierId) return 'ارتباط محصول‌محور بدون پروندهٔ Due Diligence متصل مجاز نیست؛ ابتدا پروندهٔ DD همان موضوع را متصل کنید.';
+    if(!dd) return 'پروندهٔ Due Diligence متصل یافت نشد.';
+    if(dd.status!=='APPROVED') return 'ارتباط محصول‌محور فقط پس از تصویب پروندهٔ Due Diligence همان موضوع مجاز است؛ وضعیت فعلی پرونده: '+(DOSSIER_STATUS_FA[dd.status]??dd.status)+'.';
+    if(!['CONTINUE','CONTINUE_CONDITIONAL'].includes(dd.teamY?.opinion)) return 'نظر کارشناسی مدیر تیم Y (ادامه یا ادامه مشروط) برای پروندهٔ DD ثبت نشده است؛ ثبت نظر پیش از ارتباط محصول‌محور الزامی است.';
+  }
+  if(x.dataSharePerm&&x.dataSharePerm!=='NONE'){
+    if(x.identity!=='VERIFIED') return 'پیش از تبادل اطلاعات حساس، هویت و اختیار طرف ارتباط و بررسی حقوقی باید کامل باشد.';
+    if(x.legalReview!=='PASSED') return 'پیش از تبادل اطلاعات حساس، هویت و اختیار طرف ارتباط و بررسی حقوقی باید کامل باشد.';
+  }
+  const hasFaRef=(x.textVersions??[]).some(v=>v&&v.role==='REFERENCE'&&v.lang==='fa');
+  for(const t of (x.textVersions??[])){
+    if(t&&t.role==='TRANSLATION'){
+      if(!hasFaRef) return 'متن فارسی مرجع می‌ماند؛ ترجمه بدون منبع و بازبین تأیید نمی‌شود.';
+      if(!t.reviewer) return 'متن فارسی مرجع می‌ماند؛ ترجمه بدون منبع و بازبین تأیید نمی‌شود.';
+    }
+  }
+  return null;
+}
+
 /* --------------------------- admin: RBAC catalog & access recompute ----- */
 const ROLE_LABELS_ADMIN={SUPER_ADMIN:'مدیر کل سیستم',HOLDING_ADMIN:'مدیر هلدینگ',HOLDING_EXECUTIVE:'مدیر ارشد هلدینگ',SUBSIDIARY_ADMIN:'مدیر شرکت',SUBSIDIARY_EXECUTIVE:'مدیر ارشد شرکت',RELATIONSHIP_MANAGER:'مدیر روابط',PROJECT_MANAGER:'مدیر پروژه',ANALYST:'تحلیلگر',STANDARD_USER:'کاربر استاندارد',READ_ONLY:'فقط خواندنی'};
-const R_READ=['dashboard.read','publics.read','strategy.read','organization.read','person.read','relationship.read','network.read','interaction.read','meeting.read','action.read','commitment.read','project.read','opportunity.read','recommendation.read','report.read','document.read','notification.read','search.read','calendar.read','help.read','user.read','session.read','analytics.read','ai.query','ai.executive_brief','ai.use','program.read','partnership.read'];
-const R_WRITE=['strategy.write','publics.write','person.write','relationship.write','interaction.write','meeting.write','action.write','commitment.write','project.write','opportunity.write','recommendation.تأیید','document.write','data.manage','program.write','partnership.write'];
+const R_READ=['dashboard.read','publics.read','international.read','strategy.read','organization.read','person.read','relationship.read','network.read','interaction.read','meeting.read','action.read','commitment.read','project.read','opportunity.read','recommendation.read','report.read','document.read','notification.read','search.read','calendar.read','help.read','user.read','session.read','analytics.read','ai.query','ai.executive_brief','ai.use','program.read','partnership.read'];
+const R_WRITE=['strategy.write','publics.write','international.write','person.write','relationship.write','interaction.write','meeting.write','action.write','commitment.write','project.write','opportunity.write','recommendation.تأیید','document.write','data.manage','program.write','partnership.write'];
 const R_READONLY_PERMS=R_READ.filter(p=>!['ai.query','ai.executive_brief','ai.use','analytics.read','recommendation.read'].includes(p));
 const ROLE_CATALOG=[
   {key:'SUPER_ADMIN',name:ROLE_LABELS_ADMIN.SUPER_ADMIN,description:'مالک سامانه — دسترسی کامل، غیرقابل واگذاری.',holding:true,perms:['*']},
@@ -5349,7 +5525,7 @@ const ROLE_CATALOG=[
 ];
 
 /* ---------- permission catalog (system-wide, deterministic) ---------- */
-const PERMISSION_GROUPS_FA={General:'عمومی',Core:'هسته',Meetings:'جلسات',Work:'اقدامات و پروژه‌ها',Intelligence:'هوش و تحلیل',Knowledge:'دانش و جستجو',Account:'حساب و نشست',DataGovernance:'داده و کیفیت',Security:'امنیت',Admin:'مدیریت و یکپارچه‌سازی',Publics:'عموم‌ها',Strategy:'تحلیل راهبردی'};
+const PERMISSION_GROUPS_FA={General:'عمومی',Core:'هسته',Meetings:'جلسات',Work:'اقدامات و پروژه‌ها',Intelligence:'هوش و تحلیل',Knowledge:'دانش و جستجو',Account:'حساب و نشست',DataGovernance:'داده و کیفیت',Security:'امنیت',Admin:'مدیریت و یکپارچه‌سازی',Publics:'عموم‌ها',Strategy:'تحلیل راهبردی',International:'بین‌المللی'};
 const P_DEFS=[
   ['General','dashboard.read','مشاهده داشبورد'],
   ['Core','organization.read','مشاهده سازمان‌ها'],['Core','organization.write','ثبت و ویرایش سازمان'],['Core','org.read','مشاهده سازمان (سازگاری)'],
@@ -5365,6 +5541,7 @@ const P_DEFS=[
   ['Work','approval.read','مشاهده تأییدها'],['Work','workflow.read','مشاهده گردش کارها'],
   ['Work','program.read','مشاهده حاکمیت برنامه'],['Work','program.write','ثبت ریسک و به‌روزرسانی آمادگی'],['Work','partnership.read','مشاهده مشارکت‌ها'],['Work','partnership.write','ثبت و تغییر مشارکت'],
   ['Publics','publics.read','مشاهده عموم‌ها'],['Publics','publics.write','مدیریت عموم‌ها'],
+  ['International','international.read','مشاهده ارتباطات بین‌المللی'],['International','international.write','مدیریت ارتباطات بین‌المللی'],
   ['Strategy','strategy.read','مشاهده تحلیل راهبردی'],['Strategy','strategy.write','مدیریت تحلیل راهبردی'],
   ['Intelligence','analytics.read','تحلیل و هوشمندی'],['Intelligence','analytics.write','ثبت رویداد و نتیجهٔ سنجش'],['Intelligence','ai.query','پرس‌وجوی هوشمند'],['Intelligence','ai.executive_brief','گزارش راهبردی هوش مصنوعی'],
   ['Intelligence','ai.use','فراخوانی درگاه هوش مصنوعی'],['Intelligence','ai.admin','مدیریت درگاه هوش مصنوعی (ارائه‌دهنده‌ها، کلیدها و مسیریابی)'],
@@ -6407,13 +6584,31 @@ const WFLOW_TRIGGER_FA = { MANUAL:'دستی', RELATIONSHIP_CREATED:'ایجاد �
 
 /* ====================== Publics (عموم‌ها) — کاتالوگ و قالب‌ها ====================== */
 const PUBLIC_LINKAGE_FA = {"ENABLING": "فعال‌کننده", "FUNCTIONAL_INPUT": "کارکردی-ورودی", "FUNCTIONAL_OUTPUT": "کارکردی-خروجی", "NORMATIVE": "هنجاری", "DIFFUSED": "پراکنده"};
-const PUBLIC_STAGE_FA = {"NON_PUBLIC": "غیرعموم", "LATENT": "نهفته", "AWARE": "آگاه", "ACTIVE": "فعال"};
+const PUBLIC_STAGE_FA = {"NON_PUBLIC": "غیرعموم", "LATENT": "نهفته", "AWARE": "آگاه", "ACTIVE": "فعال", "MEDIATOR": "میانجی"}; /* فاز ۱۳.۱ — وضعیت چهارم ۸.۳.۱ سند v14 */
+/* فاز ۱۳.۲ — فیلدهای نقشهٔ عموم‌ها روی عضو (۸.۳.۱/۸.۳.۳ سند v14): موضوع، سطح آگاهی،
+   میزان درگیری، محدودیت اقدام، شبکهٔ اثر، منبع مورد اعتماد، پیام، شاهد، مجرا، مسئول، اقدام بعدی */
+const PUBLIC_AWARENESS_FA={NONE:'ناآگاه',PARTIAL:'جزئی',FULL:'کامل'};
+const PUBLIC_ENGAGEMENT_FA={LOW:'کم',MEDIUM:'متوسط',HIGH:'زیاد'};
+const PUBLIC_MEMBER_TEXT_FIELDS=['topic','actionConstraint','networkEffect','trustedSource','message','evidence','channel','nextAction'];
+function publicMemberV14Apply(b,m){
+  const patch={};
+  if(b.awareness!==undefined){ const v=b.awareness===''?null:b.awareness; if(v!==null&&!PUBLIC_AWARENESS_FA[v]) return 'سطح آگاهی معتبر نیست: NONE / PARTIAL / FULL.'; patch.awareness=v; }
+  if(b.engagement!==undefined){ const v=b.engagement===''?null:b.engagement; if(v!==null&&!PUBLIC_ENGAGEMENT_FA[v]) return 'میزان درگیری معتبر نیست: LOW / MEDIUM / HIGH.'; patch.engagement=v; }
+  for(const k of PUBLIC_MEMBER_TEXT_FIELDS){ if(b[k]!==undefined) patch[k]=String(b[k]??'').trim().slice(0,400); }
+  if(b.ownerRole!==undefined){
+    const o=String(b.ownerRole??'').trim();
+    if(o){ const chart=programSettingsOf(m.orgId).roles; if(chart.length&&!chart.includes(o)) return 'مسئول عموم باید یکی از نقش‌های چارت سازمان شما باشد.'; }
+    patch.ownerRole=o;
+  }
+  Object.assign(m,patch);
+  return null;
+}
 const PUBLIC_STANCE_FA = {"KEY_PLAYER": "بازیگر کلیدی", "INFLUENCER": "تأثیرگذار", "SUPPORTER": "حامی", "OBSERVER": "ناظر"};
-const PUBLIC_CATEGORY_FA = {"INTERNAL": "داخلی", "INSTITUTIONAL": "نهادی و حاکمیتی", "ACADEMIC": "علمی، دانشگاهی و پژوهشی", "ECONOMIC": "اقتصادی و سرمایه‌گذاری", "MEDIA": "رسانه‌ای و عمومی", "ECOSYSTEM": "اکوسیستم فناوری و صنعت"};
-const PUBLIC_CATEGORY_ORDER = ["INTERNAL", "INSTITUTIONAL", "ACADEMIC", "ECONOMIC", "MEDIA", "ECOSYSTEM"];
+const PUBLIC_CATEGORY_FA = {"INTERNAL": "داخلی", "INSTITUTIONAL": "نهادی و حاکمیتی", "ACADEMIC": "علمی، دانشگاهی و پژوهشی", "ECONOMIC": "اقتصادی و سرمایه‌گذاری", "MEDIA": "رسانه‌ای و عمومی", "ECOSYSTEM": "اکوسیستم فناوری و صنعت", "INTERNATIONAL": "بین‌المللی"}; /* فاز ۱۳.۵ — دستهٔ هفتم (۱۰.۶/۸.۳.۱ سند v14) */
+const PUBLIC_CATEGORY_ORDER = ["INTERNAL", "INSTITUTIONAL", "ACADEMIC", "ECONOMIC", "MEDIA", "ECOSYSTEM", "INTERNATIONAL"];
 const G=(id,cat,fa,link,smin,smax,stance,kanal,note='')=>({id,cat,fa,link,stage:[smin,smax],stance,kanal,note});
 const PUBLICS_TEMPLATE_LIST = [
-{ id:"HOLDING", fa:"هلدینگ و سرمایه‌گذاری چندبخشی", focus:["INTERNAL", "INSTITUTIONAL", "ACADEMIC", "ECONOMIC", "MEDIA", "ECOSYSTEM"], note:"نقشهٔ شروع برای هلدینگ‌های چندبخشی؛ پوشش حوزه‌های کاری در هر ۶ دسته (قابل تنظیم)", groups:[
+{ id:"HOLDING", fa:"هلدینگ و سرمایه‌گذاری چندبخشی", focus:["INTERNAL", "INSTITUTIONAL", "ACADEMIC", "ECONOMIC", "MEDIA", "ECOSYSTEM", "INTERNATIONAL"], note:"نقشهٔ شروع برای هلدینگ‌های چندبخشی؛ پوشش حوزه‌های کاری در هر ۷ دسته (قابل تنظیم)", groups:[
     G("h-i1","INTERNAL","هیئت‌مدیره هلدینگ","ENABLING","ACTIVE","ACTIVE","KEY_PLAYER","گفت‌وگوی مستقیم و مستمر","تصمیم‌گیرنده نهایی؛ روایت هسته ابتدا اینجا تثبیت می‌شود"),
     G("h-i2","INTERNAL","مدیرعامل و مدیران ارشد اجرایی (مالی، فناوری و منابع انسانی)","ENABLING","ACTIVE","ACTIVE","KEY_PLAYER","اولین دریافت‌کنندگان هر پیام کلیدی","سخنگویان طبیعی پیام کلیدی سازمان"),
     G("h-i3","INTERNAL","مدیران‌عامل حوزه‌های کاری","ENABLING","AWARE","ACTIVE","KEY_PLAYER","برنامهٔ توانمندسازی و روایت مستقل حوزه","بزرگ‌ترین ریسک پراکندگی پیام"),
@@ -6746,7 +6941,7 @@ const PUBLIC_SECTORS = ['انرژی','آموزش','خدمات اجتماعی','�
 const pubTplById=(id)=>PUBLICS_TEMPLATES[id]??PUBLICS_TEMPLATES.HOLDING;
 const pubGroup=(tplId,gid)=>(pubTplById(tplId).groups??[]).find(g=>g.id===gid)??null;
 const pubByOrg=(orgId)=>(DB.publicsSelf??[]).find(x=>x.orgId===orgId)??null;
-const PUB_STAGE_ORDER=['NON_PUBLIC','LATENT','AWARE','ACTIVE'];
+const PUB_STAGE_ORDER=['NON_PUBLIC','LATENT','AWARE','ACTIVE','MEDIATOR'];
 /* گروه‌های مؤثر هر سازمان = الگو + بازنویسی‌های خودش + گروه‌های اختصاصی‌اش.
    فقط دسته‌ها مشترک‌اند؛ پوشش/شکاف/اعضا همیشه از همین فهرست ساخته می‌شوند. */
 const pubEffectiveGroups=(orgId)=>{
@@ -6766,7 +6961,9 @@ const pubEffectiveGroups=(orgId)=>{
   }
   for(const c of (DB.publicsCustomGroups??[]).filter(x=>x.orgId===orgId))
     out.push({id:c.id,cat:c.cat,fa:c.fa,link:c.link,linkage:c.link,stage:[c.smin,c.smax],stance:c.stance,
-      kanal:c.kanal,note:c.note??'',source:'custom',overridden:false,active:true,templateNote:''});
+      kanal:c.kanal,note:c.note??'',source:'custom',overridden:false,active:true,templateNote:'',
+      /* فاز ۱۳.۵ — ستون‌های نقشهٔ عموم‌های v14 (۸.۳.۱) روی گروه‌های سفارشی */
+      commonIssue:c.commonIssue??null,expectation:c.expectation??null,interactionAsset:c.interactionAsset??null,ownerRole:c.ownerRole??null});
   return out;
 };
 const pubEffGroup=(orgId,gid)=>(pubEffectiveGroups(orgId).find(g=>g.id===gid)??null);
@@ -6776,7 +6973,8 @@ const pubTerms=(orgId)=>{
   return {self,tpl,members:(DB.publicsMembers??[]).filter(m=>m.orgId===orgId)};
 };
 function seedPublicsStore(){
-  if(!DB.publicsCatalog){ DB.publicsCatalog={version:1,generatedAt:nowIso(),categories:PUBLIC_CATEGORY_ORDER.map(id=>({id,fa:PUBLIC_CATEGORY_FA[id]})),linkages:PUBLIC_LINKAGE_FA,stages:PUBLIC_STAGE_FA,stances:PUBLIC_STANCE_FA,templates:PUBLICS_TEMPLATES}; }
+  /* مهاجرت فاز ۱۳.۱/۱۳.۵: کاتالوگ persisted نسخهٔ <۳ (بدون میانجی/بین‌المللی) با نسخهٔ ۳ بازتولید می‌شود */
+  if(!DB.publicsCatalog||DB.publicsCatalog.version<3){ DB.publicsCatalog={version:3,generatedAt:nowIso(),categories:PUBLIC_CATEGORY_ORDER.map(id=>({id,fa:PUBLIC_CATEGORY_FA[id]})),linkages:PUBLIC_LINKAGE_FA,stages:PUBLIC_STAGE_FA,stances:PUBLIC_STANCE_FA,templates:PUBLICS_TEMPLATES}; }
   if(!Array.isArray(DB.publicsSelf)) DB.publicsSelf=[];
   if(!Array.isArray(DB.publicsMembers)) DB.publicsMembers=[];
   if(!Array.isArray(DB.mediaStore)) DB.mediaStore=[];
@@ -6845,6 +7043,7 @@ function seedPublicsStore(){
       mk('PM-H-011','org-1','h-e9','organization','org-10','AWARE',55,60,'INFLUENCER','NORMATIVE','بزرگ‌ترین نهاد رسمی بخش خصوصی؛ کانال هم‌صدایی صنعت'),
       mk('PM-H-012','org-1','h-m2','media','m-2','ACTIVE',60,75,'KEY_PLAYER','DIFFUSED','رسانهٔ پیشگام فناوری؛ پوشش زیرمجموعهٔ فناور'),
       mk('PM-H-013','org-1','h-m4','media','m-5','AWARE',65,55,'INFLUENCER','DIFFUSED','پل دانشگاه↔رسانه برای اخبار علمی هلدینگ'),
+      mk('PM-H-015','org-1','h-m2','media','m-3','MEDIATOR',60,70,'KEY_PLAYER','DIFFUSED','میانجی تخصصی میان هلدینگ و سیاست‌گذاران — پل انتقال روایت فناوری (وضعیت میانجی ۸.۳.۱)'),
       mk('PM-H-014','org-1','h-x1','person','p-14','ACTIVE',70,75,'KEY_PLAYER','NORMATIVE','چهرهٔ شناخته‌شدهٔ اکوسیستم فناوری؛ سفیر علمی هلدینگ'),
       /* ── آریا فناوری (org-2 · الگوی TECHNOLOGY · ۷ گروه) ── */
       mk('PM-TC-001','org-2','tc-i1','person','p-1','ACTIVE',70,90,'KEY_PLAYER','ENABLING','مدیر فروش محصول نرم‌افزاری',-26), /* بازبینی ۲۶ روز عقب افتاده (ماژول هشدار عموم‌ها) */
@@ -6859,6 +7058,117 @@ function seedPublicsStore(){
          (بازیگر کلیدیِ غایب) در دمو دیده شود؛ مسیر پیشنهادی از رابطهٔ r-11 (سازمان بورس) می‌آید. */
     ];
     DB.publicsMembers.push(...arr);
+    /* فاز ۱۳.۲ — دادهٔ واقع‌نمای فیلدهای نقشهٔ عموم‌ها (۸.۳.۱ سند v14) روی چهار عضو:
+       میانجی (پیوست) · فعال (زومیت) · آگاه (ایسنا) · نهفته (پردیس) */
+    const V14=(id,f)=>{const x=DB.publicsMembers.find(m=>m.id===id); if(x) Object.assign(x,f);};
+    V14('PM-H-004',{topic:'مرجعیت هوش مصنوعی کشور',awareness:'FULL',engagement:'HIGH',
+      actionConstraint:'بدون محدودیت — درخواست مصاحبه فعالانه پاسخ داده می‌شود',
+      networkEffect:'بازنشر اخبار هلدینگ در شبکهٔ فناوری و استارتاپی',
+      trustedSource:'گزارش مرجع و آرشیو مطبوعاتی هلدینگ',
+      message:'روایت متخصصانهٔ زیرمجموعه‌های فناور هلدینگ',
+      evidence:'سه پوشش تحلیلی در شش‌ماههٔ گذشته',
+      channel:'مکاتبه رسمی و گفت‌وگوی تخصصی',
+      ownerRole:'مدیر رسانه',nextAction:'دعوت به میزگرد فصل دوم'});
+    V14('PM-H-015',{topic:'سیاست‌گذاری و حکمرانی هوش مصنوعی',awareness:'FULL',engagement:'HIGH',
+      actionConstraint:'انتشار فقط پس از راستی‌آزمایی منبع رسمی',
+      networkEffect:'انتقال تفسیر سیاست‌گذاری به شبکهٔ فعالان و نهادها',
+      trustedSource:'یادداشت سیاستی و گزارش فصلی برنامه',
+      message:'جایگاه هلدینگ در شکل‌گیری سیاست‌گذاری هوش مصنوعی',
+      evidence:'استناد دوبارهٔ نشریات تحلیلی به پوشش‌های قبلی',
+      channel:'مکاتبه رسمی و نشست سیاست‌گذاری',
+      ownerRole:'مدیر رسانه',nextAction:'ارائهٔ بستهٔ منبع و دسترسی سریع به متخصص'});
+    V14('PM-H-013',{topic:'اخبار علمی زیرمجموعه‌های هلدینگ',awareness:'PARTIAL',engagement:'LOW',
+      actionConstraint:'چرخهٔ انتشار خبری کند؛ نیاز به پیش‌نویس آماده',
+      networkEffect:'پل دانشگاه و رسانه برای اخبار علمی',
+      trustedSource:'دانشگاه‌ها و پژوهشگران همکار',
+      message:'نتایج پژوهش‌های مشترک هلدینگ و دانشگاه',
+      evidence:'دو استناد علمی در سال گذشته',
+      channel:'ایمیل تحریریهٔ علمی',
+      ownerRole:'مدیر اندیشکده و پژوهش',nextAction:'ارسال پیش‌نویس خبر علمی آماده'});
+    V14('PM-H-014',{topic:'اکوسیستم فناوری و رویدادهای تخصصی',awareness:'PARTIAL',engagement:'MEDIUM',
+      actionConstraint:'مستعد روایت مستقل؛ پیام باید مستند باشد',
+      networkEffect:'معرفی هلدینگ به شبکهٔ سرمایه‌گذاران و بنیان‌گذاران',
+      trustedSource:'نمایش عملی محصول و گزارش مرجع',
+      message:'تجربهٔ واقعی کاربرد محصولات هوش مصنوعی هلدینگ',
+      evidence:'سخنرانی مشترک در کنفرانس ملی',
+      channel:'رویداد تخصصی و شبکهٔ حضوری',
+      ownerRole:'مدیر رویداد',nextAction:'دعوت به روز نمایش محصول (فقط با DD مصوب)'});
+    /* ─────────────────────────────────────────────────────────────────────
+       فاز ۱۳.۵ — نقشهٔ ۱۱ عموم سند v14 (جدول ۸.۳.۱) برای هلدینگ دمو (org-1):
+       گروه‌های سفارشی با مسئلهٔ مشترک، انتظار از مرجع، دارایی و تعامل اصلی و
+       مسئول از چارت v14. عضویت در بیش از یک عموم مجاز است.
+       ───────────────────────────────────────────────────────────────────── */
+    if(!DB.publicsCustomGroups.some(g=>g.orgId==='org-1'&&g.id==='v14-g1')){
+      const V14G=(id,cat,fa,link,smin,smax,stance,kanal,commonIssue,expectation,interactionAsset,ownerRole,note)=>({id,orgId:'org-1',cat,fa,link,smin,smax,stance,kanal,commonIssue,expectation,interactionAsset,ownerRole,note});
+      DB.publicsCustomGroups.push(
+        V14G('v14-g1','ECONOMIC','مدیران و تیم\u200cهای ۱۲ VC و شرکت\u200cهای سرمایه\u200cگذاری\u200cشده','ENABLING','AWARE','ACTIVE','KEY_PLAYER','گزارش ماهانه و نشست داخلی',
+          'هم\u200cافزایی، دسترسی به دانش، معرفی توانمندی و یکپارچگی روایت اکوسیستم',
+          'مرجع واحد اطلاعات، شواهد Due Diligence، مسیر روشن مشارکت و بازنمایی دقیق',
+          'SRIP، گزارش ماهانه، بسته معرفی و نشست داخلی','مدیر حساب','عموم ۱ جدول ۸.۳.۱ سند v14'),
+        V14G('v14-g2','ACADEMIC','پژوهشگران، استادان، دانشگاه\u200cها و مراکز پژوهشی','NORMATIVE','AWARE','ACTIVE','INFLUENCER','طرح پژوهش و میزگرد',
+          'کیفیت دانش، مسئلهٔ پژوهشی، داده، روش و امکان همکاری',
+          'روش روشن، دادهٔ قابل بررسی، دسترسی به متخصص و مسیر انتشار مشترک',
+          'اندیشکده، گزارش مرجع، طرح پژوهش، داوری و میزگرد','مدیر اندیشکده و پژوهش','عموم ۲ جدول ۸.۳.۱'),
+        V14G('v14-g3','ECOSYSTEM','مهندسان، توسعه\u200cدهندگان، متخصصان داده و مدیران محصول','FUNCTIONAL_INPUT','AWARE','ACTIVE','INFLUENCER','رسانه تخصصی و رویداد فنی',
+          'کاربرد فنی، معماری، قابلیت استفاده، محدودیت و یادگیری حرفه‌ای',
+          'محتوای فنی قابل استفاده، نمایش عملی، مستندات و امکان مشارکت',
+          'رسانه تخصصی، پایگاه دانش، رویداد فنی و نمایش محصول تأییدشده','مدیر تحقیق و توسعه','عموم ۳ جدول ۸.۳.۱'),
+        V14G('v14-g4','INSTITUTIONAL','سیاست\u200cگذاران، تنظیم\u200cگران و مدیران بخش عمومی','NORMATIVE','AWARE','ACTIVE','KEY_PLAYER','یادداشت سیاستی و جلسه رسمی',
+          'اثر فناوری بر سیاست، اقتصاد، خدمات و ظرفیت ملی',
+          'دادهٔ معتبر، تجربهٔ اجرایی، تحلیل روند و پیشنهاد قابل اجرا',
+          'گزارش مرجع، یادداشت سیاستی، جلسه رسمی و میزگرد','مدیرعامل','عموم ۴ جدول ۸.۳.۱'),
+        V14G('v14-g5','ECONOMIC','مدیران صنایع، خریداران سازمانی و شرکای کسب\u200cوکاری','FUNCTIONAL_INPUT','AWARE','ACTIVE','KEY_PLAYER','وب\u200cسایت مرجع و بسته اختصاصی',
+          'حل مسئلهٔ واقعی، امکان اجرا، یکپارچه\u200cسازی و نتیجهٔ کسب\u200cوکاری',
+          'محصول تأییدشده، شواهد فنی و بازار، محدودیت روشن و مسیر اقدام',
+          'وب\u200cسایت مرجع، مطالعهٔ موردی، دمو و بستهٔ اختصاصی','مدیر توسعه کسب\u200cوکار','عموم ۵ جدول ۸.۳.۱'),
+        V14G('v14-g6','ECONOMIC','سرمایه\u200cگذاران، نهادهای مالی و تحلیلگران سرمایه\u200cگذاری','FUNCTIONAL_INPUT','AWARE','ACTIVE','INFLUENCER','گزارش سرمایه\u200cگذاری و جلسهٔ تصمیم',
+          'کیفیت فرصت، ریسک، بازار، تیم و قابلیت رشد',
+          'شواهد Due Diligence، فرض\u200cهای آشکار، مقایسه و اقدام بعدی',
+          'گزارش سرمایه\u200cگذاری، پروندهٔ فرصت و جلسهٔ تصمیم','مدیر توسعه کسب\u200cوکار','عموم ۶ جدول ۸.۳.۱'),
+        V14G('v14-g7','MEDIA','رسانه\u200cها، خبرنگاران، سردبیران و تحلیلگران تخصصی','DIFFUSED','AWARE','ACTIVE','KEY_PLAYER','گفت\u200cوگوی تخصصی و پاسخ رسمی',
+          'دسترسی به منبع، تفسیر تحول و راستی\u200cآزمایی ادعا',
+          'منبع قابل استناد، پاسخ دقیق، متخصص پاسخ\u200cگو و اصلاح شفاف',
+          'آرشیو مطبوعاتی، گزارش مرجع، گفت\u200cوگوی تخصصی و پاسخ رسمی','مدیر رسانه','عموم ۷ جدول ۸.۳.۱'),
+        V14G('v14-g8','INSTITUTIONAL','انجمن\u200cهای تخصصی، تشکل\u200cهای صنفی و سازمان\u200cهای جامعه مدنی مرتبط','NORMATIVE','LATENT','AWARE','INFLUENCER','میزگرد و جلسهٔ تخصصی',
+          'پیامدهای حرفه\u200cای، بخشی، شغلی و اجتماعی موضوعات هوش مصنوعی',
+          'دسترسی به شواهد، امکان طرح پرسش، شنیده\u200cشدن دیدگاه و پاسخ مستند',
+          'میزگرد، گزارش موضوعی، جلسهٔ تخصصی و ثبت بازخورد','مدیر استراتژی','عموم ۸ جدول ۸.۳.۱'),
+        V14G('v14-g9','ACADEMIC','دانشجویان، استعدادهای تخصصی، بنیان\u200cگذاران و تیم\u200cهای نوآور','ENABLING','LATENT','AWARE','SUPPORTER','رویداد تخصصی و چالش',
+          'یادگیری، مسیر حرفه\u200cای، مسئلهٔ واقعی، سرمایه و فرصت مشارکت',
+          'دانش کاربردی، معیار روشن، دسترسی به شبکه و فرصت ارائهٔ توانمندی',
+          'محتوای آموزشی، رویداد تخصصی، چالش و شبکهٔ خبرگان','مدیر محتوا','عموم ۹ جدول ۸.۳.۱'),
+        V14G('v14-g10','ECOSYSTEM','کاربران و بهره\u200cبرداران محصولات تأییدشده','DIFFUSED','AWARE','ACTIVE','SUPPORTER','وب\u200cسایت مرجع و پرسش متداول',
+          'کارایی، محدودیت، تجربهٔ استفاده و نتیجهٔ محصول',
+          'ادعای آزمون\u200cپذیر، راهنمای روشن، پاسخ\u200cگویی و ثبت بازخورد',
+          'وب\u200cسایت مرجع، دمو، پرسش متداول و مسیر پاسخ\u200cگویی','مدیر محصول','عموم ۱۰ جدول ۸.۳.۱'),
+        V14G('v14-g11','INTERNATIONAL','مراکز پژوهشی، شبکه\u200cهای تخصصی، رسانه\u200cها، سرمایه\u200cگذاران و شرکای بین\u200cالمللی','NORMATIVE','LATENT','AWARE','INFLUENCER','مکاتبه رسمی و نشست مصوب',
+          'شناخت ظرفیت ایران، همکاری علمی، فنی، سرمایه\u200cگذاری و تبادل دانش',
+          'معرفی چندزبانهٔ مستند، طرف ارتباط معتبر، هدف روشن و پیگیری حرفه\u200cای',
+          'محتوای چندزبانه، مکاتبه رسمی، نشست مصوب و گزارش مرجع','مدیر توسعه کسب\u200cوکار','عموم ۱۱ جدول ۸.۳.۱ (فاز ۱۴: پروندهٔ F17)'),
+      );
+      /* اعضای نمونه با فیلدهای ۱۳.۲: یک میانجی (بین‌المللی) و یک نهفته (دانشجویان) */
+      const V14M=(id,groupId,sourceType,sourceId,stage,power,interest,stance,linkage,note,f)=>({id,orgId:'org-1',groupId,sourceType,sourceId,linkage,stage,power,interest,stance,note,assessedAt:new Date(Date.now()-7*86400000).toISOString(),reviewDue:new Date(Date.now()+90*86400000).toISOString(),...(f??{})});
+      DB.publicsMembers.push(
+        V14M('PM-H-016','v14-g11','person','p-14','MEDIATOR',70,65,'INFLUENCER','NORMATIVE','سفیر علمی هلدینگ در شبکه‌های بین‌المللی — میانجی معرفی ظرفیت ایران (وضعیت میانجی ۸.۳.۱)',
+          {topic:'همکاری علمی و فنی بین‌المللی',awareness:'FULL',engagement:'HIGH',
+           actionConstraint:'تعامل خارجی فقط با بررسی هویت و اختیار نمایندگی (فاز ۱۴)',
+           networkEffect:'انتقال اعتبار علمی هلدینگ به شبکه‌های بین‌المللی',
+           trustedSource:'گزارش مرجع و محتوای چندزبانهٔ بازبینی‌شده',
+           message:'ظرفیت فناوری هوش مصنوعی هلدینگ با سند قابل راستی‌آزمایی',
+           evidence:'دعوت‌نامهٔ همکاری پژوهشی از شبکهٔ خارجی',
+           channel:'مکاتبه رسمی و نشست مصوب',
+           ownerRole:'مدیر توسعه کسب‌وکار',nextAction:'ثبت طرف ارتباط در پروندهٔ F17 (فاز ۱۴)'}),
+        V14M('PM-H-017','v14-g9','person','p-7','LATENT',45,55,'SUPPORTER','ENABLING','تیم استعدادیابی — هنوز نهفته؛ نیازمند محتوای آموزشی و دعوت محدود',
+          {topic:'مسیر حرفه‌ای در هوش مصنوعی هلدینگ',awareness:'NONE',engagement:'LOW',
+           actionConstraint:'نبود دید از فرصت‌های سازمانی',
+           networkEffect:'جامعهٔ دانشجویی دانشگاه‌های برتر',
+           trustedSource:'دانشگاهیان و انجمن‌های علمی',
+           message:'فرصت یادگیری و مسئلهٔ واقعی در محصولات هلدینگ',
+           evidence:'حضور پراکنده در رویدادهای دانشگاهی',
+           channel:'رویداد تخصصی و محتوای آموزشی',
+           ownerRole:'مدیر محتوا',nextAction:'دعوت محدود به کارگاه فصل دوم'}),
+      );
+    }
     // پیشنهاد پیوند/قدرت-علاقه با موتور فقط برای ورودی‌های بدون مقدار (بدون بازنویسی کاربر)
     for(const m of DB.publicsMembers){ const sug=pubSuggester(m); m.linkage=m.linkage??sug.linkage; m.stance=m.stance??sug.stance; }
   }
@@ -6968,7 +7278,7 @@ function seedPublicsStore(){
       P('PM-P-101','h-m2','media','m-2','ACTIVE',58,75,'KEY_PLAYER','DIFFUSED','دیجیاتو — پیشگام رسانه‌های فناوری با بیش از ۱۰ سال سابقه'),
       P('PM-P-102','h-m3','media','m-3','ACTIVE',55,78,'KEY_PLAYER','DIFFUSED','پیوست — تمرکز ویژه بر تحلیل سیاست‌گذاری و رگولاتوری فاوا'),
       P('PM-P-103','h-m4','media','m-5','AWARE',65,55,'INFLUENCER','DIFFUSED','ایسنا — پل طبیعی بین عموم دانشگاهی و رسانه‌ای'),
-      P('PM-P-104','h-m5','media','m-7','AWARE',60,52,'INFLUENCER','DIFFUSED','مهر — پوشش فعال سیاست‌گذاری فناوری و گزارش‌های تحلیلی حکمرانی AI'),
+      P('PM-P-104','h-m5','media','m-7','MEDIATOR',60,52,'INFLUENCER','DIFFUSED','مهر — میانجی اطلاع‌رسانی میان هلدینگ و سیاست‌گذاران (وضعیت میانجی ۸.۳.۱ سند v14)؛ پوشش فعال سیاست‌گذاری فناوری'),
       P('PM-P-105','h-m6','media','m-6','AWARE',68,45,'INFLUENCER','DIFFUSED','ایرنا — خبرگزاری رسمی؛ کانال بیانیه‌های سطح‌بالای هلدینگ'),
       P('PM-P-106','h-m7','media','m-8','AWARE',62,40,'INFLUENCER','DIFFUSED','فارس — پوشش گسترده اقتصادی و فناوری با مخاطب وسیع'),
       P('PM-P-107','h-m7','media','m-9','AWARE',60,40,'INFLUENCER','DIFFUSED','تسنیم — پوشش گسترده اقتصادی و فناوری با مخاطب وسیع'),
@@ -7073,6 +7383,7 @@ function pubMemberView(m){
     sourceLabel:m.sourceType==='organization'?'سازمان':m.sourceType==='person'?'شخص':m.sourceType==='relationship'?'رابطه':'رسانه',
     groupFa:g.fa??null,categoryId:g.cat??null,categoryFa:g.cat?PUBLIC_CATEGORY_FA[g.cat]:null,
     linkageFa:PUBLIC_LINKAGE_FA[m.linkage]??null,stageFa:PUBLIC_STAGE_FA[m.stage]??null,stanceFa:PUBLIC_STANCE_FA[m.stance]??null,
+    awarenessFa:PUBLIC_AWARENESS_FA[m.awareness]??null,engagementFa:PUBLIC_ENGAGEMENT_FA[m.engagement]??null,
     kanal:g.kanal??null,signals:sug.signals,suggested:{linkage:sug.linkage,stage:sug.stage,power:sug.power,interest:sug.interest,stance:sug.stance},
     stanceHistory:Array.isArray(m.stanceHistory)?m.stanceHistory:[]};
 }
@@ -7872,7 +8183,7 @@ const nowIso=()=>new Date().toISOString();
 /* ═══════════════════════════════════════════════════════════════════════════
    گام ۲.۱ مسترپلن — «حاکمیت برنامه» (سند عملیاتی هلدینگ پارس نسخهٔ ۳)
    بخش ۱۲/۱۳: آمادگی شش‌لایهٔ وزن‌دار + دروازهٔ فصل · بخش ۲۰/۲۱: ممیزی سه‌گانه
-   بخش ۲۵/F17: ریجستری ریسک (ریسک بدون مالک ثبت نمی‌شود)
+   بخش ۲۳ سند v14: ریجستری ریسک (ریسک بدون مسئول ثبت نمی‌شود)
    بخش ۲۶/ماژول شاخص‌ها: شاخص‌های مالک‌دار — «عدد دستی وارد داشبورد نمی‌شود»؛ هر شاخص
    از دادهٔ زندهٔ ماژول‌ها محاسبه می‌شود.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -7911,10 +8222,10 @@ const PROGRAM_METRICS={
   'goal-composite':{label:'نمرهٔ مرکب هدف راهبردی سازمان (از مؤلفه‌های پایش‌شده)',unit:'score',
     compute:(c)=>{const g=(c.goals??[]).find(x=>x.status==='ACTIVE'&&(x.components??[]).length);return g?goalComposite(g,'m12'):0;}},
 };
-/* تنظیمات برنامهٔ دمو (org-1) — دقیقاً برنامهٔ سند v6؛ چارت ۳۴ عنوان نقش/۳۷ نفر
-   در چهار لایه (بخش ۲۱.۳) با زمان ورود ماه هدف، چهار فصل با آستانهٔ ۳۰/۴۵/۶۰/۷۵،
-   هدف ۲۵ تفاهم‌نامه و ده شاخص بخش ۲۶ با سنجه‌های محاسبه. نقش‌های هوش مصنوعی
-   با پرچم ai در چارت متمایز می‌شوند (۸ نقش). */
+/* تنظیمات برنامهٔ دمو (org-1) — دقیقاً برنامهٔ سند v14؛ چارت ۳۳ عنوان نقش/۳۶ نفر
+   در چهار لایه (جدول ۲۱.۳ v14: لایهٔ ۳ «فناوری و داده» ۵ نقش؛ + کارشناس امور بین‌الملل ماه ۳)
+   با زمان ورود ماه هدف، چهار فصل با آستانهٔ ۳۰/۴۵/۶۰/۷۵، هدف ۲۵ تفاهم‌نامه و ده شاخص
+   بخش ۲۶ با سنجه‌های محاسبه. نقش‌های هوش مصنوعی با پرچم ai متمایز می‌شوند (۶ نقش). */
 const PROGRAM_CHART_V6=[
   {title:'مدیرعامل',layer:'رهبری و حاکمیت',entryMonth:1,count:1},
   {title:'دستیار مدیرعامل',layer:'رهبری و حاکمیت',entryMonth:1,count:1},
@@ -7933,16 +8244,15 @@ const PROGRAM_CHART_V6=[
   {title:'مدیر اندیشکده و پژوهش',layer:'مدیریت تخصصی',entryMonth:2,count:1},
   {title:'مدیر رویداد',layer:'مدیریت تخصصی',entryMonth:3,count:1},
   {title:'مدیر تحقیق و توسعه',layer:'مدیریت تخصصی',entryMonth:2,count:1},
-  {title:'مهندس نرم‌افزار',layer:'فناوری، داده و اعتماد',entryMonth:2,count:1},
-  {title:'مهندس یادگیری ماشین',layer:'فناوری، داده و اعتماد',entryMonth:2,count:1,ai:true},
-  {title:'مهندس داده',layer:'فناوری، داده و اعتماد',entryMonth:2,count:1},
-  {title:'مهندس یکپارچه‌سازی سامانه‌ها',layer:'فناوری، داده و اعتماد',entryMonth:3,count:1},
-  {title:'کارشناس حاکمیت و ریسک هوش مصنوعی',layer:'فناوری، داده و اعتماد',entryMonth:3,count:1,ai:true},
-  {title:'تحلیلگر حاکمیت و کیفیت داده',layer:'فناوری، داده و اعتماد',entryMonth:3,count:1,ai:true},
-  {title:'تحلیلگر اعتماد و ایمنی',layer:'فناوری، داده و اعتماد',entryMonth:3,count:1,ai:true},
+  {title:'مهندس نرم‌افزار',layer:'فناوری و داده',entryMonth:2,count:1},
+  {title:'مهندس یادگیری ماشین',layer:'فناوری و داده',entryMonth:2,count:1,ai:true},
+  {title:'مهندس داده',layer:'فناوری و داده',entryMonth:2,count:1},
+  {title:'مهندس یکپارچه‌سازی سامانه‌ها',layer:'فناوری و داده',entryMonth:3,count:1},
+  {title:'تحلیلگر حاکمیت و کیفیت داده',layer:'فناوری و داده',entryMonth:3,count:1,ai:true},
   {title:'کارشناس پژوهش',layer:'کارشناسی و اجرا',entryMonth:2,count:1},
   {title:'کارشناس رسانه',layer:'کارشناسی و اجرا',entryMonth:3,count:1},
   {title:'کارشناس تعاملات',layer:'کارشناسی و اجرا',entryMonth:3,count:3},
+  {title:'کارشناس امور بین‌الملل',layer:'کارشناسی و اجرا',entryMonth:3,count:1},
   {title:'طراح گرافیک',layer:'کارشناسی و اجرا',entryMonth:1,count:2},
   {title:'کارشناس اداری و امور دفتر',layer:'کارشناسی و اجرا',entryMonth:1,count:1},
   {title:'کارشناس مناقصات',layer:'کارشناسی و اجرا',entryMonth:3,count:1},
@@ -7951,7 +8261,7 @@ const PROGRAM_CHART_V6=[
   {title:'ویراستار محتوای هوش مصنوعی',layer:'کارشناسی و اجرا',entryMonth:4,count:1,ai:true},
   {title:'کارشناس کنترل کیفی محتوا',layer:'کارشناسی و اجرا',entryMonth:4,count:1,ai:true},
 ];
-const programDemoSettings=()=>({organizationId:PROGRAM_ORG_ID,
+const programDemoSettings=()=>({organizationId:PROGRAM_ORG_ID,chartVersion:14,
   roles:PROGRAM_CHART_V6.map(r=>r.title),
   chart:PROGRAM_CHART_V6,
   seasons:[
@@ -7969,10 +8279,24 @@ const programDemoSettings=()=>({organizationId:PROGRAM_ORG_ID,
     {id:'kpi-5',category:'دارایی و رسانه',title:'وب‌سایت مرجع و پروفایل شرکتی',owner:'مدیر محصول',period:'ماه ۸',target:'انتشار عمومی هر دو دارایی',source:'لایهٔ آمادگی سازمانی — وضعیت اقلام «وب‌سایت» و «پروفایل شرکت»',metric:'readiness-items-accepted',unit:'count',targetValue:2,config:{labels:['وب‌سایت','پروفایل شرکت']}},
     {id:'kpi-6',category:'دارایی و رسانه',title:'گزارش سالانه هوش مصنوعی',owner:'مدیر اندیشکده و پژوهش',period:'ماه ۱۱',target:'انتشار',source:'مرکز دانش — اسناد «گزارش سالانه»',metric:'docs-total',unit:'count',targetValue:1,config:{pattern:'گزارش سالانه'}},
     {id:'kpi-7',category:'بازار و اکوسیستم',title:'شبکهٔ مشارکت',owner:'مدیر توسعه کسب‌وکار',period:'ماه ۱۲',target:'۲۵ تفاهم‌نامهٔ فعال',source:'ماژول مشارکت‌ها — تفاهم‌نامه‌های فعال (مرحلهٔ تفاهم‌نامه یا فعال)',metric:'active-mous',unit:'count',targetValue:25,config:{}},
-    {id:'kpi-8',category:'سازمان و زیرساخت',title:'تکمیل ساختار ۳۷ نفره (چارت v6)',owner:'مدیر منابع انسانی',period:'ماه ۷',target:'۳۷ نفر فعال',source:'اشخاص فعال در محدودهٔ شما',metric:'active-people',unit:'count',targetValue:37,config:{}},
+    {id:'kpi-8',category:'سازمان و زیرساخت',title:'تکمیل ساختار ۳۶ نفره (چارت v14)',owner:'مدیر منابع انسانی',period:'ماه ۷',target:'۳۶ نفر فعال',source:'اشخاص فعال در محدودهٔ شما',metric:'active-people',unit:'count',targetValue:36,config:{}},
     {id:'kpi-9',category:'سازمان و زیرساخت',title:'انتقال داده‌ها به SRIP',owner:'مدیر محصول',period:'ماه ۷',target:'خاموش‌سازی کامل سامانه‌های قدیمی',source:'ممیزی سامانه‌ها — سهم انتقال/خاموش‌سازیِ تکمیل‌شده',metric:'migration-done',unit:'count',targetValue:null,config:{}},
     {id:'kpi-10',category:'سازمان و زیرساخت',title:'گزارش ماهانه به مدیریت هلدینگ',owner:'دستیار مدیرعامل',period:'پایان هر ماه',target:'تحویل به‌موقع ۱۲ گزارش',source:'گزارش ماهانه — ثبت انتشار',metric:'monthly-reports',unit:'count',targetValue:12,config:{}},
   ]});
+/* فاز ۱۲.۲ — نقش‌های حذف‌شدهٔ چارت v14 در داده‌های موجود به معادل‌های مجاز نگاشت می‌شوند:
+   «تحلیلگر اعتماد و ایمنی» → «تحلیلگر حاکمیت و کیفیت داده»؛
+   «کارشناس حاکمیت و ریسک هوش مصنوعی» → «مهندس یادگیری ماشین» */
+const CHART_ROLE_MAP_V14={'تحلیلگر اعتماد و ایمنی':'تحلیلگر حاکمیت و کیفیت داده','کارشناس حاکمیت و ریسک هوش مصنوعی':'مهندس یادگیری ماشین'};
+function migrateRemovedChartRoles(){
+  const fix=(v)=>typeof v==='string'&&CHART_ROLE_MAP_V14[v]?CHART_ROLE_MAP_V14[v]:v;
+  (DB.risks??[]).forEach(r=>{r.ownerRole=fix(r.ownerRole);});
+  (DB.programSettings??[]).forEach(s=>{(s.kpis??[]).forEach(k=>{k.owner=fix(k.owner);});});
+  (DB.execControls??[]).forEach(c=>{c.ownerRole=fix(c.ownerRole);});
+  /* کارت نقش نگاشت‌شده اگر هم‌عنوانِ کارت موجود شد (تکراری) حذف می‌شود تا قاعدهٔ یکتایی نقش بماند */
+  const cards=(DB.roleCards??[]).map(c=>({...c,title:fix(c.title)}));
+  const seen=new Set();
+  DB.roleCards=cards.filter(c=>{const k=c.organizationId+'|'+c.title; if(seen.has(k)) return false; seen.add(k); return true;});
+}
 function ensureProgramSettings(orgId){
   if(!Array.isArray(DB.programSettings)) DB.programSettings=[];
   let row=DB.programSettings.find(s=>s.organizationId===orgId);
@@ -7981,9 +8305,17 @@ function ensureProgramSettings(orgId){
   if(orgId===PROGRAM_ORG_ID&&row&&!Array.isArray(row.chart)){
     DB.programSettings=DB.programSettings.filter(s=>s.organizationId!==orgId); row=null;
   }
+  /* مهاجرت چارت v14 (فاز ۱۲.۲): ردیف دموی persisted بدون نشان chartVersion:14 با بذر
+     ۳۳ نقش/۳۶ نفر v14 جایگزین می‌شود؛ ردیف مستأجر واقعی فقط نشان می‌گیرد و چارت خودش می‌ماند */
+  if(row&&row.chartVersion!==14){
+    migrateRemovedChartRoles();
+    if(orgId===PROGRAM_ORG_ID){
+      DB.programSettings=DB.programSettings.filter(s=>s.organizationId!==orgId); row=null;
+    } else { row.chartVersion=14; }
+  }
   if(!row){
     DB.programSettings.push(orgId===PROGRAM_ORG_ID?programDemoSettings()
-      :{organizationId:orgId,roles:[],chart:[],seasons:[],partnershipTarget:null,kpis:[]});
+      :{organizationId:orgId,chartVersion:14,roles:[],chart:[],seasons:[],partnershipTarget:null,kpis:[]});
   }
 }
 function programSettingsOf(orgId){ensureProgramSettings(orgId);return DB.programSettings.find(s=>s.organizationId===orgId);}
@@ -8003,7 +8335,7 @@ function ensureGoalsSeed(){
   const C=(n,title,method,target6,target12,value,unit)=>({id:`gc-${n}`,order:n,title,method,target6,target12,value,unit});
   DB.goals=[{id:'goal-ai-authority',organizationId:PROGRAM_ORG_ID,
     title:'مرجعیت هوش مصنوعی فناوران پارس ایرانیان',owner:'مدیر اندیشکده و پژوهش',status:'ACTIVE',
-    description:'مرجعیت، ادعا نیست؛ جایگاهی است که با اعتبار منبع، کیفیت داده، تداوم حضور و استنادپذیری ساخته می‌شود و باید سنجیده شود (بخش ۱۸ سند v6). ابزار عملیاتی، راهنمای پایش مرجعیت با ۲۵ سؤال در سه دسته و جدول پایش ماهانه است؛ نتیجهٔ پایش هم شاخص مرجعیت را تغذیه می‌کند و هم اقدام‌های اصلاحی محتوا و وب‌سایت مرجع را تعیین می‌کند.',
+    description:'مرجعیت، ادعا نیست؛ جایگاهی است که با اعتبار منبع، کیفیت داده، تداوم حضور و استنادپذیری ساخته می‌شود و باید سنجیده شود (بخش ۱۸ سند v14). ابزار عملیاتی، راهنمای پایش مرجعیت با ۲۵ سؤال در سه دسته و جدول پایش ماهانه است؛ نتیجهٔ پایش هم شاخص مرجعیت را تغذیه می‌کند و هم اقدام‌های اصلاحی محتوا و وب‌سایت مرجع را تعیین می‌کند.',
     components:[
       C(1,'تعداد منابع معتبر ارجاع‌دهنده','شمارش منابع مستقل معتبر',15,40,22,'count'),
       C(2,'تعداد گزارش‌های مرجع منتشرشده','شمارش گزارش‌های اعتبارسنجی‌شده',4,10,6,'count'),
@@ -8120,20 +8452,25 @@ function ensureProgramSeed(){
   const in90=(d)=>new Date(Date.now()+d*86400000).toISOString();
   /* ── ریجستری ریسک — ۹ ریسک فهرست سند (بخش ۲۵) ── */
   if(!Array.isArray(DB.risks)||!DB.risks.length){DB.risks=[
-    {id:'risk-1',organizationId:PROGRAM_ORG_ID,title:'خروج ناگهانی فرد کلیدی',probability:'MEDIUM',impact:'HIGH',preventive:'برنامهٔ جانشین‌پروری در ممیزی افراد؛ مستندسازی دانش',reactive:'پیشنهاد رقابتی مطابق بازار',ownerRole:'مدیرعامل',status:'IN_PROGRESS',createdAt:ago(45),reviewAt:in90(12),notes:''},
-    {id:'risk-2',organizationId:PROGRAM_ORG_ID,title:'همکاری‌نکردن زیرمجموعه در ارائه داده',probability:'MEDIUM',impact:'HIGH',preventive:'حمایت رسمی مدیریت هلدینگ؛ شروع از زیرمجموعه‌های هم‌راستا',reactive:'ثبت موانع در گزارش ماهانه',ownerRole:'مدیر استراتژی',status:'OPEN',createdAt:ago(45),reviewAt:in90(12),notes:''},
-    {id:'risk-3',organizationId:PROGRAM_ORG_ID,title:'بحران رسانه‌ای یا برداشت منفی از خروجی‌ها',probability:'LOW',impact:'HIGH',preventive:'خط‌مشی انتشار و تأیید سه‌مرحله‌ای',reactive:'پروتکل پاسخ‌گویی بیست‌وچهار ساعته',ownerRole:'مدیر رسانه',status:'OPEN',createdAt:ago(40),reviewAt:in90(20),notes:''},
-    {id:'risk-4',organizationId:PROGRAM_ORG_ID,title:'تأخیر در انتقال سامانه‌ها و داده‌ها',probability:'MEDIUM',impact:'MEDIUM',preventive:'اجرای موازی محدود',reactive:'آموزش کوتاه کاربران',ownerRole:'مدیر محصول',status:'IN_PROGRESS',createdAt:ago(38),reviewAt:in90(30),notes:''},
-    {id:'risk-5',organizationId:PROGRAM_ORG_ID,title:'از دست رفتن داده در جریان انتقال',probability:'LOW',impact:'HIGH',preventive:'نسخهٔ پشتیبان معتبر پیش از هر انتقال؛ تطبیق رکورد به رکورد',reactive:'سی روز نگهداری سامانهٔ قدیمی',ownerRole:'مدیر محصول',status:'OPEN',createdAt:ago(38),reviewAt:in90(30),notes:''},
-    {id:'risk-6',organizationId:PROGRAM_ORG_ID,title:'تأخیر در استخدام نقش‌های تخصصی',probability:'MEDIUM',impact:'MEDIUM',preventive:'بانک استعداد از ماه نخست',reactive:'جذب با پیشنهاد رقابتی؛ برون‌سپاری موقت تولید',ownerRole:'مدیر پروژه',status:'OPEN',createdAt:ago(30),reviewAt:in90(8),notes:''},
-    {id:'risk-7',organizationId:PROGRAM_ORG_ID,title:'خزش محدوده و درخواست‌های بیرون از برنامه',probability:'HIGH',impact:'MEDIUM',preventive:'قاعدهٔ کنترل محدوده',reactive:'هر درخواست جدید فقط از طریق تغییر رسمی برنامه',ownerRole:'مدیر پروژه',status:'OPEN',createdAt:ago(30),reviewAt:in90(8),notes:''},
-    {id:'risk-8',organizationId:PROGRAM_ORG_ID,title:'پیشی‌گرفتن رقبا در انتشار مرجعیت',probability:'MEDIUM',impact:'MEDIUM',preventive:'تقویم انتشار پیوسته؛ تقدم گزارش سالانه',reactive:'پایش ماهانهٔ رقبا',ownerRole:'مدیر اندیشکده و پژوهش',status:'IN_PROGRESS',createdAt:ago(20),reviewAt:in90(15),notes:''},
-    {id:'risk-9',organizationId:PROGRAM_ORG_ID,title:'تغییر اولویت مدیریت هلدینگ در میانهٔ برنامه',probability:'LOW',impact:'HIGH',preventive:'گزارش ماهانهٔ شفاف؛ بازنگری فصلی با صورت‌جلسه',reactive:'حفظ هستهٔ ثابت برنامه',ownerRole:'مدیرعامل',status:'CLOSED',createdAt:ago(60),reviewAt:in90(40),notes:'در بازنگری فصل گذشته بسته شد.'},
-    /* گام ۹.۲ — F17: ریسک‌های AI با ستون‌های هشت‌گانه (مورد استفاده تا توقف) */
-    {id:'risk-ai-1',organizationId:PROGRAM_ORG_ID,kind:'AI',title:'تزریق دستور از طریق سند بازیابی‌شده در پرسش سازمانی',probability:'LOW',impact:'HIGH',preventive:'مرز داده و دستور (بلوک غیرقابل اعتماد BEGIN-DATA/END-DATA)',reactive:'توقف per-کاربرد و بازگشت به پاسخ انسانی',ownerRole:'مدیر محصول',status:'IN_PROGRESS',createdAt:ago(25),reviewAt:in90(20),notes:'آزمون ۱۹.۴ در باتری api هر تغییر کد اجرا می‌شود.',
+    {id:'risk-1',organizationId:PROGRAM_ORG_ID,title:'خروج ناگهانی فرد کلیدی',probability:'MEDIUM',impact:'HIGH',preventive:'برنامهٔ جانشین‌پروری در ممیزی افراد؛ مستندسازی دانش',reactive:'پیشنهاد رقابتی مطابق بازار',earlyWarning:'استعفای اعلام‌نشده یا کاهش ناگهانی مشارکت فرد کلیدی در جلسات',ownerRole:'مدیرعامل',status:'IN_PROGRESS',createdAt:ago(45),reviewAt:in90(12),notes:''},
+    {id:'risk-2',organizationId:PROGRAM_ORG_ID,title:'همکاری‌نکردن زیرمجموعه در ارائه داده',probability:'MEDIUM',impact:'HIGH',preventive:'حمایت رسمی مدیریت هلدینگ؛ شروع از زیرمجموعه‌های هم‌راستا',reactive:'ثبت موانع در گزارش ماهانه',earlyWarning:'دیرکرد بیش از دو هفته‌ای در پاسخ به درخواست‌های رسمی داده',ownerRole:'مدیر استراتژی',status:'OPEN',createdAt:ago(45),reviewAt:in90(12),notes:''},
+    {id:'risk-3',organizationId:PROGRAM_ORG_ID,title:'بحران رسانه‌ای یا برداشت منفی از خروجی‌ها',probability:'LOW',impact:'HIGH',preventive:'خط‌مشی انتشار و تأیید سه‌مرحله‌ای',reactive:'پروتکل پاسخ‌گویی بیست‌وچهار ساعته',earlyWarning:'افزایش بازتاب منفی رسانه‌ای یا پرسش‌های هماهنگ‌نشده',ownerRole:'مدیر رسانه',status:'OPEN',createdAt:ago(40),reviewAt:in90(20),notes:''},
+    {id:'risk-4',organizationId:PROGRAM_ORG_ID,title:'تأخیر در انتقال سامانه‌ها و داده‌ها',probability:'MEDIUM',impact:'MEDIUM',preventive:'اجرای موازی محدود',reactive:'آموزش کوتاه کاربران',earlyWarning:'انحراف بیش از دو هفته از نقشهٔ انتقال سامانه‌ها',ownerRole:'مدیر محصول',status:'IN_PROGRESS',createdAt:ago(38),reviewAt:in90(30),notes:''},
+    {id:'risk-5',organizationId:PROGRAM_ORG_ID,title:'از دست رفتن داده در جریان انتقال',probability:'LOW',impact:'HIGH',preventive:'نسخهٔ پشتیبان معتبر پیش از هر انتقال؛ تطبیق رکورد به رکورد',reactive:'سی روز نگهداری سامانهٔ قدیمی',earlyWarning:'مغایرت شمار رکورد بین مبدأ و مقصد پس از هر موج انتقال',ownerRole:'مدیر محصول',status:'OPEN',createdAt:ago(38),reviewAt:in90(30),notes:''},
+    {id:'risk-6',organizationId:PROGRAM_ORG_ID,title:'تأخیر در استخدام نقش‌های تخصصی',probability:'MEDIUM',impact:'MEDIUM',preventive:'بانک استعداد از ماه نخست',reactive:'جذب با پیشنهاد رقابتی؛ برون‌سپاری موقت تولید',earlyWarning:'خالی ماندن نقش تخصصی بیش از ۴۵ روز با وجود آگهی فعال',ownerRole:'مدیر پروژه',status:'OPEN',createdAt:ago(30),reviewAt:in90(8),notes:''},
+    {id:'risk-7',organizationId:PROGRAM_ORG_ID,title:'خزش محدوده و درخواست‌های بیرون از برنامه',probability:'HIGH',impact:'MEDIUM',preventive:'قاعدهٔ کنترل محدوده',reactive:'هر درخواست جدید فقط از طریق تغییر رسمی برنامه',earlyWarning:'دو تغییر محدوده یا بیشتر در یک فصل بدون صورت‌جلسهٔ رسمی',ownerRole:'مدیر پروژه',status:'OPEN',createdAt:ago(30),reviewAt:in90(8),notes:''},
+    {id:'risk-8',organizationId:PROGRAM_ORG_ID,title:'پیشی‌گرفتن رقبا در انتشار مرجعیت',probability:'MEDIUM',impact:'MEDIUM',preventive:'تقویم انتشار پیوسته؛ تقدم گزارش سالانه',reactive:'پایش ماهانهٔ رقبا',earlyWarning:'انتشار رقیب در موضوع نشست مرجع برنامه با فاصلهٔ کم',ownerRole:'مدیر اندیشکده و پژوهش',status:'IN_PROGRESS',createdAt:ago(20),reviewAt:in90(15),notes:''},
+    {id:'risk-9',organizationId:PROGRAM_ORG_ID,title:'تغییر اولویت مدیریت هلدینگ در میانهٔ برنامه',probability:'LOW',impact:'HIGH',preventive:'گزارش ماهانهٔ شفاف؛ بازنگری فصلی با صورت‌جلسه',reactive:'حفظ هستهٔ ثابت برنامه',earlyWarning:'لغو یا تعویق جلسات فصلی مدیریت هلدینگ دو بار پیاپی',ownerRole:'مدیرعامل',status:'CLOSED',createdAt:ago(60),reviewAt:in90(40),notes:'در بازنگری فصل گذشته بسته شد.'},
+    /* گام ۹.۲ — ریسک‌های AI با ستون‌های هشت‌گانه (مورد استفاده تا توقف) */
+    {id:'risk-ai-1',organizationId:PROGRAM_ORG_ID,kind:'AI',title:'تزریق دستور از طریق سند بازیابی‌شده در پرسش سازمانی',probability:'LOW',impact:'HIGH',preventive:'مرز داده و دستور (بلوک غیرقابل اعتماد BEGIN-DATA/END-DATA)',reactive:'توقف per-کاربرد و بازگشت به پاسخ انسانی',earlyWarning:'پاسخ مدل با ارجاع به دستورهای داخل سند بازیابی‌شده',ownerRole:'مدیر محصول',status:'IN_PROGRESS',createdAt:ago(25),reviewAt:in90(20),notes:'آزمون ۱۹.۴ در باتری api هر تغییر کد اجرا می‌شود.',
       ai:{useCase:'org-question',testRun:'باتری api — چک تزریق دستور',finding:'پیلود داخل سند بازیابی‌شده در بلوک داده می‌ماند و دستور سامانه را عوض نمی‌کند',version:'demo-v6',releaseDecision:'CONDITIONAL',limitation:'خروجی فقط از منابع بازیابی‌شده؛ پاسخ بدون منبع نمایش داده نمی‌شود',review:'با هر تغییر موتور بازیابی',stopped:false}},
-    {id:'risk-ai-2',organizationId:PROGRAM_ORG_ID,kind:'AI',title:'نشت الگوی محرمانه در خروجی مدل ابری',probability:'LOW',impact:'HIGH',preventive:'پوشاندن ورودی پیش از ارسال ابری + پالایش خروجی در همهٔ مسیرها',reactive:'قطع کلید ارائه‌دهنده و توقف مسیر ابری',ownerRole:'مدیر فناوری اطلاعات',status:'OPEN',createdAt:ago(20),reviewAt:in90(25),notes:'',
+    {id:'risk-ai-2',organizationId:PROGRAM_ORG_ID,kind:'AI',title:'نشت الگوی محرمانه در خروجی مدل ابری',probability:'LOW',impact:'HIGH',preventive:'پوشاندن ورودی پیش از ارسال ابری + پالایش خروجی در همهٔ مسیرها',reactive:'قطع کلید ارائه‌دهنده و توقف مسیر ابری',earlyWarning:'هشدار پایش دربارهٔ ورودی حاوی الگوی محرمانه پیش از ارسال ابری',ownerRole:'مدیر فناوری اطلاعات',status:'OPEN',createdAt:ago(20),reviewAt:in90(25),notes:'',
       ai:{useCase:'content-draft',testRun:'باتری api — چک نشت داده',finding:'الگوهای محرمانه در خروجی پالایش می‌شوند؛ مسیر لوکال معاف از خروج داده',version:'demo-v6',releaseDecision:'APPROVED',limitation:'مسیر ابری فقط با کلید ثبت‌شده و پس از پوشاندن؛ مسیر لوکال اول است',review:'ماهانه در کمیتهٔ امنیت',stopped:false}},
+    /* فاز ۱۴ — ریسک‌های بین‌المللی (بخش ۲۳ سند v14 + ۱۰.۶) با نشانهٔ هشدار و مسئول از چارت v14 */
+    {id:'risk-intl-1',organizationId:PROGRAM_ORG_ID,kind:'INTERNATIONAL',title:'نقض محرمانگی در مکاتبه یا تبادل داده با طرف خارجی',probability:'MEDIUM',impact:'HIGH',earlyWarning:'درخواست اطلاعات حساس پیش از تأیید هویت یا بررسی حقوقی در پروندهٔ F17',preventive:'سطح‌بندی محرمانگی و مجوز اشتراک داده در هر پرونده؛ دروازهٔ هویت تأییدشده + بررسی حقوقی گذرنده پیش از تبادل',reactive:'توقف فوری تبادل داده، اطلاع مشاور حقوقی و ثبت در بازبینی ماهانهٔ بین‌المللی',ownerRole:'مدیرعامل',status:'OPEN',createdAt:ago(15),reviewAt:in90(15),notes:''},
+    {id:'risk-intl-2',organizationId:PROGRAM_ORG_ID,kind:'INTERNATIONAL',title:'تعامل با طرف خارجی بدون بررسی هویت و اختیار نمایندگی',probability:'MEDIUM',impact:'HIGH',earlyWarning:'پیشنهاد جلسه، تعهد یا تبادل اطلاعات پیش از تأیید هویت در پروندهٔ F17',preventive:'دروازهٔ هویت VERIFIED + بررسی حقوقی گذرنده پیش از هر تبادل؛ الزام ثبت پروندهٔ F17 برای هر طرف ارتباط',reactive:'توقف تعامل، ثبت در بازبینی ماهانهٔ بین‌المللی و اطلاع مسئول پیگیری',ownerRole:'مدیر توسعه کسب‌وکار',status:'OPEN',createdAt:ago(15),reviewAt:in90(15),notes:''},
+    {id:'risk-intl-3',organizationId:PROGRAM_ORG_ID,kind:'INTERNATIONAL',title:'ترجمه‌ی نادقیق یا ادعای فراتر از متن تأییدشده در محتوای چندزبانه',probability:'MEDIUM',impact:'MEDIUM',earlyWarning:'نسخهٔ ترجمه بدون بازبین تخصصی یا اختلاف ادعا با نسخهٔ مرجع فارسی',preventive:'نسخهٔ مرجع فارسی الزامی + بازبین ترجمه در هر نسخهٔ زبان دیگر',reactive:'اصلاح نسخه، ثبت منشأ شاهد و اطلاع گیرندهٔ نهایی',ownerRole:'مدیر محتوا',status:'OPEN',createdAt:ago(15),reviewAt:in90(20),notes:''},
+    {id:'risk-intl-4',organizationId:PROGRAM_ORG_ID,kind:'INTERNATIONAL',title:'تعهد یا هزینهٔ سفر خارجی بدون تصویب مستقل',probability:'LOW',impact:'HIGH',earlyWarning:'درخواست رزرو یا تعهد هزینهٔ سفر/حضور در رویداد پیش از تصویب مستقل هدف سفر',preventive:'قاعدهٔ ۱۰.۶.۳: حضور خارجی فقط برای هدف مشخص، پس از تصویب مستقل و با ارزیابی جداگانه؛ هیچ رویداد سالانه‌ای خودکار تعریف نمی‌شود',reactive:'لغو تعهد، ثبت در گزارش ماهانه و بازبینی فرآیند تصویب',ownerRole:'مدیر استراتژی',status:'OPEN',createdAt:ago(15),reviewAt:in90(25),notes:''},
   ];}
   /* ── آمادگی شش‌لایه — اجزا و معیار پذیرش از جدول بخش ۱۲ سند؛ وزن‌ها بر پایهٔ
         تأکید سند (بازار = مهم‌ترین محصول؛ رابطه = دادهٔ زندهٔ SRIP).
@@ -8153,7 +8490,7 @@ function ensureProgramSeed(){
     {id:'ap-2',organizationId:PROGRAM_ORG_ID,role:'کارشناس رسانه',duties:'پایش رسانه و تولید محتوا',manager:'مدیر رسانه',capacity:'MEDIUM',dependencyRisk:'MEDIUM',successor:'ندارد',priority:'KEEP',note:'نیازمند جانشین‌پروری'},
     {id:'ap-3',organizationId:PROGRAM_ORG_ID,role:'مدیر خلاقیت',duties:'هویت بصری و نظارت بر تولید',manager:'مدیر محتوا',capacity:'LOW',dependencyRisk:'MEDIUM',successor:'ندارد',priority:'REDEFINE',note:'پیشنهاد: ادغام در تیم محتوا'},
     {id:'ap-4',organizationId:PROGRAM_ORG_ID,role:'مهندس نرم‌افزار',duties:'نگهداری وب‌سایت و سامانه‌ها',manager:'مدیر محصول',capacity:'HIGH',dependencyRisk:'HIGH',successor:'ندارد',priority:'KEEP',note:'دانش سامانه متمرکز روی یک نفر'},
-    {id:'ap-5',organizationId:PROGRAM_ORG_ID,role:'کارشناس پژوهش',duties:'—',manager:'مدیر توسعه کسب‌وکار',capacity:'—',dependencyRisk:'—',successor:'—',priority:'HIRE',note:'جایگاه خالی — جذب در ماه ۲ (چارت v6)'},
+    {id:'ap-5',organizationId:PROGRAM_ORG_ID,role:'کارشناس پژوهش',duties:'—',manager:'مدیر توسعه کسب‌وکار',capacity:'—',dependencyRisk:'—',successor:'—',priority:'HIRE',note:'جایگاه خالی — جذب در ماه ۲ (چارت v14)'},
   ];}
   if(!Array.isArray(DB.auditSystems)||!DB.auditSystems.length){
     /* گام ۴.۱ — بذر مراحل F11: دو سامانهٔ تکمیل‌شده (هر ۱۰ مرحله)، یکی در میانهٔ راه (۶ مرحله)، یکی شروع‌نشده */
@@ -8517,7 +8854,7 @@ function ensureKnowledgeSeed(){
   ];
 }
 
-/* ═══════════════ گام ۲.۶ — معماری رویدادها + پروتکل بحران (بخش ۱۷ سند؛ F10 و F15) ═══════════════
+/* ═══════════════ گام ۲.۶ — معماری رویدادها + پروتکل بحران (بخش ۱۷ سند؛ F10 و F14) ═══════════════
    رویدادها دو مسیر مستقل دارند: مسیر الف «تحت مالکیت» (سرمایه‌گذاری سنگین، شاخص
    مرجعیت) و مسیر ب «حضور در رویداد بیرونی» (سرمایه‌گذاری سبک، شاخص شبکه‌سازی).
    خروجی این محور، تدوین و نگهداری تقویم رویدادهای سالانه است که هر دو مسیر را
@@ -8714,7 +9051,7 @@ function ensureAiProvidersSeed(){
         baseUrl:'https://api.cloud-demo.example/v1',model:'gpt-4o-mini',status:'INACTIVE',keyLast4:null,keySetAt:null,builtin:false,createdAt:at,updatedAt:at});
   }
 }
-/* ═══════════ گام ۶.۲ — قواعد انتخاب مدل و کنترل داده (۱۹.۴ سند v6) ═══════════
+/* ═══════════ گام ۶.۲ — قواعد انتخاب مدل و کنترل داده (۱۹.۴ سند v14) ═══════════
    مسیریابی کاربرد→ارائه‌دهنده/مدل با جایگزین (پیش‌فرض لوکال-اول، ابری جایگزین) ·
    پوشاندن دادهٔ محرمانه فقط پیش از ارسال ابری (مسیر لوکال معاف) ·
    مرز داده و دستور: محتوای بازیابی‌شده در بلوک دادهٔ جدا با علامت‌گذاری صریح ·
@@ -8797,7 +9134,7 @@ function ensureAiRoutingSeed(){
    مدل/زمان/هزینه/وضعیت)؛ داشبورد مصرف همهٔ اعدادش را از همین لاگ می‌سازد — هیچ
    عدد دستی نیست. کلید توقف کلی و per-کاربرد با دلیل و اقدام‌کننده ثبت می‌شود؛
    حالت HALTED یعنی «بازگشت به فرآیند انسانی» (توقف ایمن، ماه ۱۲ سند). */
-/* ═══════════ گام ۹.۲ — F17 دفتر ثبت ریسک و انتشار AI ═══════════
+/* ═══════════ گام ۹.۲ — دفتر ثبت ریسک و انتشار AI (ماژول پلتفرمی) ═══════════
    ستون‌های هشت‌گانهٔ AI روی ریسک: مورد استفاده · آزمون · یافته · نسخه ·
    تصمیم انتشار · محدودیت · بازبینی · توقف. اعتبارسنجی مشترک POST/PATCH. */
 const AI_RISK_RELEASE_FA={APPROVED:'تأیید',CONDITIONAL:'مشروط',REJECTED:'رد'};
@@ -8808,7 +9145,7 @@ function aiRiskFields(b,partial){
   const out={};
   for(const k of keys){
     if(!(k in (b??{}))) continue;
-    if(k==='useCase'){ const u=String(b.useCase??'').trim(); if(u&&!AI_F12_USE_CASES.some(s=>s.key===u)) return {err:'مورد استفادهٔ AI باید یکی از هشت کاربرد جدول ۱۹.۲ باشد.'}; out.useCase=u; }
+    if(k==='useCase'){ const u=String(b.useCase??'').trim(); if(u&&!AI_F12_USE_CASES.some(s=>s.key===u)) return {err:'مورد استفادهٔ AI باید یکی از هفت کاربرد جدول ۱۹.۲ سند v14 باشد (به‌علاوهٔ کاربرد پلتفرمی اصالت).'}; out.useCase=u; }
     else if(k==='releaseDecision'){ const d=String(b.releaseDecision??'').toUpperCase(); if(d&&!['APPROVED','CONDITIONAL','REJECTED'].includes(d)) return {err:'تصمیم انتشار باید تأیید/مشروط/رد باشد.'}; out.releaseDecision=d; }
     else if(k==='stopped'){ out.stopped=!!b.stopped; }
     else if(k==='version'){ out.version=String(b.version??'').trim().slice(0,40); }
@@ -8817,7 +9154,7 @@ function aiRiskFields(b,partial){
   return {err:null,ai:out};
 }
 /* ═══════════ گام ۹.۱ — F12 کارت کاربرد و ارزیابی AI (۱۹.۲/۱۹.۳ سند v6) ═══════════
-   رجیستری هشت کاربرد AI جدول ۱۹.۲ با هر سیزده ستون؛ ستون «مدل» زنده از مسیریابی
+   رجیستری کاربردهای AI — هفت کاربرد ۱۹.۲ سند v14 + کاربرد پلتفرمی اصالت با هر سیزده ستون؛ ستون «مدل» زنده از مسیریابی
    درگاه خوانده می‌شود (عدد/متن دستی نیست) و «تشخیص اصالت» به‌عنوان کاربردِ موتور
    قواعد قطعی (۸.۱) خارج از مسیریابی، کارت خودش را دارد. */
 const AI_F12_AUTHORITY={
@@ -8836,9 +9173,9 @@ const AI_F12_USE_CASES=[
   {key:'dd-review',problem:'بررسی منظم محورهای Due Diligence در برابر سوالات استاندارد',user:'کاربران مجاز پروندهٔ DD',allowedData:'سوالات استاندارد DD + پاسخ‌ها و شواهد پیوست پروندهٔ در محدوده',tool:'پنل پروندهٔ Due Diligence',retrieval:'چرخهٔ پرسش–پاسخ ساختاریافته روی پروندهٔ DD',testSet:{name:'محورهای ۶.۲.۱/۶.۲.۲ سند',cases:9},sourceReliance:'کامل — وضعیت هر محور از پاسخ‌ها و شواهد ثبت‌شده محاسبه می‌شود',security:'محدودهٔ سازمانی + مجوز دسترسی به پرونده + ثبت کامل تغییرات',humanConfirm:'نظر نهایی صرفاً انسانی — دستیار فقط پیش‌نویس و جمع‌بندی می‌سازد',rollback:'پروندهٔ DD بدون جمع‌بندی دستیار معتبر می‌ماند؛ توقف per-کاربرد'},
   {key:'opp-priority',problem:'رتبه‌بندی فرصت‌ها با معیارهای متعدد',user:'مدیران فرصت و فروش',allowedData:'فرصت‌ها، ارزش پلکانی، احتمال و تعاملات رابطهٔ مرتبط در محدوده',tool:'پنل اولویت‌بندی هوشمند در صفحهٔ فرصت',retrieval:'محاسبهٔ وزنی روی دادهٔ زندهٔ فرصت و آخرین تعامل رابطه',testSet:{name:'فرصت‌های نمونه با امتیاز معلوم',cases:10},sourceReliance:'کامل — امتیاز و دلیل سه‌عاملی از دادهٔ خود فرصت محاسبه می‌شود',security:'بدون خروج داده — محاسبهٔ درون‌سازانه و قطعی',humanConfirm:'بدون رد/قبول خودکار — امتیاز فقط مرتب‌سازی و دلیل می‌دهد',rollback:'مرتب‌سازی دستی همیشه در دسترس است؛ توقف per-کاربرد'},
   {key:'next-action',problem:'پیشنهاد گام بعدی روی تعامل/تعهد/اقدام',user:'کاربران تعامل و تعهد',allowedData:'تعامل، تعهد و اقدام‌های مرتبط در محدوده',tool:'کارت پیشنهاد اقدام بعدی روی تعامل',retrieval:'قواعد قطعی مهلت و وضعیت روی دادهٔ زندهٔ تعامل',testSet:{name:'سناریوهای مهلت و وضعیت',cases:6},sourceReliance:'کامل — پیشنهاد از وضعیت و مهلت رکورد محاسبه می‌شود',security:'بدون خروج داده — قواعد درون‌سامانه',humanConfirm:'ارسال/ثبت فقط با تأیید کاربر (۱۹.۲)',rollback:'اقدام دستی از مسیر معمول همیشه ممکن است؛ توقف per-کاربرد'},
-  {key:'content-draft',problem:'پیش‌نویس محتوای منبع‌دار از بستهٔ اسناد مجاز',user:'تیم رسانه و محتوا',allowedData:'فقط اسناد انتخاب‌شدهٔ مجاز در محدوده (چک‌باکس)',tool:'پنل دستیار تولید محتوا در رسانهٔ تقویم',retrieval:'بستهٔ اسناد مجاز کاربر + قالب انتشار نه‌گامی',testSet:{name:'پیش‌نویس‌های نمونه با برچسب سهم AI',cases:7},sourceReliance:'کامل — ادعاها به سند منبع پیوند می‌خورند؛ سهم AI اعلام می‌شود',security:'پوشاندن الگوهای محرمانه + مرز داده و دستور + کارت F08 کامل',humanConfirm:'انتشار صرفاً انسانی با C2PA و اثرانگشت SHA-256 انتشار (۷.۵)',rollback:'پیش‌نویس منتشرنشده قابل دورریز است؛ توقف per-کاربرد'},
+  {key:'content-draft',problem:'پیش‌نویس محتوای منبع‌دار از بستهٔ اسناد مجاز',user:'تیم رسانه و محتوا',allowedData:'فقط اسناد انتخاب‌شدهٔ مجاز در محدوده (چک‌باکس)',tool:'پنل دستیار تولید محتوا در رسانهٔ تقویم',retrieval:'بستهٔ اسناد مجاز کاربر + قالب انتشار هشت‌گامی (۱۶.۲ سند v14)',testSet:{name:'پیش‌نویس‌های نمونه با برچسب سهم AI',cases:7},sourceReliance:'کامل — ادعاها به سند منبع پیوند می‌خورند؛ سهم AI اعلام می‌شود',security:'پوشاندن الگوهای محرمانه + مرز داده و دستور + کارت F08 کامل',humanConfirm:'انتشار صرفاً انسانی با C2PA و اثرانگشت SHA-256 انتشار (۷.۵)',rollback:'پیش‌نویس منتشرنشده قابل دورریز است؛ توقف per-کاربرد'},
   {key:'authority-monitor',problem:'پایش جایگاه مرجعیت در برابر رقبا',user:'مدیر اندیشکده و پژوهش',allowedData:'رقیبان هفت‌بُعدی و نظرسنجی‌های عمومی در محدوده',tool:'پنل پایش مرجعیت هوش مصنوعی',retrieval:'دادهٔ رقیب/نظرسنجی + معیارهای پایش ماهانه',testSet:{name:'دوره‌های پایش نمونه',cases:5},sourceReliance:'کامل — نتیجهٔ پایش از دادهٔ رقیب و نظرسنجی محاسبه می‌شود',security:'محدودهٔ سازمانی + دادهٔ عمومی/در محدوده',humanConfirm:'ثبت نتیجهٔ پایش با تأیید مدیر اندیشکده (۱۹.۲)',rollback:'پایش دستی با راهنمای ۲۵ سؤال ممکن است؛ توقف per-کاربرد'},
-  {key:'authenticity',problem:'تشخیص حساب/منبع/سرور جعلی و ریسک اصالت',user:'تحلیلگر اعتماد و ایمنی + مالک',allowedData:'رویدادهای امنیتی، نشست‌ها و دستگاه‌های در محدوده',tool:'موتور نشانه‌ها و پرونده‌های اصالت (F13) در هوشمندی',retrieval:'کاتالوگ ۱۶ نشانهٔ وزن‌دار روی دادهٔ زندهٔ امنیتی',testSet:{name:'سناریوهای نشانه و امتیاز (۸.۱)',cases:16},sourceReliance:'کامل — امتیاز ریسک قطعی از نشانه‌های فعال با دلیل و شاهد',security:'دسترسی فقط برای نقش تحلیلگر/مالک + snapshot نسخهٔ قاعده در پرونده',humanConfirm:'اقدام محدودکننده فقط پس از بازبینی انسانی (۸.۲/۱۹.۵.۱)',rollback:'پرونده بدون اقدام باز می‌ماند؛ رفع محدودیت با ابطال اعتراض'},
+  {key:'authenticity',problem:'تشخیص حساب/منبع/سرور جعلی و ریسک اصالت',user:'تحلیلگر حاکمیت و کیفیت داده + مسئول',allowedData:'رویدادهای امنیتی، نشست‌ها و دستگاه‌های در محدوده',tool:'موتور نشانه‌ها و پرونده‌های اصالت (ماژول پلتفرمی) در هوشمندی',retrieval:'کاتالوگ ۱۶ نشانهٔ وزن‌دار روی دادهٔ زندهٔ امنیتی',testSet:{name:'سناریوهای نشانه و امتیاز (۸.۱)',cases:16},sourceReliance:'کامل — امتیاز ریسک قطعی از نشانه‌های فعال با دلیل و شاهد',security:'دسترسی فقط برای نقش تحلیلگر/مالک + snapshot نسخهٔ قاعده در پرونده',humanConfirm:'اقدام محدودکننده فقط پس از بازبینی انسانی (۸.۲)',rollback:'پرونده بدون اقدام باز می‌ماند؛ رفع محدودیت با ابطال اعتراض'},
 ];
 function ensureAiUseCaseCardsFor(orgId){
   if(!Array.isArray(DB.aiUseCases)) DB.aiUseCases=[];
@@ -9141,7 +9478,7 @@ function aiNextActionProposal(inter){
 /* ═══════════════ گام ۷.۵ — دستیار تولید محتوا + فیلدهای کامل F08 ═══════════════
    «پیش‌نویس از بستهٔ منابع»: انتخاب اسناد مجاز → پیش‌نویس منبع‌دار با افشای AI.
    F08: مدل/نسخه · دستور تولید · میزان استفاده از AI · ادعاها · حقوق استفاده ·
-   وضعیت C2PA · راستی‌آزما · مالک/تأیید · اثرانگشت دیجیتال انتشار (SHA-256، بند ۱۶.۲). */
+   وضعیت C2PA · راستی‌آزما · مسئول/تأیید · اثرانگشت دیجیتال انتشار (SHA-256). */
 const F08_AI_SHARE_FA={FULL:'کاملاً هوش مصنوعی',PARTIAL:'با کمک هوش مصنوعی',MINOR:'کمکی حداقلی'};
 const F08_C2PA_FA={NOT_EMBEDDED:'جاسازی نشده',EMBEDDED:'جاسازی‌شده (C2PA)'};
 function contentF08(c){
@@ -9174,7 +9511,7 @@ function aiContentDraftFrom(docs,pillar){
     `بر اساس ستون «${p.title}» (ریتم ${p.rhythm})، این پیش‌نویس فقط از بستهٔ منابع مجاز انتخابی ساخته شده است.`,
     ...docs.slice(0,5).map((d,i)=>`نکتهٔ ${faN(i+1)} — از سند «${d.name}» (طبقه‌بندی ${d.classification??'داخلی'}): محتوای کلیدی این سند به اختصار بازگو و ارجاع داده می‌شود [${faN(i+1)}].`),
     `جمع‌بندی: چارچوب پیام از منابع فوق برداشت شده و پیش از انتشار باید گردش تأیید سه‌مرحله‌ای F08 را بگذراند.`,
-    'افشای هوش مصنوعی: این پیش‌نویس با کمک درگاه هوش مصنوعی از منابع مجاز تولید شده است؛ پیش از انتشار، بازبینی و تأیید انسانی الزامی است (سطح اختیار ۱۹.۲ سند v6).',
+    'افشای هوش مصنوعی: این پیش‌نویس با کمک درگاه هوش مصنوعی از منابع مجاز تولید شده است؛ پیش از انتشار، بازبینی و تأیید انسانی الزامی است (سطح اختیار ۱۹.۲ سند v14).',
   ].join('\n\n');
   return {title,pillar:p.key,month,body,
     citations:docs.slice(0,5).map((d,i)=>({n:i+1,documentId:d.id,name:d.name}))};
@@ -9250,7 +9587,7 @@ function authRiskScoreOf(subject){
     reason,
     families:families.map(f=>({key:f,titleFa:AUTH_FAMILY_FA[f]??f,
       count:signals.filter(s=>{const d=AUTH_SIGNAL_CATALOG.find(c=>c.key===s.signalKey);return d&&d.family===f;}).length})),
-    rule:'امتیاز ریسک قطعی از ترکیب وزن‌دار نشانه‌های ثبت‌شده محاسبه می‌شود؛ خروجی همیشه «امتیاز + دلیل + شاهد» است، نه برچسب قطعی (سند v6، ۱۹.۵).',
+    rule:'امتیاز ریسک قطعی از ترکیب وزن‌دار نشانه‌های ثبت‌شده محاسبه می‌شود؛ خروجی همیشه «امتیاز + دلیل + شاهد» است، نه برچسب قطعی (سند v14، ۱۹.۵).',
     ruleVersion:'auth-risk-v1'};
 }
 function authSubjectView(s){
@@ -9303,7 +9640,7 @@ function ensureAuthSubjects(){
   saveDb();
 }
 
-/* ═══════════════ گام ۸.۲ — پروندهٔ اصالت F13 + سیاست اقدام (۱۹.۵.۱) ═══════════════
+/* ═══════════════ گام ۸.۲ — پروندهٔ اصالت (ماژول پلتفرمی) + سیاست اقدام (۱۹.۵.۱) ═══════════════
    هر پرونده: شناسهٔ حساب/منبع/سرور/دستگاه/نشست + نشانه‌ها + امتیاز + نسخهٔ قاعده +
    اقدام + بازبین + اعتراض و نتیجه. چهار سطح: کم (ثبت و ادامه) · متوسط (شاهد تکمیلی)
    · بالا (محدودیت موقت + پرونده) · بحرانی (قرنطینه + هشدار).
@@ -9830,13 +10167,16 @@ function ensurePartnershipSeed(){
     {id:'pt-9',organizationId:PARTNERSHIP_ORG_ID,partnerOrgId:'org-5',type:'رویدادی',stage:'ENDED',ownerRole:'مدیر رویداد',ourCommitments:'برگزاری وبینار مشترک',theirCommitments:'معرفی به شبکهٔ پیمانکاران',contractName:'قرارداد وبینار مشترک',contractSignedAt:ago(300),relationshipId:'r-3',opportunityId:'o-2',reviewAt:ago(10),createdAt:ago(320),updatedAt:ago(10),notes:'پایان موفق؛ امکان تمدید در برنامهٔ سال دوم.'},
   ];
 }
-/* ═══════════ گام ۱۰.۱ — F02 پروندهٔ Due Diligence + F15 آماده‌سازی سرمایه‌گذار و شریک ═══════════
+/* ═══════════ گام ۱۰.۱ — F02 پروندهٔ Due Diligence + F14 آماده‌سازی سرمایه‌گذار و شریک ═══════════
    F02: محورهای ۶.۲.۱ (فنی) و ۶.۲.۲ (کسب‌وکاری) با پاسخ/شاهد/نقص · حق پاسخ طرف مقابل ·
    نظر مدیر تیم Y · وضعیت تصویب G2 (شرط: تکمیل همهٔ محورها + نظر تیم Y).
-   F15: کارت آماده‌سازی متصل به مشارکت/فرصت — وضعیت DD و تعهدها زنده محاسبه می‌شوند. */
+   F14: کارت آماده‌سازی متصل به مشارکت/فرصت — وضعیت DD و تعهدها زنده محاسبه می‌شوند. */
 const DD_AXIS_STATUS_FA={NOT_STARTED:'شروع‌نشده',IN_PROGRESS:'در جریان',ACCEPTED:'پذیرفته‌شده'};
-const DOSSIER_STATUS_FA={DRAFT:'پیش‌نویس',IN_REVIEW:'در بررسی',APPROVED:'تصویب‌شده',REJECTED:'ردشده'};
-const TEAM_Y_OPINION_FA={APPROVE:'تأیید',CONDITIONS:'مشروط',REJECT:'رد'};
+const DOSSIER_STATUS_FA={DRAFT:'پیش‌نویس',IN_REVIEW:'در بررسی',APPROVED:'تصویب‌شده',REJECTED:'ردشده',CANNOT_OPINE:'عدم امکان اظهارنظر'};
+const DD_BLOCKER_FA={NO_DATA:'عدم دسترسی به داده',NO_ACCESS:'عدم دسترسی',UNRESOLVED_CONFLICT:'تعارض حل‌نشده',NON_COOPERATION:'عدم همکاری'};
+const DD_CANNOT_OPINE_RULE='تا رفع مانع و تصویب گزارش، هیچ توصیهٔ ورود به بازار یا معرفی رسمی صادر نمی‌شود.';
+const TEAM_Y_OPINION_FA={CONTINUE:'ادامه',CONTINUE_CONDITIONAL:'ادامه مشروط',STOP:'توقف',FURTHER_REVIEW:'نیاز به بررسی تکمیلی'};
+const TEAM_Y_MIG={APPROVE:'CONTINUE',CONDITIONS:'CONTINUE_CONDITIONAL',REJECT:'STOP'}; /* مهاجرت persisted → چهارگانهٔ v14 */
 const DD_AXES=[
   {key:'product-arch',cat:'621',title:'محصول و معماری'},
   {key:'code-data',cat:'621',title:'کد و داده'},
@@ -9850,10 +10190,16 @@ const DD_AXES=[
   {key:'fit',cat:'622',title:'تناسب محصول–بازار'},
   {key:'economics',cat:'622',title:'اقتصاد واحد کسب‌وکار'},
   {key:'competition',cat:'622',title:'رقابت'},
+  /* فاز ۱۵ (۶.۲.۲ سند v14) — سه محور کسب‌وکاری جدید → مجموع ۱۵ محور */
+  {key:'sales-gtm',cat:'622',title:'فروش و توسعه بازار'},
+  {key:'team-governance',cat:'622',title:'تیم و حاکمیت'},
+  {key:'legal-risk',cat:'622',title:'حقوقی و ریسک'},
 ];
 const DD_AXIS_CAT_FA={'621':'محورهای ۶.۲.۱ — فنی و محصول','622':'محورهای ۶.۲.۲ — کسب‌وکار'};
 function ensureDossierSeed(){
   if(!Array.isArray(DB.dossiers)) DB.dossiers=[];
+  /* فاز ۱۵.۲ — مهاجرت نظر تیم Y persisted به چهارگانهٔ v14 */
+  (DB.dossiers??[]).forEach(d=>{ if(d.teamY&&TEAM_Y_MIG[d.teamY.opinion]) d.teamY.opinion=TEAM_Y_MIG[d.teamY.opinion]; });
   if(DB.dossiers.length) return;
   const AGO=(d)=>new Date(Date.now()-d*86400000).toISOString();
   const ax=(over={})=>Object.fromEntries(DD_AXES.map(a=>[a.key,{answer:'',evidence:'',gap:'',status:'NOT_STARTED',response:null,responseAt:null,...(over[a.key]??{})}]));
@@ -9870,13 +10216,21 @@ function ensureDossierSeed(){
        'market':{answer:'شرکت‌های زیرمجموعه هلدینگ‌ها',evidence:'تحلیل بازار',gap:'',status:'ACCEPTED'},
        'fit':{answer:'تناسب با فرآیند ارتباط‌محور هلدینگ‌ها',evidence:'پایلوت دو ماهه',gap:'',status:'ACCEPTED'},
        'economics':{answer:'اشتراک سالانه + سرخط موفقیت در ۱۸ ماه',evidence:'مدل مالی',gap:'',status:'ACCEPTED'},
-       'competition':{answer:'بدون رقیب داخلی هم‌تراز؛ CRMهای عمومی جایگزین نیستند',evidence:'تحلیل رقبا',gap:'',status:'ACCEPTED'}}),
-     teamY:{opinion:'APPROVE',note:'بررسی فنی و کسب‌وکاری تکمیل است؛ شروع هم‌سرمایه‌گذاری تایید می‌شود.',by:'demo@srip.local',at:AGO(10)},
+       'competition':{answer:'بدون رقیب داخلی هم‌تراز؛ CRMهای عمومی جایگزین نیستند',evidence:'تحلیل رقبا',gap:'',status:'ACCEPTED'},
+       'sales-gtm':{answer:'فروش مستقیم سازمانی + شرکای پیاده‌سازی؛ قیف سه‌مرحله‌ای با سرخط ۹۰ روزه',evidence:'طرح فروش + گزارش قیف دو فصل',gap:'',status:'ACCEPTED'},
+       'team-governance':{answer:'هیئت‌مدیرهٔ مستقل، کمیتهٔ حسابرسی و جلسات فصلی؛ کلیدهای دسترسی تفکیک‌شده',evidence:'اساس‌نامه + صورت‌جلسات + گزارش دسترسی',gap:'',status:'ACCEPTED'},
+       'legal-risk':{answer:'قرارداد استاندارد با شرط تحریم و مرجع حل اختلاف؛ دعوای جاری ثبت نشده',evidence:'نظر کتبی مشاور حقوقی',gap:'بیمهٔ مسئولیت حرفه‌ای هنوز تکمیل نشده',status:'ACCEPTED'}}),
+     teamY:{opinion:'CONTINUE',note:'بررسی فنی و کسب‌وکاری تکمیل است؛ ادامهٔ هم‌سرمایه‌گذاری توصیه می‌شود.',by:'demo@srip.local',at:AGO(10)},
      createdAt:AGO(60),updatedAt:AGO(10)},
     {id:'dd-2',organizationId:PARTNERSHIP_ORG_ID,subjectOrgId:'org-8',ownerRole:'مدیر اندیشکده و پژوهش',
      status:'IN_REVIEW',axes:ax({'product-arch':{answer:'سامانهٔ استاندارد استان با دادهٔ رسمی',evidence:'نمونهٔ اولیه',gap:'مقیاس‌پذیری دادهٔ استانی آزموده نشده',status:'IN_PROGRESS'},
        'problem':{answer:'نبود پایش یکپارچهٔ دادهٔ استانی',evidence:'درخواست رسمی استانداری',gap:'',status:'ACCEPTED'}}),
-     teamY:null,createdAt:AGO(20),updatedAt:AGO(5)});
+     teamY:null,createdAt:AGO(20),updatedAt:AGO(5)},
+    /* فاز ۱۵.۳ — بذر «عدم امکان اظهارنظر»: مانع داده + g2Ready همیشه false */
+    {id:'dd-3',organizationId:PARTNERSHIP_ORG_ID,subjectOrgId:'org-9',ownerRole:'مدیر تحقیق و توسعه',
+     status:'CANNOT_OPINE',blocker:'NO_DATA',blockerNote:'دادهٔ مالی و فنی سازمان موضوع پس از دو یادآوری رسمی ارائه نشده است؛ مهلت پاسخ در صورت‌جلسهٔ گذشته ثبت شده.',
+     axes:ax({'problem':{answer:'ادعای نیاز بازار بدون سند پشتیبان',evidence:'یادداشت اولیهٔ ملاقات',gap:'دادهٔ مالی و عملیاتی ارائه نشده',status:'IN_PROGRESS'}}),
+     teamY:null,createdAt:AGO(15),updatedAt:AGO(2)});
 }
 function dossierView(d){
   const axes=DD_AXES.map(a=>({key:a.key,cat:a.cat,catFa:DD_AXIS_CAT_FA[a.cat],title:a.title,...(d.axes?.[a.key]??{answer:'',evidence:'',gap:'',status:'NOT_STARTED',response:null,responseAt:null}),
@@ -9885,7 +10239,10 @@ function dossierView(d){
   const org=ORGS.find(o=>o.id===d.subjectOrgId);
   return {...d,subjectName:org?.name??d.subjectOrgId,subjectType:org?.type??null,
     axes,acceptedAxes:accepted,totalAxes:axes.length,
-    ddComplete:accepted===axes.length,g2Ready:accepted===axes.length&&!!d.teamY,
+    ddComplete:accepted===axes.length,
+    g2Ready:d.status==='CANNOT_OPINE'?false:accepted===axes.length&&!!d.teamY,
+    blockerFa:d.blocker?DD_BLOCKER_FA[d.blocker]??d.blocker:null,
+    cannotOpineRule:d.status==='CANNOT_OPINE'?DD_CANNOT_OPINE_RULE:null,
     statusFa:DOSSIER_STATUS_FA[d.status]??d.status,
     teamYFa:d.teamY?{...d.teamY,opinionFa:TEAM_Y_OPINION_FA[d.teamY.opinion]??d.teamY.opinion}:null};
 }
@@ -9917,7 +10274,7 @@ function readinessPackView(x,req){
     ddStatus:dd?{dossierId:dd.id,status:dd.status,statusFa:dd.statusFa,acceptedAxes:dd.acceptedAxes,totalAxes:dd.totalAxes,g2Ready:dd.g2Ready}:null,
     ddStatusFa:dd?`${dd.statusFa} — ${dd.acceptedAxes}/${dd.totalAxes} محور`:'بدون پروندهٔ DD'};
 }
-/* ═══════════ گام ۱۰.۲ — F09 فرصت مناقصه + F18 کارت ورود به بازار: ثابت‌ها، بذر و نما ═══════════ */
+/* ═══════════ گام ۱۰.۲ — F09 فرصت مناقصه + F16 کارت ورود به بازار: ثابت‌ها، بذر و نما ═══════════ */
 const TENDER_DECISION_FA={JOIN:'می‌کنیم',CONDITIONAL:'مشروط',DECLINE:'می‌کنیم — منصرف',UNDECIDED:'هنوز نامشخص'}; /* تصمیم شرکت */
 const TENDER_SUBMIT_FA={NOT_SUBMITTED:'ارسال نشده',PREPARING:'در حال آماده‌سازی',SUBMITTED:'ارسال شد',WITHDRAWN:'بازپس‌گیری'};
 const TENDER_OUTCOME_FA={PENDING:'در انتظار',WON:'برد',LOST:'باخت'};
@@ -9979,7 +10336,7 @@ function gtmCardView(x){
     decisionFa:GTM_DECISION_FA[x.decision]??x.decision};
 }
 
-/* ═══════════ گام ۱۰.۳ — F01 کنترل اجرا + F16 کارت نقش و ورود همکار: بذر و نما ═══════════ */
+/* ═══════════ گام ۱۰.۳ — F01 کنترل اجرا + F15 کارت نقش و ورود همکار: بذر و نما ═══════════ */
 const EXEC_STATUS_FA={ON_TRACK:'در مسیر',AT_RISK:'در معرض ریسک',BLOCKED:'بلاک',DONE:'تکمیل'};
 
 function ensureExecControlSeed(){
@@ -10044,6 +10401,30 @@ const CAP_MATURITY_FA={BASIC:'پایه',GOOD:'خوب',ADVANCED:'پیشرفته'}
 const CAP_RISK_FA={LOW:'کم',MEDIUM:'متوسط',HIGH:'بالا'};
 const CAP_KIND_FA={PERSON:'فرد',ASSET:'دارایی'};
 const ENV_KIND_FA={PUBLIC:'عموم‌ها',STAKEHOLDER:'ذی‌نفع',COMPETITOR:'رقیب'};
+/* فاز ۱۳.۳ — فیلدهای عمومی F04 (۸.۳.۱ سند v14): فقط برای kind=PUBLIC الزامی‌اند */
+const ENV_PUBLIC_STATUS_FA={LATENT:'نهفته',AWARE:'آگاه',ACTIVE:'فعال',MEDIATOR:'میانجی'};
+const ENV_COMM_BEHAVIOR_FA={RECEIVE:'دریافت',SEARCH:'جست‌وجو',RESHARE:'بازنشر',ACT:'اقدام'};
+function envPublicFieldsApply(b,row){
+  if(row.kind!=='PUBLIC'){ /* کارت غیرعمومی: فیلدهای عمومی پاک می‌شوند */
+    if(b.kind!==undefined||b.commonIssue!==undefined){ row.commonIssue=''; row.publicStatus=null; row.awareness=null; row.engagement=null; row.actionConstraint=''; row.commBehavior=null; }
+    return null;
+  }
+  const patch={};
+  if(b.commonIssue!==undefined) patch.commonIssue=String(b.commonIssue??'').trim().slice(0,400);
+  if(b.publicStatus!==undefined) patch.publicStatus=b.publicStatus===''?null:String(b.publicStatus).toUpperCase();
+  if(b.awareness!==undefined) patch.awareness=b.awareness===''?null:String(b.awareness).toUpperCase();
+  if(b.engagement!==undefined) patch.engagement=b.engagement===''?null:String(b.engagement).toUpperCase();
+  if(b.actionConstraint!==undefined) patch.actionConstraint=String(b.actionConstraint??'').trim().slice(0,400);
+  if(b.commBehavior!==undefined) patch.commBehavior=b.commBehavior===''?null:String(b.commBehavior).toUpperCase();
+  Object.assign(row,patch);
+  /* اقلام الزامی عمومی — فقط برای kind=PUBLIC (۸.۳.۱ سند v14) */
+  if(!String(row.commonIssue??'').trim()||String(row.commonIssue).trim().length<3) return 'کارت عمومی بدون «مسئلهٔ مشترک» ثبت نمی‌شود (۸.۳.۱ سند v14).';
+  if(!ENV_PUBLIC_STATUS_FA[row.publicStatus]) return 'وضعیت عموم را انتخاب کنید: نهفته / آگاه / فعال / میانجی.';
+  if(!PUBLIC_AWARENESS_FA[row.awareness]) return 'سطح آگاهی عموم را انتخاب کنید: NONE / PARTIAL / FULL.';
+  if(!PUBLIC_ENGAGEMENT_FA[row.engagement]) return 'میزان درگیری عموم را انتخاب کنید: LOW / MEDIUM / HIGH.';
+  if(!ENV_COMM_BEHAVIOR_FA[row.commBehavior]) return 'رفتار ارتباطی عموم را انتخاب کنید: دریافت / جست‌وجو / بازنشر / اقدام.';
+  return null;
+}
 const ENV_STATUS_FA={DRAFT:'پیش‌نویس',PENDING:'در انتظار تصویب',APPROVED:'مصوب',REJECTED:'ردشده'};
 const ENV_IMPORTANCE_FA={HIGH:'زیاد',MEDIUM:'متوسط',LOW:'کم'};
 const RES_STATUS_FA={DRAFT:'پیش‌نویس',IN_REVIEW:'در داوری',PUBLISHED:'منتشرشده'};
@@ -10062,7 +10443,7 @@ function ensureCapacityAuditSeed(){
     {id:'ca-2',organizationId:PROGRAM_ORG_ID,kind:'PERSON',subject:'کارشناس ارشد داده',
      maturity:'GOOD',access:'دسترسی به انبار داده و داشبوردها',dependency:'تنها فرد آشنا با خط دادهٔ تاریخی',
      evidence:'مصاحبهٔ ممیزی + سابقهٔ پروژه‌ها',gap:'نبود جانشین و مستندات ناکافی',
-     risk:'MEDIUM',action:'جذب دستیار داده و مستندسازی خط داده (پیوند با F16)',
+     risk:'MEDIUM',action:'جذب دستیار داده و مستندسازی خط داده (پیوند با F15)',
      createdAt:AGO(18),updatedAt:AGO(6)}
   );
   saveDb();
@@ -10089,13 +10470,20 @@ function ensureEnvCardSeed(){
      source:'اطلاعیهٔ رسمی بورس',importance:'MEDIUM',position:'فرصت رگولاتوری برای دادهٔ ساخت‌یافته',
      power:'HIGH',message:'ورود زودهنگام با گزارش تحلیلی طبقه‌بندی',
      competitorEvidence:'',scenario:'ابلاغ رسمی تا پایان فصل و موج گزارش‌های تفسیری',
+     /* فاز ۱۳.۳ — فیلدهای عمومی ۸.۳.۱ سند v14 */
+     commonIssue:'شفافیت طبقه‌بندی صنایع و دسترسی به دادهٔ ساخت‌یافته',
+     publicStatus:'AWARE',awareness:'PARTIAL',engagement:'MEDIUM',
+     actionConstraint:'نیازمند تفسیر رسمی بورس پیش از هر موضع‌گیری',
+     commBehavior:'SEARCH',
      alert:false,status:'DRAFT',approvedBy:null,approvedAt:null,
      createdAt:AGO(5),updatedAt:AGO(5)}
   );
   saveDb();
 }
 function envCardView(x){
-  return {...x,kindFa:ENV_KIND_FA[x.kind],statusFa:ENV_STATUS_FA[x.status],importanceFa:ENV_IMPORTANCE_FA[x.importance]};
+  return {...x,kindFa:ENV_KIND_FA[x.kind],statusFa:ENV_STATUS_FA[x.status],importanceFa:ENV_IMPORTANCE_FA[x.importance],
+    publicStatusFa:ENV_PUBLIC_STATUS_FA[x.publicStatus]??null,commBehaviorFa:ENV_COMM_BEHAVIOR_FA[x.commBehavior]??null,
+    awarenessFa:PUBLIC_AWARENESS_FA[x.awareness]??null,engagementFa:PUBLIC_ENGAGEMENT_FA[x.engagement]??null};
 }
 const RES_ORG_ID=PARTNERSHIP_ORG_ID;
 function ensureResearchPlanSeed(){
@@ -14813,6 +15201,8 @@ async function __handler(req, res) {
       linkage:b.linkage??sug.linkage,stage:b.stage??sug.stage,power:Number.isFinite(Number(b.power))?Number(b.power):sug.power,
       interest:Number.isFinite(Number(b.interest))?Number(b.interest):sug.interest,stance:b.stance??sug.stance,
       note:String(b.note??''),assessedAt:nowIso(),reviewDue:new Date(Date.now()+(Number(self.reviewIntervalDays)||90)*86400000).toISOString()};
+    const v14err=publicMemberV14Apply(b,row);
+    if(v14err) return json(res,400,{message:v14err});
     DB.publicsMembers.push(row);
     const ctx={publicMember:pubMemberView(row),groupId,orgId,sourceType,sourceId};
     await autoRunWorkflows('PublicMember',row.id,'PUBLIC_MEMBER_ADDED',ctx,`pm-added:${row.id}`);
@@ -14850,6 +15240,8 @@ async function __handler(req, res) {
     if(b.power!==undefined){ const v=Number(b.power); if(!Number.isFinite(v)||v<0||v>100) return json(res,400,{message:'قدرت باید عددی بین ۰ تا ۱۰۰ باشد.'}); m.power=v; }
     if(b.interest!==undefined){ const v=Number(b.interest); if(!Number.isFinite(v)||v<0||v>100) return json(res,400,{message:'علاقه باید عددی بین ۰ تا ۱۰۰ باشد.'}); m.interest=v; }
     if(b.note!==undefined) m.note=String(b.note).slice(0,240);
+    const v14err=publicMemberV14Apply(b,m);
+    if(v14err) return json(res,400,{message:v14err});
     if(b.power!==undefined||b.interest!==undefined||b.stage!==undefined) m.stance=pubStanceOf(m.power,m.interest);
     /* تاریخچهٔ موضع + علت (الگوی Squivr/ArcSight: «چه چیزی واکنش درگیرد») */
     if(m.stance!==before.stance){
@@ -15223,6 +15615,171 @@ async function __handler(req, res) {
     await autoRunWorkflows('Media',row.id,'MEDIA_CREATED',{media:row,id:row.id,name:row.name,type:row.type},`media-created:${row.id}`);
     saveDb(); audit(req,'CREATE','Media',row.id,'OK',{meta:{name:row.name,type:row.type}});
     return json(res,201,row);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     فاز ۱۴ — ارتباطات بین‌المللی (۱۰.۶ + F17/P17 سند v14)
+     ═══════════════════════════════════════════════════════════════════════ */
+  if(is('/international/contacts')&&method==='GET'){
+    if(!hasPerm('international.read')) return json(res,403,{message:'شما مجوز «مشاهده ارتباطات بین‌المللی» (international.read) را ندارید.'});
+    ensureInternationalSeed();
+    if(!inScope(req,INTL_ORG_ID)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
+    let rows=(DB.intlContacts??[]).filter(x=>x.organizationId===INTL_ORG_ID).map(intlContactView);
+    const f={status:q.get('status'),identity:q.get('identity'),country:q.get('country'),targetGroup:q.get('targetGroup')};
+    if(f.status) rows=rows.filter(r=>r.status===f.status);
+    if(f.identity) rows=rows.filter(r=>r.identity===f.identity);
+    if(f.country) rows=rows.filter(r=>r.country===f.country);
+    if(f.targetGroup) rows=rows.filter(r=>r.targetGroup===f.targetGroup);
+    rows.sort((a,b)=>String(b.updatedAt??'').localeCompare(String(a.updatedAt??'')));
+    const byStatus={},byIdentity={};
+    for(const r of rows){ byStatus[r.status]=(byStatus[r.status]??0)+1; byIdentity[r.identity]=(byIdentity[r.identity]??0)+1; }
+    return json(res,200,{items:rows,summary:{total:rows.length,byStatus,byIdentity,referred:rows.filter(r=>r.referral?.decision==='REFERRED').length},
+      rule:'دامنه پس از عبور هر موضوع از دروازهٔ Due Diligence تعریف می‌شود؛ فهرست‌سازی بی‌هدف یا انتشار یکسان برای همه‌کشورها انجام نمی‌شود.'});
+  }
+  if(is('/international/contacts')&&method==='POST'){
+    if(!hasPerm('international.write')) return json(res,403,{message:'شما مجوز «مدیریت ارتباطات بین‌المللی» (international.write) را ندارید.'});
+    ensureInternationalSeed();
+    if(!inScope(req,INTL_ORG_ID)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
+    const b=await readBody(req);
+    const x={id:`intl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,organizationId:INTL_ORG_ID,
+      country:String(b.country??'').trim(),market:String(b.market??'').trim()||null,targetGroup:String(b.targetGroup??'').trim()||null,
+      orgName:String(b.orgName??'').trim(),contactName:String(b.contactName??'').trim()||null,source:String(b.source??'').trim()||null,
+      identity:'UNVERIFIED',identityNote:String(b.identityNote??'').trim()||null,
+      purpose:String(b.purpose??'').trim(),
+      linkType:String(b.linkType??'NONE'),linkRef:b.linkRef?String(b.linkRef):null,ddDossierId:b.ddDossierId?String(b.ddDossierId):null,
+      message:String(b.message??'').trim(),messageType:String(b.messageType??'GENERAL'),evidence:String(b.evidence??'').trim()||null,
+      lang:String(b.lang??'fa'),
+      textVersions:Array.isArray(b.textVersions)?b.textVersions.filter(v=>v&&v.lang&&v.role).map(v=>({lang:String(v.lang),role:String(v.role),text:String(v.text??'').trim(),reviewer:v.reviewer?String(v.reviewer):null,approvedAt:v.approvedAt?String(v.approvedAt):null})):[],
+      confidentiality:String(b.confidentiality??'PUBLIC'),dataSharePerm:String(b.dataSharePerm??'NONE'),
+      legalReview:'PENDING',financialReview:'PENDING',correspondences:[],
+      commitments:String(b.commitments??'').trim()||null,
+      opportunityId:b.opportunityId?String(b.opportunityId):null,ownerRole:String(b.ownerRole??'').trim(),
+      nextAction:String(b.nextAction??'').trim()||null,dueAt:b.dueAt?String(b.dueAt):null,referral:null,
+      reviewOutcome:null,reviewAt:null,status:'OPEN',createdAt:nowIso(),updatedAt:nowIso()};
+    const err=intlValidate(x,true);
+    if(err) return json(res,400,{message:err});
+    DB.intlContacts.push(x);
+    saveDb(); audit(req,'CREATE','InternationalContact',x.id,'OK',{meta:{country:x.country,orgName:x.orgName}});
+    return json(res,201,intlContactView(x));
+  }
+  {
+    const m=match('/international/contacts/:id');
+    if(m&&method==='GET'){
+      if(!hasPerm('international.read')) return json(res,403,{message:'شما مجوز «مشاهده ارتباطات بین‌المللی» (international.read) را ندارید.'});
+      ensureInternationalSeed();
+      const row=(DB.intlContacts??[]).find(x=>x.id===m[0]&&x.organizationId===INTL_ORG_ID);
+      if(!row) return json(res,404,{message:'پرونده‌ی ارتباط یافت نشد.'});
+      return json(res,200,intlContactView(row));
+    }
+    if(m&&method==='PATCH'){
+      if(!hasPerm('international.write')) return json(res,403,{message:'شما مجوز «مدیریت ارتباطات بین‌المللی» (international.write) را ندارید.'});
+      ensureInternationalSeed();
+      const row=(DB.intlContacts??[]).find(x=>x.id===m[0]&&x.organizationId===INTL_ORG_ID);
+      if(!row) return json(res,404,{message:'پرونده‌ی ارتباط یافت نشد.'});
+      const b=await readBody(req);
+      const scalars=['country','market','targetGroup','orgName','contactName','source','identity','identityNote','purpose','linkType','linkRef','ddDossierId','message','messageType','evidence','lang','confidentiality','dataSharePerm','legalReview','financialReview','commitments','opportunityId','ownerRole','nextAction','dueAt','reviewOutcome','reviewAt','status'];
+      for(const k of scalars) if(b[k]!=null) row[k]=String(b[k]).trim()||null;
+      if(Array.isArray(b.textVersions)) row.textVersions=b.textVersions.filter(v=>v&&v.lang&&v.role).map(v=>({lang:String(v.lang),role:String(v.role),text:String(v.text??'').trim(),reviewer:v.reviewer?String(v.reviewer):null,approvedAt:v.approvedAt?String(v.approvedAt):null}));
+      /* افزودن مکاتبه و نسخهٔ متنی به‌صورت تراکمی */
+      if(b.correspondence&&typeof b.correspondence==='object')
+        (row.correspondences??=[]).push({at:b.correspondence.at?String(b.correspondence.at):nowIso(),type:String(b.correspondence.type??'EMAIL'),summary:String(b.correspondence.summary??'').trim(),by:currentUser(req)?.email??'unknown'});
+      if(b.textVersion&&typeof b.textVersion==='object')
+        (row.textVersions??=[]).push({lang:String(b.textVersion.lang??''),role:String(b.textVersion.role??'TRANSLATION'),text:String(b.textVersion.text??'').trim(),reviewer:b.textVersion.reviewer?String(b.textVersion.reviewer):null,approvedAt:b.textVersion.approvedAt?String(b.textVersion.approvedAt):null});
+      const err=intlValidate(row,false);
+      if(err) return json(res,400,{message:err});
+      row.updatedAt=nowIso();
+      saveDb(); audit(req,'UPDATE','InternationalContact',row.id,'OK',{meta:{fields:Object.keys(b).slice(0,8)}});
+      return json(res,200,intlContactView(row));
+    }
+    if(m&&method==='DELETE'){
+      if(!hasPerm('international.write')) return json(res,403,{message:'شما مجوز «مدیریت ارتباطات بین‌المللی» (international.write) را ندارید.'});
+      ensureInternationalSeed();
+      const idx=(DB.intlContacts??[]).findIndex(x=>x.id===m[0]&&x.organizationId===INTL_ORG_ID);
+      if(idx<0) return json(res,404,{message:'پرونده‌ی ارتباط یافت نشد.'});
+      const [row]=DB.intlContacts.splice(idx,1);
+      saveDb(); audit(req,'DELETE','InternationalContact',row.id,'OK',{meta:{country:row.country,orgName:row.orgName}});
+      return json(res,200,{message:'پرونده‌ی ارتباط حذف شد.',id:row.id});
+    }
+  }
+  /* قاعده‌ی ۴: فرصت واجد شرایط به مسیر F14 ارجاع می‌شود؛ فروش فقط با مرجع مجاز */
+  if(match('/international/contacts/:id/referral')&&method==='POST'){
+    if(!hasPerm('international.write')) return json(res,403,{message:'شما مجوز «مدیریت ارتباطات بین‌المللی» (international.write) را ندارید.'});
+    ensureInternationalSeed();
+    const rid=match('/international/contacts/:id/referral')[0];
+    const row=(DB.intlContacts??[]).find(x=>x.id===rid&&x.organizationId===INTL_ORG_ID);
+    if(!row) return json(res,404,{message:'پرونده‌ی ارتباط یافت نشد.'});
+    if(row.messageType==='PRODUCT'){
+      const dd=(DB.dossiers??[]).find(d=>d.id===row.ddDossierId);
+      if(!dd||dd.status!=='APPROVED') return json(res,400,{message:'ارجاع فرصت محصول‌محور فقط پس از تصویب پرونده‌ی Due Diligence همان موضوع مجاز است؛ فروش و نهایی‌سازی فقط با مرجع مجاز فناوران انجام می‌شود.'});
+    }
+    const b=await readBody(req);
+    const packId=String(b.packId??'').trim();
+    if(!packId) return json(res,400,{message:'ارجاع فرصت نیازمند انتخاب کارت F14 (پکیج آماده‌سازی) است.'});
+    if(!(DB.readinessPacks??[]).some(r=>r.id===packId&&r.organizationId===INTL_ORG_ID)) return json(res,400,{message:'کارت F14 منتخب یافت نشد.'});
+    row.referral={decision:'REFERRED',packId,at:nowIso()};
+    row.updatedAt=nowIso();
+    saveDb(); audit(req,'UPDATE','InternationalContact',row.id,'OK',{meta:{referral:packId}});
+    return json(res,200,intlContactView(row));
+  }
+  if(is('/international/overview')&&method==='GET'){
+    if(!hasPerm('international.read')) return json(res,403,{message:'شما مجوز «مشاهده ارتباطات بین‌المللی» (international.read) را ندارید.'});
+    ensureInternationalSeed();
+    if(!inScope(req,INTL_ORG_ID)) return json(res,403,{message:'سازمان خارج از محدودهٔ دسترسی شماست.'});
+    const rows=(DB.intlContacts??[]).filter(x=>x.organizationId===INTL_ORG_ID);
+    const byCountry={};
+    for(const r of rows){ const k=r.country||'نامشخص'; byCountry[k]=byCountry[k]??{total:0,verified:0,closed:0}; byCountry[k].total++; if(r.identity==='VERIFIED') byCountry[k].verified++; if(r.status==='CLOSED') byCountry[k].closed++; }
+    return json(res,200,{
+      scope:'پس از عبور هر موضوع از دروازه‌ی Due Diligence؛ پوشش فناوران، ۱۲ VC و همه‌ی شرکت‌های سرمایه‌گذاری‌شده‌ی زیرمجموعه',
+      targetGroups:INTL_TARGET_GROUPS,priorityCountries:INTL_PRIORITY_COUNTRIES,rules:INTL_CONTROL_RULES,reviewCriteria:INTL_REVIEW_CRITERIA,
+      summary:{total:rows.length,
+        byStatus:Object.fromEntries(Object.keys(INTL_STATUS_FA).map(k=>[k,rows.filter(r=>r.status===k).length])),
+        byIdentity:Object.fromEntries(Object.keys(INTL_IDENTITY_FA).map(k=>[k,rows.filter(r=>r.identity===k).length])),
+        byCountry,referred:rows.filter(r=>r.referral?.decision==='REFERRED').length}
+    });
+  }
+  if(is('/international/reviews')&&method==='GET'){
+    if(!hasPerm('international.read')) return json(res,403,{message:'شما مجوز «مشاهده ارتباطات بین‌المللی» (international.read) را ندارید.'});
+    ensureInternationalSeed();
+    const rows=(DB.intlReviews??[]).filter(x=>x.organizationId===INTL_ORG_ID).slice().sort((a,b)=>String(a.at??'').localeCompare(String(b.at??'')));
+    return json(res,200,{items:rows,criteria:INTL_REVIEW_CRITERIA,baselineExists:rows.some(r=>r.isBaseline),
+      rule:'از ماه ۳ پرونده‌ی ارتباطات بین‌المللی هر ماه بازبینی می‌شود؛ پیش از تشکیل خط مبنا، سهمیه‌ی تماس یا جلسه فرض نمی‌شود.'});
+  }
+  if(is('/international/reviews')&&method==='POST'){
+    if(!hasPerm('international.write')) return json(res,403,{message:'شما مجوز «مدیریت ارتباطات بین‌المللی» (international.write) را ندارید.'});
+    ensureInternationalSeed();
+    const b=await readBody(req);
+    const month=String(b.month??'').trim();
+    if(!month) return json(res,400,{message:'عنوان ماه بازبینی الزامی است.'});
+    const rows=(DB.intlReviews??[]).filter(x=>x.organizationId===INTL_ORG_ID);
+    const isBaseline=!!b.isBaseline;
+    if(isBaseline&&rows.some(r=>r.isBaseline)) return json(res,400,{message:'خط مبنا یک‌بار ثبت می‌شود؛ ماه‌های بعد باید در برابر خط مبنا سنجیده شوند.'});
+    if(!isBaseline&&!rows.some(r=>r.isBaseline)) return json(res,400,{message:'پیش از تشکیل خط مبنا، سهمیه‌ی تماس یا جلسه فرض نمی‌شود؛ ابتدا ماه خط مبنا را ثبت کنید.'});
+    const crits=Array.isArray(b.criteria)?b.criteria.filter(c=>c&&c.key&&INTL_REVIEW_CRITERIA.some(x=>x.key===String(c.key))):[];
+    if(crits.length!==INTL_REVIEW_CRITERIA.length) return json(res,400,{message:'هر پنج معیار پایش ماهانه باید با مقدار و شاهد ثبت شود.'});
+    for(const c of crits) if(!String(c.value??'').trim()) return json(res,400,{message:'مقدار معیار «'+(INTL_REVIEW_CRITERIA.find(x=>x.key===c.key)?.label??c.key)+'» خالی است.'});
+    const row={id:`intl-rv-${Date.now().toString(36)}`,organizationId:INTL_ORG_ID,month,isBaseline,
+      target:b.target?String(b.target):null,at:nowIso(),
+      criteria:crits.map(c=>({key:String(c.key),value:String(c.value).trim(),evidence:String(c.evidence??'').trim()||null})),
+      by:currentUser(req)?.email??'unknown'};
+    DB.intlReviews.push(row);
+    saveDb(); audit(req,'CREATE','InternationalReview',row.id,'OK',{meta:{month,isBaseline}});
+    return json(res,201,row);
+  }
+  if(is('/international/export')&&method==='GET'){
+    if(!hasPerm('international.read')) return json(res,403,{message:'شما مجوز «مشاهده ارتباطات بین‌المللی» (international.read) را ندارید.'});
+    ensureInternationalSeed();
+    const rows=(DB.intlContacts??[]).filter(x=>x.organizationId===INTL_ORG_ID).map(intlContactView)
+      .sort((a,b)=>String(b.updatedAt??'').localeCompare(String(a.updatedAt??'')));
+    const fmt=q.get('format')==='csv'?'csv':'json';
+    if(fmt==='json'){
+      res.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Content-Disposition':`attachment; filename="international-contacts-${INTL_ORG_ID}.json"`});
+      return res.end(JSON.stringify({exportedAt:nowIso(),items:rows},null,2));
+    }
+    const head=['شناسه','کشور','بازار','گروه هدف','نهاد','طرف ارتباط','هویت','نوع پیام','وضعیت DD','محرمانگی','اشتراک داده','بررسی حقوقی','بررسی مالی','مسئول پیگیری','اقدام بعدی','مهلت','ارجاع','وضعیت','آخرین به‌روزرسانی'];
+    const esc=(v)=>`"${String(v??'').replace(/"/g,'""')}"`;
+    const csv=[head.join(','),...rows.map(r=>[r.id,r.country,r.market,r.targetGroupFa,r.orgName,r.contactName,r.identityFa,r.messageTypeFa,r.ddStatusFa,r.confidentialityFa,r.dataSharePermFa,r.legalReviewFa,r.financialReviewFa,r.ownerRole,r.nextAction,r.dueAt,r.referralFa??'',r.statusFa,r.updatedAt].map(esc).join(','))].join('\n');
+    res.writeHead(200,{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':`attachment; filename="international-contacts-${INTL_ORG_ID}.csv"`});
+    return res.end('\ufeff'+csv);
   }
 
   /* ═══════════════════════════════════════════════════════════════════════
@@ -16263,7 +16820,7 @@ async function __handler(req, res) {
         closed:all.filter(r=>r.status==='CLOSED').length,
         highOpen:all.filter(r=>r.status!=='CLOSED'&&riskGrade(r)==='HIGH').length},
       roles:programSettingsFor(req).roles,levels:RISK_LEVEL_FA,statuses:RISK_STATUS_FA,
-      rule:'هر ریسک با چهار قلم بنیادی ثبت می‌شود و ریسک بدون مالک، ثبت‌شده محسوب نمی‌گردد (بخش ۲۵ سند).'});
+      rule:'هر ریسک با احتمال، اثر، نشانهٔ هشدار، اقدام پیشگیرانه، برنامه واکنش، مسئول مربوطه و مهلت بازبینی ثبت می‌شود؛ ریسک بدون مسئول و مهلت معتبر نیست. موارد بحرانی همان روز و موارد بالا در گزارش هفتگی پیگیری می‌شوند (بخش ۲۳ سند v14).'});
   }
   if(is('/program/risks')&&method==='POST'){
     if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
@@ -16274,10 +16831,18 @@ async function __handler(req, res) {
     const probability=String(b.probability??'').toUpperCase(),impact=String(b.impact??'').toUpperCase();
     if(!RISK_LEVEL_FA[probability]||!RISK_LEVEL_FA[impact]) return json(res,400,{message:'احتمال و اثر هرکدام باید یکی از مقادیر پایین/متوسط/بالا باشد.'});
     const ownerRole=String(b.ownerRole??'').trim();
-    if(!ownerRole) return json(res,400,{message:'ریسک بدون مالک ثبت نمی‌شود (بخش ۲۵ سند).'});
+    if(!ownerRole) return json(res,400,{message:'ریسک بدون مسئول ثبت نمی‌شود (بخش ۲۳ سند v14).'});
+    /* فاز ۱۶.۱ — نشانهٔ هشدار و مهلت بازبینی الزامی (بخش ۲۳ سند v14) */
+    const earlyWarning=String(b.earlyWarning??'').trim();
+    if(!earlyWarning) return json(res,400,{message:'نشانهٔ هشدار ریسک را بنویسید — ریسک بدون نشانهٔ هشدار قابل پایش نیست (بخش ۲۳ سند v14).'});
+    const reviewAtRaw=String(b.reviewAt??'').trim();
+    if(!reviewAtRaw) return json(res,400,{message:'مهلت بازبینی ریسک الزامی است — ریسک بدون مسئول و مهلت معتبر نیست.'});
+    const reviewAtD=new Date(reviewAtRaw);
+    if(Number.isNaN(reviewAtD.getTime())) return json(res,400,{message:'قالب مهلت بازبینی معتبر نیست.'});
+    if(reviewAtD.getTime()<=Date.now()) return json(res,400,{message:'مهلت بازبینی باید تاریخ آینده باشد — ریسک بدون مسئول و مهلت معتبر نیست.'});
     const riskChart=programSettingsFor(req).roles;
-    if(riskChart.length&&!riskChart.includes(ownerRole)) return json(res,400,{message:'مالک ریسک باید یکی از نقش‌های چارت سازمان شما باشد.'});
-    /* گام ۹.۲ — F17: ثبت ریسک AI با ستون‌های هشت‌گانه (اختیاری) */
+    if(riskChart.length&&!riskChart.includes(ownerRole)) return json(res,400,{message:'مسئول ریسک باید یکی از نقش‌های چارت سازمان شما باشد.'});
+    /* گام ۹.۲ — ثبت ریسک AI با ستون‌های هشت‌گانه (اختیاری) */
     let ai=null;
     if(b.ai&&typeof b.ai==='object'){
       const v=aiRiskFields(b.ai,false);
@@ -16286,10 +16851,10 @@ async function __handler(req, res) {
     }
     const row={id:`risk-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`,
       organizationId:primaryOrgId(authUser)??visibleOrgIds(req)[0]??PROGRAM_ORG_ID,
-      title,probability,impact,
+      title,probability,impact,earlyWarning,
       preventive:String(b.preventive??'').trim(),reactive:String(b.reactive??'').trim(),
       ownerRole,status:'OPEN',createdAt:nowIso(),
-      reviewAt:new Date(Date.now()+90*86400000).toISOString(),notes:String(b.notes??'').trim(),
+      reviewAt:reviewAtD.toISOString(),notes:String(b.notes??'').trim(),
       ...(ai?{kind:'AI',ai}:{})};
     DB.risks.unshift(row); saveDb();
     audit(req,'CREATE','Risk',row.id,'OK',{title:row.title,ownerRole,...(ai?{aiUseCase:ai.useCase}:{})});
@@ -16305,10 +16870,16 @@ async function __handler(req, res) {
     if(b.title!=null){const t=String(b.title).trim(); if(t.length<3) return json(res,400,{message:'عنوان ریسک را بنویسید (حداقل ۳ نویسه).'}); row.title=t;}
     if(b.probability!=null){const p=String(b.probability).toUpperCase(); if(!RISK_LEVEL_FA[p]) return json(res,400,{message:'احتمال باید پایین/متوسط/بالا باشد.'}); row.probability=p;}
     if(b.impact!=null){const i=String(b.impact).toUpperCase(); if(!RISK_LEVEL_FA[i]) return json(res,400,{message:'اثر باید پایین/متوسط/بالا باشد.'}); row.impact=i;}
-    if(b.ownerRole!=null){const o=String(b.ownerRole).trim(); if(!o) return json(res,400,{message:'ریسک بدون مالک ثبت نمی‌شود (بخش ۲۵ سند).'}); const rChart=programSettingsOf(row.organizationId).roles; if(rChart.length&&!rChart.includes(o)) return json(res,400,{message:'مالک ریسک باید یکی از نقش‌های چارت سازمان شما باشد.'}); row.ownerRole=o;}
+    if(b.ownerRole!=null){const o=String(b.ownerRole).trim(); if(!o) return json(res,400,{message:'ریسک بدون مسئول ثبت نمی‌شود (بخش ۲۳ سند v14).'}); const rChart=programSettingsOf(row.organizationId).roles; if(rChart.length&&!rChart.includes(o)) return json(res,400,{message:'مسئول ریسک باید یکی از نقش‌های چارت سازمان شما باشد.'}); row.ownerRole=o;}
     if(b.status!=null){const st=String(b.status).toUpperCase(); if(!RISK_STATUS_FA[st]) return json(res,400,{message:'وضعیت باید باز/در اقدام/بسته باشد.'}); row.status=st;}
-    for(const k of ['preventive','reactive','notes']) if(b[k]!=null) row[k]=String(b[k]).trim();
-    if(b.reviewAt!=null) row.reviewAt=String(b.reviewAt);
+    for(const k of ['preventive','reactive','notes','earlyWarning']) if(b[k]!=null) row[k]=String(b[k]).trim();
+    if(b.earlyWarning!=null&&!String(b.earlyWarning).trim()) return json(res,400,{message:'نشانهٔ هشدار ریسک را بنویسید — ریسک بدون نشانهٔ هشدار قابل پایش نیست (بخش ۲۳ سند v14).'});
+    if(b.reviewAt!=null){
+      const d=new Date(String(b.reviewAt));
+      if(Number.isNaN(d.getTime())) return json(res,400,{message:'قالب مهلت بازبینی معتبر نیست.'});
+      if(d.getTime()<=Date.now()) return json(res,400,{message:'مهلت بازبینی باید تاریخ آینده باشد — ریسک بدون مسئول و مهلت معتبر نیست.'});
+      row.reviewAt=d.toISOString();
+    }
     /* گام ۹.۲ — به‌روزرسانی ستون‌های AI ریسک (تصمیم انتشار/توقف/…) */
     if(b.ai&&typeof b.ai==='object'){
       const v=aiRiskFields(b.ai,true);
@@ -16344,11 +16915,11 @@ async function __handler(req, res) {
   }
   if(is('/program/audits')&&method==='GET'){
     if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
-    /* گام ۵.۳ — چارت هدف v6 (بخش ۲۱.۳): ۳۴ عنوان نقش/۳۷ نفر/۴ لایه با زمان ورود؛ per-tenant */
+    /* گام ۵.۳ (به‌روزشدهٔ فاز ۱۲.۲) — چارت هدف v14 (جدول ۲۱.۳): ۳۳ عنوان نقش/۳۶ نفر/۴ لایه با زمان ورود؛ per-tenant */
     const chartSet=programSettingsFor(req);
     return json(res,200,{...programAuditsFor(req),
       chart:(chartSet.chart??[]).map(r=>({...r})),
-      chartRule:'چارت هدف تیم (بخش ۲۱.۳ سند v6): زمان ورود، ماه هدف برای فعال‌شدن نقش است و آغاز جذب می‌تواند زودتر انجام شود.',
+      chartRule:'چارت هدف تیم (بخش ۲۱.۳ سند v14): زمان ورود، ماه هدف برای فعال‌شدن نقش است و آغاز جذب می‌تواند زودتر انجام شود.',
       rule:'ممیزی ارزیابی صادقانه از وضعیت موجود است؛ خروجی آن ورودی مستقیم بازسازی نقش‌ها و برنامهٔ انتقال داده است (بخش ۲۰/۲۱ سند).',
       migrationRule:'هر سامانهٔ در صف انتقال/خاموش‌سازی، ده مرحلهٔ کنترلی بخش ۲۱ سند را ترتیبی طی می‌کند (F11)؛ سامانه فقط با اتمام هر ده مرحله «تکمیل‌شده» می‌شود.'});
   }
@@ -16898,7 +17469,7 @@ async function __handler(req, res) {
         generationPrompt:`ساخت پیش‌نویس از بستهٔ منابع انتخابی (${faN(docs.length)} سند، ستون ${pillar})`,
         aiShare:'PARTIAL',c2paStatus:'NOT_EMBEDDED',sources:ids},
       requiresApproval:true,
-      approvalRule:'ثبت پیش‌نویس فقط با تأیید کاربر (سطح اختیار ۱۹.۲ سند v6)؛ پیش‌نویس ثبت‌شده همچنان گردش تأیید F08 را می‌گذراند.',
+      approvalRule:'ثبت پیش‌نویس فقط با تأیید کاربر (سطح اختیار ۱۹.۲ سند v14)؛ پیش‌نویس ثبت‌شده همچنان گردش تأیید F08 را می‌گذراند.',
       engine:route.providerName,
       sources:docs.map(d=>({sourceTypeFa:'سند مخزن',title:d.name,url:'/documents',documentId:d.id})),
       disclaimer:'فقط پیشنهاد — تولید از منابع مجاز؛ پیش از انتشار، بازبینی و تأیید انسانی الزامی است.'});
@@ -16935,7 +17506,7 @@ async function __handler(req, res) {
     const ids=visibleOrgIds(req);
     const items=DB.aiProviders.filter(p=>ids.includes(p.organizationId)).map(aiProviderView);
     return json(res,200,{items,
-      rule:'هیچ جزئی از سامانه مستقیم به مدل وصل نمی‌شود؛ همهٔ فراخوانی‌ها از درگاه per-tenant می‌گذرد (۱۹.۱ سند v6). مسیر لوکال بدون هیچ سرویس بیرونی کار می‌کند و کلید API فقط یک‌بار نمایش داده و سپس تنها با ۴ رقم آخر نگه داشته می‌شود.'});
+      rule:'هیچ جزئی از سامانه مستقیم به مدل وصل نمی‌شود؛ همهٔ فراخوانی‌ها از درگاه per-tenant می‌گذرد (۱۹.۱ سند v14). مسیر لوکال بدون هیچ سرویس بیرونی کار می‌کند و کلید API فقط یک‌بار نمایش داده و سپس تنها با ۴ رقم آخر نگه داشته می‌شود.'});
   }
   if(is('/ai/providers')&&method==='POST'){
     if(!hasPerm('ai.admin')) return json(res,403,{message:'شما مجوز «مدیریت درگاه هوش مصنوعی» (ai.admin) را ندارید.'});
@@ -17074,7 +17645,7 @@ async function __handler(req, res) {
         usable:primary?.status==='ACTIVE'||fallback?.status==='ACTIVE'};
     });
     return json(res,200,{items,providers:providers.map(aiProviderView),
-      rule:'سیاست پیش‌فرض: لوکال اول، ابری جایگزین — قابل تغییر per-tenant. هر کاربرد AI یک ارائه‌دهنده/مدل اصلی و یک مسیر جایگزین دارد؛ مسیر عملاً در دسترس است اگر اصلی یا جایگزین ACTIVE باشد (قواعد انتخاب مدل، ۱۹.۴ سند v6).'});
+      rule:'سیاست پیش‌فرض: لوکال اول، ابری جایگزین — قابل تغییر per-tenant. هر کاربرد AI یک ارائه‌دهنده/مدل اصلی و یک مسیر جایگزین دارد؛ مسیر عملاً در دسترس است اگر اصلی یا جایگزین ACTIVE باشد (قواعد انتخاب مدل، ۱۹.۴ سند v14).'});
   }
   if(is('/ai/routing')&&method==='PATCH'){
     if(!hasPerm('ai.admin')) return json(res,403,{message:'شما مجوز «مدیریت درگاه هوش مصنوعی» (ai.admin) را ندارید.'});
@@ -17189,14 +17760,14 @@ async function __handler(req, res) {
     const missing=[...new Set(routedApps.filter(a=>!covered.has(a)))];
     return json(res,200,{items:cards,
       coverage:{gatewayApplications:new Set(routedApps).size,covered:covered.size,missing},
-      rule:'هر کاربرد فعال درگاه هوش مصنوعی باید یک کارت F12 (کاربرد و ارزیابی AI) داشته باشد؛ ستون مدل زنده از مسیریابی خوانده می‌شود و تصمیم انتشار/آزمون/بازگشت ایمن در همین کارت ثبت می‌شود (۱۹.۲/۱۹.۳ سند v6).'});
+      rule:'هر کاربرد فعال درگاه هوش مصنوعی باید یک کارت F12 (کاربرد و ارزیابی AI) داشته باشد؛ ستون مدل زنده از مسیریابی خوانده می‌شود و تصمیم انتشار/آزمون/بازگشت ایمن در همین کارت ثبت می‌شود (۱۹.۲/۱۹.۳ سند v14).'});
   }
   if(is('/ai/use-cases')&&method==='POST'){
     if(!hasPerm('ai.admin')) return json(res,403,{message:'شما مجوز «مدیریت درگاه هوش مصنوعی» (ai.admin) را ندارید.'});
     ensureAiRoutingSeed();
     const b=await readBody(req);
     const app=AI_F12_USE_CASES.find(s=>s.key===String(b.application??'').trim());
-    if(!app) return json(res,400,{message:'کاربرد نامعتبر است — از فهرست هشت کاربرد جدول ۱۹.۲ انتخاب کنید.'});
+    if(!app) return json(res,400,{message:'کاربرد نامعتبر است — از فهرست هفت کاربرد جدول ۱۹.۲ سند v14 (به‌علاوهٔ کاربرد پلتفرمی اصالت) انتخاب کنید.'});
     const orgId=primaryOrgId(authUser)??visibleOrgIds(req)[0]??PROGRAM_ORG_ID;
     ensureAiUseCaseCardsFor(orgId);
     if((DB.aiUseCases??[]).some(c=>c.organizationId===orgId&&c.application===app.key))
@@ -17265,7 +17836,7 @@ async function __handler(req, res) {
     const prim=primaryOrgId(authUser)??ids[0]??null;
     const items=(DB.aiModelCards??[]).filter(c=>c.organizationId===prim).map(aiModelCardView);
     return json(res,200,{items,
-      rule:'هر ارائه‌دهندهٔ هوش مصنوعی یک شناسنامهٔ مدل مستقل دارد: مدل، نسخه، منشأ و محدودیت‌ها — متصل به ارائه‌دهنده و با وضعیت زندهٔ آن (F17 / ۱۹.۴ سند v6).'});
+      rule:'هر ارائه‌دهندهٔ هوش مصنوعی یک شناسنامهٔ مدل مستقل دارد: مدل، نسخه، منشأ و محدودیت‌ها — متصل به ارائه‌دهنده و با وضعیت زندهٔ آن (ماژول پلتفرمی).'});
   }
   if(is('/ai/model-cards')&&method==='POST'){
     if(!hasPerm('ai.admin')) return json(res,403,{message:'شما مجوز «مدیریت درگاه هوش مصنوعی» (ai.admin) را ندارید.'});
@@ -17296,7 +17867,7 @@ async function __handler(req, res) {
     if(b.limitations!=null) card.limitations=String(b.limitations).trim().slice(0,400);
     if(Array.isArray(b.useCases)){
       const bad=b.useCases.find(k=>!AI_F12_USE_CASES.some(s=>s.key===k));
-      if(bad) return json(res,400,{message:`کاربرد «${bad}» در فهرست هشت کاربرد ۱۹.۲ نیست.`});
+      if(bad) return json(res,400,{message:`کاربرد «${bad}» در فهرست هفت کاربرد ۱۹.۲ سند v14 (به‌علاوهٔ کاربرد پلتفرمی اصالت) نیست.`});
       card.useCases=b.useCases;
     }
     card.updatedAt=nowIso(); saveDb();
@@ -17508,7 +18079,7 @@ async function __handler(req, res) {
       status:'OK',docsRetrieved:1,orgId:halt.orgId});
     return json(res,200,{draft,
       requiresApproval:true,
-      approvalRule:'ثبت پس از تأیید صاحب جلسه (سطح اختیار ۱۹.۲ سند v6) — بدون تأیید، هیچ چیزی ثبت نمی‌شود.',
+      approvalRule:'ثبت پس از تأیید صاحب جلسه (سطح اختیار ۱۹.۲ سند v14) — بدون تأیید، هیچ چیزی ثبت نمی‌شود.',
       engine:route.providerName,engineFa:route.mode==='LOCAL'?'موتور قطعی (بدون مدل بیرونی)':`ارائه‌دهنده: ${route.providerName}`,
       sources:[{sourceTypeFa:'جلسه',title:m.title,url:`/meetings/${m.id}`}],
       disclaimer:'فقط پیشنهاد — ویرایش کنید و سپس با تأیید ثبت کنید.'});
@@ -17593,7 +18164,7 @@ async function __handler(req, res) {
       mode:route.mode,promptChars:0,outputChars:JSON.stringify(pr).length,durationMs:Date.now()-t0,
       costEstimate:0,status:'OK',docsRetrieved:1,orgId:halt.orgId});
     return json(res,200,{opportunityId:o.id,name:o.name,...pr,
-      decisionRule:'بدون رد یا قبول خودکار — امتیاز و دلیل قابل توضیح فقط برای تصمیم انسانی است (سطح اختیار ۱۹.۲ سند v6).',
+      decisionRule:'بدون رد یا قبول خودکار — امتیاز و دلیل قابل توضیح فقط برای تصمیم انسانی است (سطح اختیار ۱۹.۲ سند v14).',
       engine:route.providerName,
       sources:[{sourceTypeFa:'رکورد ساختاریافته',title:`فرصت: ${o.name}`,url:`/opportunities/${o.id}`}],
       disclaimer:'فقط پیشنهاد'});
@@ -17616,7 +18187,7 @@ async function __handler(req, res) {
       costEstimate:0,status:'OK',docsRetrieved:1,orgId:halt.orgId});
     return json(res,200,{interactionId:inter.id,subject:inter.subject,proposal,
       requiresApproval:true,
-      approvalRule:'ثبت و ارسال فقط با تأیید کاربر (سطح اختیار ۱۹.۲ سند v6) — بدون تأیید، هیچ اقدامی ثبت نمی‌شود.',
+      approvalRule:'ثبت و ارسال فقط با تأیید کاربر (سطح اختیار ۱۹.۲ سند v14) — بدون تأیید، هیچ اقدامی ثبت نمی‌شود.',
       engine:route.providerName,
       sources:[{sourceTypeFa:'رکورد ساختاریافته',title:`تعامل: ${inter.subject}`,url:'/interactions'}],
       disclaimer:'فقط پیشنهاد'});
@@ -17706,7 +18277,7 @@ async function __handler(req, res) {
     return json(res,200,{signal:row,subject:v,risk:v?.risk??null});
   }
 
-  /* ─────────────── گام ۸.۲ — پروندهٔ اصالت F13 + سیاست اقدام (/authenticity/cases) ────────── */
+  /* ─────────────── گام ۸.۲ — پروندهٔ اصالت (ماژول پلتفرمی) + سیاست اقدام (/authenticity/cases) ────────── */
   if(is('/authenticity/cases')&&method==='GET'){
     if(!hasPerm('security.read')) return json(res,403,{message:'شما مجوز «مشاهدهٔ امنیت» (security.read) را ندارید.'});
     ensureAuthCasesSeed();
@@ -17847,7 +18418,7 @@ async function __handler(req, res) {
     const outputs=THINK_TANK_OUTPUTS.map(o=>({...o,
       registered:items.filter(r=>r.outputKey===o.key).length}));
     return json(res,200,{outputs,items,
-      rule:'زمان هر خروجی اندیشکده در جدول صریح است؛ تاریخ دقیق انتشار در تقویم SRIP ثبت و هر تغییر با علت و مالک اصلاح می‌شود (بخش ۱۵.۱ سند v6).'});
+      rule:'زمان هر خروجی اندیشکده در جدول صریح است؛ تاریخ دقیق انتشار در تقویم SRIP ثبت و هر تغییر با علت و مسئول اصلاح می‌شود (بخش ۱۵.۱ سند v14).'});
   }
   if(is('/program/think-tank')&&method==='POST'){
     if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت ریسک و به‌روزرسانی آمادگی» (program.write) را ندارید.'});
@@ -18213,7 +18784,7 @@ async function __handler(req, res) {
 
   /* ─────────────── گام ۲.۲ مسترپلن — ماژول مشارکت (/partnerships) ──────────
      خط لولهٔ چهارسطحی مذاکره → تفاهم‌نامه → فعال → پایان؛ قاعدهٔ سند:
-     فعال‌سازی مشارکت بدون قرارداد ثبت نمی‌شود (F15 — مذاکره تا فعال‌سازی). */
+     فعال‌سازی مشارکت بدون قرارداد ثبت نمی‌شود (F14 — مذاکره تا فعال‌سازی). */
   if(is('/partnerships')&&method==='GET'){
     if(!hasPerm('partnership.read')) return json(res,403,{message:'شما مجوز «مشاهده مشارکت‌ها» (partnership.read) را ندارید.'});
     const rows=partnershipsFor(req);
@@ -18222,7 +18793,7 @@ async function __handler(req, res) {
     return json(res,200,{items:filtered.map(partnershipView),summary:partnershipSummary(rows,programSettingsFor(req).partnershipTarget),
       stages:PARTNERSHIP_STAGES.map(st=>({key:st,label:PARTNERSHIP_STAGE_FA[st]})),
       types:PARTNERSHIP_TYPES,roles:programSettingsFor(req).roles,
-      rule:'فعال‌سازی مشارکت بدون قرارداد ثبت نمی‌شود (F15 سند — مذاکره تا فعال‌سازی).',generatedAt:nowIso()});
+      rule:'فعال‌سازی مشارکت بدون قرارداد ثبت نمی‌شود (F14 سند — مذاکره تا فعال‌سازی).',generatedAt:nowIso()});
   }
   if(is('/partnerships')&&method==='POST'){
     if(!hasPerm('partnership.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر مشارکت» (partnership.write) را ندارید.'});
@@ -18242,7 +18813,7 @@ async function __handler(req, res) {
     const oppId=String(b.opportunityId??'').trim()||null;
     if(oppId&&!OPPORTUNITIES.some(o=>o.id===oppId)) return json(res,400,{message:'فرصت انتخاب‌شده یافت نشد.'});
     const contractName=String(b.contractName??'').trim()||null;
-    const stage='NEGOTIATION'; /* هر مشارکت تازه از مذاکره آغاز می‌شود (F15) */
+    const stage='NEGOTIATION'; /* هر مشارکت تازه از مذاکره آغاز می‌شود (F14) */
     const row={id:`pt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`,
       organizationId:primaryOrgId(authUser)??visibleOrgIds(req)[0]??PARTNERSHIP_ORG_ID,
       partnerOrgId,type,stage,ownerRole,
@@ -18271,7 +18842,7 @@ async function __handler(req, res) {
     if(b.stage!=null){
       const v=String(b.stage).toUpperCase();
       if(!PARTNERSHIP_STAGE_FA[v]) return json(res,400,{message:'مرحلهٔ مشارکت باید مذاکره، تفاهم‌نامه، فعال یا پایان باشد.'});
-      if(v==='ACTIVE'&&!row.contractName) return json(res,400,{message:'فعال‌سازی مشارکت بدون قرارداد ثبت نمی‌شود (F15 سند — مذاکره تا فعال‌سازی).'});
+      if(v==='ACTIVE'&&!row.contractName) return json(res,400,{message:'فعال‌سازی مشارکت بدون قرارداد ثبت نمی‌شود (F14 سند — مذاکره تا فعال‌سازی).'});
       row.stage=v;
     }
     for(const k of ['ourCommitments','theirCommitments','notes']) if(b[k]!=null) row[k]=String(b[k]).trim();
@@ -18291,7 +18862,8 @@ async function __handler(req, res) {
     return json(res,200,{items,
       axes:DD_AXES.map(a=>({key:a.key,cat:a.cat,catFa:DD_AXIS_CAT_FA[a.cat],title:a.title})),
       statuses:Object.fromEntries(Object.entries(DOSSIER_STATUS_FA)),
-      rule:'پروندهٔ Due Diligence (F02): دوازده محور استاندارد ۶.۲.۱ (فنی) و ۶.۲.۲ (کسب‌وکاری)؛ هر محور با پاسخ، شاهد و نقص. طرف مقابل حق پاسخ به یافته‌ها دارد و تصویب (G2) فقط با پذیرش همهٔ محورها + ثبت نظر مدیر تیم Y ممکن است.'});
+      blockers:Object.fromEntries(Object.entries(DD_BLOCKER_FA)),
+      rule:'پروندهٔ Due Diligence (F02): پانزده محور استاندارد ۶.۲.۱ (فنی) و ۶.۲.۲ (کسب‌وکاری)؛ هر محور با پاسخ، شاهد و نقص. طرف مقابل حق پاسخ به یافته‌ها دارد و تصویب (G2) فقط با پذیرش همهٔ محورها + ثبت نظر مدیر تیم Y ممکن است. در صورت مانع داده/دسترسی، وضعیت «عدم امکان اظهارنظر» با شرح مانع ثبت می‌شود و تا رفع مانع هیچ توصیهٔ ورود به بازار صادر نمی‌شود. موضوع بررسی می‌تواند محصول، محصول جانبی (خروجی ثانویهٔ قابل‌عرضه از همان زیرساخت)، VC یا شرکت سرمایه‌گذاری‌شده باشد (۶.۲ سند v14).'});
   }
   if(is('/dossiers')&&method==='POST'){
     if(!hasPerm('partnership.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر مشارکت» (partnership.write) را ندارید.'});
@@ -18302,7 +18874,7 @@ async function __handler(req, res) {
     const ownerRole=String(b.ownerRole??'').trim();
     if(!ownerRole) return json(res,400,{message:'پروندهٔ DD بدون مالک ثبت نمی‌شود.'});
     const dChart=programSettingsFor(req).roles;
-    if(dChart.length&&!dChart.includes(ownerRole)) return json(res,400,{message:'مالک پرونده باید یکی از نقش‌های چارت سازمان شما باشد.'});
+    if(dChart.length&&!dChart.includes(ownerRole)) return json(res,400,{message:'مسئول پرونده باید یکی از نقش‌های چارت سازمان شما باشد.'});
     const row={id:`dd-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,
       organizationId:primaryOrgId(authUser)??visibleOrgIds(req)[0]??PARTNERSHIP_ORG_ID,
       subjectOrgId,ownerRole,status:'DRAFT',
@@ -18327,7 +18899,7 @@ async function __handler(req, res) {
     const d=(DB.dossiers??[]).find(x=>x.id===ddAx[0]&&visibleOrgIds(req).includes(x.organizationId));
     if(!d) return json(res,404,{message:'پروندهٔ DD یافت نشد یا خارج از محدودهٔ شماست.'});
     const axis=DD_AXES.find(a=>a.key===ddAx[1]);
-    if(!axis) return json(res,400,{message:'محور نامعتبر است — از فهرست دوازده محور ۶.۲.۱/۶.۲.۲ انتخاب کنید.'});
+    if(!axis) return json(res,400,{message:'محور نامعتبر است — از فهرست پانزده محور ۶.۲.۱/۶.۲.۲ انتخاب کنید.'});
     d.axes=d.axes??{};
     d.axes[axis.key]=d.axes[axis.key]??{answer:'',evidence:'',gap:'',status:'NOT_STARTED',response:null,responseAt:null};
     const b=await readBody(req);
@@ -18362,12 +18934,40 @@ async function __handler(req, res) {
     if(!d) return json(res,404,{message:'پروندهٔ DD یافت نشد یا خارج از محدودهٔ شماست.'});
     const b=await readBody(req);
     const opinion=String(b.opinion??'').toUpperCase();
-    if(!TEAM_Y_OPINION_FA[opinion]) return json(res,400,{message:'نظر مدیر تیم Y باید تأیید/مشروط/رد باشد.'});
+    if(!TEAM_Y_OPINION_FA[opinion]) return json(res,400,{message:'نظر مدیر تیم Y باید یکی از چهار حالت باشد: ادامه / ادامه مشروط / توقف / نیاز به بررسی تکمیلی.'});
     const note=String(b.note??'').trim();
     if(!note) return json(res,400,{message:'نظر مدیر تیم Y بدون یادداشت ثبت نمی‌شود — دلیل را بنویسید.'});
     d.teamY={opinion,note:note.slice(0,500),by:authUser?.email??'—',at:nowIso()};
     d.updatedAt=nowIso(); saveDb();
     audit(req,'TEAM_Y','Dossier',d.id,'OK',{opinion});
+    return json(res,200,dossierView(d));
+  }
+  /* فاز ۱۵.۳ — ثبت مانع (فقط از IN_REVIEW) و رفع مانع (بازگشت به IN_REVIEW) */
+  const ddBlk=match('/dossiers/:id/blocker');
+  if(ddBlk&&method==='POST'){
+    if(!hasPerm('partnership.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر مشارکت» (partnership.write) را ندارید.'});
+    ensureDossierSeed();
+    const d=(DB.dossiers??[]).find(x=>x.id===ddBlk[0]&&visibleOrgIds(req).includes(x.organizationId));
+    if(!d) return json(res,404,{message:'پروندهٔ DD یافت نشد یا خارج از محدودهٔ شماست.'});
+    if(d.status!=='IN_REVIEW') return json(res,400,{message:'ثبت مانع فقط از وضعیت «در بررسی» ممکن است؛ ابتدا پرونده را به بررسی ببرید.'});
+    const b=await readBody(req);
+    const blocker=String(b.blocker??'').toUpperCase();
+    if(!DD_BLOCKER_FA[blocker]) return json(res,400,{message:'مانع را انتخاب کنید: عدم دسترسی به داده / عدم دسترسی / تعارض حل‌نشده / عدم همکاری.'});
+    const note=String(b.blockerNote??'').trim();
+    if(!note) return json(res,400,{message:'شرح مانع الزامی است — منشأ، مهلت داده‌شده و تلاش‌های انجام‌شده را بنویسید.'});
+    d.status='CANNOT_OPINE'; d.blocker=blocker; d.blockerNote=note.slice(0,500); d.updatedAt=nowIso();
+    saveDb(); audit(req,'BLOCKER','Dossier',d.id,'OK',{blocker});
+    return json(res,200,dossierView(d));
+  }
+  const ddUnblk=match('/dossiers/:id/unblock');
+  if(ddUnblk&&method==='POST'){
+    if(!hasPerm('partnership.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر مشارکت» (partnership.write) را ندارید.'});
+    ensureDossierSeed();
+    const d=(DB.dossiers??[]).find(x=>x.id===ddUnblk[0]&&visibleOrgIds(req).includes(x.organizationId));
+    if(!d) return json(res,404,{message:'پروندهٔ DD یافت نشد یا خارج از محدودهٔ شماست.'});
+    if(d.status!=='CANNOT_OPINE') return json(res,400,{message:'رفع مانع فقط برای پروندهٔ «عدم امکان اظهارنظر» ممکن است.'});
+    d.status='IN_REVIEW'; d.blocker=null; d.blockerNote=null; d.updatedAt=nowIso();
+    saveDb(); audit(req,'UNBLOCK','Dossier',d.id,'OK',{});
     return json(res,200,dossierView(d));
   }
   const ddAp=match('/dossiers/:id/approval');
@@ -18381,14 +18981,16 @@ async function __handler(req, res) {
     if(!['APPROVED','REJECTED'].includes(decision)) return json(res,400,{message:'وضعیت تصویب باید تصویب‌شده یا ردشده باشد.'});
     const view=dossierView(d);
     /* شرط G2: تصویب فقط با پذیرش همهٔ محورها + نظر مدیر تیم Y */
+    if(d.status==='CANNOT_OPINE') return json(res,400,{message:'پرونده در وضعیت «عدم امکان اظهارنظر» است — تا رفع مانع و تصویب گزارش، هیچ توصیهٔ ورود به بازار یا معرفی رسمی صادر نمی‌شود.'});
     if(decision==='APPROVED'&&!view.ddComplete) return json(res,400,{message:`دروازهٔ G2 باز نیست — ${faN(view.acceptedAxes)} از ${faN(view.totalAxes)} محور پذیرفته شده؛ همهٔ محورها باید پذیرفته شوند.`});
     if(decision==='APPROVED'&&!d.teamY) return json(res,400,{message:'دروازهٔ G2 باز نیست — نظر مدیر تیم Y هنوز ثبت نشده است.'});
+    if(decision==='APPROVED'&&d.teamY?.opinion==='STOP') return json(res,400,{message:'نظر مدیر تیم Y «توقف» است؛ تصمیم نهایی توقف سرمایه‌گذاری با مرجع مجاز در فناوران هوش مصنوعی پارس ایرانیان است.'});
     d.status=decision; d.updatedAt=nowIso(); saveDb();
     audit(req,'APPROVAL','Dossier',d.id,'OK',{decision});
     return json(res,200,dossierView(d));
   }
 
-  /* ─────────────── گام ۱۰.۱ — F15 کارت آماده‌سازی سرمایه‌گذار و شریک (/readiness-packs) ────────── */
+  /* ─────────────── گام ۱۰.۱ — F14 کارت آماده‌سازی سرمایه‌گذار و شریک (/readiness-packs) ────────── */
   if(is('/readiness-packs')&&method==='GET'){
     if(!hasPerm('partnership.read')) return json(res,403,{message:'شما مجوز «مشاهده مشارکت‌ها» (partnership.read) را ندارید.'});
     ensurePartnershipSeed(); ensureDossierSeed(); ensureReadinessPackSeed();
@@ -18396,7 +18998,7 @@ async function __handler(req, res) {
     const items=(DB.readinessPacks??[]).filter(x=>ids.includes(x.organizationId))
       .map(x=>readinessPackView(x,req)).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));
     return json(res,200,{items,
-      rule:'کارت آماده‌سازی سرمایه‌گذار و شریک (F15): موضوع، هدف رابطه، شواهد، فهرست هدف، طرح جلسه و اقدام بعدی — متصل به مشارکت/فرصت موجود؛ «وضعیت DD» و «تعهدها» زنده از پروندهٔ DD و مشارکت متصل خوانده می‌شوند و دستی ثبت نمی‌شوند.'});
+      rule:'کارت آماده‌سازی سرمایه‌گذار و شریک (F14): موضوع، هدف رابطه، شواهد، فهرست هدف، طرح جلسه و اقدام بعدی — متصل به مشارکت/فرصت موجود؛ «وضعیت DD» و «تعهدها» زنده از پروندهٔ DD و مشارکت متصل خوانده می‌شوند و دستی ثبت نمی‌شوند.'});
   }
   if(is('/readiness-packs')&&method==='POST'){
     if(!hasPerm('partnership.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر مشارکت» (partnership.write) را ندارید.'});
@@ -18413,7 +19015,7 @@ async function __handler(req, res) {
     if(ptId&&!(DB.partnerships??[]).some(p=>p.id===ptId&&ids.includes(p.organizationId))) return json(res,400,{message:'مشارکت انتخاب‌شده یافت نشد یا خارج از محدودهٔ شماست.'});
     const opId=String(b.opportunityId??'').trim()||null;
     if(opId&&!OPPORTUNITIES.some(o=>o.id===opId)) return json(res,400,{message:'فرصت انتخاب‌شده یافت نشد.'});
-    if(!ptId&&!opId) return json(res,400,{message:'کارت F15 باید به یک مشارکت یا فرصت موجود متصل باشد.'});
+    if(!ptId&&!opId) return json(res,400,{message:'کارت F14 باید به یک مشارکت یا فرصت موجود متصل باشد.'});
     const row={id:`rp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,5)}`,
       organizationId:primaryOrgId(authUser)??ids[0]??PARTNERSHIP_ORG_ID,
       subject,partnershipId:ptId,opportunityId:opId,ownerRole,
@@ -18520,7 +19122,7 @@ async function __handler(req, res) {
     return json(res,200,tenderView(row));
   }
 
-  /* ─────────────── گام ۱۰.۲ — F18 کارت ورود به بازار (/gtm-cards) ────────── */
+  /* ─────────────── گام ۱۰.۲ — F16 کارت ورود به بازار (/gtm-cards) ────────── */
   if(is('/gtm-cards')&&method==='GET'){
     if(!hasPerm('opportunity.read')) return json(res,403,{message:'شما مجوز «مشاهده فرصت‌ها» (opportunity.read) را ندارید.'});
     ensureDossierSeed(); ensureGtmCardSeed();
@@ -18528,7 +19130,7 @@ async function __handler(req, res) {
       .map(gtmCardView).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));
     return json(res,200,{items,
       decisions:Object.fromEntries(Object.entries(GTM_DECISION_FA)),
-      rule:'کارت ورود به بازار (F18): محصول، وضعیت DD (زنده از پروندهٔ متصل)، مشتری ایدئال، ارزش پیشنهادی، بسته‌بندی، قیمت‌گذاری، کانال، شریک، اجرای آزمایشی و شواهد مشتری؛ تصمیم ورود (GO) فقط با پروندهٔ DD تصویب‌شده باز می‌شود.'});
+      rule:'کارت ورود به بازار (F16): محصول، وضعیت DD (زنده از پروندهٔ متصل)، مشتری ایدئال، ارزش پیشنهادی، بسته‌بندی، قیمت‌گذاری، کانال، شریک، اجرای آزمایشی و شواهد مشتری؛ تصمیم ورود (GO) فقط با پروندهٔ DD تصویب‌شده باز می‌شود.'});
   }
   if(is('/gtm-cards')&&method==='POST'){
     if(!hasPerm('opportunity.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر فرصت» (opportunity.write) را ندارید.'});
@@ -18615,7 +19217,7 @@ async function __handler(req, res) {
     if(scope.length<3) return json(res,400,{message:'دامنهٔ کنترل اجرا الزامی است — بدون دامنه، کنترل ثبت نمی‌شود.'});
     const ownerRole=String(b.ownerRole??'').trim();
     const eChart=programSettingsFor(req).roles;
-    if(!ownerRole||!eChart.includes(ownerRole)) return json(res,400,{message:'مالک کنترل اجرا باید یکی از نقش‌های چارت سازمان شما باشد.'});
+    if(!ownerRole||!eChart.includes(ownerRole)) return json(res,400,{message:'مسئول کنترل اجرا باید یکی از نقش‌های چارت سازمان شما باشد.'});
     const deadline=String(b.deadline??'').trim();
     if(!/^\d{4}-\d{2}-\d{2}/.test(deadline)) return json(res,400,{message:'مهلت کنترل اجرا را در قالب تاریخ مشخص کنید.'});
     const status=String(b.status??'ON_TRACK').toUpperCase();
@@ -18651,7 +19253,7 @@ async function __handler(req, res) {
       if(!scopedProjects(req).some(p=>p.id===v)) return json(res,400,{message:'پروژهٔ متصل یافت نشد یا خارج از محدودهٔ شماست.'});
       row.projectId=v;
     }
-    if(b.ownerRole!=null){const v=String(b.ownerRole).trim(); const eChart=programSettingsOf(row.organizationId).roles; if(!eChart.includes(v)) return json(res,400,{message:'مالک کنترل اجرا باید یکی از نقش‌های چارت سازمان شما باشد.'}); row.ownerRole=v;}
+    if(b.ownerRole!=null){const v=String(b.ownerRole).trim(); const eChart=programSettingsOf(row.organizationId).roles; if(!eChart.includes(v)) return json(res,400,{message:'مسئول کنترل اجرا باید یکی از نقش‌های چارت سازمان شما باشد.'}); row.ownerRole=v;}
     if(b.deadline!=null){const v=String(b.deadline).trim(); if(!/^\d{4}-\d{2}-\d{2}/.test(v)) return json(res,400,{message:'مهلت کنترل اجرا را در قالب تاریخ مشخص کنید.'}); row.deadline=v;}
     if(b.status!=null){
       const v=String(b.status).toUpperCase();
@@ -18665,14 +19267,14 @@ async function __handler(req, res) {
     return json(res,200,execControlView(row));
   }
 
-  /* ─────────────── گام ۱۰.۳ — F16 کارت نقش و ورود همکار (/role-cards) ────────── */
+  /* ─────────────── گام ۱۰.۳ — F15 کارت نقش و ورود همکار (/role-cards) ────────── */
   if(is('/role-cards')&&method==='GET'){
     if(!hasPerm('program.read')) return json(res,403,{message:'شما مجوز «مشاهده حاکمیت برنامه» (program.read) را ندارید.'});
     ensureRoleCardSeed();
     const items=(DB.roleCards??[]).filter(x=>visibleOrgIds(req).includes(x.organizationId))
       .map(roleCardView).sort((a,b)=>String(a.title).localeCompare(String(b.title),'fa'));
     return json(res,200,{items,
-      rule:'کارت نقش و ورود همکار (F16): عنوان نقش (الزامی از چارت سازمان)، مأموریت، مسئولیت، شایستگی، ارزیابی، مسیر ورود، دسترسی، اهداف ۳۰/۶۰/۹۰ روزه، بازخورد و جانشین؛ تأیید نهایی فقط با تکمیل هر سه هدف بازه‌ای.'});
+      rule:'کارت نقش و ورود همکار (F15): عنوان نقش (الزامی از چارت سازمان)، مأموریت، مسئولیت، شایستگی، ارزیابی، مسیر ورود، دسترسی، اهداف ۳۰/۶۰/۹۰ روزه، بازخورد و جانشین؛ تأیید نهایی فقط با تکمیل هر سه هدف بازه‌ای.'});
   }
   if(is('/role-cards')&&method==='POST'){
     if(!hasPerm('program.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر حاکمیت برنامه» (program.write) را ندارید.'});
@@ -18785,7 +19387,7 @@ async function __handler(req, res) {
     const items=(DB.envCards??[]).filter(x=>visibleOrgIds(req).includes(x.organizationId))
       .map(envCardView).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));
     return json(res,200,{items,
-      rule:'کارت محیط، ذی‌نفع و رقیب (F04): ادغام عموم‌ها و رقیب — نوع اطلاعات، نشانهٔ تغییر، منبع، اهمیت، موضع، قدرت، پیام، شواهد رقیب، سناریو و هشدار؛ فعال‌سازی هشدار فقط پس از تصویب در گردش F05 (درخواست و تصویب).'});
+      rule:'کارت محیط، ذی‌نفع، عموم و رقیب (F04): ادغام عموم‌ها و رقیب — نوع اطلاعات، نشانهٔ تغییر، منبع، اهمیت، موضع، قدرت، پیام، شواهد رقیب، سناریو و هشدار؛ برای کارت «عموم‌ها» مسئلهٔ مشترک، وضعیت چهارگانه (نهفته/آگاه/فعال/میانجی)، آگاهی، درگیری، محدودیت اقدام و رفتار ارتباطی الزامی است (۸.۳.۱ سند v14)؛ فعال‌سازی هشدار فقط پس از تصویب در گردش F05.'});
   }
   if(is('/env-stakeholder-cards')&&method==='POST'){
     if(!hasPerm('publics.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر عموم‌ها» (publics.write) را ندارید.'});
@@ -18811,7 +19413,10 @@ async function __handler(req, res) {
       message:String(b.message??'').trim().slice(0,300),
       competitorEvidence:String(b.competitorEvidence??'').trim().slice(0,400),
       scenario:String(b.scenario??'').trim().slice(0,400),alert:false,
+      commonIssue:'',publicStatus:null,awareness:null,engagement:null,actionConstraint:'',commBehavior:null,
       status:'DRAFT',approvedBy:null,approvedAt:null,createdAt:nowIso(),updatedAt:nowIso()};
+    const pubErr=envPublicFieldsApply(b,row);
+    if(pubErr) return json(res,400,{message:pubErr});
     DB.envCards.unshift(row); saveDb();
     audit(req,'CREATE','EnvCard',row.id,'OK',{kind,infoType});
     return json(res,201,envCardView(row));
@@ -18840,6 +19445,8 @@ async function __handler(req, res) {
     if(b.importance!=null){const v=String(b.importance).toUpperCase(); if(!ENV_IMPORTANCE_FA[v]) return json(res,400,{message:'اهمیت نامعتبر است.'}); row.importance=v;}
     if(b.power!=null){const v=String(b.power).toUpperCase(); if(!ENV_IMPORTANCE_FA[v]) return json(res,400,{message:'قدرت نامعتبر است.'}); row.power=v;}
     if(b.kind!=null){const v=String(b.kind).toUpperCase(); if(!ENV_KIND_FA[v]) return json(res,400,{message:'نوع کارت نامعتبر است.'}); row.kind=v;}
+    const pubErr=envPublicFieldsApply(b,row);
+    if(pubErr) return json(res,400,{message:pubErr});
     if(b.alert===true){
       if(row.status!=='APPROVED') return json(res,400,{message:'هشدار فقط پس از تصویب کارت در گردش F05 فعال می‌شود — ابتدا کارت را به تصویب برسانید.'});
       row.alert=true;
@@ -18856,7 +19463,7 @@ async function __handler(req, res) {
     const items=(DB.researchPlans??[]).filter(x=>visibleOrgIds(req).includes(x.organizationId))
       .map(researchPlanView).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));
     return json(res,200,{items,
-      rule:'طرح پژوهش و داوری (F07): پرسش، دامنه، روش، نمونه، منابع، محدودیت، تعارض، دو داور مستقل، اصلاحات و نسخه — انتشار فقط با تأیید هر دو داور مستقل (حلقهٔ ۱۵.۳ سند v6).'});
+      rule:'طرح پژوهش و داوری (F07): پرسش، دامنه، روش، نمونه، منابع، محدودیت، تعارض، دو داور مستقل، اصلاحات و نسخه — انتشار فقط با تأیید هر دو داور مستقل (حلقهٔ ۱۵.۳ سند v14).'});
   }
   if(is('/research-plans')&&method==='POST'){
     if(!hasPerm('strategy.write')) return json(res,403,{message:'شما مجوز «ثبت و تغییر راهبرد» (strategy.write) را ندارید.'});
