@@ -1,0 +1,48 @@
+name: rasmio graph v2
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      RASMIO_PHONE: ${{ secrets.RASMIO_PHONE }}
+      OTP_BRANCH: arena/01a08a50-srip
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: arena/01a08a50-srip
+          fetch-depth: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: install
+        working-directory: scripts/rasmio
+        run: npm install --no-audit --no-fund
+      - name: run robot
+        working-directory: scripts/rasmio
+        run: node capture.mjs
+      - name: commit output
+        if: always()
+        run: |
+          git config user.name "rasmio-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -f scripts/rasmio/out scripts/rasmio/shots || true
+          git commit -m "rasmio: output $(date -u +%Y.%m.%d-%H%M)" || true
+          git fetch origin arena/01a08a50-srip || true
+          git rebase origin/arena/01a08a50-srip || (git rebase --abort || true)
+          git push origin HEAD:arena/01a08a50-srip || echo "[bot] push failed - artifact exists"
+      - name: save output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rasmio-capture
+          retention-days: 1
+          path: |
+            scripts/rasmio/out/
+            scripts/rasmio/shots/
