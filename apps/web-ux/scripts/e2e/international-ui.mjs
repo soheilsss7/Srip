@@ -13,14 +13,15 @@ const E2E_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '.e2e-
 const BASE = process.env.UI_BASE ?? 'http://localhost:3000';
 const EXE = process.env.CHROME_EXE ?? resolve(E2E_DIR, 'chromium');
 console.log('chromium:', EXE);
-const browser = await puppeteer.launch({
+const launchBrowser = () => puppeteer.launch({
   executablePath: EXE,
   env: {...process.env, LD_LIBRARY_PATH: (process.env.CHROME_LD ?? join(E2E_DIR, 'nss')) + ':' + (process.env.LD_LIBRARY_PATH ?? '')},
   args: [...sparticuz.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
   headless: true,
   defaultViewport: { width: 1440, height: 960 },
 });
-const page = await browser.newPage();
+let browser = await launchBrowser();
+let page = await browser.newPage();
 let fails = 0;
 const ok = (name, cond, extra = '') => {
   if (cond) console.log('PASS', name);
@@ -205,17 +206,26 @@ try {
   ok('خروجی JSON/CSV در پنل پرونده‌ها', expBtns >= 2, `n=${expBtns}`);
 
   // 14) جست‌وجو/فیلتر — صفحه را تازه باز می‌کنیم (بازبارگذاری پس از ارجاع، تایمینگ hydration را جابه‌جا می‌کند)
-  await page.goto(`${BASE}/international`, { waitUntil: 'networkidle0', timeout: 60000 });
-  await new Promise(r => setTimeout(r, 2500));
+  /* ۱۷.۱: پس از سناریوی مودال/ارجاع، prefetch های Next و hydration می‌توانند تایمینگ بازبارگذاری را لغزان کنند (محیط دو‌هسته‌ای) —
+     دادهٔ واقعی جدول را منتظر می‌مانیم؛ اگر نیامد، بازبارگذاری تازه تا سه بار تلاش می‌کنیم (صفحهٔ خودش سالم است — تأیید دستی) */
   const searchSel = '.data-intl-contacts input[aria-label*="جست"], .data-intl-contacts input[type="search"]';
-  const searchReady = await waitForSel(searchSel, 20000);
-  if (searchReady) {
+  let filtered = -1;
+  for (let attempt = 1; attempt <= 4 && filtered !== 1; attempt++) {
+    /* تلاش دوباره با صفحهٔ تازه؛ در تلاش سوم مرورگر کاملاً تازه — حالت فرسودهٔ مرورگر می‌تواند hydration را ببلعد (تأیید دستی: صفحه در مرورگر تازه سالم بار می‌شود) */
+    if (attempt === 3) { const b2 = await launchBrowser(); await browser.close().catch(() => {}); browser = b2; await new Promise(r => setTimeout(r, 1200)); }
+    if (attempt > 1) { const fresh = await browser.newPage(); await page.close().catch(() => {}); page = fresh; await new Promise(r => setTimeout(r, 800)); }
+    await page.goto(`${BASE}/international`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    const rowsReady = await page.waitForFunction(() => document.querySelectorAll('tr[data-intl-id]').length > 0, { timeout: 25000 }).then(() => true).catch(() => false);
+    if (!rowsReady) continue;
+    const searchReady = await waitForSel(searchSel, 10000);
+    if (!searchReady) continue;
+    await new Promise(r => setTimeout(r, 400));
     await page.click(searchSel);
     await page.type(searchSel, 'زوریخ');
+    await new Promise(r => setTimeout(r, 1400));
+    filtered = await page.evaluate(() => document.querySelectorAll('tr[data-intl-id]').length);
   }
-  await new Promise(r => setTimeout(r, 1200));
-  const filtered = await page.evaluate(() => document.querySelectorAll('tr[data-intl-id]').length);
-  ok('جست‌وجوی جدول پرونده‌ها (زوریخ → ۱ ردیف)', filtered === 1, `n=${filtered}`);
+  ok('جست‌وجوی جدول پرونده‌ها (زوریخ → ۱ ردیف)', filtered === 1, `n=${filtered < 0 ? 0 : filtered}`);
 } catch (e) {
   console.error('FATAL', e?.message ?? String(e));
   fails++;

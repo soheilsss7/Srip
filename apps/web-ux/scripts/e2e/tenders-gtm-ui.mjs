@@ -109,12 +109,12 @@ try {
     const t = document.querySelector('section[data-f16]')?.textContent ?? '';
     return {
       count: document.querySelectorAll('section[data-f16] tbody tr').length,
-      liveDD: t.includes('تصویب‌شده — ۱۲/۱۲ محور') && t.includes('در بررسی — ۱/۱۲ محور'),
+      liveDD: t.includes('تصویب‌شده — ۱۵/۱۵ محور') && t.includes('در بررسی — ۱/۱۵ محور'),
       go: t.includes('ورود (GO)'),
       pilot: t.includes('اجرای آزمایشی'),
     };
   });
-  ok('F16: دو کارت بذر با وضعیت DD زنده (تصویب‌شده ۱۲/۱۲ و در بررسی ۱/۱۲) و تصمیم‌ها',
+  ok('F16: دو کارت بذر با وضعیت DD زنده (تصویب‌شده ۱۵/۱۵ و در بررسی ۱/۱۵) و تصمیم‌ها',
     gtm.count === 2 && gtm.liveDD && gtm.go && gtm.pilot, JSON.stringify(gtm));
 
   /* ── ۶) گرهٔ GO: کارت جدید بدون DD → ۴۰۰؛ با DD تصویب‌شده → ۲۰۱ ── */
