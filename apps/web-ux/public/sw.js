@@ -1720,7 +1720,7 @@ const crypto = {
 const V1 = '/api/v1';
 /* نسخهٔ نمایشیِ Mock API — در هر انتشار باید عوض شود؛ چون داخل SW تزریق می‌شود و
    مرورگرها با آن، سرویس‌کارگرِ کهنه را تشخیص و خودکار به‌روزرسانی می‌کنند. */
-const DEMO_MOCK_VERSION = '2026.10.05.01';
+const DEMO_MOCK_VERSION = '2026.10.11.01';
 
 /* ------------------------------ demo data ------------------------------ */
 let ORGS = [
@@ -2036,6 +2036,17 @@ let PERSON_ORGS = [
   { personId:'p-1', organizationId:'org-4', roleTitle:'مشاور راهبردی', department:'—', isPrimary:false, status:'ACTIVE' },
   { personId:'p-7', organizationId:'org-2', roleTitle:'مدیر محصول', department:'فنی', isPrimary:true, status:'ACTIVE' },
 ];
+
+/* ۱۷.۱ (مسترپلن فاز ۱۷): تصویر بذر خام first-run — seedهای ماژول در طول عمر پروسه
+   mutate می‌شوند (اتصال دیتابیس بیرونی ORGS.push می‌زند، امتیاز رابطه در RELS کم می‌شود،
+   NOTIFICATIONS.unshift و…). resetDbInPlace باید از این تصویر کپیِ تازه بگیرد، نه مرجع آلوده. */
+const SEED_PRISTINE = {
+  orgs: structuredClone(ORGS), people: structuredClone(PEOPLE), rels: structuredClone(RELS),
+  meetings: structuredClone(MEETINGS), actions: structuredClone(ACTIONS), commitments: structuredClone(COMMITMENTS),
+  projects: structuredClone(PROJECTS), projectExtra: structuredClone(PROJECT_EXTRA), opportunities: structuredClone(OPPORTUNITIES),
+  interactions: structuredClone(INTERACTIONS), notifications: structuredClone(NOTIFICATIONS),
+  recs: structuredClone(RECS), aiUsage: structuredClone(AI_USAGE), personOrgs: structuredClone(PERSON_ORGS),
+};
 
 const TYPE_KEYS = {
   FOLLOW_UP:'پیگیری', MEETING:'جلسه', INTRODUCTION:'معرفی', RELATIONSHIP_REPAIR:'ترمیم رابطه',
@@ -5294,6 +5305,15 @@ let USERS = null;
 
 /* P3: بازنشانی درجا (E2E/دمو) — همان seedهای راه‌اندازی، بدون دست‌کاری دیسک */
 function resetDbInPlace(){
+  /* ۱۷.۱: بازنشانی واقعی — seedهای ماژول را از تصویر بذر first-run (SEED_PRISTINE) کپیِ
+     تازه می‌گیریم و نرخ‌محدودِ فرّای مسیرهای عمومی (PHASE2_RATE) را صفر می‌کنیم تا
+     dev/reset معادل restart --reset باشد، حتی وقتی پروسه مدت‌ها درخواست خورده است. */
+  ORGS=structuredClone(SEED_PRISTINE.orgs); PEOPLE=structuredClone(SEED_PRISTINE.people); RELS=structuredClone(SEED_PRISTINE.rels);
+  MEETINGS=structuredClone(SEED_PRISTINE.meetings); ACTIONS=structuredClone(SEED_PRISTINE.actions); COMMITMENTS=structuredClone(SEED_PRISTINE.commitments);
+  PROJECTS=structuredClone(SEED_PRISTINE.projects); PROJECT_EXTRA=structuredClone(SEED_PRISTINE.projectExtra); OPPORTUNITIES=structuredClone(SEED_PRISTINE.opportunities);
+  INTERACTIONS=structuredClone(SEED_PRISTINE.interactions); NOTIFICATIONS=structuredClone(SEED_PRISTINE.notifications); RECS=structuredClone(SEED_PRISTINE.recs);
+  AI_USAGE=structuredClone(SEED_PRISTINE.aiUsage); PERSON_ORGS=structuredClone(SEED_PRISTINE.personOrgs);
+  PHASE2_RATE.clear();
   DB = { version: 2, users: {}, orgs: ORGS, people: PEOPLE, rels: RELS, meetings: MEETINGS,
     actions: ACTIONS, commitments: COMMITMENTS, projects: PROJECTS, projectExtra: PROJECT_EXTRA,
     opportunities: OPPORTUNITIES, interactions: INTERACTIONS, notifications: NOTIFICATIONS,
