@@ -39,7 +39,7 @@ jobs:
           git push origin HEAD:arena/01a08a50-srip || echo "[bot] push failed - artifact exists"
       - name: save output
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: rasmio-capture
           retention-days: 1
