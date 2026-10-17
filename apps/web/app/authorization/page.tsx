@@ -1,0 +1,15 @@
+'use client';
+import {useEffect,useState} from 'react';
+import {api} from '../_lib/api';
+import {Badge,DataTable,Empty,ErrorCard,Loading,PageHeader} from '../_components/page-ui';
+
+type Perm = { key?: string; description?: string | null; rolePermissions?: Array<{ role?: { key?: string } | string }> };
+const unwrap=(x:any)=>Array.isArray(x)?x:x?.items??x?.rows??x?.data??[];
+
+export default function Authorization(){
+  const [items,setItems]=useState<Perm[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState('');
+  useEffect(()=>{api('/admin/permissions').then((x:any)=>setItems(unwrap(x))).catch(e=>setError((e as Error).message)).finally(()=>setLoading(false));},[]);
+  const rolesOf=(p:Perm)=>Array.isArray(p.rolePermissions)?p.rolePermissions.map(rp=>{const r=rp?.role;return typeof r==='string'?r:r?.key;}).filter(Boolean).join('، '):'—';
+  const rows=items.map(p=>({key:p.key??'—',description:p.description??'—',roles:rolesOf(p)}));
+  return <main className="feature-page"><PageHeader eyebrow="مجوزها" title="مجوزها" description="فهرست مجوزهای سرور و نقش‌های صاحب هرکدام — مبنای کنترل دسترسی مبتنی بر نقش (RBAC) و دسترسی آگاه از محدوده." actions={<Badge tone="info">{items.length} مجوز</Badge>}/><ErrorCard message={error}/>{loading?<Loading/>:<section className="panel"><div className="table-wrap">{items.length?<DataTable columns={[{key:'key',label:'کلید مجوز'},{key:'description',label:'توضیح'},{key:'roles',label:'نقش‌ها'}]} rows={rows}/>:<Empty>هیچ Permission ای یافت نشد.</Empty>}</div></section>}</main>;
+}

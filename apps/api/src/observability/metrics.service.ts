@@ -1,0 +1,36 @@
+import { Injectable } from '@nestjs/common';
+
+type Histogram={count:number,sum:number,buckets:Record<string,number>};
+const BUCKETS=[5,10,25,50,100,250,500,1000,2500,5000,10000];
+function histogram():Histogram{return {count:0,sum:0,buckets:Object.fromEntries(BUCKETS.map(x=>[String(x),0]))};}
+function observe(h:Histogram,value:number){h.count++;h.sum+=value;for(const b of BUCKETS)if(value<=b)h.buckets[String(b)]++;}
+
+@Injectable()
+export class MetricsService {
+  private startedAt=Date.now();
+  private requests=0; private errors=0; private totalLatencyMs=0;
+  private apiLatency=new Map<string,Histogram>(); private dbLatency=new Map<string,Histogram>(); private queueCounts=new Map<string,Record<string,number>>();
+  private storage=new Map<string,{requests:number,errors:number,latency:Histogram,bytes:number}>(); private ai=new Map<string,{requests:number,errors:number,latency:Histogram,inputTokens:number,outputTokens:number,cost:number}>();
+  private users=new Set<string>(); private userActivity=new Map<string,Set<string>>(); private availabilitySamples=0; private availabilityOk=0; private lastCpu=process.cpuUsage(); private lastCpuAt=Date.now();
+
+  observeRequest(durationMs:number,statusCode:number,method='GET',route='unknown',userId?:string){this.requests++;this.totalLatencyMs+=durationMs;if(statusCode>=500)this.errors++;observe(this.metric(this.apiLatency,`${method} ${route}`),durationMs);if(userId){this.users.add(userId);const day=new Date().toISOString().slice(0,10);const set=this.userActivity.get(day)??new Set<string>();set.add(userId);this.userActivity.set(day,set);if(this.userActivity.size>31){const oldest=[...this.userActivity.keys()].sort()[0];this.userActivity.delete(oldest);}}}
+  observeDb(durationMs:number,operation='query'){observe(this.metric(this.dbLatency,operation),durationMs);}
+  observeQueue(queue:string,counts:Record<string,number>){this.queueCounts.set(queue,counts);}
+  observeStorage(operation:string,durationMs:number,bytes=0,error=false){const s=this.storage.get(operation)??{requests:0,errors:0,latency:histogram(),bytes:0};s.requests++;s.bytes+=bytes;if(error)s.errors++;observe(s.latency,durationMs);this.storage.set(operation,s);}
+  observeAi(provider:string,durationMs:number,inputTokens=0,outputTokens=0,cost=0,error=false){const a=this.ai.get(provider)??{requests:0,errors:0,latency:histogram(),inputTokens:0,outputTokens:0,cost:0};a.requests++;a.inputTokens+=inputTokens;a.outputTokens+=outputTokens;a.cost+=cost;if(error)a.errors++;observe(a.latency,durationMs);this.ai.set(provider,a);}
+  observeAvailability(ok:boolean){this.availabilitySamples++;if(ok)this.availabilityOk++;}
+  activeUsers30d(){const cutoff=Date.now()-30*86400000;const ids=new Set<string>();for(const [day,set] of this.userActivity){if(Date.parse(day+'T00:00:00.000Z')>=cutoff)for(const id of set)ids.add(id);}return ids.size;}
+  private metric(map:Map<string,Histogram>,key:string){let h=map.get(key);if(!h){h=histogram();map.set(key,h);}return h;}
+  snapshot(){const uptimeSeconds=Math.floor((Date.now()-this.startedAt)/1000);const mem=process.memoryUsage();const cpu=process.cpuUsage();const now=Date.now();const elapsed=Math.max(1,now-this.lastCpuAt)*1000;const cpuPercent=Number((((cpu.user-this.lastCpu.user)+(cpu.system-this.lastCpu.system))/elapsed*100).toFixed(2));this.lastCpu=cpu;this.lastCpuAt=now;return {requests:this.requests,errors:this.errors,averageLatencyMs:this.requests?Number((this.totalLatencyMs/this.requests).toFixed(2)):0,uptimeSeconds,activeUsers:this.activeUsers30d(),process:{rssBytes:mem.rss,heapUsedBytes:mem.heapUsed,heapTotalBytes:mem.heapTotal,cpuPercent},availabilityPercent:this.availabilitySamples?Number((this.availabilityOk/this.availabilitySamples*100).toFixed(3)):100,apiLatency:this.histogramMap(this.apiLatency),dbLatency:this.histogramMap(this.dbLatency),queue:this.queueObject(),storage:Object.fromEntries(this.storage),ai:Object.fromEntries(this.ai)};}
+  private histogramMap(map:Map<string,Histogram>){return Object.fromEntries([...map.entries()].map(([k,v])=>[k,{count:v.count,sum:v.sum,buckets:v.buckets}]));}
+  private queueObject(){return Object.fromEntries(this.queueCounts);}
+  prometheus(){const lines:string[]=[];const s=this.snapshot();const esc=(x:string)=>x.replace(/\\/g,'\\\\').replace(/"/g,'\\"');
+    lines.push('# HELP srip_http_requests_total Total HTTP requests','# TYPE srip_http_requests_total counter',`srip_http_requests_total ${s.requests}`,'# HELP srip_http_errors_total Total HTTP 5xx responses','# TYPE srip_http_errors_total counter',`srip_http_errors_total ${s.errors}`,'# HELP srip_http_average_latency_ms Average HTTP latency','# TYPE srip_http_average_latency_ms gauge',`srip_http_average_latency_ms ${s.averageLatencyMs}`,'# HELP srip_process_uptime_seconds Process uptime','# TYPE srip_process_uptime_seconds gauge',`srip_process_uptime_seconds ${s.uptimeSeconds}`,'# HELP srip_active_users_30d Unique users observed in the last 30 days','# TYPE srip_active_users_30d gauge',`srip_active_users_30d ${s.activeUsers}`,'# HELP srip_availability_percent Observed availability percentage','# TYPE srip_availability_percent gauge',`srip_availability_percent ${s.availabilityPercent}`,'# HELP srip_process_resident_memory_bytes Resident process memory','# TYPE srip_process_resident_memory_bytes gauge',`srip_process_resident_memory_bytes ${s.process.rssBytes}`,'# HELP srip_process_heap_used_bytes Process heap used','# TYPE srip_process_heap_used_bytes gauge',`srip_process_heap_used_bytes ${s.process.heapUsedBytes}`,'# HELP srip_process_cpu_percent Process CPU percentage','# TYPE srip_process_cpu_percent gauge',`srip_process_cpu_percent ${s.process.cpuPercent}`);
+    for(const [route,h] of this.apiLatency){for(const b of BUCKETS)lines.push(`srip_api_latency_ms_bucket{route="${esc(route)}",le="${b}"} ${h.buckets[String(b)]}`);lines.push(`srip_api_latency_ms_bucket{route="${esc(route)}",le="+Inf"} ${h.count}`,`srip_api_latency_ms_sum{route="${esc(route)}"} ${h.sum}`,`srip_api_latency_ms_count{route="${esc(route)}"} ${h.count}`);}
+    for(const [op,h] of this.dbLatency){for(const b of BUCKETS)lines.push(`srip_db_latency_ms_bucket{operation="${esc(op)}",le="${b}"} ${h.buckets[String(b)]}`);lines.push(`srip_db_latency_ms_bucket{operation="${esc(op)}",le="+Inf"} ${h.count}`,`srip_db_latency_ms_sum{operation="${esc(op)}"} ${h.sum}`,`srip_db_latency_ms_count{operation="${esc(op)}"} ${h.count}`);}
+    for(const [q,c] of this.queueCounts)for(const [state,n] of Object.entries(c))lines.push(`srip_queue_jobs{queue="${esc(q)}",state="${esc(state)}"} ${n}`);
+    for(const [op,v] of this.storage)lines.push(`srip_storage_requests_total{operation="${esc(op)}"} ${v.requests}`,`srip_storage_errors_total{operation="${esc(op)}"} ${v.errors}`,`srip_storage_bytes_total{operation="${esc(op)}"} ${v.bytes}`);
+    for(const [provider,v] of this.ai)lines.push(`srip_ai_requests_total{provider="${esc(provider)}"} ${v.requests}`,`srip_ai_errors_total{provider="${esc(provider)}"} ${v.errors}`,`srip_ai_input_tokens_total{provider="${esc(provider)}"} ${v.inputTokens}`,`srip_ai_output_tokens_total{provider="${esc(provider)}"} ${v.outputTokens}`,`srip_ai_cost_total{provider="${esc(provider)}"} ${v.cost}`);
+    return lines.join('\n')+'\n';
+  }
+}

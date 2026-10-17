@@ -1,0 +1,411 @@
+'use client';
+import { faFullDate } from '../_lib/jalali';
+import Link from 'next/link';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { api } from '../_lib/api';
+import { fa } from '../_lib/fa';
+import { useWorkspace } from '../_components/workspace';
+import { Card, Badge } from '@srip/design-system';
+import { Modal } from '../_components/page-ui';
+import {
+  Phone, Mail, Users, StickyNote, MessageSquare, Plus, Search, CalendarDays,
+  BellRing, Clock, Building2, User, ListFilter, Activity, ClipboardList, Sparkles, CheckCircle2,
+} from 'lucide-react';
+import { JalaliDateField } from '../_components/jalali-date-field';
+
+type Interaction = {
+  id: string;
+  type: string;
+  subject: string;
+  summary?: string;
+  outcome?: string;
+  occurredAt: string;
+  followUpRequired: boolean;
+  followUpAt?: string;
+  importance?: string;
+  sentiment?: number;
+  purpose?: string;
+  channel?: string;
+  quality?: number;
+  result?: string;
+  direction?: string;
+  nextStep?: string;
+  nextStepAt?: string;
+  organization?: { name: string };
+  person?: { firstName: string; lastName: string };
+  relationship?: { sourceOrganization?: { name: string }; targetOrganization?: { name: string } };
+};
+
+const TYPE_META: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
+  CALL: { icon: <Phone size={16}/>, color: 'type-call', label: 'تماس' },
+  EMAIL: { icon: <Mail size={16}/>, color: 'type-email', label: 'ایمیل' },
+  MEETING: { icon: <Users size={16}/>, color: 'type-meeting', label: 'جلسه' },
+  NOTE: { icon: <StickyNote size={16}/>, color: 'type-note', label: 'یادداشت' },
+  MESSAGE: { icon: <MessageSquare size={16}/>, color: 'type-message', label: 'پیام' },
+};
+
+const PURPOSE_META: Record<string, string> = {
+  DISCOVERY: 'کشف', TRUST_BUILDING: 'اعتمادسازی', DECISION: 'تصمیم', NEGOTIATION: 'مذاکره', PROBLEM_SOLVING: 'حل مسئله', APPRECIATION: 'تجلیل',
+};
+const RESULT_META: Record<string, { label: string; cls: string }> = {
+  ADVANCED: { label: 'پیشرفت', cls: 'success' }, STABLE: { label: 'ثابت', cls: 'info' }, REGRESSED: { label: 'عقب‌گرد', cls: 'danger' },
+};
+const DIRECTION_META: Record<string, string> = { WE: 'از ما', THEM: 'از طرف مقابل', MUTUAL: 'دوطرفه' };
+const QUALITY_LABEL: Record<number, string> = { 1: 'بسیار ضعیف', 2: 'ضعیف', 3: 'قابل قبول', 4: 'خوب', 5: 'عالی' };
+
+function TypeDot({ type }: { type: string }) {
+  const meta = TYPE_META[type] ?? { icon: <Activity size={16}/>, color: 'type-other', label: type };
+  return <span className={`type-dot ${meta.color}`}>{meta.icon}</span>;
+}
+
+export default function InteractionsPage() {
+  const { can } = useWorkspace();
+  const writable = can('interaction.write');
+
+  const [items, setItems] = useState<Interaction[]>([]);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [followUps, setFollowUps] = useState(false);
+  /* گام ۷.۴ — پیشنهاد اقدام بعدی (درگاه هوش مصنوعی؛ ثبت فقط با تأیید کاربر) */
+  const [aiSel, setAiSel] = useState('');
+  const [aiProposal, setAiProposal] = useState<any>(null);
+  const [aiBusy, setAiBusy] = useState(false);
+  const runNextAction = async () => {
+    if (!aiSel) return;
+    setAiBusy(true); setError(''); setAiProposal(null);
+    try { setAiProposal(await api(`/ai/interactions/${aiSel}/next-action`, { method: 'POST' })); }
+    catch (e) { setError((e as Error).message); }
+    finally { setAiBusy(false); }
+  };
+  const applyNextAction = async () => {
+    setAiBusy(true); setError('');
+    try {
+      const r: any = await api(`/ai/interactions/${aiSel}/next-action/apply`, { method: 'POST', body: JSON.stringify({ confirmed: true, proposal: aiProposal?.proposal }) });
+      setAiProposal(null); setAiSel('');
+      setError('');
+      alert(`اقدام «${r.actionId ? 'ثبت شد' : ''}» با تأیید شما ثبت شد.`);
+      load();
+    } catch (e) { setError((e as Error).message); }
+    finally { setAiBusy(false); }
+  };
+  const [q, setQ] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+
+  const [form, setForm] = useState({
+    type: 'NOTE', subject: '', summary: '',
+    occurredAt: new Date().toISOString().slice(0, 16),
+    followUpRequired: false, followUpAt: '',
+    organizationId: '', personId: '', relationshipId: '',
+    purpose: '', channel: '', quality: '', result: '', direction: '', nextStep: '', nextStepAt: '',
+  });
+
+  const load = useCallback(() => {
+    setLoading(true);
+    return api<Interaction[]>(`/interactions?followUpOnly=${followUps}`)
+      .then(x => setItems(Array.isArray(x) ? x as Interaction[] : (x as any).items ?? []))
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false));
+  }, [followUps]);
+  useEffect(() => { load(); }, [load]);
+
+  const create = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true); setError('');
+    try {
+      await api('/interactions', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...form,
+          occurredAt: new Date(form.occurredAt).toISOString(),
+          followUpAt: form.followUpRequired && form.followUpAt ? new Date(form.followUpAt).toISOString() : undefined,
+          purpose: form.purpose || undefined,
+          channel: form.channel || undefined,
+          quality: form.quality ? Number(form.quality) : undefined,
+          result: form.result || undefined,
+          direction: form.direction || undefined,
+          nextStep: form.nextStep || undefined,
+          nextStepAt: form.nextStep && form.nextStepAt ? new Date(form.nextStepAt).toISOString() : undefined,
+          organizationId: form.organizationId || undefined,
+          personId: form.personId || undefined,
+          relationshipId: form.relationshipId || undefined,
+        }),
+      });
+      setForm({ ...form, subject: '', summary: '', followUpAt: '' });
+      setCreateOpen(false);
+      await load();
+    } catch (err: any) {
+      setError(err.message);
+    } finally { setBusy(false); }
+  };
+
+  const counts = useMemo(() => {
+    const total = items.length;
+    const weekAgo = Date.now() - 7 * 86400000;
+    const thisWeek = items.filter(i => new Date(i.occurredAt).getTime() >= weekAgo).length;
+    const follow = items.filter(i => i.followUpRequired).length;
+    const upcoming = items.filter(i => i.followUpRequired && i.followUpAt && new Date(i.followUpAt).getTime() > Date.now()).length;
+    return { total, thisWeek, follow, upcoming };
+  }, [items]);
+
+  const visible = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    return items.filter((i) => {
+      if (typeFilter && i.type !== typeFilter) return false;
+      if (term && !`${i.subject} ${i.summary ?? ''} ${i.organization?.name ?? ''}`.toLowerCase().includes(term)) return false;
+      return true;
+    });
+  }, [items, q, typeFilter]);
+
+  const typesPresent = [...new Set(items.map(i => i.type))];
+
+  const timeline = useMemo(() => {
+    const groups = new Map<string, Interaction[]>();
+    for (const i of visible) {
+      const key = new Date(i.occurredAt).toDateString();
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(i);
+    }
+    return [...groups.entries()].sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime());
+  }, [visible]);
+
+  return (
+    <>
+    <div className="interactions-page">
+      <section className="page-heading">
+        <div>
+          <h1>تعاملات</h1>
+          <p className="subtitle">تماس‌ها، ایمیل‌ها، جلسات، یادداشت‌ها و پیگیری‌ها در یک خط زمانی یکپارچه — از سرور واقعی.</p>
+        </div>
+        <div className="heading-tools">
+          {writable && <button type="button" className="primary-action" onClick={()=>{setError('');setCreateOpen(true)}}><Plus size={14}/> ثبت تعامل</button>}
+        </div>
+      </section>
+
+      {error && <div className="error-card" role="alert">{error}</div>}
+
+      <section className="stats-row">
+        <div className="stat-card">
+          <div className="st-top"><span className="st-ico ic-blue"><Activity size={18}/></span><span className="st-name">کل تعاملات</span></div>
+          <strong className="st-value">{counts.total}</strong>
+          <div className="st-foot"><span className="st-delta up">{counts.thisWeek} در ۷ روز اخیر</span></div>
+        </div>
+        <div className="stat-card">
+          <div className="st-top"><span className="st-ico ic-gold"><CalendarDays size={18}/></span><span className="st-name">این هفته</span></div>
+          <strong className="st-value">{counts.thisWeek}</strong>
+          <div className="st-foot"><span className="st-delta">طی ۷ روز</span></div>
+        </div>
+        <div className="stat-card">
+          <div className="st-top"><span className="st-ico ic-red"><BellRing size={18}/></span><span className="st-name">نیازمند پیگیری</span></div>
+          <strong className="st-value">{counts.follow}</strong>
+          <div className="st-foot"><span className="st-delta down">{counts.upcoming} آتی</span></div>
+        </div>
+        <div className="stat-card">
+          <div className="st-top"><span className="st-ico ic-purple"><ClipboardList size={18}/></span><span className="st-name">انواع</span></div>
+          <strong className="st-value">{typesPresent.length}</strong>
+          <div className="st-foot"><span className="st-delta">{typesPresent.map(t=>TYPE_META[t]?.label??t).join(' · ') || '—'}</span></div>
+        </div>
+      </section>
+
+      {/* ═══ گام ۷.۴ — پیشنهاد اقدام بعدی (AI؛ فقط پیشنهاد، ثبت با تأیید کاربر) ═══ */}
+      <section className="ai-next-action panel" style={{ marginBottom: 16 }}>
+        <div className="panel-title">
+          <div><h2><Sparkles size={15}/> پیشنهاد اقدام بعدی (درگاه هوش مصنوعی)</h2>
+            <p>یک تعامل را انتخاب کنید؛ اقدام، پیام پیشنهادی و مهلت از داده ساخته می‌شود — ثبت فقط با تأیید شما.</p></div>
+          <span className="chip warning">فقط پیشنهاد</span>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <select value={aiSel} onChange={e => { setAiSel(e.target.value); setAiProposal(null); }} aria-label="انتخاب تعامل"
+            style={{ minWidth: 280 }}>
+            <option value="">— تعاملی را انتخاب کنید —</option>
+            {items.slice(0, 12).map((it: any) => (
+              <option key={it.id} value={it.id}>{it.subject}</option>
+            ))}
+          </select>
+          <button type="button" className="primary-action" onClick={runNextAction} disabled={!aiSel || aiBusy}>
+            <Sparkles size={14}/> {aiBusy ? 'در حال پیشنهاد…' : 'پیشنهاد اقدام بعدی'}
+          </button>
+        </div>
+        {aiProposal && (
+          <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+            <div className="detail-grid">
+              <div className="detail-item" style={{ gridColumn: '1/-1' }}><small>اقدام پیشنهادی</small><strong>{aiProposal.proposal?.actionTitle}</strong></div>
+              <div className="detail-item" style={{ gridColumn: '1/-1' }}><small>پیام پیشنهادی</small><strong>{aiProposal.proposal?.message}</strong></div>
+              <div className="detail-item"><small>مهلت پیشنهادی</small><strong>{fa(aiProposal.proposal?.dueDays)} روز ({aiProposal.proposal?.dueAt ? new Date(aiProposal.proposal.dueAt).toLocaleDateString('fa-IR') : '—'})</strong></div>
+              <div className="detail-item"><small>مبنای پیشنهاد</small><strong>{fa(aiProposal.proposal?.basis?.overdueCommitments ?? 0)} تعهد معوق · {fa(aiProposal.proposal?.basis?.openActions ?? 0)} اقدام باز</strong></div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <button type="button" className="primary-action" onClick={applyNextAction} disabled={aiBusy}>
+                <CheckCircle2 size={14}/> ثبت اقدام با تأیید من
+              </button>
+              <button type="button" className="secondary-action" onClick={() => setAiProposal(null)} disabled={aiBusy}>دور انداختن</button>
+              <small className="subtitle" style={{ margin: 0 }}>بدون تأیید، هیچ اقدامی ثبت نمی‌شود (سطح اختیار ۱۹.۲ سند v14).</small>
+            </div>
+          </div>
+        )}
+      </section>
+
+      <div className="interactions-layout">
+        <Card className="interactions-feed">
+          <div className="panel-title">
+            <div><h2>خط زمانی</h2><p>جدیدترین‌ها در بالا</p></div>
+            <div className="table-toolbar">
+              <div className="search-box">
+                <Search size={15}/>
+                <input placeholder="جستجوی موضوع، خلاصه یا سازمان…" value={q} onChange={(e) => setQ(e.target.value)} />
+              </div>
+              <select aria-label="فیلتر نوع" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+                <option value="">همه انواع</option>
+                {typesPresent.map((t) => <option key={t} value={t}>{TYPE_META[t]?.label ?? t}</option>)}
+              </select>
+            </div>
+            <div className="seg-btn">
+              <button className={!followUps ? 'active' : ''} onClick={() => setFollowUps(false)}>همه</button>
+              <button className={followUps ? 'warning active' : ''} onClick={() => setFollowUps(true)}>پیگیری‌ها</button>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="loading-row"><span className="spinner" /> در حال بارگذاری…</div>
+          ) : timeline.length ? (
+            <div className="interaction-timeline">
+              {timeline.map(([day, list]) => (
+                <div className="timeline-day" key={day}>
+                  <div className="timeline-dayhead"><span>{dayLabel(day)}</span><b>{list.length}</b></div>
+                  <div className="timeline-items">
+                    {list.map((i) => {
+                      const meta = TYPE_META[i.type] ?? { label: fa(i.type), color: 'type-other' };
+                      return (
+                        <article className={`timeline-item ${i.followUpRequired ? 'has-follow' : ''}`} key={i.id}>
+                          <TypeDot type={i.type} />
+                          <div className="ti-body">
+                            <div className="ti-head">
+                              <span className="ti-type">{meta.label}</span>
+                              <span className="ti-time"><Clock size={12}/>{timeLabel(i.occurredAt)}</span>
+                              {i.importance && i.importance !== 'MEDIUM' && <Badge className={i.importance === 'CRITICAL' || i.importance === 'HIGH' ? 'danger' : 'warning'}>{fa(i.importance)}</Badge>}
+                              {i.purpose && <Badge>{PURPOSE_META[i.purpose] ?? i.purpose}</Badge>}
+                              {i.result && RESULT_META[i.result] && <Badge className={RESULT_META[i.result].cls}>{RESULT_META[i.result].label}</Badge>}
+                              {i.quality != null && <Badge>{i.quality}★ {QUALITY_LABEL[i.quality] ?? ''}</Badge>}
+                            </div>
+                            <Link className="ti-subject" href={`/interactions/${i.id}`}>{i.subject}</Link>
+                            {i.summary ? <p className="ti-summary">{i.summary}</p> : null}
+                            <div className="ti-meta">
+                              {i.organization?.name ? <span><Building2 size={12}/>{i.organization.name}</span> : null}
+                              {i.person ? <span><User size={12}/>{i.person.firstName} {i.person.lastName}</span> : null}
+                              {i.relationship?.sourceOrganization?.name && i.relationship?.targetOrganization?.name
+                                ? <span className="ti-rel"><Activity size={12}/>{i.relationship.sourceOrganization.name} ↔ {i.relationship.targetOrganization.name}</span>
+                                : null}
+                            </div>
+                            {i.followUpRequired && (
+                              <div className="ti-followup">
+                                <BellRing size={12}/>
+                                <span>پیگیری {i.followUpAt ? `در ${dateTimeLabel(i.followUpAt)}` : 'لازم'}</span>
+                                {i.followUpAt && new Date(i.followUpAt).getTime() < Date.now() ? <Badge className="danger">سررسید گذشته</Badge> : null}
+                              </div>
+                            )}
+                            {i.nextStep && (
+                              <div className="ti-followup" style={i.nextStepAt && new Date(i.nextStepAt).getTime() < Date.now() ? { borderColor: 'color-mix(in srgb, var(--danger, #e5484d) 45%, var(--border))' } : undefined}>
+                                <ClipboardList size={12}/>
+                                <span>قدم بعدی: {i.nextStep}{i.nextStepAt ? ` — ${dateTimeLabel(i.nextStepAt)}` : ''}{i.nextStepAt && new Date(i.nextStepAt).getTime() < Date.now() ? ' (موعد گذشته)' : ''}</span>
+                              </div>
+                            )}
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-people">
+              <Activity size={28}/>
+              <p>{followUps ? 'پیگیری‌ای ثبت نشده است. تعامل‌هایی که در آن‌ها «پیگیری» را علامت زده‌اید، اینجا فهرست می‌شوند.' : 'تعاملی ثبت نشده است. از دکمهٔ «ثبت تعامل» در بالای همین صفحه، نخستین تماس یا جلسه را ثبت کنید.'}</p>
+            </div>
+          )}
+        </Card>
+
+
+      </div>
+    </div>
+    {/* Create modal */}
+    <Modal open={createOpen} title="ثبت تعامل" description="تماس، ایمیل، جلسه یا یادداشت — تعامل در تایم‌لاین شما ثبت می‌شود." onClose={() => setCreateOpen(false)}
+      footer={<>
+        <button type="button" className="btn btn-secondary" onClick={() => setCreateOpen(false)}>انصراف</button>
+        <button type="submit" form="interaction-create-form" className="srip-button primary" disabled={busy}>{busy ? 'در حال ذخیره…' : 'ثبت تعامل'}</button>
+      </>}>
+      <form id="interaction-create-form" className="entity-form" onSubmit={create}>
+        <div className="field full"><label className="field-label">نوع</label>
+          <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
+            {Object.keys(TYPE_META).map((t) => <option key={t} value={t}>{TYPE_META[t].label}</option>)}
+          </select>
+        </div>
+        <div className="field full"><label className="field-label">موضوع <span className="req">*</span></label><input required value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} /></div>
+        <div className="field full"><label className="field-label">زمان</label><JalaliDateField withTime value={form.occurredAt} onChange={(v) => setForm({ ...form, occurredAt: v })} /></div>
+        <div className="field full"><label className="field-label">خلاصه</label><textarea value={form.summary} onChange={(e) => setForm({ ...form, summary: e.target.value })} /></div>
+        <div className="form-grid">
+          <div className="field"><label className="field-label">هدف تعامل</label>
+            <select value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })}>
+              <option value="">—</option>
+              {Object.entries(PURPOSE_META).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </div>
+          <div className="field"><label className="field-label">کانال</label>
+            <select value={form.channel} onChange={(e) => setForm({ ...form, channel: e.target.value })}>
+              <option value="">—</option>
+              {['MEETING','PHONE','EMAIL','MESSAGE','EVENT','OTHER'].map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div className="field"><label className="field-label">کیفیت گفت‌وگو</label>
+            <select value={form.quality} onChange={(e) => setForm({ ...form, quality: e.target.value })}>
+              <option value="">—</option>
+              {[1,2,3,4,5].map(q => <option key={q} value={q}>{q} — {QUALITY_LABEL[q]}</option>)}
+            </select>
+          </div>
+          <div className="field"><label className="field-label">نتیجه</label>
+            <select value={form.result} onChange={(e) => setForm({ ...form, result: e.target.value })}>
+              <option value="">—</option>
+              {Object.entries(RESULT_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+            </select>
+          </div>
+          <div className="field"><label className="field-label">جهت</label>
+            <select value={form.direction} onChange={(e) => setForm({ ...form, direction: e.target.value })}>
+              <option value="">—</option>
+              {Object.entries(DIRECTION_META).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </div>
+          <div className="field"><label className="field-label">قدم بعدی</label><input value={form.nextStep} onChange={(e) => setForm({ ...form, nextStep: e.target.value })} placeholder="مثلاً ارسال پیش‌فاکتور" /></div>
+          {form.nextStep && (
+            <div className="field full"><label className="field-label">موعد قدم بعدی</label><JalaliDateField withTime value={form.nextStepAt} onChange={(v) => setForm({ ...form, nextStepAt: v })} /></div>
+          )}
+        </div>
+        <div className="field"><label className="field-label">سازمان</label><input value={form.organizationId} onChange={(e) => setForm({ ...form, organizationId: e.target.value })} placeholder="شناسه سازمان (اختیاری)" /></div>
+        <div className="field"><label className="field-label">شخص</label><input value={form.personId} onChange={(e) => setForm({ ...form, personId: e.target.value })} placeholder="شناسه شخص (اختیاری)" /></div>
+        <div className="field full check-line">
+          <input type="checkbox" checked={form.followUpRequired} onChange={(e) => setForm({ ...form, followUpRequired: e.target.checked })} />
+          نیازمند پیگیری
+        </div>
+        {form.followUpRequired && (
+          <div className="field full"><label className="field-label">موعد پیگیری</label><JalaliDateField withTime value={form.followUpAt} onChange={(v) => setForm({ ...form, followUpAt: v })} /></div>
+        )}
+      </form>
+    </Modal>
+    </>
+  );
+}
+function dayLabel(day: string): string {
+  const d = new Date(day);
+  const today = new Date().toDateString();
+  const yest = new Date(Date.now() - 86400000).toDateString();
+  if (day === today) return 'امروز';
+  if (day === yest) return 'دیروز';
+  return faFullDate(d); // ترتیب دستوری درست (Intl fa-IR در برخی ICUها ترتیب را می‌شکند)
+}
+function timeLabel(iso: string): string {
+  return new Date(iso).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
+}
+function dateTimeLabel(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString('fa-IR', { month: 'short', day: 'numeric' }) + ' — ' + d.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
+}

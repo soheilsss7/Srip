@@ -1,0 +1,22 @@
+import { Module } from '@nestjs/common';
+import { EventBusModule } from '../event-bus/event-bus.module';
+import { CriteriaModule } from '../criteria/criteria.module';
+import { AuditModule } from '../audit/audit.module';
+import { ScoringBaseService } from './scoring-base.service';
+import { CanonicalRelationshipScoreService } from './relationship-score.service';
+import { OpportunityScoreService } from './opportunity-score.service';
+import { RiskScoreService } from './risk-score.service';
+import { ConnectorScoreService } from './connector-score.service';
+import { NetworkScoreService } from './network-score.service';
+import { ScoringController } from './scoring.controller';
+import { ScoreVersioningService } from './score-versioning.service';
+@Module({
+    imports: [EventBusModule, AuditModule, CriteriaModule],
+    controllers: [ScoringController],
+    providers: [
+        ScoringBaseService, ScoreVersioningService, CanonicalRelationshipScoreService, OpportunityScoreService, RiskScoreService, ConnectorScoreService, NetworkScoreService
+    ],
+    exports: [CanonicalRelationshipScoreService, OpportunityScoreService, RiskScoreService, ConnectorScoreService, NetworkScoreService]
+})
+export class ScoringModule {
+}
