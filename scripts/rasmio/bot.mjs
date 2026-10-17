@@ -48,6 +48,7 @@ function botPush(tag) {
   sh('git add -f out'); sh('git add -f shots'); sh('git add -f data'); sh('git add -f frontier.json');
   if (!sh(`git commit -m "rasmio-bot: ${tag} (${new Date().toISOString().slice(11, 19)})"`)) return;
   for (let i = 0; i < 3; i++) {
+    sh('git rebase --abort || true'); /* ربیز نیمه‌کارهٔ مانده = فاجعهٔ ۱۷ مهر — همیشه پاک شود */
     sh(`git fetch origin ${BRANCH}`);
     sh(`git rebase origin/${BRANCH}`);
     if (sh(`git push origin HEAD:${BRANCH}`)) { log('bot-push:', tag); return; }
@@ -72,16 +73,21 @@ async function storageGuard() {
     } catch (e) { G('شمارش کامیت خطا خورد:', String(e).slice(0, 80)); }
     if (count >= 300) {
       const sh = (c) => { try { execSync(c, { stdio: 'pipe', timeout: 600_000 }); return true; } catch (e) { G('گام ناموفق:', c.slice(0, 70), '→', String((e && e.message) || e).slice(0, 150)); return false; } };
+      sh('git rebase --abort || true'); /* ربیز نیمه‌کاره = فاجعهٔ ۱۷ مهر (پوش درختِ قفل‌شده) */
       sh(`git fetch origin ${BRANCH}`);
       sh(`git rebase origin/${BRANCH}`);
       sh(`git push origin HEAD:${BRANCH}`);
-      if (sh('git checkout --orphan _squash_tmp')) {
-        if (sh('git commit -q -m "snapshot: همهٔ داده‌ها + تاریخچهٔ فشرده (محافظ سقف ریپو)"')) {
-          sh(`git branch -M ${BRANCH}`);
-          if (sh(`git push -f origin HEAD:${BRANCH}`)) G('✓ تاریخچه فشرده شد (' + count + ' کامیت → ۱) — داده‌ها کامل، حجم همیشه زیر سقف');
+      sh('git rebase --abort || true');
+      if (sh('git checkout --orphan _squash_tmp') && sh('git add -A') && sh('git commit -q -m "snapshot: داده‌ها + تاریخچهٔ فشرده (محافظ سقف)"')) {
+        /* قفل سلامت: فقط اگر گرافِ داخل اسنپ‌شات سالم و بزرگ است پوش اجباری می‌شود */
+        let nodesN = 0;
+        try { nodesN = Object.keys((JSON.parse(fs.readFileSync('data/graph.json', 'utf8')) || {}).nodes || {}).length; } catch {}
+        const floor = Math.max(1000, Math.floor(((frontier.stats && frontier.stats.maxNodes) || 0) * 0.5));
+        if (nodesN >= floor) {
+          if (sh(`git push -f origin HEAD:${BRANCH}`)) G('✓ تاریخچه فشرده شد (' + count + ' کامیت → ۱؛ سلامت گراف ' + nodesN + ' گره تأیید شد)');
           else G('فشرده‌سازی این بار نشد — اجرای بعدی دوباره');
-        }
-      }
+        } else { G('⛔ فشرده‌سازی لغو شد — گراف اسنپ‌شات سالم نیست (' + nodesN + ' < ' + floor + ')؛ داده حفظ شد'); }
+      } else G('فشرده‌سازی این بار نشد — اجرای بعدی دوباره');
     }
     /* ۲) آرشیو روزانهٔ کامل در Releases — رایگان، جدای از حجم ریپو (۷ روز نگهداری) */
     const today = new Date().toISOString().slice(0, 10);
@@ -167,23 +173,86 @@ function decryptBlob(blob, passphrase) {
   return JSON.parse(pt.toString('utf8'));
 }
 
+/* ═══ خودترمیمی: بازسازی کامل گراف/صف/بازدید از فایل‌های موجودیتِ سالم (data/entities) ═══ */
+function rebuildFromEntities(why) {
+  try {
+    const files = fs.readdirSync(`${DATA}/entities`).filter((f) => f.endsWith('.json'));
+    if (files.length < 1000) { log('🔨 بازسازی رد شد — فایل موجودیت کافی نیست:', files.length); return false; }
+    log('🔨 بازسازی حالت از', files.length, 'فایل موجودیت سالم… (' + why + ')');
+    const nodes = {}, edges = [], visited = {}, ekeys = new Set();
+    const mk = (href) => { const pm = String(href).match(/\/person\/([0-9A-Fa-f]+)/); if (pm) return { type: 'person', id: pm[1] }; const cm = String(href).match(/\/company\/(\d+)/); if (cm) return { type: 'company', id: cm[1] }; return null; };
+    const now = new Date().toISOString();
+    for (const f of files) {
+      let d; try { d = JSON.parse(fs.readFileSync(`${DATA}/entities/${f}`, 'utf8')); } catch { continue; }
+      if (!d || !d.type || !d.id) continue;
+      const k = d.type + ':' + d.id;
+      nodes[k] = { type: d.type, id: d.id, name: d.name || d.id, url: d.url || (d.type === 'company' ? 'https://rasmio.com/company/' + d.id : 'https://rasmio.com/person/' + d.id + '/x/') };
+      const rows = Array.isArray(d.rows) ? d.rows : [];
+      visited[k] = { at: now, rows: rows.length };
+      for (const r of rows) {
+        const t = r && r.href ? mk(r.href) : null;
+        if (!t) continue;
+        const tk = t.type + ':' + t.id;
+        if (!nodes[tk]) nodes[tk] = { type: t.type, id: t.id, name: (r.name || (Array.isArray(r.cells) && r.cells[0] ? String(r.cells[0]).trim() : '') || t.id), url: t.type === 'company' ? 'https://rasmio.com/company/' + t.id : 'https://rasmio.com/person/' + t.id + '/x/' };
+        const role = Array.isArray(r.cells) ? String(r.cells.find((c) => /مدیر|بازرس|عضو|نماینده|رئیس|حق امضا/.test(String(c)) || r.cells[1]) || '') : '';
+        const ek = k + '|' + tk + '|' + (r.header || '') + '|' + role;
+        if (ekeys.has(ek)) continue;
+        ekeys.add(ek);
+        edges.push({ from: k, to: tk, kind: r.header || '', role: role.slice(0, 60), cells: r.cells });
+      }
+    }
+    /* صف‌ها: هدف‌های ارجاع‌شده‌ای که فایل ندارند (خزش‌نشده) */
+    const pendCo = [], pendPer = [];
+    for (const k of Object.keys(nodes)) {
+      if (visited[k]) continue;
+      const [type, id] = k.split(':');
+      if (type === 'company') pendCo.push({ type, id, name: nodes[k].name });
+      else pendPer.push({ type, id, name: nodes[k].name });
+    }
+    /* صفر-ردیف‌ها را «جارو-شده» علامت می‌زنیم — امروز از نو خزش شده‌اند؛ دور تکراری نگیریم */
+    const sm = {};
+    for (const [k, v] of Object.entries(visited)) if ((v || {}).rows === 0 && k.startsWith('company:')) sm[k] = 3;
+    const old = frontier || {};
+    frontier = {
+      pending: pendCo, personsLater: pendPer, visited,
+      graph: { nodes, edges },
+      discovery: old.discovery && old.discovery.searchDone !== undefined ? old.discovery : { v: 9, search: { termIdx: 381, page: 1, provDone: true }, searchDone: true },
+      stats: Object.assign({}, old.stats, { entities: Object.keys(visited).length, maxNodes: Math.max(Object.keys(nodes).length, (old.stats && old.stats.maxNodes) || 0) }),
+      lastDay: old.lastDay, sweptMap: sm, crawlMode: old.crawlMode,
+    };
+    log('🔨 بازسازی کامل ✓ — گره:', Object.keys(nodes).length, '· یال:', edges.length, '· صف شرکت:', pendCo.length, '· اشخاص پارک:', pendPer.length);
+    return true;
+  } catch (e) { log('🔨 خطای بازسازی:', String((e && e.message) || e).slice(0, 120)); return false; }
+}
+
 /* ─── خزنده: بارگذاری صف ─── */
 let frontier;
 try { frontier = JSON.parse(fs.readFileSync('frontier.json', 'utf8')); } catch { frontier = null; }
 if (!frontier || !Array.isArray(frontier.pending)) {
-  let seeds = [];
-  try { seeds = JSON.parse(fs.readFileSync('companies.json', 'utf8')); } catch {}
-  frontier = { pending: seeds.filter((c) => c.nationalId).map((c) => ({ type: 'company', id: c.nationalId, name: c.name })), visited: {}, graph: { nodes: {}, edges: [] }, stats: { runs: 0, entities: 0 } };
+  /* فاجعهٔ ۱۷ مهر: frontier خراب → شروع خاموش از صفر. حالا: اول بازسازی از فایل‌های سالم */
+  if (!rebuildFromEntities('frontier.json ناخوانا/خراب')) {
+    log('🚨 بازسازی نشد — ادامه با دانه‌های اولیه (حالت اضطراری)');
+    let seeds = [];
+    try { seeds = JSON.parse(fs.readFileSync('companies.json', 'utf8')); } catch {}
+    frontier = { pending: seeds.filter((c) => c.nationalId).map((c) => ({ type: 'company', id: c.nationalId, name: c.name })), visited: {}, graph: { nodes: {}, edges: [] }, stats: { runs: 0, entities: 0 } };
+  }
 }
 /* گراف از frontier.json جدا شده — از data/graph.json بارگذاری می‌شود */
 if (!frontier.graph || !frontier.graph.nodes || !Object.keys(frontier.graph.nodes).length) {
   try { frontier.graph = JSON.parse(fs.readFileSync(`${DATA}/graph.json`, 'utf8')); } catch { frontier.graph = { nodes: {}, edges: [] }; }
 }
+/* واچ‌داگ: گراف کوچک‌تر از نصف بیشینهٔ تاریخی = فاجعه → بازسازی از فایل‌های موجودیت */
+{
+  const _n = Object.keys(frontier.graph.nodes || {}).length;
+  const _floor = Math.max(40000, Math.floor(((frontier.stats && frontier.stats.maxNodes) || 0) * 0.5));
+  if (_n && _n < _floor) { log('🚨 واچ‌داگ: گراف ' + _n + ' گره < کف سلامت ' + _floor + ' → بازسازی'); rebuildFromEntities('گراف آسیب‌دیده'); }
+}
 const saveFrontier = () => {
   try {
     const { graph, ...rest } = frontier;
-    fs.writeFileSync('frontier.json', JSON.stringify(rest));
-    if (graph && graph.nodes) fs.writeFileSync(`${DATA}/graph.json`, JSON.stringify(graph));
+    fs.writeFileSync('frontier.json.tmp', JSON.stringify(rest));
+    fs.renameSync('frontier.json.tmp', 'frontier.json');
+    if (graph && graph.nodes) { fs.writeFileSync(`${DATA}/graph.json.tmp`, JSON.stringify(graph)); fs.renameSync(`${DATA}/graph.json.tmp`, `${DATA}/graph.json`); }
   } catch {}
 };
 const normId = (href) => {
@@ -978,6 +1047,7 @@ try {
   log('پایان این اجرا:', stopReason, '— صف باقی‌مانده:', frontier.pending.length);
   frontier.stats.runs++;
   frontier.stats.entities = Object.keys(frontier.visited).length;
+  frontier.stats.maxNodes = Math.max(frontier.stats.maxNodes || 0, Object.keys(frontier.graph.nodes).length);
   try { fs.writeFileSync(`${DATA}/graph.json`, JSON.stringify(frontier.graph)); } catch {}
   saveFrontier();
 
