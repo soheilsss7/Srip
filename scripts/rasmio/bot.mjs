@@ -378,9 +378,11 @@ try {
   }
   if (removed) log('🧽 ' + removed + ' گرهٔ زباله (نام خطای صفحه) حذف شد');
   const seenP = new Set(); const before = (frontier.pending || []).length;
+  /* ⚠️ فقط «خزش‌شده»ها حذف می‌شوند. بودن در گراف یعنی «کشف‌شده با اطلاعات پایه»،
+     نه «خزش‌شده» — وگرنه کل صفِ اشخاص/محصولات خالی می‌شد (باگ ۲۴ مهر). */
   frontier.pending = (frontier.pending || []).filter((x) => {
     const k = x.type + ':' + x.id; if (seenP.has(k)) return false; seenP.add(k);
-    return !frontier.visited[k] && !frontier.graph.nodes[k];
+    return !frontier.visited[k];
   });
   const cut = before - frontier.pending.length;
   if (cut > 0) log('🧽 صف پاک‌سازی شد — ' + cut + ' مورد تکراری/خزش‌شده حذف (' + before + ' → ' + frontier.pending.length + ')');
