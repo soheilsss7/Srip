@@ -1,0 +1,9 @@
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { IsEnum, IsInt, IsOptional, IsString, Max, Min, MinLength } from 'class-validator';
+import { OpportunityStatus } from '@prisma/client';
+import { OpportunitiesService } from './opportunities.service';
+import { AuthGuard } from '../common/guards/auth.guard';
+import { AuthorizationGuard } from '../common/guards/authorization.guard';
+import { RequirePermission } from '../common/decorators/require-permission.decorator';
+class OpportunityDto { @IsString() @MinLength(2) name!:string; @IsString() @IsOptional() description?:string; @IsEnum(OpportunityStatus) @IsOptional() status?:OpportunityStatus; @IsOptional() value?:number; @IsInt() @Min(0) @Max(100) @IsOptional() probability?:number; @IsString() @IsOptional() organizationId?:string; @IsString() @IsOptional() projectId?:string; @IsString() @IsOptional() relationshipId?:string; }
+@Controller('opportunities') @UseGuards(AuthGuard, AuthorizationGuard) export class OpportunitiesController { constructor(private readonly service: OpportunitiesService) {} @Get() @RequirePermission('opportunity.read') list(@Req() req:any,@Query('page') page?:string,@Query('pageSize') pageSize?:string){return this.service.list(req.user.sub,page,pageSize)} @Get(':id') @RequirePermission('opportunity.read') get(@Param('id') id:string,@Req() req:any){return this.service.get(req.user.sub,id)} @Post() @RequirePermission('opportunity.write') create(@Body() d:OpportunityDto,@Req() req:any){return this.service.create(req.user.sub,d)} @Patch(':id') @RequirePermission('opportunity.write') update(@Param('id') id:string,@Body() d:OpportunityDto,@Req() req:any){return this.service.update(req.user.sub,id,d)} @Delete(':id') @RequirePermission('opportunity.write') remove(@Param('id') id:string,@Req() req:any){return this.service.remove(req.user.sub,id)} }
