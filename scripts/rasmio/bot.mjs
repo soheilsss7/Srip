@@ -1877,12 +1877,26 @@ try {
       }
     }
   }
-  /* ترتیب: شرکت‌ها اول (داده و یال تازه می‌دهند)، اشخاص بعد از آن — داخل هر گروه تصادفی */
+  /* 🆕 ترتیبِ نوبت‌گردشی: شرکت و شخص و محصول و برند و اختراع همه سهم می‌گیرند (درخواست ۲۴ مهر).
+     قبلاً شرکت‌ها کلِ صف را می‌گرفتند و اشخاص/محصولات هرگز خزش نمی‌شدند. */
   {
-    const comps = frontier.pending.filter((x) => x.type === 'company');
-    const pers = frontier.pending.filter((x) => x.type !== 'company');
-    for (const grp of [comps, pers]) for (let i = grp.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [grp[i], grp[j]] = [grp[j], grp[i]]; }
-    frontier.pending = [...comps, ...pers];
+    const groups = {};
+    for (const x of frontier.pending) (groups[x.type] = groups[x.type] || []).push(x);
+    for (const g of Object.values(groups)) for (let i = g.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [g[i], g[j]] = [g[j], g[i]]; }
+    const WEIGHT = { company: 3, person: 2, product: 2, brand: 1, patent: 1 };
+    const order = [];
+    const idx = {}; for (const t of Object.keys(groups)) idx[t] = 0;
+    let total = frontier.pending.length;
+    while (total > 0) {
+      let moved = false;
+      for (const t of Object.keys(groups)) {
+        const w = WEIGHT[t] || 1;
+        for (let i = 0; i < w && idx[t] < groups[t].length; i++) { order.push(groups[t][idx[t]++]); total--; moved = true; }
+      }
+      if (!moved) break;
+    }
+    frontier.pending = order;
+    log('🎯 ترتیبِ صف: نوبت‌گردشی — ' + Object.entries(groups).map(([t, g]) => t + ' ' + g.length).join(' · '));
   }
   /* ═══ حالت ترکیبی: هر اجرا علاوه بر شرکت‌ها چند شخص هم خزش می‌کند (صفحهٔ شخص = جدول شرکت‌های مرتبط + آگهی‌ها) ═══ */
   if (frontier.personsLater && frontier.personsLater.length) {
