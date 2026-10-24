@@ -133,6 +133,13 @@ async function storageGuard() {
       sh(`git rebase origin/${BRANCH}`);
       sh(`git push origin HEAD:${BRANCH}`);
       sh('git rebase --abort || true');
+      /* 🛡 ایمنی: قبل از فشرده‌سازی، درختِ کاری را با سرِ شاخه یکی کن —
+         وگرنه اسنپ‌شات، کدهای تازه‌ای که بعد از شروع این اجرا پوش شده را پاک می‌کرد (حادثهٔ ۲۴ مهر) */
+      sh('git rebase --abort || true');
+      sh(`git fetch origin ${BRANCH}`);
+      sh(`git reset --mixed origin/${BRANCH}`);
+      sh('git checkout -- .');
+      sh(`git reset --hard origin/${BRANCH}`);
       if (sh('git checkout --orphan _squash_tmp') && sh('git add -A') && sh('git commit -q -m "snapshot: داده‌ها + تاریخچهٔ فشرده (محافظ سقف)"')) {
         /* قفل سلامت: فقط اگر گرافِ داخل اسنپ‌شات سالم و بزرگ است پوش اجباری می‌شود */
         let nodesN = 0;
@@ -467,6 +474,13 @@ const normId = (href) => {
   if (pm) return { type: 'person', id: pm[1] };
   const cm = String(href).match(/\/company\/(\d+)/);
   if (cm) return { type: 'company', id: cm[1] };
+  /* 🆕 محصول / برند / اختراع هم شناسایی می‌شوند ⇒ از صفحهٔ محصول، شرکت تازه درمی‌آید */
+  const pr = String(href).match(/\/product\/([0-9A-Za-z]+)/);
+  if (pr) return { type: 'product', id: pr[1] };
+  const br = String(href).match(/\/brand\/([0-9A-Za-z]+)/);
+  if (br) return { type: 'brand', id: br[1] };
+  const pa = String(href).match(/\/patent\/([0-9A-Za-z]+)/);
+  if (pa) return { type: 'patent', id: pa[1] };
   return null;
 };
 const keyOf = (e) => `${e.type}:${e.id}`;
@@ -505,11 +519,11 @@ if (!frontier.discovery || frontier.discovery.v !== DISCOVERY_V) {
 const enqueue = (ent, via) => {
   if (!ent || !ent.id) return;
   const k = keyOf(ent);
-  /* اشخاص پارک می‌شوند — داده‌شان از جدول‌های شرکت‌ها می‌آید؛ شرکت‌ها اولویت‌اند */
-  if (ent.type === 'person') {
-    frontier.personsLater = frontier.personsLater || [];
-    if (frontier.visited[k] || frontier.personsLater.some((p) => keyOf(p) === k)) return;
-    frontier.personsLater.push(ent);
+  /* 🆕 اشخاص و محصولات دیگر پارکِ مطلق نمی‌شوند — مستقیم در صف (درخواست ۲۴ مهر) */
+  if (ent.type === 'person' || ent.type === 'product' || ent.type === 'brand' || ent.type === 'patent') {
+    if (frontier.visited[k] || frontier.pending.some((p) => keyOf(p) === k)) return;
+    if (frontier.pending.length > 400000) return;
+    frontier.pending.push(ent);
     if (via) dbg('enqueue-' + k, { via });
     return;
   }
@@ -616,7 +630,8 @@ async function discoverSeeds(maxNew = 400) {
           const key = type + ':' + id;
           if (!seen.has(key)) {
             seen.add(key); got++; fresh++;
-            if (type === 'company' || type === 'person') {
+            /* 🆕 همهٔ نوع‌ها (شرکت/شخص/محصول/برند/اختراع) در صف خزش می‌روند */
+            if (!frontier.pending.some((x) => x.type === type && x.id === id)) {
               pendKeys.add(key);
               frontier.pending.push({ type, id, name: h.title || undefined });
             }
@@ -1184,7 +1199,16 @@ async function parsePageTables(pg = page) {
 }
 
 async function extractEntity(ent, pg = page) {
-  const url = ent.type === 'company' ? `${BASE}/company/${ent.id}` : `${BASE}/person/${ent.id}/x/`;
+  /* 🆕 آدرسِ هر نوع موجودیت — محصول/برند/اختراع هم خزش می‌شوند (درخواست ۲۴ مهر) */
+  const URL_OF = {
+    company: (id) => `${BASE}/company/${id}`,
+    person: (id) => `${BASE}/person/${id}/x/`,
+    product: (id) => `${BASE}/product/${id}/`,
+    brand: (id) => `${BASE}/brand/${id}/`,
+    patent: (id) => `${BASE}/patent/${id}/`,
+    invention: (id) => `${BASE}/patent/${id}/`,
+  };
+  const url = (URL_OF[ent.type] || URL_OF.company)(ent.id);
   /* ═══ مسیر سریع: HTML سرور (SSR) — حالت تطبیقی (کوکی/بی‌نام) ═══ */
   let parsed = null, via = 'fetch', html = '';
   const tryFetchParse = async (withCookie) => {
@@ -1810,13 +1834,30 @@ try {
   const discovered = await discoverSeeds(Number(process.env.DISCOVER_MAX || 8000)); /* همیشه فعال: ۵ دقیقه سهم کشف در هر اجرا — شرکت تازه اولویت دارد */
   if (discovered) log('کشف:', discovered, 'موجودیت تازه به صف اضافه شد — صف کل:', frontier.pending.length);
 
-  /* ═══ پارک اشخاص: ۱۰۰٪ بودجه روی شرکت‌ها (دادهٔ اشخاص از جدول‌های شرکت‌ها جمع می‌شود) ═══ */
-  frontier.personsLater = [...(frontier.personsLater || []), ...frontier.pending.filter((x) => x.type === 'person')];
-  frontier.pending = frontier.pending.filter((x) => x.type !== 'person');
-  if (frontier.pending.length < 60 && frontier.personsLater.length) {
-    const back = frontier.personsLater.splice(0, 120).filter((x) => !frontier.visited[keyOf(x)]);
-    frontier.pending.push(...back);
-    log('شرکت‌های صف کم شد —', back.length, 'شخص برای خزش برگشت');
+  /* ═══ 🆕 پرکردنِ خودکارِ صف از گراف: اشخاص و محصولات هم سهم دارند (درخواست ۲۴ مهر) ═══ */
+  try {
+    if ((frontier.pending || []).length < 2000) {
+      const vis = frontier.visited || {};
+      const have = new Set((frontier.pending || []).map((x) => x.type + ':' + x.id));
+      const want = { person: 8000, product: 8000, brand: 4000, patent: 4000, company: 20000 };
+      const bucket = { person: [], product: [], brand: [], patent: [], company: [] };
+      for (const k of Object.keys(frontier.graph.nodes || {})) {
+        const [t, id] = k.split(':');
+        if (!bucket[t]) continue;
+        if (vis[k] || have.has(k)) continue;
+        if (bucket[t].length >= want[t]) continue;
+        bucket[t].push({ type: t, id });
+      }
+      let n = 0;
+      for (const t of Object.keys(want)) { if (bucket[t].length) { frontier.pending.push(...bucket[t]); n += bucket[t].length; } }
+      if (n) log('♻️ صف از گراف پر شد: ' + n + ' موجودیت تازه (شخص ' + bucket.person.length + ' · محصول ' + bucket.product.length + ' · برند ' + bucket.brand.length + ' · اختراع ' + bucket.patent.length + ' · شرکت ' + bucket.company.length + ') · صف: ' + frontier.pending.length);
+    }
+  } catch (e) {}
+
+  /* ═══ 🆕 اشخاص و محصولات دیگر از صف بیرون گذاشته نمی‌شوند (درخواست ۲۴ مهر) ═══ */
+  if (frontier.personsLater && frontier.personsLater.length) {
+    const back = frontier.personsLater.splice(0, 20000).filter((x) => !frontier.visited[keyOf(x)] && !frontier.pending.some((p) => keyOf(p) === keyOf(x)));
+    if (back.length) { frontier.pending.push(...back); log('👥 ' + back.length + ' شخصِ پارک‌شده به صف برگشت · باقی‌مانده: ' + frontier.personsLater.length); }
   }
   /* ═══ جاروی دورهای: هر بار شرکت‌ها تمام شد، صفر-ردیف‌های باقی‌مانده یک دور دیگر با IPهای تازه (حداکثر ۳ دور) ═══ */
   if (!frontier.pending.some((x) => x.type === 'company')) {
