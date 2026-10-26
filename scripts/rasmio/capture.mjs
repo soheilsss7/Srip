@@ -60,7 +60,7 @@ const relay = () => {
     const repo = process.env.GITHUB_REPOSITORY || 'soheilsss7/Srip';
     if (!tok) { dump('relay', 'توکن نیست'); return; }
     const active = JSON.parse(execSync(`curl --fail --silent -H "authorization: Bearer ${tok}" https://api.github.com/repos/${repo}/actions/workflows/rasmio-v3.yml/runs?per_page=50`, { timeout: 20000 }).toString());
-    if ((active.workflow_runs || []).some(r => String(r.id) !== String(process.env.GITHUB_RUN_ID) && ['in_progress', 'queued', 'requested', 'waiting'].includes(r.status))) {
+    if ((active.workflow_runs || []).some(r => Date.parse(r.created_at || r.run_started_at) >= Date.parse('2026-10-26T05:00:00Z') && String(r.id) !== String(process.env.GITHUB_RUN_ID) && ['in_progress', 'queued', 'requested', 'waiting'].includes(r.status))) {
       dump('relay', 'Another run exists; no duplicate successor'); return;
     }
 

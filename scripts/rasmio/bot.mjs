@@ -1531,7 +1531,7 @@ try {
       /* فقط «در حال اجرا» — اجراهای در صف نباید ظرفیت را پر کنند (وگرنه هر کارگر تازه فوراً بیرون می‌رود) */
       /* فقط اجراهای واقعاً زنده حساب می‌شوند: اجرای گیرکرده/زامبی (بیش از ۲۲ دقیقه) ظرفیت را اشغال نکند */
       const FRESH_MS = 22 * 60_000;
-      const others = runs.filter((x) => String(x.id) !== MY_RUN && x.status === 'in_progress' && (!x.run_started_at || (Date.now() - new Date(x.run_started_at).getTime()) < FRESH_MS));
+      const others = runs.filter((x) => Date.parse(x.created_at || x.run_started_at) >= Date.parse('2026-10-26T05:00:00Z') && String(x.id) !== MY_RUN && x.status === 'in_progress' && (!x.run_started_at || (Date.now() - new Date(x.run_started_at).getTime()) < FRESH_MS));
       /* ⚡ سقف اجرای همزمان: بیش از MAX_PARALLEL → خروج فوری (جلوگیری از انباشت و کار تکراری) */
       {
         const MINE_ID = Number(MY_RUN || '9'.repeat(15));
@@ -1934,7 +1934,7 @@ try {
     const groups = {};
     for (const x of frontier.pending) (groups[x.type] = groups[x.type] || []).push(x);
     for (const g of Object.values(groups)) for (let i = g.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [g[i], g[j]] = [g[j], g[i]]; }
-    const WEIGHT = { company: 6, product: 3, person: 1, brand: 1, patent: 1 }; /* 🏢 شرکت اول: از هر IP فقط ۵ صفحهٔ شرکت نصیبمان می‌شود ⇒ همان اولِ اجرا (IP تازه) بگیریم */
+    const WEIGHT = { company: 1, product: 3, person: 2, brand: 1, patent: 1 }; /* 🏢 شرکت اول: از هر IP فقط ۵ صفحهٔ شرکت نصیبمان می‌شود ⇒ همان اولِ اجرا (IP تازه) بگیریم */
     const order = [];
     const idx = {}; for (const t of Object.keys(groups)) idx[t] = 0;
     let total = frontier.pending.length;
