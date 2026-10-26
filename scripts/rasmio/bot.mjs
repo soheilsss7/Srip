@@ -1794,10 +1794,7 @@ try {
   } else log('⚠️ RASMIO_SESSION_KEY نیست — نشست ذخیره نمی‌شود (هر بار پیامک لازم است).');
 
   /* 🚀 وقتی سهمیهٔ API تمام شد و صف بزرگ است، خزش را کوتاه کن تا اجرای بعدی (IP تازه) زودتر شروع شود */
-  if (frontier.discovery && frontier.discovery.apiq && frontier.discovery.apiq.quotaOut) {
-    process.env.CRAWL_TIME_BUDGET_S = String(Math.min(Number(process.env.CRAWL_TIME_BUDGET_S || 1300), Number(process.env.QUOTA_OUT_CRAWL_S || 90)));
-    log('🔄 سهمیهٔ این IP تمام — خزش کوتاه می‌شود تا اجرای بعدی با IP تازه ادامه دهد');
-  }
+  /* Search quota is not a measured detail-page quota. A persisted search flag must not shorten later detail runs. */
   /* ═══ 🔬 کاوش شش: پیمایش بدون عبارت فقط با کلیک «صفحهٔ بعد» — تا کجا می‌رود؟ ═══ */
   try {
     if (!fs.existsSync(`${DATA}/probe-all6.json`)) {
