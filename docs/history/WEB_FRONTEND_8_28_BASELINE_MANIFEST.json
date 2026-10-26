@@ -1,0 +1,41 @@
+{
+  "package": "8.28",
+  "baseline": "8.27",
+  "scope": "Full non-AI Web hardening, route integrity, API contract boundary, security headers, file validation and audit automation.",
+  "source_basis": [
+    "سند فنی پلتفرم تعاملات چک لیستی.docx",
+    "سند پلتفرم تعاملات.docx",
+    "Repository baseline 8.27"
+  ],
+  "preservation": "Existing repository retained; no previous feature is intentionally removed. Invalid navigation was reconciled to canonical routes.",
+  "completed": [
+    "Navigation route integrity corrected",
+    "Register/password-reset routes treated as public auth routes",
+    "Production security headers",
+    "Central API error/request/timeout handling",
+    "Opt-in Idempotency-Key support for mutating requests",
+    "Authenticated report/download path",
+    "Centralized uploads with client-side size/type guard",
+    "Data Quality route",
+    "Repository Web Contract Audit",
+    "Static secret and direct-fetch audit",
+    "AI controller excluded from non-AI contract audit"
+  ],
+  "document_alignment": [
+    "Feature chain Requirement→UX→Entity→Database→API→Business Logic→Authorization→Web→Tests→Security→Deployment",
+    "Web performance: lazy loading/code splitting/cache/CDN/bundle analysis remain runtime gates",
+    "Search: pagination/debounce/ranking/permission-aware filtering",
+    "Network: server-side paths, node limits and lazy graph expansion",
+    "Admin: users/roles/permissions/master data/workflow/scoring/notification/audit",
+    "Import: upload/mapping/validation/duplicate detection/preview/approval/import/report",
+    "Data quality: duplicates/owners/contacts/stale relationships/emails/organizations/dates/profiles",
+    "Reporting: CSV/Excel/PDF and permission/audit requirements"
+  ],
+  "static_audit": "PASS",
+  "contract_audit": "PASS",
+  "zip_integrity": "PASS",
+  "typecheck": "NOT_PROVEN: node_modules absent in current runtime",
+  "production_build": "NOT_PROVEN: node_modules absent in current runtime",
+  "browser_e2e": "NOT_PROVEN: browser/runtime services unavailable in current execution environment",
+  "live_api_db_redis_queue_storage": "NOT_PROVEN"
+}

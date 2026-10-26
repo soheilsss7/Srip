@@ -1,0 +1,232 @@
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.postgres-dr
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      BACKUP_S3_URI: ${BACKUP_S3_URI}
+      BACKUP_S3_SSE: ${BACKUP_S3_SSE:-AES256}
+      BACKUP_S3_KMS_KEY_ID: ${BACKUP_S3_KMS_KEY_ID:-}
+      AWS_REGION: ${AWS_REGION:-eu-central-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
+    command:
+      - bash
+      - -lc
+      - >-
+        exec postgres
+        -c wal_level=replica
+        -c archive_mode=on
+        -c archive_timeout=$${WAL_ARCHIVE_TIMEOUT:-60s}
+        -c archive_command='/usr/local/bin/archive-wal.sh %p %f'
+    volumes: [srip_pg:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+
+  backup:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.postgres-dr
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY}
+      BACKUP_S3_URI: ${BACKUP_S3_URI}
+      BACKUP_S3_SSE: ${BACKUP_S3_SSE:-AES256}
+      BACKUP_S3_KMS_KEY_ID: ${BACKUP_S3_KMS_KEY_ID:-}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-35}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+      AWS_REGION: ${AWS_REGION:-eu-central-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
+    volumes:
+      - srip_backups:/backups
+      - ./scripts:/scripts:ro
+    command: ["/scripts/backup-scheduler.sh"]
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [srip_redis:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  clamav:
+    image: clamav/clamav:1.4.3_base
+    restart: unless-stopped
+    volumes: [srip_clamav:/var/lib/clamav]
+    healthcheck:
+      test: ["CMD-SHELL", "clamdscan --ping 3"]
+      interval: 30s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.api
+    restart: "no"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+    command: ["pnpm", "--filter", "@srip/api", "prisma", "migrate", "deploy"]
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      API_PORT: 4000
+      WEB_ORIGIN: ${WEB_ORIGIN}
+      JWT_SECRET: ${JWT_SECRET}
+      QUEUE_WORKER_ENABLED: "false"
+      FILE_SCAN_REQUIRED: "true"
+      CLAMAV_HOST: clamav
+      CLAMAV_PORT: ${CLAMAV_PORT:-3310}
+      RATE_LIMIT_FAIL_OPEN: ${RATE_LIMIT_FAIL_OPEN:-false}
+      RATE_LIMIT_GLOBAL_MAX: ${RATE_LIMIT_GLOBAL_MAX:-10000}
+      RATE_LIMIT_GLOBAL_WINDOW_MS: ${RATE_LIMIT_GLOBAL_WINDOW_MS:-60000}
+      RATE_LIMIT_IP_MAX: ${RATE_LIMIT_IP_MAX:-500}
+      RATE_LIMIT_IP_WINDOW_MS: ${RATE_LIMIT_IP_WINDOW_MS:-60000}
+      RATE_LIMIT_USER_MAX: ${RATE_LIMIT_USER_MAX:-1000}
+      RATE_LIMIT_USER_WINDOW_MS: ${RATE_LIMIT_USER_WINDOW_MS:-60000}
+      RATE_LIMIT_ENDPOINT_MAX: ${RATE_LIMIT_ENDPOINT_MAX:-120}
+      RATE_LIMIT_ENDPOINT_WINDOW_MS: ${RATE_LIMIT_ENDPOINT_WINDOW_MS:-60000}
+      RATE_LIMIT_LOGIN_MAX: ${RATE_LIMIT_LOGIN_MAX:-10}
+      RATE_LIMIT_LOGIN_WINDOW_MS: ${RATE_LIMIT_LOGIN_WINDOW_MS:-900000}
+      RATE_LIMIT_PASSWORD_RESET_MAX: ${RATE_LIMIT_PASSWORD_RESET_MAX:-5}
+      RATE_LIMIT_PASSWORD_RESET_WINDOW_MS: ${RATE_LIMIT_PASSWORD_RESET_WINDOW_MS:-900000}
+      RATE_LIMIT_MFA_MAX: ${RATE_LIMIT_MFA_MAX:-10}
+      RATE_LIMIT_MFA_WINDOW_MS: ${RATE_LIMIT_MFA_WINDOW_MS:-300000}
+      RATE_LIMIT_EXPORT_MAX: ${RATE_LIMIT_EXPORT_MAX:-20}
+      RATE_LIMIT_EXPORT_WINDOW_MS: ${RATE_LIMIT_EXPORT_WINDOW_MS:-600000}
+      RATE_LIMIT_SEARCH_MAX: ${RATE_LIMIT_SEARCH_MAX:-120}
+      RATE_LIMIT_SEARCH_WINDOW_MS: ${RATE_LIMIT_SEARCH_WINDOW_MS:-60000}
+      RATE_LIMIT_BULK_IMPORT_MAX: ${RATE_LIMIT_BULK_IMPORT_MAX:-10}
+      RATE_LIMIT_BULK_IMPORT_WINDOW_MS: ${RATE_LIMIT_BULK_IMPORT_WINDOW_MS:-600000}
+      RATE_LIMIT_WEBHOOK_MAX: ${RATE_LIMIT_WEBHOOK_MAX:-300}
+      RATE_LIMIT_WEBHOOK_WINDOW_MS: ${RATE_LIMIT_WEBHOOK_WINDOW_MS:-60000}
+      RATE_LIMIT_SENSITIVE_MAX: ${RATE_LIMIT_SENSITIVE_MAX:-30}
+      RATE_LIMIT_SENSITIVE_WINDOW_MS: ${RATE_LIMIT_SENSITIVE_WINDOW_MS:-60000}
+      OTEL_TRACING_ENABLED: ${OTEL_TRACING_ENABLED:-true}
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-srip-api}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
+      SENTRY_RELEASE: ${SENTRY_RELEASE:-unknown}
+      S3_REQUIRED: ${S3_REQUIRED:-true}
+    ports: ["127.0.0.1:4000:4000"]
+    logging:
+      driver: json-file
+      options: {max-size: "20m", max-file: "5"}
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      migrate: {condition: service_completed_successfully}
+      clamav: {condition: service_healthy}
+
+  worker:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      QUEUE_WORKER_ENABLED: "true"
+      QUEUE_CONCURRENCY: ${QUEUE_CONCURRENCY:-5}
+      QUEUE_MAX_ATTEMPTS: ${QUEUE_MAX_ATTEMPTS:-5}
+      QUEUE_BACKOFF_MS: ${QUEUE_BACKOFF_MS:-2000}
+      QUEUE_RATE_LIMIT_MAX: ${QUEUE_RATE_LIMIT_MAX:-100}
+      QUEUE_RATE_LIMIT_DURATION_MS: ${QUEUE_RATE_LIMIT_DURATION_MS:-1000}
+      OTEL_TRACING_ENABLED: ${OTEL_TRACING_ENABLED:-true}
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-srip-worker}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
+      SENTRY_RELEASE: ${SENTRY_RELEASE:-unknown}
+      S3_REQUIRED: ${S3_REQUIRED:-true}
+    logging:
+      driver: json-file
+      options: {max-size: "20m", max-file: "5"}
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      migrate: {condition: service_completed_successfully}
+      clamav: {condition: service_healthy}
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    ports: ["127.0.0.1:3000:3000"]
+    logging:
+      driver: json-file
+      options: {max-size: "20m", max-file: "5"}
+    depends_on:
+      api: {condition: service_healthy}
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.133.0
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./infra/otel/collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+    ports: ["127.0.0.1:4317:4317", "127.0.0.1:4318:4318"]
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    restart: unless-stopped
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - srip_prometheus:/prometheus
+    ports: ["127.0.0.1:9090:9090"]
+    depends_on: [api]
+
+  grafana:
+    image: grafana/grafana:12.1.1
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - srip_grafana:/var/lib/grafana
+    ports: ["127.0.0.1:3001:3000"]
+    depends_on: [prometheus]
+
+volumes:
+  srip_pg:
+  srip_redis:
+  srip_clamav:
+  srip_prometheus:
+  srip_grafana:
+  srip_backups:

@@ -1,0 +1,22 @@
+export type LifecycleEntityConfig = { delegate: string; permission: string; organizationFields: string[]; softDeleteStatus?: { field: string; value: string }; restoreStatus?: { field: string; value: string } };
+export const LIFECYCLE_ENTITIES: Record<string, LifecycleEntityConfig> = {
+  Organization:{delegate:'organization',permission:'org.write',organizationFields:['id'],softDeleteStatus:{field:'status',value:'ARCHIVED'},restoreStatus:{field:'status',value:'ACTIVE'}},
+  Person:{delegate:'person',permission:'person.write',organizationFields:['organizationId']},
+  Referral:{delegate:'referral',permission:'relationship.write',organizationFields:['sourceOrganizationId','targetOrganizationId']},
+  Workflow:{delegate:'workflow',permission:'workflow.write',organizationFields:['organizationId']},
+  IntegrationConnection:{delegate:'integrationConnection',permission:'integration.write',organizationFields:['organizationId']},
+  PersonRelationship:{delegate:'personRelationship',permission:'relationship.write',organizationFields:[],softDeleteStatus:{field:'status',value:'ARCHIVED'},restoreStatus:{field:'status',value:'ACTIVE'}},
+  Relationship:{delegate:'relationship',permission:'relationship.write',organizationFields:['sourceOrganizationId','targetOrganizationId'],softDeleteStatus:{field:'status',value:'ARCHIVED'},restoreStatus:{field:'status',value:'ACTIVE'}},
+  Interaction:{delegate:'interaction',permission:'interaction.write',organizationFields:['organizationId']},
+  Meeting:{delegate:'meeting',permission:'meeting.write',organizationFields:['organizationId']},
+  Action:{delegate:'action',permission:'action.write',organizationFields:['organizationId']},
+  Commitment:{delegate:'commitment',permission:'commitment.write',organizationFields:['organizationId']},
+  Project:{delegate:'project',permission:'project.write',organizationFields:['organizationId']},
+  ProjectRequirement:{delegate:'projectRequirement',permission:'project.write',organizationFields:['organizationId']},
+  Opportunity:{delegate:'opportunity',permission:'opportunity.write',organizationFields:['organizationId']},
+  Note:{delegate:'note',permission:'entity.write',organizationFields:['organizationId']},
+  Document:{delegate:'document',permission:'document.write',organizationFields:['organizationId']},
+  Notification:{delegate:'notification',permission:'entity.write',organizationFields:[]},
+  Recommendation:{delegate:'recommendation',permission:'recommendation.write',organizationFields:['organizationId']},
+  User:{delegate:'user',permission:'entity.write',organizationFields:[]},
+};
