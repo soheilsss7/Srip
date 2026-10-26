@@ -7,6 +7,11 @@ let verify = false;
 try { verify = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8')).client_payload?.mode === 'verify-data'; } catch {}
 if (verify) {
   process.env.RASMIO_VERIFY = '1';
+  try {
+    const keys = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8')).client_payload?.keys;
+    if (Array.isArray(keys)) process.env.RASMIO_VERIFY_KEYS = JSON.stringify(keys.filter(k => /^(company|person|product):[a-zA-Z0-9]+$/.test(k)).slice(0, 6));
+  } catch {}
+
   process.env.RASMIO_PARALLEL = '1';
   process.env.CRAWL_LIMIT = '6';
   process.env.CRAWL_TIME_BUDGET_S = '300';

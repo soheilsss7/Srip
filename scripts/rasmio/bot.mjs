@@ -14,6 +14,7 @@
    · اجرا: schedule روزانه + repository_dispatch (عامل Arena) + دستی.
    ========================================================================== */
 import puppeteer from 'puppeteer';
+import { extractTablesFromDOM } from './table-extractor.mjs';
 import { installNetworkAudit } from './network-audit.mjs';
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -1174,32 +1175,7 @@ const clearDeviceModal = async (stage) => {
 };
 
 /* ─── استخراج ساختاری یک صفحهٔ شرکت/شخص (جدول‌های MUI) ─── */
-async function parsePageTables(pg = page) {
-  return pg.evaluate(() => {
-    const rows = [];
-    const tables = [];
-    const seen = new Set();
-    for (const t of document.querySelectorAll('table')) {
-      const header = [...t.querySelectorAll('thead th')].map((th) => (th.innerText || '').replace(/\s+/g, ' ').trim()).filter(Boolean).join(' | ');
-      const allRows = [];
-      for (const tr of t.querySelectorAll('tbody tr')) {
-        const cells = [...tr.querySelectorAll('td')].map((td) => (td.innerText || '').replace(/\s+/g, ' ').trim()).filter(Boolean);
-        if (cells.length) allRows.push(cells.slice(0, 10));
-        const links = [...tr.querySelectorAll('a[href*="/person/"], a[href*="/company/"]')];
-        if (!links.length) continue;
-        const link = links.find((l) => (l.innerText || '').trim()) || links[0];
-        const href = link.getAttribute('href');
-        const dedupe = href + '§' + header;
-        if (seen.has(dedupe)) continue;
-        seen.add(dedupe);
-        rows.push({ header, href, name: (link.innerText || '').replace(/\s+/g, ' ').trim(), cells: cells.slice(0, 8) });
-      }
-      if (allRows.length) tables.push({ header, rows: allRows });
-    }
-    const title = ((document.querySelector('h1') || {}).innerText || document.title || '').trim();
-    return { title: title.trim(), rows, tables };
-  });
-}
+async function parsePageTables(pg = page) { return pg.evaluate(extractTablesFromDOM); }
 
 async function extractEntity(ent, pg = page) {
   /* 🆕 آدرسِ هر نوع موجودیت — محصول/برند/اختراع هم خزش می‌شوند (درخواست ۲۴ مهر) */
@@ -1385,7 +1361,7 @@ async function extractEntity(ent, pg = page) {
     const previousTables = (previous?.tables || []).length;
     const empty = parsed.rows.length === 0 && !(parsed.tables || []).length;
     if (!(empty && (previousRows || previousTables))) {
-      fs.writeFileSync(entityFile, JSON.stringify({ ...node, via, fetchedAt: new Date().toISOString(), sourceRun: process.env.GITHUB_RUN_ID || 'local', ...(info ? { info } : {}), rows: parsed.rows, ...(parsed.tables && parsed.tables.length ? { tables: parsed.tables } : {}) }, null, 1));
+      fs.writeFileSync(entityFile, JSON.stringify({ ...node, tableSchemaVersion: 2, via, fetchedAt: new Date().toISOString(), sourceRun: process.env.GITHUB_RUN_ID || 'local', ...(info ? { info } : {}), rows: parsed.rows, ...(parsed.tables && parsed.tables.length ? { tables: parsed.tables } : {}) }, null, 1));
     } else log('دادهٔ قبلی حفظ شد — پاسخ جدید خالی بود:', keyOf(ent));
   } catch {}
   const tableRows = (parsed.tables || []).reduce((n, t) => n + (t.rows || []).length, 0);
@@ -1963,7 +1939,11 @@ try {
   // Separate array: takeLocal removes from shared pending; sharing it would shift twice.
   let queue = MAX_PARALLEL === 1 ? [...frontier.pending] : frontier.pending.filter((_, i) => i % MAX_PARALLEL === SLOT);
   if (process.env.RASMIO_VERIFY === '1') {
-    queue = ['product', 'person', 'company'].flatMap(type => frontier.pending.filter(e => e.type === type).slice(0, 2));
+    const requested = JSON.parse(process.env.RASMIO_VERIFY_KEYS || '[]');
+    if (requested.length) {
+      queue = requested.map(k => { const [type, id] = k.split(':'); return { type, id }; });
+      for (const e of queue) { delete frontier.visited[keyOf(e)]; if (!frontier.pending.some(p => keyOf(p) === keyOf(e))) frontier.pending.push(e); }
+    } else queue = ['product', 'person', 'company'].flatMap(type => frontier.pending.filter(e => e.type === type).slice(0, 2));
     log('VERIFY selected pending entities:', queue.map(keyOf));
   }
   if (MAX_PARALLEL > 1) log('⚡ کارگر ' + (SLOT + 1) + '/' + MAX_PARALLEL + ' — سهم این اجرا: ' + queue.length + ' از صف ' + frontier.pending.length);
