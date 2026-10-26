@@ -31,7 +31,7 @@ const BASE = process.env.RASMIO_BASE || 'https://rasmio.com';
 const networkAudit = installNetworkAudit({ host: new URL(BASE).hostname, out: OUT });
 globalThis.fetch = networkAudit.fetch;
 const LIMIT = Number(process.env.CRAWL_LIMIT || 400); // سقف هر اجرا — زنجیرهٔ اجراها گراف را کامل می‌کند
-const MAX_PARALLEL = Math.max(1, Math.min(16, Number(process.env.RASMIO_PARALLEL || 10))); // ⚡ کارگرهای همزمان (هر اجرا IP تازه = سهمیهٔ تازه)
+const MAX_PARALLEL = Math.max(1, Math.min(16, Number(process.env.RASMIO_PARALLEL || 1))); // ⚡ کارگرهای همزمان (هر اجرا IP تازه = سهمیهٔ تازه)
 const SLOT = MAX_PARALLEL > 1 ? (Number(process.env.GITHUB_RUN_ID || '0') % MAX_PARALLEL) : 0; // تیکهٔ اختصاصی این کارگر از صف
 const TIME_BUDGET_S = Number(process.env.CRAWL_TIME_BUDGET_S || 1300); // بودجهٔ خزندگی هر اجرا (ثانیه) — همیشه قبل از سقف ۳۰دقیقه‌ای job تمام می‌شود تا خروجی کامیت شود
 const DELAY_MS = Number(process.env.CRAWL_DELAY_MS || 5000);
@@ -94,6 +94,8 @@ function botPush(tag) {
 
 /* ═══ محافظ سقف ریپو v2: تاریخچه همیشه سبک + آرشیو روزانهٔ رایگان — با گزارش کامل هر قدم ═══ */
 async function storageGuard() {
+  log('Storage guard: automatic force-push disabled; data history must not be rewritten by concurrent jobs');
+  return;
   const G = (...a) => log('🗜 [گارد]', ...a);
   try {
     const tok = selfToken();
@@ -1094,6 +1096,7 @@ function selfToken() {
 
 /* ═══ زنجیرهٔ پیوسته: اجرای بعدی فوراً dispatch می‌گردد — فقط وقتی اجرای دیگری در صف نیست ═══ */
 async function selfChain() {
+  return; /* capture.mjs is the only successor scheduler */
   try {
     const tok = selfToken();
     dbg('self-chain', { hasToken: !!tok, tokLen: tok.length });
@@ -1218,8 +1221,11 @@ async function extractEntity(ent, pg = page) {
       if (ck) headers.cookie = ck;
     }
     const r = await fetch(url, { headers, redirect: 'follow', cache: 'no-store' });
-    if (!r.ok) { dbg('fetch-status', { id: ent.id, withCookie, status: r.status }); return null; }
+    if (!r.ok) { const err = new Error('HTTP ' + r.status); err.retryable = true; throw err; }
     const h = await r.text();
+    if (/سقف\s*مجاز|امکان مشاهده اطلاعات در صفحه شرکت برای شما محدود شده/.test(h)) {
+      const err = new Error('explicit-access-limit'); err.retryable = true; throw err;
+    }
     /* 🚧 سقفِ سایت: «سقف مجاز ۵ درخواست شما برای ۴ روز تکمیل شده است» — یعنی این IP دیگر صفحهٔ شرکت نمی‌گیرد.
        به‌جای تلف‌کردن وقت، بقیهٔ این اجرا صرفِ محصول/شخص/برند (بی‌سقف) می‌شود و شرکت‌ها برای IP تازه می‌مانند. */
     if (ent.type === 'company') {
@@ -1259,7 +1265,7 @@ async function extractEntity(ent, pg = page) {
       if (res.parsed.rows.length > 0) { html = res.html; parsed = res.parsed; via = wc ? 'fetch' : 'fetch-anon'; frontier.crawlMode = wc ? 'session' : 'anon'; break; }
       if (!html) { html = res.html; parsed = res.parsed; } /* نگه‌داشتن برای مسیر مرورگر */
     }
-  } catch (e) { dbg('fetch-extract-error', { id: ent.id, e: String(e).slice(0, 120) }); }
+  } catch (e) { if (e.retryable) throw e; dbg('fetch-extract-error', { id: ent.id, e: String(e).slice(0, 120) }); }
   /* ═══ مسیر کامل مرورگر: فقط اگر لازم باشد — fetchِ سالمِ بی‌جدول یعنی صفحه واقعاً داده ندارد (SSR کامل است) و مرورگر فقط وقت می‌سوزاند ═══ */
   const fetchCleanEmpty = ent.type !== 'person' && parsed && via === 'fetch' && parsed.rows.length === 0 && parsed.tables && parsed.tables.length === 0
     && parsed.title && !/undefined/i.test(parsed.title);
@@ -1354,7 +1360,7 @@ async function extractEntity(ent, pg = page) {
   }
   /* ذخیرهٔ موجودیت */
   const node = { type: ent.type, id: ent.id, name, url, ...(graphTool && graphTool.href ? { graphTool: graphTool.href } : {}) };
-  frontier.graph.nodes[keyOf(ent)] = node;
+  frontier.graph.nodes[keyOf(ent)] = { ...(frontier.graph.nodes[keyOf(ent)] || {}), ...node };
   const edges = [];
   for (const r of parsed.rows) {
     const target = normId(r.href);
@@ -1375,11 +1381,19 @@ async function extractEntity(ent, pg = page) {
     const previousTables = (previous?.tables || []).length;
     const empty = parsed.rows.length === 0 && !(parsed.tables || []).length;
     if (!(empty && (previousRows || previousTables))) {
-      fs.writeFileSync(entityFile, JSON.stringify({ ...node, via, ...(info ? { info } : {}), rows: parsed.rows, ...(parsed.tables && parsed.tables.length ? { tables: parsed.tables } : {}) }, null, 1));
+      fs.writeFileSync(entityFile, JSON.stringify({ ...node, via, fetchedAt: new Date().toISOString(), sourceRun: process.env.GITHUB_RUN_ID || 'local', ...(info ? { info } : {}), rows: parsed.rows, ...(parsed.tables && parsed.tables.length ? { tables: parsed.tables } : {}) }, null, 1));
     } else log('دادهٔ قبلی حفظ شد — پاسخ جدید خالی بود:', keyOf(ent));
   } catch {}
+  const tableRows = (parsed.tables || []).reduce((n, t) => n + (t.rows || []).length, 0);
+  if (parsed.rows.length || tableRows) {
+    const receipt = { at: new Date().toISOString(), runId: process.env.GITHUB_RUN_ID || 'local', key: keyOf(ent),
+      rows: parsed.rows.length, tableRows, tables: (parsed.tables || []).length, via,
+      file: `${DATA}/entities/${ent.type}-${ent.id}.json` };
+    fs.appendFileSync(`${OUT}/verified-data-${process.env.GITHUB_RUN_ID || 'local'}.jsonl`, JSON.stringify(receipt) + '\n');
+    log('VERIFIED-DATA', receipt);
+  }
   const dead = ent.type === 'person' && /undefined/i.test((parsed && parsed.title) || '');
-  return { node, rows: parsed.rows.length, newEdges: edges.length, dead };
+  return { node, rows: parsed.rows.length, tableRows, newEdges: edges.length, dead };
 }
 
 try {
@@ -1506,7 +1520,7 @@ try {
   /* ═══ ۰) قفل انحصار — هیچ دو اجرایی همزمان نباشد (ریشهٔ گم‌شدن داده و شکست ورود) ═══ */
   const MY_RUN = String(process.env.GITHUB_RUN_ID || '');
   const ghApiRaw = async (path, method = 'GET') => fetch(`https://api.github.com${path}`, { method, headers: { authorization: `Bearer ${selfToken()}`, accept: 'application/vnd.github+json' } });
-  if (selfToken()) {
+  if (selfToken() && process.env.RASMIO_VERIFY !== '1') {
     try {
       const r = await ghApiRaw(`/repos/${REPO}/actions/workflows/rasmio-v3.yml/runs?per_page=30`);
       const runs = r.ok ? ((await r.json()).workflow_runs || []) : [];
@@ -1864,7 +1878,7 @@ try {
 
   /* ═══ ۴) خزندگی BFS ═══ */
   /* ═══ کشف دانه‌های تازه از نقشهٔ سایت رسمیو ═══ */
-  const discovered = await discoverSeeds(Number(process.env.DISCOVER_MAX || 8000)); /* همیشه فعال: ۵ دقیقه سهم کشف در هر اجرا — شرکت تازه اولویت دارد */
+  const discovered = process.env.RASMIO_VERIFY === '1' || frontier.pending.length > 2000 ? 0 : await discoverSeeds(Number(process.env.DISCOVER_MAX || 8000)); /* همیشه فعال: ۵ دقیقه سهم کشف در هر اجرا — شرکت تازه اولویت دارد */
   if (discovered) log('کشف:', discovered, 'موجودیت تازه به صف اضافه شد — صف کل:', frontier.pending.length);
 
   /* ═══ 🆕 پرکردنِ خودکارِ صف از گراف: اشخاص و محصولات هم سهم دارند (درخواست ۲۴ مهر) ═══ */
@@ -1942,7 +1956,12 @@ try {
     if (picked.length) log('👥 حالت ترکیبی —', picked.length, 'شخص در این اجرا هم خزش می‌شود · اشخاص باقی‌مانده:', frontier.personsLater.length);
   }
   /* ⚡ تیکه‌بندی صف: هر کارگر از موقعیت‌های SLOT, SLOT+N, … برمی‌دارد → کارگرها روی هم نمی‌افتند */
-  let queue = SLOT === 0 && MAX_PARALLEL === 1 ? frontier.pending : frontier.pending.filter((_, i) => i % MAX_PARALLEL === SLOT);
+  // Separate array: takeLocal removes from shared pending; sharing it would shift twice.
+  let queue = MAX_PARALLEL === 1 ? [...frontier.pending] : frontier.pending.filter((_, i) => i % MAX_PARALLEL === SLOT);
+  if (process.env.RASMIO_VERIFY === '1') {
+    queue = ['product', 'person', 'company'].flatMap(type => frontier.pending.filter(e => e.type === type).slice(0, 2));
+    log('VERIFY selected pending entities:', queue.map(keyOf));
+  }
   if (MAX_PARALLEL > 1) log('⚡ کارگر ' + (SLOT + 1) + '/' + MAX_PARALLEL + ' — سهم این اجرا: ' + queue.length + ' از صف ' + frontier.pending.length);
   const takeLocal = () => {
     while (queue.length) {
@@ -1960,7 +1979,7 @@ try {
   let stopReason = 'frontier-empty';
   /* ═══ موتور موجی: تا ۳ موجودیت همزمان (تب‌های مخفی) + موج تطبیقی ═══ */
   const MAX_WAVE = 4;
-  let waveN = 4, zeroWaves = 0, lastCkpt = 0, lastRot = 0, paced = false;
+  let waveN = process.env.RASMIO_VERIFY === '1' ? 1 : 4, zeroWaves = 0, lastCkpt = 0, lastRot = 0, paced = false;
   while (processed < LIMIT && queue.length) {
     if ((Date.now() - crawlStart) / 1000 > TIME_BUDGET_S) { stopReason = 'time-budget'; break; }
     if (hardTimeUp()) { stopReason = 'hard-deadline'; log('⏰ سقف مطلق job — توقف امن و پوش داده'); break; }
@@ -1979,7 +1998,12 @@ try {
     progress('crawl', { current: keyOf(wave[0]), processed, pending: frontier.pending.length, wave: wave.length });
     const results = await Promise.all(wave.map(async (e, i) => {
       try { return { ent: e, r: await extractEntity(e, WORKERS[i] || page) }; }
-      catch (err) { frontier.visited[keyOf(e)] = { ...(frontier.visited[keyOf(e)] || {}), at: new Date().toISOString(), error: String(err).slice(0, 150) }; return { ent: e, r: null }; }
+      catch (err) {
+        // Failed/limited requests remain pending, not falsely marked visited.
+        if (!frontier.pending.some(p => keyOf(p) === keyOf(e))) frontier.pending.push(e);
+        log('FETCH-DEFERRED', keyOf(e), String(err.message || err).slice(0, 120));
+        return { ent: e, r: null };
+      }
     }));
     let okInWave = 0;
     if (results.every((x) => !x.r)) { failedStreak++; if (failedStreak >= 2) { stopReason = 'blocked-fast'; break; } } else failedStreak = 0;
@@ -1988,7 +2012,7 @@ try {
       const k = keyOf(e);
       frontier.visited[k] = { ...(frontier.visited[k] || {}), at: new Date().toISOString(), rows: r.rows };
       if (r.dead) { frontier.visited[k].zeroRetried = true; frontier.visited[k].suspectTries = 8; log('⛔ صفحهٔ شخص داده ندارد (undefined) — بدون تلاش مجدد'); }
-      if (r.rows > 0) { delete frontier.visited[k].suspect; okInWave++; }
+      if (r.rows > 0 || r.tableRows > 0) { delete frontier.visited[k].suspect; okInWave++; }
       /* 🚧 شرکتِ پشتِ دیوار «خزش‌شده» حساب نمی‌شود — برای اجرای بعدی با IP تازه برمی‌گردد */
       if (globalThis.__rasmioWall && e.type === 'company' && r.rows === 0) { delete frontier.visited[k]; frontier.pending.push(e); heldCompanies++; }
       processedKeys.push(k);
@@ -2040,6 +2064,10 @@ try {
 
   fs.writeFileSync(`${OUT}/manifest.json`, JSON.stringify({ at: new Date().toISOString(), authedWithoutSms: authed, processed, failed, pending: frontier.pending.length, visitedTotal: Object.keys(frontier.visited).length, nodes: Object.keys(frontier.graph.nodes).length, edges: frontier.graph.edges.length }, null, 1));
   progress('done', { processed, failed, pending: frontier.pending.length, stopReason });
+  fs.writeFileSync(`${OUT}/run-summary-${process.env.GITHUB_RUN_ID || 'local'}.json`, JSON.stringify({
+    at: new Date().toISOString(), runId: process.env.GITHUB_RUN_ID || 'local', verify: process.env.RASMIO_VERIFY === '1',
+    processed, failed, stopReason, pending: frontier.pending.length, entities: runReport
+  }, null, 2));
   log(`✅ اجرا تمام (${stopReason}) — ${processed} موجودیت تازه · صف باقی‌مانده: ${frontier.pending.length} · کل گراف: ${Object.keys(frontier.graph.nodes).length} گره / ${frontier.graph.edges.length} یال`);
   /* ═══ زنجیرهٔ پیوسته: تا وقتی صف یا کشف باقی است، اجرای بعدی فوراً خودکار درخواست می‌شود ═══ */
   const disc = frontier.discovery || {};

@@ -3,6 +3,15 @@ import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 
 const BRANCH = process.env.OTP_BRANCH || 'arena/01a08a50-srip';
+let verify = false;
+try { verify = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8')).client_payload?.mode === 'verify-data'; } catch {}
+if (verify) {
+  process.env.RASMIO_VERIFY = '1';
+  process.env.RASMIO_PARALLEL = '1';
+  process.env.CRAWL_LIMIT = '6';
+  process.env.CRAWL_TIME_BUDGET_S = '300';
+}
+
 const sh = (c) => { try { return execSync(c, { stdio: ['ignore', 'pipe', 'pipe'], timeout: 60_000 }).toString().trim(); } catch (e) { return 'ERR: ' + String((e && e.message) || e).slice(0, 300); } };
 const dump = (tag, text) => { try { fs.mkdirSync('out', { recursive: true }); fs.appendFileSync('out/boot.log', `\n===== ${tag} @ ${new Date().toISOString()} =====\n${text}\n`); } catch {} };
 const push = (tag) => {
@@ -30,6 +39,7 @@ push('boot');
 /* ⛓ تضمین بقای زنجیره: هر اجرا در پایان (موفق یا ناموفق) یک اجرای جانشین می‌فرستد.
    اگر ظرفیت پر باشد، جانشین در شروع خودش بی‌صدا بیرون می‌رود — بدون ضرر. */
 const relay = () => {
+  if (verify) return;
   try {
     let tok = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '';
     if (!tok) {
@@ -49,6 +59,11 @@ const relay = () => {
     }
     const repo = process.env.GITHUB_REPOSITORY || 'soheilsss7/Srip';
     if (!tok) { dump('relay', 'توکن نیست'); return; }
+    const active = JSON.parse(execSync(`curl --fail --silent -H "authorization: Bearer ${tok}" https://api.github.com/repos/${repo}/actions/workflows/rasmio-v3.yml/runs?per_page=50`, { timeout: 20000 }).toString());
+    if ((active.workflow_runs || []).some(r => String(r.id) !== String(process.env.GITHUB_RUN_ID) && ['in_progress', 'queued', 'requested', 'waiting'].includes(r.status))) {
+      dump('relay', 'Another run exists; no duplicate successor'); return;
+    }
+
     execSync(`curl -s -X POST -H "authorization: Bearer ${tok}" -H "accept: application/vnd.github+json" -H "content-type: application/json" https://api.github.com/repos/${repo}/dispatches -d '{"event_type":"rasmio-run"}'`, { stdio: 'ignore', timeout: 30_000 });
     dump('relay', 'یک جانشین فرستاده شد');
   } catch (e) { dump('relay-error', String((e && e.message) || e)); }
