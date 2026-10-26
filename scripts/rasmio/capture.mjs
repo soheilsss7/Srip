@@ -59,14 +59,10 @@ const relay = () => {
     }
     const repo = process.env.GITHUB_REPOSITORY || 'soheilsss7/Srip';
     if (!tok) { dump('relay', 'توکن نیست'); return; }
-    const active = JSON.parse(execSync(`curl --fail --silent -H "authorization: Bearer ${tok}" https://api.github.com/repos/${repo}/actions/workflows/rasmio-v3.yml/runs?per_page=50`, { timeout: 20000 }).toString());
-    if ((active.workflow_runs || []).some(r => Date.parse(r.created_at || r.run_started_at) >= Date.parse('2026-10-26T05:00:00Z') && String(r.id) !== String(process.env.GITHUB_RUN_ID) && ['in_progress', 'queued', 'requested', 'waiting'].includes(r.status))) {
-      dump('relay', 'Another run exists; no duplicate successor'); return;
-    }
-
+    // Rejected runs exit inside bot.mjs and never reach relay. Only the admitted writer schedules a successor.
     execSync(`curl -s -X POST -H "authorization: Bearer ${tok}" -H "accept: application/vnd.github+json" -H "content-type: application/json" https://api.github.com/repos/${repo}/dispatches -d '{"event_type":"rasmio-run"}'`, { stdio: 'ignore', timeout: 30_000 });
     dump('relay', 'یک جانشین فرستاده شد');
-  } catch (e) { dump('relay-error', String((e && e.message) || e)); }
+  } catch (e) { dump('relay-error', 'successor request failed; status=' + String(e?.status || 'unknown')); }
 };
 
 try {

@@ -1390,8 +1390,11 @@ async function extractEntity(ent, pg = page) {
   } catch {}
   const tableRows = (parsed.tables || []).reduce((n, t) => n + (t.rows || []).length, 0);
   if (parsed.rows.length || tableRows) {
+    const storedText = fs.readFileSync(`${DATA}/entities/${ent.type}-${ent.id}.json`, 'utf8');
+    const stored = JSON.parse(storedText);
+    if (stored.sourceRun !== (process.env.GITHUB_RUN_ID || 'local')) throw new Error('Entity persistence verification failed');
     const receipt = { at: new Date().toISOString(), runId: process.env.GITHUB_RUN_ID || 'local', key: keyOf(ent),
-      rows: parsed.rows.length, tableRows, tables: (parsed.tables || []).length, via,
+      rows: parsed.rows.length, tableRows, tables: (parsed.tables || []).length, via, sha256: crypto.createHash('sha256').update(storedText).digest('hex'),
       file: `${DATA}/entities/${ent.type}-${ent.id}.json` };
     fs.appendFileSync(`${OUT}/verified-data-${process.env.GITHUB_RUN_ID || 'local'}.jsonl`, JSON.stringify(receipt) + '\n');
     log('VERIFIED-DATA', receipt);
@@ -1985,7 +1988,7 @@ try {
   const MAX_WAVE = 4;
   let waveN = process.env.RASMIO_VERIFY === '1' ? 1 : 4, zeroWaves = 0, lastCkpt = 0, lastRot = 0, paced = false;
   while (processed < LIMIT && queue.length) {
-    if ((Date.now() - crawlStart) / 1000 > TIME_BUDGET_S) { stopReason = 'time-budget'; break; }
+    if ((Date.now() - crawlStart) / 1000 > Math.min(TIME_BUDGET_S, Number(process.env.CRAWL_TIME_BUDGET_S || TIME_BUDGET_S))) { stopReason = 'time-budget'; break; }
     if (hardTimeUp()) { stopReason = 'hard-deadline'; log('⏰ سقف مطلق job — توقف امن و پوش داده'); break; }
     /* رسمیو به هر IP بعد از چند درخواست پوسته می‌دهد → تعویض IP فوری (اجرای بعدی = IP تازه) */
     if (zeroStreak >= (paced ? 2 : 18)) { stopReason = 'quota-or-blocked'; break; }
