@@ -387,6 +387,7 @@ try {
   const JUNK = /this page couldn|this site can.t be reached|دسترسی ندارید|خطا|error|not found|404/i;
   let removed = 0;
   for (const [k, v] of Object.entries(frontier.graph.nodes || {})) {
+    if (typeof v?.url === 'string' && v.url.startsWith(BASE + BASE)) v.url = v.url.slice(BASE.length);
     const nm = String((v && v.name) || '');
     if (!nm || nm === '\u{1F3E2}' || (nm.length < 45 && JUNK.test(nm))) { delete frontier.graph.nodes[k]; removed++; }
   }
@@ -1346,7 +1347,7 @@ async function extractEntity(ent, pg = page) {
     const target = normId(r.href);
     if (!target) continue;
     const tName = r.name || (r.cells[0] || '').trim();
-    frontier.graph.nodes[keyOf(target)] ??= { type: target.type, id: target.id, name: tName, url: `${BASE}${r.href}` };
+    frontier.graph.nodes[keyOf(target)] ??= { type: target.type, id: target.id, name: tName, url: new URL(r.href, BASE).href };
     const role = r.header.includes('سمت') ? (r.cells.find((c) => /مدیر|بازرس|عضو|نماینده|رئیس|حق امضا|مدیرعامل/.test(c)) || r.cells[1] || '') : (r.header.split('|')[0] || '').trim();
     edges.push({ from: keyOf(ent), to: keyOf(target), kind: r.header, role, cells: r.cells });
     enqueue({ type: target.type, id: target.id, name: tName }, keyOf(ent));
