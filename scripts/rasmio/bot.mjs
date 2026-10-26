@@ -1323,6 +1323,10 @@ async function extractEntity(ent, pg = page) {
     }
     if (!Object.keys(info).length) info = null;
   } catch {}
+  // An empty detail response is incomplete, not a successful visit.
+  if (!parsed.rows.length && !(parsed.tables || []).some(t => (t.rows || []).length)) {
+    const err = new Error('empty-detail-response'); err.retryable = true; throw err;
+  }
   /* نام: h1 → تگ title → شناسه */
   let name = parsed.title.replace(/\s*-\s*رسمــیو.*$/, '').trim();
   if (!name || /^\d+$/.test(name)) {
@@ -1976,7 +1980,7 @@ try {
   const processedKeys = [];
   const runReport = [];
   const crawlStart = Date.now();
-  let stopReason = 'frontier-empty';
+  let stopReason = process.env.RASMIO_VERIFY === '1' ? 'verify-batch-complete' : 'frontier-empty';
   /* ═══ موتور موجی: تا ۳ موجودیت همزمان (تب‌های مخفی) + موج تطبیقی ═══ */
   const MAX_WAVE = 4;
   let waveN = process.env.RASMIO_VERIFY === '1' ? 1 : 4, zeroWaves = 0, lastCkpt = 0, lastRot = 0, paced = false;
@@ -1987,7 +1991,7 @@ try {
     if (zeroStreak >= (paced ? 2 : 18)) { stopReason = 'quota-or-blocked'; break; }
     const wave = [];
     let heldCompanies = 0;
-    while (wave.length < Math.min(waveN, WORKERS.length)) { /* سقف تب: هر موجودیت تب خودش */
+    while (wave.length < Math.min(waveN, WORKERS.length, LIMIT - processed)) { /* سقف تب: هر موجودیت تب خودش */
       const e = takeLocal();
       if (!e) break;
       /* 🚧 پشتِ دیوار: شرکت را برای اجرای بعدی (IP تازه) نگه می‌داریم و نمی‌خزیمش */
@@ -2029,7 +2033,7 @@ try {
       /* مکث کوتاه و ادامه — به‌جای بستن اجرا (نرخ موفقیت ۳۳٪ ⇒ صفرهای پیاپی طبیعی است) */
       await sleep(4_000 + Math.random() * 5_000);
       if (zeroWaves % 3 === 0) { log('⏳ ' + zeroWaves + ' موج بدون داده — مکث و ادامه'); await sleep(6_000); }
-    } else { zeroWaves = 0; if (okInWave === wave.length && waveN < MAX_WAVE && !paced) waveN++; }
+    } else { zeroWaves = 0; if (process.env.RASMIO_VERIFY !== '1' && okInWave === wave.length && waveN < MAX_WAVE && !paced) waveN++; }
     if (processed - lastRot >= 20) { lastRot = processed; await rotateIdentity(); }
     if (processed - lastCkpt >= 25) { lastCkpt = processed; botPush('checkpoint-' + processed); }
     saveFrontier();
