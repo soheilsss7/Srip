@@ -17,6 +17,7 @@ import puppeteer from 'puppeteer';
 import { restoreIncompleteDetails, prioritizeDetailRepair, markDetailRepaired, hasDetailCounts, backfillKnownDetailQueue } from './detail-repair.mjs';
 import { extractTablesFromDOM } from './table-extractor.mjs';
 import { installNetworkAudit } from './network-audit.mjs';
+import { PublicProxyTransport, permittedDetailURL } from './proxy-transport.mjs';
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
@@ -1134,6 +1135,9 @@ async function selfChain() {
 }
 
 let browser = null, page = null;
+let publicProxyTransport=null;
+const proxyPages=new WeakMap();
+const PUBLIC_PROXY_DETAILS=process.env.RASMIO_PROXY_TRANSPORT !== 'off';
 let WORKERS = []; /* تب‌های همزمان برای موتور موجی */
 let AUTHED = false; /* وقتی true: داده‌های ویژهٔ واردشده (ابزار شبکهٔ ارتباطات و…) هم برداشته می‌شود */
 /* مخزن هویت‌های ناشناس — هر اجرا و هر چرخش، یک UA واقعی متفاوت */
@@ -1189,6 +1193,8 @@ const clearDeviceModal = async (stage) => {
 async function parsePageTables(pg = page) { return pg.evaluate(extractTablesFromDOM); }
 
 async function extractEntity(ent, pg = page) {
+  const route=proxyPages.get(pg);
+  if(PUBLIC_PROXY_DETAILS && ['company','person'].includes(ent.type) && !route)throw new Error('proxy-required-no-direct-fallback');
   /* 🆕 آدرسِ هر نوع موجودیت — محصول/برند/اختراع هم خزش می‌شوند (درخواست ۲۴ مهر) */
   const URL_OF = {
     company: (id) => `${BASE}/company/${id}/direct/`, // Public canonical route validated by the free-proxy experiment; avoids the 308 chain.
@@ -1207,7 +1213,7 @@ async function extractEntity(ent, pg = page) {
       const ck = (await pg.cookies(BASE)).map((c) => `${c.name}=${c.value}`).join('; ');
       if (ck) headers.cookie = ck;
     }
-    const r = await fetch(url, { headers, redirect: 'follow', cache: 'no-store' });
+    const r = route ? await route.fetch(url) : await fetch(url, { headers, redirect: 'follow', cache: 'no-store' });
     if (!r.ok) { const err = new Error('HTTP ' + r.status); err.retryable = true; throw err; }
     const h = await r.text();
     if (/سقف\s*مجاز|امکان مشاهده اطلاعات در صفحه شرکت برای شما محدود شده/.test(h)) {
@@ -1215,7 +1221,7 @@ async function extractEntity(ent, pg = page) {
     }
     /* 🚧 سقفِ سایت: «سقف مجاز ۵ درخواست شما برای ۴ روز تکمیل شده است» — یعنی این IP دیگر صفحهٔ شرکت نمی‌گیرد.
        به‌جای تلف‌کردن وقت، بقیهٔ این اجرا صرفِ محصول/شخص/برند (بی‌سقف) می‌شود و شرکت‌ها برای IP تازه می‌مانند. */
-    if (ent.type === 'company') {
+    if (ent.type === 'company' && !route) {
       const tb0 = (h.match(/<table/gi) || []).length;
       globalThis.__rasmioZeroCo = tb0 === 0 ? (globalThis.__rasmioZeroCo || 0) + 1 : 0;
       if (globalThis.__rasmioZeroCo >= 3 && !globalThis.__rasmioWall) { globalThis.__rasmioWall = true; log('🚧 سقف شرکت‌های این IP پر شد (۳ شرکت پیاپی بی‌جدول) — بقیهٔ وقت صرفِ محصول/شخص می‌شود · اجرای بعدی؛ IP تازه تضمین نشده'); }
@@ -1258,8 +1264,8 @@ async function extractEntity(ent, pg = page) {
     && parsed.title && !/undefined/i.test(parsed.title);
   if ((!parsed || parsed.rows.length === 0) && !fetchCleanEmpty) {
     via = 'browser';
-    if (ent.type === 'person') { try { await pg.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 30_000 }); await sleep(1500); } catch {} } /* گرم‌کردن کوکی */
-    try { await pg.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 }); } catch {}
+    if (ent.type === 'person' && !route) { try { await pg.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 30_000 }); await sleep(1500); } catch {} } /* گرم‌کردن کوکی */
+    try { await pg.goto(route?.finalURL || url, { waitUntil: 'domcontentloaded', timeout: 30_000 }); } catch {}
     await sleep(2500);
     /* اسکرول تدریجی برای فعال‌سازی رندر تنبل جدول‌ها */
     try {
@@ -1300,13 +1306,13 @@ async function extractEntity(ent, pg = page) {
       if (idx < 0) continue;
       const same = (lines[idx] === lb) ? '' : lines[idx].slice(lb.length).trim();
       const val = same || (lines[idx + 1] && !labels.includes(lines[idx + 1]) ? lines[idx + 1] : '');
-      if (val) { const key = lb.includes('تاسیس') || lb.includes('تأسیس') ? 'تاریخ تاسیس' : lb; info[key] = val.slice(0, 160); }
+      if (val) { const key = lb.includes('تاسیس') || lb.includes('تأسیس') ? 'تاریخ تاسیس' : lb; info[key] = val; }
     }
     const ai = lines.findIndex((l) => /نشانی ثبتی/.test(l));
     if (ai >= 0) {
       /* نشانی واقعی: اولین خطِ بلندِ بعد از برچسب (برچسب خودش «نشانی ثبتی شرکت» است) */
       const val = lines.slice(ai + 1, ai + 6).find((l) => l.length > 25) || lines[ai + 1] || '';
-      if (val) info['نشانی'] = val.slice(0, 260);
+      if (val) info['نشانی'] = val;
     }
     if (!Object.keys(info).length) info = null;
   } catch {}
@@ -1314,6 +1320,16 @@ async function extractEntity(ent, pg = page) {
   if (!parsed.rows.length && !(parsed.tables || []).some(t => (t.rows || []).length)) {
     const err = new Error('empty-detail-response'); err.retryable = true; throw err;
   }
+  if(route && /undefined|صفحه یافت نشد/i.test(parsed.title||''))throw new Error('profile-identity-unverified');
+  if(route && ent.type==='company') {
+    const actualId=String(info?.['شناسه ملی']||'').replace(/[۰-۹]/g,c=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c))).replace(/[٠-٩]/g,c=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(c))).match(/\d{11}/)?.[0];
+    if(actualId!==String(ent.id))throw new Error('company-identity-unverified');
+  }
+  const egress=route?{proxy:route.proxy,observedExitIP:route.observedExitIP,mainRequests:route.mainRequests,scope:'Echo-observed IP; destination egress is unverified',directFallback:false}:null;
+  if(route)via=via==='browser'?'proxy-browser':'proxy-fetch';
+  let moreControls=null;
+  try {moreControls=await pg.evaluate(()=>[...document.querySelectorAll('button,a')].filter(e=>/مشاهده\s*(سایر|بیشتر|همه)|نمایش\s*بیشتر/.test(e.textContent||'')).length);}catch{}
+  const profileCoverage={status:'unverified',access:'anonymous-public',paginationVerified:false,moreControls,infoKeys:Object.keys(info||{}),sections:(parsed.tables||[]).length,twentyRowTables:(parsed.tables||[]).filter(t=>t.rows.length===20).length};
   /* نام: h1 → تگ title → شناسه */
   let name = parsed.title.replace(/\s*-\s*رسمــیو.*$/, '').trim();
   if (!name || /^\d+$/.test(name)) {
@@ -1370,11 +1386,14 @@ async function extractEntity(ent, pg = page) {
     try { previous = JSON.parse(fs.readFileSync(entityFile, 'utf8')); } catch {}
     const previousRows = (previous?.rows || []).length;
     const previousTables = (previous?.tables || []).length;
+    const previousTableRows=(previous?.tables||[]).reduce((n,t)=>n+(t.rows||[]).length,0);
+    const incomingTableRows=(parsed.tables||[]).reduce((n,t)=>n+(t.rows||[]).length,0);
+    if(previousRows>parsed.rows.length || previousTables>(parsed.tables||[]).length || previousTableRows>incomingTableRows || Object.keys(previous?.info||{}).some(k=>!Object.hasOwn(info||{},k)))throw new Error('richer-existing-detail-preserved');
     const empty = parsed.rows.length === 0 && !(parsed.tables || []).length;
     if (!(empty && (previousRows || previousTables))) {
-      fs.writeFileSync(entityFile, JSON.stringify({ ...node, tableSchemaVersion: 2, via, fetchedAt: new Date().toISOString(), sourceRun: process.env.GITHUB_RUN_ID || 'local', ...(info ? { info } : {}), rows: parsed.rows, ...(parsed.tables && parsed.tables.length ? { tables: parsed.tables } : {}) }, null, 1));
+      fs.writeFileSync(entityFile, JSON.stringify({ ...node, tableSchemaVersion: 2, via, ...(egress?{egress}:{}), profileCoverage, fetchedAt: new Date().toISOString(), sourceRun: process.env.GITHUB_RUN_ID || 'local', ...(info ? { info } : {}), rows: parsed.rows, ...(parsed.tables && parsed.tables.length ? { tables: parsed.tables } : {}) }, null, 1));
     } else log('دادهٔ قبلی حفظ شد — پاسخ جدید خالی بود:', keyOf(ent));
-  } catch {}
+  } catch (e) {throw e;}
   const tableRows = (parsed.tables || []).reduce((n, t) => n + (t.rows || []).length, 0);
   if (parsed.rows.length || tableRows) {
     const storedText = fs.readFileSync(`${DATA}/entities/${ent.type}-${ent.id}.json`, 'utf8');
@@ -1382,7 +1401,7 @@ async function extractEntity(ent, pg = page) {
     if (stored.sourceRun !== (process.env.GITHUB_RUN_ID || 'local')) throw new Error('Entity persistence verification failed');
     const receipt = { at: new Date().toISOString(), runId: process.env.GITHUB_RUN_ID || 'local', key: keyOf(ent),
       rows: parsed.rows.length, tableRows, tables: (parsed.tables || []).length, via, sha256: crypto.createHash('sha256').update(storedText).digest('hex'),
-      file: `${DATA}/entities/${ent.type}-${ent.id}.json` };
+      file: `${DATA}/entities/${ent.type}-${ent.id}.json`, ...(egress?{egress}:{}), coverageStatus:'unverified' };
     fs.appendFileSync(`${OUT}/verified-data-${process.env.GITHUB_RUN_ID || 'local'}.jsonl`, JSON.stringify(receipt) + '\n');
     log('VERIFIED-DATA', receipt);
   }
@@ -1390,6 +1409,33 @@ async function extractEntity(ent, pg = page) {
   return { node, rows: parsed.rows.length, tableRows, newEdges: edges.length, dead };
 }
 
+async function extractRoutedEntity(ent, defaultPage) {
+  if(!PUBLIC_PROXY_DETAILS || !['company','person'].includes(ent.type))return extractEntity(ent,defaultPage);
+  if(!publicProxyTransport)throw new Error('public-proxy-transport-not-ready');
+  const route=await publicProxyTransport.acquire(ent);
+  let context,pg,success=false,reason;
+  try {
+    context=await browser.createBrowserContext({proxyServer:route.proxy,proxyBypassList:['<-loopback>']});
+    pg=await context.newPage();proxyPages.set(pg,route);
+    await pg.setViewport({width:1440,height:900});await pg.setUserAgent(UA_NORM);
+    await pg.setExtraHTTPHeaders({'accept-language':'fa,en;q=0.9'});
+    await pg.setBypassServiceWorker(true);await pg.setRequestInterception(true);
+    pg.on('request',request=>{
+      try {
+        const url=new URL(request.url());
+        if(url.protocol!=='https:' || url.hostname!=='rasmio.com' || ['image','media','font'].includes(request.resourceType())){void request.abort().catch(()=>{});return;}
+        if(request.isNavigationRequest() && request.frame()===pg.mainFrame()) {
+          if(!permittedDetailURL(url.href,ent)){void request.abort().catch(()=>{});return;}
+          route.reserve('browser-navigation',url.href);
+        }
+        void request.continue().catch(()=>{});
+      }catch{void request.abort().catch(()=>{});}
+    });
+    const result=await extractEntity(ent,pg);success=result.rows>0 || result.tableRows>0;
+    return result;
+  } catch(e){reason=e.message||String(e);throw e;}
+  finally {if(pg)proxyPages.delete(pg);if(context)await context.close().catch(()=>{});route.finish(success,reason);}
+}
 try {
   /* ═══ 🧭 کاوش سبک (بدون مرورگر): استخراج API واقعی جستجو از کدهای JS سایت ═══ */
   try {
@@ -1562,8 +1608,12 @@ try {
       }
     } catch (e) { dbg('lock-error', String(e).slice(0, 150)); }
   }
+  if(PUBLIC_PROXY_DETAILS) {
+    publicProxyTransport=await new PublicProxyTransport({frontier,out:OUT}).initialize();
+    log('PUBLIC-PROXY-ENABLED', {types:['company','person'],candidates:publicProxyTransport.candidates.length,directFallback:false});
+  }
   log('startup — راه‌اندازی مرورگر… | node', process.version);
-  browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-blink-features=AutomationControlled', '--window-size=1440,900'] });
+  browser = await puppeteer.launch({ headless: 'new', ...(publicProxyTransport?{env:publicProxyTransport.env}:{}), args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-blink-features=AutomationControlled', '--window-size=1440,900'] });
   const newStealthPage = async () => {
     const pg = await browser.newPage();
     await pg.setViewport({ width: 1440, height: 900 });
@@ -1987,13 +2037,13 @@ try {
       const e = takeLocal();
       if (!e) break;
       /* 🚧 پشتِ دیوار: شرکت را برای اجرای بعدی (IP تازه) نگه می‌داریم و نمی‌خزیمش */
-      if (globalThis.__rasmioWall && e.type === 'company') { frontier.pending.push(e); heldCompanies++; continue; }
+      if (!PUBLIC_PROXY_DETAILS && globalThis.__rasmioWall && e.type === 'company') { frontier.pending.push(e); heldCompanies++; continue; }
       wave.push(e);
     }
     if (!wave.length) { if (heldCompanies) { stopReason = 'company-wall'; break; } continue; }
     progress('crawl', { current: keyOf(wave[0]), processed, pending: frontier.pending.length, wave: wave.length });
     const results = await Promise.all(wave.map(async (e, i) => {
-      try { return { ent: e, r: await extractEntity(e, WORKERS[i] || page) }; }
+      try { return { ent: e, r: await extractRoutedEntity(e, WORKERS[i] || page) }; }
       catch (err) {
         // Failed/limited requests remain pending, not falsely marked visited.
         if (!frontier.pending.some(p => keyOf(p) === keyOf(e))) frontier.pending.push(e);
@@ -2016,7 +2066,7 @@ try {
       frontier.visited[k] = { ...(frontier.visited[k] || {}), at: new Date().toISOString(), rows: r.rows, tableRows: r.tableRows, detailSchemaVersion: 2 };
       if (r.rows > 0 || r.tableRows > 0) { delete frontier.visited[k].suspect; markDetailRepaired(frontier, k); okInWave++; }
       /* 🚧 شرکتِ پشتِ دیوار «خزش‌شده» حساب نمی‌شود — برای اجرای بعدی با IP تازه برمی‌گردد */
-      if (globalThis.__rasmioWall && e.type === 'company' && r.rows === 0) { delete frontier.visited[k]; frontier.pending.push(e); heldCompanies++; }
+      if (!PUBLIC_PROXY_DETAILS && globalThis.__rasmioWall && e.type === 'company' && r.rows === 0) { delete frontier.visited[k]; frontier.pending.push(e); heldCompanies++; }
       processedKeys.push(k);
       runReport.push({ ...r.node, rows: r.rows, newEdges: r.newEdges });
       zeroStreak = 0; // Table-only records are valid details too.
@@ -2045,6 +2095,7 @@ try {
     await sleep(nap);
   }
   if (stopReason === 'quota-or-blocked') { for (const k of processedKeys) { if (frontier.visited[k] && frontier.visited[k].rows === 0) frontier.visited[k].suspect = true; } }
+  publicProxyTransport?.save();
   log('پایان این اجرا:', stopReason, '— صف باقی‌مانده:', frontier.pending.length);
   frontier.stats.runs++;
   frontier.stats.entities = Object.keys(frontier.visited).length;
@@ -2069,7 +2120,7 @@ try {
   progress('done', { processed, failed, pending: frontier.pending.length, stopReason });
   fs.writeFileSync(`${OUT}/run-summary-${process.env.GITHUB_RUN_ID || 'local'}.json`, JSON.stringify({
     at: new Date().toISOString(), runId: process.env.GITHUB_RUN_ID || 'local', verify: process.env.RASMIO_VERIFY === '1',
-    processed, failed, stopReason, pending: frontier.pending.length, detailRepair: { remaining: frontier.detailRepair?.remaining?.length || 0, repaired: frontier.detailRepair?.repaired || 0 }, entities: runReport
+    processed, failed, stopReason, pending: frontier.pending.length, proxyTransport: {enabled:PUBLIC_PROXY_DETAILS,checks:publicProxyTransport?.checked||0,successfulProfiles:publicProxyTransport?.report.outcomes.filter(o=>o.success).length||0,failedProfiles:publicProxyTransport?.report.outcomes.filter(o=>!o.success).length||0,directFallback:false}, detailRepair: { remaining: frontier.detailRepair?.remaining?.length || 0, repaired: frontier.detailRepair?.repaired || 0 }, entities: runReport
   }, null, 2));
   log(`✅ اجرا تمام (${stopReason}) — ${processed} موجودیت تازه · صف باقی‌مانده: ${frontier.pending.length} · کل گراف: ${Object.keys(frontier.graph.nodes).length} گره / ${frontier.graph.edges.length} یال`);
   /* ═══ زنجیرهٔ پیوسته: تا وقتی صف یا کشف باقی است، اجرای بعدی فوراً خودکار درخواست می‌شود ═══ */
@@ -2099,4 +2150,5 @@ try {
   } catch {}
 } finally {
   try { if (browser) await browser.close(); } catch {}
+  publicProxyTransport?.close();
 }
