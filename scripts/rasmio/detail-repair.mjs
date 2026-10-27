@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 const validKey = key => /^(company:\d{11}|person:[0-9a-fA-F]+)$/.test(key);
+export const hasDetailCounts = result => result?.rows > 0 || result?.tableRows > 0;
 export const hasDetailData = d => Array.isArray(d?.rows) && d.rows.length > 0 || (d?.tables || []).some(t => Array.isArray(t.rows) && t.rows.length > 0);
 export function restoreIncompleteDetails(frontier, directory) {
   if (frontier.detailRepair?.version === 1) return { ...frontier.detailRepair.summary, reused: true };

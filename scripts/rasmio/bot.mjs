@@ -14,7 +14,7 @@
    · اجرا: schedule روزانه + repository_dispatch (عامل Arena) + دستی.
    ========================================================================== */
 import puppeteer from 'puppeteer';
-import { restoreIncompleteDetails, prioritizeDetailRepair, markDetailRepaired } from './detail-repair.mjs';
+import { restoreIncompleteDetails, prioritizeDetailRepair, markDetailRepaired, hasDetailCounts } from './detail-repair.mjs';
 import { extractTablesFromDOM } from './table-extractor.mjs';
 import { installNetworkAudit } from './network-audit.mjs';
 import { execSync } from 'node:child_process';
@@ -2003,14 +2003,20 @@ try {
     for (const { ent: e, r } of results) {
       if (!r) { failed++; log('✗', keyOf(e), 'خطا'); continue; }
       const k = keyOf(e);
+      if (!hasDetailCounts(r)) {
+        delete frontier.visited[k];
+        if (!frontier.pending.some(p => keyOf(p) === k)) frontier.pending.push(e);
+        failed++; zeroStreak++;
+        log('FETCH-DEFERRED', k, 'empty result is not a completed detail');
+        continue;
+      }
       frontier.visited[k] = { ...(frontier.visited[k] || {}), at: new Date().toISOString(), rows: r.rows, tableRows: r.tableRows, detailSchemaVersion: 2 };
-      if (r.dead) { frontier.visited[k].zeroRetried = true; frontier.visited[k].suspectTries = 8; log('⛔ صفحهٔ شخص داده ندارد (undefined) — بدون تلاش مجدد'); }
       if (r.rows > 0 || r.tableRows > 0) { delete frontier.visited[k].suspect; markDetailRepaired(frontier, k); okInWave++; }
       /* 🚧 شرکتِ پشتِ دیوار «خزش‌شده» حساب نمی‌شود — برای اجرای بعدی با IP تازه برمی‌گردد */
       if (globalThis.__rasmioWall && e.type === 'company' && r.rows === 0) { delete frontier.visited[k]; frontier.pending.push(e); heldCompanies++; }
       processedKeys.push(k);
       runReport.push({ ...r.node, rows: r.rows, newEdges: r.newEdges });
-      zeroStreak = r.rows === 0 ? zeroStreak + 1 : 0;
+      zeroStreak = 0; // Table-only records are valid details too.
       processed++;
       log(`✔ [${processed}/${LIMIT}]`, k, '—', r.rows, 'ردیف');
     }

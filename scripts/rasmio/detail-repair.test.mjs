@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {restoreIncompleteDetails, prioritizeDetailRepair, markDetailRepaired, hasDetailData} from './detail-repair.mjs';
+import {restoreIncompleteDetails, prioritizeDetailRepair, markDetailRepaired, hasDetailData, hasDetailCounts} from './detail-repair.mjs';
 test('restores missing and falsely visited empty entities but preserves populated files',()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'repair-'));
  const ids=['company:10100042823','person:ABC','person:DEF','company:10480075869'];
@@ -24,4 +24,11 @@ test('restores missing and falsely visited empty entities but preserves populate
 test('nonempty tables count even when linked rows are empty',()=>{
  assert.equal(hasDetailData({rows:[],tables:[{rows:[['key','value']]}]}),true);
  assert.equal(hasDetailData({rows:[],tables:[]}),false);
+});
+
+test('zero, dead and missing results never qualify as completed details',()=>{
+ assert.equal(hasDetailCounts({rows:0,tableRows:0,dead:true}),false);
+ assert.equal(hasDetailCounts(null),false);
+ assert.equal(hasDetailCounts({rows:0,tableRows:7}),true);
+ assert.equal(hasDetailCounts({rows:2}),true);
 });
