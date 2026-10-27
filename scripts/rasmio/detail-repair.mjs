@@ -48,3 +48,32 @@ export function markDetailRepaired(frontier, key) {
   const i = state.remaining.indexOf(key);
   if (i >= 0) { state.remaining.splice(i, 1); state.repaired++; }
 }
+
+// Backfill known graph nodes even while the global queue is large. The old
+// <2000 refill condition left hundreds of thousands of known profiles stranded.
+export function backfillKnownDetailQueue(frontier, directory) {
+  if (frontier.graphDetailBackfill?.version === 1) return { ...frontier.graphDetailBackfill.summary, reused: true };
+  const populated = new Set();
+  for (const file of fs.readdirSync(directory)) {
+    const match = file.match(/^(company|person)-(.+)\.json$/);
+    if (!match) continue;
+    const key = `${match[1]}:${match[2]}`;
+    if (!validKey(key)) continue;
+    try { if (hasDetailData(JSON.parse(fs.readFileSync(path.join(directory, file), 'utf8')))) populated.add(key); } catch {}
+  }
+  frontier.pending ||= []; frontier.visited ||= {};
+  const pending = new Set(frontier.pending.map(e => `${e.type}:${e.id}`));
+  const reopened = [], summary = { identifiedWithoutNonemptyDetail: 0, addedToPending: 0, clearedVisited: 0, types: { company: 0, person: 0 }, addedByType: { company: 0, person: 0 } };
+  for (const key in frontier.graph?.nodes || {}) {
+    if (!validKey(key) || populated.has(key)) continue;
+    const [type, id] = key.split(':');
+    summary.identifiedWithoutNonemptyDetail++; summary.types[type]++;
+    if (frontier.visited[key]) { delete frontier.visited[key]; reopened.push(key); summary.clearedVisited++; }
+    if (!pending.has(key)) {
+      frontier.pending.push({ type, id }); pending.add(key);
+      summary.addedToPending++; summary.addedByType[type]++;
+    }
+  }
+  frontier.graphDetailBackfill = { version: 1, at: new Date().toISOString(), summary, reopened };
+  return summary;
+}

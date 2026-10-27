@@ -14,7 +14,7 @@
    · اجرا: schedule روزانه + repository_dispatch (عامل Arena) + دستی.
    ========================================================================== */
 import puppeteer from 'puppeteer';
-import { restoreIncompleteDetails, prioritizeDetailRepair, markDetailRepaired, hasDetailCounts } from './detail-repair.mjs';
+import { restoreIncompleteDetails, prioritizeDetailRepair, markDetailRepaired, hasDetailCounts, backfillKnownDetailQueue } from './detail-repair.mjs';
 import { extractTablesFromDOM } from './table-extractor.mjs';
 import { installNetworkAudit } from './network-audit.mjs';
 import { execSync } from 'node:child_process';
@@ -385,6 +385,9 @@ if (!frontier.graph || !frontier.graph.nodes || !Object.keys(frontier.graph.node
 }
 const repairSummary = restoreIncompleteDetails(frontier, `${DATA}/entities`);
 log('DETAIL-REPAIR', repairSummary);
+const backlogSummary = backfillKnownDetailQueue(frontier, `${DATA}/entities`);
+log('GRAPH-DETAIL-BACKFILL', backlogSummary);
+fs.writeFileSync(`${OUT}/graph-detail-backfill-${process.env.GITHUB_RUN_ID || 'local'}.json`, JSON.stringify({ at: new Date().toISOString(), ...backlogSummary }, null, 2));
 fs.writeFileSync(`${OUT}/detail-repair-${process.env.GITHUB_RUN_ID || 'local'}.json`, JSON.stringify({ at: new Date().toISOString(), ...repairSummary }, null, 2));
 /* ═══ 🧽 پاک‌سازی: صف بدون تکراری + حذف گره‌های زباله (نام‌های خطای صفحه) ═══ */
 try {
@@ -437,7 +440,7 @@ function mergeRemoteState() {
     const rf = rd('scripts/rasmio/frontier.json');
     if (rf) {
       frontier.visited = frontier.visited || {};
-      const needsRepair = new Set(frontier.detailRepair?.remaining || []);
+      const needsRepair = new Set([...(frontier.detailRepair?.remaining || []), ...(frontier.graphDetailBackfill?.reopened || [])]);
       for (const [k, v] of Object.entries(rf.visited || {})) {
         // An old zero/error visit must never hide a newly restored repair task.
         if (needsRepair.has(k) && !(v?.detailSchemaVersion === 2 && ((v.rows || 0) > 0 || (v.tableRows || 0) > 0))) continue;
@@ -537,7 +540,7 @@ const enqueue = (ent, via) => {
   /* 🆕 اشخاص و محصولات دیگر پارکِ مطلق نمی‌شوند — مستقیم در صف (درخواست ۲۴ مهر) */
   if (ent.type === 'person' || ent.type === 'product' || ent.type === 'brand' || ent.type === 'patent') {
     if (frontier.visited[k] || frontier.pending.some((p) => keyOf(p) === k)) return;
-    if (frontier.pending.length > 400000) return;
+    if (ent.type !== 'person' && frontier.pending.length > 400000) return; // Known people must not be silently dropped.
     frontier.pending.push(ent);
     if (via) dbg('enqueue-' + k, { via });
     return;
@@ -1918,7 +1921,7 @@ try {
     const groups = {};
     for (const x of frontier.pending) (groups[x.type] = groups[x.type] || []).push(x);
     for (const g of Object.values(groups)) for (let i = g.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [g[i], g[j]] = [g[j], g[i]]; }
-    const WEIGHT = { company: 1, product: 3, person: 2, brand: 1, patent: 1 }; /* 🏢 شرکت اول: از هر IP فقط ۵ صفحهٔ شرکت نصیبمان می‌شود ⇒ همان اولِ اجرا (IP تازه) بگیریم */
+    const WEIGHT = { company: 3, person: 3, product: 1, brand: 1, patent: 1 }; /* 🏢 شرکت اول: از هر IP فقط ۵ صفحهٔ شرکت نصیبمان می‌شود ⇒ همان اولِ اجرا (IP تازه) بگیریم */
     const order = [];
     const idx = {}; for (const t of Object.keys(groups)) idx[t] = 0;
     let total = frontier.pending.length;
