@@ -1,0 +1,135 @@
+{
+  "runId": "40446846879",
+  "startedAt": "2026-10-27T03:55:48.870Z",
+  "mode": "bounded-anonymous-proxy-test",
+  "limits": {
+    "candidates": 20,
+    "concurrency": 2,
+    "companyRequests": 4,
+    "storedProfiles": 2,
+    "wallSeconds": 150
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "sha256": "5d42ff8dfd50515ae86577312995c77c7a78f2b2b04736cc9a84ed6c6567563c",
+      "lines": 1687
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "sha256": "514dda1847e5fb6f35bbd2f6c78fca1d2cfedddf5a1d2e34a9df9e92d1e42420",
+      "lines": 6358
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "sha256": "66e24dec72b517def50f6a183270e04d9b755c2874aeff8bc7ebd64942e8d5d7",
+      "lines": 85992
+    }
+  ],
+  "attempts": [
+    {
+      "proxy": "http://184.75.221.82:3118",
+      "startedAt": "2026-10-27T03:55:49.615Z",
+      "phase": "company-https",
+      "observedExitIP": "184.75.221.82",
+      "responses": [
+        {
+          "url": "https://rasmio.com/company/10100000711/direct/",
+          "status": 200,
+          "bytes": 1198147,
+          "redirect": null
+        }
+      ],
+      "htmlTitle": "🏢 کارخانجات بنای سبک قدس رضوی - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها",
+      "rawTableCount": 6,
+      "tableRows": 13,
+      "tables": 6,
+      "outcome": "nonempty-company-identity-verified",
+      "elapsedMs": 2340
+    },
+    {
+      "proxy": "http://80.87.193.111:12345",
+      "startedAt": "2026-10-27T03:55:49.619Z",
+      "phase": "echo-https",
+      "outcome": "request-failed",
+      "error": "curl: (28) Failed to connect to 80.87.193.111 port 12345 after 4002 ms: Timeout was reached\n",
+      "elapsedMs": 4014
+    },
+    {
+      "proxy": "http://183.110.216.159:8091",
+      "startedAt": "2026-10-27T03:55:53.634Z",
+      "phase": "echo-https",
+      "outcome": "request-failed",
+      "error": "curl: (28) Failed to connect to 183.110.216.159 port 8091 after 4002 ms: Timeout was reached\n",
+      "elapsedMs": 4011
+    },
+    {
+      "proxy": "https://84.17.47.150:9002",
+      "startedAt": "2026-10-27T03:55:53.636Z",
+      "phase": "echo-https",
+      "outcome": "request-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.17.47.150'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore coul",
+      "elapsedMs": 197
+    },
+    {
+      "proxy": "http://5.129.254.49:8888",
+      "startedAt": "2026-10-27T03:55:57.645Z",
+      "phase": "company-https",
+      "observedExitIP": "5.129.254.129",
+      "responses": [
+        {
+          "url": "https://rasmio.com/company/10100000711/direct/",
+          "status": 200,
+          "bytes": 1198147,
+          "redirect": null
+        }
+      ],
+      "htmlTitle": "🏢 کارخانجات بنای سبک قدس رضوی - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها",
+      "rawTableCount": 6,
+      "tableRows": 13,
+      "tables": 6,
+      "outcome": "nonempty-company-identity-verified",
+      "elapsedMs": 3462
+    },
+    {
+      "proxy": "http://78.138.185.81:3128",
+      "startedAt": "2026-10-27T03:55:57.647Z",
+      "phase": "echo-https",
+      "outcome": "request-failed",
+      "error": "curl: (28) Failed to connect to 78.138.185.81 port 3128 after 4002 ms: Timeout was reached\n",
+      "elapsedMs": 4010
+    }
+  ],
+  "verifiedProfiles": [
+    {
+      "file": "out/public-proxy-profile-40446846879-1.json",
+      "key": "company:10100000711",
+      "observedExitIP": "184.75.221.82",
+      "proxy": "http://184.75.221.82:3118",
+      "tableRows": 13,
+      "tables": 6,
+      "sha256": "21eb2c80534199d7a35c054b59a3820756cb6ff6be14783bd8019cf4ca9e85ef",
+      "nationalIdMatches": true
+    },
+    {
+      "file": "out/public-proxy-profile-40446846879-2.json",
+      "key": "company:10100000711",
+      "observedExitIP": "5.129.254.129",
+      "proxy": "http://5.129.254.49:8888",
+      "tableRows": 13,
+      "tables": 6,
+      "sha256": "1739645c0724f437ef6987d085a2f82f74c4ec252021401c16ee8289be3a1db6",
+      "nationalIdMatches": true
+    }
+  ],
+  "productionRoutingChanged": false,
+  "exitScope": "Echo-service-observed IP; destination-specific egress and unused target quota are not proven",
+  "previouslyEchoVerifiedCandidates": 6,
+  "protocolSelection": "HTTP/HTTPS proxies",
+  "candidateCount": 20,
+  "finishedAt": "2026-10-27T03:56:01.731Z",
+  "verifiedExitCount": 2
+}
