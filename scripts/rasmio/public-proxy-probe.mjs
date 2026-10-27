@@ -31,7 +31,12 @@ export async function runPublicProxyProbe() {
         return text.trim().split('\n');
       } catch(e) {report.sources.push({repo,file,error:String(e.message).slice(0,160)});return [];}
     }));
-    const candidates=interleaveCandidates(lists.map(list=>list.filter(line=>/^https?:/.test(line))),20);
+    const previousHealthy=[];
+    for(const file of fs.readdirSync('out').filter(f=>/^public-proxy-probe-[0-9A-Za-z_-]+\.json$/.test(f)).sort().reverse().slice(0,6)) {
+      try { const prior=JSON.parse(fs.readFileSync(path.join('out',file),'utf8')); for(const a of prior.attempts || []) if(a.observedExitIP && /^https?:/.test(a.proxy)) previousHealthy.push(a.proxy); } catch {}
+    }
+    report.previouslyEchoVerifiedCandidates=previousHealthy.length;
+    const candidates=interleaveCandidates([previousHealthy,...lists.map(list=>list.filter(line=>/^https?:/.test(line)))],20);
     report.protocolSelection='HTTP/HTTPS proxies';
     report.candidateCount=candidates.length;save();
     browser=await puppeteer.launch({headless:true,env,args:['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage','--disable-background-networking','--disable-component-update','--disable-sync','--no-first-run'],userDataDir:path.join(scratch,'browser')});
@@ -49,7 +54,7 @@ export async function runPublicProxyProbe() {
           usedExits.add(ip);
           if(companyAttempts>=4 || report.verifiedProfiles.length+inflightCompany>=2){attempt.outcome='company-probe-budget-skipped';return;}
           inflightCompany++;reserved=true;attempt.phase='company-https';
-          let target='https://rasmio.com/company/10100000711',html='';attempt.responses=[];
+          let target='https://rasmio.com/company/10100000711/direct/',html='';attempt.responses=[];
           for(let redirects=0;redirects<=2;redirects++) {
             if(companyAttempts>=4){attempt.outcome='company-request-budget-exhausted';return;}
             companyAttempts++;
@@ -65,6 +70,7 @@ export async function runPublicProxyProbe() {
             }
             break;
           }
+          if(attempt.responses.at(-1)?.status>=300 && attempt.responses.at(-1)?.status<400){attempt.outcome='redirect-limit';return;}
           attempt.htmlTitle=(html.match(/<title[^>]*>([^<]*)<\/title>/i)||[])[1]||null;
           attempt.rawTableCount=(html.match(/<table\b/gi)||[]).length;
           if(/سقف\s*مجاز|امکان مشاهده اطلاعات در صفحه شرکت برای شما محدود شده/.test(html)){attempt.outcome='explicit-access-limit';return;}
