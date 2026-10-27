@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {reserveExit,permittedDetailURL,transportCurlArgs,PublicProxyTransport} from './proxy-transport.mjs';
+import {reserveExit,permittedDetailURL,permittedResourceURL,transportCurlArgs,PublicProxyTransport} from './proxy-transport.mjs';
 test('budget persists across leases and blocks fifth navigation, including a browser fallback',()=>{
  const state={};for(let i=1;i<=4;i++)assert.equal(reserveExit(state,'8.8.8.8',{now:100}),i);
  assert.throws(()=>reserveExit(state,'8.8.8.8',{now:101}),/budget/);
@@ -41,4 +41,30 @@ test('mocked pool routes HTTP, preserves counters, quarantines limited exits and
   for(const c of calls){assert.equal(c.env.GITHUB_TOKEN,undefined);assert.equal(c.env.GH_TOKEN,undefined);assert.ok(c.args.includes('--proxy'));}
   assert.equal(pool.report.directFallback,false);
  } finally {pool.close();fs.rmSync(out,{recursive:true,force:true});}
+});
+test('profile HTTP errors retain their actual status, without following an out-of-scope redirect',async()=>{
+ const out=fs.mkdtempSync(path.join(os.tmpdir(),'pool-http-test-'));let response='blocked\n__EGRESS_META__429\t';const calls=[];
+ const pool=new PublicProxyTransport({frontier:{},out,execute:async(_,args)=>{calls.push(args);return {stdout:response};}});
+ try{
+  const lease=pool.lease({proxy:'http://8.8.8.8:80',ip:'1.1.1.1'}, {type:'company',id:'10100009135'});
+  assert.equal((await lease.fetch('https://rasmio.com/company/10100009135/direct/')).status,429);
+  assert.equal(pool.report.requests[0].status,429);assert.equal(calls[0].includes('--fail'),false);
+  response='redirect\n__EGRESS_META__302\thttps://evil.test/';
+  await assert.rejects(lease.fetch('https://rasmio.com/company/10100009135/direct/'),/redirect-not-permitted/);
+  assert.equal(calls.length,2);lease.finish(false,'HTTP 429');
+ }finally{pool.close();fs.rmSync(out,{recursive:true,force:true});}
+});
+test('tunnel failures are auditable retryable deferrals, not browser/direct retry signals',async()=>{
+ const out=fs.mkdtempSync(path.join(os.tmpdir(),'pool-fail-test-'));
+ const pool=new PublicProxyTransport({frontier:{},out,execute:async()=>{throw Object.assign(new Error('tunnel failed'),{stderr:'curl: (28) timeout'});}});
+ try{
+  const lease=pool.lease({proxy:'http://8.8.8.8:80',ip:'1.1.1.1'}, {type:'company',id:'10100009135'});
+  await assert.rejects(lease.fetch('https://rasmio.com/company/10100009135/direct/'),e=>e.retryable===true&&/proxy-curl-failed/.test(e.message));
+  assert.match(pool.report.requests[0].error,/timeout/);lease.finish(false,'proxy-curl-failed');
+ }finally{pool.close();fs.rmSync(out,{recursive:true,force:true});}
+});
+
+test('profile assets and APIs may use Rasmio subdomains, not lookalike hosts',()=>{
+ for(const u of ['https://rasmio.com/_next/static/a.js','https://api.rasmio.com/api/company','https://cdn.rasmio.com/app.js'])assert.equal(permittedResourceURL(u),true);
+ for(const u of ['https://evilrasmio.com/a.js','https://rasmio.com.evil.test/','http://api.rasmio.com/','https://user:pass@api.rasmio.com/','https://api.rasmio.com:444/'])assert.equal(permittedResourceURL(u),false);
 });

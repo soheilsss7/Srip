@@ -16,6 +16,9 @@ export function permittedDetailURL(value, ent) {
     return !!match && match[1]===ent.type && match[2].toUpperCase()===String(ent.id).toUpperCase() && (ent.type==='company'?/^\d{11}$/.test(ent.id):/^[a-fA-F0-9]+$/.test(ent.id));
   } catch{return false;}
 }
+export function permittedResourceURL(value) {
+  try {const u=new URL(value);return u.protocol==='https:'&&!u.port&&!u.username&&!u.password&&(u.hostname==='rasmio.com'||u.hostname.endsWith('.rasmio.com'));}catch{return false;}
+}
 export function reserveExit(state, ip, {now=Date.now(), max=4, windowMs=WINDOW}={}) {
   if(!isIP(ip))throw new Error('Invalid observed IP');
   state.exits ||= {};
@@ -100,7 +103,7 @@ export class PublicProxyTransport {
   }
   lease(entry,ent){
     const pool=this;let closed=false;const key=`${ent.type}:${ent.id}`;
-    const lease={proxy:entry.proxy,observedExitIP:entry.ip,finalURL:null,mainRequests:0,
+    const lease={proxy:entry.proxy,observedExitIP:entry.ip,finalURL:null,mainRequests:0,blockedHosts:[],
       reserve(kind,url){
         if(closed || entry.retired)throw new Error('proxy-lease-closed');
         if(!permittedDetailURL(url,ent))throw new Error('proxy-target-not-permitted');
@@ -116,6 +119,7 @@ export class PublicProxyTransport {
           catch(e){observation.error=String(e.stderr||e.message).slice(0,240);pool.save();const error=new Error('proxy-curl-failed: '+observation.error);error.retryable=true;throw error;}
           const at=stdout.lastIndexOf('\n__EGRESS_META__');if(at<0)throw new Error('Missing HTTP metadata');
           const body=stdout.slice(0,at),[statusText,redirect]=stdout.slice(at+'\n__EGRESS_META__'.length).split('\t');const status=Number(statusText);
+          observation.scriptHosts=[...new Set([...body.matchAll(/<script[^>]+src=["']([^"']+)/gi)].map(m=>{try{return new URL(m[1],target).hostname;}catch{return 'invalid';}}))].slice(0,20);
           observation.status=status;observation.bytes=Buffer.byteLength(body);observation.rawTables=(body.match(/<table/gi)||[]).length;observation.title=(body.match(/<title[^>]*>([^<]*)<\/title>/i)||[])[1]?.slice(0,160)||null;pool.save();
           if(status>=300 && status<400){if(!permittedDetailURL(redirect,ent))throw new Error('proxy-redirect-not-permitted');target=redirect;continue;}
           lease.finalURL=target;
@@ -126,7 +130,7 @@ export class PublicProxyTransport {
       finish(success,reason){
         if(closed)return;closed=true;
         if(!success){entry.retired=true;pool.state.exits[entry.ip] ||= {requests:0,lastAt:pool.now()};if(/explicit-access-limit|HTTP 429|exit-budget/.test(String(reason)))pool.state.exits[entry.ip].blockedAt=pool.now();else pool.state.exits[entry.ip].cooldownUntil=pool.now()+120000;}
-        pool.report.outcomes.push({at:new Date().toISOString(),key,proxy:entry.proxy,observedExitIP:entry.ip,mainRequests:lease.mainRequests,success,reason:reason?String(reason).slice(0,180):null});
+        pool.report.outcomes.push({at:new Date().toISOString(),key,proxy:entry.proxy,observedExitIP:entry.ip,mainRequests:lease.mainRequests,blockedResourceHosts:lease.blockedHosts,success,reason:reason?String(reason).slice(0,180):null});
         pool.busy.delete(entry.ip);for(const resolve of pool.waiters.splice(0))resolve();pool.save();
       },
     };

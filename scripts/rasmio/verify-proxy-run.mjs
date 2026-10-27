@@ -1,8 +1,10 @@
 // Independent Git readback: never treats a nonempty record as a complete profile.
 import {execFileSync} from 'node:child_process';
 import crypto from 'node:crypto';
-const [before,after,runId]=process.argv.slice(2);
-if(!before||!after||!/^\d+$/.test(runId||''))throw new Error('Usage: node verify-proxy-run.mjs BEFORE AFTER RUN_ID');
+const [beforeArg,afterArg,runId]=process.argv.slice(2);
+if(!beforeArg||!afterArg||!/^\d+$/.test(runId||''))throw new Error('Usage: node verify-proxy-run.mjs BEFORE AFTER RUN_ID');
+const before=execFileSync('git',['rev-parse',beforeArg],{encoding:'utf8'}).trim();
+const after=execFileSync('git',['rev-parse',afterArg],{encoding:'utf8'}).trim();
 const read=(ref,file)=>execFileSync('git',['show',`${ref}:scripts/rasmio/${file}`],{encoding:'utf8',maxBuffer:256*1024*1024,stdio:['ignore','pipe','ignore']});
 const hasData=x=>!!(x?.rows?.length||x?.tables?.some(t=>t.rows?.length));
 const pool=JSON.parse(read(after,`out/proxy-transport-${runId}.json`));

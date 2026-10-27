@@ -17,7 +17,7 @@ import puppeteer from 'puppeteer';
 import { restoreIncompleteDetails, prioritizeDetailRepair, markDetailRepaired, hasDetailCounts, backfillKnownDetailQueue } from './detail-repair.mjs';
 import { extractTablesFromDOM } from './table-extractor.mjs';
 import { installNetworkAudit } from './network-audit.mjs';
-import { PublicProxyTransport, permittedDetailURL } from './proxy-transport.mjs';
+import { PublicProxyTransport, permittedDetailURL, permittedResourceURL } from './proxy-transport.mjs';
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
@@ -1423,7 +1423,7 @@ async function extractRoutedEntity(ent, defaultPage) {
     pg.on('request',request=>{
       try {
         const url=new URL(request.url());
-        if(url.protocol!=='https:' || url.hostname!=='rasmio.com' || ['image','media','font'].includes(request.resourceType())){void request.abort().catch(()=>{});return;}
+        if(!permittedResourceURL(url.href) || ['image','media','font'].includes(request.resourceType())){if(!permittedResourceURL(url.href)&&!route.blockedHosts.includes(url.hostname)&&route.blockedHosts.length<20)route.blockedHosts.push(url.hostname);void request.abort().catch(()=>{});return;}
         if(request.isNavigationRequest() && request.frame()===pg.mainFrame()) {
           if(!permittedDetailURL(url.href,ent)){void request.abort().catch(()=>{});return;}
           route.reserve('browser-navigation',url.href);
