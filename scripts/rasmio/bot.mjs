@@ -33,7 +33,7 @@ const BASE = process.env.RASMIO_BASE || 'https://rasmio.com';
 const networkAudit = installNetworkAudit({ host: new URL(BASE).hostname, out: OUT });
 globalThis.fetch = networkAudit.fetch;
 const LIMIT = Number(process.env.CRAWL_LIMIT || 400); // سقف هر اجرا — زنجیرهٔ اجراها گراف را کامل می‌کند
-const MAX_PARALLEL = Math.max(1, Math.min(16, Number(process.env.RASMIO_PARALLEL || 1))); // ⚡ کارگرهای همزمان (هر اجرا IP تازه = سهمیهٔ تازه)
+const MAX_PARALLEL = Math.max(1, Math.min(16, Number(process.env.RASMIO_PARALLEL || 1))); // ⚡ کارگرهای همزمان (اجرای تازه تضمین IP یا سهمیهٔ تازه نیست)
 const SLOT = MAX_PARALLEL > 1 ? (Number(process.env.GITHUB_RUN_ID || '0') % MAX_PARALLEL) : 0; // تیکهٔ اختصاصی این کارگر از صف
 const TIME_BUDGET_S = Number(process.env.CRAWL_TIME_BUDGET_S || 1300); // بودجهٔ خزندگی هر اجرا (ثانیه) — همیشه قبل از سقف ۳۰دقیقه‌ای job تمام می‌شود تا خروجی کامیت شود
 const DELAY_MS = Number(process.env.CRAWL_DELAY_MS || 5000);
@@ -1191,7 +1191,7 @@ async function parsePageTables(pg = page) { return pg.evaluate(extractTablesFrom
 async function extractEntity(ent, pg = page) {
   /* 🆕 آدرسِ هر نوع موجودیت — محصول/برند/اختراع هم خزش می‌شوند (درخواست ۲۴ مهر) */
   const URL_OF = {
-    company: (id) => `${BASE}/company/${id}`,
+    company: (id) => `${BASE}/company/${id}/direct/`, // Public canonical route validated by the free-proxy experiment; avoids the 308 chain.
     person: (id) => `${BASE}/person/${id}/x/`,
     product: (id) => `${BASE}/product/${id}/`,
     brand: (id) => `${BASE}/brand/${id}/`,
@@ -1218,7 +1218,7 @@ async function extractEntity(ent, pg = page) {
     if (ent.type === 'company') {
       const tb0 = (h.match(/<table/gi) || []).length;
       globalThis.__rasmioZeroCo = tb0 === 0 ? (globalThis.__rasmioZeroCo || 0) + 1 : 0;
-      if (globalThis.__rasmioZeroCo >= 3 && !globalThis.__rasmioWall) { globalThis.__rasmioWall = true; log('🚧 سقف شرکت‌های این IP پر شد (۳ شرکت پیاپی بی‌جدول) — بقیهٔ وقت صرفِ محصول/شخص می‌شود · اجرای بعدی = IP تازه'); }
+      if (globalThis.__rasmioZeroCo >= 3 && !globalThis.__rasmioWall) { globalThis.__rasmioWall = true; log('🚧 سقف شرکت‌های این IP پر شد (۳ شرکت پیاپی بی‌جدول) — بقیهٔ وقت صرفِ محصول/شخص می‌شود · اجرای بعدی؛ IP تازه تضمین نشده'); }
     }
     /* 🔎 ردیابی ۲۵ مهر: چرا شرکت‌ها ۰ ردیف می‌دهند؟ وضعیت و طول و تعداد جدولِ خام ثبت می‌شود */
     if (ent.type === 'company') {
@@ -1979,7 +1979,7 @@ try {
   while (processed < LIMIT && queue.length) {
     if ((Date.now() - crawlStart) / 1000 > Math.min(TIME_BUDGET_S, Number(process.env.CRAWL_TIME_BUDGET_S || TIME_BUDGET_S))) { stopReason = 'time-budget'; break; }
     if (hardTimeUp()) { stopReason = 'hard-deadline'; log('⏰ سقف مطلق job — توقف امن و پوش داده'); break; }
-    /* رسمیو به هر IP بعد از چند درخواست پوسته می‌دهد → تعویض IP فوری (اجرای بعدی = IP تازه) */
+    /* رسمیو به هر IP بعد از چند درخواست پوسته می‌دهد → تعویض IP فوری (اجرای بعدی؛ IP تازه تضمین نشده) */
     if (zeroStreak >= (paced ? 2 : 18)) { stopReason = 'quota-or-blocked'; break; }
     const wave = [];
     let heldCompanies = 0;

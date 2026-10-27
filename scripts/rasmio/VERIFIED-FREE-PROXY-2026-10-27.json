@@ -1,0 +1,864 @@
+{
+  "verifiedAtSnapshot": "0e1279dbbf924a31e36cdb0181dcaafc25d78a57",
+  "beforeSnapshot": "7b5da73ff8088efa4de5a371cccc692fa16756d6",
+  "datasetChecks": [
+    {
+      "key": "company:10100009135",
+      "name": "شرکت تعاونی کشاورزی دامداران فیروزکوه",
+      "file": "data/entities/company-10100009135.json",
+      "previouslyEmpty": true,
+      "storedSHA256": "8189bf51e46c69602f3cf77030d43796db265c67a52c8b28427a0fdcea46eae5",
+      "tables": 4,
+      "tableRows": 14,
+      "linkedRows": 10,
+      "infoKeys": [
+        "شناسه ملی",
+        "شماره ثبت",
+        "تاریخ تاسیس",
+        "وضعیت شرکت",
+        "نوع شرکت",
+        "کد اقتصادی",
+        "سرمایه ثبتی",
+        "آخرین آگهی روزنامه رسمی",
+        "نشانی"
+      ],
+      "sourceRun": "40447206296",
+      "readbackVerified": true,
+      "profileCompleteness": "unverified"
+    },
+    {
+      "key": "company:10100008094",
+      "name": "شرکت سیم نور پویا",
+      "file": "data/entities/company-10100008094.json",
+      "previouslyEmpty": true,
+      "storedSHA256": "54166e3d30dfb1a5ca5a08856df178dc06167f7bf883f3763cbb122ed7841c26",
+      "tables": 7,
+      "tableRows": 47,
+      "linkedRows": 38,
+      "infoKeys": [
+        "شناسه ملی",
+        "شماره ثبت",
+        "تاریخ تاسیس",
+        "وضعیت شرکت",
+        "نوع شرکت",
+        "کد اقتصادی",
+        "سرمایه ثبتی",
+        "آخرین آگهی روزنامه رسمی",
+        "نشانی"
+      ],
+      "sourceRun": "40447206296",
+      "readbackVerified": true,
+      "profileCompleteness": "unverified"
+    }
+  ],
+  "controlChecks": {
+    "snapshot": "7b5da73ff8088efa4de5a371cccc692fa16756d6",
+    "checks": [
+      {
+        "key": "company:10100000711",
+        "name": "شرکت کارخانجات بنای سبک قدس رضوی",
+        "file": "out/public-proxy-profile-40446846879-1.json",
+        "sha256": "21eb2c80534199d7a35c054b59a3820756cb6ff6be14783bd8019cf4ca9e85ef",
+        "tables": 6,
+        "tableRows": 13,
+        "readbackVerified": true
+      },
+      {
+        "key": "company:10100000711",
+        "name": "شرکت کارخانجات بنای سبک قدس رضوی",
+        "file": "out/public-proxy-profile-40446846879-2.json",
+        "sha256": "1739645c0724f437ef6987d085a2f82f74c4ec252021401c16ee8289be3a1db6",
+        "tables": 6,
+        "tableRows": 13,
+        "readbackVerified": true
+      }
+    ]
+  },
+  "attemptCount": 58,
+  "uniqueProxyServersAttempted": 38,
+  "distinctEchoObservedIPs": 8,
+  "repairedCompanies": 2,
+  "repairedTables": 11,
+  "repairedTableRows": 61,
+  "experiments": [
+    {
+      "runId": "40446313922",
+      "startedAt": "2026-10-27T03:50:09.125Z",
+      "mode": "bounded-anonymous-proxy-test",
+      "limits": {
+        "candidates": 20,
+        "concurrency": 2,
+        "companyRequests": 4,
+        "storedProfiles": 2,
+        "wallSeconds": 150
+      },
+      "sources": [
+        {
+          "repo": "monosans/proxy-list",
+          "file": "proxies/all.txt",
+          "sha256": "5d42ff8dfd50515ae86577312995c77c7a78f2b2b04736cc9a84ed6c6567563c",
+          "lines": 1687
+        },
+        {
+          "repo": "ProxyScrape/free-proxy-list",
+          "file": "proxies/all/data.txt",
+          "sha256": "59f061d1e8740b3e13ab61cc05bbc3a0e087a7cc799fee1cba2414310870d0ae",
+          "lines": 5534
+        },
+        {
+          "repo": "proxifly/free-proxy-list",
+          "file": "proxies/all/data.txt",
+          "sha256": "66e24dec72b517def50f6a183270e04d9b755c2874aeff8bc7ebd64942e8d5d7",
+          "lines": 85992
+        }
+      ],
+      "attempts": [
+        {
+          "proxy": "socks4://109.68.189.22:54643",
+          "startedAt": "2026-10-27T03:50:11.239Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (97) Can't complete SOCKS4 connection to 0.0.0.0:0. (91), request rejected or failed.\n",
+          "elapsedMs": 435
+        },
+        {
+          "proxy": "http://174.138.119.88:80",
+          "startedAt": "2026-10-27T03:50:11.244Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (22) The requested URL returned error: 405\n",
+          "elapsedMs": 137
+        },
+        {
+          "proxy": "socks5://208.102.51.6:58208",
+          "startedAt": "2026-10-27T03:50:11.674Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (60) SSL certificate problem: self-signed certificate in certificate chain\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish",
+          "elapsedMs": 1043
+        },
+        {
+          "proxy": "http://80.87.193.111:12345",
+          "startedAt": "2026-10-27T03:50:11.677Z",
+          "phase": "company-https",
+          "observedExitIP": "80.87.193.111",
+          "tableRows": 0,
+          "tables": 0,
+          "outcome": "empty-detail-response",
+          "elapsedMs": 2043
+        },
+        {
+          "proxy": "socks4://72.195.101.99:4145",
+          "startedAt": "2026-10-27T03:50:13.721Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (60) SSL certificate problem: self-signed certificate in certificate chain\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish",
+          "elapsedMs": 584
+        },
+        {
+          "proxy": "socks5://69.61.200.104:36181",
+          "startedAt": "2026-10-27T03:50:13.723Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (60) SSL certificate problem: self-signed certificate in certificate chain\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish",
+          "elapsedMs": 963
+        },
+        {
+          "proxy": "socks5://83.237.82.146:1080",
+          "startedAt": "2026-10-27T03:50:14.785Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (28) Failed to connect to 83.237.82.146 port 1080 after 4002 ms: Timeout was reached\n",
+          "elapsedMs": 4010
+        },
+        {
+          "proxy": "http://34.44.49.215:80",
+          "startedAt": "2026-10-27T03:50:14.788Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (22) The requested URL returned error: 405\n",
+          "elapsedMs": 111
+        },
+        {
+          "proxy": "socks5://66.42.224.229:41679",
+          "startedAt": "2026-10-27T03:50:18.796Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (60) SSL certificate problem: self-signed certificate in certificate chain\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish",
+          "elapsedMs": 929
+        },
+        {
+          "proxy": "socks4://46.8.104.176:1080",
+          "startedAt": "2026-10-27T03:50:18.798Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (97) Recv failure: Connection reset by peer\n",
+          "elapsedMs": 1373
+        },
+        {
+          "proxy": "socks4://201.79.50.139:10000",
+          "startedAt": "2026-10-27T03:50:20.172Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (7) Failed to connect to 201.79.50.139 port 10000 after 80 ms: Couldn't connect to server\n",
+          "elapsedMs": 87
+        },
+        {
+          "proxy": "socks5://174.64.199.82:4145",
+          "startedAt": "2026-10-27T03:50:20.174Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (60) SSL certificate problem: self-signed certificate in certificate chain\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish",
+          "elapsedMs": 678
+        },
+        {
+          "proxy": "socks5://81.211.26.237:1080",
+          "startedAt": "2026-10-27T03:50:20.853Z",
+          "phase": "company-https",
+          "observedExitIP": "81.211.26.237",
+          "outcome": "request-failed",
+          "error": "curl: (28) Failed to connect to 81.211.26.237 port 1080 after 4002 ms: Timeout was reached\n",
+          "elapsedMs": 5221
+        },
+        {
+          "proxy": "socks4://72.207.109.5:4145",
+          "startedAt": "2026-10-27T03:50:20.855Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (60) SSL certificate problem: self-signed certificate in certificate chain\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish",
+          "elapsedMs": 582
+        },
+        {
+          "proxy": "socks5://72.195.34.42:4145",
+          "startedAt": "2026-10-27T03:50:26.074Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (60) SSL certificate problem: self-signed certificate in certificate chain\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish",
+          "elapsedMs": 682
+        },
+        {
+          "proxy": "http://78.138.185.81:3128",
+          "startedAt": "2026-10-27T03:50:26.077Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (28) Failed to connect to 78.138.185.81 port 3128 after 4002 ms: Timeout was reached\n",
+          "elapsedMs": 4008
+        },
+        {
+          "proxy": "socks4://176.236.37.132:1080",
+          "startedAt": "2026-10-27T03:50:30.085Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (97) Can't complete SOCKS4 connection to 0.0.0.0:0. (91), request rejected or failed.\n",
+          "elapsedMs": 1394
+        },
+        {
+          "proxy": "socks5://192.252.211.197:14921",
+          "startedAt": "2026-10-27T03:50:30.088Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (60) SSL certificate problem: self-signed certificate in certificate chain\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish",
+          "elapsedMs": 496
+        },
+        {
+          "proxy": "socks4://94.247.241.70:51006",
+          "startedAt": "2026-10-27T03:50:31.479Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (28) Failed to connect to 94.247.241.70 port 51006 after 4002 ms: Timeout was reached\n",
+          "elapsedMs": 4010
+        },
+        {
+          "proxy": "socks4://174.64.199.79:4145",
+          "startedAt": "2026-10-27T03:50:31.482Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (60) SSL certificate problem: self-signed certificate in certificate chain\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish",
+          "elapsedMs": 576
+        }
+      ],
+      "verifiedProfiles": [],
+      "productionRoutingChanged": false,
+      "exitScope": "Echo-service-observed IP; destination-specific egress and unused target quota are not proven",
+      "candidateCount": 20,
+      "finishedAt": "2026-10-27T03:50:35.569Z",
+      "verifiedExitCount": 2
+    },
+    {
+      "runId": "40446633224",
+      "startedAt": "2026-10-27T03:53:46.373Z",
+      "mode": "bounded-anonymous-proxy-test",
+      "limits": {
+        "candidates": 20,
+        "concurrency": 2,
+        "companyRequests": 4,
+        "storedProfiles": 2,
+        "wallSeconds": 150
+      },
+      "sources": [
+        {
+          "repo": "monosans/proxy-list",
+          "file": "proxies/all.txt",
+          "sha256": "5d42ff8dfd50515ae86577312995c77c7a78f2b2b04736cc9a84ed6c6567563c",
+          "lines": 1687
+        },
+        {
+          "repo": "ProxyScrape/free-proxy-list",
+          "file": "proxies/all/data.txt",
+          "sha256": "514dda1847e5fb6f35bbd2f6c78fca1d2cfedddf5a1d2e34a9df9e92d1e42420",
+          "lines": 6358
+        },
+        {
+          "repo": "proxifly/free-proxy-list",
+          "file": "proxies/all/data.txt",
+          "sha256": "66e24dec72b517def50f6a183270e04d9b755c2874aeff8bc7ebd64942e8d5d7",
+          "lines": 85992
+        }
+      ],
+      "attempts": [
+        {
+          "proxy": "http://80.87.193.111:12345",
+          "startedAt": "2026-10-27T03:53:47.036Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (22) The requested URL returned error: 503\n",
+          "elapsedMs": 289
+        },
+        {
+          "proxy": "http://183.110.216.159:8091",
+          "startedAt": "2026-10-27T03:53:47.041Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (28) Failed to connect to 183.110.216.159 port 8091 after 4002 ms: Timeout was reached\n",
+          "elapsedMs": 4015
+        },
+        {
+          "proxy": "https://84.17.47.150:9002",
+          "startedAt": "2026-10-27T03:53:51.056Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.17.47.150'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore coul",
+          "elapsedMs": 209
+        },
+        {
+          "proxy": "http://78.138.185.81:3128",
+          "startedAt": "2026-10-27T03:53:51.058Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (28) Failed to connect to 78.138.185.81 port 3128 after 4002 ms: Timeout was reached\n",
+          "elapsedMs": 4013
+        },
+        {
+          "proxy": "http://184.75.221.82:3118",
+          "startedAt": "2026-10-27T03:53:55.071Z",
+          "phase": "company-https",
+          "observedExitIP": "184.75.221.82",
+          "responses": [
+            {
+              "url": "https://rasmio.com/company/10100000711",
+              "status": 308,
+              "bytes": 21,
+              "redirect": "https://rasmio.com/company/10100000711/"
+            },
+            {
+              "url": "https://rasmio.com/company/10100000711/",
+              "status": 308,
+              "bytes": 789274,
+              "redirect": "https://rasmio.com/company/10100000711/direct"
+            },
+            {
+              "url": "https://rasmio.com/company/10100000711/direct",
+              "status": 308,
+              "bytes": 28,
+              "redirect": "https://rasmio.com/company/10100000711/direct/"
+            }
+          ],
+          "htmlTitle": null,
+          "rawTableCount": 0,
+          "tableRows": 0,
+          "tables": 0,
+          "outcome": "empty-detail-response",
+          "elapsedMs": 4043
+        },
+        {
+          "proxy": "https://84.17.47.149:9002",
+          "startedAt": "2026-10-27T03:53:55.074Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.17.47.149'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore coul",
+          "elapsedMs": 198
+        },
+        {
+          "proxy": "http://5.129.254.49:8888",
+          "startedAt": "2026-10-27T03:53:59.114Z",
+          "phase": "company-https",
+          "observedExitIP": "5.129.254.60",
+          "responses": [
+            {
+              "url": "https://rasmio.com/company/10100000711",
+              "status": 308,
+              "bytes": 21,
+              "redirect": "https://rasmio.com/company/10100000711/"
+            }
+          ],
+          "outcome": "company-request-budget-exhausted",
+          "elapsedMs": 1775
+        },
+        {
+          "proxy": "http://167.99.3.26:5555",
+          "startedAt": "2026-10-27T03:53:59.118Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (56) Recv failure: Connection reset by peer\n",
+          "elapsedMs": 24
+        },
+        {
+          "proxy": "https://84.17.47.148:9002",
+          "startedAt": "2026-10-27T03:54:00.889Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.17.47.148'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore coul",
+          "elapsedMs": 196
+        },
+        {
+          "proxy": "http://45.90.32.134:3128",
+          "startedAt": "2026-10-27T03:54:00.891Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (28) Proxy CONNECT aborted due to timeout\n",
+          "elapsedMs": 4009
+        },
+        {
+          "proxy": "http://147.161.247.9:11870",
+          "startedAt": "2026-10-27T03:54:04.901Z",
+          "phase": "echo-https",
+          "observedExitIP": "147.161.247.9",
+          "outcome": "company-probe-budget-skipped",
+          "elapsedMs": 493
+        },
+        {
+          "proxy": "https://84.17.47.147:9002",
+          "startedAt": "2026-10-27T03:54:04.903Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.17.47.147'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore coul",
+          "elapsedMs": 198
+        },
+        {
+          "proxy": "http://5.129.254.51:8888",
+          "startedAt": "2026-10-27T03:54:05.394Z",
+          "phase": "echo-https",
+          "observedExitIP": "5.129.254.210",
+          "outcome": "company-probe-budget-skipped",
+          "elapsedMs": 705
+        },
+        {
+          "proxy": "http://145.220.227.57:3128",
+          "startedAt": "2026-10-27T03:54:05.396Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (22) The requested URL returned error: 502\n",
+          "elapsedMs": 2518
+        },
+        {
+          "proxy": "https://84.17.47.146:9002",
+          "startedAt": "2026-10-27T03:54:07.915Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.17.47.146'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore coul",
+          "elapsedMs": 203
+        },
+        {
+          "proxy": "http://5.129.254.215:8888",
+          "startedAt": "2026-10-27T03:54:07.917Z",
+          "phase": "echo-https",
+          "observedExitIP": "5.129.254.215",
+          "outcome": "company-probe-budget-skipped",
+          "elapsedMs": 742
+        },
+        {
+          "proxy": "https://84.17.47.126:9002",
+          "startedAt": "2026-10-27T03:54:08.659Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.17.47.126'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore coul",
+          "elapsedMs": 200
+        },
+        {
+          "proxy": "http://31.131.248.48:3129",
+          "startedAt": "2026-10-27T03:54:08.662Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (22) The requested URL returned error: 502\n",
+          "elapsedMs": 258
+        },
+        {
+          "proxy": "http://45.91.248.107:80",
+          "startedAt": "2026-10-27T03:54:08.920Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (22) The requested URL returned error: 400\n",
+          "elapsedMs": 36
+        },
+        {
+          "proxy": "https://84.17.47.125:9002",
+          "startedAt": "2026-10-27T03:54:08.923Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.17.47.125'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore coul",
+          "elapsedMs": 197
+        }
+      ],
+      "verifiedProfiles": [],
+      "productionRoutingChanged": false,
+      "exitScope": "Echo-service-observed IP; destination-specific egress and unused target quota are not proven",
+      "protocolSelection": "HTTP/HTTPS proxies",
+      "candidateCount": 20,
+      "finishedAt": "2026-10-27T03:54:09.205Z",
+      "verifiedExitCount": 5
+    },
+    {
+      "runId": "40446846879",
+      "startedAt": "2026-10-27T03:55:48.870Z",
+      "mode": "bounded-anonymous-proxy-test",
+      "limits": {
+        "candidates": 20,
+        "concurrency": 2,
+        "companyRequests": 4,
+        "storedProfiles": 2,
+        "wallSeconds": 150
+      },
+      "sources": [
+        {
+          "repo": "monosans/proxy-list",
+          "file": "proxies/all.txt",
+          "sha256": "5d42ff8dfd50515ae86577312995c77c7a78f2b2b04736cc9a84ed6c6567563c",
+          "lines": 1687
+        },
+        {
+          "repo": "ProxyScrape/free-proxy-list",
+          "file": "proxies/all/data.txt",
+          "sha256": "514dda1847e5fb6f35bbd2f6c78fca1d2cfedddf5a1d2e34a9df9e92d1e42420",
+          "lines": 6358
+        },
+        {
+          "repo": "proxifly/free-proxy-list",
+          "file": "proxies/all/data.txt",
+          "sha256": "66e24dec72b517def50f6a183270e04d9b755c2874aeff8bc7ebd64942e8d5d7",
+          "lines": 85992
+        }
+      ],
+      "attempts": [
+        {
+          "proxy": "http://184.75.221.82:3118",
+          "startedAt": "2026-10-27T03:55:49.615Z",
+          "phase": "company-https",
+          "observedExitIP": "184.75.221.82",
+          "responses": [
+            {
+              "url": "https://rasmio.com/company/10100000711/direct/",
+              "status": 200,
+              "bytes": 1198147,
+              "redirect": null
+            }
+          ],
+          "htmlTitle": "🏢 کارخانجات بنای سبک قدس رضوی - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها",
+          "rawTableCount": 6,
+          "tableRows": 13,
+          "tables": 6,
+          "outcome": "nonempty-company-identity-verified",
+          "elapsedMs": 2340
+        },
+        {
+          "proxy": "http://80.87.193.111:12345",
+          "startedAt": "2026-10-27T03:55:49.619Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (28) Failed to connect to 80.87.193.111 port 12345 after 4002 ms: Timeout was reached\n",
+          "elapsedMs": 4014
+        },
+        {
+          "proxy": "http://183.110.216.159:8091",
+          "startedAt": "2026-10-27T03:55:53.634Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (28) Failed to connect to 183.110.216.159 port 8091 after 4002 ms: Timeout was reached\n",
+          "elapsedMs": 4011
+        },
+        {
+          "proxy": "https://84.17.47.150:9002",
+          "startedAt": "2026-10-27T03:55:53.636Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.17.47.150'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore coul",
+          "elapsedMs": 197
+        },
+        {
+          "proxy": "http://5.129.254.49:8888",
+          "startedAt": "2026-10-27T03:55:57.645Z",
+          "phase": "company-https",
+          "observedExitIP": "5.129.254.129",
+          "responses": [
+            {
+              "url": "https://rasmio.com/company/10100000711/direct/",
+              "status": 200,
+              "bytes": 1198147,
+              "redirect": null
+            }
+          ],
+          "htmlTitle": "🏢 کارخانجات بنای سبک قدس رضوی - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها",
+          "rawTableCount": 6,
+          "tableRows": 13,
+          "tables": 6,
+          "outcome": "nonempty-company-identity-verified",
+          "elapsedMs": 3462
+        },
+        {
+          "proxy": "http://78.138.185.81:3128",
+          "startedAt": "2026-10-27T03:55:57.647Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (28) Failed to connect to 78.138.185.81 port 3128 after 4002 ms: Timeout was reached\n",
+          "elapsedMs": 4010
+        }
+      ],
+      "verifiedProfiles": [
+        {
+          "file": "out/public-proxy-profile-40446846879-1.json",
+          "key": "company:10100000711",
+          "observedExitIP": "184.75.221.82",
+          "proxy": "http://184.75.221.82:3118",
+          "tableRows": 13,
+          "tables": 6,
+          "sha256": "21eb2c80534199d7a35c054b59a3820756cb6ff6be14783bd8019cf4ca9e85ef",
+          "nationalIdMatches": true
+        },
+        {
+          "file": "out/public-proxy-profile-40446846879-2.json",
+          "key": "company:10100000711",
+          "observedExitIP": "5.129.254.129",
+          "proxy": "http://5.129.254.49:8888",
+          "tableRows": 13,
+          "tables": 6,
+          "sha256": "1739645c0724f437ef6987d085a2f82f74c4ec252021401c16ee8289be3a1db6",
+          "nationalIdMatches": true
+        }
+      ],
+      "productionRoutingChanged": false,
+      "exitScope": "Echo-service-observed IP; destination-specific egress and unused target quota are not proven",
+      "previouslyEchoVerifiedCandidates": 6,
+      "protocolSelection": "HTTP/HTTPS proxies",
+      "candidateCount": 20,
+      "finishedAt": "2026-10-27T03:56:01.731Z",
+      "verifiedExitCount": 2
+    },
+    {
+      "runId": "40447206296",
+      "startedAt": "2026-10-27T03:59:59.677Z",
+      "mode": "bounded-anonymous-repair-sample",
+      "limits": {
+        "candidates": 20,
+        "concurrency": 2,
+        "companyRequests": 4,
+        "storedProfiles": 2,
+        "wallSeconds": 150
+      },
+      "sources": [
+        {
+          "repo": "monosans/proxy-list",
+          "file": "proxies/all.txt",
+          "sha256": "5d42ff8dfd50515ae86577312995c77c7a78f2b2b04736cc9a84ed6c6567563c",
+          "lines": 1687
+        },
+        {
+          "repo": "ProxyScrape/free-proxy-list",
+          "file": "proxies/all/data.txt",
+          "sha256": "514dda1847e5fb6f35bbd2f6c78fca1d2cfedddf5a1d2e34a9df9e92d1e42420",
+          "lines": 6358
+        },
+        {
+          "repo": "proxifly/free-proxy-list",
+          "file": "proxies/all/data.txt",
+          "sha256": "66e24dec72b517def50f6a183270e04d9b755c2874aeff8bc7ebd64942e8d5d7",
+          "lines": 85992
+        }
+      ],
+      "attempts": [
+        {
+          "proxy": "http://184.75.221.82:3118",
+          "startedAt": "2026-10-27T04:00:01.879Z",
+          "phase": "company-https",
+          "observedExitIP": "184.75.221.82",
+          "companyId": "10100008094",
+          "responses": [],
+          "outcome": "request-failed",
+          "error": "curl: (28) Proxy CONNECT aborted due to timeout\n",
+          "elapsedMs": 4339
+        },
+        {
+          "proxy": "http://80.87.193.111:12345",
+          "startedAt": "2026-10-27T04:00:01.884Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (22) The requested URL returned error: 503\n",
+          "elapsedMs": 468
+        },
+        {
+          "proxy": "http://183.110.216.159:8091",
+          "startedAt": "2026-10-27T04:00:06.219Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (56) Proxy CONNECT aborted\n",
+          "elapsedMs": 2310
+        },
+        {
+          "proxy": "https://84.17.47.150:9002",
+          "startedAt": "2026-10-27T04:00:06.222Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.17.47.150'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore coul",
+          "elapsedMs": 296
+        },
+        {
+          "proxy": "http://5.129.254.49:8888",
+          "startedAt": "2026-10-27T04:00:08.529Z",
+          "phase": "company-https",
+          "observedExitIP": "5.129.254.60",
+          "companyId": "10100009135",
+          "responses": [
+            {
+              "url": "https://rasmio.com/company/10100009135/direct/",
+              "status": 200,
+              "bytes": 1160945,
+              "redirect": null
+            }
+          ],
+          "htmlTitle": "🏢 کشاورزی دامداران فیروزکوه - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها",
+          "rawTableCount": 4,
+          "tableRows": 14,
+          "tables": 4,
+          "outcome": "nonempty-company-identity-verified",
+          "elapsedMs": 4129
+        },
+        {
+          "proxy": "http://78.138.185.81:3128",
+          "startedAt": "2026-10-27T04:00:08.533Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (28) Failed to connect to 78.138.185.81 port 3128 after 4002 ms: Timeout was reached\n",
+          "elapsedMs": 4011
+        },
+        {
+          "proxy": "https://84.17.47.149:9002",
+          "startedAt": "2026-10-27T04:00:12.658Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.17.47.149'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore coul",
+          "elapsedMs": 293
+        },
+        {
+          "proxy": "http://167.99.3.26:5555",
+          "startedAt": "2026-10-27T04:00:12.663Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (56) Recv failure: Connection reset by peer\n",
+          "elapsedMs": 149
+        },
+        {
+          "proxy": "https://84.17.47.148:9002",
+          "startedAt": "2026-10-27T04:00:12.951Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.17.47.148'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore coul",
+          "elapsedMs": 294
+        },
+        {
+          "proxy": "http://45.90.32.134:3128",
+          "startedAt": "2026-10-27T04:00:12.954Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (28) Proxy CONNECT aborted due to timeout\n",
+          "elapsedMs": 4011
+        },
+        {
+          "proxy": "http://147.161.247.9:11870",
+          "startedAt": "2026-10-27T04:00:16.965Z",
+          "phase": "company-https",
+          "observedExitIP": "147.161.247.9",
+          "companyId": "10100008094",
+          "responses": [
+            {
+              "url": "https://rasmio.com/company/10100008094/direct/",
+              "status": 200,
+              "bytes": 1382769,
+              "redirect": null
+            }
+          ],
+          "htmlTitle": "🏢 سیم نور پویا - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها",
+          "rawTableCount": 7,
+          "tableRows": 47,
+          "tables": 7,
+          "outcome": "nonempty-company-identity-verified",
+          "elapsedMs": 3807
+        },
+        {
+          "proxy": "https://84.17.47.147:9002",
+          "startedAt": "2026-10-27T04:00:16.968Z",
+          "phase": "echo-https",
+          "outcome": "request-failed",
+          "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.17.47.147'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore coul",
+          "elapsedMs": 297
+        }
+      ],
+      "verifiedProfiles": [
+        {
+          "file": "out/public-proxy-profile-40447206296-1.json",
+          "key": "company:10100009135",
+          "sampledFromPendingEmptyFile": true,
+          "entityFile": "data/entities/company-10100009135.json",
+          "observedExitIP": "5.129.254.60",
+          "proxy": "http://5.129.254.49:8888",
+          "tableRows": 14,
+          "tables": 4,
+          "sha256": "8189bf51e46c69602f3cf77030d43796db265c67a52c8b28427a0fdcea46eae5",
+          "nationalIdMatches": true
+        },
+        {
+          "file": "out/public-proxy-profile-40447206296-2.json",
+          "key": "company:10100008094",
+          "sampledFromPendingEmptyFile": true,
+          "entityFile": "data/entities/company-10100008094.json",
+          "observedExitIP": "147.161.247.9",
+          "proxy": "http://147.161.247.9:11870",
+          "tableRows": 47,
+          "tables": 7,
+          "sha256": "54166e3d30dfb1a5ca5a08856df178dc06167f7bf883f3763cbb122ed7841c26",
+          "nationalIdMatches": true
+        }
+      ],
+      "productionRoutingChanged": false,
+      "exitScope": "Echo-service-observed IP; destination-specific egress and unused target quota are not proven",
+      "targetIds": [
+        "10100008094",
+        "10100009135"
+      ],
+      "previouslyEchoVerifiedCandidates": 8,
+      "protocolSelection": "HTTP/HTTPS proxies",
+      "candidateCount": 20,
+      "finishedAt": "2026-10-27T04:00:20.846Z",
+      "verifiedExitCount": 3,
+      "datasetPublication": [
+        {
+          "key": "company:10100009135",
+          "status": "previously-empty-file-populated",
+          "file": "data/entities/company-10100009135.json"
+        },
+        {
+          "key": "company:10100008094",
+          "status": "previously-empty-file-populated",
+          "file": "data/entities/company-10100008094.json"
+        }
+      ]
+    }
+  ]
+}

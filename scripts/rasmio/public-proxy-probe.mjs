@@ -107,8 +107,9 @@ export async function runPublicProxyProbe({repairSample=false}={}) {
             });
             const nationalId=String(info['شناسه ملی']||'').replace(/[۰-۹]/g,c=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c))).replace(/[٠-٩]/g,c=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(c)));
             if(!nationalId.includes(companyId)){attempt.outcome='identity-not-verified';return;}
+            if(report.verifiedProfiles.some(p=>p.key===`company:${companyId}`)){attempt.outcome='duplicate-profile-not-stored';return;}
             const file=`out/public-proxy-profile-${runId}-${report.verifiedProfiles.length+1}.json`;
-            const detail={type:'company',id:companyId,name:parsed.title,via:'public-proxy-curl',sourceRun:runId,fetchedAt:new Date().toISOString(),tableSchemaVersion:2,info,rows:parsed.rows,tables:parsed.tables,profileCompleteness:'unverified',probeOnly:!repairSample};
+            const detail={type:'company',id:companyId,name:parsed.title,url:target,via:'public-proxy-curl',sourceRun:runId,fetchedAt:new Date().toISOString(),tableSchemaVersion:2,info,rows:parsed.rows,tables:parsed.tables,profileCompleteness:'unverified',probeOnly:!repairSample};
             const stored=JSON.stringify(detail,null,2);fs.writeFileSync(file,stored);files.push(file);
             report.verifiedProfiles.push({file,key:`company:${companyId}`,sampledFromPendingEmptyFile:repairSample,...(repairSample?{entityFile:`data/entities/company-${companyId}.json`}:{}),observedExitIP:ip,proxy:candidate.url,tableRows,tables:parsed.tables.length,sha256:crypto.createHash('sha256').update(stored).digest('hex'),nationalIdMatches:true});
             attempt.outcome='nonempty-company-identity-verified';
