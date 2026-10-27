@@ -8,7 +8,7 @@ import { isIP } from 'node:net';
 import crypto from 'node:crypto';
 import puppeteer from 'puppeteer';
 import { extractTablesFromDOM } from './table-extractor.mjs';
-import { interleaveCandidates, proxyCurlArgs } from './public-proxy-candidates.mjs';
+import { interleaveCandidates, proxyCurlArgs, allowedProbeTarget } from './public-proxy-candidates.mjs';
 const exec = promisify(execFile);
 const sources=[['monosans/proxy-list','proxies/all.txt'],['ProxyScrape/free-proxy-list','proxies/all/data.txt'],['proxifly/free-proxy-list','proxies/all/data.txt']];
 export async function runPublicProxyProbe() {
@@ -31,7 +31,8 @@ export async function runPublicProxyProbe() {
         return text.trim().split('\n');
       } catch(e) {report.sources.push({repo,file,error:String(e.message).slice(0,160)});return [];}
     }));
-    const candidates=interleaveCandidates(lists,20);
+    const candidates=interleaveCandidates(lists.map(list=>list.filter(line=>/^https?:/.test(line))),20);
+    report.protocolSelection='HTTP/HTTPS proxies';
     report.candidateCount=candidates.length;save();
     browser=await puppeteer.launch({headless:true,env,args:['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage','--disable-background-networking','--disable-component-update','--disable-sync','--no-first-run'],userDataDir:path.join(scratch,'browser')});
     const usedExits=new Set();let companyAttempts=0, inflightCompany=0;
@@ -47,9 +48,25 @@ export async function runPublicProxyProbe() {
           if(usedExits.has(ip)){attempt.outcome='duplicate-exit-skipped';return;}
           usedExits.add(ip);
           if(companyAttempts>=4 || report.verifiedProfiles.length+inflightCompany>=2){attempt.outcome='company-probe-budget-skipped';return;}
-          companyAttempts++;inflightCompany++;reserved=true;attempt.phase='company-https';
-          const response=await exec('curl',proxyCurlArgs(candidate.url,'https://rasmio.com/company/10100000711'),{env,cwd:scratch,timeout:10000,maxBuffer:2200000});
-          const html=response.stdout;
+          inflightCompany++;reserved=true;attempt.phase='company-https';
+          let target='https://rasmio.com/company/10100000711',html='';attempt.responses=[];
+          for(let redirects=0;redirects<=2;redirects++) {
+            if(companyAttempts>=4){attempt.outcome='company-request-budget-exhausted';return;}
+            companyAttempts++;
+            const response=await exec('curl',[...proxyCurlArgs(candidate.url,target),'--write-out','\n__PROBE_META__%{http_code}\t%{redirect_url}'],{env,cwd:scratch,timeout:10000,maxBuffer:2200000});
+            const split=response.stdout.lastIndexOf('\n__PROBE_META__');
+            if(split<0)throw new Error('Missing HTTP status metadata');
+            html=response.stdout.slice(0,split);
+            const [status,redirect]=response.stdout.slice(split+'\n__PROBE_META__'.length).split('\t');
+            attempt.responses.push({url:target,status:Number(status),bytes:Buffer.byteLength(html),redirect:redirect||null});
+            if(Number(status)>=300 && Number(status)<400) {
+              if(!redirect || !allowedProbeTarget(redirect) || new URL(redirect).hostname!=='rasmio.com'){attempt.outcome='redirect-not-permitted';return;}
+              target=redirect;continue;
+            }
+            break;
+          }
+          attempt.htmlTitle=(html.match(/<title[^>]*>([^<]*)<\/title>/i)||[])[1]||null;
+          attempt.rawTableCount=(html.match(/<table\b/gi)||[]).length;
           if(/سقف\s*مجاز|امکان مشاهده اطلاعات در صفحه شرکت برای شما محدود شده/.test(html)){attempt.outcome='explicit-access-limit';return;}
           // Browser is an offline DOM parser only; it cannot request anything from the HTML.
           const page=await browser.newPage();

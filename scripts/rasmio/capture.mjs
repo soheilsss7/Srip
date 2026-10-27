@@ -20,7 +20,7 @@ if (publicProxyProbe) {
       git(['fetch','origin',BRANCH]);
       const env = { ...process.env, GIT_INDEX_FILE: path.join(tmp,'index') };
       const parent = git(['rev-parse','FETCH_HEAD']);
-      git(['read-tree',parent],env);git(['add','--',...files],env);
+      git(['read-tree',parent],env);git(['add','-f','--',...files],env);
       const tree = git(['write-tree'],env);
       const commit = git(['commit-tree',tree,'-p',parent,'-m',`Public proxy experiment ${report.runId}: ${report.verifiedProfiles.length} verified profile responses`],env);
       git(['update-ref',`refs/heads/${BRANCH}`,commit]);
