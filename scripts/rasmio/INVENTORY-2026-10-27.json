@@ -1,0 +1,196 @@
+{
+  "snapshotRef": "3c8511e03084945739712cd7783793b3e064a0ac",
+  "manifest": {
+    "sharded": true,
+    "shards": 16,
+    "nodeCount": 936134,
+    "edgeCount": 143097,
+    "maxShardMB": 26.3,
+    "at": "2026-10-27T02:24:08.164Z"
+  },
+  "graph": {
+    "nodeCount": 936134,
+    "edgeCount": 143097,
+    "types": {
+      "company": {
+        "nodes": 330762,
+        "named": 330762,
+        "validIdFormat": 330760,
+        "withInfoField": 305630
+      },
+      "person": {
+        "nodes": 214185,
+        "named": 214185,
+        "validIdFormat": 214185
+      },
+      "brand": {
+        "nodes": 49006,
+        "named": 49006,
+        "withInfoField": 48789,
+        "validIdFormat": 49006
+      },
+      "product": {
+        "nodes": 338829,
+        "named": 338829,
+        "validIdFormat": 338829
+      },
+      "patent": {
+        "nodes": 3352,
+        "named": 3352,
+        "withInfoField": 3122,
+        "validIdFormat": 3352
+      }
+    },
+    "bytes": 522448319,
+    "idFormatExceptionExamples": [
+      "company:0",
+      "company:1"
+    ]
+  },
+  "entities": {
+    "fileCount": 32216,
+    "uniqueKeys": 32216,
+    "nonemptyUniqueKeys": 13974,
+    "types": {
+      "brand": {
+        "files": 255,
+        "linkedRows": 0,
+        "tables": 0,
+        "tableRows": 0,
+        "emptyDetailFiles": 255,
+        "validIdFormatFiles": 255
+      },
+      "company": {
+        "files": 22482,
+        "linkedRows": 148175,
+        "tables": 50916,
+        "tableRows": 244704,
+        "emptyDetailFiles": 11260,
+        "validIdFormatFiles": 22465,
+        "nonemptyFiles": 11222,
+        "infoFiles": 10586,
+        "validIdNonemptyFiles": 11222,
+        "schema2Files": 428,
+        "schema2NonemptyFiles": 428,
+        "infoOnlyFiles": 6
+      },
+      "patent": {
+        "files": 262,
+        "linkedRows": 0,
+        "tables": 1,
+        "tableRows": 7,
+        "emptyDetailFiles": 261,
+        "validIdFormatFiles": 262,
+        "nonemptyFiles": 1,
+        "infoFiles": 1,
+        "validIdNonemptyFiles": 1,
+        "schema2Files": 1,
+        "schema2NonemptyFiles": 1,
+        "schema2WidthExceptionFiles": 1
+      },
+      "person": {
+        "files": 7110,
+        "linkedRows": 2063,
+        "tables": 949,
+        "tableRows": 1705,
+        "emptyDetailFiles": 6042,
+        "validIdFormatFiles": 7110,
+        "nonemptyFiles": 1068,
+        "infoFiles": 946,
+        "validIdNonemptyFiles": 1068,
+        "schema2Files": 680,
+        "schema2NonemptyFiles": 680
+      },
+      "product": {
+        "files": 2107,
+        "linkedRows": 15813,
+        "tables": 3393,
+        "tableRows": 46543,
+        "nonemptyFiles": 1683,
+        "validIdFormatFiles": 2107,
+        "validIdNonemptyFiles": 1683,
+        "schema2Files": 1297,
+        "schema2NonemptyFiles": 1297,
+        "emptyDetailFiles": 424,
+        "infoFiles": 10
+      }
+    },
+    "bytes": 194050220,
+    "schemaVersions": {
+      "legacy": 29810,
+      "2": 2406
+    },
+    "methods": {
+      "fetch": 12010,
+      "fetch-anon": 12778,
+      "browser": 7301,
+      "unknown": 125,
+      "browser-anon": 2
+    },
+    "idFormatExceptionExamples": [
+      "company:0",
+      "company:1005743",
+      "company:101004334110",
+      "company:101006211378",
+      "company:101023768892",
+      "company:1038005433",
+      "company:1080697",
+      "company:1360163921",
+      "company:140139884422",
+      "company:251865368210",
+      "company:3002548208",
+      "company:3002647018",
+      "company:3002676595",
+      "company:3003008756",
+      "company:3003184391",
+      "company:3003191529",
+      "company:3003274317"
+    ],
+    "nonemptyKeysMissingFromGraph": 0,
+    "filesNotInGraph": 342
+  },
+  "frontier": {
+    "pendingCount": 510443,
+    "pendingUniqueCount": 510443,
+    "pendingTypes": {
+      "person": 205664,
+      "company": 57641,
+      "product": 195654,
+      "brand": 48375,
+      "patent": 3109
+    },
+    "visitedCount": 21464,
+    "visitedPositiveRows": 13929,
+    "pendingWithNonemptyEntityFile": 34,
+    "pendingWithVisited": 0
+  },
+  "jsonParseErrors": [
+    {
+      "path": "data/entities/company-10480075869.json",
+      "error": "Expecting property name enclosed in double quotes: line 4 column 1 (char 44)"
+    }
+  ],
+  "storage": {
+    "bytes": {
+      "other": 370052,
+      "entities": 194067924,
+      "graph": 522448319,
+      "frontier": 61064519,
+      "logs-and-output": 41084419,
+      "screenshots": 7718069
+    },
+    "fileCounts": {
+      "other": 38,
+      "entities": 32217,
+      "graph": 16,
+      "frontier": 1,
+      "logs-and-output": 1372,
+      "screenshots": 11
+    }
+  },
+  "notes": [
+    "fileCount in entities counts parseable files only; total entity files is storage.fileCounts.entities",
+    "nonempty is a structural criterion, not a guarantee of complete/legal/current information",
+    "schema2 width exception is a headerless two-column patent table, not evidence of truncation"
+  ]
+}
