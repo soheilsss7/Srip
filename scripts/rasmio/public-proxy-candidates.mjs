@@ -22,15 +22,16 @@ export function interleaveCandidates(lists, limit=20) {
   }
   return result;
 }
-export function allowedProbeTarget(url) {
+export function allowedProbeTarget(url, companyId = '10100000711') {
   try {
+    if(!/^\d{11}$/.test(companyId))return false;
     const u=new URL(url);
-    return url==='https://api.ipify.org/?format=json' || (u.protocol==='https:' && u.hostname==='rasmio.com' && !u.port && !u.username && !u.password && !u.search && !u.hash && /^\/company\/10100000711(?:\/[^?#]*)?$/.test(u.pathname));
+    return url==='https://api.ipify.org/?format=json' || (u.protocol==='https:' && u.hostname==='rasmio.com' && !u.port && !u.username && !u.password && !u.search && !u.hash && new RegExp(`^/company/${companyId}(?:/[^?#]*)?$`).test(u.pathname));
   } catch { return false; }
 }
-export function proxyCurlArgs(proxy, url) {
+export function proxyCurlArgs(proxy, url, companyId = '10100000711') {
   const p=parsePublicProxy(proxy);
-  if(!p || !allowedProbeTarget(url)) throw new Error('Proxy or probe target is not permitted');
+  if(!p || !allowedProbeTarget(url, companyId)) throw new Error('Proxy or probe target is not permitted');
   const endpoint=p.url.replace(/^socks5:/,'socks5h:').replace(/^socks4:/,'socks4a:');
   return ['-q','--silent','--show-error','--fail','--proxy',endpoint,'--noproxy','','--proto','=https','--proto-redir','=https','--max-redirs','0','--connect-timeout','4','--max-time','8','--max-filesize','2097152','--user-agent','Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36','--header','accept-language: fa,en',url];
 }

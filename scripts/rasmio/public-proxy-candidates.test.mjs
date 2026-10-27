@@ -20,3 +20,8 @@ test('redirects remain on the exact anonymous company profile',()=>{
  assert.equal(allowedProbeTarget('https://rasmio.com/company/10100000711/'),true);
  for(const u of ['https://evil.example/company/10100000711','https://rasmio.com/company/999','http://rasmio.com/company/10100000711','https://rasmio.com/login','https://user:pass@rasmio.com/company/10100000711','https://rasmio.com/company/10100000711/../../login'])assert.equal(allowedProbeTarget(u),false);
 });
+test('repair sample is scoped to its selected valid company identifier',()=>{
+ assert.equal(allowedProbeTarget('https://rasmio.com/company/10100042600/direct/','10100042600'),true);
+ assert.equal(allowedProbeTarget('https://rasmio.com/company/10100042600/direct/'),false);
+ assert.equal(allowedProbeTarget('https://rasmio.com/company/10100042600/direct/','.*'),false);
+});

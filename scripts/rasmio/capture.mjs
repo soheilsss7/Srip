@@ -7,10 +7,11 @@ import fs from 'node:fs';
 const BRANCH = process.env.OTP_BRANCH || 'arena/01a08a50-srip';
 // Isolated, non-relaying experiment. Never imports the production crawler.
 let publicProxyProbe = false;
-try { publicProxyProbe = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8')).client_payload?.mode === 'public-proxy-probe'; } catch {}
+try { publicProxyProbe = ['public-proxy-probe','public-proxy-repair-sample'].includes(JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8')).client_payload?.mode); } catch {}
 if (publicProxyProbe) {
   const { runPublicProxyProbe } = await import('./public-proxy-probe.mjs');
-  const { files, report } = await runPublicProxyProbe();
+  const mode=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,'utf8')).client_payload?.mode;
+  const { files, report } = await runPublicProxyProbe({repairSample:mode==='public-proxy-repair-sample'});
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'proxy-probe-publish-'));
   const git = (args, env = process.env) => execFileSync('git', args, { env, encoding: 'utf8', timeout: 60000 }).trim();
   try {
@@ -20,7 +21,24 @@ if (publicProxyProbe) {
       git(['fetch','origin',BRANCH]);
       const env = { ...process.env, GIT_INDEX_FILE: path.join(tmp,'index') };
       const parent = git(['rev-parse','FETCH_HEAD']);
-      git(['read-tree',parent],env);git(['add','-f','--',...files],env);
+      git(['read-tree',parent],env);
+      const datasetFiles=[], receipts=[];report.datasetPublication=[];
+      for(const profile of report.verifiedProfiles) {
+        if(!profile.sampledFromPendingEmptyFile || !/^data\/entities\/company-\d{11}\.json$/.test(profile.entityFile || ''))continue;
+        let previous=null;
+        try { previous=JSON.parse(execFileSync('git',['show',`${parent}:scripts/rasmio/${profile.entityFile}`],{encoding:'utf8',stdio:['ignore','pipe','ignore']})); }catch{}
+        if(previous?.rows?.length || previous?.tables?.some(t=>t.rows?.length)) {
+          report.datasetPublication.push({key:profile.key,status:'populated-remote-file-preserved'});continue;
+        }
+        const stored=fs.readFileSync(profile.file,'utf8'), detail=JSON.parse(stored);
+        if(detail.id!==profile.key.split(':')[1] || detail.sourceRun!==report.runId || !detail.tables?.some(t=>t.rows?.length))throw new Error('Invalid proxy sample persistence');
+        fs.mkdirSync('data/entities',{recursive:true});fs.writeFileSync(profile.entityFile,stored);datasetFiles.push(profile.entityFile);
+        receipts.push({at:new Date().toISOString(),runId:report.runId,key:profile.key,rows:detail.rows.length,tables:profile.tables,tableRows:profile.tableRows,via:'public-proxy-curl',sha256:profile.sha256,file:profile.entityFile});
+        report.datasetPublication.push({key:profile.key,status:'previously-empty-file-populated',file:profile.entityFile});
+      }
+      if(receipts.length) {const receiptFile=`out/verified-data-${report.runId}.jsonl`;fs.writeFileSync(receiptFile,receipts.map(r=>JSON.stringify(r)).join('\n')+'\n');datasetFiles.push(receiptFile);}
+      fs.writeFileSync(files[0],JSON.stringify(report,null,2));
+      git(['add','-f','--',...files,...datasetFiles],env);
       const tree = git(['write-tree'],env);
       const commit = git(['commit-tree',tree,'-p',parent,'-m',`Public proxy experiment ${report.runId}: ${report.verifiedProfiles.length} verified profile responses`],env);
       git(['update-ref',`refs/heads/${BRANCH}`,commit]);
