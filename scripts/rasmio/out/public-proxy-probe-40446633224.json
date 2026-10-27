@@ -1,0 +1,233 @@
+{
+  "runId": "40446633224",
+  "startedAt": "2026-10-27T03:53:46.373Z",
+  "mode": "bounded-anonymous-proxy-test",
+  "limits": {
+    "candidates": 20,
+    "concurrency": 2,
+    "companyRequests": 4,
+    "storedProfiles": 2,
+    "wallSeconds": 150
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "sha256": "5d42ff8dfd50515ae86577312995c77c7a78f2b2b04736cc9a84ed6c6567563c",
+      "lines": 1687
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "sha256": "514dda1847e5fb6f35bbd2f6c78fca1d2cfedddf5a1d2e34a9df9e92d1e42420",
+      "lines": 6358
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "sha256": "66e24dec72b517def50f6a183270e04d9b755c2874aeff8bc7ebd64942e8d5d7",
+      "lines": 85992
+    }
+  ],
+  "attempts": [
+    {
+      "proxy": "http://80.87.193.111:12345",
+      "startedAt": "2026-10-27T03:53:47.036Z",
+      "phase": "echo-https",
+      "outcome": "request-failed",
+      "error": "curl: (22) The requested URL returned error: 503\n",
+      "elapsedMs": 289
+    },
+    {
+      "proxy": "http://183.110.216.159:8091",
+      "startedAt": "2026-10-27T03:53:47.041Z",
+      "phase": "echo-https",
+      "outcome": "request-failed",
+      "error": "curl: (28) Failed to connect to 183.110.216.159 port 8091 after 4002 ms: Timeout was reached\n",
+      "elapsedMs": 4015
+    },
+    {
+      "proxy": "https://84.17.47.150:9002",
+      "startedAt": "2026-10-27T03:53:51.056Z",
+      "phase": "echo-https",
+      "outcome": "request-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.17.47.150'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore coul",
+      "elapsedMs": 209
+    },
+    {
+      "proxy": "http://78.138.185.81:3128",
+      "startedAt": "2026-10-27T03:53:51.058Z",
+      "phase": "echo-https",
+      "outcome": "request-failed",
+      "error": "curl: (28) Failed to connect to 78.138.185.81 port 3128 after 4002 ms: Timeout was reached\n",
+      "elapsedMs": 4013
+    },
+    {
+      "proxy": "http://184.75.221.82:3118",
+      "startedAt": "2026-10-27T03:53:55.071Z",
+      "phase": "company-https",
+      "observedExitIP": "184.75.221.82",
+      "responses": [
+        {
+          "url": "https://rasmio.com/company/10100000711",
+          "status": 308,
+          "bytes": 21,
+          "redirect": "https://rasmio.com/company/10100000711/"
+        },
+        {
+          "url": "https://rasmio.com/company/10100000711/",
+          "status": 308,
+          "bytes": 789274,
+          "redirect": "https://rasmio.com/company/10100000711/direct"
+        },
+        {
+          "url": "https://rasmio.com/company/10100000711/direct",
+          "status": 308,
+          "bytes": 28,
+          "redirect": "https://rasmio.com/company/10100000711/direct/"
+        }
+      ],
+      "htmlTitle": null,
+      "rawTableCount": 0,
+      "tableRows": 0,
+      "tables": 0,
+      "outcome": "empty-detail-response",
+      "elapsedMs": 4043
+    },
+    {
+      "proxy": "https://84.17.47.149:9002",
+      "startedAt": "2026-10-27T03:53:55.074Z",
+      "phase": "echo-https",
+      "outcome": "request-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.17.47.149'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore coul",
+      "elapsedMs": 198
+    },
+    {
+      "proxy": "http://5.129.254.49:8888",
+      "startedAt": "2026-10-27T03:53:59.114Z",
+      "phase": "company-https",
+      "observedExitIP": "5.129.254.60",
+      "responses": [
+        {
+          "url": "https://rasmio.com/company/10100000711",
+          "status": 308,
+          "bytes": 21,
+          "redirect": "https://rasmio.com/company/10100000711/"
+        }
+      ],
+      "outcome": "company-request-budget-exhausted",
+      "elapsedMs": 1775
+    },
+    {
+      "proxy": "http://167.99.3.26:5555",
+      "startedAt": "2026-10-27T03:53:59.118Z",
+      "phase": "echo-https",
+      "outcome": "request-failed",
+      "error": "curl: (56) Recv failure: Connection reset by peer\n",
+      "elapsedMs": 24
+    },
+    {
+      "proxy": "https://84.17.47.148:9002",
+      "startedAt": "2026-10-27T03:54:00.889Z",
+      "phase": "echo-https",
+      "outcome": "request-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.17.47.148'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore coul",
+      "elapsedMs": 196
+    },
+    {
+      "proxy": "http://45.90.32.134:3128",
+      "startedAt": "2026-10-27T03:54:00.891Z",
+      "phase": "echo-https",
+      "outcome": "request-failed",
+      "error": "curl: (28) Proxy CONNECT aborted due to timeout\n",
+      "elapsedMs": 4009
+    },
+    {
+      "proxy": "http://147.161.247.9:11870",
+      "startedAt": "2026-10-27T03:54:04.901Z",
+      "phase": "echo-https",
+      "observedExitIP": "147.161.247.9",
+      "outcome": "company-probe-budget-skipped",
+      "elapsedMs": 493
+    },
+    {
+      "proxy": "https://84.17.47.147:9002",
+      "startedAt": "2026-10-27T03:54:04.903Z",
+      "phase": "echo-https",
+      "outcome": "request-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.17.47.147'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore coul",
+      "elapsedMs": 198
+    },
+    {
+      "proxy": "http://5.129.254.51:8888",
+      "startedAt": "2026-10-27T03:54:05.394Z",
+      "phase": "echo-https",
+      "observedExitIP": "5.129.254.210",
+      "outcome": "company-probe-budget-skipped",
+      "elapsedMs": 705
+    },
+    {
+      "proxy": "http://145.220.227.57:3128",
+      "startedAt": "2026-10-27T03:54:05.396Z",
+      "phase": "echo-https",
+      "outcome": "request-failed",
+      "error": "curl: (22) The requested URL returned error: 502\n",
+      "elapsedMs": 2518
+    },
+    {
+      "proxy": "https://84.17.47.146:9002",
+      "startedAt": "2026-10-27T03:54:07.915Z",
+      "phase": "echo-https",
+      "outcome": "request-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.17.47.146'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore coul",
+      "elapsedMs": 203
+    },
+    {
+      "proxy": "http://5.129.254.215:8888",
+      "startedAt": "2026-10-27T03:54:07.917Z",
+      "phase": "echo-https",
+      "observedExitIP": "5.129.254.215",
+      "outcome": "company-probe-budget-skipped",
+      "elapsedMs": 742
+    },
+    {
+      "proxy": "https://84.17.47.126:9002",
+      "startedAt": "2026-10-27T03:54:08.659Z",
+      "phase": "echo-https",
+      "outcome": "request-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.17.47.126'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore coul",
+      "elapsedMs": 200
+    },
+    {
+      "proxy": "http://31.131.248.48:3129",
+      "startedAt": "2026-10-27T03:54:08.662Z",
+      "phase": "echo-https",
+      "outcome": "request-failed",
+      "error": "curl: (22) The requested URL returned error: 502\n",
+      "elapsedMs": 258
+    },
+    {
+      "proxy": "http://45.91.248.107:80",
+      "startedAt": "2026-10-27T03:54:08.920Z",
+      "phase": "echo-https",
+      "outcome": "request-failed",
+      "error": "curl: (22) The requested URL returned error: 400\n",
+      "elapsedMs": 36
+    },
+    {
+      "proxy": "https://84.17.47.125:9002",
+      "startedAt": "2026-10-27T03:54:08.923Z",
+      "phase": "echo-https",
+      "outcome": "request-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.17.47.125'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore coul",
+      "elapsedMs": 197
+    }
+  ],
+  "verifiedProfiles": [],
+  "productionRoutingChanged": false,
+  "exitScope": "Echo-service-observed IP; destination-specific egress and unused target quota are not proven",
+  "protocolSelection": "HTTP/HTTPS proxies",
+  "candidateCount": 20,
+  "finishedAt": "2026-10-27T03:54:09.205Z",
+  "verifiedExitCount": 5
+}
