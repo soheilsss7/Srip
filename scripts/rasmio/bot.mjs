@@ -14,6 +14,7 @@
    · اجرا: schedule روزانه + repository_dispatch (عامل Arena) + دستی.
    ========================================================================== */
 import puppeteer from 'puppeteer';
+import { restoreIncompleteDetails, prioritizeDetailRepair, markDetailRepaired } from './detail-repair.mjs';
 import { extractTablesFromDOM } from './table-extractor.mjs';
 import { installNetworkAudit } from './network-audit.mjs';
 import { execSync } from 'node:child_process';
@@ -382,6 +383,9 @@ if (!frontier || !Array.isArray(frontier.pending)) {
 if (!frontier.graph || !frontier.graph.nodes || !Object.keys(frontier.graph.nodes).length) {
   try { frontier.graph = loadGraph(); log('🧩 گراف از شاردها بارگیری شد — ' + Object.keys(frontier.graph.nodes).length + ' گره / ' + frontier.graph.edges.length + ' یال'); } catch { frontier.graph = { nodes: {}, edges: [] }; }
 }
+const repairSummary = restoreIncompleteDetails(frontier, `${DATA}/entities`);
+log('DETAIL-REPAIR', repairSummary);
+fs.writeFileSync(`${OUT}/detail-repair-${process.env.GITHUB_RUN_ID || 'local'}.json`, JSON.stringify({ at: new Date().toISOString(), ...repairSummary }, null, 2));
 /* ═══ 🧽 پاک‌سازی: صف بدون تکراری + حذف گره‌های زباله (نام‌های خطای صفحه) ═══ */
 try {
   const JUNK = /this page couldn|this site can.t be reached|دسترسی ندارید|خطا|error|not found|404/i;
@@ -433,7 +437,10 @@ function mergeRemoteState() {
     const rf = rd('scripts/rasmio/frontier.json');
     if (rf) {
       frontier.visited = frontier.visited || {};
+      const needsRepair = new Set(frontier.detailRepair?.remaining || []);
       for (const [k, v] of Object.entries(rf.visited || {})) {
+        // An old zero/error visit must never hide a newly restored repair task.
+        if (needsRepair.has(k) && !(v?.detailSchemaVersion === 2 && ((v.rows || 0) > 0 || (v.tableRows || 0) > 0))) continue;
         const a = frontier.visited[k], b = v || {};
         if (!a) frontier.visited[k] = b;
         else frontier.visited[k] = { ...b, ...a, rows: Math.max(a.rows || 0, b.rows || 0) };
@@ -1939,6 +1946,7 @@ try {
   /* ⚡ تیکه‌بندی صف: هر کارگر از موقعیت‌های SLOT, SLOT+N, … برمی‌دارد → کارگرها روی هم نمی‌افتند */
   // Separate array: takeLocal removes from shared pending; sharing it would shift twice.
   let queue = MAX_PARALLEL === 1 ? [...frontier.pending] : frontier.pending.filter((_, i) => i % MAX_PARALLEL === SLOT);
+  queue = prioritizeDetailRepair(frontier, queue, 8);
   if (process.env.RASMIO_VERIFY === '1') {
     const requested = JSON.parse(process.env.RASMIO_VERIFY_KEYS || '[]');
     if (requested.length) {
@@ -1991,13 +1999,13 @@ try {
       }
     }));
     let okInWave = 0;
-    if (results.every((x) => !x.r)) { failedStreak++; if (failedStreak >= 2) { stopReason = 'blocked-fast'; break; } } else failedStreak = 0;
+    if (results.every((x) => !x.r)) failedStreak++; else failedStreak = 0;
     for (const { ent: e, r } of results) {
       if (!r) { failed++; log('✗', keyOf(e), 'خطا'); continue; }
       const k = keyOf(e);
-      frontier.visited[k] = { ...(frontier.visited[k] || {}), at: new Date().toISOString(), rows: r.rows };
+      frontier.visited[k] = { ...(frontier.visited[k] || {}), at: new Date().toISOString(), rows: r.rows, tableRows: r.tableRows, detailSchemaVersion: 2 };
       if (r.dead) { frontier.visited[k].zeroRetried = true; frontier.visited[k].suspectTries = 8; log('⛔ صفحهٔ شخص داده ندارد (undefined) — بدون تلاش مجدد'); }
-      if (r.rows > 0 || r.tableRows > 0) { delete frontier.visited[k].suspect; okInWave++; }
+      if (r.rows > 0 || r.tableRows > 0) { delete frontier.visited[k].suspect; markDetailRepaired(frontier, k); okInWave++; }
       /* 🚧 شرکتِ پشتِ دیوار «خزش‌شده» حساب نمی‌شود — برای اجرای بعدی با IP تازه برمی‌گردد */
       if (globalThis.__rasmioWall && e.type === 'company' && r.rows === 0) { delete frontier.visited[k]; frontier.pending.push(e); heldCompanies++; }
       processedKeys.push(k);
@@ -2006,6 +2014,7 @@ try {
       processed++;
       log(`✔ [${processed}/${LIMIT}]`, k, '—', r.rows, 'ردیف');
     }
+    if (failedStreak >= 2) { stopReason = 'blocked-fast'; break; }
     /* توقف فوری بعد از موج: اگر IP خالی است هیچ چرت و فاصله‌ای تلف نشود */
     if (zeroStreak >= (paced ? 2 : 18)) { stopReason = 'quota-or-blocked'; break; }
     /* موج تطبیقی + حالت فاصله‌گذاری: شاید سقفِ «سرعت» IP است نه تعدادش — با فاصلهٔ بلند تست می‌کنیم */
@@ -2051,7 +2060,7 @@ try {
   progress('done', { processed, failed, pending: frontier.pending.length, stopReason });
   fs.writeFileSync(`${OUT}/run-summary-${process.env.GITHUB_RUN_ID || 'local'}.json`, JSON.stringify({
     at: new Date().toISOString(), runId: process.env.GITHUB_RUN_ID || 'local', verify: process.env.RASMIO_VERIFY === '1',
-    processed, failed, stopReason, pending: frontier.pending.length, entities: runReport
+    processed, failed, stopReason, pending: frontier.pending.length, detailRepair: { remaining: frontier.detailRepair?.remaining?.length || 0, repaired: frontier.detailRepair?.repaired || 0 }, entities: runReport
   }, null, 2));
   log(`✅ اجرا تمام (${stopReason}) — ${processed} موجودیت تازه · صف باقی‌مانده: ${frontier.pending.length} · کل گراف: ${Object.keys(frontier.graph.nodes).length} گره / ${frontier.graph.edges.length} یال`);
   /* ═══ زنجیرهٔ پیوسته: تا وقتی صف یا کشف باقی است، اجرای بعدی فوراً خودکار درخواست می‌شود ═══ */
