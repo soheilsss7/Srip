@@ -115,8 +115,18 @@ const relay = () => {
   } catch (e) { dump('relay-error', 'successor request failed; status=' + String(e?.status || 'unknown')); }
 };
 
+const productionBaseline=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
 try {
   await import('./bot.mjs');
+  // Independently read the published Git objects after every normal run.
+  const runId=String(process.env.GITHUB_RUN_ID||'');
+  if(/^\d+$/.test(runId)&&fs.existsSync(`out/proxy-transport-${runId}.json`)) {
+    let audit;
+    try {audit=execFileSync(process.execPath,['verify-proxy-run.mjs',productionBaseline,'HEAD',runId],{encoding:'utf8',maxBuffer:8000000,timeout:120000});}
+    catch(e){audit=String(e.stdout||JSON.stringify({runId,errors:['Independent readback audit could not complete'],globalCompletionVerified:false}));}
+    fs.writeFileSync(`out/production-readback-${runId}.json`,audit);
+    try {const a=JSON.parse(audit);dump('production-readback',JSON.stringify({newlyNonempty:a.newlyNonempty,tableRows:a.tableRows,errors:a.errors,globalCompletionVerified:false}));}catch{dump('production-readback','invalid audit output');}
+  }
   dump('bot-finished', 'ربات بدون خطا تمام شد');
   push('bot-finished');
 } catch (e) {
