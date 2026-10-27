@@ -1,0 +1,345 @@
+{
+  "runId": "40448971029",
+  "startedAt": "2026-10-27T04:18:41.939Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "lines": 1687
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 6338
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 85992
+    }
+  ],
+  "health": [
+    {
+      "proxy": "http://5.129.254.49:8888",
+      "at": "2026-10-27T04:18:44.608Z",
+      "observedExitIP": "5.129.254.210",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "https://138.199.35.215:9002",
+      "at": "2026-10-27T04:18:44.617Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '138.199.35.215'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "http://147.161.247.9:11870",
+      "at": "2026-10-27T04:18:44.626Z",
+      "outcome": "health-failed",
+      "error": "curl: (22) The requested URL returned error: 429\n"
+    },
+    {
+      "proxy": "http://161.35.70.249:3128",
+      "at": "2026-10-27T04:18:44.634Z",
+      "observedExitIP": "161.35.70.249",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "http://184.75.221.82:3118",
+      "at": "2026-10-27T04:18:44.715Z",
+      "observedExitIP": "184.75.221.82",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "https://138.199.35.214:9002",
+      "at": "2026-10-27T04:18:44.860Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '138.199.35.214'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "http://194.182.163.117:3128",
+      "at": "2026-10-27T04:18:44.961Z",
+      "outcome": "health-failed",
+      "error": "curl: (7) Failed to connect to 194.182.163.117 port 3128 after 115 ms: Couldn't connect to server\n"
+    },
+    {
+      "proxy": "https://138.199.35.213:9002",
+      "at": "2026-10-27T04:18:45.091Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '138.199.35.213'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "http://145.220.227.196:8118",
+      "at": "2026-10-27T04:18:45.107Z",
+      "observedExitIP": "145.220.183.29",
+      "outcome": "duplicate-echo-exit"
+    },
+    {
+      "proxy": "http://167.71.102.253:3128",
+      "at": "2026-10-27T04:18:45.191Z",
+      "outcome": "health-failed",
+      "error": "curl: (22) The requested URL returned error: 503\n"
+    },
+    {
+      "proxy": "https://138.199.35.212:9002",
+      "at": "2026-10-27T04:18:45.280Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '138.199.35.212'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "http://145.220.227.66:8080",
+      "at": "2026-10-27T04:18:45.388Z",
+      "observedExitIP": "145.220.183.29",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "http://36.213.79.159:1081",
+      "at": "2026-10-27T04:18:45.481Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) SSL connection timeout\n"
+    },
+    {
+      "proxy": "https://138.199.35.208:9002",
+      "at": "2026-10-27T04:18:48.173Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '138.199.35.208'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "http://145.220.227.142:8080",
+      "at": "2026-10-27T04:18:48.270Z",
+      "outcome": "health-failed",
+      "error": "curl: (22) The requested URL returned error: 502\n"
+    },
+    {
+      "proxy": "http://162.214.159.94:8085",
+      "at": "2026-10-27T04:18:50.499Z",
+      "outcome": "health-failed",
+      "error": "curl: (22) The requested URL returned error: 400\n"
+    },
+    {
+      "proxy": "https://138.199.35.205:9002",
+      "at": "2026-10-27T04:18:50.620Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '138.199.35.205'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "http://92.249.221.91:8080",
+      "at": "2026-10-27T04:18:50.717Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Proxy CONNECT aborted due to timeout\n"
+    },
+    {
+      "proxy": "http://45.91.248.107:80",
+      "at": "2026-10-27T04:18:51.279Z",
+      "outcome": "health-failed",
+      "error": "curl: (22) The requested URL returned error: 400\n"
+    },
+    {
+      "proxy": "https://138.199.35.204:9002",
+      "at": "2026-10-27T04:18:51.373Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '138.199.35.204'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "http://109.194.199.198:10808",
+      "at": "2026-10-27T04:18:51.469Z",
+      "observedExitIP": "89.110.105.22",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "http://190.12.150.244:999",
+      "at": "2026-10-27T04:18:55.732Z",
+      "observedExitIP": "190.12.150.244",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "https://138.199.35.203:9002",
+      "at": "2026-10-27T04:19:47.521Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '138.199.35.203'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "http://5.129.254.129:8888",
+      "at": "2026-10-27T04:19:47.616Z",
+      "observedExitIP": "5.129.254.51",
+      "outcome": "https-echo-verified"
+    }
+  ],
+  "requests": [
+    {
+      "at": "2026-10-27T04:18:45.331Z",
+      "key": "company:10100281308",
+      "kind": "curl",
+      "path": "/company/10100281308/direct/",
+      "proxy": "http://161.35.70.249:3128",
+      "observedExitIP": "161.35.70.249",
+      "exitWindowRequest": 1
+    },
+    {
+      "at": "2026-10-27T04:18:45.846Z",
+      "key": "company:10100281308",
+      "kind": "browser-navigation",
+      "path": "/company/10100281308/direct/",
+      "proxy": "http://161.35.70.249:3128",
+      "observedExitIP": "161.35.70.249",
+      "exitWindowRequest": 2
+    },
+    {
+      "at": "2026-10-27T04:18:46.212Z",
+      "key": "company:10100279090",
+      "kind": "curl",
+      "path": "/company/10100279090/direct/",
+      "proxy": "http://145.220.227.66:8080",
+      "observedExitIP": "145.220.183.29",
+      "exitWindowRequest": 1
+    },
+    {
+      "at": "2026-10-27T04:18:50.690Z",
+      "key": "company:10100279090",
+      "kind": "browser-navigation",
+      "path": "/company/10100279090/direct/",
+      "proxy": "http://145.220.227.66:8080",
+      "observedExitIP": "145.220.183.29",
+      "exitWindowRequest": 2
+    },
+    {
+      "at": "2026-10-27T04:18:51.829Z",
+      "key": "company:10100281308",
+      "kind": "browser-navigation",
+      "path": "/company/10100281308/direct/",
+      "proxy": "http://161.35.70.249:3128",
+      "observedExitIP": "161.35.70.249",
+      "exitWindowRequest": 3
+    },
+    {
+      "at": "2026-10-27T04:18:52.384Z",
+      "key": "person:10829284C",
+      "kind": "curl",
+      "path": "/person/10829284C/x/",
+      "proxy": "http://109.194.199.198:10808",
+      "observedExitIP": "89.110.105.22",
+      "exitWindowRequest": 1
+    },
+    {
+      "at": "2026-10-27T04:18:55.351Z",
+      "key": "person:10829284C",
+      "kind": "browser-navigation",
+      "path": "/person/10829284C/x/",
+      "proxy": "http://109.194.199.198:10808",
+      "observedExitIP": "89.110.105.22",
+      "exitWindowRequest": 2
+    },
+    {
+      "at": "2026-10-27T04:18:56.454Z",
+      "key": "person:10828BF38",
+      "kind": "curl",
+      "path": "/person/10828BF38/x/",
+      "proxy": "http://190.12.150.244:999",
+      "observedExitIP": "190.12.150.244",
+      "exitWindowRequest": 1
+    },
+    {
+      "at": "2026-10-27T04:18:56.531Z",
+      "key": "company:10100279090",
+      "kind": "browser-navigation",
+      "path": "/company/10100279090/direct/",
+      "proxy": "http://145.220.227.66:8080",
+      "observedExitIP": "145.220.183.29",
+      "exitWindowRequest": 3
+    },
+    {
+      "at": "2026-10-27T04:19:05.049Z",
+      "key": "person:10828BF38",
+      "kind": "browser-navigation",
+      "path": "/person/10828BF38/x/",
+      "proxy": "http://190.12.150.244:999",
+      "observedExitIP": "190.12.150.244",
+      "exitWindowRequest": 2
+    },
+    {
+      "at": "2026-10-27T04:19:05.152Z",
+      "key": "person:10829284C",
+      "kind": "browser-navigation",
+      "path": "/person/10829284C/x/",
+      "proxy": "http://109.194.199.198:10808",
+      "observedExitIP": "89.110.105.22",
+      "exitWindowRequest": 3
+    },
+    {
+      "at": "2026-10-27T04:19:20.998Z",
+      "key": "person:10828BF38",
+      "kind": "browser-navigation",
+      "path": "/person/10828BF38/x/",
+      "proxy": "http://190.12.150.244:999",
+      "observedExitIP": "190.12.150.244",
+      "exitWindowRequest": 3
+    },
+    {
+      "at": "2026-10-27T04:19:48.564Z",
+      "key": "person:108293C47",
+      "kind": "curl",
+      "path": "/person/108293C47/x/",
+      "proxy": "http://5.129.254.129:8888",
+      "observedExitIP": "5.129.254.51",
+      "exitWindowRequest": 4
+    }
+  ],
+  "outcomes": [
+    {
+      "at": "2026-10-27T04:18:58.548Z",
+      "key": "company:10100281308",
+      "proxy": "http://161.35.70.249:3128",
+      "observedExitIP": "161.35.70.249",
+      "mainRequests": 3,
+      "success": false,
+      "reason": "empty-detail-response"
+    },
+    {
+      "at": "2026-10-27T04:19:03.004Z",
+      "key": "company:10100279090",
+      "proxy": "http://145.220.227.66:8080",
+      "observedExitIP": "145.220.183.29",
+      "mainRequests": 3,
+      "success": false,
+      "reason": "empty-detail-response"
+    },
+    {
+      "at": "2026-10-27T04:19:11.873Z",
+      "key": "person:10829284C",
+      "proxy": "http://109.194.199.198:10808",
+      "observedExitIP": "89.110.105.22",
+      "mainRequests": 3,
+      "success": false,
+      "reason": "empty-detail-response"
+    },
+    {
+      "at": "2026-10-27T04:19:29.107Z",
+      "key": "person:10828BF38",
+      "proxy": "http://190.12.150.244:999",
+      "observedExitIP": "190.12.150.244",
+      "mainRequests": 3,
+      "success": false,
+      "reason": "empty-detail-response"
+    },
+    {
+      "at": "2026-10-27T04:20:03.226Z",
+      "key": "person:108293C47",
+      "proxy": "http://5.129.254.129:8888",
+      "observedExitIP": "5.129.254.51",
+      "mainRequests": 1,
+      "success": false,
+      "reason": "empty-detail-response"
+    }
+  ],
+  "candidateCount": 32
+}
