@@ -1,0 +1,79 @@
+{
+  "runId": "40467837515",
+  "startedAt": "2026-10-27T07:34:21.473Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "error": "HTTP 403"
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 403"
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 403"
+    }
+  ],
+  "health": [
+    {
+      "proxy": "http://5.129.254.49:8888",
+      "at": "2026-10-27T07:34:24.043Z",
+      "observedExitIP": "5.129.254.70",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "http://147.161.247.9:11870",
+      "at": "2026-10-27T07:34:24.056Z",
+      "outcome": "health-failed",
+      "error": "curl: (22) The requested URL returned error: 429\n"
+    },
+    {
+      "proxy": "http://184.75.221.82:3118",
+      "at": "2026-10-27T07:34:24.059Z",
+      "observedExitIP": "184.75.221.82",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "http://213.139.210.13:1088",
+      "at": "2026-10-27T07:34:24.062Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Proxy CONNECT aborted due to timeout\n"
+    },
+    {
+      "proxy": "http://96.30.70.8:8081",
+      "at": "2026-10-27T07:34:24.601Z",
+      "observedExitIP": "96.30.70.8",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "http://181.79.217.1:8080",
+      "at": "2026-10-27T07:34:24.909Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 181.79.217.1 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://103.204.211.103:8080",
+      "at": "2026-10-27T07:34:25.747Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 103.204.211.103 port 8080 after 5002 ms: Timeout was reached\n"
+    }
+  ],
+  "requests": [],
+  "outcomes": [],
+  "candidateCount": 7
+}
