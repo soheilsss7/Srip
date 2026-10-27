@@ -105,15 +105,18 @@ export class PublicProxyTransport {
         if(closed || entry.retired)throw new Error('proxy-lease-closed');
         if(!permittedDetailURL(url,ent))throw new Error('proxy-target-not-permitted');
         const n=reserveExit(pool.state,entry.ip,{now:pool.now()});lease.mainRequests++;
-        pool.report.requests.push({at:new Date().toISOString(),key,kind,path:new URL(url).pathname,proxy:entry.proxy,observedExitIP:entry.ip,exitWindowRequest:n});pool.save();
+        const observation={at:new Date().toISOString(),key,kind,path:new URL(url).pathname,proxy:entry.proxy,observedExitIP:entry.ip,exitWindowRequest:n};pool.report.requests.push(observation);pool.save();return observation;
       },
       async fetch(url){
         let target=url;
         for(let redirects=0;redirects<4;redirects++){
-          lease.reserve('curl',target);
-          const {stdout}=await pool.execute('curl',[...transportCurlArgs(entry.proxy,target),'--write-out','\n__EGRESS_META__%{http_code}\t%{redirect_url}'],{env:pool.env,cwd:pool.scratch,timeout:14000,maxBuffer:4500000});
+          const observation=lease.reserve('curl',target);
+          let stdout;
+          try {({stdout}=await pool.execute('curl',[...transportCurlArgs(entry.proxy,target).filter(a=>a!=='--fail'),'--write-out','\n__EGRESS_META__%{http_code}\t%{redirect_url}'],{env:pool.env,cwd:pool.scratch,timeout:14000,maxBuffer:4500000}));}
+          catch(e){observation.error=String(e.stderr||e.message).slice(0,240);pool.save();const error=new Error('proxy-curl-failed: '+observation.error);error.retryable=true;throw error;}
           const at=stdout.lastIndexOf('\n__EGRESS_META__');if(at<0)throw new Error('Missing HTTP metadata');
           const body=stdout.slice(0,at),[statusText,redirect]=stdout.slice(at+'\n__EGRESS_META__'.length).split('\t');const status=Number(statusText);
+          observation.status=status;observation.bytes=Buffer.byteLength(body);observation.rawTables=(body.match(/<table/gi)||[]).length;observation.title=(body.match(/<title[^>]*>([^<]*)<\/title>/i)||[])[1]?.slice(0,160)||null;pool.save();
           if(status>=300 && status<400){if(!permittedDetailURL(redirect,ent))throw new Error('proxy-redirect-not-permitted');target=redirect;continue;}
           lease.finalURL=target;
           return {ok:status>=200 && status<300,status,text:async()=>body};
