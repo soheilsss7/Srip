@@ -1,0 +1,134 @@
+{
+  "runId": "40842509340",
+  "startedAt": "2026-10-29T08:30:25.586Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "error": "HTTP 403"
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 403"
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 403"
+    }
+  ],
+  "health": [
+    {
+      "proxy": "http://5.129.254.49:8888",
+      "at": "2026-10-29T08:30:27.433Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 5.129.254.49 port 8888 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://147.161.247.9:11870",
+      "at": "2026-10-29T08:30:27.441Z",
+      "outcome": "health-failed",
+      "error": "curl: (22) The requested URL returned error: 429\n"
+    },
+    {
+      "proxy": "http://184.75.221.82:3118",
+      "at": "2026-10-29T08:30:27.449Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 184.75.221.82 port 3118 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://147.161.246.36:11745",
+      "at": "2026-10-29T08:30:27.456Z",
+      "observedExitIP": "147.161.247.10",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "http://154.88.137.50:999",
+      "at": "2026-10-29T08:30:32.162Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 154.88.137.50 port 999 after 5002 ms: Timeout was reached\n"
+    }
+  ],
+  "requests": [
+    {
+      "at": "2026-10-29T08:30:28.225Z",
+      "key": "person:46E9DEC1",
+      "kind": "curl",
+      "path": "/person/46E9DEC1/x/",
+      "proxy": "http://147.161.246.36:11745",
+      "observedExitIP": "147.161.247.10",
+      "exitWindowRequest": 1,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 997356,
+      "rawTables": 0,
+      "title": " فاطمه رحمتی - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-10-29T08:30:32.792Z",
+      "key": "person:46E9DEC1",
+      "kind": "browser-navigation",
+      "path": "/person/46E9DEC1/x/",
+      "proxy": "http://147.161.246.36:11745",
+      "observedExitIP": "147.161.247.10",
+      "exitWindowRequest": 2
+    },
+    {
+      "at": "2026-10-29T08:30:42.546Z",
+      "key": "company:10200336398",
+      "kind": "curl",
+      "path": "/company/10200336398/direct/",
+      "proxy": "http://147.161.246.36:11745",
+      "observedExitIP": "147.161.247.10",
+      "exitWindowRequest": 3,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1197957,
+      "rawTables": 5,
+      "title": "🏢 صنایع تجاری پارلا منسوجات - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    }
+  ],
+  "outcomes": [
+    {
+      "at": "2026-10-29T08:30:42.374Z",
+      "key": "person:46E9DEC1",
+      "proxy": "http://147.161.246.36:11745",
+      "observedExitIP": "147.161.247.10",
+      "mainRequests": 2,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "reason": null
+    },
+    {
+      "at": "2026-10-29T08:30:47.634Z",
+      "key": "company:10200336398",
+      "proxy": "http://147.161.246.36:11745",
+      "observedExitIP": "147.161.247.10",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": false,
+      "reason": "empty-detail-response"
+    }
+  ],
+  "candidateCount": 5
+}
