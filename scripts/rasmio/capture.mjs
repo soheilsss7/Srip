@@ -7,11 +7,11 @@ import fs from 'node:fs';
 const BRANCH = process.env.OTP_BRANCH || 'arena/01a08a50-srip';
 // Isolated, non-relaying experiment. Never imports the production crawler.
 let publicProxyProbe = false;
-try { publicProxyProbe = ['public-proxy-probe','public-proxy-repair-sample'].includes(JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8')).client_payload?.mode); } catch {}
+try { publicProxyProbe = ['public-proxy-probe','public-proxy-repair-sample','linka-probe'].includes(JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8')).client_payload?.mode); } catch {}
 if (publicProxyProbe) {
   const { runPublicProxyProbe } = await import('./public-proxy-probe.mjs');
   const mode=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,'utf8')).client_payload?.mode;
-  const { files, report } = await runPublicProxyProbe({repairSample:mode==='public-proxy-repair-sample'});
+  const { files, report } = mode==='linka-probe' ? await (await import('./linka-probe.mjs')).runLinkaProbe() : await runPublicProxyProbe({repairSample:mode==='public-proxy-repair-sample'});
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'proxy-probe-publish-'));
   const git = (args, env = process.env) => execFileSync('git', args, { env, encoding: 'utf8', timeout: 60000 }).trim();
   try {
@@ -40,7 +40,7 @@ if (publicProxyProbe) {
       fs.writeFileSync(files[0],JSON.stringify(report,null,2));
       git(['add','-f','--',...files,...datasetFiles],env);
       const tree = git(['write-tree'],env);
-      const commit = git(['commit-tree',tree,'-p',parent,'-m',`Public proxy experiment ${report.runId}: ${report.verifiedProfiles.length} verified profile responses`],env);
+      const commit = git(['commit-tree',tree,'-p',parent,'-m',`${mode} ${report.runId}: ${report.verifiedProfiles.length} verified profile responses`],env);
       git(['update-ref',`refs/heads/${BRANCH}`,commit]);
       try { git(['push','origin',BRANCH]);published=true; } catch { if(attempt===2)throw new Error('Proxy experiment output could not be published'); }
     }
