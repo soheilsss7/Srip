@@ -1,5 +1,7 @@
 // Bounded, anonymous company-source assessment. No canonical records are overwritten.
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 export function extractLinkaFacts(html,url) {
  const decode=s=>s.replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&').replace(/&nbsp;/g,' ').replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n)));
  const title=decode((html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)||[])[1]||'').trim();
@@ -32,6 +34,26 @@ export async function runLinkaProbe(){
   try{const sitemap=await get('https://linka.ir/sitemap/sitemap.xml');report.sitemap={bytes:Buffer.byteLength(sitemap),locations:[...sitemap.matchAll(/<loc>([^<]+)<\/loc>/gi)].map(m=>m[1]).slice(0,10)};}catch(e){report.sitemap={error:e.message};}
   const url='https://linka.ir/company/1f027db/شرکت-نفت-و-گاز-پارس';
   try{const html=await get(url);const fact=extractLinkaFacts(html,url);fact.fetchedAt=new Date().toISOString();report.facts.push(fact);report.profile={rawTables:(html.match(/<table/gi)||[]).length,jsonLdBlocks:(html.match(/application\/ld\+json/gi)||[]).length,bytes:Buffer.byteLength(html)};}catch(e){report.profile={error:e.message};}
+  // One anonymous render, since Angular serves a shell rather than company data in HTML.
+  let browser;const scratch=fs.mkdtempSync(path.join(os.tmpdir(),'linka-public-render-'));
+  try {
+   const {default:puppeteer}=await import('puppeteer');
+   browser=await puppeteer.launch({headless:true,env:{PATH:process.env.PATH,HOME:scratch,LANG:'C.UTF-8'},args:['--no-sandbox','--disable-dev-shm-usage']});
+   const page=await browser.newPage();await page.setBypassServiceWorker(true);await page.setRequestInterception(true);
+   let requests=0;report.browserRequests=[];
+   page.on('request',r=>{
+    let allowed=false;try{const u=new URL(r.url());allowed=++requests<=60&&u.protocol==='https:'&&(u.hostname==='linka.ir'||u.hostname.endsWith('.linka.ir'))&&!/^\/(recaptcha|tag|history|graph|products)(\/|$)/.test(u.pathname)&&!['image','font','media'].includes(r.resourceType());if(r.isNavigationRequest()&&r.frame()===page.mainFrame())allowed=allowed&&u.hostname==='linka.ir'&&u.pathname.startsWith('/company/1f027db/');}catch{}
+    void(allowed?r.continue():r.abort()).catch(()=>{});
+   });
+   page.on('response',r=>{if(report.browserRequests.length<20&&['fetch','xhr'].includes(r.request().resourceType())){try{const u=new URL(r.url());report.browserRequests.push({host:u.hostname,path:u.pathname,status:r.status()});}catch{}}});
+   await page.goto(url,{waitUntil:'domcontentloaded',timeout:25000});await new Promise(r=>setTimeout(r,7000));
+   report.rendered=await page.evaluate(()=>({title:document.title,text:document.body.innerText.slice(0,12000),tables:document.querySelectorAll('table').length}));
+   const normalized=report.rendered.text.replace(/[۰-۹]/g,c=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c))).replace(/[٠-٩]/g,c=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(c)));
+   const id=(normalized.match(/شناسه\s*ملی\s*[:：]?\s*(\d{11})(?!\d)/)||[])[1]||null;
+   report.rendered.nationalId=id;report.rendered.identityVerified=id==='10101865627';report.rendered.fullProfileVerified=false;
+   report.rendered.textExcerpt=report.rendered.text.slice(0,2500);delete report.rendered.text;
+  }catch(e){report.renderError=String(e.message).slice(0,300);}
+  finally{if(browser)await browser.close().catch(()=>{});fs.rmSync(scratch,{recursive:true,force:true});}
  }catch(e){report.error=e.message;}
  report.finishedAt=new Date().toISOString();fs.writeFileSync(file,JSON.stringify(report,null,2));return {files:[file],report};
 }
