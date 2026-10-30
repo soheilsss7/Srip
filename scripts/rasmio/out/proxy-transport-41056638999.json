@@ -1,0 +1,326 @@
+{
+  "runId": "41056638999",
+  "startedAt": "2026-10-30T12:37:29.342Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "lines": 1549
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 2855
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 11386
+    }
+  ],
+  "health": [
+    {
+      "proxy": "http://5.129.254.49:8888",
+      "at": "2026-10-30T12:37:31.494Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 5.129.254.49 port 8888 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://192.147.114.171:8080",
+      "at": "2026-10-30T12:37:31.504Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 192.147.114.171 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://147.161.247.9:11870",
+      "at": "2026-10-30T12:37:31.513Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) SSL connection timeout\n"
+    },
+    {
+      "proxy": "https://89.124.11.6:443",
+      "at": "2026-10-30T12:37:31.523Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '89.124.11.6'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server"
+    },
+    {
+      "proxy": "http://184.75.221.82:3118",
+      "at": "2026-10-30T12:37:32.240Z",
+      "observedExitIP": "184.75.221.82",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "http://165.101.43.155:8080",
+      "at": "2026-10-30T12:37:32.343Z",
+      "observedExitIP": "165.101.43.155",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "http://190.110.35.60:999",
+      "at": "2026-10-30T12:37:36.514Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 190.110.35.60 port 999 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://190.9.109.86:999",
+      "at": "2026-10-30T12:37:36.524Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 190.9.109.86 port 999 after 5001 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://103.144.54.35:8082",
+      "at": "2026-10-30T12:37:36.533Z",
+      "observedExitIP": "103.144.54.39",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "http://220.135.222.226:3128",
+      "at": "2026-10-30T12:37:38.034Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Proxy CONNECT aborted due to timeout\n"
+    },
+    {
+      "proxy": "http://165.16.58.130:8080",
+      "at": "2026-10-30T12:37:41.533Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 165.16.58.130 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://103.139.98.118:8080",
+      "at": "2026-10-30T12:37:41.543Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 103.139.98.118 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://131.196.13.233:999",
+      "at": "2026-10-30T12:37:43.052Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 131.196.13.233 port 999 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://124.156.179.148:8443",
+      "at": "2026-10-30T12:37:46.552Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: self-signed certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish "
+    },
+    {
+      "proxy": "http://103.248.9.229:8090",
+      "at": "2026-10-30T12:37:46.562Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 103.248.9.229 port 8090 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://38.58.66.237:999",
+      "at": "2026-10-30T12:37:47.133Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 38.58.66.237 port 999 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://37.59.112.197:443",
+      "at": "2026-10-30T12:37:48.070Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: self-signed certificate in certificate chain\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore"
+    },
+    {
+      "proxy": "http://103.168.148.129:8080",
+      "at": "2026-10-30T12:37:48.292Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Proxy CONNECT aborted due to timeout\n"
+    },
+    {
+      "proxy": "http://101.255.45.46:8080",
+      "at": "2026-10-30T12:37:51.578Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 101.255.45.46 port 8080 after 5001 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://190.112.224.179:443",
+      "at": "2026-10-30T12:37:52.152Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: unable to get local issuer certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could"
+    },
+    {
+      "proxy": "http://154.19.39.220:8090",
+      "at": "2026-10-30T12:37:52.322Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 154.19.39.220 port 8090 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://141.148.230.225:443",
+      "at": "2026-10-30T12:37:53.310Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '141.148.230.225'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the se"
+    },
+    {
+      "proxy": "http://110.76.147.29:1080",
+      "at": "2026-10-30T12:37:53.539Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Proxy CONNECT aborted due to timeout\n"
+    },
+    {
+      "proxy": "http://187.243.251.254:999",
+      "at": "2026-10-30T12:37:56.596Z",
+      "observedExitIP": "187.243.251.254",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "https://37.203.35.8:443",
+      "at": "2026-10-30T12:37:57.340Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '37.203.35.8'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server"
+    },
+    {
+      "proxy": "http://103.82.246.19:6080",
+      "at": "2026-10-30T12:37:57.895Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 103.82.246.19 port 6080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://177.234.211.31:999",
+      "at": "2026-10-30T12:37:58.557Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 177.234.211.31 port 999 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://51.15.135.81:443",
+      "at": "2026-10-30T12:38:02.913Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '51.15.135.81'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serve"
+    },
+    {
+      "proxy": "http://111.192.51.203:8888",
+      "at": "2026-10-30T12:38:03.130Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 111.192.51.203 port 8888 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://38.253.240.87:9191",
+      "at": "2026-10-30T12:38:03.575Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Proxy CONNECT aborted due to timeout\n"
+    },
+    {
+      "proxy": "https://37.59.110.73:443",
+      "at": "2026-10-30T12:38:08.148Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '37.59.110.73'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serve"
+    },
+    {
+      "proxy": "http://103.172.71.5:9191",
+      "at": "2026-10-30T12:38:08.592Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 103.172.71.5 port 9191 after 5002 ms: Timeout was reached\n"
+    }
+  ],
+  "requests": [
+    {
+      "at": "2026-10-30T12:37:40.142Z",
+      "key": "person:D0AAB0CB",
+      "kind": "curl",
+      "path": "/person/D0AAB0CB/x/",
+      "proxy": "http://103.144.54.35:8082",
+      "observedExitIP": "103.144.54.39",
+      "exitWindowRequest": 1,
+      "error": "curl: (28) Failed to connect to 103.144.54.35 port 8082 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "at": "2026-10-30T12:38:00.268Z",
+      "key": "company:10530327350",
+      "kind": "curl",
+      "path": "/company/10530327350/direct/",
+      "proxy": "http://187.243.251.254:999",
+      "observedExitIP": "187.243.251.254",
+      "exitWindowRequest": 1,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1221299,
+      "rawTables": 5,
+      "title": "🏢 طراحی و تکوین پیر امید - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-10-30T12:38:22.833Z",
+      "key": "person:D0A6D5CE",
+      "kind": "curl",
+      "path": "/person/D0A6D5CE/x/",
+      "proxy": "http://187.243.251.254:999",
+      "observedExitIP": "187.243.251.254",
+      "exitWindowRequest": 2,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 985898,
+      "rawTables": 0,
+      "title": " علی دشتی عسکری - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-10-30T12:38:38.661Z",
+      "key": "person:D0A6D5CE",
+      "kind": "browser-navigation",
+      "path": "/person/D0A6D5CE/x/",
+      "proxy": "http://187.243.251.254:999",
+      "observedExitIP": "187.243.251.254",
+      "exitWindowRequest": 3
+    },
+    {
+      "at": "2026-10-30T12:38:51.922Z",
+      "key": "person:D0A6D5CE",
+      "kind": "browser-navigation",
+      "path": "/person/D0A6D5CE/x/",
+      "proxy": "http://187.243.251.254:999",
+      "observedExitIP": "187.243.251.254",
+      "exitWindowRequest": 4
+    }
+  ],
+  "outcomes": [
+    {
+      "at": "2026-10-30T12:37:45.172Z",
+      "key": "person:D0AAB0CB",
+      "proxy": "http://103.144.54.35:8082",
+      "observedExitIP": "103.144.54.39",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "reason": "proxy-curl-failed: curl: (28) Failed to connect to 103.144.54.35 port 8082 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "at": "2026-10-30T12:38:22.749Z",
+      "key": "company:10530327350",
+      "proxy": "http://187.243.251.254:999",
+      "observedExitIP": "187.243.251.254",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "reason": null
+    },
+    {
+      "at": "2026-10-30T12:39:05.955Z",
+      "key": "person:D0A6D5CE",
+      "proxy": "http://187.243.251.254:999",
+      "observedExitIP": "187.243.251.254",
+      "mainRequests": 3,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com",
+        ""
+      ],
+      "success": false,
+      "reason": "empty-detail-response"
+    }
+  ],
+  "candidateCount": 32
+}
