@@ -1,0 +1,89 @@
+{
+  "runId": "41063229748",
+  "startedAt": "2026-10-30T13:27:12.428Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "error": "HTTP 403"
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 403"
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 403"
+    }
+  ],
+  "health": [
+    {
+      "proxy": "http://5.129.254.49:8888",
+      "at": "2026-10-30T13:27:14.927Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 5.129.254.49 port 8888 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://147.161.247.9:11870",
+      "at": "2026-10-30T13:27:14.937Z",
+      "outcome": "health-failed",
+      "error": "curl: (22) The requested URL returned error: 429\n"
+    },
+    {
+      "proxy": "http://184.75.221.82:3118",
+      "at": "2026-10-30T13:27:14.946Z",
+      "observedExitIP": "184.75.221.82",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "http://161.97.94.168:6001",
+      "at": "2026-10-30T13:27:14.956Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Proxy CONNECT aborted due to timeout\n"
+    },
+    {
+      "proxy": "http://42.115.72.145:2026",
+      "at": "2026-10-30T13:27:16.124Z",
+      "observedExitIP": "116.104.154.193",
+      "outcome": "https-echo-verified"
+    }
+  ],
+  "requests": [
+    {
+      "at": "2026-10-30T13:27:19.274Z",
+      "key": "company:10570021792",
+      "kind": "curl",
+      "path": "/company/10570021792/direct/",
+      "proxy": "http://42.115.72.145:2026",
+      "observedExitIP": "116.104.154.193",
+      "exitWindowRequest": 3,
+      "error": "curl: (28) Operation timed out after 12000 milliseconds with 276827 bytes received\n"
+    }
+  ],
+  "outcomes": [
+    {
+      "at": "2026-10-30T13:27:31.304Z",
+      "key": "company:10570021792",
+      "proxy": "http://42.115.72.145:2026",
+      "observedExitIP": "116.104.154.193",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "reason": "proxy-curl-failed: curl: (28) Operation timed out after 12000 milliseconds with 276827 bytes received\n"
+    }
+  ],
+  "candidateCount": 5
+}
