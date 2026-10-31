@@ -19,7 +19,7 @@ import { restoreIncompleteDetails, prioritizeDetailRepair, markDetailRepaired, h
 import { extractTablesFromDOM, hasParsedDetail } from './table-extractor.mjs';
 import { installNetworkAudit } from './network-audit.mjs';
 import { fetchDetailHTML } from './detail-fetch.mjs';
-import { createDetailRunPolicy } from './detail-run-policy.mjs';
+import { createDetailRunPolicy, failedTransportWave } from './detail-run-policy.mjs';
 import { PublicProxyTransport, permittedDetailURL, permittedResourceURL } from './proxy-transport.mjs';
 import { interleaveDetailLanes, requiresProxy, poolExhausted } from './detail-lanes.mjs';
 import { extractEmbeddedNoticesFromDOM, persistEmbeddedNotices } from './embedded-notices.mjs';
@@ -2080,11 +2080,11 @@ try {
         // Failed/limited requests remain pending, not falsely marked visited.
         if (!frontier.pending.some(p => keyOf(p) === keyOf(e))) frontier.pending.push(e);
         log('FETCH-DEFERRED', keyOf(e), String(err.message || err).slice(0, 120));
-        return { ent: e, r: null };
+        return { ent: e, r: null, errorKind:String(err.message||err) };
       }
     }));
     let okInWave = 0;
-    if (results.every((x) => !x.r) && !proxyLaneJustDeferred) failedStreak++; else failedStreak = 0;
+    if (failedTransportWave(results,{proxyLaneJustDeferred})) failedStreak++; else failedStreak = 0;
     for (const { ent: e, r } of results) {
       if (!r) { failed++; log('✗', keyOf(e), 'خطا'); continue; }
       const k = keyOf(e);

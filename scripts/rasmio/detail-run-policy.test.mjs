@@ -18,3 +18,6 @@ test('one proxy failure and transient errors do not manufacture a direct access 
  const p=createDetailRunPolicy();p.failure({type:'company'},new Error('HTTP 429'));p.failure({type:'product'},new Error('detail-response-aborted'));
  assert.equal(p.snapshot().directBlocked,false);assert.ok(p.permits({type:'product'}));
 });
+
+import {failedTransportWave} from './detail-run-policy.mjs';
+test('empty shells do not trigger a global blocked-fast stop while real repeated transport failures still count',()=>{const empty={r:null,errorKind:'empty-detail-response'},network={r:null,errorKind:'detail-response-aborted'};assert.equal(failedTransportWave([empty,empty]),false);assert.equal(failedTransportWave([empty,network]),false);assert.equal(failedTransportWave([network,network]),true);assert.equal(failedTransportWave([network],{proxyLaneJustDeferred:true}),false);assert.equal(failedTransportWave([{r:{rows:2}},network]),false);assert.equal(failedTransportWave([]),false);});

@@ -17,3 +17,7 @@ export function createDetailRunPolicy({emptyLimit=2}={}) {
   snapshot(){return {scope:'current run only; tasks remain pending',directBlocked,deferredTypes:[...deferredTypes],emptyCounts:{...emptyCounts}};}
  };
 }
+// Empty public shells are local lane failures, not proof that every lane is blocked.
+export function failedTransportWave(results,{proxyLaneJustDeferred=false}={}){
+ return results.length>0&&!proxyLaneJustDeferred&&results.every(x=>!x.r&&x.errorKind&&!['empty-detail-response','richer-existing-detail-preserved'].includes(x.errorKind));
+}
