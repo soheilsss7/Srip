@@ -54,7 +54,7 @@ export async function runRrkTunnelProbe(){
  const save=()=>fs.writeFileSync(file,JSON.stringify(report,null,2));let child,browser,verifiedTransport;save();
  try{
   let payload={};try{payload=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,'utf8')).client_payload||{};}catch{}
-  report.healthOnly=payload.healthOnly===true;report.rrkDnsPin=payload.rrkDnsPin===true;let originIPv4=null;if(report.rrkDnsPin&&!report.healthOnly){const resolved=await resolvePublicEndpoint({address:new URL(target).hostname,port:443});originIPv4=resolved.address;report.publicOriginResolution={hostname:new URL(target).hostname,address:originIPv4,tlsNamePreserved:true};}
+  report.healthOnly=payload.healthOnly===true;report.rrkDnsPin=payload.rrkDnsPin===true;if(payload.nativeRobots===true&&report.rrkDnsPin)throw new Error('Native TLS and pinned curl are separate trials');let originIPv4=null;if(report.rrkDnsPin&&!report.healthOnly){const resolved=await resolvePublicEndpoint({address:new URL(target).hostname,port:443});originIPv4=resolved.address;report.publicOriginResolution={hostname:new URL(target).hostname,address:originIPv4,tlsNamePreserved:true};}
   const kind=['reality','xhttp','reality-extra','plain-vless','trojan','global-checked'].includes(payload.tunnelKind)?payload.tunnelKind:'vmess';
   const expectedBlob=kind==='global-checked'?checkedSourceBlob:sourceBlob;
   report.source.blob=expectedBlob;if(kind==='global-checked'){report.source.publisherLabelsCountry='not country restricted';report.source.catalog='output/main_top100_checked.txt';report.source.publisherCheckedNotIndependentlyVerified=true;}
@@ -77,6 +77,24 @@ export async function runRrkTunnelProbe(){
    try{const {stdout}=await execute('curl',tunnelArgs(port,healthTarget,chain.bundle),{env,timeout:22000,maxBuffer:10000});attempt.health=parseTunnelEcho(stdout);report.verifiedExitCount=new Set(report.attempts.map(a=>a.health?.observedExitIP).filter(Boolean)).size;}
    catch(e){attempt.health={error:String(e.stderr||e.message).slice(0,240),verified:false};save();if(/Echo provider HTTP (?:401|403|429)/.test(attempt.health.error)){report.healthProviderRefused=true;break;}continue;}
    save();if(report.healthOnly)continue;
+   if(payload.nativeRobots===true){
+    report.originTlsClient='native Chromium; no forced TLS 1.2';let originDenied=false;
+    const {default:puppeteer}=await import('puppeteer');browser=await puppeteer.launch({headless:true,env,args:['--no-sandbox','--disable-dev-shm-usage','--disable-quic',`--proxy-server=socks5://127.0.0.1:${port}`]});
+    try{
+     const page=await browser.newPage();await page.setUserAgent('SripPublicSourceAssessment/1.0');await page.setBypassServiceWorker(true);await page.setRequestInterception(true);let requests=0;
+     const monitor={report:{stoppedOnAccessDenial:false,httpsVerifiedBy:'Chromium native certificate verification through echo-verified tunnel'}};
+     page.on('response',r=>{if([401,403,429].includes(r.status())){originDenied=true;monitor.report.stoppedOnAccessDenial=true;}});
+     page.on('request',r=>{let allowed=false;try{const u=new URL(r.url());allowed=!originDenied&&++requests<=80&&u.protocol==='https:'&&['rrk.ir','www.rrk.ir'].includes(u.hostname)&&!['image','font','media','stylesheet'].includes(r.resourceType());}catch{}void(allowed?r.continue():r.abort()).catch(()=>{});});
+     const robot={url:'https://www.rrk.ir/robots.txt',transport:'native-Chromium'};(attempt.requests??=[]).push(robot);
+     const response=await page.goto(robot.url,{waitUntil:'domcontentloaded',timeout:25000});robot.status=response?.status();save();
+     if(robot.status===404&&!originDenied){const response=await page.goto(target,{waitUntil:'domcontentloaded',timeout:75000});report.browser={status:response?.status(),requests};if(response?.status()===200)await samplePublicNotices(page,{runId,files,report,transport:monitor});}
+     else robot.continuedToSearch=false;
+    }catch(e){attempt.nativeBrowserError=String(e.message).slice(0,240);}
+    finally{await browser.close().catch(()=>{});browser=null;save();}
+    if(originDenied){report.stoppedOnAccessDenial=true;break;}
+    if(report.browser?.status===200)break;
+    continue;
+   }
    let admitted=false,denied=false;
    for(const url of ['https://www.rrk.ir/robots.txt',target]){
     if(url===target&&!admitted)break;const record={url};(attempt.requests??=[]).push(record);let stdout='';try{({stdout}=await execute('curl',tunnelArgs(port,url,chain.bundle,{destinationIPv4:originIPv4}),{env,timeout:22000,maxBuffer:1600000}));}catch(e){record.error=String(e.stderr||'Tunnel request failed').slice(0,240);stdout=String(e.stdout||'');}
