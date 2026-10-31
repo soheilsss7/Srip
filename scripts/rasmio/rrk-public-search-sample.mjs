@@ -7,7 +7,7 @@ export async function samplePublicNotices(page,{runId,files,report,transport}){
  await page.waitForSelector('#P199_NATIONALCODECOMPANY',{timeout:10000});
  const button=await page.evaluate(()=>{const input=document.querySelector('#P199_NATIONALCODECOMPANY');const region=input?.closest('.t-Region')||document;const candidates=[...region.querySelectorAll('button')].filter(b=>b.offsetParent!==null&&b.textContent.trim()==='جستجو');const known=candidates.find(b=>b.id==='B912476867105247978');return known?.id||(candidates.length===1?candidates[0].id:null);});
  if(!button){result.reason='No unambiguous public search button';return;}
- await page.type('#P199_NATIONALCODECOMPANY',company);await page.evaluate(id=>document.getElementById(id).click(),button);result.searches=1;
+ await page.evaluate(value=>{if(window.apex?.item)window.apex.item('P199_NATIONALCODECOMPANY').setValue(value);else {const input=document.getElementById('P199_NATIONALCODECOMPANY');input.value=value;input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));}},company);await page.evaluate(id=>document.getElementById(id).click(),button);result.searches=1;
  try{await page.waitForNetworkIdle({idleTime:1500,timeout:20000});}catch{}
  if(transport.report.stoppedOnAccessDenial)return;
  const located=await page.evaluate(()=>{

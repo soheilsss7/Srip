@@ -8,3 +8,9 @@ test('a certificate failure cannot be promoted from a proxy CONNECT 200 into ori
  const transport=createVerifiedCurlTransport({proxy:'http://8.8.8.8:80',bundle:'/tmp/verified-chain.pem',scratch:dir,execute});
  try{await transport.handle(request);assert.equal(responded,false);assert.equal(aborted,true);assert.ok(!JSON.stringify(transport.report).includes('private request headers'));}finally{await transport.close();fs.rmSync(dir,{recursive:true,force:true});}
 });
+test('only verified explicitly cacheable static scripts can be reused within one browser run',async()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'verified-static-test-'));let calls=0,responses=0;
+ const request={url:()=> 'https://rrk.ir/i/example.js',method:()=> 'GET',headers:()=>({}),isInterceptResolutionHandled:()=>false,respond:async()=>{responses++;},abort:async()=>{assert.fail('Unexpected abort');}};
+ const execute=async(_,args)=>{calls++;assert.ok(args.includes('--cacert'));assert.ok(!args.includes('--insecure'));fs.writeFileSync(args[args.indexOf('--dump-header')+1],'HTTP/1.1 200 Connection established\r\n\r\nHTTP/2 200\r\nContent-Type: application/javascript\r\nCache-Control: public, max-age=3600\r\n\r\n');fs.writeFileSync(args[args.indexOf('--output')+1],'/* public fixture */');return {stdout:''};};
+ const t=createVerifiedCurlTransport({proxy:'http://8.8.8.8:80',bundle:'/tmp/verified-chain.pem',scratch:dir,execute});try{await t.handle(request);await t.handle(request);assert.equal(calls,1);assert.equal(responses,2);assert.equal(t.report.verifiedStaticCacheHits,1);}finally{await t.close();fs.rmSync(dir,{recursive:true,force:true});}
+});
