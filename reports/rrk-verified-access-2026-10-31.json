@@ -1,0 +1,96 @@
+{
+  "reportedAt": "2026-10-31T17:12:13.438805+00:00",
+  "task": "Restore actual public RRK access, then retrieve complete legal notices",
+  "observedProgress": {
+    "previouslyVerifiedSecureRrkRoutes": 0,
+    "distinctSecureRrkRoutesObservedThisRound": 1,
+    "officialSearchPageRetrieved": true,
+    "firstSecureSearchResponse": {
+      "runId": "41221995151",
+      "status": 200,
+      "characters": 136556,
+      "title": "داده باز"
+    },
+    "publicSearchDOMRenderedInChromium": true,
+    "completeOfficialNoticeBodiesRetrieved": 0,
+    "canonicalRecordsAdded": 0,
+    "productionReady": false
+  },
+  "workingRouteObservation": {
+    "proxy": "http://46.209.30.11:8080",
+    "officialURL": "https://rrk.ir/ords/r/rrs/rrs-front/%D8%AF%D8%A7%D8%AF%D9%87-%D8%A8%D8%A7%D8%B2",
+    "robotsStatus": 404,
+    "countryReportedByOfficialPage": "Iran",
+    "exitAddressReportedByOfficialPage": "46.209.30.11",
+    "countryExternalGeoVerificationPerformed": false,
+    "currentReliability": "Intermittent; last two robots requests timed out. Historical successful requests must not be presented as currently stable."
+  },
+  "tlsFix": {
+    "evidenceRun": "41221741104",
+    "downloadURL": "https://certumdvtlsg2r39ca.repository.certum.pl/certumdvtlsg2r39ca.cer",
+    "subject": "C=PL\nO=Asseco Data Systems S.A.\nCN=Certum DV TLS G2 R39 CA",
+    "issuer": "C=PL\nO=Asseco Data Systems S.A.\nOU=Certum Certification Authority\nCN=Certum Trusted Root CA",
+    "fingerprint256": "83:C0:A5:A7:68:44:C8:40:DF:AF:82:0F:FD:02:AD:F6:57:3A:26:82:3E:F6:AF:75:8A:33:84:A0:AC:04:40:83",
+    "validFrom": "Jun 18 07:41:22 2024 GMT",
+    "validTo": "Jun  5 07:41:22 2039 GMT",
+    "verifiedAgainstExistingSystemRoots": true,
+    "tlsValidationDisabled": false
+  },
+  "noticeExtractionBlockers": [
+    "Original missing Certum intermediate was resolved without disabling certificate validation.",
+    "Public APEX desktop_all.min.js download was incomplete in the rendered-search run; partial JavaScript was rejected.",
+    "Longer bounded core-asset deadline and runtime-readiness guard were published, but subsequent connectivity failures prevented runtime validation.",
+    "Latest run did not reach search or notice extraction."
+  ],
+  "latestActualProbe": {
+    "runId": "41223209721",
+    "routeAdmitted": false,
+    "attempts": [
+      {
+        "proxy": "http://46.209.30.11:8080",
+        "url": "https://rrk.ir/robots.txt",
+        "tls12": false,
+        "at": "2026-10-31T17:10:59.757Z",
+        "error": "curl: (28) Proxy CONNECT aborted due to timeout\n",
+        "proxyRefused": false,
+        "status": 0
+      },
+      {
+        "proxy": "http://46.209.30.11:8080",
+        "url": "https://rrk.ir/robots.txt",
+        "tls12": false,
+        "at": "2026-10-31T17:11:04.767Z",
+        "error": "curl: (28) Proxy CONNECT aborted due to timeout\n",
+        "proxyRefused": false,
+        "status": 0
+      }
+    ],
+    "advertsExtracted": 0
+  },
+  "evidenceRuns": {
+    "independentDiagnostics": "41221471494",
+    "fresh16PublicRoutes": "41221741104",
+    "secureChainRecovery": "41221995151",
+    "fullSearchDOM": "41222818586",
+    "latest": "41223209721"
+  },
+  "otherServiceLimits": {
+    "checkHost": "HTTP 429 in 41221371070; no further check-host submissions or IP-based retries",
+    "globalping": "Used four ordinary public HTTP diagnostics, not a bulk crawling relay; initial HTTP 200 had unverified TLS and a truncated body, so was not accepted as a full notice."
+  },
+  "constraints": {
+    "loginAttempted": false,
+    "paymentAttempted": false,
+    "captchaSolved": false,
+    "tlsValidationDisabled": false,
+    "newRootTrusted": false,
+    "bulkPaidCsvUsed": false,
+    "fullArchiveCoverageClaimed": false,
+    "actualSpeedIncreaseMeasured": false
+  },
+  "validation": {
+    "nodeTestsPassed": 49,
+    "nodeTestsFailed": 0
+  },
+  "normalCrawler": "Not canceled; latest observed production run 41223190855 was in progress."
+}
