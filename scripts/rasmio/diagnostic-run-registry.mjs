@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 const branch='arena/01a08a50-srip';
-const modes=new Set(['public-proxy-probe','public-proxy-repair-sample','linka-probe','rrk-probe','rrk-route-probe','rrk-archive-probe','rrk-regional-probe','rrk-vantage-probe']);
+const modes=new Set(['public-proxy-probe','public-proxy-repair-sample','linka-probe','rrk-probe','rrk-route-probe','rrk-archive-probe','rrk-regional-probe','rrk-vantage-probe','rrk-tunnel-probe']);
 export function validDiagnosticRecord(record,runId){return /^\d+$/.test(String(runId))&&record?.runId===String(runId)&&modes.has(record.mode)&&record.productionWriter===false;}
 const git=(args,env=process.env)=>execFileSync('git',args,{env,encoding:'utf8',timeout:60000,stdio:['ignore','pipe','pipe']}).trim();
 export function isRegisteredDiagnosticRun(runId,{localDir='out/diagnostic-runs',readGit}={}){
