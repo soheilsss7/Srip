@@ -40,3 +40,7 @@ test('multiline Persian names retain a valid evidence chain',()=>{
  const r=noticeFromFields({...fields,noticeText:'خانم مریم\n  احمدی به سمت بازرس اصلی انتخاب شد. این آگهی ساختگی فقط برای آزمون چندخطی است.'},'https://rrk.ir/ords/r/x');
  assert.equal(r.personObservations[0].name,'مریم احمدی');assert.equal(validateRecord(r).personObservations.length,1);
 });
+test('robots compares Persian and percent-encoded paths consistently',()=>{
+ assert.equal(robotAllows('User-agent: *\nDisallow: /ords/داده-باز','https://rrk.ir/ords/%D8%AF%D8%A7%D8%AF%D9%87-%D8%A8%D8%A7%D8%B2'),false);
+ assert.equal(robotAllows('User-agent: *\nDisallow: /ords/%D8%AF%D8%A7%D8%AF%D9%87-%D8%A8%D8%A7%D8%B2','https://rrk.ir/ords/داده-باز'),false);
+});

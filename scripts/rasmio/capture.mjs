@@ -9,6 +9,7 @@ const BRANCH = process.env.OTP_BRANCH || 'arena/01a08a50-srip';
 let publicProxyProbe = false;
 try { publicProxyProbe = ['public-proxy-probe','public-proxy-repair-sample','linka-probe','rrk-probe','rrk-route-probe','rrk-archive-probe','rrk-regional-probe'].includes(JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8')).client_payload?.mode); } catch {}
 if (publicProxyProbe) {
+  if(process.env.GITHUB_RUN_ID){try{const mode=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,'utf8')).client_payload?.mode;(await import('./diagnostic-run-registry.mjs')).registerDiagnosticRun(mode,process.env.GITHUB_RUN_ID);}catch{console.warn('Diagnostic registry unavailable; production writer gate remains conservative');}}
   const { runPublicProxyProbe } = await import('./public-proxy-probe.mjs');
   const mode=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,'utf8')).client_payload?.mode;
   const { files, report } = mode==='rrk-regional-probe' ? await (await import('./rrk-regional-probe.mjs')).runRrkRegionalProbe() : mode==='rrk-archive-probe' ? await (await import('./rrk-archive-probe.mjs')).runRrkArchiveProbe() : mode==='rrk-route-probe' ? await (await import('./rrk-route-assessment.mjs')).runRrkRouteAssessment() : mode==='rrk-probe' ? await (await import('./rrk-probe.mjs')).runRrkProbe() : mode==='linka-probe' ? await (await import('./linka-probe.mjs')).runLinkaProbe() : await runPublicProxyProbe({repairSample:mode==='public-proxy-repair-sample'});
@@ -44,6 +45,7 @@ if (publicProxyProbe) {
       git(['update-ref',`refs/heads/${BRANCH}`,commit]);
       try { git(['push','origin',BRANCH]);published=true; } catch { if(attempt===2)throw new Error('Proxy experiment output could not be published'); }
     }
+    (await import('./diagnostic-run-registry.mjs')).synchronizePublishedCheckout(git(['rev-parse','HEAD']));
     console.log(JSON.stringify({ mode:'public-proxy-probe',attempted:report.attempts.length,echoExits:report.verifiedExitCount,profiles:report.verifiedProfiles.length,files }));
   } finally { fs.rmSync(tmp,{recursive:true,force:true}); }
   process.exit(report.error ? 1 : 0);

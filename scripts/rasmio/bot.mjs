@@ -1,3 +1,4 @@
+import {isRegisteredDiagnosticRun} from './diagnostic-run-registry.mjs';
 /* ============================================================================
    ربات رسمیو — نسخهٔ ۳ «همیشگی» (نشست ماندگار + خزندهٔ خودرشد)
    ----------------------------------------------------------------------------
@@ -1120,7 +1121,7 @@ async function selfChain() {
       await sleep(3000 + Math.random() * 12000); /* جیتر: جلوگیری از طوفان dispatch همزمان */
       const r2 = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/rasmio-v3.yml/runs?per_page=50`, { headers: { authorization: `Bearer ${tok}`, accept: 'application/vnd.github+json' } });
       if (r2.ok) {
-        const active = ((await r2.json()).workflow_runs || []).filter((x) => String(x.id) !== MY_RUN && x.status === 'in_progress');
+        const active = ((await r2.json()).workflow_runs || []).filter((x) => String(x.id) !== MY_RUN && !isRegisteredDiagnosticRun(x.id) && x.status === 'in_progress');
         const need = MAX_PARALLEL - active.length;
         if (need <= 0) { log('⚡ ظرفیت پر است (' + active.length + '/' + MAX_PARALLEL + ') — dispatch لازم نیست'); return; }
         log('⚡ ظرفیت: ' + active.length + '/' + MAX_PARALLEL + ' → یک کارگر تازه');
@@ -1567,7 +1568,7 @@ try {
       /* فقط «در حال اجرا» — اجراهای در صف نباید ظرفیت را پر کنند (وگرنه هر کارگر تازه فوراً بیرون می‌رود) */
       /* فقط اجراهای واقعاً زنده حساب می‌شوند: اجرای گیرکرده/زامبی (بیش از ۲۲ دقیقه) ظرفیت را اشغال نکند */
       const FRESH_MS = 22 * 60_000;
-      const others = runs.filter((x) => Date.parse(x.created_at || x.run_started_at) >= Date.parse('2026-10-26T05:00:00Z') && String(x.id) !== MY_RUN && x.status === 'in_progress' && (!x.run_started_at || (Date.now() - new Date(x.run_started_at).getTime()) < FRESH_MS));
+      const others = runs.filter((x) => Date.parse(x.created_at || x.run_started_at) >= Date.parse('2026-10-26T05:00:00Z') && String(x.id) !== MY_RUN && !isRegisteredDiagnosticRun(x.id) && x.status === 'in_progress' && (!x.run_started_at || (Date.now() - new Date(x.run_started_at).getTime()) < FRESH_MS));
       /* ⚡ سقف اجرای همزمان: بیش از MAX_PARALLEL → خروج فوری (جلوگیری از انباشت و کار تکراری) */
       {
         const MINE_ID = Number(MY_RUN || '9'.repeat(15));
