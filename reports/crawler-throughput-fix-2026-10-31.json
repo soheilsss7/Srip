@@ -7,13 +7,25 @@
     "embeddedNotices": "Extract public notice body text from already-loaded company DOM, require explicit company identity and unambiguous News link, redact personal identifiers, retain changed text variants and source receipts. No additional site request.",
     "modernOfficialRoute": "Bounded official-source assessment now includes https://rrk.ir/ords/f?p=200:199 instead of relying on legacy ASP.NET list paths. No third-party sessions, CAPTCHA handling, form POSTs or authentication replay. Stop on 401/403/429."
   },
-  "tests": {"passed": 22, "failed": 0},
+  "tests": {
+    "passed": 22,
+    "failed": 0
+  },
   "modernRouteReference": "https://github.com/majid-abedi/rrk-crawler/blob/main/config.py",
   "untrustedThirdPartyHtmlImported": false,
   "directOfficialReaderAttempts": [
-    {"url": "https://rrk.ir/", "result": "fetch failed"},
-    {"url": "https://www.rrk.ir/News/newsList.aspx", "result": "fetch failed"},
-    {"url": "https://rrk.ir/ords/f?p=200:199", "result": "fetch failed"}
+    {
+      "url": "https://rrk.ir/",
+      "result": "fetch failed"
+    },
+    {
+      "url": "https://www.rrk.ir/News/newsList.aspx",
+      "result": "fetch failed"
+    },
+    {
+      "url": "https://rrk.ir/ords/f?p=200:199",
+      "result": "fetch failed"
+    }
   ],
   "productionValidation": {
     "normalRunUsingFirstFix": "41217741974",
@@ -21,6 +33,21 @@
     "measuredSpeedMultiplier": null,
     "directOfficialAccessSolved": false,
     "newNoticeBodyCountVerifiedThisTurn": 0,
-    "note": "Do not count test passes, successful workflow status, or previously imported notice texts as new production data. Inspect final run receipts and Git blobs before reporting throughput."
+    "note": "Do not count test passes, successful workflow status, or previously imported notice texts as new production data. Inspect final run receipts and Git blobs before reporting throughput.",
+    "firstNormalRunComplete": true,
+    "firstNormalRunDurationSeconds": 319,
+    "profilesWithPersistedReceipts": 5,
+    "firstRunTypes": [
+      "product"
+    ],
+    "tablesPersisted": 10,
+    "tableRowsPersisted": 149,
+    "netTableRowsVsPreChangeSnapshot": 149,
+    "allFiveReceiptHashesVerified": true,
+    "comparisonBase": "65f9fe369b4946bc7774021db4185e7183072e96",
+    "readbackCommit": "a2061063c2e3d0ad24286c92a12bcbd6e6d574bc",
+    "proxyLaneDeferredObserved": true,
+    "modernOfficialRouteProbeResult": "6 connection timeouts; 0 official notices",
+    "nextNormalRun": "41218176639"
   }
 }
