@@ -28,9 +28,9 @@ export function reserveExit(state, ip, {now=Date.now(), max=4, windowMs=WINDOW}=
   entry.requests++;entry.lastAt=now;
   return entry.requests;
 }
-export function transportCurlArgs(proxy,url) {
+export function transportCurlArgs(proxy,url,{profile=false}={}) {
   const p=parsePublicProxy(proxy);if(!p || !['http','https'].includes(p.protocol))throw new Error('Invalid HTTP proxy');
-  return ['-q','--silent','--show-error','--fail','--proxy',p.url,'--noproxy','','--proto','=https','--proto-redir','=https','--max-redirs','0','--connect-timeout','5','--max-time','12','--max-filesize','4194304','--user-agent','Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36','--header','accept-language: fa,en',url];
+  return ['-q','--silent','--show-error','--fail','--proxy',p.url,'--noproxy','','--proto','=https','--proto-redir','=https','--max-redirs','0','--connect-timeout','5','--max-time',profile?'45':'12','--max-filesize','4194304','--user-agent','Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36','--header','accept-language: fa,en',url];
 }
 export class PublicProxyTransport {
   constructor({frontier,out='out',runId=process.env.GITHUB_RUN_ID||'local',fetchImpl=globalThis.fetch,execute=exec,maxChecks=32,now=()=>Date.now()}) {
@@ -39,7 +39,7 @@ export class PublicProxyTransport {
     this.scratch=fs.mkdtempSync(path.join(os.tmpdir(),'anonymous-proxy-transport-'));
     this.env={PATH:process.env.PATH,HOME:this.scratch,LANG:'C.UTF-8'};
     this.file=`${out}/proxy-transport-${String(runId).replace(/[^\w-]/g,'')}.json`;
-    this.report={runId,startedAt:new Date().toISOString(),enabledTypes:['company','person'],directFallback:false,policy:{requestsPerEchoExit:4,windowHours:96,maxCandidateChecks:maxChecks,scope:'Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy'},sources:[],health:[],requests:[],outcomes:[]};
+    this.report={runId,startedAt:new Date().toISOString(),enabledTypes:['company','person'],directFallback:false,policy:{requestsPerEchoExit:4,windowHours:96,maxCandidateChecks:maxChecks,profileResponseSeconds:45,healthResponseSeconds:12,scope:'Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy'},sources:[],health:[],requests:[],outcomes:[]};
     this.ready=[];this.busy=new Set();this.waiters=[];this.checked=0;this.index=0;this.candidates=[];
     fs.mkdirSync(out,{recursive:true});
   }
@@ -115,8 +115,8 @@ export class PublicProxyTransport {
         for(let redirects=0;redirects<4;redirects++){
           const observation=lease.reserve('curl',target);
           let stdout;
-          try {({stdout}=await pool.execute('curl',[...transportCurlArgs(entry.proxy,target).filter(a=>a!=='--fail'),'--write-out','\n__EGRESS_META__%{http_code}\t%{redirect_url}'],{env:pool.env,cwd:pool.scratch,timeout:14000,maxBuffer:4500000}));}
-          catch(e){observation.error=String(e.stderr||e.message).slice(0,240);pool.save();const error=new Error('proxy-curl-failed: '+observation.error);error.retryable=true;throw error;}
+          try {({stdout}=await pool.execute('curl',[...transportCurlArgs(entry.proxy,target,{profile:true}).filter(a=>a!=='--fail'),'--write-out','\n__EGRESS_META__%{http_code}\t%{redirect_url}'],{env:pool.env,cwd:pool.scratch,timeout:48000,maxBuffer:4500000}));}
+          catch(e){observation.error=String(e.stderr||e.message).slice(0,240);observation.partialBytesReceived=Buffer.byteLength(String(e.stdout||''));observation.partialResponseAccepted=false;pool.save();const error=new Error('proxy-curl-failed: '+observation.error);error.retryable=true;throw error;}
           const at=stdout.lastIndexOf('\n__EGRESS_META__');if(at<0)throw new Error('Missing HTTP metadata');
           const body=stdout.slice(0,at),[statusText,redirect]=stdout.slice(at+'\n__EGRESS_META__'.length).split('\t');const status=Number(statusText);
           observation.scriptHosts=[...new Set([...body.matchAll(/<script[^>]+src=["']([^"']+)/gi)].map(m=>{try{return new URL(m[1],target).hostname;}catch{return 'invalid';}}))].slice(0,20);

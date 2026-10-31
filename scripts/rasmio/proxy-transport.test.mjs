@@ -68,3 +68,14 @@ test('profile assets and APIs may use Rasmio subdomains, not lookalike hosts',()
  for(const u of ['https://rasmio.com/_next/static/a.js','https://api.rasmio.com/api/company','https://cdn.rasmio.com/app.js'])assert.equal(permittedResourceURL(u),true);
  for(const u of ['https://evilrasmio.com/a.js','https://rasmio.com.evil.test/','http://api.rasmio.com/','https://user:pass@api.rasmio.com/','https://api.rasmio.com:444/'])assert.equal(permittedResourceURL(u),false);
 });
+test('slow profile transfers get a bounded response window without relaxing health checks or accepting partial bodies',async()=>{
+ const health=transportCurlArgs('http://8.8.8.8:80','https://api.ipify.org/?format=json');const detail=transportCurlArgs('http://8.8.8.8:80','https://rasmio.com/company/10100009135/direct/',{profile:true});
+ assert.equal(health[health.indexOf('--max-time')+1],'12');assert.equal(detail[detail.indexOf('--max-time')+1],'45');
+ const out=fs.mkdtempSync(path.join(os.tmpdir(),'slow-profile-test-'));let optionsSeen;
+ const pool=new PublicProxyTransport({frontier:{},out,execute:async(_,args,options)=>{optionsSeen=options;throw Object.assign(new Error('timeout'),{stderr:'curl: (28) timeout',stdout:'partial untrusted body'});}});
+ try{
+  const lease=pool.lease({proxy:'http://8.8.8.8:80',ip:'1.1.1.1'},{type:'company',id:'10100009135'});
+  await assert.rejects(lease.fetch('https://rasmio.com/company/10100009135/direct/'),/proxy-curl-failed/);
+  assert.equal(optionsSeen.timeout,48000);assert.equal(pool.report.requests[0].partialResponseAccepted,false);assert.equal(pool.report.requests[0].partialBytesReceived,22);lease.finish(false,'proxy-curl-failed');
+ }finally{pool.close();fs.rmSync(out,{recursive:true,force:true});}
+});
