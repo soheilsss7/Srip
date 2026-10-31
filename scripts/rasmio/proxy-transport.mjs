@@ -5,6 +5,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { isIP } from 'node:net';
 import { interleaveCandidates, parsePublicProxy } from './public-proxy-candidates.mjs';
+import { endpointEligible, healthSuccess, healthFailure, newestRunFirst } from './proxy-health-policy.mjs';
 const exec=promisify(execFile);
 const WINDOW=96*60*60*1000;
 export function permittedDetailURL(value, ent) {
@@ -36,7 +37,7 @@ export function transportCurlArgs(proxy,url,{profile=false}={}) {
 export class PublicProxyTransport {
   constructor({frontier,out='out',runId=process.env.GITHUB_RUN_ID||'local',fetchImpl=globalThis.fetch,execute=exec,maxChecks=32,now=()=>Date.now()}) {
     this.frontier=frontier;this.out=out;this.runId=runId;this.fetchImpl=fetchImpl;this.execute=execute;this.maxChecks=maxChecks;this.now=now;
-    frontier.proxyTransport ||= {version:1,exits:{},cursor:0};this.state=frontier.proxyTransport;
+    frontier.proxyTransport ||= {version:1,exits:{},cursor:0};this.state=frontier.proxyTransport;this.state.endpointHealth ||= {};
     this.scratch=fs.mkdtempSync(path.join(os.tmpdir(),'anonymous-proxy-transport-'));
     this.env={PATH:process.env.PATH,HOME:this.scratch,LANG:'C.UTF-8'};
     this.file=`${out}/proxy-transport-${String(runId).replace(/[^\w-]/g,'')}.json`;
@@ -46,12 +47,19 @@ export class PublicProxyTransport {
   }
   save(){try{fs.writeFileSync(this.file,JSON.stringify(this.report,null,2));}catch{}}
   async initialize(){
+    for(const [url,h] of Object.entries(this.state.endpointHealth))if(this.now()-h.checkedAt>7*24*3600000)delete this.state.endpointHealth[url];
     const preferred=[];const seedHistory=!this.state.seededFromProbeHistory;
-    for(const file of fs.readdirSync(this.out).filter(f=>/^public-proxy-probe-[\w-]+\.json$|^proxy-transport-[\w-]+\.json$/.test(f)).sort().reverse().slice(0,12)){
+    for(const file of fs.readdirSync(this.out).filter(f=>/^public-proxy-probe-[\w-]+\.json$|^proxy-transport-[\w-]+\.json$/.test(f)).sort(newestRunFirst).slice(0,12)){
       if(path.join(this.out,file)===this.file)continue;
       try{
         const d=JSON.parse(fs.readFileSync(path.join(this.out,file),'utf8'));
         for(const p of d.verifiedProfiles||[])preferred.push(p.proxy);
+        for(const h of d.health||[]) {
+          if(!parsePublicProxy(h.proxy) || !isIP(h.observedExitIP))continue;
+          const at=Date.parse(h.at);if(!Number.isFinite(at))continue;
+          const old=this.state.endpointHealth[h.proxy];
+          if(!old || at>old.checkedAt)this.state.endpointHealth[h.proxy]=healthSuccess(old,h.observedExitIP,at);
+        }
         if(seedHistory)for(const a of d.attempts||[]){
           if(a.phase!=='company-https' || !isIP(a.observedExitIP) || !a.startedAt || this.now()-Date.parse(a.startedAt)>=WINDOW)continue;
           const old=this.state.exits[a.observedExitIP] ||= {requests:0,lastAt:Date.parse(a.startedAt)};
@@ -71,11 +79,15 @@ export class PublicProxyTransport {
         return text.split('\n').filter(line=>/^(https?|socks5):/.test(line));
       }catch(e){this.report.sources.push({repo,file,error:e.message});return [];}
     }));
-    const fresh=interleaveCandidates(lists,800).map(p=>p.url);
+    const fresh=interleaveCandidates(lists,10000).map(p=>p.url);
     const offset=this.state.cursor%Math.max(fresh.length,1);
     const rotated=[...fresh.slice(offset),...fresh.slice(0,offset)];
     this.state.cursor=(offset+this.maxChecks)%Math.max(fresh.length,1);
-    this.candidates=interleaveCandidates([preferred,rotated],this.maxChecks);
+    const universe=interleaveCandidates([preferred,rotated],10000);
+    const eligible=universe.filter(p=>endpointEligible(this.state.endpointHealth[p.url],ip=>this.available(ip),this.now()));
+    this.candidates=eligible.slice(0,this.maxChecks);
+    this.report.skippedRecentUnavailable=universe.length-eligible.length;
+    this.report.candidateUniverse=universe.length;
     this.report.candidateCount=this.candidates.length;this.save();return this;
   }
   available(ip){const e=this.state.exits[ip];return !e || this.now()-e.lastAt>=WINDOW || (!e.blockedAt && !(e.cooldownUntil>this.now()) && e.requests<4);}
@@ -90,10 +102,11 @@ export class PublicProxyTransport {
         try{
           const {stdout}=await this.execute('curl',transportCurlArgs(candidate.url,'https://api.ipify.org/?format=json'),{env:this.env,cwd:this.scratch,timeout:14000,maxBuffer:4500000});
           const ip=JSON.parse(stdout).ip;if(!isIP(ip))throw new Error('Invalid echo IP');observation.observedExitIP=ip;
+          this.state.endpointHealth[candidate.url]=healthSuccess(this.state.endpointHealth[candidate.url],ip,this.now());
           if(!this.available(ip)){observation.outcome='exit-budget-or-cooldown';continue;}
           if(this.ready.some(e=>e.ip===ip && !e.retired)){observation.outcome='duplicate-echo-exit';continue;}
           entry={proxy:candidate.url,ip,retired:false};this.ready.push(entry);observation.outcome='https-echo-verified';
-        }catch(e){observation.outcome='health-failed';observation.error=String(e.stderr||e.message).slice(0,200);}
+        }catch(e){this.state.endpointHealth[candidate.url]=healthFailure(this.state.endpointHealth[candidate.url],this.now());observation.outcome='health-failed';observation.error=String(e.stderr||e.message).slice(0,200);}
         finally{this.save();}
         continue;
       }
