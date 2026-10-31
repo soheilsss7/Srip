@@ -21,6 +21,7 @@ import { installNetworkAudit } from './network-audit.mjs';
 import { fetchDetailHTML } from './detail-fetch.mjs';
 import { createDetailRunPolicy, failedTransportWave } from './detail-run-policy.mjs';
 import {graphPartitions} from './graph-partitions.mjs';
+import {readStaticSSR} from './static-ssr.mjs';
 import { PublicProxyTransport, permittedDetailURL, permittedResourceURL } from './proxy-transport.mjs';
 import { interleaveDetailLanes, requiresProxy, poolExhausted } from './detail-lanes.mjs';
 import { extractEmbeddedNoticesFromDOM, persistEmbeddedNotices } from './embedded-notices.mjs';
@@ -1244,9 +1245,7 @@ async function extractEntity(ent, pg = page) {
         try { fs.appendFileSync(`${OUT}/probe-${String(process.env.GITHUB_RUN_ID || 'local')}.log`, new Date().toISOString() + ' ' + line + '\n'); } catch {}
       } catch {}
     }
-    await pg.setContent(h, { waitUntil: 'domcontentloaded', timeout: 20_000 });
-    await sleep(400);
-    return { html: h, parsed: await parsePageTables(pg) };
+    return {html:h,parsed:await readStaticSSR(pg,h,parsePageTables)};
   };
   try {
     if (ent.type === 'person' && !frontier.personProbed) {
