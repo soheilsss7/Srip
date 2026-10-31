@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
+import {X509Certificate} from 'node:crypto';
 import {parsePublicProxy} from './public-proxy-candidates.mjs';
 import {robotAllows,redactPersonalNumbers} from '../../tools/rrk-local/core.mjs';
 const execute=promisify(execFile);
@@ -19,12 +20,20 @@ export async function runRrkRegionalProbe(){
  const save=()=>fs.writeFileSync(file,JSON.stringify(report,null,2));let browser;save();
  try{
   const source=JSON.parse(fs.readFileSync(new URL('./rrk-regional-proxies.json',import.meta.url),'utf8'));report.proxySource={url:source.source,blob:source.sourceBlob,countryReportedByPublisher:source.countryReportedByPublisher,countryIndependentlyVerified:false};
-  const proxies=source.proxies.filter(p=>parsePublicProxy(p)).slice(0,24);let admitted=null,denied=false;
+  let tlsOnly=false;try{tlsOnly=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,'utf8')).client_payload?.tlsOnly===true;}catch{}
+  const proxies=source.proxies.filter(p=>parsePublicProxy(p)&&(!tlsOnly||p==='http://93.118.120.60:8080')).slice(0,24);let admitted=null,denied=false;
   const check=async proxy=>{const item={proxy,at:new Date().toISOString()};report.attempts.push(item);let stdout='';try{({stdout}=await execute('curl',regionalArgs(proxy,'https://rrk.ir/robots.txt'),{env,cwd:scratch,timeout:12000,maxBuffer:1600000}));}catch(e){stdout=String(e.stdout||'');item.error=String(e.stderr||e.message).slice(0,240);if(/(?:response|HTTP)\s*(?:401|403|429)\b/i.test(item.error))denied=true;}
    const n=stdout.lastIndexOf('\n__RRK_META__');if(n>=0){item.status=Number(stdout.slice(n+13))||0;const body=stdout.slice(0,n);if([401,403,429].includes(item.status))denied=true;if(item.status===200&&/^\s*User-agent\s*:/mi.test(body)){item.robotsAllowed=robotAllows(body,target);if(item.robotsAllowed&&!admitted)admitted=proxy;}}
    save();
   };
   for(let i=0;i<proxies.length&&!admitted&&!denied;i+=2){await Promise.all(proxies.slice(i,i+2).map(check));await new Promise(r=>setTimeout(r,1000));}
+  report.tlsDiagnostics=[];
+  if(!denied&&!admitted){for(const a of report.attempts.filter(a=>/unable to get local issuer/i.test(a.error||'')).slice(0,2)){
+   const p=parsePublicProxy(a.proxy);if(!p||p.protocol!=='http')continue;
+   const d={proxy:p.url};let output='';try{const r=await execute('openssl',['s_client','-proxy',new URL(p.url).hostname+':'+new URL(p.url).port,'-connect','rrk.ir:443','-servername','rrk.ir','-showcerts','-verify_return_error','-verify_hostname','rrk.ir'],{env,cwd:scratch,timeout:15000,maxBuffer:100000});output=r.stdout;}catch(e){output=String(e.stdout||'');d.error=String(e.stderr||e.message).slice(0,600);}
+   d.certificates=[];for(const cert of output.match(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/g)||[]){try{const x=new X509Certificate(cert);d.certificates.push({subject:x.subject,issuer:x.issuer,subjectAltName:x.subjectAltName,infoAccess:x.infoAccess,validFrom:x.validFrom,validTo:x.validTo,fingerprint256:x.fingerprint256});}catch{}}
+   report.tlsDiagnostics.push(d);save();
+  }}
   report.stoppedOnAccessDenial=denied;report.routeAdmitted=Boolean(admitted);
   if(admitted&&!denied){
    const {default:puppeteer}=await import('puppeteer');const proxy=parsePublicProxy(admitted);browser=await puppeteer.launch({headless:true,env,args:['--no-sandbox','--disable-dev-shm-usage',`--proxy-server=${proxy.url}`]});
