@@ -23,3 +23,5 @@ test('a previously retrieved public snapshot must match the pinned Git blob byte
 
 import {redactedClientFailure} from './rrk-tunnel-probe.mjs';
 test('client preflight diagnostics do not publish profile identifiers or key material',()=>{const c={id:'12345678-1234-1234-1234-123456789abc',publicKey:'a'.repeat(43),encryption:'mlkem768x25519plus.native.0rtt.'+'b'.repeat(43)};const m=redactedClientFailure({stderr:'invalid field '+c.id+' '+c.publicKey+' '+c.encryption},c);assert.ok(m.includes('invalid field'));for(const secret of Object.values(c))assert.ok(!m.includes(secret));});
+
+test('actual client rejection on stdout is not hidden by informational stderr',()=>{assert.match(redactedClientFailure({stdout:'Failed to start: unsupported transport',stderr:'2026 [Info] loading config'},{}) ,/unsupported transport/);});
