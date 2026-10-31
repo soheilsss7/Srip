@@ -7,11 +7,11 @@ import fs from 'node:fs';
 const BRANCH = process.env.OTP_BRANCH || 'arena/01a08a50-srip';
 // Isolated, non-relaying experiment. Never imports the production crawler.
 let publicProxyProbe = false;
-try { publicProxyProbe = ['public-proxy-probe','public-proxy-repair-sample','linka-probe','rrk-probe','rrk-route-probe'].includes(JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8')).client_payload?.mode); } catch {}
+try { publicProxyProbe = ['public-proxy-probe','public-proxy-repair-sample','linka-probe','rrk-probe','rrk-route-probe','rrk-archive-probe'].includes(JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8')).client_payload?.mode); } catch {}
 if (publicProxyProbe) {
   const { runPublicProxyProbe } = await import('./public-proxy-probe.mjs');
   const mode=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,'utf8')).client_payload?.mode;
-  const { files, report } = mode==='rrk-route-probe' ? await (await import('./rrk-route-assessment.mjs')).runRrkRouteAssessment() : mode==='rrk-probe' ? await (await import('./rrk-probe.mjs')).runRrkProbe() : mode==='linka-probe' ? await (await import('./linka-probe.mjs')).runLinkaProbe() : await runPublicProxyProbe({repairSample:mode==='public-proxy-repair-sample'});
+  const { files, report } = mode==='rrk-archive-probe' ? await (await import('./rrk-archive-probe.mjs')).runRrkArchiveProbe() : mode==='rrk-route-probe' ? await (await import('./rrk-route-assessment.mjs')).runRrkRouteAssessment() : mode==='rrk-probe' ? await (await import('./rrk-probe.mjs')).runRrkProbe() : mode==='linka-probe' ? await (await import('./linka-probe.mjs')).runLinkaProbe() : await runPublicProxyProbe({repairSample:mode==='public-proxy-repair-sample'});
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'proxy-probe-publish-'));
   const git = (args, env = process.env) => execFileSync('git', args, { env, encoding: 'utf8', timeout: 60000 }).trim();
   try {
