@@ -1,5 +1,5 @@
 """Export saved evidence to an RTL workbook. Optional dependency: openpyxl."""
-import json, pathlib
+import json, pathlib, sys
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
@@ -7,6 +7,12 @@ from openpyxl.utils import get_column_letter
 ROOT=pathlib.Path(__file__).resolve().parents[2]
 DATA=ROOT/'scripts/rasmio/data/sources/rasmio/public-reader/2026-10-31'
 E=[json.loads(p.read_text()) for p in sorted(DATA.glob('company-*.json'))]
+if '--followup' in sys.argv:
+    merged={e['id']:e for e in E}
+    for p in sorted((DATA.parent/'2026-10-31-followup').glob('company-*.json')):
+        e=json.loads(p.read_text()); old=merged[e['id']]
+        old['tables'].extend(e['tables']);old['notices'].extend(e['notices'])
+    E=list(merged.values())
 g=json.loads((DATA/'graph-observations.json').read_text())
 wb=Workbook(); wb.remove(wb.active)
 
@@ -31,13 +37,13 @@ def sheet(name,headers,rows,widths):
     return ws
 
 sheet('راهنما',['موضوع','شرح'],[
-['محتوا','۴ پرونده شرکت، ۹ جدول، ۴۵ ردیف جدول، ۴ متن آگهی بازنشرشده، ۲۰ پیوند مستند'],
+['محتوا',f"{len(E)} پرونده شرکت، {sum(len(e['tables']) for e in E)} جدول، {sum(len(t['rows']) for e in E for t in e['tables'])} ردیف جدول، {sum(len(e['notices']) for e in E)} متن آگهی بازنشرشده، {len(g['edges'])} پیوند مستند"],
 ['منبع','صفحات عمومی رسمیو؛ دریافت مستقیم از RRK انجام نشده است.'],
 ['محدوده','این بسته تکمیل همه شرکت‌ها نیست. صفحه‌های محدود، گزینه مشاهده سایر موارد، و بخش‌های نیازمند ورود کامل بررسی نشده‌اند.'],
 ['تاریخ','۳۱ اکتبر ۲۰۲۶؛ تاریخ‌های شمسی داخل داده بدون تبدیل تقویم حفظ شده‌اند.'],
 ['اشخاص','شناسه اشخاص شناسه پیوند رسمیو است، نه کد ملی. کد ملی شخصی از متن آگهی حذف شده است.'],
 ['روابط','روابط مشاهده‌شده دارای ارجاع و تاریخ هستند؛ سمت تاریخی به سمت فعلی تبدیل نشده است. گراف اصلی شاردشده در این ورود تغییر نکرد.'],
-['تکمیل','سرمایه‌گذاری مسکن گیلان: ۳۵ ردیف؛ صنایع شیمی پوشش رنگ: ۶ ردیف؛ پارس هرماس: ۴ ردیف؛ ره پویان: اطلاعات پایه، بدون جدول.'],
+['ردیف‌ها','؛ '.join(e['name']+': '+str(sum(len(t['rows']) for t in e['tables'])) for e in E)],
 ['آگهی ناقص','آگهی 130239471 در خود منبع بریده بود و به عنوان متن کامل وارد نشده است.']
 ],[24,115])
 keys=['تاریخ تاسیس','وضعیت شرکت','نوع شرکت','آخرین آگهی روزنامه رسمی','شماره ثبت','کد اقتصادی','سرمایه ثبتی','کد پستی','نشانی ثبتی شرکت','نشانی ثبتی کارخانه']
@@ -52,5 +58,5 @@ sheet('ردیف‌های جدول',['شناسه شرکت','نام شرکت','ج�
 sheet('پیوندهای مستند',['از','به','بخش','سمت ثبت‌شده در ردیف','داده ردیف','آگهی مرتبط','صفحه دریافت','سمت فعلی مستقل تایید شده؟'],[[r['from'],r['to'],r['section'],r['roleEvidence'],' | '.join(r['cells']),r['noticeURL'],r['sourceURL'],'خیر'] for r in g['edges']],[29,29,30,65,100,60,65,28])
 ws=sheet('متن آگهی‌ها',['شناسه شرکت','شناسه آگهی رسمیو','تاریخ چاپ','تاریخ نامه ثبت','متن بازنشرشده با حذف کد ملی اشخاص','پیوند ناشر','صفحه دریافت واقعی','دریافت مستقیم RRK؟'],[[e['id'],n['id'],n['printDate'],n['registrationLetterDate'],n['text'],n['publisherNoticeURL'],n['bodyAcquiredFrom'],'خیر'] for e in E for n in e['notices']],[19,24,19,19,150,60,65,24])
 for i in range(2,ws.max_row+1):ws.row_dimensions[i].height=180
-out=ROOT/'deliverables/rasmio-data-2026-10-31.xlsx';out.parent.mkdir(exist_ok=True);wb.save(out)
+out=ROOT/('deliverables/rasmio-data-2026-10-31-expanded.xlsx' if '--followup' in sys.argv else 'deliverables/rasmio-data-2026-10-31.xlsx');out.parent.mkdir(exist_ok=True);wb.save(out)
 print(out)

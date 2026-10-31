@@ -42,7 +42,7 @@ export class PublicProxyTransport {
     this.env={PATH:process.env.PATH,HOME:this.scratch,LANG:'C.UTF-8'};
     this.file=`${out}/proxy-transport-${String(runId).replace(/[^\w-]/g,'')}.json`;
     this.report={runId,startedAt:new Date().toISOString(),enabledTypes:['company','person'],directFallback:false,policy:{requestsPerEchoExit:4,supportedTransports:['http','https','socks5'],windowHours:96,maxCandidateChecks:maxChecks,profileResponseSeconds:45,healthResponseSeconds:12,scope:'Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy'},sources:[],health:[],requests:[],outcomes:[]};
-    this.ready=[];this.busy=new Set();this.waiters=[];this.checked=0;this.index=0;this.candidates=[];
+    this.ready=[];this.busy=new Set();this.waiters=[];this.checked=0;this.checking=0;this.index=0;this.candidates=[];
     fs.mkdirSync(out,{recursive:true});
   }
   save(){try{fs.writeFileSync(this.file,JSON.stringify(this.report,null,2));}catch{}}
@@ -97,7 +97,7 @@ export class PublicProxyTransport {
       let entry=this.ready.find(e=>!e.retired && !this.busy.has(e.ip) && this.available(e.ip));
       if(entry){this.busy.add(entry.ip);return this.lease(entry,ent);}
       if(this.index<this.candidates.length && this.checked<this.maxChecks){
-        const candidate=this.candidates[this.index++];this.checked++;
+        const candidate=this.candidates[this.index++];this.checked++;this.checking++;
         const observation={proxy:candidate.url,at:new Date().toISOString()};this.report.health.push(observation);
         try{
           const {stdout}=await this.execute('curl',transportCurlArgs(candidate.url,'https://api.ipify.org/?format=json'),{env:this.env,cwd:this.scratch,timeout:14000,maxBuffer:4500000});
@@ -107,10 +107,10 @@ export class PublicProxyTransport {
           if(this.ready.some(e=>e.ip===ip && !e.retired)){observation.outcome='duplicate-echo-exit';continue;}
           entry={proxy:candidate.url,ip,retired:false};this.ready.push(entry);observation.outcome='https-echo-verified';
         }catch(e){this.state.endpointHealth[candidate.url]=healthFailure(this.state.endpointHealth[candidate.url],this.now());observation.outcome='health-failed';observation.error=String(e.stderr||e.message).slice(0,200);}
-        finally{this.save();}
+        finally{this.checking--;for(const resolve of this.waiters.splice(0))resolve();this.save();}
         continue;
       }
-      if(this.busy.size){await new Promise(resolve=>{const timeout=setTimeout(resolve,2000);this.waiters.push(()=>{clearTimeout(timeout);resolve();});});continue;}
+      if(this.busy.size || this.checking){await new Promise(resolve=>{const timeout=setTimeout(resolve,2000);this.waiters.push(()=>{clearTimeout(timeout);resolve();});});continue;}
       break;
     }
     throw new Error('public-proxy-pool-unavailable');

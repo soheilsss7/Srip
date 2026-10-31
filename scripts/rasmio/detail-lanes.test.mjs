@@ -16,7 +16,7 @@ test('verify ordering unchanged; single-lane and empty queues terminate',()=>{
 });
 test('busy or reusable pools are not incorrectly declared exhausted',()=>{
  const pool={index:1,candidates:[{}],busy:new Set(),ready:[],available:()=>true};
- assert.equal(poolExhausted(pool),true);pool.busy.add('ip');assert.equal(poolExhausted(pool),false);pool.busy.clear();
+ assert.equal(poolExhausted(pool),true);pool.checking=1;assert.equal(poolExhausted(pool),false);pool.checking=0;pool.busy.add('ip');assert.equal(poolExhausted(pool),false);pool.busy.clear();
  pool.ready=[{ip:'ip',retired:false}];assert.equal(poolExhausted(pool),false);
  pool.ready[0].retired=true;assert.equal(poolExhausted(pool),true);
  pool.index=0;assert.equal(poolExhausted(pool),false);

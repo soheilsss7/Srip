@@ -1,0 +1,30 @@
+{
+  "date": "2026-10-31",
+  "scope": "Additional public company data and proxy scheduling repair; not a claim of full database coverage",
+  "companyEvidenceBatch": "scripts/rasmio/data/sources/rasmio/public-reader/2026-10-31-followup",
+  "newCompanyTableRowsObserved": 97,
+  "newCompanyTablesObserved": 6,
+  "newMirroredNoticeBodies": 9,
+  "newestAdditionalNoticePrintDate": "1405/06/01",
+  "expandedWorkbook": "deliverables/rasmio-data-2026-10-31-expanded.xlsx",
+  "expandedWorkbookTableRows": 142,
+  "expandedWorkbookMirroredNoticeBodies": 13,
+  "proxyFixes": [
+    "Sort observation files by numeric run ID, not alphabetic filename prefix",
+    "Persist bounded endpoint-health backoff and skip recently observed exhausted exits before applying the candidate-check cap",
+    "Expand candidate discovery universe from 800 to 10000 without increasing the 32 health-check cap or 4-request exit budget",
+    "Wait for in-flight health workers instead of prematurely declaring the whole pool exhausted"
+  ],
+  "directOfficialSourceSolved": false,
+  "additionalOfficialAccessAttempts": [
+    {"via":"public URLScan search API","result":"0 public results within returned 30-day search window; no notices acquired"},
+    {"via":"public Jina reader","target":"https://rrk.ir/ords/f?p=200:199","result":"reader returned 422 with upstream navigation timeout; no notice body"},
+    {"via":"public Google Translate page reader","target":"https://rrk.ir/ords/f?p=200:199","result":"Cannot translate this page; no notice body"}
+  ],
+  "tests": {"nodePassed":27,"pythonPublicReaderPassed":7},
+  "fullCompanyCoverageVerified": false,
+  "currentRolesIndependentlyVerified": false,
+  "personalNationalIdsRedacted": true,
+  "measuredSpeedMultiplier": null,
+  "note": "Mirrored notice bodies are sourced from actual public company-page text, not independently fetched from RRK. Prior 149 product rows are not counted again as this batch's 97 new company rows."
+}

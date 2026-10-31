@@ -87,3 +87,27 @@ test('SOCKS5 uses proxy-side DNS, strict TLS and the same destination and reques
  assert.throws(()=>transportCurlArgs('socks4://8.8.8.8:1080','https://rasmio.com/'));
  assert.throws(()=>transportCurlArgs('socks5://user:secret@8.8.8.8:1080','https://rasmio.com/'));
 });
+test('initialization replaces exhausted and cooling endpoints before applying the check cap',async()=>{
+ const out=fs.mkdtempSync(path.join(os.tmpdir(),'pool-policy-test-'));const now=1000;
+ const frontier={proxyTransport:{version:1,cursor:0,seededFromProbeHistory:true,exits:{'1.0.0.1':{requests:4,lastAt:now}},endpointHealth:{'http://8.8.8.8:80':{checkedAt:now,observedExitIP:'1.0.0.1'},'http://1.1.1.1:80':{checkedAt:now,retryAfter:now+5000}}}};
+ const pool=new PublicProxyTransport({frontier,out,maxChecks:1,now:()=>now,fetchImpl:async()=>({ok:true,text:async()=> 'http://8.8.8.8:80\nhttp://1.1.1.1:80\nsocks5://9.9.9.9:1080'})});
+ try{
+  await pool.initialize();assert.deepEqual(pool.candidates.map(p=>p.url),['socks5://9.9.9.9:1080']);
+  assert.equal(pool.checked,0);assert.equal(pool.report.skippedRecentUnavailable,2);assert.equal(pool.report.policy.requestsPerEchoExit,4);
+ }finally{pool.close();fs.rmSync(out,{recursive:true,force:true});}
+});
+test('a failed health worker waits for another in-flight health result instead of retiring the lane early',async()=>{
+ const out=fs.mkdtempSync(path.join(os.tmpdir(),'pool-concurrent-health-'));let completeSecond;
+ const pool=new PublicProxyTransport({frontier:{},out,maxChecks:2,execute:async(_,args)=>{
+  if(args[args.indexOf('--proxy')+1]==='http://8.8.8.8:80')throw new Error('failed first endpoint');
+  return await new Promise(resolve=>{completeSecond=()=>resolve({stdout:'{"ip":"1.1.1.1"}'});});
+ }});
+ pool.candidates=[{url:'http://8.8.8.8:80'},{url:'http://9.9.9.9:80'}];
+ try{
+  const a=pool.acquire({type:'company',id:'10100014553'});
+  const b=pool.acquire({type:'company',id:'10100020043'});
+  completeSecond();const leaseB=await b;leaseB.finish(true);
+  const leaseA=await a;assert.equal(leaseA.observedExitIP,'1.1.1.1');leaseA.finish(true);
+  assert.equal(pool.checked,2);assert.equal(pool.checking,0);
+ }finally{pool.close();fs.rmSync(out,{recursive:true,force:true});}
+});
