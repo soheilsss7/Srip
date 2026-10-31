@@ -19,6 +19,7 @@ import { restoreIncompleteDetails, prioritizeDetailRepair, markDetailRepaired, h
 import { extractTablesFromDOM, hasParsedDetail } from './table-extractor.mjs';
 import { installNetworkAudit } from './network-audit.mjs';
 import { fetchDetailHTML } from './detail-fetch.mjs';
+import { createDetailRunPolicy } from './detail-run-policy.mjs';
 import { PublicProxyTransport, permittedDetailURL, permittedResourceURL } from './proxy-transport.mjs';
 import { interleaveDetailLanes, requiresProxy, poolExhausted } from './detail-lanes.mjs';
 import { extractEmbeddedNoticesFromDOM, persistEmbeddedNotices } from './embedded-notices.mjs';
@@ -484,12 +485,16 @@ function mergeRemoteState() {
   } catch {}
 }
 
-const saveFrontier = () => {
+const checkpointStats={scope:'saveFrontier calls only',frontierWrites:0,graphWrites:0,skippedGraphWrites:0,frontierWriteMs:0,graphWriteMs:0};
+const saveFrontier = ({includeGraph=true}={}) => {
   try {
     const { graph, ...rest } = frontier;
+    const started=Date.now();
     fs.writeFileSync('frontier.json.tmp', JSON.stringify(rest));
     fs.renameSync('frontier.json.tmp', 'frontier.json');
-    if (graph && graph.nodes) { const r = saveGraphShards(); if (r) frontier.stats.graphNodes = r.n; }
+    checkpointStats.frontierWrites++;checkpointStats.frontierWriteMs+=Date.now()-started;
+    if(!includeGraph)checkpointStats.skippedGraphWrites++;
+    if (includeGraph && graph && graph.nodes) { const started=Date.now();const r = saveGraphShards();checkpointStats.graphWriteMs+=Date.now()-started;if (r){frontier.stats.graphNodes = r.n;checkpointStats.graphWrites++;} }
   } catch {}
 };
 const normId = (href) => {
@@ -2024,6 +2029,7 @@ try {
   }
   queue = interleaveDetailLanes(queue, {enabled: PUBLIC_PROXY_DETAILS && process.env.RASMIO_VERIFY !== '1'});
   let proxyLaneDeferred = false;
+  const detailRunPolicy=createDetailRunPolicy();
   if (MAX_PARALLEL > 1) log('⚡ کارگر ' + (SLOT + 1) + '/' + MAX_PARALLEL + ' — سهم این اجرا: ' + queue.length + ' از صف ' + frontier.pending.length);
   const takeLocal = () => {
     while (queue.length) {
@@ -2048,7 +2054,8 @@ try {
     /* رسمیو به هر IP بعد از چند درخواست پوسته می‌دهد → تعویض IP فوری (اجرای بعدی؛ IP تازه تضمین نشده) */
     if (zeroStreak >= (paced ? 2 : 18)) { stopReason = 'quota-or-blocked'; break; }
     // Only local scheduling changes; global pending and repair tasks remain intact.
-    if (proxyLaneDeferred) queue = queue.filter(e => !requiresProxy(e));
+    queue = queue.filter(e => (!proxyLaneDeferred || !requiresProxy(e)) && detailRunPolicy.permits(e));
+    if(!queue.length){stopReason='available-lanes-deferred';break;}
     const wave = [];
     let heldCompanies = 0;
     while (wave.length < Math.min(waveN, WORKERS.length, LIMIT - processed)) { /* سقف تب: هر موجودیت تب خودش */
@@ -2064,6 +2071,7 @@ try {
     const results = await Promise.all(wave.map(async (e, i) => {
       try { return { ent: e, r: await extractRoutedEntity(e, WORKERS[i] || page) }; }
       catch (err) {
+        detailRunPolicy.failure(e,err);
         if (err.message === 'public-proxy-pool-unavailable' && poolExhausted(publicProxyTransport)) {
           proxyLaneJustDeferred = proxyLaneJustDeferred || !proxyLaneDeferred;
           proxyLaneDeferred = true;
@@ -2109,7 +2117,7 @@ try {
     } else { zeroWaves = 0; if (process.env.RASMIO_VERIFY !== '1' && okInWave === wave.length && waveN < MAX_WAVE && !paced) waveN++; }
     if (processed - lastRot >= 20) { lastRot = processed; await rotateIdentity(); }
     if (processed - lastCkpt >= 25) { lastCkpt = processed; botPush('checkpoint-' + processed); }
-    saveFrontier();
+    saveFrontier({includeGraph:okInWave>0});
     /* خواب تطبیقی: موج کاملاً موفق = فاصلهٔ کوتاه؛ موج خالی = مکث مؤدبانه‌تر */
     const nap = paced
       ? 12_000 + Math.round(Math.random() * 6000)
@@ -2144,7 +2152,7 @@ try {
   progress('done', { processed, failed, pending: frontier.pending.length, stopReason });
   fs.writeFileSync(`${OUT}/run-summary-${process.env.GITHUB_RUN_ID || 'local'}.json`, JSON.stringify({
     at: new Date().toISOString(), runId: process.env.GITHUB_RUN_ID || 'local', verify: process.env.RASMIO_VERIFY === '1',
-    processed, failed, stopReason, pending: frontier.pending.length, proxyTransport: {enabled:PUBLIC_PROXY_DETAILS,laneDeferred:proxyLaneDeferred,checks:publicProxyTransport?.checked||0,successfulProfiles:publicProxyTransport?.report.outcomes.filter(o=>o.success).length||0,failedProfiles:publicProxyTransport?.report.outcomes.filter(o=>!o.success).length||0,directFallback:false}, detailRepair: { remaining: frontier.detailRepair?.remaining?.length || 0, repaired: frontier.detailRepair?.repaired || 0 }, entities: runReport
+    processed, failed, stopReason, pending: frontier.pending.length, detailScheduling:detailRunPolicy.snapshot(), checkpoints:checkpointStats, proxyTransport: {enabled:PUBLIC_PROXY_DETAILS,laneDeferred:proxyLaneDeferred,checks:publicProxyTransport?.checked||0,successfulProfiles:publicProxyTransport?.report.outcomes.filter(o=>o.success).length||0,failedProfiles:publicProxyTransport?.report.outcomes.filter(o=>!o.success).length||0,directFallback:false}, detailRepair: { remaining: frontier.detailRepair?.remaining?.length || 0, repaired: frontier.detailRepair?.repaired || 0 }, entities: runReport
   }, null, 2));
   log(`✅ اجرا تمام (${stopReason}) — ${processed} موجودیت تازه · صف باقی‌مانده: ${frontier.pending.length} · کل گراف: ${Object.keys(frontier.graph.nodes).length} گره / ${frontier.graph.edges.length} یال`);
   /* ═══ زنجیرهٔ پیوسته: تا وقتی صف یا کشف باقی است، اجرای بعدی فوراً خودکار درخواست می‌شود ═══ */

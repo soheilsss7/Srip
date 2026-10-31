@@ -14,5 +14,5 @@ export function interleaveDetailLanes(queue, {enabled=true, width=4}={}) {
   return output;
 }
 export function poolExhausted(pool) {
-  return !!pool && pool.index>=pool.candidates.length && !pool.busy.size && !pool.checking && !pool.ready.some(e=>!e.retired && pool.available(e.ip));
+  return !!pool && (pool.index>=pool.candidates.length || (Number.isFinite(pool.maxChecks) && pool.checked>=pool.maxChecks)) && !pool.busy.size && !pool.checking && !pool.ready.some(e=>!e.retired && pool.available(e.ip));
 }

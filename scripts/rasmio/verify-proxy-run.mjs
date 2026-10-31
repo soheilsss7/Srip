@@ -1,6 +1,7 @@
 // Independent Git readback: never treats a nonempty record as a complete profile.
 import {execFileSync} from 'node:child_process';
 import crypto from 'node:crypto';
+import {recordTransportErrors} from './readback-transport.mjs';
 const [beforeArg,afterArg,runId]=process.argv.slice(2);
 if(!beforeArg||!afterArg||!/^\d+$/.test(runId||''))throw new Error('Usage: node verify-proxy-run.mjs BEFORE AFTER RUN_ID');
 const before=execFileSync('git',['rev-parse',beforeArg],{encoding:'utf8'}).trim();
@@ -10,14 +11,15 @@ const hasData=x=>!!(x?.rows?.length||x?.tables?.some(t=>t.rows?.length));
 const pool=JSON.parse(read(after,`out/proxy-transport-${runId}.json`));
 const frontier=JSON.parse(read(after,'frontier.json'));
 let receipts=[];try{receipts=read(after,`out/verified-data-${runId}.jsonl`).trim().split('\n').filter(Boolean).map(JSON.parse);}catch{}
+let networkRequests=[];try{networkRequests=read(after,`out/network-audit-${runId}.jsonl`).trim().split('\n').filter(Boolean).map(JSON.parse);}catch{}
 const records=receipts.map(r=>{
  const raw=read(after,r.file),x=JSON.parse(raw);let old=null;try{old=JSON.parse(read(before,r.file));}catch{}
  const errors=[];const check=(v,msg)=>{if(!v)errors.push(msg);};
  check(crypto.createHash('sha256').update(raw).digest('hex')===r.sha256,'SHA mismatch');
  check(`${x.type}:${x.id}`===r.key,'ID mismatch');check(x.sourceRun===runId,'sourceRun mismatch');check(x.tableSchemaVersion===2,'schema mismatch');check(hasData(x),'empty record');
- check(x.egress?.directFallback===false&&/^proxy-/.test(x.via),'proxy metadata missing');
+ errors.push(...recordTransportErrors(x,pool,networkRequests));
  check(x.profileCoverage?.status==='unverified','unproven completeness claim');
- check(pool.outcomes.some(o=>o.key===r.key&&o.success&&o.observedExitIP===x.egress?.observedExitIP),'missing successful transport outcome');
+ 
  if(x.type==='company')check(String(x.info?.['شناسه ملی'])===x.id,'national ID mismatch');
  for(const t of x.tables||[])for(const row of t.rows||[])check(Array.isArray(row)&&row.length===t.columns.length,'table column width mismatch');
  return {key:r.key,name:x.name,baseline:!old?'missing':hasData(old)?'nonempty':'empty',tables:x.tables?.length||0,tableRows:(x.tables||[]).reduce((n,t)=>n+t.rows.length,0),linkedRows:x.rows.length,infoKeys:Object.keys(x.info||{}),sha256:r.sha256,proxy:x.egress?.proxy,observedExitIP:x.egress?.observedExitIP,coverage:x.profileCoverage,errors};

@@ -21,3 +21,5 @@ test('busy or reusable pools are not incorrectly declared exhausted',()=>{
  pool.ready[0].retired=true;assert.equal(poolExhausted(pool),true);
  pool.index=0;assert.equal(poolExhausted(pool),false);
 });
+
+test('a spent health-check budget is exhausted even if the candidate array is longer',()=>{const pool={index:2,candidates:[1,2,3,4],checked:2,maxChecks:2,busy:new Set(),ready:[],available:()=>true};assert.equal(poolExhausted(pool),true);pool.checking=1;assert.equal(poolExhausted(pool),false);pool.checking=0;pool.ready=[{ip:'8.8.8.8',retired:false}];assert.equal(poolExhausted(pool),false);});
