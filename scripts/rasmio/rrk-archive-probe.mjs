@@ -46,6 +46,8 @@ export async function runRrkArchiveProbe(){
   let entries=[];try{entries=JSON.parse(fs.readFileSync(cacheFile,'utf8')).filter(permittedArchiveEntry);}catch{}
   const listingSeed={kind:'notice-listing',url:'http://www.rrk.ir/News/NewsList.aspx',status:'200',collection:'CC-MAIN-2017-51',timestamp:'20171212140839',length:'33030',offset:'442171847',filename:'crawl-data/CC-MAIN-2017-51/segments/1512948517181.32/warc/CC-MAIN-20171212134318-20171212154318-00438.warc.gz'};
   if(!entries.some(r=>r.url===listingSeed.url))entries.unshift(listingSeed);
+  const laterListing={kind:'notice-listing',url:'http://rrk.ir/News/NewsList.aspx',status:'200',collection:'CC-MAIN-2019-51',timestamp:'20191205193705',length:'58735',offset:'123464188',filename:'crawl-data/CC-MAIN-2019-51/segments/1575540482038.36/warc/CC-MAIN-20191205190939-20191205214939-00269.warc.gz'};
+  if(!entries.some(r=>r.url===laterListing.url))entries.unshift(laterListing);
   const seen=new Set(entries.map(r=>r.url));report.cachedIndexEntries=entries.length;
   let refresh=false;try{refresh=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,'utf8')).client_payload?.refreshIndex===true;}catch{}
   const collections=refresh?['CC-MAIN-2019-51']:(entries.length?[]:['CC-MAIN-2020-50','CC-MAIN-2019-51','CC-MAIN-2018-51','CC-MAIN-2017-51']);
@@ -73,11 +75,21 @@ export async function runRrkArchiveProbe(){
     page=await browser.newPage();await page.setJavaScriptEnabled(false);await page.setRequestInterception(true);page.on('request',r=>void r.abort().catch(()=>{}));
     await page.setContent(html,{waitUntil:'domcontentloaded',timeout:10000});
     if(e.kind==='notice-listing'){
-     const snapshots=await page.evaluate(()=>[...document.querySelectorAll('a[href]')].filter(a=>/Show(?:Old)?News\.aspx/i.test(a.getAttribute('href'))).map(a=>{const tr=a.closest('tr'),table=tr?.closest('table');return {href:a.getAttribute('href'),label:a.textContent.trim(),text:tr?.innerText||a.textContent,cells:tr?[...tr.children].filter(n=>n.tagName==='TD'||n.tagName==='TH').map(n=>n.innerText.trim()):[],headers:table?[...table.querySelectorAll('th')].map(n=>n.innerText.trim()):[]};}));
+     const listingDOM=await page.evaluate(()=>{
+      const links=[];for(const a of document.querySelectorAll('a[href],[onclick]')){let href=a.getAttribute('href')||'',onclick=a.getAttribute('onclick')||'';
+       if(!/Show(?:Old)?News\.aspx/i.test(href)){
+        const literal=onclick.match(/['"]((?:\/News\/)?Show(?:Old)?News\.aspx\?Code=\d+)['"]/i)||href.match(/['"]((?:\/News\/)?Show(?:Old)?News\.aspx\?Code=\d+)['"]/i);
+        if(!literal)continue;href=literal[1];
+       }
+       const tr=a.closest('tr'),table=tr?.closest('table');links.push({href,label:a.textContent.trim(),text:tr?.innerText||a.textContent,cells:tr?[...tr.children].filter(n=>n.tagName==='TD'||n.tagName==='TH').map(n=>n.innerText.trim()):[],headers:table?[...table.querySelectorAll('th')].map(n=>n.innerText.trim()):[]});
+      }
+      return {links,text:document.body.innerText,tableCount:document.querySelectorAll('table').length,eventHints:[...document.querySelectorAll('[onclick]')].map(a=>a.getAttribute('onclick')).filter(v=>/news/i.test(v)).slice(0,8)};
+     });
+     const snapshots=listingDOM.links;item.listingTextExcerpt=redactPersonalNumbers(listingDOM.text).slice(0,6000);item.tableCount=listingDOM.tableCount;item.eventHints=listingDOM.eventHints.map(redactPersonalNumbers);
      const rows=parseArchivedListingRows(snapshots,e,item.archiveSHA256);
      item.listingRows=rows.length;item.headerSamples=snapshots.slice(0,3).map(r=>r.headers);
      if(!rows.length)throw new Error('No parseable public notice links in archived listing');
-     const file=`data/sources/rrk/archive/listings/${e.collection}.jsonl`;fs.mkdirSync('data/sources/rrk/archive/listings',{recursive:true});const payload=rows.map(r=>JSON.stringify(r)).join('\n')+'\n';fs.writeFileSync(file,payload);files.push(file);
+     const file=`data/sources/rrk/archive/listings/${e.collection}-${e.timestamp}.jsonl`;fs.mkdirSync('data/sources/rrk/archive/listings',{recursive:true});const payload=rows.map(r=>JSON.stringify(r)).join('\n')+'\n';fs.writeFileSync(file,payload);files.push(file);
      report.listingRowsExtracted=(report.listingRowsExtracted||0)+rows.length;report.listingPublication=[...(report.listingPublication||[]),{file,rows:rows.length,sha256:crypto.createHash('sha256').update(payload).digest('hex')}];item.outcome='archived-listing-evidence-extracted';save();continue;
     }
     const dom=await page.evaluate(()=>{
