@@ -12,3 +12,13 @@ test('fresh-only assessment never retests historical endpoints and fails closed 
  assert.deepEqual(selectRegionalProxies(source,{freshOnly:true,knownFailed:new Set([fresh])}),[]);
  assert.deepEqual(selectRegionalProxies({proxies:[old]},{freshOnly:true}),[]);
 });
+
+test('one previously failed route can be reassessed only with newer, recent, immutable publisher evidence',()=>{
+ const now=Date.parse('2026-10-31T16:30:00Z');
+ const item={proxy:'http://8.8.8.8:80',source:'https://github.com/roosterkid/openproxylist/blob/'+'a'.repeat(40)+'/HTTPS.txt',sourceBlob:'b'.repeat(40),publisherUpdatedAt:'2026-10-31T16:00:17Z',previousFailureAt:'2026-10-31T06:54:53Z'};
+ const s={proxies:[],recoveryProxies:[item]};
+ assert.deepEqual(selectRegionalProxies(s,{recoveryOnly:true,now}),[item.proxy]);
+ assert.deepEqual(selectRegionalProxies(s,{recoveryOnly:true,now:now+3600000}),[]);
+ assert.deepEqual(selectRegionalProxies(s,{recoveryOnly:true,now,knownFailed:new Set([item.proxy])}),[]);
+ assert.deepEqual(selectRegionalProxies({...s,recoveryProxies:[{...item,source:'https://evil.test/'}]},{recoveryOnly:true,now}),[]);
+});

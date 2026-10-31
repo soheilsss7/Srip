@@ -13,8 +13,9 @@ export function regionalArgs(proxy,url){
  const p=parsePublicProxy(proxy);if(!p||!['https://rrk.ir/robots.txt',target].includes(url))throw new Error('Unapproved regional route or target');
  return ['-q','--silent','--show-error','--proxy',p.url.replace(/^socks5:/,'socks5h:').replace(/^socks4:/,'socks4a:'),'--noproxy','','--proto','=https','--max-redirs','0','--connect-timeout','5','--max-time','10','--max-filesize','1500000','--user-agent','SripPublicSourceAssessment/1.0',url,'--write-out','\n__RRK_META__%{http_code}'];
 }
-export function selectRegionalProxies(source,{knownFailed=new Set(),freshOnly=false,tlsOnly=false,limit=24}={}) {
- const candidates=freshOnly?(source.freshProxies||[]):source.proxies;
+export function selectRegionalProxies(source,{knownFailed=new Set(),freshOnly=false,recoveryOnly=false,tlsOnly=false,limit=24,now=Date.now()}={}) {
+ const recovery=(source.recoveryProxies||[]).filter(p=>/^https:\/\/github\.com\/roosterkid\/openproxylist\/blob\/[a-f0-9]{40}\/HTTPS\.txt$/.test(p.source||'') && /^[a-f0-9]{40}$/.test(p.sourceBlob||'') && Date.parse(p.publisherUpdatedAt)>Date.parse(p.previousFailureAt) && now-Date.parse(p.publisherUpdatedAt)>=0 && now-Date.parse(p.publisherUpdatedAt)<3600000).map(p=>p.proxy);
+ const candidates=recoveryOnly?recovery:freshOnly?(source.freshProxies||[]):source.proxies;
  return [...new Set(candidates)].filter(p=>parsePublicProxy(p)&&!knownFailed.has(p)&&(!tlsOnly||p==='http://93.118.120.60:8080')).slice(0,limit);
 }
 export async function runRrkRegionalProbe(){
@@ -24,10 +25,10 @@ export async function runRrkRegionalProbe(){
  const save=()=>fs.writeFileSync(file,JSON.stringify(report,null,2));let browser;save();
  try{
   const source=JSON.parse(fs.readFileSync(new URL('./rrk-regional-proxies.json',import.meta.url),'utf8'));report.proxySource={url:source.source,blob:source.sourceBlob,countryReportedByPublisher:source.countryReportedByPublisher,countryIndependentlyVerified:false};
-  let tlsOnly=false,remaining=false,freshOnly=false;try{const p=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,'utf8')).client_payload||{};tlsOnly=p.tlsOnly===true;remaining=p.remaining===true;freshOnly=p.freshOnly===true;}catch{}
-  const knownFailed=new Set();if(remaining){for(const file of fs.readdirSync('out').filter(f=>/^rrk-regional-probe-.*\.json$/.test(f))){try{const old=JSON.parse(fs.readFileSync(`out/${file}`,'utf8'));for(const a of old.attempts||[])if(a.status===0)knownFailed.add(a.proxy);}catch{}}}
+  let tlsOnly=false,remaining=false,freshOnly=false,recoveryOnly=false;try{const p=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,'utf8')).client_payload||{};tlsOnly=p.tlsOnly===true;remaining=p.remaining===true;freshOnly=p.freshOnly===true;recoveryOnly=p.recoveryOnly===true;}catch{}
+  const knownFailed=new Set(),deniedRoutes=new Set();if(remaining||recoveryOnly){for(const file of fs.readdirSync('out').filter(f=>/^rrk-regional-probe-.*\.json$/.test(f))){try{const old=JSON.parse(fs.readFileSync(`out/${file}`,'utf8'));for(const a of old.attempts||[]){if(a.status===0)knownFailed.add(a.proxy);if(a.proxyRefused||[401,403,429].includes(a.status))deniedRoutes.add(a.proxy);}}catch{}}}
   report.previouslyFailedRoutesSkipped=knownFailed.size;report.limits.routes=remaining?96:24;
-  const proxies=selectRegionalProxies(source,{knownFailed:remaining?knownFailed:new Set(),freshOnly,tlsOnly,limit:remaining?96:24});report.freshOnly=freshOnly;report.previouslyCataloguedRoutesExcluded=freshOnly?source.previouslyCataloguedProxyCount:0;report.candidateCount=proxies.length;let admitted=null,denied=false;
+  const proxies=selectRegionalProxies(source,{knownFailed:recoveryOnly?deniedRoutes:remaining?knownFailed:new Set(),freshOnly,recoveryOnly,tlsOnly,limit:remaining?96:24});report.freshOnly=freshOnly;report.recoveryOnly=recoveryOnly;report.recoveryEvidence=recoveryOnly?source.recoveryProxies:undefined;report.previouslyCataloguedRoutesExcluded=freshOnly?source.previouslyCataloguedProxyCount:0;report.candidateCount=proxies.length;let admitted=null,denied=false;
   const check=async proxy=>{const item={proxy,at:new Date().toISOString()};report.attempts.push(item);let stdout='';try{({stdout}=await execute('curl',regionalArgs(proxy,'https://rrk.ir/robots.txt'),{env,cwd:scratch,timeout:12000,maxBuffer:1600000}));}catch(e){stdout=String(e.stdout||'');item.error=String(e.stderr||e.message).slice(0,240);item.proxyRefused=/CONNECT tunnel failed, response (?:401|403|407|429)/i.test(item.error); /* No TLS to RRK was established; never retry this refusing proxy. */}
    const n=stdout.lastIndexOf('\n__RRK_META__');if(n>=0){item.status=Number(stdout.slice(n+13))||0;const body=stdout.slice(0,n);if([401,403,429].includes(item.status))denied=true;if(item.status===404||(item.status===200&&/^\s*User-agent\s*:/mi.test(body))){item.robotsAllowed=item.status===404||robotAllows(body,target);if(item.robotsAllowed&&!admitted)admitted=proxy;}}
    save();
