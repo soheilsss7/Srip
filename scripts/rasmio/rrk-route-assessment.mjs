@@ -33,7 +33,7 @@ export async function runRrkRouteAssessment(){
  };
  try{
   for(const host of ['rrk.ir','www.rrk.ir']){try{report.dns.push({host,addresses:await dns.lookup(host,{all:true})});}catch(e){report.dns.push({host,error:e.message});}}save();
-  const tests=[['https://rrk.ir/ords/r/rrs/rrs-front/home',{}],['https://rrk.ir/ords/f?p=200:199',{}],['https://www.rrk.ir/ords/r/rrs/rrs-front/home',{}],['http://rrk.ir/ords/r/rrs/rrs-front/home',{}],['https://rrk.ir/ords/r/rrs/rrs-front/home',{ipv6:true}],['https://rrk.ir/robots.txt',{}]];
+  const tests=[['https://rrk.ir/ords/r/rrs/rrs-front/home',{}],['https://rrk.ir/ords/r/rrs/rrs-front/%D8%AF%D8%A7%D8%AF%D9%87-%D8%A8%D8%A7%D8%B2',{}],['https://www.rrk.ir/ords/r/rrs/rrs-front/home',{}],['http://rrk.ir/ords/r/rrs/rrs-front/home',{}],['https://rrk.ir/ords/r/rrs/rrs-front/home',{ipv6:true}],['https://rrk.ir/robots.txt',{}]];
   for(let i=0;i<tests.length;i+=2)await Promise.all(tests.slice(i,i+2).map(([url,o])=>check(url,o)));
   // A network timeout is not an access grant or a denial. Two previously observed public routes can diagnose reachability.
   // Never try alternate routes after an explicit HTTP access/rate denial.
@@ -55,7 +55,7 @@ export async function runRrkRouteAssessment(){
    let count=0;report.browser={startedAt:new Date().toISOString(),failedRequests:[]};
    page.on('request',r=>{let allowed=false;try{const u=new URL(r.url());allowed=++count<=60&&u.protocol==='https:'&&['rrk.ir','www.rrk.ir'].includes(u.hostname)&&!['image','font','media'].includes(r.resourceType());if(r.isNavigationRequest()&&r.frame()===page.mainFrame())allowed=allowed&&u.pathname.startsWith('/ords/');}catch{}void(allowed?r.continue():r.abort()).catch(()=>{});});
    page.on('requestfailed',r=>{if(report.browser.failedRequests.length<10)report.browser.failedRequests.push({navigation:r.isNavigationRequest(),error:r.failure()?.errorText});});
-   try{const response=await page.goto('https://rrk.ir/ords/r/rrs/rrs-front/home',{waitUntil:'domcontentloaded',timeout:45000});report.browser.status=response?.status();if(response?.status()===200){await new Promise(r=>setTimeout(r,2500));report.browser.page=await page.evaluate(()=>({title:document.title,textExcerpt:document.body.innerText.slice(0,2000),forms:document.forms.length,advertLinks:[...document.querySelectorAll('a')].filter(a=>/آگهی|جستجو/.test(a.textContent)).map(a=>({text:a.textContent.trim().slice(0,100),path:new URL(a.href,location.href).pathname})).slice(0,15)}));}}
+   try{const response=await page.goto('https://rrk.ir/ords/r/rrs/rrs-front/%D8%AF%D8%A7%D8%AF%D9%87-%D8%A8%D8%A7%D8%B2',{waitUntil:'domcontentloaded',timeout:45000});report.browser.status=response?.status();if(response?.status()===200){await new Promise(r=>setTimeout(r,2500));report.browser.page=await page.evaluate(()=>({title:document.title,textExcerpt:document.body.innerText.slice(0,2000).replace(/[۰-۹]/g,c=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c))).replace(/[٠-٩]/g,c=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(c))).replace(/(?<!\d)\d{10}(?!\d)/g,'[ده‌رقمی حذف شد]'),forms:document.forms.length,advertLinks:[...document.querySelectorAll('a')].filter(a=>/آگهی|جستجو/.test(a.textContent)).map(a=>({text:a.textContent.trim().slice(0,100),path:new URL(a.href,location.href).pathname})).slice(0,15)}));}}
    catch(e){report.browser.error=String(e.message).slice(0,300);}
    report.browser.requests=count;report.browser.finishedAt=new Date().toISOString();save();
   }catch(e){report.browser={error:String(e.message).slice(0,300)};}
