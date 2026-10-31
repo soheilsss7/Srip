@@ -6,7 +6,7 @@ export function responseHeaders(text){
  const blocks=text.trim().split(/\r?\n\r?\n/).filter(b=>/^HTTP\//.test(b));const last=blocks.at(-1)||'';const status=Number(last.match(/^HTTP\/\S+\s+(\d{3})/)?.[1]);if(!status)throw new Error('Missing HTTP status');
  const headers={};for(const line of last.split(/\r?\n/).slice(1)){const n=line.indexOf(':');if(n<1)continue;const key=line.slice(0,n).toLowerCase(),value=line.slice(n+1).trim();if(['content-length','content-encoding','transfer-encoding','connection'].includes(key))continue;if(key==='set-cookie'){headers[key]??=[];headers[key].push(value);}else headers[key]=value;}return {status,headers};
 }
-export function createVerifiedCurlTransport({proxy,bundle,scratch,env,execute,maxRequests=80}){
+export function createVerifiedCurlTransport({proxy,bundle,scratch,env,execute,maxRequests=80,tls12=false}){
  const controller=new AbortController(),pending=new Set(),queue=[];let active=0,count=0,closed=false,denied=false;const outcomes=[],cache=new Map();let cacheBytes=0,cacheHits=0;
  const acquire=async()=>{if(active>=4)await new Promise(r=>queue.push(r));active++;};const release=()=>{active--;queue.shift()?.();};
  const handle=async request=>{
@@ -16,7 +16,7 @@ export function createVerifiedCurlTransport({proxy,bundle,scratch,env,execute,ma
    if(closed||denied)throw new Error('Transport stopped');
    const cached=cache.get(request.url());if(cached&&request.method()==='GET'){result.status=cached.status;result.bytes=cached.body.length;result.verifiedStaticCache=true;cacheHits++;if(!request.isInterceptResolutionHandled())await request.respond(cached);return;}
    const coreAsset=new URL(request.url()).pathname==='/i/libraries/apex/minified/desktop_all.min.js';const seconds=coreAsset?60:20;
-   const args=['-q','--silent','--show-error','--fail-with-body','--proxy',proxy,'--noproxy','','--cacert',bundle,'--proto','=https','--max-redirs','0','--connect-timeout','5','--max-time',String(seconds),'--max-filesize','4000000','--compressed','--user-agent','SripPublicSourceAssessment/1.0','--request',request.method(),'--dump-header',base+'.headers','--output',base+'.body'];
+   const args=['-q','--silent','--show-error','--fail-with-body','--proxy',proxy,'--noproxy','','--cacert',bundle,'--proto','=https','--max-redirs','0','--connect-timeout','5','--max-time',String(seconds),'--max-filesize','4000000','--compressed','--user-agent','SripPublicSourceAssessment/1.0',...(tls12?['--tlsv1.2','--tls-max','1.2','--http1.1']:[]),'--request',request.method(),'--dump-header',base+'.headers','--output',base+'.body'];
    for(const [k,v] of Object.entries(request.headers()))if(!k.startsWith(':')&&!['host','content-length','accept-encoding','connection','user-agent'].includes(k.toLowerCase()))args.push('--header',`${k}: ${v}`);
    if(request.method()==='POST'){fs.writeFileSync(base+'.post',request.postData()||'');args.push('--data-binary','@'+base+'.post');}args.push(request.url());
    for(let attempt=0;attempt<2;attempt++){
@@ -30,5 +30,5 @@ export function createVerifiedCurlTransport({proxy,bundle,scratch,env,execute,ma
   }catch(e){result.error=String(e.stderr||(e.name==='AbortError'?'Transport stopped':'Verified HTTPS request failed')).slice(0,180);try{if(!request.isInterceptResolutionHandled())await request.abort();}catch{}}
   finally{for(const ext of ['.headers','.body','.post'])fs.rmSync(base+ext,{force:true});release();}
  };
- return {handle(request){const work=handle(request);pending.add(work);work.finally(()=>pending.delete(work));return work;},get report(){return {tlsValidationDisabled:false,httpsVerifiedBy:'curl with issuer chained to existing OS roots',requests:count,verifiedStaticCacheHits:cacheHits,stoppedOnAccessDenial:denied,outcomes};},async close(){closed=true;controller.abort();await Promise.allSettled([...pending]);cache.clear();}};
+ return {handle(request){const work=handle(request);pending.add(work);work.finally(()=>pending.delete(work));return work;},get report(){return {tlsValidationDisabled:false,httpsVerifiedBy:'curl with issuer chained to existing OS roots',tls12Compatibility:tls12,requests:count,verifiedStaticCacheHits:cacheHits,stoppedOnAccessDenial:denied,outcomes};},async close(){closed=true;controller.abort();await Promise.allSettled([...pending]);cache.clear();}};
 }
