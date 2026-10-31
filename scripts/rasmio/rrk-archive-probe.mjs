@@ -45,7 +45,8 @@ export async function runRrkArchiveProbe(){
   const cacheFile='data/sources/rrk/archive/index.json';
   let entries=[];try{entries=JSON.parse(fs.readFileSync(cacheFile,'utf8')).filter(permittedArchiveEntry);}catch{}
   const seen=new Set(entries.map(r=>r.url));report.cachedIndexEntries=entries.length;
-  const collections=entries.length?[]:['CC-MAIN-2020-50','CC-MAIN-2019-51','CC-MAIN-2018-51','CC-MAIN-2017-51'];
+  let refresh=false;try{refresh=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,'utf8')).client_payload?.refreshIndex===true;}catch{}
+  const collections=refresh?['CC-MAIN-2019-51']:(entries.length?[]:['CC-MAIN-2020-50','CC-MAIN-2019-51','CC-MAIN-2018-51','CC-MAIN-2017-51']);
   for(const collection of collections){
    const check={collection};report.collections.push(check);
    try{const q=new URLSearchParams({url:'*.rrk.ir/*',output:'json',filter:'status:200'});const response=await bounded(`https://index.commoncrawl.org/${collection}-index?${q}`);const lines=response.bytes.toString().trim().split('\n');check.indexRows=lines.length;check.noticeEntries=0;
@@ -56,8 +57,11 @@ export async function runRrkArchiveProbe(){
   if(entries.length){fs.mkdirSync('data/sources/rrk/archive',{recursive:true});fs.writeFileSync(cacheFile,JSON.stringify(entries,null,2));files.push(cacheFile);}
   report.candidateNotices=entries.length;
   if(entries.length){const {default:puppeteer}=await import('puppeteer');browser=await puppeteer.launch({headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});}
-  const captured=[];
-  for(const e of entries.slice(0,8)){
+  const captured=[],knownForms=new Set();
+  for(const file of fs.readdirSync('out').filter(f=>/^rrk-archive-probe-.*\.json$/.test(f))){try{const old=JSON.parse(fs.readFileSync(`out/${file}`,'utf8'));for(const a of old.attempts||[])if(a.error==='Archived CAPTCHA/security form, not a usable notice')knownForms.add(a.sourceURL);}catch{}}
+  report.previouslyVerifiedFormsSkipped=knownForms.size;
+  const candidates=entries.filter(e=>!knownForms.has(e.url)).sort((a,b)=>Number(b.length)-Number(a.length));
+  for(const e of candidates.slice(0,8)){
    const item={sourceURL:e.url,capturedAt:e.timestamp,collection:e.collection};report.attempts.push(item);let page;
    try{
     const start=Number(e.offset),length=Number(e.length),end=start+length-1;
