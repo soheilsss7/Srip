@@ -18,6 +18,7 @@ import puppeteer from 'puppeteer';
 import { restoreIncompleteDetails, prioritizeDetailRepair, markDetailRepaired, hasDetailCounts, backfillKnownDetailQueue } from './detail-repair.mjs';
 import { extractTablesFromDOM, hasParsedDetail } from './table-extractor.mjs';
 import { installNetworkAudit } from './network-audit.mjs';
+import { fetchDetailHTML } from './detail-fetch.mjs';
 import { PublicProxyTransport, permittedDetailURL, permittedResourceURL } from './proxy-transport.mjs';
 import { interleaveDetailLanes, requiresProxy, poolExhausted } from './detail-lanes.mjs';
 import { extractEmbeddedNoticesFromDOM, persistEmbeddedNotices } from './embedded-notices.mjs';
@@ -1216,7 +1217,7 @@ async function extractEntity(ent, pg = page) {
       const ck = (await pg.cookies(BASE)).map((c) => `${c.name}=${c.value}`).join('; ');
       if (ck) headers.cookie = ck;
     }
-    const r = route ? await route.fetch(url) : await fetch(url, { headers, redirect: 'follow', cache: 'no-store' });
+    const r = route ? await route.fetch(url) : await fetchDetailHTML(url, { headers });
     if (!r.ok) { const err = new Error('HTTP ' + r.status); err.retryable = true; throw err; }
     const h = await r.text();
     if (/سقف\s*مجاز|امکان مشاهده اطلاعات در صفحه شرکت برای شما محدود شده/.test(h)) {
