@@ -39,7 +39,7 @@ export async function runRrkRegionalProbe(){
    const n=stdout.lastIndexOf('\n__RRK_META__');if(n>=0){item.status=Number(stdout.slice(n+13))||0;const body=stdout.slice(0,n);if([401,403,429].includes(item.status))denied=true;if(item.status===404||(item.status===200&&/^\s*User-agent\s*:/mi.test(body))){item.robotsAllowed=item.status===404||robotAllows(body,target);if(item.robotsAllowed&&!admitted){admitted=proxy;report.admittedHost=new URL(url).hostname;}}}
    save();
   };
-  if(compatibilityFrom){for(const proxy of proxies){await check(proxy,{url:'https://www.rrk.ir/robots.txt',tls12:true});if(!admitted&&!denied)await check(proxy,{url:'https://rrk.ir/robots.txt',tls12:true});}}else{for(let i=0;i<proxies.length&&!admitted&&!denied;i+=2){await Promise.all(proxies.slice(i,i+2).map(proxy=>check(proxy)));await new Promise(r=>setTimeout(r,1000));}}
+  if(resumeAdmittedFrom){for(let i=0;i<2&&!admitted&&!denied;i++){await check(proxies[0]);if(!/timed out|timeout/i.test(report.attempts.at(-1)?.error||''))break;}}else if(compatibilityFrom){for(const proxy of proxies){await check(proxy,{url:'https://www.rrk.ir/robots.txt',tls12:true});if(!admitted&&!denied)await check(proxy,{url:'https://rrk.ir/robots.txt',tls12:true});}}else{for(let i=0;i<proxies.length&&!admitted&&!denied;i+=2){await Promise.all(proxies.slice(i,i+2).map(proxy=>check(proxy)));await new Promise(r=>setTimeout(r,1000));}}
   report.tlsDiagnostics=[];
   if(!denied&&!admitted){for(const a of report.attempts.filter(a=>/unable to get local issuer/i.test(a.error||'')||(tlsOnly&&a.proxy==='http://93.118.120.60:8080')).slice(0,2)){
    const p=parsePublicProxy(a.proxy);if(!p||p.protocol!=='http')continue;
