@@ -1,5 +1,5 @@
 {
-  "reportedAt": "2026-10-31T17:43:42.541153+00:00",
+  "reportedAt": "2026-10-31T17:59:33.830850+00:00",
   "task": "Restore actual public RRK access, then retrieve complete legal notices",
   "observedProgress": {
     "previouslyVerifiedSecureRrkRoutes": 0,
@@ -224,10 +224,9 @@
   },
   "regressionTests": {
     "command": "node --test scripts/rasmio/*.test.mjs",
-    "tests": 78,
-    "pass": 78,
+    "pass": 85,
     "fail": 0,
-    "scope": "All 20 top-level rasmio test files; not a live-data acceptance result."
+    "scope": "All top-level rasmio tests only, not live-data acceptance."
   },
   "freshRouteIssuerFix": {
     "description": "Complete the known Certum intermediate for new routes too, validating against existing system roots; no TLS bypass or new trust anchor.",
@@ -235,5 +234,12 @@
       "41225620428",
       "41225768868"
     ]
+  },
+  "latestInvestigation": {
+    "report": "reports/rrk-new-routing-2026-10-31.json",
+    "newDirectFullRrkNotices": 0,
+    "canonicalRrkRowsAdded": 0,
+    "currentlyWorkingRoutesVerified": 0,
+    "productionReady": false
   }
 }

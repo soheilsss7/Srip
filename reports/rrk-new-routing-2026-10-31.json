@@ -1,0 +1,379 @@
+{
+  "reportedAt": "2026-10-31T17:59:33.830850+00:00",
+  "scope": "New work after the request to test previously untried routes; not cumulative dataset totals.",
+  "result": {
+    "newDirectFullRrkNotices": 0,
+    "canonicalRrkRowsAdded": 0,
+    "currentlyWorkingRoutesVerified": 0,
+    "productionReady": false
+  },
+  "counts": {
+    "neverPreviouslyCataloguedGeoNodeHostsTested": 14,
+    "newRealityEndpointsActuallyTested": 1,
+    "correctedXhttpProfilesActuallyTested": 2,
+    "additionalRepeatedRealityAttempt": 1,
+    "totalRecordedNetworkAttempts": 18,
+    "unsupportedPlaintextProfilesRejectedBeforeNetwork": 2
+  },
+  "corrections": [
+    "Previously XHTTP VLESS encryption was silently replaced with none; the exact published MLKEM configuration is now retained and tested. Earlier XHTTP results were not tests of the complete published configuration.",
+    "One source API request received HTTP 403 before any tunnel tests. Later cache-backed runs used the previously obtained 6282-byte public snapshot, verified against Git blob 8d1e9dacd9ba9cf082474c0258824101c172e3ca; no retry of that denied request was required.",
+    "Plain VLESS and Trojan were not network-tested: official Xray v26.10.31 rejected their declared plaintext transport. No protection was disabled or client downgraded.",
+    "Startup validation now combines stdout and stderr and redacts source credentials instead of hiding the actual failure behind an informational banner."
+  ],
+  "runs": [
+    {
+      "runId": "41226153018",
+      "mode": "rrk-public-regional-routing",
+      "reportPath": "scripts/rasmio/out/rrk-regional-probe-41226153018.json",
+      "attempts": [
+        {
+          "proxy": "socks4://31.171.223.238:18000",
+          "url": "https://rrk.ir/robots.txt",
+          "tls12": false,
+          "at": "2026-10-31T17:47:06.201Z",
+          "error": "curl: (28) Failed to connect to 31.171.223.238 port 18000 after 5002 ms: Timeout was reached\n",
+          "proxyRefused": false,
+          "status": 0
+        },
+        {
+          "proxy": "http://185.140.232.21:1400",
+          "url": "https://rrk.ir/robots.txt",
+          "tls12": false,
+          "at": "2026-10-31T17:47:06.204Z",
+          "error": "curl: (7) Failed to connect to 185.140.232.21 port 1400 after 1277 ms: Couldn't connect to server\n",
+          "proxyRefused": false,
+          "status": 0
+        },
+        {
+          "proxy": "http://2.188.210.83:4443",
+          "url": "https://rrk.ir/robots.txt",
+          "tls12": false,
+          "at": "2026-10-31T17:47:12.213Z",
+          "error": "curl: (28) Failed to connect to 2.188.210.83 port 4443 after 5002 ms: Timeout was reached\n",
+          "proxyRefused": false,
+          "status": 0
+        },
+        {
+          "proxy": "socks5://178.252.165.226:1080",
+          "url": "https://rrk.ir/robots.txt",
+          "tls12": false,
+          "at": "2026-10-31T17:47:12.216Z",
+          "error": "curl: (28) Connection timed out after 5002 milliseconds\n",
+          "proxyRefused": false,
+          "status": 0
+        },
+        {
+          "proxy": "http://178.252.171.229:8080",
+          "url": "https://rrk.ir/robots.txt",
+          "tls12": false,
+          "at": "2026-10-31T17:47:18.226Z",
+          "error": "curl: (28) Failed to connect to 178.252.171.229 port 8080 after 5002 ms: Timeout was reached\n",
+          "proxyRefused": false,
+          "status": 0
+        },
+        {
+          "proxy": "socks4://89.44.241.98:1080",
+          "url": "https://rrk.ir/robots.txt",
+          "tls12": false,
+          "at": "2026-10-31T17:47:18.229Z",
+          "error": "curl: (7) Failed to connect to 89.44.241.98 port 1080 after 206 ms: Couldn't connect to server\n",
+          "proxyRefused": false,
+          "status": 0
+        },
+        {
+          "proxy": "http://185.88.177.40:80",
+          "url": "https://rrk.ir/robots.txt",
+          "tls12": false,
+          "at": "2026-10-31T17:47:24.238Z",
+          "error": "curl: (56) CONNECT tunnel failed, response 400\n",
+          "proxyRefused": false,
+          "status": 0
+        },
+        {
+          "proxy": "socks4://87.107.109.254:2180",
+          "url": "https://rrk.ir/robots.txt",
+          "tls12": false,
+          "at": "2026-10-31T17:47:24.240Z",
+          "error": "curl: (7) Failed to connect to 87.107.109.254 port 2180 after 178 ms: Couldn't connect to server\n",
+          "proxyRefused": false,
+          "status": 0
+        },
+        {
+          "proxy": "socks4://185.60.59.245:10808",
+          "url": "https://rrk.ir/robots.txt",
+          "tls12": false,
+          "at": "2026-10-31T17:47:25.640Z",
+          "error": "curl: (7) Failed to connect to 185.60.59.245 port 10808 after 185 ms: Couldn't connect to server\n",
+          "proxyRefused": false,
+          "status": 0
+        },
+        {
+          "proxy": "http://185.211.59.126:10808",
+          "url": "https://rrk.ir/robots.txt",
+          "tls12": false,
+          "at": "2026-10-31T17:47:25.643Z",
+          "error": "curl: (7) Failed to connect to 185.211.59.126 port 10808 after 185 ms: Couldn't connect to server\n",
+          "proxyRefused": false,
+          "status": 0
+        },
+        {
+          "proxy": "socks4://151.233.50.238:1080",
+          "url": "https://rrk.ir/robots.txt",
+          "tls12": false,
+          "at": "2026-10-31T17:47:26.835Z",
+          "error": "curl: (28) Connection timed out after 5002 milliseconds\n",
+          "proxyRefused": false,
+          "status": 0
+        },
+        {
+          "proxy": "http://81.12.28.35:3128",
+          "url": "https://rrk.ir/robots.txt",
+          "tls12": false,
+          "at": "2026-10-31T17:47:26.838Z",
+          "error": "curl: (28) Proxy CONNECT aborted due to timeout\n",
+          "proxyRefused": false,
+          "status": 0
+        },
+        {
+          "proxy": "http://87.107.184.182:8080",
+          "url": "https://rrk.ir/robots.txt",
+          "tls12": false,
+          "at": "2026-10-31T17:47:32.916Z",
+          "error": "curl: (7) Failed to connect to 87.107.184.182 port 8080 after 206 ms: Couldn't connect to server\n",
+          "proxyRefused": false,
+          "status": 0
+        },
+        {
+          "proxy": "http://93.118.109.220:8080",
+          "url": "https://rrk.ir/robots.txt",
+          "tls12": false,
+          "at": "2026-10-31T17:47:32.918Z",
+          "error": "curl: (28) Failed to connect to 93.118.109.220 port 8080 after 5002 ms: Timeout was reached\n",
+          "proxyRefused": false,
+          "status": 0
+        }
+      ],
+      "failedProfileSetups": [],
+      "error": null,
+      "cacheVerified": false,
+      "advertsExtracted": 0,
+      "canonicalRecordsChanged": false
+    },
+    {
+      "runId": "41226183609",
+      "mode": "rrk-public-encrypted-tunnel-routing",
+      "reportPath": "scripts/rasmio/out/rrk-tunnel-probe-41226183609.json",
+      "attempts": [],
+      "failedProfileSetups": [],
+      "error": "Public source provider HTTP 403",
+      "cacheVerified": false,
+      "advertsExtracted": 0,
+      "canonicalRecordsChanged": false
+    },
+    {
+      "runId": "41226184264",
+      "mode": "vless-reality-extra-pinned-key",
+      "reportPath": "scripts/rasmio/out/rrk-tunnel-probe-41226184264.json",
+      "attempts": [
+        {
+          "sourceIndex": 23,
+          "protocol": "vless-reality-extra-pinned-key",
+          "serverAddress": "176.120.18.31",
+          "serverPort": 10156,
+          "at": "2026-10-31T17:47:47.694Z",
+          "requests": [
+            {
+              "url": "https://www.rrk.ir/robots.txt",
+              "error": "curl: (28) SSL connection timeout\n",
+              "status": 0,
+              "characters": 0
+            }
+          ]
+        }
+      ],
+      "failedProfileSetups": [],
+      "error": null,
+      "cacheVerified": false,
+      "advertsExtracted": 0,
+      "canonicalRecordsChanged": false
+    },
+    {
+      "runId": "41226234672",
+      "mode": "vless-plain-with-strict-inner-https",
+      "reportPath": "scripts/rasmio/out/rrk-tunnel-probe-41226234672.json",
+      "attempts": [],
+      "failedProfileSetups": [
+        {
+          "sourceIndex": 2,
+          "serverAddress": "91.207.18.88",
+          "errorCode": null,
+          "message": "Tunnel client exited before readiness"
+        }
+      ],
+      "error": null,
+      "cacheVerified": false,
+      "advertsExtracted": 0,
+      "canonicalRecordsChanged": false
+    },
+    {
+      "runId": "41226473009",
+      "mode": "vless-xhttp-pinned-key",
+      "reportPath": "scripts/rasmio/out/rrk-tunnel-probe-41226473009.json",
+      "attempts": [
+        {
+          "sourceIndex": 12,
+          "protocol": "vless-xhttp-pinned-key",
+          "serverAddress": "89.42.196.237",
+          "serverPort": 2030,
+          "at": "2026-10-31T17:51:12.454Z",
+          "requests": [
+            {
+              "url": "https://www.rrk.ir/robots.txt",
+              "error": "curl: (28) SSL connection timeout\n",
+              "status": 0,
+              "characters": 0
+            }
+          ]
+        },
+        {
+          "sourceIndex": 13,
+          "protocol": "vless-xhttp-pinned-key",
+          "serverAddress": "89.42.196.92",
+          "serverPort": 1819,
+          "at": "2026-10-31T17:51:20.778Z",
+          "requests": [
+            {
+              "url": "https://www.rrk.ir/robots.txt",
+              "error": "curl: (28) SSL connection timeout\n",
+              "status": 0,
+              "characters": 0
+            }
+          ]
+        }
+      ],
+      "failedProfileSetups": [],
+      "error": null,
+      "cacheVerified": true,
+      "advertsExtracted": 0,
+      "canonicalRecordsChanged": false
+    },
+    {
+      "runId": "41226473606",
+      "mode": "vless-reality-extra-pinned-key",
+      "reportPath": "scripts/rasmio/out/rrk-tunnel-probe-41226473606.json",
+      "attempts": [
+        {
+          "sourceIndex": 23,
+          "protocol": "vless-reality-extra-pinned-key",
+          "serverAddress": "176.120.18.31",
+          "serverPort": 10156,
+          "at": "2026-10-31T17:51:18.413Z",
+          "requests": [
+            {
+              "url": "https://www.rrk.ir/robots.txt",
+              "error": "curl: (28) SSL connection timeout\n",
+              "status": 0,
+              "characters": 0
+            }
+          ]
+        }
+      ],
+      "failedProfileSetups": [],
+      "error": null,
+      "cacheVerified": true,
+      "advertsExtracted": 0,
+      "canonicalRecordsChanged": false
+    },
+    {
+      "runId": "41226474253",
+      "mode": "vless-plain-with-strict-inner-https",
+      "reportPath": "scripts/rasmio/out/rrk-tunnel-probe-41226474253.json",
+      "attempts": [],
+      "failedProfileSetups": [
+        {
+          "sourceIndex": 2,
+          "serverAddress": "91.207.18.88",
+          "errorCode": null,
+          "message": "Tunnel client exited before readiness"
+        }
+      ],
+      "error": null,
+      "cacheVerified": true,
+      "advertsExtracted": 0,
+      "canonicalRecordsChanged": false
+    },
+    {
+      "runId": "41226643882",
+      "mode": "vless-plain-with-strict-inner-https",
+      "reportPath": "scripts/rasmio/out/rrk-tunnel-probe-41226643882.json",
+      "attempts": [],
+      "failedProfileSetups": [
+        {
+          "sourceIndex": 2,
+          "serverAddress": "91.207.18.88",
+          "errorCode": null,
+          "message": "Client configuration rejected: Xray 26.10.31 (Xray, Penetrates Everything.) a4a3dff (go1.27.3 linux/amd64)\nA unified platform for anti-censorship.\n2026/10/31 17:53:20.018683 [Info]"
+        }
+      ],
+      "error": null,
+      "cacheVerified": true,
+      "advertsExtracted": 0,
+      "canonicalRecordsChanged": false
+    },
+    {
+      "runId": "41226819622",
+      "mode": "vless-plain-with-strict-inner-https",
+      "reportPath": "scripts/rasmio/out/rrk-tunnel-probe-41226819622.json",
+      "attempts": [],
+      "failedProfileSetups": [
+        {
+          "sourceIndex": 2,
+          "serverAddress": "91.207.18.88",
+          "errorCode": null,
+          "message": "Client configuration rejected: Failed to start: main: failed to load config files: [/tmp/rrk-vmess-JR4xMR/client.private.json] > infra/conf: failed to build outbound config with tag  > infra/conf: vless without TLS or other encryption is prohibited unless the server address is a private IP or domain\n"
+        }
+      ],
+      "error": null,
+      "cacheVerified": true,
+      "advertsExtracted": 0,
+      "canonicalRecordsChanged": false
+    },
+    {
+      "runId": "41226838316",
+      "mode": "trojan-raw-with-strict-inner-https",
+      "reportPath": "scripts/rasmio/out/rrk-tunnel-probe-41226838316.json",
+      "attempts": [],
+      "failedProfileSetups": [
+        {
+          "sourceIndex": 7,
+          "serverAddress": "89.42.196.114",
+          "errorCode": null,
+          "message": "Client configuration rejected: 2026/10/31 17:55:48.556841 [Warning] common/errors: The feature Trojan (with no Flow, etc.) is deprecated, not recommended for using and might be removed. Please migrate to VLESS with Flow & Seed as soon as possible.\nFailed to start: main: failed to load config files: [/tmp/rrk-vmess-EfqcNq/client.private.json] > infra/conf: failed to build outbound config with tag  > infra/conf: trojan without TLS is prohibited unless the server address is a private IP or domain\n"
+        }
+      ],
+      "error": null,
+      "cacheVerified": true,
+      "advertsExtracted": 0,
+      "canonicalRecordsChanged": false
+    }
+  ],
+  "security": {
+    "tlsValidationDisabled": false,
+    "clientSecurityRestrictionBypassed": false,
+    "rawSourceProfilesCommitted": false,
+    "sourceSnapshotPin": "8d1e9dacd9ba9cf082474c0258824101c172e3ca"
+  },
+  "otherInvestigations": {
+    "directReaderFetch": "Official open-data page failed to fetch.",
+    "publisherPdfSearch": "Found ordinary-newspaper registry advertisements, but text extraction interleaved columns and contained historical decisions. No incomplete or mismatched text was imported as a complete RRK notice.",
+    "workflowPermission": "Attempt to add an isolated authenticated workflow was rejected for missing workflows permission. No workflow change was published; no credentials were extracted or requested."
+  },
+  "tests": {
+    "command": "node --test scripts/rasmio/*.test.mjs",
+    "pass": 85,
+    "fail": 0,
+    "scope": "All top-level rasmio tests only, not live-data acceptance."
+  },
+  "normalCrawlerCancelled": false
+}
