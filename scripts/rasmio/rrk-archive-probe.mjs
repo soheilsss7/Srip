@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import crypto from 'node:crypto';
-import {gunzipSync} from 'node:zlib';
+import {gunzipSync,inflateSync,brotliDecompressSync} from 'node:zlib';
 import {noticeFromFields,normalizeDigits,redactPersonalNumbers,graphFor} from '../../tools/rrk-local/core.mjs';
 export function permittedArchiveEntry(r){
  try{const u=new URL(r.url);return ['http:','https:'].includes(u.protocol)&&['rrk.ir','www.rrk.ir'].includes(u.hostname)&&!u.username&&!u.password&&!u.port&&/^\/News\/Show(?:Old)?News\.aspx$/i.test(u.pathname)&&/^\d+$/.test(u.searchParams.get('Code')||'')&&r.status==='200'&&/^crawl-data\/CC-MAIN-\d{4}-\d{2}\/segments\/[\d.]+\/warc\/[\w.-]+\.warc\.gz$/.test(r.filename)&&Number.isSafeInteger(Number(r.offset))&&Number(r.offset)>=0&&Number.isSafeInteger(Number(r.length))&&Number(r.length)>0&&Number(r.length)<2000000;}catch{return false;}
@@ -11,9 +11,22 @@ export function archivedHTML(bytes,entry){
  const header=raw.subarray(0,split).toString('utf8');const target=header.match(/^WARC-Target-URI:\s*(.+)$/mi)?.[1]?.trim();
  if(target!==entry.url||!/^WARC-Type:\s*response\s*$/mi.test(header))throw new Error('WARC identity mismatch');
  const http=raw.subarray(split+4);const end=http.indexOf('\r\n\r\n');if(end<0||!/^HTTP\/\d(?:\.\d)? 200\b/.test(http.subarray(0,end).toString()))throw new Error('No archived HTTP 200');
- const headers=http.subarray(0,end).toString('latin1');if(/Transfer-Encoding:\s*chunked|Content-Encoding:/i.test(headers))throw new Error('Encoded archived HTTP not yet supported');
+ const headers=http.subarray(0,end).toString('latin1');
  const len=Number(header.match(/^Content-Length:\s*(\d+)/mi)?.[1]);if(!Number.isSafeInteger(len)||len<end+4||split+4+len>raw.length)throw new Error('Invalid WARC length');
- return http.subarray(end+4,len).toString('utf8');
+ let body=http.subarray(end+4,len);
+ const looksHTML=b=>/^\s*(?:<|\ufeff)/u.test(b.subarray(0,100).toString('utf8'));
+ // Common Crawl can retain original transport headers after decoding its payload.
+ if(/Transfer-Encoding:\s*chunked/i.test(headers)&&!looksHTML(body)){
+  const chunks=[];let p=0,total=0,ended=false;
+  while(p<body.length){const n=body.indexOf('\r\n',p);if(n<0)throw new Error('Bad archived chunks');const line=body.subarray(p,n).toString('ascii').split(';')[0];if(!/^[0-9a-f]+$/i.test(line))throw new Error('Bad chunk size');const size=parseInt(line,16);p=n+2;if(size===0){ended=true;break;}if(p+size+2>body.length||body.subarray(p+size,p+size+2).toString()!=='\r\n')throw new Error('Truncated chunk');total+=size;if(total>8000000)throw new Error('Decoded body too large');chunks.push(body.subarray(p,p+size));p+=size+2;}
+  if(!ended)throw new Error('Unterminated chunks');body=Buffer.concat(chunks);
+ }
+ const encoding=headers.match(/^Content-Encoding:\s*([^\r\n]+)/mi)?.[1]?.trim().toLowerCase();
+ if(encoding&&!looksHTML(body)){
+  const options={maxOutputLength:8000000};
+  if(encoding==='gzip')body=gunzipSync(body,options);else if(encoding==='deflate')body=inflateSync(body,options);else if(encoding==='br')body=brotliDecompressSync(body,options);else if(encoding!=='identity')throw new Error('Unsupported archived encoding');
+ }
+ return body.toString('utf8');
 }
 async function bounded(url,opts={},max=2000000){
  const r=await fetch(url,{...opts,redirect:'error',signal:AbortSignal.timeout(25000)});
@@ -54,7 +67,7 @@ export async function runRrkArchiveProbe(){
      const text=body.textContent.replace(/\s+/g,' ').trim();
      return {title:document.title,text,formInputs:[...document.querySelectorAll('input')].map(e=>({id:e.id,type:e.type})).filter(e=>/captcha|securitycode/i.test(e.id)),ids:[...document.querySelectorAll('[id]')].map(e=>e.id).filter(x=>/news|company|national|bodytext/i.test(x)).slice(0,30)};
     });
-    item.title=dom.title;item.structuredFieldIDs=dom.ids;
+    item.title=redactPersonalNumbers(dom.title);item.structuredFieldIDs=dom.ids;item.redactedTextExcerpt=redactPersonalNumbers(dom.text).slice(-5000);
     if(dom.formInputs.some(i=>i.type!=='hidden'))throw new Error('Archived CAPTCHA/security form, not a usable notice');
     const text=normalizeDigits(dom.text);
     const nationalId=text.match(/شناسه\s*ملی\s*(?:شرکت)?\s*[:：]?\s*(\d{11})(?!\d)/)?.[1];
