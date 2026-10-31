@@ -15,11 +15,12 @@ export function createVerifiedCurlTransport({proxy,bundle,scratch,env,execute,ma
   try{
    if(closed||denied)throw new Error('Transport stopped');
    const cached=cache.get(request.url());if(cached&&request.method()==='GET'){result.status=cached.status;result.bytes=cached.body.length;result.verifiedStaticCache=true;cacheHits++;if(!request.isInterceptResolutionHandled())await request.respond(cached);return;}
-   const args=['-q','--silent','--show-error','--fail-with-body','--proxy',proxy,'--noproxy','','--cacert',bundle,'--proto','=https','--max-redirs','0','--connect-timeout','5','--max-time','20','--max-filesize','4000000','--compressed','--user-agent','SripPublicSourceAssessment/1.0','--request',request.method(),'--dump-header',base+'.headers','--output',base+'.body'];
+   const coreAsset=new URL(request.url()).pathname==='/i/libraries/apex/minified/desktop_all.min.js';const seconds=coreAsset?60:20;
+   const args=['-q','--silent','--show-error','--fail-with-body','--proxy',proxy,'--noproxy','','--cacert',bundle,'--proto','=https','--max-redirs','0','--connect-timeout','5','--max-time',String(seconds),'--max-filesize','4000000','--compressed','--user-agent','SripPublicSourceAssessment/1.0','--request',request.method(),'--dump-header',base+'.headers','--output',base+'.body'];
    for(const [k,v] of Object.entries(request.headers()))if(!k.startsWith(':')&&!['host','content-length','accept-encoding','connection','user-agent'].includes(k.toLowerCase()))args.push('--header',`${k}: ${v}`);
    if(request.method()==='POST'){fs.writeFileSync(base+'.post',request.postData()||'');args.push('--data-binary','@'+base+'.post');}args.push(request.url());
    for(let attempt=0;attempt<2;attempt++){
-    try{result.networkAttempts=attempt+1;await execute('curl',args,{env,cwd:scratch,timeout:22000,maxBuffer:100000,signal:controller.signal});break;}
+    try{result.networkAttempts=attempt+1;await execute('curl',args,{env,cwd:scratch,timeout:(seconds+2)*1000,maxBuffer:100000,signal:controller.signal});break;}
     catch(e){if(e.code===28&&request.method()==='GET'&&attempt===0&&!closed&&!denied){await new Promise(r=>setTimeout(r,250));continue;}if(e.code!==22||!fs.existsSync(base+'.headers')||!fs.existsSync(base+'.body'))throw e;const h=responseHeaders(fs.readFileSync(base+'.headers','utf8'));if(h.status<400)throw e;break;}
    }
    const {status,headers}=responseHeaders(fs.readFileSync(base+'.headers','utf8'));result.status=status;if([401,403,429].includes(status))denied=true;

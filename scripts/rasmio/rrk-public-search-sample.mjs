@@ -3,6 +3,7 @@ import fs from 'node:fs';import {noticeFromFields,validateRecord,normalizeDigits
 export async function samplePublicNotices(page,{runId,files,report,transport}){
  const company='10100014553';const result={companyNationalId:company,searches:0,maxNotices:2,notices:[],paymentAttempted:false,loginAttempted:false};report.publicNoticeSample=result;
  if(transport.report.stoppedOnAccessDenial)return;
+ if(!await page.evaluate(()=>typeof window.apex?.item==='function'&&typeof window.apex?.server?.plugin==='function')){result.reason='Required public APEX runtime did not load; no search attempted';return;}
  if(await page.$('iframe[src*="recaptcha"],iframe[src*="hcaptcha"],.g-recaptcha,.h-captcha')){result.reason='CAPTCHA present; no search attempted';return;}
  await page.waitForSelector('#P199_NATIONALCODECOMPANY',{timeout:10000});
  const button=await page.evaluate(()=>{const input=document.querySelector('#P199_NATIONALCODECOMPANY');const region=input?.closest('.t-Region')||document;const candidates=[...region.querySelectorAll('button')].filter(b=>b.offsetParent!==null&&b.textContent.trim()==='جستجو');const known=candidates.find(b=>b.id==='B912476867105247978');return known?.id||(candidates.length===1?candidates[0].id:null);});
