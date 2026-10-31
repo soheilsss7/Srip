@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-31",
+  "changes": {
+    "independentDetailLane": "Company/person proxy failures no longer put every independent entity behind the initial repair-heavy prefix. Queue entries remain pending on failure; verification ordering is preserved.",
+    "tableOnlySSR": "Nonempty tables without linked entity rows no longer trigger redundant browser navigation, scrolling and reload.",
+    "additionalTransport": "Public SOCKS5 candidates can use proxy-side DNS with validated HTTPS. Same 4-request observed-exit budget; no credentials or direct fallback.",
+    "embeddedNotices": "Extract public notice body text from already-loaded company DOM, require explicit company identity and unambiguous News link, redact personal identifiers, retain changed text variants and source receipts. No additional site request.",
+    "modernOfficialRoute": "Bounded official-source assessment now includes https://rrk.ir/ords/f?p=200:199 instead of relying on legacy ASP.NET list paths. No third-party sessions, CAPTCHA handling, form POSTs or authentication replay. Stop on 401/403/429."
+  },
+  "tests": {"passed": 22, "failed": 0},
+  "modernRouteReference": "https://github.com/majid-abedi/rrk-crawler/blob/main/config.py",
+  "untrustedThirdPartyHtmlImported": false,
+  "directOfficialReaderAttempts": [
+    {"url": "https://rrk.ir/", "result": "fetch failed"},
+    {"url": "https://www.rrk.ir/News/newsList.aspx", "result": "fetch failed"},
+    {"url": "https://rrk.ir/ords/f?p=200:199", "result": "fetch failed"}
+  ],
+  "productionValidation": {
+    "normalRunUsingFirstFix": "41217741974",
+    "modernOfficialRouteProbe": "41217841654",
+    "measuredSpeedMultiplier": null,
+    "directOfficialAccessSolved": false,
+    "newNoticeBodyCountVerifiedThisTurn": 0,
+    "note": "Do not count test passes, successful workflow status, or previously imported notice texts as new production data. Inspect final run receipts and Git blobs before reporting throughput."
+  }
+}

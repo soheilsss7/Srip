@@ -79,3 +79,11 @@ test('slow profile transfers get a bounded response window without relaxing heal
   assert.equal(optionsSeen.timeout,48000);assert.equal(pool.report.requests[0].partialResponseAccepted,false);assert.equal(pool.report.requests[0].partialBytesReceived,22);lease.finish(false,'proxy-curl-failed');
  }finally{pool.close();fs.rmSync(out,{recursive:true,force:true});}
 });
+
+test('SOCKS5 uses proxy-side DNS, strict TLS and the same destination and request budgets',()=>{
+ const args=transportCurlArgs('socks5://8.8.8.8:1080','https://rasmio.com/company/10100009135/direct/',{profile:true});
+ assert.equal(args[args.indexOf('--proxy')+1],'socks5h://8.8.8.8:1080');
+ assert.equal(args[args.indexOf('--noproxy')+1],'');assert.ok(!args.includes('--insecure'));
+ assert.throws(()=>transportCurlArgs('socks4://8.8.8.8:1080','https://rasmio.com/'));
+ assert.throws(()=>transportCurlArgs('socks5://user:secret@8.8.8.8:1080','https://rasmio.com/'));
+});
