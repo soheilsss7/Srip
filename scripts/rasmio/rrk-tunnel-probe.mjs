@@ -24,6 +24,7 @@ export function publicRealityCandidates(text){
   const endpoint=u.hostname+':'+u.port;if(seen.has(endpoint))continue;seen.add(endpoint);result.push({index,address:u.hostname,port:Number(u.port),id:u.username,protocol:'vless-reality',publicKey:key,shortId:sid,fingerprint:fp,flow,serverName:q.get('sni')||''});
  }return result.slice(0,2);
 }
+export async function resolvePublicEndpoint(candidate,resolve=lookup){const addresses=await resolve(candidate.address,{family:4,all:true});if(!addresses.length||addresses.some(a=>!parsePublicProxy(`http://${a.address}:${candidate.port}`)))throw new Error('Tunnel endpoint did not resolve exclusively to public IPv4 addresses');return {...candidate,address:addresses[0].address};}
 export function xrayConfig(candidate,port){const outbound=candidate.protocol==='vless-reality'?{protocol:'vless',settings:{vnext:[{address:candidate.address,port:candidate.port,users:[{id:candidate.id,encryption:'none',flow:candidate.flow}]}]},streamSettings:{network:'raw',security:'reality',realitySettings:{serverName:candidate.serverName,fingerprint:candidate.fingerprint,password:candidate.publicKey,shortId:candidate.shortId}}}:{protocol:'vmess',settings:{vnext:[{address:candidate.address,port:candidate.port,users:[{id:candidate.id,alterId:0,security:candidate.security}]}]},streamSettings:{network:'raw',security:'none'}};return {log:{loglevel:'none'},inbounds:[{listen:'127.0.0.1',port,protocol:'socks',settings:{auth:'noauth',udp:false}}],outbounds:[outbound]};}
 export function tunnelArgs(port,url,bundle){if(!Number.isInteger(port)||port<1024||port>65535||!['https://www.rrk.ir/robots.txt',target].includes(url))throw new Error('Unapproved tunnel target');return ['-q','--silent','--show-error','--proxy',`socks5h://127.0.0.1:${port}`,'--noproxy','','--cacert',bundle,'--proto','=https','--max-redirs','0','--connect-timeout','8','--max-time','20','--max-filesize','1500000','--tlsv1.2','--tls-max','1.2','--http1.1','--user-agent','SripPublicSourceAssessment/1.0',url,'--write-out','\n__RRK_META__%{http_code}'];}
 async function freePort(){const server=net.createServer();await new Promise((r,j)=>{server.once('error',j);server.listen(0,'127.0.0.1',r);});const port=server.address().port;await new Promise(r=>server.close(r));return port;}
@@ -31,7 +32,7 @@ async function ready(port,child){for(let i=0;i<20;i++){if(child.exitCode!==null)
 export async function runRrkTunnelProbe(){
  const runId=String(process.env.GITHUB_RUN_ID||'local').replace(/[^\w-]/g,''),file=`out/rrk-tunnel-probe-${runId}.json`,files=[file];fs.mkdirSync('out',{recursive:true});
  const scratch=fs.mkdtempSync(path.join(os.tmpdir(),'rrk-vmess-')),env={PATH:process.env.PATH,HOME:scratch,LANG:'C.UTF-8'};
- const report={runId,startedAt:new Date().toISOString(),mode:'rrk-public-vmess-routing',source:{repository:'sakha1370/OpenRay',blob:sourceBlob,publisherLabelsCountry:'IR',exitCountryIndependentlyVerified:false},limits:{tunnels:2,browserRequests:80,publicCompanySearches:1,maxNotices:2},attempts:[],verifiedProfiles:[],verifiedExitCount:0,advertsExtracted:0,relationshipsExtracted:0,canonicalRecordsChanged:false,fullCoverageVerified:false,publicKeysExported:false,tlsValidationDisabled:false};
+ const report={runId,startedAt:new Date().toISOString(),mode:'rrk-public-encrypted-tunnel-routing',source:{repository:'sakha1370/OpenRay',blob:sourceBlob,publisherLabelsCountry:'IR',exitCountryIndependentlyVerified:false},limits:{tunnels:2,browserRequests:80,publicCompanySearches:1,maxNotices:2},attempts:[],verifiedProfiles:[],verifiedExitCount:0,advertsExtracted:0,relationshipsExtracted:0,canonicalRecordsChanged:false,fullCoverageVerified:false,publicKeysExported:false,tlsValidationDisabled:false};
  const save=()=>fs.writeFileSync(file,JSON.stringify(report,null,2));let child,browser;save();
  try{
   const source=await fetch(`https://api.github.com/repos/sakha1370/OpenRay/git/blobs/${sourceBlob}`,{signal:AbortSignal.timeout(15000)});if(!source.ok)throw new Error(`Public source provider HTTP ${source.status}`);const blob=await source.json(),text=Buffer.from(blob.content||'','base64').toString();if(text.length>50000)throw new Error('Unexpected source size');let reality=false;try{reality=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,'utf8')).client_payload?.tunnelKind==='reality';}catch{}report.tunnelKind=reality?'vless-reality-pinned-key':'vmess-aead';const candidates=reality?publicRealityCandidates(text):publicVmessCandidates(text);report.candidateCount=candidates.length;save();if(!candidates.length)throw new Error('No approved published VMess candidates');
@@ -39,8 +40,8 @@ export async function runRrkTunnelProbe(){
   if(createHash('sha256').update(fs.readFileSync(zip)).digest('hex')!==archiveSHA)throw new Error('Public client binary checksum mismatch');
   const binary=path.join(scratch,'xray');const extracted=await execute('unzip',['-p',zip,'xray'],{env,encoding:'buffer',timeout:10000,maxBuffer:64000000});fs.writeFileSync(binary,extracted.stdout,{mode:0o700});report.client={version:'v26.10.31',archiveSHA256:archiveSHA,checksumVerified:true};
   const chain=await prepareCertumChain(scratch,execute,env);report.chainCompletion=chain.evidence;report.nativeIssuerCache=await prepareNativeIssuerCache({scratch,env,execute});
-  for(const original of candidates){
-   const addresses=await lookup(original.address,{family:4,all:true});if(!addresses.length||addresses.some(a=>!parsePublicProxy(`http://${a.address}:${original.port}`)))throw new Error('Tunnel endpoint did not resolve exclusively to public IPv4 addresses');const candidate={...original,address:addresses[0].address};
+  for(const original of candidates){try{
+   const candidate=await resolvePublicEndpoint(original);
    const port=await freePort(),config=path.join(scratch,'client.private.json');fs.writeFileSync(config,JSON.stringify(xrayConfig(candidate,port)),{mode:0o600});
    child=spawn(binary,['run','-config',config],{env,stdio:'ignore'});child.on('error',()=>{});await ready(port,child);
    const attempt={sourceIndex:candidate.index,protocol:report.tunnelKind,serverAddress:candidate.address,serverPort:candidate.port,at:new Date().toISOString()};report.attempts.push(attempt);save();let admitted=false,denied=false;
@@ -56,7 +57,7 @@ export async function runRrkTunnelProbe(){
     try{const response=await page.goto(target,{waitUntil:'domcontentloaded',timeout:75000});report.browser={status:response?.status()};if(response?.status()===200)await samplePublicNotices(page,{runId,files,report,transport:monitor});}catch(e){report.browser={error:e.message.slice(0,180)};}report.browser.requests=requests;await browser.close();browser=null;break;
    }
    child.kill('SIGTERM');child=null;await sleep(200);
-  }
+  }catch(e){(report.failedProfileSetups??=[]).push({sourceIndex:original.index,serverAddress:original.address,errorCode:e.code||null,message:String(e.message).replace(/[-a-f0-9]{36}/gi,'[config-id-omitted]').slice(0,180)});save();}finally{if(child){child.kill('SIGTERM');child=null;}}}
  }catch(e){report.error=String(e.message).replace(/[-a-f0-9]{36}/gi,'[public-config-id-omitted]').slice(0,240);}
  finally{if(browser)await browser.close().catch(()=>{});if(child)child.kill('SIGTERM');fs.rmSync(scratch,{recursive:true,force:true});report.finishedAt=new Date().toISOString();save();}
  return {files,report};
