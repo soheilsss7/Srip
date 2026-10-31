@@ -18,7 +18,7 @@ export async function runRrkRouteAssessment(){
  const runId=String(process.env.GITHUB_RUN_ID||'local').replace(/[^\w-]/g,'');fs.mkdirSync('out',{recursive:true});
  const file=`out/rrk-route-probe-${runId}.json`,scratch=fs.mkdtempSync(path.join(os.tmpdir(),'rrk-connectivity-'));
  const env={PATH:process.env.PATH,HOME:scratch,LANG:'C.UTF-8'};
- const report={runId,mode:'rrk-bounded-route-assessment',startedAt:new Date().toISOString(),requests:[],dns:[],limits:{maxTargetRequests:8,concurrency:2,secondsPerRequest:12},canonicalRecordsChanged:false,advertsExtracted:0,relationshipsExtracted:0,verifiedProfiles:[],attempts:[],verifiedExitCount:0,fullCoverageVerified:false};
+ const report={runId,mode:'rrk-bounded-route-assessment',startedAt:new Date().toISOString(),requests:[],dns:[],limits:{maxCurlTargetRequests:8,maxBrowserNavigations:1,maxBrowserRequests:60,concurrency:2,secondsPerCurlRequest:12,browserNavigationSeconds:45},canonicalRecordsChanged:false,advertsExtracted:0,relationshipsExtracted:0,verifiedProfiles:[],attempts:[],verifiedExitCount:0,fullCoverageVerified:false};
  const save=()=>fs.writeFileSync(file,JSON.stringify(report,null,2));
  const check=async(url,options={})=>{
   const item={url,route:options.proxy?'public-proxy':options.ipv6?'direct-ipv6':'direct-ipv4',proxy:options.proxy||null,at:new Date().toISOString()};report.requests.push(item);save();
@@ -47,6 +47,19 @@ export async function runRrkRouteAssessment(){
     if(report.requests.some(r=>[401,403,429].includes(r.status)))break;
    }
   }
+  let browser;
+  try {
+   const {default:puppeteer}=await import('puppeteer');
+   browser=await puppeteer.launch({headless:true,env,args:['--no-sandbox','--disable-dev-shm-usage']});
+   const page=await browser.newPage();await page.setBypassServiceWorker(true);await page.setRequestInterception(true);
+   let count=0;report.browser={startedAt:new Date().toISOString(),failedRequests:[]};
+   page.on('request',r=>{let allowed=false;try{const u=new URL(r.url());allowed=++count<=60&&u.protocol==='https:'&&['rrk.ir','www.rrk.ir'].includes(u.hostname)&&!['image','font','media'].includes(r.resourceType());if(r.isNavigationRequest()&&r.frame()===page.mainFrame())allowed=allowed&&u.pathname.startsWith('/ords/');}catch{}void(allowed?r.continue():r.abort()).catch(()=>{});});
+   page.on('requestfailed',r=>{if(report.browser.failedRequests.length<10)report.browser.failedRequests.push({navigation:r.isNavigationRequest(),error:r.failure()?.errorText});});
+   try{const response=await page.goto('https://rrk.ir/ords/r/rrs/rrs-front/home',{waitUntil:'domcontentloaded',timeout:45000});report.browser.status=response?.status();if(response?.status()===200){await new Promise(r=>setTimeout(r,2500));report.browser.page=await page.evaluate(()=>({title:document.title,textExcerpt:document.body.innerText.slice(0,2000),forms:document.forms.length,advertLinks:[...document.querySelectorAll('a')].filter(a=>/آگهی|جستجو/.test(a.textContent)).map(a=>({text:a.textContent.trim().slice(0,100),path:new URL(a.href,location.href).pathname})).slice(0,15)}));}}
+   catch(e){report.browser.error=String(e.message).slice(0,300);}
+   report.browser.requests=count;report.browser.finishedAt=new Date().toISOString();save();
+  }catch(e){report.browser={error:String(e.message).slice(0,300)};}
+  finally{if(browser)await browser.close().catch(()=>{});}
  }catch(e){report.error=e.message;}
  finally{report.finishedAt=new Date().toISOString();save();fs.rmSync(scratch,{recursive:true,force:true});}
  return {files:[file],report};
