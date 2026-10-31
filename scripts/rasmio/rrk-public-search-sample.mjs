@@ -1,5 +1,5 @@
 // One public company search and at most two notices. Never clicks login, payment, export or CAPTCHA controls.
-import fs from 'node:fs';import {noticeFromFields,validateRecord,normalizeDigits} from '../../tools/rrk-local/core.mjs';
+import fs from 'node:fs';import {noticeFromFields,validateRecord,normalizeDigits,redactPersonalNumbers} from '../../tools/rrk-local/core.mjs';
 export async function samplePublicNotices(page,{runId,files,report,transport}){
  const company='10100014553';const result={companyNationalId:company,searches:0,maxNotices:2,notices:[],paymentAttempted:false,loginAttempted:false};report.publicNoticeSample=result;
  if(transport.report.stoppedOnAccessDenial)return;
@@ -16,7 +16,7 @@ export async function samplePublicNotices(page,{runId,files,report,transport}){
   }}return {links:[...new Set(found)].slice(0,2),rowCount:document.querySelectorAll('.a-GV-row').length,text:document.body.innerText};
  });
  result.renderedRows=located.rowCount;result.detailLinksLocated=located.links.length;
- result.searchTextExcerpt=located.text.replace(/(?<!\d)\d{10}(?!\d)/g,'[redacted]').slice(0,5000);
+ result.searchTextExcerpt=redactPersonalNumbers(located.text).slice(0,5000);
  for(const url of located.links){
   if(transport.report.stoppedOnAccessDenial)break;
   const response=await page.goto(url,{waitUntil:'domcontentloaded',timeout:30000});if(response?.status()!==200)continue;

@@ -14,14 +14,14 @@ export function createVerifiedCurlTransport({proxy,bundle,scratch,env,execute,ma
   await acquire();const base=path.join(scratch,`verified-browser-${id}`);const result={path:new URL(request.url()).pathname,method:request.method()};outcomes.push(result);
   try{
    if(closed||denied)throw new Error('Transport stopped');
-   const args=['-q','--silent','--show-error','--fail-with-body','--proxy',proxy,'--noproxy','','--cacert',bundle,'--proto','=https','--max-redirs','0','--connect-timeout','5','--max-time','20','--max-filesize','4000000','--compressed','--request',request.method(),'--dump-header',base+'.headers','--output',base+'.body'];
-   for(const [k,v] of Object.entries(request.headers()))if(!k.startsWith(':')&&!['host','content-length','accept-encoding','connection'].includes(k.toLowerCase()))args.push('--header',`${k}: ${v}`);
+   const args=['-q','--silent','--show-error','--fail-with-body','--proxy',proxy,'--noproxy','','--cacert',bundle,'--proto','=https','--max-redirs','0','--connect-timeout','5','--max-time','20','--max-filesize','4000000','--compressed','--user-agent','SripPublicSourceAssessment/1.0','--request',request.method(),'--dump-header',base+'.headers','--output',base+'.body'];
+   for(const [k,v] of Object.entries(request.headers()))if(!k.startsWith(':')&&!['host','content-length','accept-encoding','connection','user-agent'].includes(k.toLowerCase()))args.push('--header',`${k}: ${v}`);
    if(request.method()==='POST'){fs.writeFileSync(base+'.post',request.postData()||'');args.push('--data-binary','@'+base+'.post');}args.push(request.url());
    try{await execute('curl',args,{env,cwd:scratch,timeout:22000,maxBuffer:100000,signal:controller.signal});}catch(e){if(e.code!==22||!fs.existsSync(base+'.headers')||!fs.existsSync(base+'.body'))throw e;const h=responseHeaders(fs.readFileSync(base+'.headers','utf8'));if(h.status<400)throw e;}
    const {status,headers}=responseHeaders(fs.readFileSync(base+'.headers','utf8'));result.status=status;if([401,403,429].includes(status))denied=true;
-   const body=fs.readFileSync(base+'.body');if(body.length>4000000)throw new Error('Response exceeds bound');result.bytes=body.length;
+   const body=fs.readFileSync(base+'.body');if(body.length>4000000)throw new Error('Response exceeds bound');result.bytes=body.length;if(status>=400&&body.length<1024)result.errorBodyPreview=body.toString('utf8').replace(/<[^>]*>/g,' ').replace(/\d{10,}/g,'[redacted]').slice(0,160);
    if(!request.isInterceptResolutionHandled())await request.respond({status,headers,body});
-  }catch(e){result.error=String(e.message).slice(0,180);try{if(!request.isInterceptResolutionHandled())await request.abort();}catch{}}
+  }catch(e){result.error=String(e.stderr||(e.name==='AbortError'?'Transport stopped':'Verified HTTPS request failed')).slice(0,180);try{if(!request.isInterceptResolutionHandled())await request.abort();}catch{}}
   finally{for(const ext of ['.headers','.body','.post'])fs.rmSync(base+ext,{force:true});release();}
  };
  return {handle(request){const work=handle(request);pending.add(work);work.finally(()=>pending.delete(work));return work;},get report(){return {tlsValidationDisabled:false,httpsVerifiedBy:'curl with issuer chained to existing OS roots',requests:count,stoppedOnAccessDenial:denied,outcomes};},async close(){closed=true;controller.abort();await Promise.allSettled([...pending]);}};
