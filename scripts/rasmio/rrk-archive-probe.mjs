@@ -49,7 +49,7 @@ export async function runRrkArchiveProbe(){
   const collections=refresh?['CC-MAIN-2019-51']:(entries.length?[]:['CC-MAIN-2020-50','CC-MAIN-2019-51','CC-MAIN-2018-51','CC-MAIN-2017-51']);
   for(const collection of collections){
    const check={collection};report.collections.push(check);
-   try{const q=new URLSearchParams({url:'*.rrk.ir/*',output:'json',filter:'status:200'});const response=await bounded(`https://index.commoncrawl.org/${collection}-index?${q}`);const lines=response.bytes.toString().trim().split('\n');check.indexRows=lines.length;check.noticeEntries=0;
+   try{const q=new URLSearchParams({url:'www.rrk.ir',matchType:'host',output:'json',page:'0',pageSize:'1'});const response=await bounded(`https://index.commoncrawl.org/${collection}-index?${q}`,{},5000000);const lines=response.bytes.toString().trim().split('\n');check.indexRows=lines.length;check.noticeEntries=0;
     for(const line of lines){let row;try{row=JSON.parse(line);}catch{continue;}if(!permittedArchiveEntry(row))continue;check.noticeEntries++;if(!seen.has(row.url)){seen.add(row.url);entries.push({...row,collection});}}
    }catch(e){check.error=e.message;}
    save();await new Promise(r=>setTimeout(r,1200));
