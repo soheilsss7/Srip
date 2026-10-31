@@ -28,6 +28,7 @@ import { interleaveDetailLanes, requiresProxy, poolExhausted } from './detail-la
 import { extractEmbeddedNoticesFromDOM, persistEmbeddedNotices } from './embedded-notices.mjs';
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
+import path from 'node:path';
 import crypto from 'node:crypto';
 import zlib from 'node:zlib';
 
