@@ -20,6 +20,7 @@ import { extractTablesFromDOM, hasParsedDetail } from './table-extractor.mjs';
 import { installNetworkAudit } from './network-audit.mjs';
 import { fetchDetailHTML } from './detail-fetch.mjs';
 import { createDetailRunPolicy, failedTransportWave } from './detail-run-policy.mjs';
+import {graphPartitions} from './graph-partitions.mjs';
 import { PublicProxyTransport, permittedDetailURL, permittedResourceURL } from './proxy-transport.mjs';
 import { interleaveDetailLanes, requiresProxy, poolExhausted } from './detail-lanes.mjs';
 import { extractEmbeddedNoticesFromDOM, persistEmbeddedNotices } from './embedded-notices.mjs';
@@ -255,28 +256,24 @@ function decryptBlob(blob, passphrase) {
 const GSHARDS = Number(process.env.GRAPH_SHARDS || 16);
 const shardOf = (k) => { let h = 0; for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0; return ((h % GSHARDS) + GSHARDS) % GSHARDS; };
 const shardPath = (i) => `${DATA}/graph/s-${String(i).padStart(2, '0')}.json`;
-function saveGraphShards() {
+function saveGraphShards({onlyShards=null}={}) {
   try {
     const g = frontier.graph || { nodes: {}, edges: [] };
     fs.mkdirSync(`${DATA}/graph`, { recursive: true });
-    const buckets = []; for (let i = 0; i < GSHARDS; i++) buckets.push({ nodes: {}, edges: [] });
-    for (const [k, v] of Object.entries(g.nodes || {})) buckets[shardOf(k)].nodes[k] = v;
-    const seen = new Set();
-    for (const e of (g.edges || [])) {
-      const key = `${e.from}|${e.to}|${e.kind}|${e.role}`;
-      if (seen.has(key)) continue; seen.add(key);
-      buckets[shardOf(String(e.from || ''))].edges.push(e);
+    const buckets=graphPartitions(g,{shards:GSHARDS,onlyShards});
+    let n=0,m=0,maxB=0,bytesWritten=0;
+    for(const [i,bucket] of buckets){
+      const p=shardPath(i),body=JSON.stringify(bucket),bytes=Buffer.byteLength(body);
+      fs.writeFileSync(p+'.tmp',body);fs.renameSync(p+'.tmp',p);
+      maxB=Math.max(maxB,bytes);bytesWritten+=bytes;n+=Object.keys(bucket.nodes).length;m+=bucket.edges.length;
     }
-    let n = 0, m = 0, maxB = 0;
-    for (let i = 0; i < GSHARDS; i++) {
-      const p = shardPath(i), body = JSON.stringify(buckets[i]);
-      fs.writeFileSync(p + '.tmp', body); fs.renameSync(p + '.tmp', p);
-      maxB = Math.max(maxB, body.length);
-      n += Object.keys(buckets[i].nodes).length; m += buckets[i].edges.length;
-    }
-    fs.writeFileSync(`${DATA}/graph.json.tmp`, JSON.stringify({ sharded: true, shards: GSHARDS, nodeCount: n, edgeCount: m, maxShardMB: Math.round(maxB / 104857.6) / 10, at: new Date().toISOString() }));
-    fs.renameSync(`${DATA}/graph.json.tmp`, `${DATA}/graph.json`);
-    return { n, m, maxB };
+    // A partial snapshot is never published on its own: final/checkpoint pushes
+    // retain the default full snapshot and update the complete manifest.
+    if(onlyShards===null){
+      fs.writeFileSync(`${DATA}/graph.json.tmp`,JSON.stringify({sharded:true,shards:GSHARDS,nodeCount:n,edgeCount:m,maxShardMB:Math.round(maxB/104857.6)/10,at:new Date().toISOString()}));
+      fs.renameSync(`${DATA}/graph.json.tmp`,`${DATA}/graph.json`);
+    }else{n=Object.keys(g.nodes||{}).length;m=(g.edges||[]).length;}
+    return {n,m,maxB,shardsWritten:buckets.size,bytesWritten};
   } catch (e) { return null; }
 }
 function loadGraph() {
@@ -485,8 +482,8 @@ function mergeRemoteState() {
   } catch {}
 }
 
-const checkpointStats={scope:'saveFrontier calls only',frontierWrites:0,graphWrites:0,skippedGraphWrites:0,frontierWriteMs:0,graphWriteMs:0};
-const saveFrontier = ({includeGraph=true}={}) => {
+const checkpointStats={scope:'saveFrontier calls only',frontierWrites:0,graphWrites:0,skippedGraphWrites:0,frontierWriteMs:0,graphWriteMs:0,graphShardWrites:0,graphBytesWritten:0};
+const saveFrontier = ({includeGraph=true,graphShards=null}={}) => {
   try {
     const { graph, ...rest } = frontier;
     const started=Date.now();
@@ -494,7 +491,7 @@ const saveFrontier = ({includeGraph=true}={}) => {
     fs.renameSync('frontier.json.tmp', 'frontier.json');
     checkpointStats.frontierWrites++;checkpointStats.frontierWriteMs+=Date.now()-started;
     if(!includeGraph)checkpointStats.skippedGraphWrites++;
-    if (includeGraph && graph && graph.nodes) { const started=Date.now();const r = saveGraphShards();checkpointStats.graphWriteMs+=Date.now()-started;if (r){frontier.stats.graphNodes = r.n;checkpointStats.graphWrites++;} }
+    if (includeGraph && graph && graph.nodes) { const started=Date.now();const r = saveGraphShards({onlyShards:graphShards});checkpointStats.graphWriteMs+=Date.now()-started;if (r){frontier.stats.graphNodes = r.n;checkpointStats.graphWrites++;checkpointStats.graphShardWrites+=r.shardsWritten;checkpointStats.graphBytesWritten+=r.bytesWritten;} }
   } catch {}
 };
 const normId = (href) => {
@@ -1386,13 +1383,14 @@ async function extractEntity(ent, pg = page) {
   }
   /* ذخیرهٔ موجودیت */
   const node = { type: ent.type, id: ent.id, name, url, ...(graphTool && graphTool.href ? { graphTool: graphTool.href } : {}) };
+  const changedGraphKeys=new Set([keyOf(ent)]);
   frontier.graph.nodes[keyOf(ent)] = { ...(frontier.graph.nodes[keyOf(ent)] || {}), ...node };
   const edges = [];
   for (const r of parsed.rows) {
     const target = normId(r.href);
     if (!target) continue;
     const tName = r.name || (r.cells[0] || '').trim();
-    frontier.graph.nodes[keyOf(target)] ??= { type: target.type, id: target.id, name: tName, url: new URL(r.href, BASE).href };
+    if(!frontier.graph.nodes[keyOf(target)]){frontier.graph.nodes[keyOf(target)] = { type: target.type, id: target.id, name: tName, url: new URL(r.href, BASE).href };changedGraphKeys.add(keyOf(target));}
     const role = r.header.includes('سمت') ? (r.cells.find((c) => /مدیر|بازرس|عضو|نماینده|رئیس|حق امضا|مدیرعامل/.test(c)) || r.cells[1] || '') : (r.header.split('|')[0] || '').trim();
     edges.push({ from: keyOf(ent), to: keyOf(target), kind: r.header, role, cells: r.cells });
     enqueue({ type: target.type, id: target.id, name: tName }, keyOf(ent));
@@ -1425,7 +1423,7 @@ async function extractEntity(ent, pg = page) {
     log('VERIFIED-DATA', receipt);
   }
   const dead = ent.type === 'person' && /undefined/i.test((parsed && parsed.title) || '');
-  return { node, rows: parsed.rows.length, tableRows, newEdges: edges.length, dead };
+  return { node, rows: parsed.rows.length, tableRows, newEdges: edges.length, dead, graphShards:[...new Set([...changedGraphKeys].map(shardOf))] };
 }
 
 async function extractRoutedEntity(ent, defaultPage) {
@@ -2083,7 +2081,7 @@ try {
         return { ent: e, r: null, errorKind:String(err.message||err) };
       }
     }));
-    let okInWave = 0;
+    let okInWave = 0;const changedWaveShards=new Set();
     if (failedTransportWave(results,{proxyLaneJustDeferred})) failedStreak++; else failedStreak = 0;
     for (const { ent: e, r } of results) {
       if (!r) { failed++; log('✗', keyOf(e), 'خطا'); continue; }
@@ -2095,6 +2093,7 @@ try {
         log('FETCH-DEFERRED', k, 'empty result is not a completed detail');
         continue;
       }
+      for(const shard of r.graphShards||[])changedWaveShards.add(shard);
       frontier.visited[k] = { ...(frontier.visited[k] || {}), at: new Date().toISOString(), rows: r.rows, tableRows: r.tableRows, detailSchemaVersion: 2 };
       if (r.rows > 0 || r.tableRows > 0) { delete frontier.visited[k].suspect; markDetailRepaired(frontier, k); okInWave++; }
       /* 🚧 شرکتِ پشتِ دیوار «خزش‌شده» حساب نمی‌شود — برای اجرای بعدی با IP تازه برمی‌گردد */
@@ -2117,7 +2116,7 @@ try {
     } else { zeroWaves = 0; if (process.env.RASMIO_VERIFY !== '1' && okInWave === wave.length && waveN < MAX_WAVE && !paced) waveN++; }
     if (processed - lastRot >= 20) { lastRot = processed; await rotateIdentity(); }
     if (processed - lastCkpt >= 25) { lastCkpt = processed; botPush('checkpoint-' + processed); }
-    saveFrontier({includeGraph:okInWave>0});
+    saveFrontier({includeGraph:okInWave>0,graphShards:[...changedWaveShards]});
     /* خواب تطبیقی: موج کاملاً موفق = فاصلهٔ کوتاه؛ موج خالی = مکث مؤدبانه‌تر */
     const nap = paced
       ? 12_000 + Math.round(Math.random() * 6000)
