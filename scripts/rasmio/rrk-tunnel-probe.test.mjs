@@ -20,3 +20,6 @@ test('public raw VLESS is restricted to one observed endpoint and preserves inne
 import {verifiedPublicSnapshot} from './rrk-tunnel-probe.mjs';
 import {createHash} from 'node:crypto';
 test('a previously retrieved public snapshot must match the pinned Git blob byte for byte',()=>{const b=Buffer.from('public fixture\n');const sha=createHash('sha1').update(Buffer.from(`blob ${b.length}\0`)).update(b).digest('hex');const snapshot={gitBlob:sha,content:b.toString('base64')};assert.equal(verifiedPublicSnapshot(snapshot,sha),b.toString());assert.throws(()=>verifiedPublicSnapshot(snapshot));assert.throws(()=>verifiedPublicSnapshot({...snapshot,content:Buffer.from('changed').toString('base64')},sha));assert.throws(()=>verifiedPublicSnapshot({...snapshot,content:'invalid!'},sha));assert.throws(()=>verifiedPublicSnapshot({...snapshot,content:'a'.repeat(70001)},sha));});
+
+import {redactedClientFailure} from './rrk-tunnel-probe.mjs';
+test('client preflight diagnostics do not publish profile identifiers or key material',()=>{const c={id:'12345678-1234-1234-1234-123456789abc',publicKey:'a'.repeat(43),encryption:'mlkem768x25519plus.native.0rtt.'+'b'.repeat(43)};const m=redactedClientFailure({stderr:'invalid field '+c.id+' '+c.publicKey+' '+c.encryption},c);assert.ok(m.includes('invalid field'));for(const secret of Object.values(c))assert.ok(!m.includes(secret));});
