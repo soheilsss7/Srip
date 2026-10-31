@@ -1,0 +1,200 @@
+{
+  "runId": "41244413001",
+  "startedAt": "2026-10-31T21:37:30.681Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "lines": 1489
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 11330
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 3573
+    }
+  ],
+  "health": [
+    {
+      "proxy": "https://3.239.124.130:443",
+      "at": "2026-10-31T21:37:33.290Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '3.239.124.130'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serv"
+    },
+    {
+      "proxy": "http://123.16.15.41:1452",
+      "at": "2026-10-31T21:37:33.301Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 123.16.15.41 port 1452 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://37.203.35.18:443",
+      "at": "2026-10-31T21:37:33.387Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '37.203.35.18'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serve"
+    },
+    {
+      "proxy": "http://180.180.156.69:80",
+      "at": "2026-10-31T21:37:33.628Z",
+      "observedExitIP": "180.180.156.69",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "https://82.197.70.35:443",
+      "at": "2026-10-31T21:37:38.317Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: EE certificate key too weak\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestabl"
+    },
+    {
+      "proxy": "http://103.134.221.52:1111",
+      "at": "2026-10-31T21:37:38.754Z",
+      "observedExitIP": "103.134.223.3",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "https://152.70.50.62:443",
+      "at": "2026-10-31T21:38:17.874Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '152.70.50.62'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serve"
+    },
+    {
+      "proxy": "https://146.70.253.162:9443",
+      "at": "2026-10-31T21:38:18.115Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '146.70.253.162'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "http://103.151.227.130:8080",
+      "at": "2026-10-31T21:38:18.359Z",
+      "observedExitIP": "103.151.227.130",
+      "outcome": "https-echo-verified"
+    }
+  ],
+  "requests": [
+    {
+      "at": "2026-10-31T21:37:35.703Z",
+      "key": "company:14004194783",
+      "kind": "curl",
+      "path": "/company/14004194783/direct/",
+      "proxy": "http://180.180.156.69:80",
+      "observedExitIP": "180.180.156.69",
+      "exitWindowRequest": 1,
+      "error": "curl: (56) Recv failure: Connection reset by peer\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    },
+    {
+      "at": "2026-10-31T21:37:41.176Z",
+      "key": "company:14004195708",
+      "kind": "curl",
+      "path": "/company/14004195708/direct/",
+      "proxy": "http://103.134.221.52:1111",
+      "observedExitIP": "103.134.223.3",
+      "exitWindowRequest": 1,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 959110,
+      "rawTables": 0,
+      "title": "🏢 گلهای طبیعت منطقه آزاد چابهار - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-10-31T21:38:01.123Z",
+      "key": "company:14004196099",
+      "kind": "curl",
+      "path": "/company/14004196099/direct/",
+      "proxy": "http://103.134.221.52:1111",
+      "observedExitIP": "103.134.223.3",
+      "exitWindowRequest": 2,
+      "error": "curl: (28) Failed to connect to 103.134.221.52 port 1111 after 5002 ms: Timeout was reached\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    },
+    {
+      "at": "2026-10-31T21:38:23.375Z",
+      "key": "company:14004196348",
+      "kind": "curl",
+      "path": "/company/14004196348/direct/",
+      "proxy": "http://103.151.227.130:8080",
+      "observedExitIP": "103.151.227.130",
+      "exitWindowRequest": 2,
+      "error": "curl: (28) Failed to connect to 103.151.227.130 port 8080 after 5002 ms: Timeout was reached\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    }
+  ],
+  "outcomes": [
+    {
+      "at": "2026-10-31T21:37:37.972Z",
+      "key": "company:14004194783",
+      "proxy": "http://180.180.156.69:80",
+      "observedExitIP": "180.180.156.69",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (56) Recv failure: Connection reset by peer\n"
+    },
+    {
+      "at": "2026-10-31T21:37:46.051Z",
+      "key": "company:14004195708",
+      "proxy": "http://103.134.221.52:1111",
+      "observedExitIP": "103.134.223.3",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": false,
+      "providerLimited": true,
+      "reason": "provider-limited-public-profile"
+    },
+    {
+      "at": "2026-10-31T21:38:06.152Z",
+      "key": "company:14004196099",
+      "proxy": "http://103.134.221.52:1111",
+      "observedExitIP": "103.134.223.3",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) Failed to connect to 103.134.221.52 port 1111 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "at": "2026-10-31T21:38:28.401Z",
+      "key": "company:14004196348",
+      "proxy": "http://103.151.227.130:8080",
+      "observedExitIP": "103.151.227.130",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) Failed to connect to 103.151.227.130 port 8080 after 5002 ms: Timeout was reached\n"
+    }
+  ],
+  "skippedRecentUnavailable": 29,
+  "candidateUniverse": 10000,
+  "candidateCount": 32
+}
