@@ -78,16 +78,16 @@ export async function runRrkTunnelProbe(){
    catch(e){attempt.health={error:String(e.stderr||e.message).slice(0,240),verified:false};save();if(/Echo provider HTTP (?:401|403|429)/.test(attempt.health.error)){report.healthProviderRefused=true;break;}continue;}
    save();if(report.healthOnly)continue;
    if(payload.nativeRobots===true){
-    report.originTlsClient='native Chromium; no forced TLS 1.2';let originDenied=false;
+    report.originTlsClient='native Chromium; no forced TLS 1.2';const nativeTarget=new URL(target);if(payload.nativeApex===true)nativeTarget.hostname='rrk.ir';report.originHostname=nativeTarget.hostname;let originDenied=false;
     const {default:puppeteer}=await import('puppeteer');browser=await puppeteer.launch({headless:true,env,args:['--no-sandbox','--disable-dev-shm-usage','--disable-quic',`--proxy-server=socks5://127.0.0.1:${port}`]});
     try{
      const page=await browser.newPage();await page.setUserAgent('SripPublicSourceAssessment/1.0');await page.setBypassServiceWorker(true);await page.setRequestInterception(true);let requests=0;
      const monitor={report:{stoppedOnAccessDenial:false,httpsVerifiedBy:'Chromium native certificate verification through echo-verified tunnel'}};
      page.on('response',r=>{if([401,403,429].includes(r.status())){originDenied=true;monitor.report.stoppedOnAccessDenial=true;}});
      page.on('request',r=>{let allowed=false;try{const u=new URL(r.url());allowed=!originDenied&&++requests<=80&&u.protocol==='https:'&&['rrk.ir','www.rrk.ir'].includes(u.hostname)&&!['image','font','media','stylesheet'].includes(r.resourceType());}catch{}void(allowed?r.continue():r.abort()).catch(()=>{});});
-     const robot={url:'https://www.rrk.ir/robots.txt',transport:'native-Chromium'};(attempt.requests??=[]).push(robot);
+     const robot={url:new URL('/robots.txt',nativeTarget).href,transport:'native-Chromium'};(attempt.requests??=[]).push(robot);
      const response=await page.goto(robot.url,{waitUntil:'domcontentloaded',timeout:25000});robot.status=response?.status();save();
-     if(robot.status===404&&!originDenied){const response=await page.goto(target,{waitUntil:'domcontentloaded',timeout:75000});report.browser={status:response?.status(),requests};if(response?.status()===200)await samplePublicNotices(page,{runId,files,report,transport:monitor});}
+     if(robot.status===404&&!originDenied){const response=await page.goto(nativeTarget.href,{waitUntil:'domcontentloaded',timeout:75000});report.browser={status:response?.status(),requests};if(response?.status()===200)await samplePublicNotices(page,{runId,files,report,transport:monitor});}
      else robot.continuedToSearch=false;
     }catch(e){attempt.nativeBrowserError=String(e.message).slice(0,240);}
     finally{await browser.close().catch(()=>{});browser=null;save();}
