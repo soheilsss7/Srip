@@ -1,4 +1,4 @@
-import {test} from 'node:test';import assert from 'node:assert/strict';import {regionalArgs,selectRegionalProxies,tlsCompatibilityCandidates} from './rrk-regional-probe.mjs';
+import {test} from 'node:test';import assert from 'node:assert/strict';import {regionalArgs,selectRegionalProxies,tlsCompatibilityCandidates,resumeRouteOptions} from './rrk-regional-probe.mjs';
 test('regional routes preserve TLS validation, bounded requests and strict targets',()=>{
  const a=regionalArgs('socks5://8.8.8.8:1080','https://rrk.ir/robots.txt');assert.ok(a.includes('socks5h://8.8.8.8:1080'));assert.equal(a.includes('--insecure'),false);assert.equal(a.includes('--proxy-insecure'),false);assert.equal(a.includes('--location'),false);assert.ok(a.includes('--max-time'));
  for(const p of ['http://127.0.0.1:80','http://user:secret@8.8.8.8:80','http://8.8.8.8:80/evil'])assert.throws(()=>regionalArgs(p,'https://rrk.ir/robots.txt'));
@@ -30,3 +30,5 @@ test('TLS compatibility is limited to an observed EOF, recent known route and st
  assert.deepEqual(tlsCompatibilityCandidates({proxies:[]},prior,new Set(),now),[]);
  const a=regionalArgs(proxy,'https://www.rrk.ir/robots.txt',{tls12:true});assert.ok(a.includes('--http1.1'));assert.ok(a.includes('--tls-max'));assert.ok(!a.includes('--insecure'));assert.ok(!a.includes('--proxy-insecure'));
 });
+
+test('resuming an observed route preserves the successful hostname and TLS mode',()=>{const proxy='http://8.8.8.8:80';const prior={attempts:[{proxy,status:404,robotsAllowed:true,url:'https://www.rrk.ir/robots.txt',tls12:true}]};assert.deepEqual(resumeRouteOptions(prior,proxy),{url:'https://www.rrk.ir/robots.txt',tls12:true});assert.throws(()=>resumeRouteOptions(prior,'http://9.9.9.9:80'));assert.throws(()=>resumeRouteOptions({attempts:[{...prior.attempts[0],url:'https://evil.test/robots.txt'}]},proxy));assert.throws(()=>resumeRouteOptions({attempts:[{...prior.attempts[0],status:403}]},proxy));});

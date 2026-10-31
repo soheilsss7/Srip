@@ -6,7 +6,7 @@ export function responseHeaders(text){
  const blocks=text.trim().split(/\r?\n\r?\n/).filter(b=>/^HTTP\//.test(b));const last=blocks.at(-1)||'';const status=Number(last.match(/^HTTP\/\S+\s+(\d{3})/)?.[1]);if(!status)throw new Error('Missing HTTP status');
  const headers={};for(const line of last.split(/\r?\n/).slice(1)){const n=line.indexOf(':');if(n<1)continue;const key=line.slice(0,n).toLowerCase(),value=line.slice(n+1).trim();if(['content-length','content-encoding','transfer-encoding','connection'].includes(key))continue;if(key==='set-cookie'){headers[key]??=[];headers[key].push(value);}else headers[key]=value;}return {status,headers};
 }
-export function createVerifiedCurlTransport({proxy,bundle,scratch,env,execute,maxRequests=80,tls12=false}){
+export function createVerifiedCurlTransport({proxy,bundle,scratch,env,execute,maxRequests=80,tls12=false,onDocument=null}){
  const controller=new AbortController(),pending=new Set(),queue=[];let active=0,count=0,closed=false,denied=false;const outcomes=[],cache=new Map();let cacheBytes=0,cacheHits=0;
  const acquire=async()=>{if(active>=4)await new Promise(r=>queue.push(r));active++;};const release=()=>{active--;queue.shift()?.();};
  const handle=async request=>{
@@ -17,7 +17,7 @@ export function createVerifiedCurlTransport({proxy,bundle,scratch,env,execute,ma
    const cached=cache.get(request.url());if(cached&&request.method()==='GET'){result.status=cached.status;result.bytes=cached.body.length;result.verifiedStaticCache=true;cacheHits++;if(!request.isInterceptResolutionHandled())await request.respond(cached);return;}
    const coreAsset=new URL(request.url()).pathname==='/i/libraries/apex/minified/desktop_all.min.js';const seconds=coreAsset?60:20;
    const args=['-q','--silent','--show-error','--fail-with-body','--proxy',proxy,'--noproxy','','--cacert',bundle,'--proto','=https','--max-redirs','0','--connect-timeout','5','--max-time',String(seconds),'--max-filesize','4000000','--compressed','--user-agent','SripPublicSourceAssessment/1.0',...(tls12?['--tlsv1.2','--tls-max','1.2','--http1.1']:[]),'--request',request.method(),'--dump-header',base+'.headers','--output',base+'.body'];
-   for(const [k,v] of Object.entries(request.headers()))if(!k.startsWith(':')&&!['host','content-length','accept-encoding','connection','user-agent'].includes(k.toLowerCase()))args.push('--header',`${k}: ${v}`);
+   for(const [k,v] of Object.entries(request.headers()))if(['accept','accept-language','content-type','cookie','origin','referer','x-requested-with'].includes(k.toLowerCase()))args.push('--header',`${k}: ${v}`);
    if(request.method()==='POST'){fs.writeFileSync(base+'.post',request.postData()||'');args.push('--data-binary','@'+base+'.post');}args.push(request.url());
    for(let attempt=0;attempt<2;attempt++){
     try{result.networkAttempts=attempt+1;await execute('curl',args,{env,cwd:scratch,timeout:(seconds+2)*1000,maxBuffer:100000,signal:controller.signal});break;}
@@ -25,6 +25,7 @@ export function createVerifiedCurlTransport({proxy,bundle,scratch,env,execute,ma
    }
    const {status,headers}=responseHeaders(fs.readFileSync(base+'.headers','utf8'));result.status=status;if([401,403,429].includes(status))denied=true;
    const body=fs.readFileSync(base+'.body');if(body.length>4000000)throw new Error('Response exceeds bound');result.bytes=body.length;if(status>=400&&body.length<1024)result.errorBodyPreview=body.toString('utf8').replace(/<[^>]*>/g,' ').replace(/\d{10,}/g,'[redacted]').slice(0,160);
+   if(onDocument&&request.resourceType?.()==='document')onDocument(request.url(),body,status);
    if(status===200&&request.method()==='GET'&&/\.js(?:\?|$)/i.test(request.url())&&!headers['set-cookie']&&!/no-store|no-cache|private/i.test(headers['cache-control']||'')&&/(?:^|,)\s*max-age=[1-9][0-9]*/i.test(headers['cache-control']||'')&&cacheBytes+body.length<=16000000&&!cache.has(request.url())){cache.set(request.url(),{status,headers,body});cacheBytes+=body.length;}
    if(!request.isInterceptResolutionHandled())await request.respond({status,headers,body});
   }catch(e){result.error=String(e.stderr||(e.name==='AbortError'?'Transport stopped':'Verified HTTPS request failed')).slice(0,180);try{if(!request.isInterceptResolutionHandled())await request.abort();}catch{}}
