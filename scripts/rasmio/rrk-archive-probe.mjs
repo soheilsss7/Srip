@@ -42,14 +42,18 @@ export async function runRrkArchiveProbe(){
  const report={runId,mode:'rrk-public-archive-assessment',startedAt:new Date().toISOString(),limits:{indexCollections:4,maxArchivedPages:8,concurrency:1},collections:[],attempts:[],records:[],advertsExtracted:0,relationshipsExtracted:0,verifiedProfiles:[],verifiedExitCount:0,canonicalRecordsChanged:false,liveSourceFetched:false,fullCoverageVerified:false};
  let browser;const save=()=>fs.writeFileSync(reportFile,JSON.stringify(report,null,2));save();
  try{
-  const entries=[],seen=new Set();
-  for(const collection of ['CC-MAIN-2020-50','CC-MAIN-2019-51','CC-MAIN-2018-51','CC-MAIN-2017-51']){
+  const cacheFile='data/sources/rrk/archive/index.json';
+  let entries=[];try{entries=JSON.parse(fs.readFileSync(cacheFile,'utf8')).filter(permittedArchiveEntry);}catch{}
+  const seen=new Set(entries.map(r=>r.url));report.cachedIndexEntries=entries.length;
+  const collections=entries.length?[]:['CC-MAIN-2020-50','CC-MAIN-2019-51','CC-MAIN-2018-51','CC-MAIN-2017-51'];
+  for(const collection of collections){
    const check={collection};report.collections.push(check);
    try{const q=new URLSearchParams({url:'*.rrk.ir/*',output:'json',filter:'status:200'});const response=await bounded(`https://index.commoncrawl.org/${collection}-index?${q}`);const lines=response.bytes.toString().trim().split('\n');check.indexRows=lines.length;check.noticeEntries=0;
     for(const line of lines){let row;try{row=JSON.parse(line);}catch{continue;}if(!permittedArchiveEntry(row))continue;check.noticeEntries++;if(!seen.has(row.url)){seen.add(row.url);entries.push({...row,collection});}}
    }catch(e){check.error=e.message;}
    save();await new Promise(r=>setTimeout(r,1200));
   }
+  if(entries.length){fs.mkdirSync('data/sources/rrk/archive',{recursive:true});fs.writeFileSync(cacheFile,JSON.stringify(entries,null,2));files.push(cacheFile);}
   report.candidateNotices=entries.length;
   if(entries.length){const {default:puppeteer}=await import('puppeteer');browser=await puppeteer.launch({headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});}
   const captured=[];

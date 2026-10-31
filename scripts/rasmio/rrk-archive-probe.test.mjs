@@ -14,3 +14,12 @@ test('archive identity and HTTP status are verified before text is parsed',()=>{
  assert.throws(()=>archivedHTML(gzipSync(warc.replace(entry.url,'http://www.rrk.ir/other')),entry),/identity/);
  assert.throws(()=>archivedHTML(gzipSync(warc.replace('200 OK','403 No')),entry),/200/);
 });
+test('compressed, chunked and Common Crawl pre-decoded payloads are supported',()=>{
+ const html=Buffer.from('<html>synthetic transport fixture</html>');
+ const wrap=(payload,headers)=>{const http=Buffer.concat([Buffer.from(`HTTP/1.1 200 OK\r\n${headers}\r\n\r\n`),payload]);return gzipSync(Buffer.concat([Buffer.from(`WARC/1.0\r\nWARC-Type: response\r\nWARC-Target-URI: ${entry.url}\r\nContent-Length: ${http.length}\r\n\r\n`),http]));};
+ assert.equal(archivedHTML(wrap(gzipSync(html),'Content-Encoding: gzip'),entry),html.toString());
+ assert.equal(archivedHTML(wrap(html,'Content-Encoding: gzip'),entry),html.toString());
+ const chunked=Buffer.concat([Buffer.from(html.length.toString(16)+'\r\n'),html,Buffer.from('\r\n0\r\n\r\n')]);
+ assert.equal(archivedHTML(wrap(chunked,'Transfer-Encoding: chunked'),entry),html.toString());
+ assert.throws(()=>archivedHTML(wrap(Buffer.from('ff\r\nshort'),'Transfer-Encoding: chunked'),entry),/chunk/);
+});
