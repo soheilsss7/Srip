@@ -30,3 +30,14 @@ export function extractTablesFromDOM(root = document) {
 export function hasParsedDetail(parsed) {
   return !!parsed && ((parsed.rows || []).length>0 || (parsed.tables || []).some(t=>(t.rows || []).length>0));
 }
+
+// Shape validation is separate from presence detection: a streamed HTML fragment
+// can contain data before React has assembled a usable rectangular table.
+export function hasAlignedTableColumns(parsed){
+ return (parsed?.tables||[]).every(t=>Array.isArray(t.columns)&&(t.rows||[]).every(row=>Array.isArray(row)&&row.length===t.columns.length));
+}
+export function preservesMalformedTableValues(previous,incoming){
+ const norm=v=>String(v??'').replace(/\s+/g,' ').trim();
+ const cells=new Set((incoming.tables||[]).flatMap(t=>(t.rows||[]).flat()).map(norm).filter(Boolean));
+ return (previous.tables||[]).flatMap(t=>(t.rows||[]).flat()).map(norm).filter(Boolean).every(v=>cells.has(v)) && (previous.rows||[]).every(old=>(incoming.rows||[]).some(row=>row.href===old.href));
+}

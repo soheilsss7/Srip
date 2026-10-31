@@ -28,3 +28,14 @@ test('table-only SSR is detail, avoiding duplicate browser navigation; shells ar
  assert.equal(hasParsedDetail({rows:[{}],tables:[]}),true);
  for(const p of [null,{}, {rows:[],tables:[]},{rows:[],tables:[{rows:[]}]}])assert.equal(hasParsedDetail(p),false);
 });
+import {hasAlignedTableColumns,preservesMalformedTableValues} from './table-extractor.mjs';
+test('streamed fragments are not admitted as correctly structured tables',()=>{
+ assert.equal(hasAlignedTableColumns({tables:[{columns:['A','B'],rows:[['one','two']]}]}),true);
+ assert.equal(hasAlignedTableColumns({tables:[{columns:['A','B'],rows:[['one']]}]}),false);
+ assert.equal(hasAlignedTableColumns({tables:[{columns:[],rows:[['fragment']]}]}),false);
+});
+test('reassembling malformed tables must retain every observed nonempty cell',()=>{
+ const old={tables:[{rows:[['a'],['b'],['a','b']]}]};
+ assert.equal(preservesMalformedTableValues(old,{tables:[{rows:[['a','b']]}]}),true);
+ assert.equal(preservesMalformedTableValues(old,{tables:[{rows:[['a']]}]}),false);
+});

@@ -16,13 +16,14 @@ import {isRegisteredDiagnosticRun} from './diagnostic-run-registry.mjs';
    ========================================================================== */
 import puppeteer from 'puppeteer';
 import { restoreIncompleteDetails, prioritizeDetailRepair, markDetailRepaired, hasDetailCounts, backfillKnownDetailQueue } from './detail-repair.mjs';
-import { extractTablesFromDOM, hasParsedDetail } from './table-extractor.mjs';
+import { extractTablesFromDOM, hasParsedDetail, hasAlignedTableColumns, preservesMalformedTableValues } from './table-extractor.mjs';
 import { installNetworkAudit } from './network-audit.mjs';
 import { fetchDetailHTML } from './detail-fetch.mjs';
 import { createDetailRunPolicy, failedTransportWave } from './detail-run-policy.mjs';
 import {graphPartitions} from './graph-partitions.mjs';
 import {readStaticSSR} from './static-ssr.mjs';
 import {providerLimitedCompany} from './provider-limited-profile.mjs';
+import {requeueMalformedTables} from './table-shape-repair.mjs';
 import { PublicProxyTransport, permittedDetailURL, permittedResourceURL } from './proxy-transport.mjs';
 import { interleaveDetailLanes, requiresProxy, poolExhausted } from './detail-lanes.mjs';
 import { extractEmbeddedNoticesFromDOM, persistEmbeddedNotices } from './embedded-notices.mjs';
@@ -389,6 +390,7 @@ if (!frontier || !Array.isArray(frontier.pending)) {
 if (!frontier.graph || !frontier.graph.nodes || !Object.keys(frontier.graph.nodes).length) {
   try { frontier.graph = loadGraph(); log('🧩 گراف از شاردها بارگیری شد — ' + Object.keys(frontier.graph.nodes).length + ' گره / ' + frontier.graph.edges.length + ' یال'); } catch { frontier.graph = { nodes: {}, edges: [] }; }
 }
+const tableShapeRepair=requeueMalformedTables(frontier,`${DATA}/entities`,OUT);
 const repairSummary = restoreIncompleteDetails(frontier, `${DATA}/entities`);
 log('DETAIL-REPAIR', repairSummary);
 const backlogSummary = backfillKnownDetailQueue(frontier, `${DATA}/entities`);
@@ -1269,10 +1271,10 @@ async function extractEntity(ent, pg = page) {
   /* ═══ مسیر کامل مرورگر: فقط اگر لازم باشد — fetchِ سالمِ بی‌جدول یعنی صفحه واقعاً داده ندارد (SSR کامل است) و مرورگر فقط وقت می‌سوزاند ═══ */
   const fetchCleanEmpty = ent.type !== 'person' && parsed && via === 'fetch' && parsed.rows.length === 0 && parsed.tables && parsed.tables.length === 0
     && parsed.title && !/undefined/i.test(parsed.title);
-  if (!hasParsedDetail(parsed) && !fetchCleanEmpty) {
+  if ((!hasParsedDetail(parsed) && !fetchCleanEmpty) || !hasAlignedTableColumns(parsed)) {
     via = 'browser';
     if (ent.type === 'person' && !route) { try { await pg.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 30_000 }); await sleep(1500); } catch {} } /* گرم‌کردن کوکی */
-    try { await pg.goto(route?.finalURL || url, { waitUntil: 'domcontentloaded', timeout: 30_000 }); } catch {}
+    try {const response=await pg.goto(route?.finalURL || url,{waitUntil:'domcontentloaded',timeout:30_000});if([401,403,429].includes(response?.status())){const error=new Error('HTTP '+response.status());error.retryable=true;throw error;}}catch(error){if(error.retryable)throw error;}
     await sleep(2500);
     /* اسکرول تدریجی برای فعال‌سازی رندر تنبل جدول‌ها */
     try {
@@ -1290,7 +1292,7 @@ async function extractEntity(ent, pg = page) {
     let parsed0 = await parsePageTables(pg);
     /* شانس دوم: ریلود — خطای استریم گاهی فقط بار اول رخ می‌دهد */
     if (parsed0.rows.length === 0) {
-      try { await pg.reload({ waitUntil: 'domcontentloaded', timeout: 30_000 }); await sleep(6000); } catch {}
+      try {const response=await pg.reload({waitUntil:'domcontentloaded',timeout:30_000});if([401,403,429].includes(response?.status())){const error=new Error('HTTP '+response.status());error.retryable=true;throw error;}await sleep(6000);}catch(error){if(error.retryable)throw error;}
       const parsed1 = await parsePageTables(pg);
       if (parsed1.rows.length > parsed0.rows.length) parsed0 = parsed1;
     }
@@ -1301,6 +1303,7 @@ async function extractEntity(ent, pg = page) {
       } catch (e) { dbg('zero-rows', { id: ent.id, type: ent.type, err: String(e).slice(0, 120) }); }
     }
   }
+  if(!hasAlignedTableColumns(parsed)){const error=new Error('table-shape-unverified');error.retryable=true;throw error;}
   /* اطلاعات پایهٔ شرکت — کامل بودن داده (تاسیس، سرمایه، ثبت، نشانی…) */
   let info = null,publicVisibleText='';
   try {
@@ -1327,7 +1330,7 @@ async function extractEntity(ent, pg = page) {
   // An empty detail response is incomplete, not a successful visit.
   if (!parsed.rows.length && !(parsed.tables || []).some(t => (t.rows || []).length)) {
     if(route && via==='fetch' && route.finalURL){
-      const file=`${DATA}/entities/company/${ent.id}.json`;let previous={};try{previous=JSON.parse(fs.readFileSync(file,'utf8'));}catch{}
+      const file=`${DATA}/entities/company-${ent.id}.json`;let previous={};try{previous=JSON.parse(fs.readFileSync(file,'utf8'));}catch{}
       const basic=providerLimitedCompany({entity:ent,title:parsed.title,url,info,text:publicVisibleText,previous});
       if(basic){
         if(basic.fieldsAdded>0){fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file+'.tmp',JSON.stringify(basic.record,null,2));fs.renameSync(file+'.tmp',file);checkpointStats.publicBasicProfilesUpdated++;checkpointStats.publicBasicFieldsAdded+=basic.fieldsAdded;}
@@ -1415,7 +1418,7 @@ async function extractEntity(ent, pg = page) {
     const previousTables = (previous?.tables || []).length;
     const previousTableRows=(previous?.tables||[]).reduce((n,t)=>n+(t.rows||[]).length,0);
     const incomingTableRows=(parsed.tables||[]).reduce((n,t)=>n+(t.rows||[]).length,0);
-    if(previousRows>parsed.rows.length || previousTables>(parsed.tables||[]).length || previousTableRows>incomingTableRows || Object.keys(previous?.info||{}).some(k=>!Object.hasOwn(info||{},k)))throw new Error('richer-existing-detail-preserved');
+    if(((hasAlignedTableColumns(previous) || !preservesMalformedTableValues(previous,parsed)) && (previousRows>parsed.rows.length || previousTables>(parsed.tables||[]).length || previousTableRows>incomingTableRows)) || Object.keys(previous?.info||{}).some(k=>!Object.hasOwn(info||{},k)))throw new Error('richer-existing-detail-preserved');
     const empty = parsed.rows.length === 0 && !(parsed.tables || []).length;
     if (!(empty && (previousRows || previousTables))) {
       fs.writeFileSync(entityFile, JSON.stringify({ ...node, tableSchemaVersion: 2, via, ...(egress?{egress}:{}), profileCoverage, fetchedAt: new Date().toISOString(), sourceRun: process.env.GITHUB_RUN_ID || 'local', ...(info ? { info } : {}), rows: parsed.rows, ...(parsed.tables && parsed.tables.length ? { tables: parsed.tables } : {}) }, null, 1));
