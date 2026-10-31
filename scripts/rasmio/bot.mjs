@@ -22,6 +22,7 @@ import { fetchDetailHTML } from './detail-fetch.mjs';
 import { createDetailRunPolicy, failedTransportWave } from './detail-run-policy.mjs';
 import {graphPartitions} from './graph-partitions.mjs';
 import {readStaticSSR} from './static-ssr.mjs';
+import {providerLimitedCompany} from './provider-limited-profile.mjs';
 import { PublicProxyTransport, permittedDetailURL, permittedResourceURL } from './proxy-transport.mjs';
 import { interleaveDetailLanes, requiresProxy, poolExhausted } from './detail-lanes.mjs';
 import { extractEmbeddedNoticesFromDOM, persistEmbeddedNotices } from './embedded-notices.mjs';
@@ -483,7 +484,7 @@ function mergeRemoteState() {
   } catch {}
 }
 
-const checkpointStats={scope:'saveFrontier calls only',frontierWrites:0,graphWrites:0,skippedGraphWrites:0,frontierWriteMs:0,graphWriteMs:0,graphShardWrites:0,graphBytesWritten:0};
+const checkpointStats={scope:'saveFrontier calls only',frontierWrites:0,graphWrites:0,skippedGraphWrites:0,frontierWriteMs:0,graphWriteMs:0,graphShardWrites:0,graphBytesWritten:0,publicBasicProfilesUpdated:0,publicBasicFieldsAdded:0};
 const saveFrontier = ({includeGraph=true,graphShards=null}={}) => {
   try {
     const { graph, ...rest } = frontier;
@@ -1300,9 +1301,10 @@ async function extractEntity(ent, pg = page) {
     }
   }
   /* اطلاعات پایهٔ شرکت — کامل بودن داده (تاسیس، سرمایه، ثبت، نشانی…) */
-  let info = null;
+  let info = null,publicVisibleText='';
   try {
     const text = await pg.evaluate(() => (document.body.innerText || ''));
+    publicVisibleText=text;
     const lines = text.split('\n').map((l) => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
     info = {};
     const labels = ['تاریخ تاسیس','تاریخ تأسیس','وضعیت شرکت','نوع شرکت','شماره ثبت','کد اقتصادی','شناسه ملی','سرمایه ثبتی','آخرین آگهی روزنامه رسمی','کد پستی','کد ملی','شهر محل صدور'];
@@ -1323,6 +1325,14 @@ async function extractEntity(ent, pg = page) {
   } catch {}
   // An empty detail response is incomplete, not a successful visit.
   if (!parsed.rows.length && !(parsed.tables || []).some(t => (t.rows || []).length)) {
+    if(route && via==='fetch' && route.finalURL){
+      const file=`${DATA}/entities/company/${ent.id}.json`;let previous={};try{previous=JSON.parse(fs.readFileSync(file,'utf8'));}catch{}
+      const basic=providerLimitedCompany({entity:ent,title:parsed.title,url,info,text:publicVisibleText,previous});
+      if(basic){
+        if(basic.fieldsAdded>0){fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file+'.tmp',JSON.stringify(basic.record,null,2));fs.renameSync(file+'.tmp',file);checkpointStats.publicBasicProfilesUpdated++;checkpointStats.publicBasicFieldsAdded+=basic.fieldsAdded;}
+        const err=new Error('provider-limited-public-profile');err.verifiedPublicUnavailable=true;err.retryable=true;throw err;
+      }
+    }
     const err = new Error('empty-detail-response'); err.retryable = true; throw err;
   }
   if(route && /undefined|صفحه یافت نشد/i.test(parsed.title||''))throw new Error('profile-identity-unverified');
@@ -1429,7 +1439,7 @@ async function extractRoutedEntity(ent, defaultPage) {
   if(!PUBLIC_PROXY_DETAILS || !['company','person'].includes(ent.type))return extractEntity(ent,defaultPage);
   if(!publicProxyTransport)throw new Error('public-proxy-transport-not-ready');
   const route=await publicProxyTransport.acquire(ent);
-  let context,pg,success=false,reason;
+  let context,pg,success=false,reason,verifiedPublicUnavailable=false;
   try {
     context=await browser.createBrowserContext({proxyServer:route.proxy,proxyBypassList:['<-loopback>']});
     pg=await context.newPage();proxyPages.set(pg,route);
@@ -1449,8 +1459,8 @@ async function extractRoutedEntity(ent, defaultPage) {
     });
     const result=await extractEntity(ent,pg);success=result.rows>0 || result.tableRows>0;
     return result;
-  } catch(e){reason=e.message||String(e);throw e;}
-  finally {if(pg)proxyPages.delete(pg);if(context)await context.close().catch(()=>{});route.finish(success,reason);}
+  } catch(e){reason=e.message||String(e);verifiedPublicUnavailable=e.verifiedPublicUnavailable===true;throw e;}
+  finally {if(pg)proxyPages.delete(pg);if(context)await context.close().catch(()=>{});route.finish(success,reason,{verifiedPublicUnavailable});}
 }
 try {
   /* ═══ 🧭 کاوش سبک (بدون مرورگر): استخراج API واقعی جستجو از کدهای JS سایت ═══ */

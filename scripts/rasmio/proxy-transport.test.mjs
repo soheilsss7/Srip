@@ -111,3 +111,15 @@ test('a failed health worker waits for another in-flight health result instead o
   assert.equal(pool.checked,2);assert.equal(pool.checking,0);
  }finally{pool.close();fs.rmSync(out,{recursive:true,force:true});}
 });
+test('a verified provider-limited public view is not a dead proxy; four-page budget still applies',async()=>{
+ const out=fs.mkdtempSync(path.join(os.tmpdir(),'provider-pool-')),frontier={};
+ const execute=async(cmd,args)=>args.at(-1)==='https://api.ipify.org/?format=json'?{stdout:'{"ip":"1.1.1.1"}'}:{stdout:'<html>provider limited</html>\n__EGRESS_META__200\t'};
+ const pool=new PublicProxyTransport({frontier,out,execute,maxChecks:1});pool.candidates=[{url:'http://8.8.8.8:80'}];
+ try{for(let n=0;n<4;n++){const lease=await pool.acquire({type:'company',id:'10100009135'});await lease.fetch('https://rasmio.com/company/10100009135/direct/');lease.finish(false,'provider-limited-public-profile',{verifiedPublicUnavailable:true});}
+ assert.equal(frontier.proxyTransport.exits['1.1.1.1'].requests,4);assert.equal(pool.report.outcomes.every(x=>x.success===false&&x.providerLimited),true);await assert.rejects(pool.acquire({type:'company',id:'10100009135'}),/unavailable/);
+ }finally{pool.close();fs.rmSync(out,{recursive:true,force:true});}
+});
+test('unverified empty responses still retire a proxy',async()=>{
+ const out=fs.mkdtempSync(path.join(os.tmpdir(),'empty-pool-'));const execute=async(cmd,args)=>args.at(-1)==='https://api.ipify.org/?format=json'?{stdout:'{"ip":"1.1.1.1"}'}:{stdout:'<html>empty</html>\n__EGRESS_META__200\t'};
+ const pool=new PublicProxyTransport({frontier:{},out,execute,maxChecks:1});pool.candidates=[{url:'http://8.8.8.8:80'}];try{const lease=await pool.acquire({type:'company',id:'10100009135'});await lease.fetch('https://rasmio.com/company/10100009135/direct/');lease.finish(false,'provider-limited-public-profile');assert.equal(pool.report.outcomes[0].providerLimited,false);await assert.rejects(pool.acquire({type:'company',id:'10100009135'}),/unavailable/);}finally{pool.close();fs.rmSync(out,{recursive:true,force:true});}
+});

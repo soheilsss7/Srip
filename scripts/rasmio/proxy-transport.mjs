@@ -141,10 +141,12 @@ export class PublicProxyTransport {
         }
         throw new Error('proxy-redirect-limit');
       },
-      finish(success,reason){
+      finish(success,reason,{verifiedPublicUnavailable=false}={}){
         if(closed)return;closed=true;
-        if(!success){entry.retired=true;pool.state.exits[entry.ip] ||= {requests:0,lastAt:pool.now()};if(/explicit-access-limit|HTTP 429|exit-budget/.test(String(reason)))pool.state.exits[entry.ip].blockedAt=pool.now();else pool.state.exits[entry.ip].cooldownUntil=pool.now()+120000;}
-        pool.report.outcomes.push({at:new Date().toISOString(),key,proxy:entry.proxy,observedExitIP:entry.ip,mainRequests:lease.mainRequests,blockedResourceHosts:lease.blockedHosts,success,reason:reason?String(reason).slice(0,180):null});
+        const last=pool.report.requests.filter(r=>r.key===key&&r.observedExitIP===entry.ip).at(-1);
+        const providerLimited=verifiedPublicUnavailable===true&&reason==='provider-limited-public-profile'&&last?.kind==='curl'&&last.status===200&&!last.error;
+        if(!success&&!providerLimited){entry.retired=true;pool.state.exits[entry.ip] ||= {requests:0,lastAt:pool.now()};if(/explicit-access-limit|HTTP 429|exit-budget/.test(String(reason)))pool.state.exits[entry.ip].blockedAt=pool.now();else pool.state.exits[entry.ip].cooldownUntil=pool.now()+120000;}
+        pool.report.outcomes.push({at:new Date().toISOString(),key,proxy:entry.proxy,observedExitIP:entry.ip,mainRequests:lease.mainRequests,blockedResourceHosts:lease.blockedHosts,success,providerLimited,reason:reason?String(reason).slice(0,180):null});
         pool.busy.delete(entry.ip);for(const resolve of pool.waiters.splice(0))resolve();pool.save();
       },
     };
