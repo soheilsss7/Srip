@@ -1,0 +1,57 @@
+{
+  "runId": "41189241575",
+  "startedAt": "2026-10-31T09:35:13.517Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "error": "HTTP 403"
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 403"
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 403"
+    }
+  ],
+  "health": [
+    {
+      "proxy": "http://5.129.254.49:8888",
+      "at": "2026-10-31T09:35:15.678Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 5.129.254.49 port 8888 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://147.161.247.9:11870",
+      "at": "2026-10-31T09:35:15.689Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Proxy CONNECT aborted due to timeout\n"
+    },
+    {
+      "proxy": "http://184.75.221.82:3118",
+      "at": "2026-10-31T09:35:15.698Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 184.75.221.82 port 3118 after 5001 ms: Timeout was reached\n"
+    }
+  ],
+  "requests": [],
+  "outcomes": [],
+  "candidateCount": 3
+}
