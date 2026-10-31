@@ -16,9 +16,11 @@ import {isRegisteredDiagnosticRun} from './diagnostic-run-registry.mjs';
    ========================================================================== */
 import puppeteer from 'puppeteer';
 import { restoreIncompleteDetails, prioritizeDetailRepair, markDetailRepaired, hasDetailCounts, backfillKnownDetailQueue } from './detail-repair.mjs';
-import { extractTablesFromDOM } from './table-extractor.mjs';
+import { extractTablesFromDOM, hasParsedDetail } from './table-extractor.mjs';
 import { installNetworkAudit } from './network-audit.mjs';
 import { PublicProxyTransport, permittedDetailURL, permittedResourceURL } from './proxy-transport.mjs';
+import { interleaveDetailLanes, requiresProxy, poolExhausted } from './detail-lanes.mjs';
+import { extractEmbeddedNoticesFromDOM, persistEmbeddedNotices } from './embedded-notices.mjs';
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
@@ -1256,14 +1258,14 @@ async function extractEntity(ent, pg = page) {
     for (const wc of order) {
       const res = await tryFetchParse(wc);
       if (!res) continue;
-      if (res.parsed.rows.length > 0) { html = res.html; parsed = res.parsed; via = wc ? 'fetch' : 'fetch-anon'; frontier.crawlMode = wc ? 'session' : 'anon'; break; }
+      if (hasParsedDetail(res.parsed)) { html = res.html; parsed = res.parsed; via = wc ? 'fetch' : 'fetch-anon'; frontier.crawlMode = wc ? 'session' : 'anon'; break; }
       if (!html) { html = res.html; parsed = res.parsed; } /* نگه‌داشتن برای مسیر مرورگر */
     }
   } catch (e) { if (e.retryable) throw e; dbg('fetch-extract-error', { id: ent.id, e: String(e).slice(0, 120) }); }
   /* ═══ مسیر کامل مرورگر: فقط اگر لازم باشد — fetchِ سالمِ بی‌جدول یعنی صفحه واقعاً داده ندارد (SSR کامل است) و مرورگر فقط وقت می‌سوزاند ═══ */
   const fetchCleanEmpty = ent.type !== 'person' && parsed && via === 'fetch' && parsed.rows.length === 0 && parsed.tables && parsed.tables.length === 0
     && parsed.title && !/undefined/i.test(parsed.title);
-  if ((!parsed || parsed.rows.length === 0) && !fetchCleanEmpty) {
+  if (!hasParsedDetail(parsed) && !fetchCleanEmpty) {
     via = 'browser';
     if (ent.type === 'person' && !route) { try { await pg.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 30_000 }); await sleep(1500); } catch {} } /* گرم‌کردن کوکی */
     try { await pg.goto(route?.finalURL || url, { waitUntil: 'domcontentloaded', timeout: 30_000 }); } catch {}
@@ -1325,6 +1327,16 @@ async function extractEntity(ent, pg = page) {
   if(route && ent.type==='company') {
     const actualId=String(info?.['شناسه ملی']||'').replace(/[۰-۹]/g,c=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c))).replace(/[٠-٩]/g,c=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(c))).match(/\d{11}/)?.[0];
     if(actualId!==String(ent.id))throw new Error('company-identity-unverified');
+  }
+  if(ent.type==='company') {
+    try {
+      const actualId=String(info?.['شناسه ملی']||'').replace(/[۰-۹]/g,c=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c))).trim();
+      if(actualId===String(ent.id)) {
+        const notices=await pg.evaluate(extractEmbeddedNoticesFromDOM,String(ent.id));
+        const receipts=persistEmbeddedNotices({notices,companyId:String(ent.id),sourceURL:url,dataDir:DATA,outDir:OUT,runId:process.env.GITHUB_RUN_ID||'local'});
+        if(receipts.length)log('MIRRORED-NOTICES',ent.id,receipts.length,'public embedded texts; not direct RRK');
+      }
+    } catch(error) {log('NOTICE-EXTRACTION-DEFERRED',String(error.message).slice(0,160));}
   }
   const egress=route?{proxy:route.proxy,observedExitIP:route.observedExitIP,mainRequests:route.mainRequests,scope:'Echo-observed IP; destination egress is unverified',directFallback:false}:null;
   if(route)via=via==='browser'?'proxy-browser':'proxy-fetch';
@@ -2009,6 +2021,8 @@ try {
     } else queue = ['product', 'person', 'company'].flatMap(type => frontier.pending.filter(e => e.type === type).slice(0, 2));
     log('VERIFY selected pending entities:', queue.map(keyOf));
   }
+  queue = interleaveDetailLanes(queue, {enabled: PUBLIC_PROXY_DETAILS && process.env.RASMIO_VERIFY !== '1'});
+  let proxyLaneDeferred = false;
   if (MAX_PARALLEL > 1) log('⚡ کارگر ' + (SLOT + 1) + '/' + MAX_PARALLEL + ' — سهم این اجرا: ' + queue.length + ' از صف ' + frontier.pending.length);
   const takeLocal = () => {
     while (queue.length) {
@@ -2032,6 +2046,8 @@ try {
     if (hardTimeUp()) { stopReason = 'hard-deadline'; log('⏰ سقف مطلق job — توقف امن و پوش داده'); break; }
     /* رسمیو به هر IP بعد از چند درخواست پوسته می‌دهد → تعویض IP فوری (اجرای بعدی؛ IP تازه تضمین نشده) */
     if (zeroStreak >= (paced ? 2 : 18)) { stopReason = 'quota-or-blocked'; break; }
+    // Only local scheduling changes; global pending and repair tasks remain intact.
+    if (proxyLaneDeferred) queue = queue.filter(e => !requiresProxy(e));
     const wave = [];
     let heldCompanies = 0;
     while (wave.length < Math.min(waveN, WORKERS.length, LIMIT - processed)) { /* سقف تب: هر موجودیت تب خودش */
@@ -2043,9 +2059,15 @@ try {
     }
     if (!wave.length) { if (heldCompanies) { stopReason = 'company-wall'; break; } continue; }
     progress('crawl', { current: keyOf(wave[0]), processed, pending: frontier.pending.length, wave: wave.length });
+    let proxyLaneJustDeferred = false;
     const results = await Promise.all(wave.map(async (e, i) => {
       try { return { ent: e, r: await extractRoutedEntity(e, WORKERS[i] || page) }; }
       catch (err) {
+        if (err.message === 'public-proxy-pool-unavailable' && poolExhausted(publicProxyTransport)) {
+          proxyLaneJustDeferred = proxyLaneJustDeferred || !proxyLaneDeferred;
+          proxyLaneDeferred = true;
+          log('PROXY-LANE-DEFERRED: pool exhausted; independent detail work continues');
+        }
         // Failed/limited requests remain pending, not falsely marked visited.
         if (!frontier.pending.some(p => keyOf(p) === keyOf(e))) frontier.pending.push(e);
         log('FETCH-DEFERRED', keyOf(e), String(err.message || err).slice(0, 120));
@@ -2053,7 +2075,7 @@ try {
       }
     }));
     let okInWave = 0;
-    if (results.every((x) => !x.r)) failedStreak++; else failedStreak = 0;
+    if (results.every((x) => !x.r) && !proxyLaneJustDeferred) failedStreak++; else failedStreak = 0;
     for (const { ent: e, r } of results) {
       if (!r) { failed++; log('✗', keyOf(e), 'خطا'); continue; }
       const k = keyOf(e);
@@ -2121,7 +2143,7 @@ try {
   progress('done', { processed, failed, pending: frontier.pending.length, stopReason });
   fs.writeFileSync(`${OUT}/run-summary-${process.env.GITHUB_RUN_ID || 'local'}.json`, JSON.stringify({
     at: new Date().toISOString(), runId: process.env.GITHUB_RUN_ID || 'local', verify: process.env.RASMIO_VERIFY === '1',
-    processed, failed, stopReason, pending: frontier.pending.length, proxyTransport: {enabled:PUBLIC_PROXY_DETAILS,checks:publicProxyTransport?.checked||0,successfulProfiles:publicProxyTransport?.report.outcomes.filter(o=>o.success).length||0,failedProfiles:publicProxyTransport?.report.outcomes.filter(o=>!o.success).length||0,directFallback:false}, detailRepair: { remaining: frontier.detailRepair?.remaining?.length || 0, repaired: frontier.detailRepair?.repaired || 0 }, entities: runReport
+    processed, failed, stopReason, pending: frontier.pending.length, proxyTransport: {enabled:PUBLIC_PROXY_DETAILS,laneDeferred:proxyLaneDeferred,checks:publicProxyTransport?.checked||0,successfulProfiles:publicProxyTransport?.report.outcomes.filter(o=>o.success).length||0,failedProfiles:publicProxyTransport?.report.outcomes.filter(o=>!o.success).length||0,directFallback:false}, detailRepair: { remaining: frontier.detailRepair?.remaining?.length || 0, repaired: frontier.detailRepair?.repaired || 0 }, entities: runReport
   }, null, 2));
   log(`✅ اجرا تمام (${stopReason}) — ${processed} موجودیت تازه · صف باقی‌مانده: ${frontier.pending.length} · کل گراف: ${Object.keys(frontier.graph.nodes).length} گره / ${frontier.graph.edges.length} یال`);
   /* ═══ زنجیرهٔ پیوسته: تا وقتی صف یا کشف باقی است، اجرای بعدی فوراً خودکار درخواست می‌شود ═══ */

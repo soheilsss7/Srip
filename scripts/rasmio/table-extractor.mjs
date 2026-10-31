@@ -25,3 +25,8 @@ export function extractTablesFromDOM(root = document) {
   }
   return { title: text(root.querySelector('h1') || {}) || (root.title || '').trim(), rows, tables };
 }
+
+// Linked rows are not required: financial/product/capital tables can contain no entity links.
+export function hasParsedDetail(parsed) {
+  return !!parsed && ((parsed.rows || []).length>0 || (parsed.tables || []).some(t=>(t.rows || []).length>0));
+}
