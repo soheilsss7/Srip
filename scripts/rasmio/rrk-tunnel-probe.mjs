@@ -9,6 +9,7 @@ const archiveURL='https://github.com/XTLS/Xray-core/releases/download/v26.10.31/
 const archiveSHA='e4bd9119f50ae7c41658b1abd0679ae06f98bd864a2907ff33f2f2cf7081b214';
 const sourceBlob='8d1e9dacd9ba9cf082474c0258824101c172e3ca';
 const checkedSourceBlob='7d7f08cb10b22a028e4bcaf249dda5376a277e66';
+const healthTarget='https://api.ipify.org/?format=json';
 const target='https://www.rrk.ir/ords/r/rrs/rrs-front/%D8%AF%D8%A7%D8%AF%D9%87-%D8%A8%D8%A7%D8%B2';
 export function verifiedPublicSnapshot(snapshot,expectedBlob=sourceBlob){
  if(!snapshot||snapshot.gitBlob!==expectedBlob||typeof snapshot.content!=='string'||snapshot.content.length>70000||!/^[A-Za-z0-9+/]*={0,2}$/.test(snapshot.content))throw new Error('Invalid public source snapshot');const bytes=Buffer.from(snapshot.content,'base64');if(bytes.length>50000||createHash('sha1').update(Buffer.from(`blob ${bytes.length}\0`)).update(bytes).digest('hex')!==expectedBlob)throw new Error('Public source snapshot does not match the pinned Git blob');return bytes.toString('utf8');
@@ -41,7 +42,8 @@ export function xrayConfig(candidate,port){
  else outbound={protocol:'vmess',settings:{vnext:[{address:candidate.address,port:candidate.port,users:[{id:candidate.id,alterId:0,security:candidate.security}]}]},streamSettings:{network:'raw',security:'none'}};
  return {log:{loglevel:'none'},inbounds:[{listen:'127.0.0.1',port,protocol:'socks',settings:{auth:'noauth',udp:false}}],outbounds:[outbound]};
 }
-export function tunnelArgs(port,url,bundle){if(!Number.isInteger(port)||port<1024||port>65535||!['https://www.rrk.ir/robots.txt',target].includes(url))throw new Error('Unapproved tunnel target');return ['-q','--silent','--show-error','--proxy',`socks5h://127.0.0.1:${port}`,'--noproxy','','--cacert',bundle,'--proto','=https','--max-redirs','0','--connect-timeout','8','--max-time','20','--max-filesize','1500000','--tlsv1.2','--tls-max','1.2','--http1.1','--user-agent','SripPublicSourceAssessment/1.0',url,'--write-out','\n__RRK_META__%{http_code}'];}
+export function tunnelArgs(port,url,bundle){if(!Number.isInteger(port)||port<1024||port>65535||![healthTarget,'https://www.rrk.ir/robots.txt',target].includes(url))throw new Error('Unapproved tunnel target');return ['-q','--silent','--show-error','--proxy',`socks5h://127.0.0.1:${port}`,'--noproxy','','--cacert',bundle,'--proto','=https','--max-redirs','0','--connect-timeout','8','--max-time','20','--max-filesize','1500000','--tlsv1.2','--tls-max','1.2','--http1.1','--user-agent','SripPublicSourceAssessment/1.0',url,'--write-out','\n__RRK_META__%{http_code}'];}
+export function parseTunnelEcho(stdout){const n=stdout.lastIndexOf('\n__RRK_META__');if(n<0)throw Error('Missing echo HTTP metadata');const status=Number(stdout.slice(n+13));if(status!==200)throw Error(`Echo provider HTTP ${status}`);const ip=JSON.parse(stdout.slice(0,n)).ip;if(!net.isIP(ip))throw Error('Invalid echo IP');return {status,observedExitIP:ip,scope:'IP observed by echo service; RRK destination egress and country not verified'};}
 async function freePort(){const server=net.createServer();await new Promise((r,j)=>{server.once('error',j);server.listen(0,'127.0.0.1',r);});const port=server.address().port;await new Promise(r=>server.close(r));return port;}
 async function ready(port,child){for(let i=0;i<20;i++){if(child.exitCode!==null)throw new Error('Tunnel client exited before readiness');if(await new Promise(r=>{const s=net.connect({host:'127.0.0.1',port});s.setTimeout(150);s.once('connect',()=>{s.destroy();r(true);});s.once('error',()=>{s.destroy();r(false);});s.once('timeout',()=>{s.destroy();r(false);});}))return;await sleep(100);}throw new Error('Local tunnel listener not ready');}
 export async function runRrkTunnelProbe(){
@@ -51,6 +53,7 @@ export async function runRrkTunnelProbe(){
  const save=()=>fs.writeFileSync(file,JSON.stringify(report,null,2));let child,browser;save();
  try{
   let payload={};try{payload=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,'utf8')).client_payload||{};}catch{}
+  report.healthOnly=payload.healthOnly===true;
   const kind=['reality','xhttp','reality-extra','plain-vless','trojan','global-checked'].includes(payload.tunnelKind)?payload.tunnelKind:'vmess';
   const expectedBlob=kind==='global-checked'?checkedSourceBlob:sourceBlob;
   report.source.blob=expectedBlob;if(kind==='global-checked'){report.source.publisherLabelsCountry='not country restricted';report.source.catalog='output/main_top100_checked.txt';report.source.publisherCheckedNotIndependentlyVerified=true;}
@@ -69,10 +72,14 @@ export async function runRrkTunnelProbe(){
    const port=await freePort(),config=path.join(scratch,'client.private.json');fs.writeFileSync(config,JSON.stringify(xrayConfig(candidate,port)),{mode:0o600});
    try{await execute(binary,['run','-test','-config',config],{env,timeout:5000,maxBuffer:30000});}catch(e){throw new Error('Client configuration rejected: '+redactedClientFailure(e,candidate));}
    child=spawn(binary,['run','-config',config],{env,stdio:'ignore'});child.on('error',()=>{});await ready(port,child);
-   const attempt={sourceIndex:candidate.index,protocol:report.tunnelKind,serverAddress:candidate.address,serverPort:candidate.port,at:new Date().toISOString()};report.attempts.push(attempt);save();let admitted=false,denied=false;
+   const attempt={sourceIndex:candidate.index,protocol:report.tunnelKind,serverAddress:candidate.address,serverPort:candidate.port,at:new Date().toISOString()};report.attempts.push(attempt);save();
+   try{const {stdout}=await execute('curl',tunnelArgs(port,healthTarget,chain.bundle),{env,timeout:22000,maxBuffer:10000});attempt.health=parseTunnelEcho(stdout);report.verifiedExitCount=new Set(report.attempts.map(a=>a.health?.observedExitIP).filter(Boolean)).size;}
+   catch(e){attempt.health={error:String(e.stderr||e.message).slice(0,240),verified:false};save();if(/Echo provider HTTP (?:401|403|429)/.test(attempt.health.error)){report.healthProviderRefused=true;break;}continue;}
+   save();if(report.healthOnly)continue;
+   let admitted=false,denied=false;
    for(const url of ['https://www.rrk.ir/robots.txt',target]){
     if(url===target&&!admitted)break;const record={url};(attempt.requests??=[]).push(record);let stdout='';try{({stdout}=await execute('curl',tunnelArgs(port,url,chain.bundle),{env,timeout:22000,maxBuffer:1600000}));}catch(e){record.error=String(e.stderr||'Tunnel request failed').slice(0,240);stdout=String(e.stdout||'');}
-    const n=stdout.lastIndexOf('\n__RRK_META__');if(n>=0){record.status=Number(stdout.slice(n+13))||0;const body=stdout.slice(0,n);record.characters=body.length;if([401,403,429].includes(record.status))denied=true;if(url.endsWith('/robots.txt')){if(record.status===404)admitted=true;else if(record.status===200){record.reason='Robots policy requires separate review; no automatic continuation';}}else if(record.status===200){record.title=redactPersonalNumbers((body.match(/<title[^>]*>([\s\S]*?)<\/title>/i)||[])[1]||'');record.publicSearchFormLocated=/P199_NATIONALCODECOMPANY/.test(body);attempt.searchPageRetrieved=true;}}
+    const n=stdout.lastIndexOf('\n__RRK_META__');if(n>=0){record.status=Number(stdout.slice(n+13))||0;const body=stdout.slice(0,n);record.characters=body.length;if([401,403,429].includes(record.status))denied=true;if(record.error){record.completeResponse=false;}else if(url.endsWith('/robots.txt')){if(record.status===404)admitted=true;else if(record.status===200){record.reason='Robots policy requires separate review; no automatic continuation';}}else if(record.status===200){record.title=redactPersonalNumbers((body.match(/<title[^>]*>([\s\S]*?)<\/title>/i)||[])[1]||'');record.publicSearchFormLocated=/P199_NATIONALCODECOMPANY/.test(body);attempt.searchPageRetrieved=true;}}
     save();if(denied)break;
    }
    if(denied){report.stoppedOnAccessDenial=true;break;}
