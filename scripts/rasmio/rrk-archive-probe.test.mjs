@@ -23,3 +23,13 @@ test('compressed, chunked and Common Crawl pre-decoded payloads are supported',(
  assert.equal(archivedHTML(wrap(chunked,'Transfer-Encoding: chunked'),entry),html.toString());
  assert.throws(()=>archivedHTML(wrap(Buffer.from('ff\r\nshort'),'Transfer-Encoding: chunked'),entry),/chunk/);
 });
+test('listing evidence retains source scope and does not infer complete notices or unlabelled identities',async()=>{
+ const {parseArchivedListingRows}=await import('./rrk-archive-probe.mjs');
+ const row={href:'ShowNews.aspx?Code=123',text:'Synthetic company evidence 1234567890',cells:['Synthetic company','10260492051'],headers:['نام شرکت','شناسه ملی']};
+ const e={...entry,url:'http://www.rrk.ir/News/NewsList.aspx',kind:'notice-listing',timestamp:'20171212140839',collection:'CC-MAIN-2017-51'};
+ assert.equal(permittedArchiveEntry(e),true);
+ const [a]=parseArchivedListingRows([row],e,'a'.repeat(64));assert.equal(a.companyNationalId,'10260492051');assert.equal(a.verification.fullNoticeVerified,false);assert.equal(a.text.includes('1234567890'),false);
+ assert.equal(parseArchivedListingRows([{...row,headers:[]}],e,'a')[0].companyNationalId,null);
+ assert.equal(parseArchivedListingRows([{...row,href:'https://evil.test/News/ShowNews.aspx?Code=123'}],e,'a').length,0);
+ assert.throws(()=>parseArchivedListingRows([row,{...row,text:'conflicting synthetic text'}],e,'a'),/Conflicting/);
+});

@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import {gunzipSync,inflateSync,brotliDecompressSync} from 'node:zlib';
 import {noticeFromFields,normalizeDigits,redactPersonalNumbers,graphFor} from '../../tools/rrk-local/core.mjs';
 export function permittedArchiveEntry(r){
- try{const u=new URL(r.url);return ['http:','https:'].includes(u.protocol)&&['rrk.ir','www.rrk.ir'].includes(u.hostname)&&!u.username&&!u.password&&!u.port&&/^\/News\/Show(?:Old)?News\.aspx$/i.test(u.pathname)&&/^\d+$/.test(u.searchParams.get('Code')||'')&&r.status==='200'&&/^crawl-data\/CC-MAIN-\d{4}-\d{2}\/segments\/[\d.]+\/warc\/[\w.-]+\.warc\.gz$/.test(r.filename)&&Number.isSafeInteger(Number(r.offset))&&Number(r.offset)>=0&&Number.isSafeInteger(Number(r.length))&&Number(r.length)>0&&Number(r.length)<2000000;}catch{return false;}
+ try{const u=new URL(r.url);return ['http:','https:'].includes(u.protocol)&&['rrk.ir','www.rrk.ir'].includes(u.hostname)&&!u.username&&!u.password&&!u.port&&((/^\/News\/Show(?:Old)?News\.aspx$/i.test(u.pathname)&&/^\d+$/.test(u.searchParams.get('Code')||''))||(r.kind==='notice-listing'&&/^\/News\/NewsList\.aspx$/i.test(u.pathname)&&!u.search))&&r.status==='200'&&/^crawl-data\/CC-MAIN-\d{4}-\d{2}\/segments\/[\d.]+\/warc\/[\w.-]+\.warc\.gz$/.test(r.filename)&&Number.isSafeInteger(Number(r.offset))&&Number(r.offset)>=0&&Number.isSafeInteger(Number(r.length))&&Number(r.length)>0&&Number(r.length)<2000000;}catch{return false;}
 }
 export function archivedHTML(bytes,entry){
  if(!permittedArchiveEntry(entry))throw new Error('Invalid archived target/range');
@@ -44,6 +44,8 @@ export async function runRrkArchiveProbe(){
  try{
   const cacheFile='data/sources/rrk/archive/index.json';
   let entries=[];try{entries=JSON.parse(fs.readFileSync(cacheFile,'utf8')).filter(permittedArchiveEntry);}catch{}
+  const listingSeed={kind:'notice-listing',url:'http://www.rrk.ir/News/NewsList.aspx',status:'200',collection:'CC-MAIN-2017-51',timestamp:'20171212140839',length:'33030',offset:'442171847',filename:'crawl-data/CC-MAIN-2017-51/segments/1512948517181.32/warc/CC-MAIN-20171212134318-20171212154318-00438.warc.gz'};
+  if(!entries.some(r=>r.url===listingSeed.url))entries.unshift(listingSeed);
   const seen=new Set(entries.map(r=>r.url));report.cachedIndexEntries=entries.length;
   let refresh=false;try{refresh=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,'utf8')).client_payload?.refreshIndex===true;}catch{}
   const collections=refresh?['CC-MAIN-2019-51']:(entries.length?[]:['CC-MAIN-2020-50','CC-MAIN-2019-51','CC-MAIN-2018-51','CC-MAIN-2017-51']);
@@ -70,6 +72,14 @@ export async function runRrkArchiveProbe(){
     const html=archivedHTML(response.bytes,e);item.archiveSHA256=crypto.createHash('sha256').update(response.bytes).digest('hex');
     page=await browser.newPage();await page.setJavaScriptEnabled(false);await page.setRequestInterception(true);page.on('request',r=>void r.abort().catch(()=>{}));
     await page.setContent(html,{waitUntil:'domcontentloaded',timeout:10000});
+    if(e.kind==='notice-listing'){
+     const snapshots=await page.evaluate(()=>[...document.querySelectorAll('a[href]')].filter(a=>/Show(?:Old)?News\.aspx/i.test(a.getAttribute('href'))).map(a=>{const tr=a.closest('tr'),table=tr?.closest('table');return {href:a.getAttribute('href'),label:a.textContent.trim(),text:tr?.innerText||a.textContent,cells:tr?[...tr.children].filter(n=>n.tagName==='TD'||n.tagName==='TH').map(n=>n.innerText.trim()):[],headers:table?[...table.querySelectorAll('th')].map(n=>n.innerText.trim()):[]};}));
+     const rows=parseArchivedListingRows(snapshots,e,item.archiveSHA256);
+     item.listingRows=rows.length;item.headerSamples=snapshots.slice(0,3).map(r=>r.headers);
+     if(!rows.length)throw new Error('No parseable public notice links in archived listing');
+     const file=`data/sources/rrk/archive/listings/${e.collection}.jsonl`;fs.mkdirSync('data/sources/rrk/archive/listings',{recursive:true});const payload=rows.map(r=>JSON.stringify(r)).join('\n')+'\n';fs.writeFileSync(file,payload);files.push(file);
+     report.listingRowsExtracted=(report.listingRowsExtracted||0)+rows.length;report.listingPublication=[...(report.listingPublication||[]),{file,rows:rows.length,sha256:crypto.createHash('sha256').update(payload).digest('hex')}];item.outcome='archived-listing-evidence-extracted';save();continue;
+    }
     const dom=await page.evaluate(()=>{
      const body=document.body.cloneNode(true);body.querySelectorAll('script,style,input,textarea,select').forEach(e=>e.remove());
      const text=body.textContent.replace(/\s+/g,' ').trim();
@@ -95,4 +105,22 @@ export async function runRrkArchiveProbe(){
  }catch(e){report.error=e.message;}
  finally{if(browser)await browser.close().catch(()=>{});report.finishedAt=new Date().toISOString();save();}
  return {files,report};
+}
+
+export function parseArchivedListingRows(snapshots,entry,archiveSHA256){
+ const result=new Map();
+ for(const row of snapshots){
+  let u;try{u=new URL(row.href,entry.url);}catch{continue;}
+  if(!['rrk.ir','www.rrk.ir'].includes(u.hostname)||!['http:','https:'].includes(u.protocol)||u.username||u.password||u.port||!/^\/News\/Show(?:Old)?News\.aspx$/i.test(u.pathname)||!/^\d+$/.test(u.searchParams.get('Code')||''))continue;
+  if(!row.text||row.text.length>8000||row.cells.length>20)continue;
+  const clean=x=>redactPersonalNumbers(x).replace(/[يى]/g,'ی').replace(/ك/g,'ک').replace(/\s+/g,' ').trim();
+  const text=clean(row.text),headers=row.headers.map(clean),cells=row.cells.map(clean),sameShape=headers.length===cells.length;
+  const find=regex=>sameShape?cells[headers.findIndex(h=>regex.test(h))]||null:null;
+  const idCell=find(/شناسه\s*ملی/),nationalId=idCell&&/^\d{11}$/.test(idCell)?idCell:null;
+  u.protocol='https:';const sourceURL=u.origin+u.pathname+'?Code='+u.searchParams.get('Code');
+  const record={schemaVersion:1,recordType:'official-archived-listing-row',recordId:'rrk:listing:'+u.searchParams.get('Code'),sourceURL,text,companyNationalId:nationalId,companyName:find(/نام\s*(?:شرکت|شخصیت)/),headers,cells,textSHA256:crypto.createHash('sha256').update(text).digest('hex'),acquisition:{method:'commoncrawl-archive',collection:entry.collection,capturedAt:entry.timestamp,originalListURL:entry.url,filename:entry.filename,offset:entry.offset,length:entry.length,archiveSHA256},verification:{fullNoticeVerified:false,liveSourceVerified:false,canonicalProfileModified:false,currentRolesVerified:false},privacy:{tenDigitPersonalNumbersRedacted:true}};
+  if(result.has(record.recordId)&&result.get(record.recordId).text!==text)throw new Error('Conflicting listing rows for the same notice');
+  result.set(record.recordId,record);
+ }
+ return [...result.values()];
 }
