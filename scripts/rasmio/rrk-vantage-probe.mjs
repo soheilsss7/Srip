@@ -26,23 +26,8 @@ export async function runRrkVantageProbe({fetchImpl=globalThis.fetch,wait=pause,
   const text=await r.text();if(text.length>4000000)throw new Error('Diagnostic result exceeds bound');return JSON.parse(text);
  };
  try {
-  // Node IDs are discovered from the provider, never guessed or used as proxy endpoints.
-  try {
-   const inventory=await request('https://check-host.net/nodes/hosts');
-   const entries=Object.entries(inventory.nodes||{});
-   const selected=[...entries.filter(([,n])=>n.location?.[0]==='ir').slice(0,2),...entries.filter(([,n])=>n.location?.[0]==='de').slice(0,1)];
-   report.checkHost={nodes:selected.map(([id,n])=>({id,country:n.location[0],city:n.location[2],asn:n.asn})),results:null};
-   if(selected.length) {
-    const url=new URL('https://check-host.net/check-http');url.searchParams.set('host','https://rrk.ir/');for(const [id] of selected)url.searchParams.append('node',id);
-    const created=await request(url.href);const id=String(created.request_id||'');
-    if(created.ok!==1||!/^\w+$/.test(id))throw new Error('No valid public diagnostic ID returned');
-    report.checkHost.id=id;report.checkHost.reportURL=`https://check-host.net/check-report/${id}`;
-    for(let i=0;i<4;i++){await wait(5000);const results=await request(`https://check-host.net/check-result/${id}`);report.checkHost.results=results;save();if(Object.values(results).every(v=>v!==null))break;}
-    const statuses=Object.values(report.checkHost.results||{}).flatMap(v=>Array.isArray(v)?v:[]).map(v=>v?.[3]);
-    if(statuses.some(s=>[401,403,429].includes(s))){report.stoppedOnOriginDenial=true;return {files:[file],report};}
-   }
-  }catch(e){report.checkHostError=e.message;}
-  if(providerDenied)return {files:[file],report};
+  // Do not retry check-host after its HTTP 429, including from a new runner IP.
+  report.checkHost={status:'not-requested',reason:'Prior run 41221371070 was rate-limited; no retries or IP rotation'};
   for(const country of ['IR','DE']) {
    const item={requestedCountry:country};report.measurements.push(item);
    try {
