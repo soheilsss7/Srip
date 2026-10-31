@@ -34,10 +34,10 @@ export function graphFor(records){
  return {nodes:[...nodes.values()],edges,identityMergesPerformed:0};
 }
 export function robotAllows(text,url){
- const target=new URL(url).pathname;
+ let target;try{target=decodeURI(new URL(url).pathname);}catch{return false;}
  // Conservative: apply every Disallow group, not just the wildcard group.
  for(const line of text.split(/\r?\n/)){const m=line.replace(/#.*/,'').match(/^\s*Disallow\s*:\s*(\S+)/i);if(!m)continue;
-  const rule=m[1],escaped=rule.split('*').map(s=>s.replace(/[.+?^{}()|[\]\\]/g,'\\$&')).join('.*');
+  let rule;try{rule=decodeURI(m[1]);}catch{return false;}const escaped=rule.split('*').map(s=>s.replace(/[.+?^{}()|[\]\\]/g,'\\$&')).join('.*');
   if(new RegExp('^'+escaped).test(target))return false;
  }
  return true;
