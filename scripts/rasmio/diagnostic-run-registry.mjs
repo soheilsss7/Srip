@@ -32,7 +32,6 @@ export function synchronizePublishedCheckout(commit,{hosted=process.env.GITHUB_A
  // after all intended outputs have already been committed and pushed.
  if(!hosted)return false;
  if(!/^[a-f0-9]{40}$/.test(commit))throw new Error('Invalid published Git commit');
- run(['read-tree',commit]);
- run(['restore',`--source=${commit}`,'--worktree','--',':/']);
+ run(['restore',`--source=${commit}`,'--staged','--worktree','--',':/']);
  return true;
 }

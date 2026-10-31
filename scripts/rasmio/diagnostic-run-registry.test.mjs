@@ -16,13 +16,13 @@ test('a stale default index cannot roll back newer code or data during legacy ou
  const git=args=>execFileSync('git',args,{cwd:dir,encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
  try{
   git(['init','-q','-b','arena/01a08a50-srip']);git(['config','user.name','Test']);git(['config','user.email','test@example.invalid']);
-  fs.mkdirSync(path.join(dir,'out'));fs.mkdirSync(path.join(dir,'data'));fs.writeFileSync(path.join(dir,'code.mjs'),'old');git(['add','.']);git(['commit','-qm','old checkout']);const old=git(['rev-parse','HEAD']);
-  fs.writeFileSync(path.join(dir,'code.mjs'),'new');fs.writeFileSync(path.join(dir,'data','new.json'),'new remote data');git(['add','.']);git(['commit','-qm','new published code and data']);const latest=git(['rev-parse','HEAD']);
-  git(['read-tree',old]);fs.writeFileSync(path.join(dir,'code.mjs'),'old');fs.rmSync(path.join(dir,'data','new.json'));
+  fs.mkdirSync(path.join(dir,'out'));fs.mkdirSync(path.join(dir,'data'));fs.writeFileSync(path.join(dir,'code.mjs'),'old');fs.writeFileSync(path.join(dir,'data','obsolete.json'),'old removed data');git(['add','.']);git(['commit','-qm','old checkout']);const old=git(['rev-parse','HEAD']);
+  fs.writeFileSync(path.join(dir,'code.mjs'),'new');fs.rmSync(path.join(dir,'data','obsolete.json'));fs.writeFileSync(path.join(dir,'data','new.json'),'new remote data');git(['add','.']);git(['commit','-qm','new published code and data']);const latest=git(['rev-parse','HEAD']);
+  git(['read-tree',old]);fs.writeFileSync(path.join(dir,'code.mjs'),'old');fs.rmSync(path.join(dir,'data','new.json'));fs.writeFileSync(path.join(dir,'data','obsolete.json'),'old removed data');
   assert.ok(git(['diff','--cached','--name-only','HEAD']).includes('code.mjs'));
   assert.equal(synchronizePublishedCheckout(latest,{hosted:true,run:git}),true);
   fs.writeFileSync(path.join(dir,'out','result.json'),'new result');git(['add','-f','out','data']);git(['commit','-qm','legacy workflow finalization']);
-  assert.equal(git(['show','HEAD:code.mjs']),'new');assert.equal(git(['show','HEAD:data/new.json']),'new remote data');
+  assert.equal(git(['ls-files','data/obsolete.json']),'');assert.equal(fs.existsSync(path.join(dir,'data','obsolete.json')),false);assert.equal(git(['show','HEAD:code.mjs']),'new');assert.equal(git(['show','HEAD:data/new.json']),'new remote data');
   assert.equal(git(['show','HEAD:out/result.json']),'new result');assert.equal(synchronizePublishedCheckout(latest,{hosted:false,run:()=>{throw Error('must not touch user checkout');}}),false);
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
