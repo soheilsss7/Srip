@@ -1,0 +1,106 @@
+{
+  "runId": "41328516064",
+  "startedAt": "2026-11-01T16:53:03.573Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "error": "HTTP 403"
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 403"
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 403"
+    }
+  ],
+  "health": [
+    {
+      "proxy": "http://181.114.61.17:8085",
+      "at": "2026-11-01T16:53:05.366Z",
+      "observedExitIP": "181.114.63.251",
+      "outcome": "https-echo-verified"
+    }
+  ],
+  "requests": [
+    {
+      "at": "2026-11-01T16:53:09.690Z",
+      "key": "company:14011300554",
+      "kind": "curl",
+      "path": "/company/14011300554/direct/",
+      "proxy": "http://181.114.61.17:8085",
+      "observedExitIP": "181.114.63.251",
+      "exitWindowRequest": 1,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 961823,
+      "rawTables": 0,
+      "title": "🏢 مدرسه متوسطه دوره اول پسرانه شهید مطهری ر ه - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-01T16:53:18.012Z",
+      "key": "company:14011303046",
+      "kind": "curl",
+      "path": "/company/14011303046/direct/",
+      "proxy": "http://181.114.61.17:8085",
+      "observedExitIP": "181.114.63.251",
+      "exitWindowRequest": 2,
+      "error": "curl: (28) Failed to connect to 181.114.61.17 port 8085 after 5001 ms: Timeout was reached\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    }
+  ],
+  "outcomes": [
+    {
+      "at": "2026-11-01T16:53:17.677Z",
+      "key": "company:14011300554",
+      "proxy": "http://181.114.61.17:8085",
+      "observedExitIP": "181.114.63.251",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": false,
+      "providerLimited": true,
+      "reason": "provider-limited-public-profile"
+    },
+    {
+      "at": "2026-11-01T16:53:23.093Z",
+      "key": "company:14011303046",
+      "proxy": "http://181.114.61.17:8085",
+      "observedExitIP": "181.114.63.251",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) Failed to connect to 181.114.61.17 port 8085 after 5001 ms: Timeout was reached\n"
+    }
+  ],
+  "skippedRecentUnavailable": 1,
+  "candidateUniverse": 2,
+  "candidateCount": 1
+}
