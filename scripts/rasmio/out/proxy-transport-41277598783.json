@@ -1,0 +1,384 @@
+{
+  "runId": "41277598783",
+  "startedAt": "2026-11-01T05:37:24.497Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "lines": 1776
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 3907
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 10725
+    }
+  ],
+  "health": [
+    {
+      "proxy": "socks5://79.134.4.225:1080",
+      "at": "2026-11-01T05:37:27.816Z",
+      "observedExitIP": "79.134.4.225",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "socks5://94.230.127.180:1080",
+      "at": "2026-11-01T05:37:27.826Z",
+      "observedExitIP": "94.230.127.180",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "https://138.199.35.198:9002",
+      "at": "2026-11-01T05:37:28.906Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '138.199.35.198'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "https://138.199.35.197:9002",
+      "at": "2026-11-01T05:37:29.029Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '138.199.35.197'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "socks5://109.191.10.98:1080",
+      "at": "2026-11-01T05:37:29.151Z",
+      "observedExitIP": "109.191.10.98",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "https://138.199.35.195:9002",
+      "at": "2026-11-01T05:38:26.534Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '138.199.35.195'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "socks5://82.202.130.176:1212",
+      "at": "2026-11-01T05:38:26.665Z",
+      "outcome": "health-failed",
+      "error": "curl: (35) OpenSSL SSL_connect: SSL_ERROR_SYSCALL in connection to api.ipify.org:443 \n"
+    },
+    {
+      "proxy": "http://198.199.86.11:3128",
+      "at": "2026-11-01T05:38:27.210Z",
+      "observedExitIP": "198.199.86.11",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "https://138.199.35.199:9002",
+      "at": "2026-11-01T05:38:39.869Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '138.199.35.199'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "socks5://185.182.110.74:1080",
+      "at": "2026-11-01T05:38:39.881Z",
+      "outcome": "health-failed",
+      "error": "curl: (97) connection to proxy closed\n"
+    },
+    {
+      "proxy": "socks5://90.150.52.50:1080",
+      "at": "2026-11-01T05:38:39.990Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 90.150.52.50 port 1080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://138.199.35.217:9002",
+      "at": "2026-11-01T05:38:40.474Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '138.199.35.217'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "http://209.97.150.167:3128",
+      "at": "2026-11-01T05:38:40.595Z",
+      "observedExitIP": "209.97.150.167",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "https://51.79.173.71:443",
+      "at": "2026-11-01T05:38:45.010Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: certificate has expired\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish "
+    },
+    {
+      "proxy": "http://34.43.46.91:80",
+      "at": "2026-11-01T05:38:45.446Z",
+      "observedExitIP": "34.143.51.195",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "https://138.199.35.207:9002",
+      "at": "2026-11-01T05:38:45.594Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '138.199.35.207'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "https://138.199.35.220:9002",
+      "at": "2026-11-01T05:38:45.719Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '138.199.35.220'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "https://151.115.78.51:443",
+      "at": "2026-11-01T05:38:45.841Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '151.115.78.51'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serv"
+    },
+    {
+      "proxy": "https://138.199.35.216:9002",
+      "at": "2026-11-01T05:38:46.107Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '138.199.35.216'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "http://172.245.168.179:21241",
+      "at": "2026-11-01T05:38:46.223Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 172.245.168.179 port 21241 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://138.199.35.218:9002",
+      "at": "2026-11-01T05:38:51.244Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '138.199.35.218'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "https://138.199.35.202:9002",
+      "at": "2026-11-01T05:38:51.366Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '138.199.35.202'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "https://84.17.47.123:9002",
+      "at": "2026-11-01T05:38:51.487Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.17.47.123'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serve"
+    },
+    {
+      "proxy": "http://149.104.29.39:20000",
+      "at": "2026-11-01T05:38:51.718Z",
+      "observedExitIP": "149.104.29.39",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "https://138.199.35.219:9002",
+      "at": "2026-11-01T05:39:41.736Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '138.199.35.219'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "http://65.109.87.121:28080",
+      "at": "2026-11-01T05:39:41.748Z",
+      "outcome": "health-failed",
+      "error": "curl: (22) The requested URL returned error: 502\n"
+    },
+    {
+      "proxy": "https://138.199.35.206:9002",
+      "at": "2026-11-01T05:39:41.759Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '138.199.35.206'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "http://45.194.41.43:8080",
+      "at": "2026-11-01T05:39:41.769Z",
+      "observedExitIP": "45.194.41.43",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "https://138.199.35.211:9002",
+      "at": "2026-11-01T05:39:41.860Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '138.199.35.211'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "socks5://98.188.47.132:4145",
+      "at": "2026-11-01T05:39:41.881Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: self-signed certificate in certificate chain\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore"
+    },
+    {
+      "proxy": "https://138.199.35.209:9002",
+      "at": "2026-11-01T05:39:41.983Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '138.199.35.209'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "https://47.88.35.91:3128",
+      "at": "2026-11-01T05:39:42.107Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: EE certificate key too weak\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestabl"
+    }
+  ],
+  "requests": [
+    {
+      "at": "2026-11-01T05:37:29.672Z",
+      "key": "company:14006623122",
+      "kind": "curl",
+      "path": "/company/14006623122/direct/",
+      "proxy": "socks5://94.230.127.180:1080",
+      "observedExitIP": "94.230.127.180",
+      "exitWindowRequest": 1,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1132504,
+      "rawTables": 3,
+      "title": "🏢 پارمیس پارسیان راد - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-01T05:37:32.085Z",
+      "key": "company:14006619161",
+      "kind": "curl",
+      "path": "/company/14006619161/direct/",
+      "proxy": "socks5://109.191.10.98:1080",
+      "observedExitIP": "109.191.10.98",
+      "exitWindowRequest": 1,
+      "error": "curl: (28) Operation timed out after 45000 milliseconds with 0 bytes received\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    },
+    {
+      "at": "2026-11-01T05:38:26.641Z",
+      "key": "company:14006623823",
+      "kind": "curl",
+      "path": "/company/14006623823/direct/",
+      "proxy": "socks5://94.230.127.180:1080",
+      "observedExitIP": "94.230.127.180",
+      "exitWindowRequest": 2,
+      "error": "curl: (7) Failed to connect to 94.230.127.180 port 1080 after 167 ms: Couldn't connect to server\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    },
+    {
+      "at": "2026-11-01T05:38:27.496Z",
+      "key": "company:14006626636",
+      "kind": "curl",
+      "path": "/company/14006626636/direct/",
+      "proxy": "http://198.199.86.11:3128",
+      "observedExitIP": "198.199.86.11",
+      "exitWindowRequest": 1,
+      "error": "curl: (60) SSL certificate problem: self-signed certificate in certificate chain\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish a secure connection",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    },
+    {
+      "at": "2026-11-01T05:38:40.857Z",
+      "key": "company:14006634964",
+      "kind": "curl",
+      "path": "/company/14006634964/direct/",
+      "proxy": "http://209.97.150.167:3128",
+      "observedExitIP": "209.97.150.167",
+      "exitWindowRequest": 1,
+      "error": "curl: (60) SSL certificate problem: self-signed certificate in certificate chain\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish a secure connection",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    },
+    {
+      "at": "2026-11-01T05:38:53.258Z",
+      "key": "company:14006633754",
+      "kind": "curl",
+      "path": "/company/14006633754/direct/",
+      "proxy": "http://149.104.29.39:20000",
+      "observedExitIP": "149.104.29.39",
+      "exitWindowRequest": 1,
+      "error": "curl: (18) Transferred a partial file\n",
+      "partialBytesReceived": 142153,
+      "partialResponseAccepted": false
+    }
+  ],
+  "outcomes": [
+    {
+      "at": "2026-11-01T05:38:03.979Z",
+      "key": "company:14006623122",
+      "proxy": "socks5://94.230.127.180:1080",
+      "observedExitIP": "94.230.127.180",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "providerLimited": false,
+      "reason": null
+    },
+    {
+      "at": "2026-11-01T05:38:17.111Z",
+      "key": "company:14006619161",
+      "proxy": "socks5://109.191.10.98:1080",
+      "observedExitIP": "109.191.10.98",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) Operation timed out after 45000 milliseconds with 0 bytes received\n"
+    },
+    {
+      "at": "2026-11-01T05:38:26.834Z",
+      "key": "company:14006623823",
+      "proxy": "socks5://94.230.127.180:1080",
+      "observedExitIP": "94.230.127.180",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (7) Failed to connect to 94.230.127.180 port 1080 after 167 ms: Couldn't connect to server\n"
+    },
+    {
+      "at": "2026-11-01T05:38:27.678Z",
+      "key": "company:14006626636",
+      "proxy": "http://198.199.86.11:3128",
+      "observedExitIP": "198.199.86.11",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (60) SSL certificate problem: self-signed certificate in certificate chain\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the"
+    },
+    {
+      "at": "2026-11-01T05:38:41.003Z",
+      "key": "company:14006634964",
+      "proxy": "http://209.97.150.167:3128",
+      "observedExitIP": "209.97.150.167",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (60) SSL certificate problem: self-signed certificate in certificate chain\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the"
+    },
+    {
+      "at": "2026-11-01T05:39:31.462Z",
+      "key": "company:14006633754",
+      "proxy": "http://149.104.29.39:20000",
+      "observedExitIP": "149.104.29.39",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (18) Transferred a partial file\n"
+    }
+  ],
+  "skippedRecentUnavailable": 33,
+  "candidateUniverse": 10000,
+  "candidateCount": 32
+}
