@@ -1,0 +1,58 @@
+{
+  "runId": "41275693239",
+  "startedAt": "2026-11-01T05:08:33.588Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "error": "HTTP 403"
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 403"
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 403"
+    }
+  ],
+  "health": [
+    {
+      "proxy": "socks5://5.140.110.96:1080",
+      "at": "2026-11-01T05:08:35.135Z",
+      "outcome": "health-failed",
+      "error": "curl: (7) Failed to connect to 5.140.110.96 port 1080 after 466 ms: Couldn't connect to server\n"
+    },
+    {
+      "proxy": "socks5://185.182.110.74:1080",
+      "at": "2026-11-01T05:08:35.143Z",
+      "outcome": "health-failed",
+      "error": "curl: (97) connection to proxy closed\n"
+    }
+  ],
+  "requests": [],
+  "outcomes": [],
+  "skippedRecentUnavailable": 0,
+  "candidateUniverse": 2,
+  "candidateCount": 2
+}
