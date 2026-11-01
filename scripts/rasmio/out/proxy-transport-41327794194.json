@@ -1,0 +1,212 @@
+{
+  "runId": "41327794194",
+  "startedAt": "2026-11-01T16:44:26.689Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "lines": 2210
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 3812
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 10776
+    }
+  ],
+  "health": [
+    {
+      "proxy": "http://181.114.61.17:8085",
+      "at": "2026-11-01T16:44:30.524Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 181.114.61.17 port 8085 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://45.12.30.210:80",
+      "at": "2026-11-01T16:44:30.536Z",
+      "outcome": "health-failed",
+      "error": "curl: (22) The requested URL returned error: 400\n"
+    },
+    {
+      "proxy": "http://103.112.139.174:8080",
+      "at": "2026-11-01T16:44:30.556Z",
+      "observedExitIP": "36.65.114.220",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "http://185.162.228.235:80",
+      "at": "2026-11-01T16:44:35.546Z",
+      "outcome": "health-failed",
+      "error": "curl: (22) The requested URL returned error: 400\n"
+    },
+    {
+      "proxy": "http://200.10.30.5:8083",
+      "at": "2026-11-01T16:44:35.566Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 200.10.30.5 port 8083 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://173.245.49.240:80",
+      "at": "2026-11-01T16:44:40.584Z",
+      "outcome": "health-failed",
+      "error": "curl: (22) The requested URL returned error: 400\n"
+    },
+    {
+      "proxy": "http://152.166.69.34:8080",
+      "at": "2026-11-01T16:44:40.603Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 152.166.69.34 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://103.21.244.182:80",
+      "at": "2026-11-01T16:44:45.622Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 103.21.244.182 port 80 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://23.94.68.53:3128",
+      "at": "2026-11-01T16:44:50.641Z",
+      "observedExitIP": "23.94.68.53",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "http://172.64.149.65:80",
+      "at": "2026-11-01T16:45:23.633Z",
+      "outcome": "health-failed",
+      "error": "curl: (22) The requested URL returned error: 400\n"
+    },
+    {
+      "proxy": "http://103.222.255.193:8080",
+      "at": "2026-11-01T16:45:23.656Z",
+      "observedExitIP": "103.222.255.193",
+      "outcome": "https-echo-verified"
+    }
+  ],
+  "requests": [
+    {
+      "at": "2026-11-01T16:44:33.067Z",
+      "key": "company:14011232494",
+      "kind": "curl",
+      "path": "/company/14011232494/direct/",
+      "proxy": "http://103.112.139.174:8080",
+      "observedExitIP": "36.65.114.220",
+      "exitWindowRequest": 1,
+      "error": "curl: (28) SSL connection timeout\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    },
+    {
+      "at": "2026-11-01T16:44:51.524Z",
+      "key": "company:14011222466",
+      "kind": "curl",
+      "path": "/company/14011222466/direct/",
+      "proxy": "http://23.94.68.53:3128",
+      "observedExitIP": "23.94.68.53",
+      "exitWindowRequest": 1,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 961024,
+      "rawTables": 0,
+      "title": "🏢 مدرسه ابتدایی پسرانه حضرت ابوالفضل ع - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-01T16:45:07.419Z",
+      "key": "company:14011240727",
+      "kind": "curl",
+      "path": "/company/14011240727/direct/",
+      "proxy": "http://23.94.68.53:3128",
+      "observedExitIP": "23.94.68.53",
+      "exitWindowRequest": 2,
+      "error": "curl: (18) Transferred a partial file\n",
+      "partialBytesReceived": 738418,
+      "partialResponseAccepted": false
+    },
+    {
+      "at": "2026-11-01T16:45:27.165Z",
+      "key": "company:14011242009",
+      "kind": "curl",
+      "path": "/company/14011242009/direct/",
+      "proxy": "http://103.222.255.193:8080",
+      "observedExitIP": "103.222.255.193",
+      "exitWindowRequest": 3,
+      "error": "curl: (28) Failed to connect to 103.222.255.193 port 8080 after 5002 ms: Timeout was reached\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    }
+  ],
+  "outcomes": [
+    {
+      "at": "2026-11-01T16:44:38.107Z",
+      "key": "company:14011232494",
+      "proxy": "http://103.112.139.174:8080",
+      "observedExitIP": "36.65.114.220",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) SSL connection timeout\n"
+    },
+    {
+      "at": "2026-11-01T16:44:54.730Z",
+      "key": "company:14011222466",
+      "proxy": "http://23.94.68.53:3128",
+      "observedExitIP": "23.94.68.53",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": false,
+      "providerLimited": true,
+      "reason": "provider-limited-public-profile"
+    },
+    {
+      "at": "2026-11-01T16:45:10.130Z",
+      "key": "company:14011240727",
+      "proxy": "http://23.94.68.53:3128",
+      "observedExitIP": "23.94.68.53",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (18) Transferred a partial file\n"
+    },
+    {
+      "at": "2026-11-01T16:45:32.200Z",
+      "key": "company:14011242009",
+      "proxy": "http://103.222.255.193:8080",
+      "observedExitIP": "103.222.255.193",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) Failed to connect to 103.222.255.193 port 8080 after 5002 ms: Timeout was reached\n"
+    }
+  ],
+  "skippedRecentUnavailable": 13,
+  "candidateUniverse": 10000,
+  "candidateCount": 32
+}
