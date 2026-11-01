@@ -1,0 +1,261 @@
+{
+  "runId": "41271972257",
+  "startedAt": "2026-11-01T04:10:28.124Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "lines": 2205
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 10725
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 3622
+    }
+  ],
+  "health": [
+    {
+      "proxy": "http://38.188.201.10:999",
+      "at": "2026-11-01T04:10:32.408Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Proxy CONNECT aborted due to timeout\n"
+    },
+    {
+      "proxy": "socks5://85.122.120.119:30016",
+      "at": "2026-11-01T04:10:32.419Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 85.122.120.119 port 30016 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://103.103.146.149:7080",
+      "at": "2026-11-01T04:10:37.429Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 103.103.146.149 port 7080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://95.211.190.26:9100",
+      "at": "2026-11-01T04:10:37.441Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5001 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://82.149.217.54:1080",
+      "at": "2026-11-01T04:10:42.449Z",
+      "observedExitIP": "82.149.217.54",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "socks5://58.144.196.192:39105",
+      "at": "2026-11-01T04:10:42.459Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://158.179.171.148:1080",
+      "at": "2026-11-01T04:10:47.478Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 158.179.171.148 port 1080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://185.135.81.149:9060",
+      "at": "2026-11-01T04:10:52.497Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://172.86.84.97:1085",
+      "at": "2026-11-01T04:10:57.515Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 172.86.84.97 port 1085 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://31.163.202.186:9050",
+      "at": "2026-11-01T04:11:02.534Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 31.163.202.186 port 9050 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://23.247.128.4:9005",
+      "at": "2026-11-01T04:11:07.553Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://85.143.254.38:1080",
+      "at": "2026-11-01T04:11:12.571Z",
+      "outcome": "health-failed",
+      "error": "curl: (7) Failed to connect to 85.143.254.38 port 1080 after 120 ms: Couldn't connect to server\n"
+    },
+    {
+      "proxy": "socks5://185.62.1.44:1080",
+      "at": "2026-11-01T04:11:12.707Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 185.62.1.44 port 1080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://103.55.63.14:1080",
+      "at": "2026-11-01T04:11:17.724Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 103.55.63.14 port 1080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://103.197.48.208:1080",
+      "at": "2026-11-01T04:11:22.742Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 103.197.48.208 port 1080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://193.200.85.129:1080",
+      "at": "2026-11-01T04:11:27.759Z",
+      "observedExitIP": "193.200.85.129",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "socks5://150.129.115.253:6667",
+      "at": "2026-11-01T04:12:05.117Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 150.129.115.253 port 6667 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://138.199.222.72:9050",
+      "at": "2026-11-01T04:12:10.138Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://195.98.82.63:1080",
+      "at": "2026-11-01T04:12:15.157Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 195.98.82.63 port 1080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://47.250.51.110:808",
+      "at": "2026-11-01T04:12:20.176Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: unable to get local issuer certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could"
+    },
+    {
+      "proxy": "socks5://91.73.223.206:1080",
+      "at": "2026-11-01T04:12:24.649Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://8.221.138.111:6379",
+      "at": "2026-11-01T04:12:29.668Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://91.107.153.123:9083",
+      "at": "2026-11-01T04:12:34.687Z",
+      "outcome": "health-failed",
+      "error": "curl: (7) Failed to connect to 91.107.153.123 port 9083 after 97 ms: Couldn't connect to server\n"
+    },
+    {
+      "proxy": "socks5://185.246.155.9:8787",
+      "at": "2026-11-01T04:12:34.801Z",
+      "observedExitIP": "185.246.155.9",
+      "outcome": "https-echo-verified"
+    }
+  ],
+  "requests": [
+    {
+      "at": "2026-11-01T04:10:45.608Z",
+      "key": "company:14006183380",
+      "kind": "curl",
+      "path": "/company/14006183380/direct/",
+      "proxy": "socks5://82.149.217.54:1080",
+      "observedExitIP": "82.149.217.54",
+      "exitWindowRequest": 4,
+      "error": "curl: (28) Failed to connect to 82.149.217.54 port 1080 after 5002 ms: Timeout was reached\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    },
+    {
+      "at": "2026-11-01T04:11:47.998Z",
+      "key": "company:14006184794",
+      "kind": "curl",
+      "path": "/company/14006184794/direct/",
+      "proxy": "socks5://193.200.85.129:1080",
+      "observedExitIP": "193.200.85.129",
+      "exitWindowRequest": 1,
+      "error": "curl: (97) Can't complete SOCKS5 connection to rasmio.com. (1)\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    },
+    {
+      "at": "2026-11-01T04:12:36.041Z",
+      "key": "company:14006186821",
+      "kind": "curl",
+      "path": "/company/14006186821/direct/",
+      "proxy": "socks5://185.246.155.9:8787",
+      "observedExitIP": "185.246.155.9",
+      "exitWindowRequest": 1,
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    }
+  ],
+  "outcomes": [
+    {
+      "at": "2026-11-01T04:10:50.636Z",
+      "key": "company:14006183380",
+      "proxy": "socks5://82.149.217.54:1080",
+      "observedExitIP": "82.149.217.54",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) Failed to connect to 82.149.217.54 port 1080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "at": "2026-11-01T04:11:52.629Z",
+      "key": "company:14006184794",
+      "proxy": "socks5://193.200.85.129:1080",
+      "observedExitIP": "193.200.85.129",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (97) Can't complete SOCKS5 connection to rasmio.com. (1)\n"
+    },
+    {
+      "at": "2026-11-01T04:12:41.070Z",
+      "key": "company:14006186821",
+      "proxy": "socks5://185.246.155.9:8787",
+      "observedExitIP": "185.246.155.9",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) Connection timed out after 5002 milliseconds\n"
+    }
+  ],
+  "skippedRecentUnavailable": 26,
+  "candidateUniverse": 9887,
+  "candidateCount": 32
+}
