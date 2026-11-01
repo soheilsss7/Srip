@@ -1,0 +1,267 @@
+{
+  "runId": "41364222297",
+  "startedAt": "2026-11-01T23:53:38.738Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "lines": 2171
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 11494
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 4511
+    }
+  ],
+  "health": [
+    {
+      "proxy": "http://103.193.145.1:8080",
+      "at": "2026-11-01T23:53:41.238Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 103.193.145.1 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://206.188.208.101:8447",
+      "at": "2026-11-01T23:53:41.249Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: unable to get local issuer certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could"
+    },
+    {
+      "proxy": "http://181.78.195.136:999",
+      "at": "2026-11-01T23:53:41.306Z",
+      "observedExitIP": "205.235.1.36",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "https://205.178.136.118:8443",
+      "at": "2026-11-01T23:53:46.260Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: unable to get local issuer certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could"
+    },
+    {
+      "proxy": "http://103.171.255.59:8080",
+      "at": "2026-11-01T23:53:46.314Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 103.171.255.59 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://103.147.247.169:8080",
+      "at": "2026-11-01T23:53:51.332Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 103.147.247.169 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://205.178.137.221:8443",
+      "at": "2026-11-01T23:53:56.351Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: unable to get local issuer certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could"
+    },
+    {
+      "proxy": "socks5://188.191.164.55:4890",
+      "at": "2026-11-01T23:53:56.408Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 188.191.164.55 port 4890 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://207.204.53.156:8443",
+      "at": "2026-11-01T23:54:01.426Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: unable to get local issuer certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could"
+    },
+    {
+      "proxy": "https://205.178.136.146:8447",
+      "at": "2026-11-01T23:54:01.480Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: unable to get local issuer certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could"
+    },
+    {
+      "proxy": "socks5://140.207.114.166:10080",
+      "at": "2026-11-01T23:54:01.531Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 140.207.114.166 port 10080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://205.178.136.208:8443",
+      "at": "2026-11-01T23:54:06.548Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: unable to get local issuer certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could"
+    },
+    {
+      "proxy": "http://125.25.167.187:80",
+      "at": "2026-11-01T23:54:06.601Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Proxy CONNECT aborted due to timeout\n"
+    },
+    {
+      "proxy": "http://103.158.210.56:8080",
+      "at": "2026-11-01T23:54:11.618Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 103.158.210.56 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://34.47.173.196:443",
+      "at": "2026-11-01T23:54:16.637Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '34.47.173.196'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serv"
+    },
+    {
+      "proxy": "https://3.21.129.156:37051",
+      "at": "2026-11-01T23:54:17.070Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: unable to get local issuer certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could"
+    },
+    {
+      "proxy": "http://1.20.101.16:80",
+      "at": "2026-11-01T23:54:17.126Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 1.20.101.16 port 80 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://16.174.124.173:43737",
+      "at": "2026-11-01T23:54:22.143Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: unable to get local issuer certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could"
+    },
+    {
+      "proxy": "https://205.178.186.117:8447",
+      "at": "2026-11-01T23:54:22.274Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: unable to get local issuer certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could"
+    },
+    {
+      "proxy": "https://192.227.176.234:443",
+      "at": "2026-11-01T23:54:22.330Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '192.227.176.234'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the se"
+    },
+    {
+      "proxy": "http://103.116.82.141:8080",
+      "at": "2026-11-01T23:54:22.397Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 103.116.82.141 port 8080 after 5001 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://63.180.203.233:24724",
+      "at": "2026-11-01T23:54:27.415Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: unable to get local issuer certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could"
+    },
+    {
+      "proxy": "https://201.55.8.55:443",
+      "at": "2026-11-01T23:54:27.614Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: certificate has expired\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish "
+    },
+    {
+      "proxy": "http://157.15.63.48:8080",
+      "at": "2026-11-01T23:54:27.866Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 157.15.63.48 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://82.149.217.54:1080",
+      "at": "2026-11-01T23:54:32.885Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 82.149.217.54 port 1080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://54.117.6.131:769",
+      "at": "2026-11-01T23:54:37.903Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: unable to get local issuer certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could"
+    },
+    {
+      "proxy": "http://163.223.172.29:1080",
+      "at": "2026-11-01T23:54:38.289Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 163.223.172.29 port 1080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://18.191.250.90:39267",
+      "at": "2026-11-01T23:54:54.966Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: unable to get local issuer certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could"
+    },
+    {
+      "proxy": "http://103.111.116.233:81",
+      "at": "2026-11-01T23:54:59.991Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 103.111.116.233 port 81 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://69.161.222.32:8447",
+      "at": "2026-11-01T23:55:05.016Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) SSL connection timeout\n"
+    },
+    {
+      "proxy": "http://18.231.214.206:12385",
+      "at": "2026-11-01T23:55:10.036Z",
+      "outcome": "health-failed",
+      "error": "curl: (22) The requested URL returned error: 400\n"
+    },
+    {
+      "proxy": "https://205.178.144.193:8443",
+      "at": "2026-11-01T23:55:10.287Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: unable to get local issuer certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could"
+    }
+  ],
+  "requests": [
+    {
+      "at": "2026-11-01T23:53:45.188Z",
+      "key": "company:10100258539",
+      "kind": "curl",
+      "path": "/company/10100258539/direct/",
+      "proxy": "http://181.78.195.136:999",
+      "observedExitIP": "205.235.1.36",
+      "exitWindowRequest": 2,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 915210,
+      "rawTables": 0,
+      "title": "🏢 لابراتوار دارو سازی ارایشی و بهداشتی مینا - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    }
+  ],
+  "outcomes": [
+    {
+      "at": "2026-11-01T23:53:52.222Z",
+      "key": "company:10100258539",
+      "proxy": "http://181.78.195.136:999",
+      "observedExitIP": "205.235.1.36",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "explicit-access-limit"
+    }
+  ],
+  "skippedRecentUnavailable": 14,
+  "candidateUniverse": 10000,
+  "candidateCount": 32
+}
