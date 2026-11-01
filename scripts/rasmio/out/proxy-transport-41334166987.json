@@ -1,0 +1,182 @@
+{
+  "runId": "41334166987",
+  "startedAt": "2026-11-01T17:59:16.748Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "error": "HTTP 403"
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 403"
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 403"
+    }
+  ],
+  "health": [
+    {
+      "proxy": "socks5://37.193.95.9:10808",
+      "at": "2026-11-01T17:59:20.292Z",
+      "observedExitIP": "185.121.179.67",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "http://128.199.121.61:9090",
+      "at": "2026-11-01T17:59:20.303Z",
+      "outcome": "health-failed",
+      "error": "curl: (7) Failed to connect to 128.199.121.61 port 9090 after 204 ms: Couldn't connect to server\n"
+    },
+    {
+      "proxy": "socks5://8.219.245.123:1080",
+      "at": "2026-11-01T17:59:20.523Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) SSL connection timeout\n"
+    }
+  ],
+  "requests": [
+    {
+      "at": "2026-11-01T17:59:22.521Z",
+      "key": "company:14012058774",
+      "kind": "curl",
+      "path": "/company/14012058774/direct/",
+      "proxy": "socks5://37.193.95.9:10808",
+      "observedExitIP": "185.121.179.67",
+      "exitWindowRequest": 1,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1145769,
+      "rawTables": 4,
+      "title": "🏢 دارینه صنعت صبا - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-01T18:00:08.276Z",
+      "key": "company:14012061388",
+      "kind": "curl",
+      "path": "/company/14012061388/direct/",
+      "proxy": "socks5://37.193.95.9:10808",
+      "observedExitIP": "185.121.179.67",
+      "exitWindowRequest": 2,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 957855,
+      "rawTables": 0,
+      "title": "🏢 دهیاری قشلاق تره چی - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-01T18:00:23.537Z",
+      "key": "company:14012062302",
+      "kind": "curl",
+      "path": "/company/14012062302/direct/",
+      "proxy": "socks5://37.193.95.9:10808",
+      "observedExitIP": "185.121.179.67",
+      "exitWindowRequest": 3,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1035655,
+      "rawTables": 2,
+      "title": "🏢 فناوران برودت پویا - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-01T18:00:34.516Z",
+      "key": "company:14012064984",
+      "kind": "curl",
+      "path": "/company/14012064984/direct/",
+      "proxy": "socks5://37.193.95.9:10808",
+      "observedExitIP": "185.121.179.67",
+      "exitWindowRequest": 4,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1164327,
+      "rawTables": 4,
+      "title": "🏢 اختصاصی بازارگردانی برلیان - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    }
+  ],
+  "outcomes": [
+    {
+      "at": "2026-11-01T18:00:08.181Z",
+      "key": "company:14012058774",
+      "proxy": "socks5://37.193.95.9:10808",
+      "observedExitIP": "185.121.179.67",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "providerLimited": false,
+      "reason": null
+    },
+    {
+      "at": "2026-11-01T18:00:13.086Z",
+      "key": "company:14012061388",
+      "proxy": "socks5://37.193.95.9:10808",
+      "observedExitIP": "185.121.179.67",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": false,
+      "providerLimited": true,
+      "reason": "provider-limited-public-profile"
+    },
+    {
+      "at": "2026-11-01T18:00:34.431Z",
+      "key": "company:14012062302",
+      "proxy": "socks5://37.193.95.9:10808",
+      "observedExitIP": "185.121.179.67",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "providerLimited": false,
+      "reason": null
+    },
+    {
+      "at": "2026-11-01T18:01:06.209Z",
+      "key": "company:14012064984",
+      "proxy": "socks5://37.193.95.9:10808",
+      "observedExitIP": "185.121.179.67",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "providerLimited": false,
+      "reason": null
+    }
+  ],
+  "skippedRecentUnavailable": 6,
+  "candidateUniverse": 9,
+  "candidateCount": 3
+}
