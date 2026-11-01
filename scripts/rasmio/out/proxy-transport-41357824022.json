@@ -1,0 +1,286 @@
+{
+  "runId": "41357824022",
+  "startedAt": "2026-11-01T22:35:41.222Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "lines": 2442
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 4014
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 11262
+    }
+  ],
+  "health": [
+    {
+      "proxy": "http://148.153.73.246:8080",
+      "at": "2026-11-01T22:35:44.044Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 148.153.73.246 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://118.179.205.174:2080",
+      "at": "2026-11-01T22:35:44.056Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 118.179.205.174 port 2080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://181.115.67.3:999",
+      "at": "2026-11-01T22:35:49.067Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Proxy CONNECT aborted due to timeout\n"
+    },
+    {
+      "proxy": "https://4.172.245.121:443",
+      "at": "2026-11-01T22:35:49.078Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '4.172.245.121'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serv"
+    },
+    {
+      "proxy": "https://89.207.188.137:443",
+      "at": "2026-11-01T22:35:49.232Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '89.207.188.137'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "http://103.145.34.112:1111",
+      "at": "2026-11-01T22:35:49.555Z",
+      "observedExitIP": "103.145.34.112",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "http://39.98.86.246:8118",
+      "at": "2026-11-01T22:35:54.088Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Proxy CONNECT aborted due to timeout\n"
+    },
+    {
+      "proxy": "http://186.148.180.133:999",
+      "at": "2026-11-01T22:35:59.108Z",
+      "observedExitIP": "186.148.180.134",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "https://221.120.177.43:443",
+      "at": "2026-11-01T22:36:23.008Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '221.120.177.43'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "https://134.122.129.254:8443",
+      "at": "2026-11-01T22:36:23.611Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: self-signed certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish "
+    },
+    {
+      "proxy": "http://38.172.130.175:999",
+      "at": "2026-11-01T22:36:23.934Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 38.172.130.175 port 999 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://31.32.19.111:8081",
+      "at": "2026-11-01T22:36:28.954Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: self-signed certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish "
+    },
+    {
+      "proxy": "http://115.147.26.200:8181",
+      "at": "2026-11-01T22:36:29.306Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 115.147.26.200 port 8181 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://24.121.152.67:443",
+      "at": "2026-11-01T22:36:34.326Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: self-signed certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish "
+    },
+    {
+      "proxy": "https://49.51.180.61:8888",
+      "at": "2026-11-01T22:36:34.406Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: self-signed certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish "
+    },
+    {
+      "proxy": "https://104.36.251.30:443",
+      "at": "2026-11-01T22:36:34.445Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '104.36.251.30'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serv"
+    },
+    {
+      "proxy": "http://157.20.100.194:8080",
+      "at": "2026-11-01T22:36:34.488Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 157.20.100.194 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://201.4.69.123:8080",
+      "at": "2026-11-01T22:36:39.508Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 201.4.69.123 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://185.93.106.214:443",
+      "at": "2026-11-01T22:36:44.529Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: self-signed certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish "
+    },
+    {
+      "proxy": "http://190.94.213.234:999",
+      "at": "2026-11-01T22:36:44.842Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 190.94.213.234 port 999 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://47.243.181.85:42533",
+      "at": "2026-11-01T22:36:49.862Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: self-signed certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish "
+    },
+    {
+      "proxy": "http://187.249.112.221:999",
+      "at": "2026-11-01T22:36:50.178Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 187.249.112.221 port 999 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://213.109.163.119:443",
+      "at": "2026-11-01T22:36:55.199Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: self-signed certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish "
+    },
+    {
+      "proxy": "https://107.91.88.78:8443",
+      "at": "2026-11-01T22:36:55.532Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: self-signed certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish "
+    },
+    {
+      "proxy": "https://74.208.250.147:8443",
+      "at": "2026-11-01T22:36:56.001Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '74.208.250.147'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "http://202.136.83.167:8090",
+      "at": "2026-11-01T22:36:56.142Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 202.136.83.167 port 8090 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://217.237.171.227:443",
+      "at": "2026-11-01T22:37:01.162Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '217.237.171.227'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the se"
+    },
+    {
+      "proxy": "https://196.43.240.49:9443",
+      "at": "2026-11-01T22:37:01.501Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '196.43.240.49'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serv"
+    },
+    {
+      "proxy": "socks5://118.70.151.55:1080",
+      "at": "2026-11-01T22:37:02.082Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 118.70.151.55 port 1080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://162.251.237.199:443",
+      "at": "2026-11-01T22:37:07.102Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: unable to get local issuer certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could"
+    },
+    {
+      "proxy": "https://129.205.246.123:443",
+      "at": "2026-11-01T22:37:07.167Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '129.205.246.123'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the se"
+    },
+    {
+      "proxy": "https://190.213.55.167:443",
+      "at": "2026-11-01T22:37:07.750Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: self-signed certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish "
+    }
+  ],
+  "requests": [
+    {
+      "at": "2026-11-01T22:35:54.517Z",
+      "key": "company:14015776753",
+      "kind": "curl",
+      "path": "/company/14015776753/direct/",
+      "proxy": "http://103.145.34.112:1111",
+      "observedExitIP": "103.145.34.112",
+      "exitWindowRequest": 3,
+      "error": "curl: (28) Failed to connect to 103.145.34.112 port 1111 after 5002 ms: Timeout was reached\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    },
+    {
+      "at": "2026-11-01T22:36:01.554Z",
+      "key": "company:14015771252",
+      "kind": "curl",
+      "path": "/company/14015771252/direct/",
+      "proxy": "http://186.148.180.133:999",
+      "observedExitIP": "186.148.180.134",
+      "exitWindowRequest": 3,
+      "error": "curl: (28) Failed to connect to 186.148.180.133 port 999 after 5002 ms: Timeout was reached\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    }
+  ],
+  "outcomes": [
+    {
+      "at": "2026-11-01T22:35:59.548Z",
+      "key": "company:14015776753",
+      "proxy": "http://103.145.34.112:1111",
+      "observedExitIP": "103.145.34.112",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) Failed to connect to 103.145.34.112 port 1111 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "at": "2026-11-01T22:36:06.583Z",
+      "key": "company:14015771252",
+      "proxy": "http://186.148.180.133:999",
+      "observedExitIP": "186.148.180.134",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) Failed to connect to 186.148.180.133 port 999 after 5002 ms: Timeout was reached\n"
+    }
+  ],
+  "skippedRecentUnavailable": 110,
+  "candidateUniverse": 10000,
+  "candidateCount": 32
+}
