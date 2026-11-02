@@ -1,0 +1,692 @@
+{
+  "runId": "41370580680",
+  "startedAt": "2026-11-02T01:06:19.336Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "lines": 3141
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 3948
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 11494
+    }
+  ],
+  "health": [
+    {
+      "proxy": "socks5://14.225.205.152:1081",
+      "at": "2026-11-02T01:06:21.938Z",
+      "outcome": "health-failed",
+      "error": "curl: (97) Can't complete SOCKS5 connection to api.ipify.org. (2)\n"
+    },
+    {
+      "proxy": "http://80.74.54.148:3128",
+      "at": "2026-11-02T01:06:21.946Z",
+      "outcome": "health-failed",
+      "error": "curl: (22) The requested URL returned error: 403\n"
+    },
+    {
+      "proxy": "socks5://194.87.96.31:1080",
+      "at": "2026-11-02T01:06:22.235Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5000 milliseconds\n"
+    },
+    {
+      "proxy": "http://134.209.29.120:3128",
+      "at": "2026-11-02T01:06:23.529Z",
+      "outcome": "health-failed",
+      "error": "curl: (22) The requested URL returned error: 429\n"
+    },
+    {
+      "proxy": "http://189.51.168.165:999",
+      "at": "2026-11-02T01:06:24.059Z",
+      "observedExitIP": "189.51.168.165",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "socks5://207.180.217.98:1088",
+      "at": "2026-11-02T01:06:24.634Z",
+      "observedExitIP": "207.180.217.98",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "http://46.232.249.209:40001",
+      "at": "2026-11-02T01:06:25.957Z",
+      "observedExitIP": "104.28.193.116",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "socks5://34.150.120.78:1080",
+      "at": "2026-11-02T01:06:27.249Z",
+      "observedExitIP": "34.150.120.78",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "http://104.194.146.9:80",
+      "at": "2026-11-02T01:06:33.407Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Proxy CONNECT aborted due to timeout\n"
+    },
+    {
+      "proxy": "socks5://2.102.71.177:1080",
+      "at": "2026-11-02T01:07:00.176Z",
+      "outcome": "health-failed",
+      "error": "curl: (7) Failed to connect to 2.102.71.177 port 1080 after 141 ms: Couldn't connect to server\n"
+    },
+    {
+      "proxy": "socks5://192.3.7.110:1080",
+      "at": "2026-11-02T01:07:00.334Z",
+      "observedExitIP": "192.3.7.110",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "socks5://91.92.155.207:1080",
+      "at": "2026-11-02T01:07:41.975Z",
+      "observedExitIP": "91.92.155.207",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "socks5://188.226.27.24:1080",
+      "at": "2026-11-02T01:07:58.082Z",
+      "observedExitIP": "88.210.12.209",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "socks5://145.220.227.144:1080",
+      "at": "2026-11-02T01:07:58.093Z",
+      "observedExitIP": "145.220.183.29",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "socks5://176.124.206.150:8443",
+      "at": "2026-11-02T01:07:58.102Z",
+      "observedExitIP": "176.124.206.150",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "http://83.171.113.43:3128",
+      "at": "2026-11-02T01:07:58.111Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 83.171.113.43 port 3128 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://84.200.89.140:1080",
+      "at": "2026-11-02T01:08:03.128Z",
+      "observedExitIP": "84.200.89.140",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "socks5://91.243.98.96:2080",
+      "at": "2026-11-02T01:08:44.295Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 91.243.98.96 port 2080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://84.17.47.150:9002",
+      "at": "2026-11-02T01:08:44.306Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.17.47.150'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serve"
+    },
+    {
+      "proxy": "socks5://77.239.96.194:1081",
+      "at": "2026-11-02T01:08:44.605Z",
+      "outcome": "health-failed",
+      "error": "curl: (35) OpenSSL SSL_connect: SSL_ERROR_SYSCALL in connection to api.ipify.org:443 \n"
+    },
+    {
+      "proxy": "https://84.17.47.149:9002",
+      "at": "2026-11-02T01:08:45.089Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.17.47.149'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serve"
+    },
+    {
+      "proxy": "http://65.108.203.36:18080",
+      "at": "2026-11-02T01:08:45.390Z",
+      "outcome": "health-failed",
+      "error": "curl: (22) The requested URL returned error: 502\n"
+    },
+    {
+      "proxy": "http://163.172.167.48:80",
+      "at": "2026-11-02T01:08:47.879Z",
+      "outcome": "health-failed",
+      "error": "curl: (22) The requested URL returned error: 500\n"
+    },
+    {
+      "proxy": "https://84.17.47.148:9002",
+      "at": "2026-11-02T01:08:48.321Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.17.47.148'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serve"
+    },
+    {
+      "proxy": "socks5://95.163.85.73:1080",
+      "at": "2026-11-02T01:08:48.621Z",
+      "observedExitIP": "95.163.85.73",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "https://84.17.47.147:9002",
+      "at": "2026-11-02T01:08:49.315Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.17.47.147'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serve"
+    },
+    {
+      "proxy": "http://185.238.238.137:58080",
+      "at": "2026-11-02T01:08:49.615Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 185.238.238.137 port 58080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://84.17.47.146:9002",
+      "at": "2026-11-02T01:08:54.633Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.17.47.146'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serve"
+    },
+    {
+      "proxy": "https://84.17.47.126:9002",
+      "at": "2026-11-02T01:08:54.941Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.17.47.126'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serve"
+    },
+    {
+      "proxy": "http://185.238.238.169:58080",
+      "at": "2026-11-02T01:08:55.238Z",
+      "observedExitIP": "185.238.236.99",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "https://84.17.47.125:9002",
+      "at": "2026-11-02T01:08:59.357Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.17.47.125'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serve"
+    },
+    {
+      "proxy": "socks5://37.153.71.144:1080",
+      "at": "2026-11-02T01:08:59.652Z",
+      "outcome": "health-failed",
+      "error": "curl: (97) connection to proxy closed\n"
+    }
+  ],
+  "requests": [
+    {
+      "at": "2026-11-02T01:06:26.749Z",
+      "key": "company:10100373470",
+      "kind": "curl",
+      "path": "/company/10100373470/direct/",
+      "proxy": "http://46.232.249.209:40001",
+      "observedExitIP": "104.28.193.116",
+      "exitWindowRequest": 1,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1308340,
+      "rawTables": 5,
+      "title": "🏢 دیبا ماندگار کرج - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-02T01:06:38.497Z",
+      "key": "person:10A635731",
+      "kind": "curl",
+      "path": "/person/10A635731/x/",
+      "proxy": "http://46.232.249.209:40001",
+      "observedExitIP": "104.28.193.116",
+      "exitWindowRequest": 2,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 938725,
+      "rawTables": 0,
+      "title": " مرضیه طباطبایی مهریزی - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-02T01:06:40.564Z",
+      "key": "person:10A635731",
+      "kind": "browser-navigation",
+      "path": "/person/10A635731/x/",
+      "proxy": "http://46.232.249.209:40001",
+      "observedExitIP": "104.28.193.116",
+      "exitWindowRequest": 3
+    },
+    {
+      "at": "2026-11-02T01:07:00.258Z",
+      "key": "company:10100376380",
+      "kind": "curl",
+      "path": "/company/10100376380/direct/",
+      "proxy": "http://46.232.249.209:40001",
+      "observedExitIP": "104.28.193.116",
+      "exitWindowRequest": 4,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1172498,
+      "rawTables": 6,
+      "title": "✅ مرکز ملی شماره گذاری کالا و خدمات ایران - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-02T01:07:01.291Z",
+      "key": "person:10A6D06EA",
+      "kind": "curl",
+      "path": "/person/10A6D06EA/x/",
+      "proxy": "socks5://192.3.7.110:1080",
+      "observedExitIP": "192.3.7.110",
+      "exitWindowRequest": 2,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1011582,
+      "rawTables": 0,
+      "title": " حمیدرضا شهبازی منشادی - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-02T01:07:06.944Z",
+      "key": "person:10A6D06EA",
+      "kind": "browser-navigation",
+      "path": "/person/10A6D06EA/x/",
+      "proxy": "socks5://192.3.7.110:1080",
+      "observedExitIP": "192.3.7.110",
+      "exitWindowRequest": 3
+    },
+    {
+      "at": "2026-11-02T01:07:42.058Z",
+      "key": "company:10100377134",
+      "kind": "curl",
+      "path": "/company/10100377134/direct/",
+      "proxy": "socks5://192.3.7.110:1080",
+      "observedExitIP": "192.3.7.110",
+      "exitWindowRequest": 4,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 996543,
+      "rawTables": 0,
+      "title": "🏢 حسابرسی صندوق بازنشستگی کشوری - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-02T01:07:42.953Z",
+      "key": "person:10A6D8A76",
+      "kind": "curl",
+      "path": "/person/10A6D8A76/x/",
+      "proxy": "socks5://91.92.155.207:1080",
+      "observedExitIP": "91.92.155.207",
+      "exitWindowRequest": 3,
+      "error": "curl: (60) SSL certificate problem: self-signed certificate in certificate chain\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish a secure connection",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    },
+    {
+      "at": "2026-11-02T01:07:59.246Z",
+      "key": "company:10102663554",
+      "kind": "curl",
+      "path": "/company/10102663554/direct/",
+      "proxy": "socks5://176.124.206.150:8443",
+      "observedExitIP": "176.124.206.150",
+      "exitWindowRequest": 1,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 996317,
+      "rawTables": 1,
+      "title": "🏢 الدوز صنعت سبلان - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-02T01:08:00.054Z",
+      "key": "person:10B081836",
+      "kind": "curl",
+      "path": "/person/10B081836/x/",
+      "proxy": "socks5://145.220.227.144:1080",
+      "observedExitIP": "145.220.183.29",
+      "exitWindowRequest": 4,
+      "error": "curl: (60) SSL certificate problem: self-signed certificate in certificate chain\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish a secure connection",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    },
+    {
+      "at": "2026-11-02T01:08:03.003Z",
+      "key": "company:10100377493",
+      "kind": "curl",
+      "path": "/company/10100377493/direct/",
+      "proxy": "socks5://176.124.206.150:8443",
+      "observedExitIP": "176.124.206.150",
+      "exitWindowRequest": 2,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1204356,
+      "rawTables": 3,
+      "title": "🏢 همکاران سیستم البرز - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-02T01:08:05.063Z",
+      "key": "company:10100951240",
+      "kind": "curl",
+      "path": "/company/10100951240/direct/",
+      "proxy": "socks5://84.200.89.140:1080",
+      "observedExitIP": "84.200.89.140",
+      "exitWindowRequest": 1,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1144915,
+      "rawTables": 2,
+      "title": "🏢 تولیدی شیمیائی کلران - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-02T01:08:23.262Z",
+      "key": "company:10660137170",
+      "kind": "curl",
+      "path": "/company/10660137170/direct/",
+      "proxy": "socks5://176.124.206.150:8443",
+      "observedExitIP": "176.124.206.150",
+      "exitWindowRequest": 3,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 998338,
+      "rawTables": 1,
+      "title": "🏢 جهان پی بیستون - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-02T01:08:23.289Z",
+      "key": "person:E292392B",
+      "kind": "curl",
+      "path": "/person/E292392B/x/",
+      "proxy": "socks5://84.200.89.140:1080",
+      "observedExitIP": "84.200.89.140",
+      "exitWindowRequest": 2,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1004515,
+      "rawTables": 0,
+      "title": " پوریا الهیاری - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-02T01:08:25.434Z",
+      "key": "person:E292392B",
+      "kind": "browser-navigation",
+      "path": "/person/E292392B/x/",
+      "proxy": "socks5://84.200.89.140:1080",
+      "observedExitIP": "84.200.89.140",
+      "exitWindowRequest": 3
+    },
+    {
+      "at": "2026-11-02T01:08:44.435Z",
+      "key": "person:1295A33DF",
+      "kind": "curl",
+      "path": "/person/1295A33DF/x/",
+      "proxy": "socks5://176.124.206.150:8443",
+      "observedExitIP": "176.124.206.150",
+      "exitWindowRequest": 4,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 941089,
+      "rawTables": 0,
+      "title": " علی‌رضا کریم پور رزکناری - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-02T01:08:44.463Z",
+      "key": "person:1FC2D0B4",
+      "kind": "curl",
+      "path": "/person/1FC2D0B4/x/",
+      "proxy": "socks5://84.200.89.140:1080",
+      "observedExitIP": "84.200.89.140",
+      "exitWindowRequest": 4,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 993493,
+      "rawTables": 0,
+      "title": " اکبر عظیمی مهر آبادی - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-02T01:08:50.110Z",
+      "key": "company:14004136910",
+      "kind": "curl",
+      "path": "/company/14004136910/direct/",
+      "proxy": "socks5://95.163.85.73:1080",
+      "observedExitIP": "95.163.85.73",
+      "exitWindowRequest": 1,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 991407,
+      "rawTables": 0,
+      "title": "🏢 بازرگانی جام جهان منطقه آزاد چابهار - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    }
+  ],
+  "outcomes": [
+    {
+      "at": "2026-11-02T01:06:33.426Z",
+      "key": "company:10100373470",
+      "proxy": "http://46.232.249.209:40001",
+      "observedExitIP": "104.28.193.116",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "providerLimited": false,
+      "reason": null
+    },
+    {
+      "at": "2026-11-02T01:06:49.340Z",
+      "key": "person:10A635731",
+      "proxy": "http://46.232.249.209:40001",
+      "observedExitIP": "104.28.193.116",
+      "mainRequests": 2,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "providerLimited": false,
+      "reason": null
+    },
+    {
+      "at": "2026-11-02T01:07:04.868Z",
+      "key": "company:10100376380",
+      "proxy": "http://46.232.249.209:40001",
+      "observedExitIP": "104.28.193.116",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "providerLimited": false,
+      "reason": null
+    },
+    {
+      "at": "2026-11-02T01:07:30.558Z",
+      "key": "person:10A6D06EA",
+      "proxy": "socks5://192.3.7.110:1080",
+      "observedExitIP": "192.3.7.110",
+      "mainRequests": 2,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "providerLimited": false,
+      "reason": null
+    },
+    {
+      "at": "2026-11-02T01:07:43.871Z",
+      "key": "person:10A6D8A76",
+      "proxy": "socks5://91.92.155.207:1080",
+      "observedExitIP": "91.92.155.207",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (60) SSL certificate problem: self-signed certificate in certificate chain\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the"
+    },
+    {
+      "at": "2026-11-02T01:07:47.709Z",
+      "key": "company:10100377134",
+      "proxy": "socks5://192.3.7.110:1080",
+      "observedExitIP": "192.3.7.110",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": false,
+      "providerLimited": false,
+      "reason": "empty-detail-response"
+    },
+    {
+      "at": "2026-11-02T01:08:00.610Z",
+      "key": "person:10B081836",
+      "proxy": "socks5://145.220.227.144:1080",
+      "observedExitIP": "145.220.183.29",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (60) SSL certificate problem: self-signed certificate in certificate chain\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the"
+    },
+    {
+      "at": "2026-11-02T01:08:01.794Z",
+      "key": "company:10102663554",
+      "proxy": "socks5://176.124.206.150:8443",
+      "observedExitIP": "176.124.206.150",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "providerLimited": false,
+      "reason": null
+    },
+    {
+      "at": "2026-11-02T01:08:07.626Z",
+      "key": "company:10100377493",
+      "proxy": "socks5://176.124.206.150:8443",
+      "observedExitIP": "176.124.206.150",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "providerLimited": false,
+      "reason": null
+    },
+    {
+      "at": "2026-11-02T01:08:12.505Z",
+      "key": "company:10100951240",
+      "proxy": "socks5://84.200.89.140:1080",
+      "observedExitIP": "84.200.89.140",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "providerLimited": false,
+      "reason": null
+    },
+    {
+      "at": "2026-11-02T01:08:26.817Z",
+      "key": "company:10660137170",
+      "proxy": "socks5://176.124.206.150:8443",
+      "observedExitIP": "176.124.206.150",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "providerLimited": false,
+      "reason": null
+    },
+    {
+      "at": "2026-11-02T01:08:37.734Z",
+      "key": "person:E292392B",
+      "proxy": "socks5://84.200.89.140:1080",
+      "observedExitIP": "84.200.89.140",
+      "mainRequests": 2,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "providerLimited": false,
+      "reason": null
+    },
+    {
+      "at": "2026-11-02T01:08:58.153Z",
+      "key": "person:1295A33DF",
+      "proxy": "socks5://176.124.206.150:8443",
+      "observedExitIP": "176.124.206.150",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com",
+        ""
+      ],
+      "success": false,
+      "providerLimited": false,
+      "reason": "empty-detail-response"
+    },
+    {
+      "at": "2026-11-02T01:08:58.439Z",
+      "key": "person:1FC2D0B4",
+      "proxy": "socks5://84.200.89.140:1080",
+      "observedExitIP": "84.200.89.140",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com",
+        ""
+      ],
+      "success": false,
+      "providerLimited": false,
+      "reason": "empty-detail-response"
+    },
+    {
+      "at": "2026-11-02T01:09:23.023Z",
+      "key": "company:14004136910",
+      "proxy": "socks5://95.163.85.73:1080",
+      "observedExitIP": "95.163.85.73",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": false,
+      "providerLimited": false,
+      "reason": "empty-detail-response"
+    }
+  ],
+  "skippedRecentUnavailable": 36,
+  "candidateUniverse": 10000,
+  "candidateCount": 32
+}
