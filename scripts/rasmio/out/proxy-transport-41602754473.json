@@ -1,0 +1,285 @@
+{
+  "runId": "41602754473",
+  "startedAt": "2026-11-03T08:23:00.767Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "lines": 2002
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 2625
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 11571
+    }
+  ],
+  "health": [
+    {
+      "proxy": "socks5://91.107.153.123:9083",
+      "at": "2026-11-03T08:23:04.258Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://118.179.27.153:1080",
+      "at": "2026-11-03T08:23:04.268Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 118.179.27.153 port 1080 after 5001 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://43.161.248.18:1080",
+      "at": "2026-11-03T08:23:09.277Z",
+      "observedExitIP": "43.161.248.18",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "socks5://185.213.91.24:9100",
+      "at": "2026-11-03T08:23:09.286Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://129.151.128.225:1080",
+      "at": "2026-11-03T08:23:10.311Z",
+      "observedExitIP": "129.151.128.225",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "socks5://129.150.57.5:55555",
+      "at": "2026-11-03T08:23:14.301Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 129.150.57.5 port 55555 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://85.235.62.246:1080",
+      "at": "2026-11-03T08:23:19.369Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 85.235.62.246 port 1080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://45.144.222.214:1080",
+      "at": "2026-11-03T08:23:24.386Z",
+      "outcome": "health-failed",
+      "error": "curl: (7) Failed to connect to 45.144.222.214 port 1080 after 168 ms: Couldn't connect to server\n"
+    },
+    {
+      "proxy": "socks5://89.208.84.221:1090",
+      "at": "2026-11-03T08:23:24.568Z",
+      "outcome": "health-failed",
+      "error": "curl: (7) Failed to connect to 89.208.84.221 port 1090 after 182 ms: Couldn't connect to server\n"
+    },
+    {
+      "proxy": "socks5://113.22.221.35:20000",
+      "at": "2026-11-03T08:23:24.764Z",
+      "observedExitIP": "113.22.221.35",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "socks5://39.106.201.108:7890",
+      "at": "2026-11-03T08:23:45.877Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5001 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://185.62.1.41:1080",
+      "at": "2026-11-03T08:23:50.894Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 185.62.1.41 port 1080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://39.109.101.250:10808",
+      "at": "2026-11-03T08:23:55.912Z",
+      "outcome": "health-failed",
+      "error": "curl: (7) Failed to connect to 39.109.101.250 port 10808 after 163 ms: Couldn't connect to server\n"
+    },
+    {
+      "proxy": "socks5://84.21.191.170:1080",
+      "at": "2026-11-03T08:23:56.091Z",
+      "outcome": "health-failed",
+      "error": "curl: (7) Failed to connect to 84.21.191.170 port 1080 after 181 ms: Couldn't connect to server\n"
+    },
+    {
+      "proxy": "socks5://5.175.245.72:1083",
+      "at": "2026-11-03T08:23:56.287Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://89.189.84.62:9090",
+      "at": "2026-11-03T08:24:01.305Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 89.189.84.62 port 9090 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://194.67.110.12:7000",
+      "at": "2026-11-03T08:24:06.322Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 194.67.110.12 port 7000 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://118.69.134.153:20000",
+      "at": "2026-11-03T08:24:11.340Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 118.69.134.153 port 20000 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://77.238.237.253:41414",
+      "at": "2026-11-03T08:24:16.358Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 77.238.237.253 port 41414 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://20.4.122.186:1080",
+      "at": "2026-11-03T08:24:21.377Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 20.4.122.186 port 1080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://93.88.134.18:1080",
+      "at": "2026-11-03T08:24:26.394Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 93.88.134.18 port 1080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://77.50.61.182:1080",
+      "at": "2026-11-03T08:24:31.411Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 77.50.61.182 port 1080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://102.69.146.59:7080",
+      "at": "2026-11-03T08:24:36.429Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 102.69.146.59 port 7080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://94.124.160.141:1080",
+      "at": "2026-11-03T08:24:41.446Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 94.124.160.141 port 1080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://185.21.10.126:1080",
+      "at": "2026-11-03T08:25:01.704Z",
+      "outcome": "health-failed",
+      "error": "curl: (7) Failed to connect to 185.21.10.126 port 1080 after 133 ms: Couldn't connect to server\n"
+    },
+    {
+      "proxy": "socks5://89.189.132.154:1080",
+      "at": "2026-11-03T08:25:01.852Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 89.189.132.154 port 1080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://185.21.141.238:1080",
+      "at": "2026-11-03T08:25:06.870Z",
+      "outcome": "health-failed",
+      "error": "curl: (7) Failed to connect to 185.21.141.238 port 1080 after 209 ms: Couldn't connect to server\n"
+    },
+    {
+      "proxy": "socks5://87.229.236.151:1080",
+      "at": "2026-11-03T08:25:07.094Z",
+      "observedExitIP": "87.229.236.151",
+      "outcome": "https-echo-verified"
+    }
+  ],
+  "requests": [
+    {
+      "at": "2026-11-03T08:23:11.934Z",
+      "key": "person:22D8714",
+      "kind": "curl",
+      "path": "/person/22D8714/x/",
+      "proxy": "socks5://129.151.128.225:1080",
+      "observedExitIP": "129.151.128.225",
+      "exitWindowRequest": 1,
+      "error": "curl: (28) Failed to connect to 129.151.128.225 port 1080 after 5001 ms: Timeout was reached\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    },
+    {
+      "at": "2026-11-03T08:23:26.222Z",
+      "key": "company:10102123290",
+      "kind": "curl",
+      "path": "/company/10102123290/direct/",
+      "proxy": "socks5://113.22.221.35:20000",
+      "observedExitIP": "113.22.221.35",
+      "exitWindowRequest": 1,
+      "error": "curl: (28) Connection timed out after 5001 milliseconds\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    },
+    {
+      "at": "2026-11-03T08:25:11.095Z",
+      "key": "company:10102123670",
+      "kind": "curl",
+      "path": "/company/10102123670/direct/",
+      "proxy": "socks5://87.229.236.151:1080",
+      "observedExitIP": "87.229.236.151",
+      "exitWindowRequest": 1,
+      "error": "curl: (28) Failed to connect to 87.229.236.151 port 1080 after 5002 ms: Timeout was reached\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    }
+  ],
+  "outcomes": [
+    {
+      "at": "2026-11-03T08:23:16.961Z",
+      "key": "person:22D8714",
+      "proxy": "socks5://129.151.128.225:1080",
+      "observedExitIP": "129.151.128.225",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) Failed to connect to 129.151.128.225 port 1080 after 5001 ms: Timeout was reached\n"
+    },
+    {
+      "at": "2026-11-03T08:23:31.248Z",
+      "key": "company:10102123290",
+      "proxy": "socks5://113.22.221.35:20000",
+      "observedExitIP": "113.22.221.35",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) Connection timed out after 5001 milliseconds\n"
+    },
+    {
+      "at": "2026-11-03T08:25:16.121Z",
+      "key": "company:10102123670",
+      "proxy": "socks5://87.229.236.151:1080",
+      "observedExitIP": "87.229.236.151",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) Failed to connect to 87.229.236.151 port 1080 after 5002 ms: Timeout was reached\n"
+    }
+  ],
+  "skippedRecentUnavailable": 3,
+  "candidateUniverse": 10000,
+  "candidateCount": 32
+}
