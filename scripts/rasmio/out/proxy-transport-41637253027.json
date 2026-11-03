@@ -1,0 +1,64 @@
+{
+  "runId": "41637253027",
+  "startedAt": "2026-11-03T12:38:15.453Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "error": "HTTP 403"
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 403"
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 403"
+    }
+  ],
+  "health": [
+    {
+      "proxy": "http://218.207.164.174:7890",
+      "at": "2026-11-03T12:38:17.414Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 218.207.164.174 port 7890 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://49.213.59.105:8082",
+      "at": "2026-11-03T12:38:17.424Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 49.213.59.105 port 8082 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://103.239.52.100:1080",
+      "at": "2026-11-03T12:38:22.433Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 103.239.52.100 port 1080 after 5002 ms: Timeout was reached\n"
+    }
+  ],
+  "requests": [],
+  "outcomes": [],
+  "skippedRecentUnavailable": 0,
+  "candidateUniverse": 3,
+  "candidateCount": 3
+}
