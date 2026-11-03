@@ -1,0 +1,58 @@
+{
+  "runId": "41684547988",
+  "startedAt": "2026-11-03T17:30:15.664Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "error": "HTTP 403"
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 403"
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 403"
+    }
+  ],
+  "health": [
+    {
+      "proxy": "http://188.132.249.157:8080",
+      "at": "2026-11-03T17:30:17.768Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 188.132.249.157 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://201.7.31.146:8080",
+      "at": "2026-11-03T17:30:17.780Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Proxy CONNECT aborted due to timeout\n"
+    }
+  ],
+  "requests": [],
+  "outcomes": [],
+  "skippedRecentUnavailable": 4,
+  "candidateUniverse": 6,
+  "candidateCount": 2
+}
