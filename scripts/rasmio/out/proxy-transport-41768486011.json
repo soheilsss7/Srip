@@ -1,0 +1,116 @@
+{
+  "runId": "41768486011",
+  "startedAt": "2026-11-04T03:40:30.470Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "error": "HTTP 403"
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 403"
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 403"
+    }
+  ],
+  "health": [
+    {
+      "proxy": "socks5://193.218.118.128:1080",
+      "at": "2026-11-04T03:40:33.122Z",
+      "observedExitIP": "85.232.187.205",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "http://188.132.221.186:8080",
+      "at": "2026-11-04T03:40:33.131Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 188.132.221.186 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://103.38.104.199:8080",
+      "at": "2026-11-04T03:40:38.147Z",
+      "observedExitIP": "103.38.104.199",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "http://43.251.205.146:8080",
+      "at": "2026-11-04T03:40:41.835Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 43.251.205.146 port 8080 after 5003 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://122.2.48.121:8080",
+      "at": "2026-11-04T03:40:46.852Z",
+      "observedExitIP": "122.2.48.121",
+      "outcome": "exit-budget-or-cooldown"
+    }
+  ],
+  "requests": [
+    {
+      "at": "2026-11-04T03:40:34.126Z",
+      "key": "person:3880C29",
+      "kind": "curl",
+      "path": "/person/3880C29/x/",
+      "proxy": "socks5://193.218.118.128:1080",
+      "observedExitIP": "85.232.187.205",
+      "exitWindowRequest": 3,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1343080,
+      "rawTables": 0,
+      "title": " فرشته قربانی - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-04T03:40:37.603Z",
+      "key": "person:3880C29",
+      "kind": "browser-navigation",
+      "path": "/person/3880C29/x/",
+      "proxy": "socks5://193.218.118.128:1080",
+      "observedExitIP": "85.232.187.205",
+      "exitWindowRequest": 4
+    }
+  ],
+  "outcomes": [
+    {
+      "at": "2026-11-04T03:40:58.628Z",
+      "key": "person:3880C29",
+      "proxy": "socks5://193.218.118.128:1080",
+      "observedExitIP": "85.232.187.205",
+      "mainRequests": 2,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "providerLimited": false,
+      "reason": null
+    }
+  ],
+  "skippedRecentUnavailable": 9,
+  "candidateUniverse": 14,
+  "candidateCount": 5
+}
