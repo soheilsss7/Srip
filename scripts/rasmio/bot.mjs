@@ -2123,10 +2123,12 @@ try {
     if (zeroStreak >= (paced ? 2 : 18)) { stopReason = 'quota-or-blocked'; break; }
     /* موج تطبیقی + حالت فاصله‌گذاری: شاید سقفِ «سرعت» IP است نه تعدادش — با فاصلهٔ بلند تست می‌کنیم */
     if (okInWave === 0) {
-      zeroWaves++; waveN = 1;
-      /* مکث کوتاه و ادامه — به‌جای بستن اجرا (نرخ موفقیت ۳۳٪ ⇒ صفرهای پیاپی طبیعی است) */
-      await sleep(4_000 + Math.random() * 5_000);
-      if (zeroWaves % 3 === 0) { log('⏳ ' + zeroWaves + ' موج بدون داده — مکث و ادامه'); await sleep(6_000); }
+      zeroWaves++;
+      // An empty public shell in one lane is not evidence to serialize every
+      // independent lane. Keep the configured ceiling (never add workers).
+      if(failedTransportWave(results,{proxyLaneJustDeferred}))waveN=1;
+      // The single normal nap below remains; don't add a second/third sleep.
+      if(zeroWaves%3===0)log('⏳ '+zeroWaves+' موج بدون داده — ادامه با مکث پایه');
     } else { zeroWaves = 0; if (process.env.RASMIO_VERIFY !== '1' && okInWave === wave.length && waveN < MAX_WAVE && !paced) waveN++; }
     if (processed - lastRot >= 20) { lastRot = processed; await rotateIdentity(); }
     if (processed - lastCkpt >= 25) { lastCkpt = processed; botPush('checkpoint-' + processed); }

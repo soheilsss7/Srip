@@ -134,3 +134,12 @@ test('resolved managed tunnel uses the same four-request exit budget and verifie
  const pool=new PublicProxyTransport({frontier,out,execute,maxChecks:1});pool.candidates=[{url:'user-tunnel:test'}];pool.resolveCandidate=async()=>({url:'socks5://127.0.0.1:12345',trustedLocal:true,tunnelId:'test',release:()=>released++});
  try{for(let i=0;i<4;i++){const lease=await pool.acquire({type:'company',id:'10100009135'});await lease.fetch('https://rasmio.com/company/10100009135/direct/');lease.finish(true);}await assert.rejects(pool.acquire({type:'company',id:'10100009135'}),/unavailable/);assert.equal(frontier.proxyTransport.exits['1.1.1.1'].requests,4);assert.equal(pool.report.health[0].tunnelId,'test');assert.equal(pool.report.outcomes.filter(o=>o.success).length,4);assert.equal(released,0);}finally{pool.close();fs.rmSync(out,{recursive:true,force:true});}
 });
+test('health warmup is bounded to three echo workers, does not reserve profile quota, and shares max checks',async()=>{
+ const out=fs.mkdtempSync(path.join(os.tmpdir(),'warmup-'));let active=0,peak=0,calls=0;const frontier={};
+ const pool=new PublicProxyTransport({frontier,out,maxChecks:5,execute:async(_,args)=>{assert.equal(args.at(-1),'https://api.ipify.org/?format=json');const n=++calls;active++;peak=Math.max(peak,active);await new Promise(r=>setTimeout(r,5));active--;return {stdout:JSON.stringify({ip:`1.1.1.${n}`})};}});
+ pool.candidates=Array.from({length:10},(_,i)=>({url:`http://8.8.8.${i+1}:80`}));
+ try{await pool.warmup();assert.equal(calls,5);assert.equal(peak,3);assert.equal(pool.checking,0);assert.equal(pool.ready.length,5);assert.equal(pool.busy.size,0);assert.deepEqual(frontier.proxyTransport.exits,{});const lease=await pool.acquire({type:'company',id:'10100009135'});assert.equal(calls,5);lease.finish(true);}finally{pool.close();fs.rmSync(out,{recursive:true,force:true});}
+});
+test('health warmup stops scheduling new echo requests after explicit provider refusal',async()=>{
+ const out=fs.mkdtempSync(path.join(os.tmpdir(),'warmup-refusal-'));let calls=0;const pool=new PublicProxyTransport({frontier:{},out,execute:async()=>{calls++;throw Object.assign(Error('refused'),{stderr:'curl: (22) The requested URL returned error: 429'});}});pool.candidates=Array.from({length:20},()=>({url:'http://8.8.8.8:80'}));try{await pool.warmup();assert.ok(calls<=3);assert.equal(pool.report.healthProviderRefused,true);}finally{pool.close();fs.rmSync(out,{recursive:true,force:true});}
+});

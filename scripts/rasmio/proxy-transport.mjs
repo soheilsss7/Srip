@@ -90,13 +90,8 @@ export class PublicProxyTransport {
     this.report.candidateUniverse=universe.length;
     this.report.candidateCount=this.candidates.length;this.save();return this;
   }
-  available(ip){const e=this.state.exits[ip];return !e || this.now()-e.lastAt>=WINDOW || (!e.blockedAt && !(e.cooldownUntil>this.now()) && e.requests<4);}
-  async acquire(ent){
-    const begin=this.now();
-    while(this.now()-begin<60000){
-      let entry=this.ready.find(e=>!e.retired && !this.busy.has(e.ip) && this.available(e.ip));
-      if(entry){this.busy.add(entry.ip);return this.lease(entry,ent);}
-      if(this.index<this.candidates.length && this.checked<this.maxChecks){
+  async checkNextCandidate({reserveFor=null}={}){
+    if(this.report.healthProviderRefused || this.index>=this.candidates.length || this.checked>=this.maxChecks)return false;
         const candidate=this.candidates[this.index++];this.checked++;this.checking++;
         const observation={proxy:candidate.url,at:new Date().toISOString()};this.report.health.push(observation);let resolved;
         try{
@@ -104,13 +99,25 @@ export class PublicProxyTransport {
           const {stdout}=await this.execute('curl',transportCurlArgs(resolved.url,'https://api.ipify.org/?format=json',{trustedLocal:resolved.trustedLocal===true}),{env:this.env,cwd:this.scratch,timeout:14000,maxBuffer:4500000});
           const ip=JSON.parse(stdout).ip;if(!isIP(ip))throw new Error('Invalid echo IP');observation.observedExitIP=ip;
           this.state.endpointHealth[candidate.url]=healthSuccess(this.state.endpointHealth[candidate.url],ip,this.now());
-          if(!this.available(ip)){observation.outcome='exit-budget-or-cooldown';resolved.release?.();continue;}
-          if(this.ready.some(e=>e.ip===ip && !e.retired)){observation.outcome='duplicate-echo-exit';resolved.release?.();continue;}
-          entry={proxy:resolved.url,ip,retired:false,trustedLocal:resolved.trustedLocal===true,tunnelId:resolved.tunnelId};this.ready.push(entry);observation.outcome='https-echo-verified';
-        }catch(e){resolved?.release?.();this.state.endpointHealth[candidate.url]=healthFailure(this.state.endpointHealth[candidate.url],this.now());observation.outcome='health-failed';observation.error=String(e.stderr||e.message).slice(0,200);}
+          if(!this.available(ip)){observation.outcome='exit-budget-or-cooldown';resolved.release?.();return true;}
+          if(this.ready.some(e=>e.ip===ip && !e.retired)){observation.outcome='duplicate-echo-exit';resolved.release?.();return true;}
+          const entry={proxy:resolved.url,ip,retired:false,trustedLocal:resolved.trustedLocal===true,tunnelId:resolved.tunnelId};this.ready.push(entry);observation.outcome='https-echo-verified';if(reserveFor){this.busy.add(entry.ip);return {lease:this.lease(entry,reserveFor)};}
+        }catch(e){resolved?.release?.();this.state.endpointHealth[candidate.url]=healthFailure(this.state.endpointHealth[candidate.url],this.now());observation.outcome='health-failed';observation.error=String(e.stderr||e.message).slice(0,200);if(/returned error: (?:401|403|429)\b/.test(observation.error))this.report.healthProviderRefused=true;}
         finally{this.checking--;for(const resolve of this.waiters.splice(0))resolve();this.save();}
-        continue;
-      }
+    return true;
+  }
+  async warmup({concurrency=3}={}){
+    if(!Number.isInteger(concurrency)||concurrency<1||concurrency>3)throw new Error('Invalid health concurrency');
+    const started=Date.now();await Promise.all(Array.from({length:concurrency},async()=>{while(await this.checkNextCandidate()){};}));
+    this.report.healthWarmup={concurrency,checks:this.checked,milliseconds:Date.now()-started,scope:'HTTPS echo only; no profile requests or quota reservations'};this.save();return this;
+  }
+  available(ip){const e=this.state.exits[ip];return !e || this.now()-e.lastAt>=WINDOW || (!e.blockedAt && !(e.cooldownUntil>this.now()) && e.requests<4);}
+  async acquire(ent){
+    const begin=this.now();
+    while(this.now()-begin<60000){
+      let entry=this.ready.find(e=>!e.retired && !this.busy.has(e.ip) && this.available(e.ip));
+      if(entry){this.busy.add(entry.ip);return this.lease(entry,ent);}
+      const checked=await this.checkNextCandidate({reserveFor:ent});if(checked?.lease)return checked.lease;if(checked)continue;
       if(this.busy.size || this.checking){await new Promise(resolve=>{const timeout=setTimeout(resolve,2000);this.waiters.push(()=>{clearTimeout(timeout);resolve();});});continue;}
       break;
     }
