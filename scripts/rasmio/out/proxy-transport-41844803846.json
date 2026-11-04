@@ -1,0 +1,404 @@
+{
+  "runId": "41844803846",
+  "startedAt": "2026-11-04T14:10:58.263Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "lines": 2420
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 4412
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 11306
+    }
+  ],
+  "health": [
+    {
+      "proxy": "socks5://127.0.0.1:33871",
+      "at": "2026-11-04T14:10:58.954Z",
+      "tunnelId": "7fa67013b99fa4aa",
+      "observedExitIP": "91.201.67.193",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:42631",
+      "at": "2026-11-04T14:10:58.962Z",
+      "tunnelId": "b608ee76fd754470",
+      "observedExitIP": "193.29.139.235",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:39685",
+      "at": "2026-11-04T14:10:58.962Z",
+      "tunnelId": "87dd88d0c1e4765b",
+      "observedExitIP": "15.204.97.206",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:38829",
+      "at": "2026-11-04T14:11:00.631Z",
+      "tunnelId": "7b35147439192f02",
+      "observedExitIP": "15.204.97.206",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:45583",
+      "at": "2026-11-04T14:11:00.770Z",
+      "tunnelId": "42da078e52e7ef1f",
+      "outcome": "health-failed",
+      "error": "curl: (35) Recv failure: Connection reset by peer\n"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:39307",
+      "at": "2026-11-04T14:11:01.018Z",
+      "tunnelId": "d94d22ae6da9f98b",
+      "observedExitIP": "67.220.95.3",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:43003",
+      "at": "2026-11-04T14:11:01.284Z",
+      "tunnelId": "f64f6df5a2233ae3",
+      "outcome": "health-failed",
+      "error": "curl: (35) OpenSSL SSL_connect: SSL_ERROR_SYSCALL in connection to api.ipify.org:443 \n"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:36351",
+      "at": "2026-11-04T14:11:01.310Z",
+      "tunnelId": "7b39dee91a38db1a",
+      "outcome": "health-failed",
+      "error": "curl: (28) SSL connection timeout\n"
+    },
+    {
+      "proxy": "http://180.190.238.62:8080",
+      "at": "2026-11-04T14:11:03.439Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 180.190.238.62 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://45.190.78.181:999",
+      "at": "2026-11-04T14:11:04.046Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 45.190.78.181 port 999 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://103.182.22.174:8000",
+      "at": "2026-11-04T14:11:06.449Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Proxy CONNECT aborted due to timeout\n"
+    },
+    {
+      "proxy": "https://69.161.223.61:8447",
+      "at": "2026-11-04T14:11:08.453Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: unable to get local issuer certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could"
+    },
+    {
+      "proxy": "http://49.213.43.6:8080",
+      "at": "2026-11-04T14:11:08.550Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 49.213.43.6 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://34.122.187.196:80",
+      "at": "2026-11-04T14:11:09.061Z",
+      "outcome": "health-failed",
+      "error": "curl: (22) The requested URL returned error: 500\n"
+    },
+    {
+      "proxy": "http://202.179.2.250:8080",
+      "at": "2026-11-04T14:11:09.128Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 202.179.2.250 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://1.4.141.66:80",
+      "at": "2026-11-04T14:11:11.462Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Proxy CONNECT aborted due to timeout\n"
+    },
+    {
+      "proxy": "http://194.124.37.119:8080",
+      "at": "2026-11-04T14:11:13.564Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 194.124.37.119 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://192.6.154.179:3128",
+      "at": "2026-11-04T14:11:14.142Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Proxy CONNECT aborted due to timeout\n"
+    },
+    {
+      "proxy": "socks5://103.192.80.81:1088",
+      "at": "2026-11-04T14:11:16.590Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5004 milliseconds\n"
+    },
+    {
+      "proxy": "http://103.165.126.65:8080",
+      "at": "2026-11-04T14:11:18.597Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 103.165.126.65 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://206.188.207.88:8443",
+      "at": "2026-11-04T14:11:19.242Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: unable to get local issuer certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could"
+    },
+    {
+      "proxy": "http://103.156.114.46:8080",
+      "at": "2026-11-04T14:11:19.362Z",
+      "observedExitIP": "103.156.114.46",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "http://103.158.236.132:8080",
+      "at": "2026-11-04T14:11:21.607Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 103.158.236.132 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://14.241.133.207:8080",
+      "at": "2026-11-04T14:11:23.613Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 14.241.133.207 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://43.230.192.242:1080",
+      "at": "2026-11-04T14:11:24.350Z",
+      "observedExitIP": "43.230.192.242",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "https://206.188.209.190:8443",
+      "at": "2026-11-04T14:11:26.128Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: unable to get local issuer certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could"
+    },
+    {
+      "proxy": "http://124.105.40.93:8181",
+      "at": "2026-11-04T14:11:26.630Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 124.105.40.93 port 8181 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://103.88.91.14:8080",
+      "at": "2026-11-04T14:11:27.718Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 103.88.91.14 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://208.67.28.19:58090",
+      "at": "2026-11-04T14:11:28.627Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 208.67.28.19 port 58090 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://154.73.29.217:8080",
+      "at": "2026-11-04T14:11:31.644Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 154.73.29.217 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://38.58.66.237:999",
+      "at": "2026-11-04T14:11:32.732Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 38.58.66.237 port 999 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://45.150.164.38:8443",
+      "at": "2026-11-04T14:11:33.641Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '45.150.164.38'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serv"
+    }
+  ],
+  "requests": [
+    {
+      "at": "2026-11-04T14:11:45.173Z",
+      "key": "company:10200305788",
+      "kind": "curl",
+      "path": "/company/10200305788/direct/",
+      "proxy": "socks5://43.230.192.242:1080",
+      "observedExitIP": "43.230.192.242",
+      "exitWindowRequest": 2,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1227660,
+      "rawTables": 6,
+      "title": "🏢 گازار لودر تبریز - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-04T14:11:45.182Z",
+      "key": "person:46A11E4",
+      "kind": "curl",
+      "path": "/person/46A11E4/x/",
+      "proxy": "http://103.156.114.46:8080",
+      "observedExitIP": "103.156.114.46",
+      "exitWindowRequest": 1,
+      "error": "curl: (28) Failed to connect to 103.156.114.46 port 8080 after 5002 ms: Timeout was reached\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    },
+    {
+      "at": "2026-11-04T14:12:05.359Z",
+      "key": "person:46A5F69",
+      "kind": "curl",
+      "path": "/person/46A5F69/x/",
+      "proxy": "socks5://43.230.192.242:1080",
+      "observedExitIP": "43.230.192.242",
+      "exitWindowRequest": 3,
+      "error": "curl: (28) Failed to connect to 43.230.192.242 port 1080 after 5002 ms: Timeout was reached\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    }
+  ],
+  "outcomes": [
+    {
+      "at": "2026-11-04T14:11:50.213Z",
+      "key": "person:46A11E4",
+      "proxy": "http://103.156.114.46:8080",
+      "observedExitIP": "103.156.114.46",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) Failed to connect to 103.156.114.46 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "at": "2026-11-04T14:11:55.361Z",
+      "key": "company:10200305788",
+      "proxy": "socks5://43.230.192.242:1080",
+      "observedExitIP": "43.230.192.242",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "providerLimited": false,
+      "reason": null
+    },
+    {
+      "at": "2026-11-04T14:12:10.395Z",
+      "key": "person:46A5F69",
+      "proxy": "socks5://43.230.192.242:1080",
+      "observedExitIP": "43.230.192.242",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) Failed to connect to 43.230.192.242 port 1080 after 5002 ms: Timeout was reached\n"
+    }
+  ],
+  "skippedRecentUnavailable": 100,
+  "candidateUniverse": 10000,
+  "candidateCount": 32,
+  "userTunnels": {
+    "enabled": true,
+    "source": "data/sources/user-public-tunnels/2026-11-04.txt",
+    "total": 57,
+    "accepted": 52,
+    "rejected": [
+      {
+        "line": 26,
+        "reason": "unsupported-shadowsocks-cipher"
+      },
+      {
+        "line": 43,
+        "reason": "unsupported-security-extension"
+      },
+      {
+        "line": 45,
+        "reason": "unsupported-security-extension"
+      },
+      {
+        "line": 51,
+        "reason": "unsupported-security-extension"
+      }
+    ],
+    "duplicates": [
+      {
+        "line": 59,
+        "id": "32ad7c4c101c0f15"
+      }
+    ],
+    "rotation": "up to eight configurations attempted per run; persistent cursor advances on attempt; shared four-page observed-IP budget",
+    "clientSHA256": "e4bd9119f50ae7c41658b1abd0679ae06f98bd864a2907ff33f2f2cf7081b214",
+    "scheduling": "profile-success first, healthy second, untested then expired failures; exhausted observed exits revalidated no more than hourly",
+    "selected": [
+      {
+        "id": "7fa67013b99fa4aa",
+        "line": 7,
+        "protocol": "vless"
+      },
+      {
+        "id": "b608ee76fd754470",
+        "line": 8,
+        "protocol": "shadowsocks"
+      },
+      {
+        "id": "87dd88d0c1e4765b",
+        "line": 10,
+        "protocol": "vless"
+      },
+      {
+        "id": "7b35147439192f02",
+        "line": 11,
+        "protocol": "vless"
+      },
+      {
+        "id": "42da078e52e7ef1f",
+        "line": 6,
+        "protocol": "trojan"
+      },
+      {
+        "id": "d94d22ae6da9f98b",
+        "line": 12,
+        "protocol": "vmess"
+      },
+      {
+        "id": "f64f6df5a2233ae3",
+        "line": 13,
+        "protocol": "vless"
+      },
+      {
+        "id": "7b39dee91a38db1a",
+        "line": 14,
+        "protocol": "shadowsocks"
+      }
+    ]
+  },
+  "healthWarmup": {
+    "concurrency": 3,
+    "checks": 32,
+    "milliseconds": 38791,
+    "scope": "HTTPS echo only; no profile requests or quota reservations"
+  }
+}
