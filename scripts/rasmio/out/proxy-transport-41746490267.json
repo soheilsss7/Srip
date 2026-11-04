@@ -1,0 +1,263 @@
+{
+  "runId": "41746490267",
+  "startedAt": "2026-11-04T00:24:44.051Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "lines": 3439
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 5622
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 11678
+    }
+  ],
+  "health": [
+    {
+      "proxy": "http://45.190.85.4:999",
+      "at": "2026-11-04T00:24:46.558Z",
+      "observedExitIP": "45.190.85.42",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "https://83.212.225.32:443",
+      "at": "2026-11-04T00:24:46.567Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '83.212.225.32'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serv"
+    },
+    {
+      "proxy": "http://202.183.236.221:8080",
+      "at": "2026-11-04T00:24:46.910Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 202.183.236.221 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://213.214.134.50:443",
+      "at": "2026-11-04T00:24:51.926Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '213.214.134.50'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "http://198.244.254.77:3128",
+      "at": "2026-11-04T00:24:52.212Z",
+      "observedExitIP": "198.244.254.77",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "http://78.39.253.48:8080",
+      "at": "2026-11-04T00:24:52.937Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 78.39.253.48 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://188.219.81.243:443",
+      "at": "2026-11-04T00:24:57.953Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '188.219.81.243'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "https://45.220.173.35:443",
+      "at": "2026-11-04T00:24:58.246Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '45.220.173.35'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serv"
+    },
+    {
+      "proxy": "https://41.77.155.164:443",
+      "at": "2026-11-04T00:24:59.085Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '41.77.155.164'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serv"
+    },
+    {
+      "proxy": "http://185.166.27.208:2020",
+      "at": "2026-11-04T00:24:59.585Z",
+      "observedExitIP": "185.166.27.208",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "https://188.219.81.246:443",
+      "at": "2026-11-04T00:25:03.642Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '188.219.81.246'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "https://200.52.72.14:443",
+      "at": "2026-11-04T00:25:03.961Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: certificate has expired\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish "
+    },
+    {
+      "proxy": "http://103.65.237.92:5678",
+      "at": "2026-11-04T00:25:04.049Z",
+      "outcome": "health-failed",
+      "error": "curl: (22) The requested URL returned error: 400\n"
+    },
+    {
+      "proxy": "https://205.178.136.151:8447",
+      "at": "2026-11-04T00:25:04.549Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: unable to get local issuer certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could"
+    },
+    {
+      "proxy": "https://205.186.138.13:443",
+      "at": "2026-11-04T00:25:05.760Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '205.186.138.13'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "https://3.231.160.150:41552",
+      "at": "2026-11-04T00:25:05.999Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: unable to get local issuer certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could"
+    },
+    {
+      "proxy": "https://20.19.38.176:443",
+      "at": "2026-11-04T00:25:06.238Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: self-signed certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish "
+    },
+    {
+      "proxy": "http://103.56.205.84:8080",
+      "at": "2026-11-04T00:25:06.476Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 103.56.205.84 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://37.100.85.116:443",
+      "at": "2026-11-04T00:25:11.492Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '37.100.85.116'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serv"
+    },
+    {
+      "proxy": "https://38.28.185.148:443",
+      "at": "2026-11-04T00:25:12.012Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '38.28.185.148'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serv"
+    },
+    {
+      "proxy": "https://38.28.185.229:443",
+      "at": "2026-11-04T00:25:12.394Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '38.28.185.229'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serv"
+    },
+    {
+      "proxy": "http://200.26.184.192:999",
+      "at": "2026-11-04T00:25:12.671Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 200.26.184.192 port 999 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://38.28.185.142:443",
+      "at": "2026-11-04T00:25:17.687Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '38.28.185.142'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serv"
+    },
+    {
+      "proxy": "https://38.28.185.240:443",
+      "at": "2026-11-04T00:25:18.139Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '38.28.185.240'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serv"
+    },
+    {
+      "proxy": "https://38.28.185.215:443",
+      "at": "2026-11-04T00:25:18.646Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '38.28.185.215'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serv"
+    },
+    {
+      "proxy": "http://220.128.223.136:8085",
+      "at": "2026-11-04T00:25:19.179Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Proxy CONNECT aborted due to timeout\n"
+    },
+    {
+      "proxy": "https://38.28.185.139:443",
+      "at": "2026-11-04T00:25:24.195Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '38.28.185.139'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serv"
+    },
+    {
+      "proxy": "https://38.28.185.153:443",
+      "at": "2026-11-04T00:25:24.641Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '38.28.185.153'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serv"
+    },
+    {
+      "proxy": "https://38.28.185.157:443",
+      "at": "2026-11-04T00:25:25.183Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '38.28.185.157'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serv"
+    },
+    {
+      "proxy": "https://205.178.144.208:8447",
+      "at": "2026-11-04T00:25:25.633Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: unable to get local issuer certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could"
+    },
+    {
+      "proxy": "https://205.178.136.58:8443",
+      "at": "2026-11-04T00:25:25.711Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: unable to get local issuer certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could"
+    },
+    {
+      "proxy": "http://27.185.218.213:17981",
+      "at": "2026-11-04T00:25:25.786Z",
+      "outcome": "health-failed",
+      "error": "curl: (22) The requested URL returned error: 502\n"
+    }
+  ],
+  "requests": [
+    {
+      "at": "2026-11-04T00:24:48.095Z",
+      "key": "person:37518BC",
+      "kind": "curl",
+      "path": "/person/37518BC/x/",
+      "proxy": "http://45.190.85.4:999",
+      "observedExitIP": "45.190.85.42",
+      "exitWindowRequest": 1,
+      "error": "curl: (28) Failed to connect to 45.190.85.4 port 999 after 5002 ms: Timeout was reached\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    }
+  ],
+  "outcomes": [
+    {
+      "at": "2026-11-04T00:24:53.245Z",
+      "key": "person:37518BC",
+      "proxy": "http://45.190.85.4:999",
+      "observedExitIP": "45.190.85.42",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) Failed to connect to 45.190.85.4 port 999 after 5002 ms: Timeout was reached\n"
+    }
+  ],
+  "skippedRecentUnavailable": 61,
+  "candidateUniverse": 10000,
+  "candidateCount": 32
+}
