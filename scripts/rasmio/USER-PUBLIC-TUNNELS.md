@@ -47,3 +47,17 @@ connections, distinct echo-observed exits and explicit origin-data count zero.
 
 Xray v26.10.31 archive SHA-256 is pinned and verified before extracting/running.
 Temporary generated client configurations are owner-only files outside the repo.
+
+## Throughput scheduling update
+
+Production now ranks recent profile-success configurations ahead of echo-only,
+unknown, and expired-failure configurations. Known exhausted exits are not retested
+more than hourly (then refreshed for dynamic exit changes); the persistent
+four-request budget is unchanged. Up to 32 selected echo health checks run with
+**at most three health-only workers** before profile extraction. This does not
+increase the profile/browser worker ceiling or reserve a single profile request.
+Echo 401/403/429 stops scheduling further echo checks. Reports include
+`healthWarmup` timings, while successful data must still pass independent readback.
+Empty public shells in one lane no longer force every independent lane to a
+single worker; duplicated empty-wave sleeps were removed, retaining the normal
+pacing interval and access-wall handling. No sustained speed multiplier is implied.
