@@ -1355,7 +1355,7 @@ async function extractEntity(ent, pg = page) {
       }
     } catch(error) {log('NOTICE-EXTRACTION-DEFERRED',String(error.message).slice(0,160));}
   }
-  const egress=route?{proxy:route.proxy,observedExitIP:route.observedExitIP,mainRequests:route.mainRequests,scope:'Echo-observed IP; destination egress is unverified',directFallback:false}:null;
+  const egress=route?{proxy:route.proxy,observedExitIP:route.observedExitIP,...(route.tunnelId?{userTunnelId:route.tunnelId}:{}),mainRequests:route.mainRequests,scope:'Echo-observed IP; destination egress is unverified',directFallback:false}:null;
   if(route)via=via==='browser'?'proxy-browser':'proxy-fetch';
   let moreControls=null;
   try {moreControls=await pg.evaluate(()=>[...document.querySelectorAll('button,a')].filter(e=>/مشاهده\s*(سایر|بیشتر|همه)|نمایش\s*بیشتر/.test(e.textContent||'')).length);}catch{}
