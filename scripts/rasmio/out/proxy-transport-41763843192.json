@@ -1,0 +1,286 @@
+{
+  "runId": "41763843192",
+  "startedAt": "2026-11-04T02:56:29.184Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "lines": 2562
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 4784
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 11679
+    }
+  ],
+  "health": [
+    {
+      "proxy": "http://103.208.103.30:8080",
+      "at": "2026-11-04T02:56:31.501Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 103.208.103.30 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://80.74.54.148:3128",
+      "at": "2026-11-04T02:56:31.508Z",
+      "outcome": "health-failed",
+      "error": "curl: (22) The requested URL returned error: 403\n"
+    },
+    {
+      "proxy": "http://142.93.65.222:3129",
+      "at": "2026-11-04T02:56:31.739Z",
+      "observedExitIP": "142.93.65.222",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "http://185.192.21.82:8080",
+      "at": "2026-11-04T02:56:31.948Z",
+      "observedExitIP": "185.192.21.82",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "http://112.198.138.29:8082",
+      "at": "2026-11-04T02:56:32.594Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) SSL connection timeout\n"
+    },
+    {
+      "proxy": "http://155.138.236.211:18080",
+      "at": "2026-11-04T02:56:36.518Z",
+      "observedExitIP": "155.138.236.211",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "https://79.188.239.47:8443",
+      "at": "2026-11-04T02:56:36.702Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: self-signed certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish "
+    },
+    {
+      "proxy": "https://79.188.239.40:8443",
+      "at": "2026-11-04T02:56:37.040Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: self-signed certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish "
+    },
+    {
+      "proxy": "https://193.77.81.97:443",
+      "at": "2026-11-04T02:56:37.472Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '193.77.81.97'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serve"
+    },
+    {
+      "proxy": "https://18.169.247.230:443",
+      "at": "2026-11-04T02:56:37.607Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: unable to get local issuer certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could"
+    },
+    {
+      "proxy": "socks5://103.178.121.234:1080",
+      "at": "2026-11-04T02:56:37.762Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 103.178.121.234 port 1080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://138.197.69.103:443",
+      "at": "2026-11-04T02:56:37.835Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '138.197.69.103'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "https://35.187.237.178:443",
+      "at": "2026-11-04T02:56:37.953Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '35.187.237.178'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "http://114.9.29.166:8080",
+      "at": "2026-11-04T02:56:38.574Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 114.9.29.166 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://101.255.209.250:3128",
+      "at": "2026-11-04T02:56:42.776Z",
+      "outcome": "health-failed",
+      "error": "curl: (56) Recv failure: Connection reset by peer\n"
+    },
+    {
+      "proxy": "https://20.103.207.25:443",
+      "at": "2026-11-04T02:56:43.588Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '20.103.207.25'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serv"
+    },
+    {
+      "proxy": "http://1.2.248.41:80",
+      "at": "2026-11-04T02:56:43.951Z",
+      "observedExitIP": "1.2.248.41",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "https://34.93.103.38:443",
+      "at": "2026-11-04T02:56:45.349Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '34.93.103.38'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serve"
+    },
+    {
+      "proxy": "http://45.133.107.10:81",
+      "at": "2026-11-04T02:56:46.112Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 45.133.107.10 port 81 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://41.220.138.55:8080",
+      "at": "2026-11-04T02:56:47.420Z",
+      "observedExitIP": "41.220.138.55",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "https://203.193.169.112:443",
+      "at": "2026-11-04T02:56:51.127Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: certificate has expired\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish "
+    },
+    {
+      "proxy": "socks5://5.255.99.75:1080",
+      "at": "2026-11-04T02:56:51.613Z",
+      "observedExitIP": "5.255.99.75",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "https://79.188.239.45:8443",
+      "at": "2026-11-04T02:56:52.289Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: self-signed certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish "
+    },
+    {
+      "proxy": "http://8.219.97.248:80",
+      "at": "2026-11-04T02:56:52.610Z",
+      "observedExitIP": "8.219.64.236",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "https://79.188.239.42:8443",
+      "at": "2026-11-04T02:57:11.290Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: self-signed certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish "
+    },
+    {
+      "proxy": "http://45.194.3.132:8080",
+      "at": "2026-11-04T02:57:11.712Z",
+      "outcome": "health-failed",
+      "error": "curl: (56) Recv failure: Connection reset by peer\n"
+    },
+    {
+      "proxy": "https://130.52.199.50:443",
+      "at": "2026-11-04T02:57:12.310Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: self-signed certificate in certificate chain\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore"
+    },
+    {
+      "proxy": "socks5://77.37.203.137:1080",
+      "at": "2026-11-04T02:57:12.357Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 77.37.203.137 port 1080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "https://133.242.152.27:443",
+      "at": "2026-11-04T02:57:17.372Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '133.242.152.27'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the ser"
+    },
+    {
+      "proxy": "https://84.72.72.153:443",
+      "at": "2026-11-04T02:57:17.853Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target host name '84.72.72.153'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the serve"
+    },
+    {
+      "proxy": "http://45.77.249.199:1236",
+      "at": "2026-11-04T02:57:18.130Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Proxy CONNECT aborted due to timeout\n"
+    },
+    {
+      "proxy": "http://190.12.150.244:999",
+      "at": "2026-11-04T02:57:23.144Z",
+      "observedExitIP": "190.12.150.244",
+      "outcome": "exit-budget-or-cooldown"
+    }
+  ],
+  "requests": [
+    {
+      "at": "2026-11-04T02:56:53.339Z",
+      "key": "person:38278E5D",
+      "kind": "curl",
+      "path": "/person/38278E5D/x/",
+      "proxy": "http://41.220.138.55:8080",
+      "observedExitIP": "41.220.138.55",
+      "exitWindowRequest": 1,
+      "error": "curl: (28) Proxy CONNECT aborted due to timeout\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    },
+    {
+      "at": "2026-11-04T02:56:56.613Z",
+      "key": "company:10103345437",
+      "kind": "curl",
+      "path": "/company/10103345437/direct/",
+      "proxy": "http://8.219.97.248:80",
+      "observedExitIP": "8.219.64.236",
+      "exitWindowRequest": 2,
+      "error": "curl: (56) Proxy CONNECT aborted\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    }
+  ],
+  "outcomes": [
+    {
+      "at": "2026-11-04T02:56:57.026Z",
+      "key": "company:10103345437",
+      "proxy": "http://8.219.97.248:80",
+      "observedExitIP": "8.219.64.236",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (56) Proxy CONNECT aborted\n"
+    },
+    {
+      "at": "2026-11-04T02:56:58.361Z",
+      "key": "person:38278E5D",
+      "proxy": "http://41.220.138.55:8080",
+      "observedExitIP": "41.220.138.55",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) Proxy CONNECT aborted due to timeout\n"
+    }
+  ],
+  "skippedRecentUnavailable": 121,
+  "candidateUniverse": 10000,
+  "candidateCount": 32
+}
