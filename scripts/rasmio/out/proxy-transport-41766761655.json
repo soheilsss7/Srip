@@ -1,0 +1,70 @@
+{
+  "runId": "41766761655",
+  "startedAt": "2026-11-04T03:23:59.419Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "error": "HTTP 403"
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 403"
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 403"
+    }
+  ],
+  "health": [
+    {
+      "proxy": "socks5://193.218.118.128:1080",
+      "at": "2026-11-04T03:24:01.332Z",
+      "observedExitIP": "78.105.209.95",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "http://79.52.108.2:8080",
+      "at": "2026-11-04T03:24:01.339Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 79.52.108.2 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://103.38.104.199:8080",
+      "at": "2026-11-04T03:24:04.062Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 103.38.104.199 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://43.251.205.146:8080",
+      "at": "2026-11-04T03:24:06.354Z",
+      "observedExitIP": "43.251.205.146",
+      "outcome": "exit-budget-or-cooldown"
+    }
+  ],
+  "requests": [],
+  "outcomes": [],
+  "skippedRecentUnavailable": 7,
+  "candidateUniverse": 11,
+  "candidateCount": 4
+}
