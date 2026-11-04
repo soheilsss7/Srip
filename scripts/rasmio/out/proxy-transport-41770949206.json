@@ -1,0 +1,573 @@
+{
+  "runId": "41770949206",
+  "startedAt": "2026-11-04T04:05:25.283Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "lines": 3114
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 11679
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 4253
+    }
+  ],
+  "health": [
+    {
+      "proxy": "http://90.146.196.18:8080",
+      "at": "2026-11-04T04:05:27.530Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 90.146.196.18 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://193.33.157.134:8080",
+      "at": "2026-11-04T04:05:27.539Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 193.33.157.134 port 8080 after 5001 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://65.21.252.66:10809",
+      "at": "2026-11-04T04:05:32.712Z",
+      "observedExitIP": "84.20.16.53",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "http://194.124.37.118:8080",
+      "at": "2026-11-04T04:05:32.721Z",
+      "observedExitIP": "194.124.37.118",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "http://85.133.169.45:8118",
+      "at": "2026-11-04T04:05:34.883Z",
+      "outcome": "health-failed",
+      "error": "curl: (22) The requested URL returned error: 503\n"
+    },
+    {
+      "proxy": "http://198.46.87.212:3128",
+      "at": "2026-11-04T04:05:35.646Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 198.46.87.212 port 3128 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://103.132.40.16:7777",
+      "at": "2026-11-04T04:05:40.662Z",
+      "observedExitIP": "103.132.40.16",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "http://116.204.166.49:8080",
+      "at": "2026-11-04T04:06:02.545Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 116.204.166.49 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://8.213.197.208:1080",
+      "at": "2026-11-04T04:06:07.564Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://107.174.30.92:1080",
+      "at": "2026-11-04T04:06:12.581Z",
+      "observedExitIP": "107.174.30.92",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "socks5://163.5.53.209:1080",
+      "at": "2026-11-04T04:06:15.545Z",
+      "outcome": "health-failed",
+      "error": "curl: (97) Recv failure: Connection reset by peer\n"
+    },
+    {
+      "proxy": "socks5://95.31.52.151:1080",
+      "at": "2026-11-04T04:06:15.816Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 95.31.52.151 port 1080 after 5001 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://209.97.150.167:3128",
+      "at": "2026-11-04T04:06:20.832Z",
+      "observedExitIP": "209.97.150.167",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "http://155.138.236.211:18080",
+      "at": "2026-11-04T04:06:20.923Z",
+      "observedExitIP": "155.138.236.211",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "http://89.43.132.242:8080",
+      "at": "2026-11-04T04:06:21.036Z",
+      "observedExitIP": "89.43.132.242",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "socks5://45.74.31.42:4172",
+      "at": "2026-11-04T04:06:58.868Z",
+      "outcome": "health-failed",
+      "error": "curl: (7) Failed to connect to 45.74.31.42 port 4172 after 4204 ms: Couldn't connect to server\n"
+    },
+    {
+      "proxy": "socks5://194.44.255.112:8090",
+      "at": "2026-11-04T04:07:03.088Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 194.44.255.112 port 8090 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://93.91.162.222:1080",
+      "at": "2026-11-04T04:07:08.105Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 93.91.162.222 port 1080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://79.52.108.2:8080",
+      "at": "2026-11-04T04:07:13.123Z",
+      "observedExitIP": "79.52.108.2",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "socks5://8.219.122.8:9999",
+      "at": "2026-11-04T04:07:18.740Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) SSL connection timeout\n"
+    },
+    {
+      "proxy": "socks5://185.147.72.168:1081",
+      "at": "2026-11-04T04:07:23.758Z",
+      "outcome": "health-failed",
+      "error": "curl: (97) Received invalid version in initial SOCKS5 response.\n"
+    },
+    {
+      "proxy": "http://201.7.31.168:8080",
+      "at": "2026-11-04T04:07:23.959Z",
+      "observedExitIP": "201.7.31.168",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "socks5://90.154.61.187:1080",
+      "at": "2026-11-04T04:07:47.419Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 90.154.61.187 port 1080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://148.113.175.17:1090",
+      "at": "2026-11-04T04:07:47.429Z",
+      "observedExitIP": "148.113.175.17",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "http://176.88.168.109:8080",
+      "at": "2026-11-04T04:07:47.575Z",
+      "observedExitIP": "176.88.168.109",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "socks5://155.138.221.32:1082",
+      "at": "2026-11-04T04:07:48.477Z",
+      "observedExitIP": "155.138.221.32",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "http://34.43.46.91:443",
+      "at": "2026-11-04T04:07:52.437Z",
+      "observedExitIP": "34.96.25.133",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "socks5://216.51.177.106:1080",
+      "at": "2026-11-04T04:08:08.926Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 216.51.177.106 port 1080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://217.77.102.18:3128",
+      "at": "2026-11-04T04:08:08.936Z",
+      "observedExitIP": "176.211.16.50",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "socks5://81.211.12.53:1080",
+      "at": "2026-11-04T04:08:13.944Z",
+      "observedExitIP": "81.211.12.53",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "http://89.43.135.115:8080",
+      "at": "2026-11-04T04:08:31.846Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 89.43.135.115 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://69.55.49.177:38182",
+      "at": "2026-11-04T04:08:31.856Z",
+      "observedExitIP": "69.55.49.177",
+      "outcome": "exit-budget-or-cooldown"
+    }
+  ],
+  "requests": [
+    {
+      "at": "2026-11-04T04:05:33.596Z",
+      "key": "person:3992DDA",
+      "kind": "curl",
+      "path": "/person/3992DDA/x/",
+      "proxy": "http://194.124.37.118:8080",
+      "observedExitIP": "194.124.37.118",
+      "exitWindowRequest": 2,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1096454,
+      "rawTables": 0,
+      "title": " عباس کشوری - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-04T04:05:36.416Z",
+      "key": "person:3992DDA",
+      "kind": "browser-navigation",
+      "path": "/person/3992DDA/x/",
+      "proxy": "http://194.124.37.118:8080",
+      "observedExitIP": "194.124.37.118",
+      "exitWindowRequest": 3
+    },
+    {
+      "at": "2026-11-04T04:05:45.834Z",
+      "key": "person:3994EFB",
+      "kind": "curl",
+      "path": "/person/3994EFB/x/",
+      "proxy": "http://103.132.40.16:7777",
+      "observedExitIP": "103.132.40.16",
+      "exitWindowRequest": 1,
+      "error": "curl: (28) Failed to connect to 103.132.40.16 port 7777 after 5002 ms: Timeout was reached\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    },
+    {
+      "at": "2026-11-04T04:06:02.628Z",
+      "key": "company:10103444870",
+      "kind": "curl",
+      "path": "/company/10103444870/direct/",
+      "proxy": "http://194.124.37.118:8080",
+      "observedExitIP": "194.124.37.118",
+      "exitWindowRequest": 4,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1142995,
+      "rawTables": 4,
+      "title": "🏢 پرشین کالای خواب - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-04T04:06:22.180Z",
+      "key": "person:39A26DB",
+      "kind": "curl",
+      "path": "/person/39A26DB/x/",
+      "proxy": "http://89.43.132.242:8080",
+      "observedExitIP": "89.43.132.242",
+      "exitWindowRequest": 1,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1054985,
+      "rawTables": 0,
+      "title": " مهدی غفاری - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-04T04:06:36.654Z",
+      "key": "person:39A26DB",
+      "kind": "browser-navigation",
+      "path": "/person/39A26DB/x/",
+      "proxy": "http://89.43.132.242:8080",
+      "observedExitIP": "89.43.132.242",
+      "exitWindowRequest": 2
+    },
+    {
+      "at": "2026-11-04T04:06:58.942Z",
+      "key": "company:10103444884",
+      "kind": "curl",
+      "path": "/company/10103444884/direct/",
+      "proxy": "http://89.43.132.242:8080",
+      "observedExitIP": "89.43.132.242",
+      "exitWindowRequest": 3,
+      "error": "curl: (56) Proxy CONNECT aborted\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    },
+    {
+      "at": "2026-11-04T04:07:24.900Z",
+      "key": "person:39A82D6",
+      "kind": "curl",
+      "path": "/person/39A82D6/x/",
+      "proxy": "http://201.7.31.168:8080",
+      "observedExitIP": "201.7.31.168",
+      "exitWindowRequest": 1,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1147989,
+      "rawTables": 0,
+      "title": "✅ حسین نصیری - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-04T04:07:27.292Z",
+      "key": "person:39A82D6",
+      "kind": "browser-navigation",
+      "path": "/person/39A82D6/x/",
+      "proxy": "http://201.7.31.168:8080",
+      "observedExitIP": "201.7.31.168",
+      "exitWindowRequest": 2
+    },
+    {
+      "at": "2026-11-04T04:07:47.504Z",
+      "key": "company:10103445165",
+      "kind": "curl",
+      "path": "/company/10103445165/direct/",
+      "proxy": "http://201.7.31.168:8080",
+      "observedExitIP": "201.7.31.168",
+      "exitWindowRequest": 3,
+      "error": "curl: (28) Proxy CONNECT aborted due to timeout\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    },
+    {
+      "at": "2026-11-04T04:07:50.102Z",
+      "key": "company:14009758620",
+      "kind": "curl",
+      "path": "/company/14009758620/direct/",
+      "proxy": "socks5://155.138.221.32:1082",
+      "observedExitIP": "155.138.221.32",
+      "exitWindowRequest": 1,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1065547,
+      "rawTables": 3,
+      "title": "🏢 جوشکاری صنایع پروفیل جرگلان - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-04T04:07:52.910Z",
+      "key": "person:39AB725",
+      "kind": "curl",
+      "path": "/person/39AB725/x/",
+      "proxy": "http://34.43.46.91:443",
+      "observedExitIP": "34.96.25.133",
+      "exitWindowRequest": 1,
+      "error": "curl: (28) Proxy CONNECT aborted due to timeout\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    },
+    {
+      "at": "2026-11-04T04:08:09.012Z",
+      "key": "company:14015179631",
+      "kind": "curl",
+      "path": "/company/14015179631/direct/",
+      "proxy": "socks5://155.138.221.32:1082",
+      "observedExitIP": "155.138.221.32",
+      "exitWindowRequest": 2,
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    },
+    {
+      "at": "2026-11-04T04:08:10.273Z",
+      "key": "person:7E6FB7BF",
+      "kind": "curl",
+      "path": "/person/7E6FB7BF/x/",
+      "proxy": "http://217.77.102.18:3128",
+      "observedExitIP": "176.211.16.50",
+      "exitWindowRequest": 1,
+      "error": "curl: (28) Proxy CONNECT aborted due to timeout\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    },
+    {
+      "at": "2026-11-04T04:08:17.071Z",
+      "key": "company:14013407674",
+      "kind": "curl",
+      "path": "/company/14013407674/direct/",
+      "proxy": "socks5://81.211.12.53:1080",
+      "observedExitIP": "81.211.12.53",
+      "exitWindowRequest": 2,
+      "error": "curl: (28) Failed to connect to 81.211.12.53 port 1080 after 5002 ms: Timeout was reached\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    }
+  ],
+  "outcomes": [
+    {
+      "at": "2026-11-04T04:05:49.305Z",
+      "key": "person:3992DDA",
+      "proxy": "http://194.124.37.118:8080",
+      "observedExitIP": "194.124.37.118",
+      "mainRequests": 2,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "providerLimited": false,
+      "reason": null
+    },
+    {
+      "at": "2026-11-04T04:05:50.862Z",
+      "key": "person:3994EFB",
+      "proxy": "http://103.132.40.16:7777",
+      "observedExitIP": "103.132.40.16",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) Failed to connect to 103.132.40.16 port 7777 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "at": "2026-11-04T04:06:10.724Z",
+      "key": "company:10103444870",
+      "proxy": "http://194.124.37.118:8080",
+      "observedExitIP": "194.124.37.118",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "providerLimited": false,
+      "reason": null
+    },
+    {
+      "at": "2026-11-04T04:06:48.110Z",
+      "key": "person:39A26DB",
+      "proxy": "http://89.43.132.242:8080",
+      "observedExitIP": "89.43.132.242",
+      "mainRequests": 2,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "providerLimited": false,
+      "reason": null
+    },
+    {
+      "at": "2026-11-04T04:06:59.266Z",
+      "key": "company:10103444884",
+      "proxy": "http://89.43.132.242:8080",
+      "observedExitIP": "89.43.132.242",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (56) Proxy CONNECT aborted\n"
+    },
+    {
+      "at": "2026-11-04T04:07:37.291Z",
+      "key": "person:39A82D6",
+      "proxy": "http://201.7.31.168:8080",
+      "observedExitIP": "201.7.31.168",
+      "mainRequests": 2,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "providerLimited": false,
+      "reason": null
+    },
+    {
+      "at": "2026-11-04T04:07:52.533Z",
+      "key": "company:10103445165",
+      "proxy": "http://201.7.31.168:8080",
+      "observedExitIP": "201.7.31.168",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) Proxy CONNECT aborted due to timeout\n"
+    },
+    {
+      "at": "2026-11-04T04:07:55.494Z",
+      "key": "company:14009758620",
+      "proxy": "socks5://155.138.221.32:1082",
+      "observedExitIP": "155.138.221.32",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "providerLimited": false,
+      "reason": null
+    },
+    {
+      "at": "2026-11-04T04:07:57.940Z",
+      "key": "person:39AB725",
+      "proxy": "http://34.43.46.91:443",
+      "observedExitIP": "34.96.25.133",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) Proxy CONNECT aborted due to timeout\n"
+    },
+    {
+      "at": "2026-11-04T04:08:14.039Z",
+      "key": "company:14015179631",
+      "proxy": "socks5://155.138.221.32:1082",
+      "observedExitIP": "155.138.221.32",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "at": "2026-11-04T04:08:15.301Z",
+      "key": "person:7E6FB7BF",
+      "proxy": "http://217.77.102.18:3128",
+      "observedExitIP": "176.211.16.50",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) Proxy CONNECT aborted due to timeout\n"
+    },
+    {
+      "at": "2026-11-04T04:08:22.095Z",
+      "key": "company:14013407674",
+      "proxy": "socks5://81.211.12.53:1080",
+      "observedExitIP": "81.211.12.53",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) Failed to connect to 81.211.12.53 port 1080 after 5002 ms: Timeout was reached\n"
+    }
+  ],
+  "skippedRecentUnavailable": 60,
+  "candidateUniverse": 10000,
+  "candidateCount": 32
+}
