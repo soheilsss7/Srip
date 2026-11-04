@@ -1,0 +1,363 @@
+{
+  "runId": "41815715471",
+  "startedAt": "2026-11-04T10:41:38.584Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "lines": 3416
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 4859
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 11306
+    }
+  ],
+  "health": [
+    {
+      "proxy": "http://5.42.97.67:8080",
+      "at": "2026-11-04T10:41:41.027Z",
+      "outcome": "health-failed",
+      "error": "curl: (35) OpenSSL SSL_connect: SSL_ERROR_SYSCALL in connection to api.ipify.org:443 \n"
+    },
+    {
+      "proxy": "socks5://199.66.182.232:4145",
+      "at": "2026-11-04T10:41:41.372Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: self-signed certificate in certificate chain\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore"
+    },
+    {
+      "proxy": "socks5://206.246.26.1:1080",
+      "at": "2026-11-04T10:41:41.866Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 206.246.26.1 port 1080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://45.9.72.212:2080",
+      "at": "2026-11-04T10:41:41.975Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) SSL connection timeout\n"
+    },
+    {
+      "proxy": "http://103.208.101.16:8080",
+      "at": "2026-11-04T10:41:46.882Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 103.208.101.16 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://176.62.229.17:1080",
+      "at": "2026-11-04T10:41:46.990Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 176.62.229.17 port 1080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://5.75.133.113:10811",
+      "at": "2026-11-04T10:41:51.896Z",
+      "observedExitIP": "152.233.3.65",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "socks5://213.199.47.140:1080",
+      "at": "2026-11-04T10:41:52.003Z",
+      "observedExitIP": "213.199.47.140",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "http://155.138.236.211:18080",
+      "at": "2026-11-04T10:41:53.136Z",
+      "observedExitIP": "155.138.236.211",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "socks5://216.105.128.144:4145",
+      "at": "2026-11-04T10:41:53.203Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: self-signed certificate in certificate chain\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore"
+    },
+    {
+      "proxy": "socks5://45.74.31.41:10030",
+      "at": "2026-11-04T10:41:53.540Z",
+      "outcome": "health-failed",
+      "error": "curl: (7) Failed to connect to 45.74.31.41 port 10030 after 2208 ms: Couldn't connect to server\n"
+    },
+    {
+      "proxy": "socks5://79.134.4.192:1080",
+      "at": "2026-11-04T10:41:55.761Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 79.134.4.192 port 1080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://109.191.114.251:1080",
+      "at": "2026-11-04T10:42:00.774Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) SSL connection timeout\n"
+    },
+    {
+      "proxy": "socks5://72.207.109.5:4145",
+      "at": "2026-11-04T10:42:05.788Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: self-signed certificate in certificate chain\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore"
+    },
+    {
+      "proxy": "http://46.32.187.81:3128",
+      "at": "2026-11-04T10:42:06.385Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Proxy CONNECT aborted due to timeout\n"
+    },
+    {
+      "proxy": "socks5://47.254.122.220:5443",
+      "at": "2026-11-04T10:42:11.398Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 47.254.122.220 port 5443 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://167.99.3.26:10810",
+      "at": "2026-11-04T10:42:16.413Z",
+      "outcome": "health-failed",
+      "error": "curl: (56) Recv failure: Connection reset by peer\n"
+    },
+    {
+      "proxy": "socks5://176.114.199.202:1080",
+      "at": "2026-11-04T10:42:16.472Z",
+      "outcome": "health-failed",
+      "error": "curl: (7) Failed to connect to 176.114.199.202 port 1080 after 141 ms: Couldn't connect to server\n"
+    },
+    {
+      "proxy": "socks5://194.87.232.240:1080",
+      "at": "2026-11-04T10:42:16.626Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 194.87.232.240 port 1080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://101.36.112.205:1081",
+      "at": "2026-11-04T10:42:21.641Z",
+      "observedExitIP": "101.36.112.205",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "http://34.105.252.3:3128",
+      "at": "2026-11-04T10:42:42.932Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 34.105.252.3 port 3128 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://91.134.141.4:3128",
+      "at": "2026-11-04T10:42:47.947Z",
+      "observedExitIP": "91.134.141.4",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "socks5://184.170.245.148:4145",
+      "at": "2026-11-04T10:42:48.458Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate problem: self-signed certificate in certificate chain\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore"
+    },
+    {
+      "proxy": "http://31.131.248.48:3129",
+      "at": "2026-11-04T10:42:48.790Z",
+      "outcome": "health-failed",
+      "error": "curl: (22) The requested URL returned error: 502\n"
+    },
+    {
+      "proxy": "http://134.209.29.120:3128",
+      "at": "2026-11-04T10:42:49.067Z",
+      "observedExitIP": "134.209.29.120",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "socks5://49.13.22.249:10805",
+      "at": "2026-11-04T10:42:49.558Z",
+      "outcome": "health-failed",
+      "error": "curl: (7) Failed to connect to 49.13.22.249 port 10805 after 106 ms: Couldn't connect to server\n"
+    },
+    {
+      "proxy": "socks5://195.182.149.117:1080",
+      "at": "2026-11-04T10:42:49.678Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 195.182.149.117 port 1080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://209.50.255.91:1080",
+      "at": "2026-11-04T10:42:54.694Z",
+      "observedExitIP": "209.50.255.91",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "socks5://145.220.227.132:8118",
+      "at": "2026-11-04T10:42:56.201Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 145.220.227.132 port 8118 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://178.207.12.86:3128",
+      "at": "2026-11-04T10:43:01.227Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 178.207.12.86 port 3128 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "socks5://65.21.252.66:10805",
+      "at": "2026-11-04T10:43:06.242Z",
+      "observedExitIP": "93.115.0.48",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "socks5://194.9.233.171:1080",
+      "at": "2026-11-04T10:44:45.619Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 194.9.233.171 port 1080 after 5002 ms: Timeout was reached\n"
+    }
+  ],
+  "requests": [
+    {
+      "at": "2026-11-04T10:41:54.409Z",
+      "key": "company:10104045184",
+      "kind": "curl",
+      "path": "/company/10104045184/direct/",
+      "proxy": "socks5://5.75.133.113:10811",
+      "observedExitIP": "152.233.3.65",
+      "exitWindowRequest": 1,
+      "error": "curl: (28) SSL connection timeout\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    },
+    {
+      "at": "2026-11-04T10:42:22.956Z",
+      "key": "person:41C91CE",
+      "kind": "curl",
+      "path": "/person/41C91CE/x/",
+      "proxy": "socks5://101.36.112.205:1081",
+      "observedExitIP": "101.36.112.205",
+      "exitWindowRequest": 1,
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    },
+    {
+      "at": "2026-11-04T10:43:10.604Z",
+      "key": "person:41C9E90",
+      "kind": "curl",
+      "path": "/person/41C9E90/x/",
+      "proxy": "socks5://65.21.252.66:10805",
+      "observedExitIP": "93.115.0.48",
+      "exitWindowRequest": 1,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1131694,
+      "rawTables": 0,
+      "title": " علی‌رضا حسینی - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-04T10:43:17.148Z",
+      "key": "person:41C9E90",
+      "kind": "browser-navigation",
+      "path": "/person/41C9E90/x/",
+      "proxy": "socks5://65.21.252.66:10805",
+      "observedExitIP": "93.115.0.48",
+      "exitWindowRequest": 2
+    },
+    {
+      "at": "2026-11-04T10:43:38.237Z",
+      "key": "person:41C9E90",
+      "kind": "browser-navigation",
+      "path": "/person/41C9E90/x/",
+      "proxy": "socks5://65.21.252.66:10805",
+      "observedExitIP": "93.115.0.48",
+      "exitWindowRequest": 3
+    },
+    {
+      "at": "2026-11-04T10:44:16.537Z",
+      "key": "person:41CE69C",
+      "kind": "curl",
+      "path": "/person/41CE69C/x/",
+      "proxy": "socks5://65.21.252.66:10805",
+      "observedExitIP": "93.115.0.48",
+      "exitWindowRequest": 4,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 960753,
+      "rawTables": 0,
+      "title": " شادی کاظمی - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    }
+  ],
+  "outcomes": [
+    {
+      "at": "2026-11-04T10:41:59.434Z",
+      "key": "company:10104045184",
+      "proxy": "socks5://5.75.133.113:10811",
+      "observedExitIP": "152.233.3.65",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) SSL connection timeout\n"
+    },
+    {
+      "at": "2026-11-04T10:42:27.980Z",
+      "key": "person:41C91CE",
+      "proxy": "socks5://101.36.112.205:1081",
+      "observedExitIP": "101.36.112.205",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "at": "2026-11-04T10:44:06.699Z",
+      "key": "person:41C9E90",
+      "proxy": "socks5://65.21.252.66:10805",
+      "observedExitIP": "93.115.0.48",
+      "mainRequests": 3,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "providerLimited": false,
+      "reason": null
+    },
+    {
+      "at": "2026-11-04T10:44:37.282Z",
+      "key": "person:41CE69C",
+      "proxy": "socks5://65.21.252.66:10805",
+      "observedExitIP": "93.115.0.48",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com",
+        ""
+      ],
+      "success": false,
+      "providerLimited": false,
+      "reason": "empty-detail-response"
+    }
+  ],
+  "skippedRecentUnavailable": 76,
+  "candidateUniverse": 10000,
+  "candidateCount": 32
+}
