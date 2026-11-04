@@ -3,7 +3,7 @@ import {parsePublicProxy} from './public-proxy-candidates.mjs';import {userXrayC
 const execute=promisify(execFile),sleep=ms=>new Promise(r=>setTimeout(r,ms));
 export const clientArchive={url:'https://github.com/XTLS/Xray-core/releases/download/v26.10.31/Xray-linux-64.zip',sha256:'e4bd9119f50ae7c41658b1abd0679ae06f98bd864a2907ff33f2f2cf7081b214'};
 export async function resolveTunnelEndpoint(candidate,resolve=lookup){
- let addresses;try{addresses=await resolve(candidate.address,{family:4,all:true});}catch{throw new Error('tunnel-dns-failed');}
+ let addresses,timer;try{addresses=await Promise.race([resolve(candidate.address,{family:4,all:true}),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('DNS timeout')),5000);timer.unref();})]);}catch{throw new Error('tunnel-dns-failed');}finally{clearTimeout(timer);}
  if(!addresses?.length||addresses.some(a=>!parsePublicProxy(`http://${a.address}:${candidate.port}`)))throw new Error('tunnel-public-ipv4-required');return addresses[0].address;
 }
 export async function freeTunnelPort(){return new Promise((resolve,reject)=>{const s=net.createServer();s.once('error',reject);s.listen(0,'127.0.0.1',()=>{const port=s.address().port;s.close(()=>resolve(port));});});}
@@ -21,7 +21,7 @@ export class UserTunnelManager{
  async start(candidate){
   if(this.clients.has(candidate.id))return this.clients.get(candidate.id).endpoint;
   if(this.pending.has(candidate.id))return this.pending.get(candidate.id);
-  if(this.clients.size+this.pending.size>=this.maxClients)throw new Error('tunnel-client-capacity');
+  if(new Set([...this.clients.keys(),...this.pending.keys()]).size>=this.maxClients)throw new Error('tunnel-client-capacity');
   const task=this.launch(candidate);this.pending.set(candidate.id,task);try{return await task;}finally{this.pending.delete(candidate.id);}
  }
  async launch(candidate){

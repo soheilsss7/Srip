@@ -8,3 +8,10 @@ test('new source preserves all 57 inputs, rejects four unsupported settings and 
 test('fingerprints deduplicate changed labels but not distinct endpoints',()=>{const a=parseTunnelURI(uri+'#one'),b=parseTunnelURI(uri+'#two'),c=parseTunnelURI(uri.replace('8.8.8.8','9.9.9.9'));assert.equal(a.id,b.id);assert.notEqual(a.id,c.id);});
 test('rotation resumes at the next attempted configuration across the end',()=>{const cs=[{id:0},{id:1},{id:2}];assert.deepEqual(rotatingUserCandidates(cs,2,2).map(x=>[x.candidate.id,x.nextCursor]),[[2,0],[0,1]]);assert.deepEqual(rotatingUserCandidates([],0),[]);});
 test('resolved endpoints must all be public IPv4; TLS name survives pinning',async()=>{await assert.rejects(resolveTunnelEndpoint({address:'test',port:443},async()=>[{address:'127.0.0.1'}]),/public/);await assert.rejects(resolveTunnelEndpoint({address:'test',port:443},async()=>[{address:'8.8.8.8'},{address:'10.0.0.1'}]),/public/);assert.equal(await resolveTunnelEndpoint({address:'test',port:443},async()=>[{address:'8.8.8.8'}]),'8.8.8.8');});
+import {UserTunnelManager} from './user-tunnel-manager.mjs';
+test('an allocated listener still becoming ready is counted once, not twice',async()=>{
+ const manager=new UserTunnelManager({scratch:'/tmp',maxClients:2});const done=[];
+ manager.launch=async c=>{const endpoint={url:'socks5://127.0.0.1:12345'};manager.clients.set(c.id,{endpoint});await new Promise(resolve=>done.push(resolve));return endpoint;};
+ const a=manager.start({id:'a'}),b=manager.start({id:'b'});
+ await assert.rejects(manager.start({id:'c'}),/capacity/);assert.equal(done.length,2);done.forEach(f=>f());await Promise.all([a,b]);assert.equal(manager.pending.size,0);manager.clients.clear();
+});
