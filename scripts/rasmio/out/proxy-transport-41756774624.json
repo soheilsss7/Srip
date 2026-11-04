@@ -1,0 +1,77 @@
+{
+  "runId": "41756774624",
+  "startedAt": "2026-11-04T01:51:24.827Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "error": "HTTP 403"
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 403"
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 403"
+    }
+  ],
+  "health": [
+    {
+      "proxy": "http://148.230.4.146:999",
+      "at": "2026-11-04T01:51:26.836Z",
+      "observedExitIP": "204.153.206.193",
+      "outcome": "https-echo-verified"
+    }
+  ],
+  "requests": [
+    {
+      "at": "2026-11-04T01:51:30.547Z",
+      "key": "company:10103247048",
+      "kind": "curl",
+      "path": "/company/10103247048/direct/",
+      "proxy": "http://148.230.4.146:999",
+      "observedExitIP": "204.153.206.193",
+      "exitWindowRequest": 4,
+      "error": "curl: (28) Failed to connect to 148.230.4.146 port 999 after 5001 ms: Timeout was reached\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    }
+  ],
+  "outcomes": [
+    {
+      "at": "2026-11-04T01:51:35.572Z",
+      "key": "company:10103247048",
+      "proxy": "http://148.230.4.146:999",
+      "observedExitIP": "204.153.206.193",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) Failed to connect to 148.230.4.146 port 999 after 5001 ms: Timeout was reached\n"
+    }
+  ],
+  "skippedRecentUnavailable": 4,
+  "candidateUniverse": 5,
+  "candidateCount": 1
+}
