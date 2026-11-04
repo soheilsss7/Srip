@@ -1,0 +1,139 @@
+{
+  "runId": "41774173942",
+  "startedAt": "2026-11-04T04:36:55.149Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "error": "HTTP 403"
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 403"
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 403"
+    }
+  ],
+  "health": [
+    {
+      "proxy": "socks5://193.218.118.128:1080",
+      "at": "2026-11-04T04:36:57.117Z",
+      "observedExitIP": "51.194.86.143",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "http://125.27.218.12:8080",
+      "at": "2026-11-04T04:36:57.128Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Failed to connect to 125.27.218.12 port 8080 after 5002 ms: Timeout was reached\n"
+    },
+    {
+      "proxy": "http://80.232.221.211:8080",
+      "at": "2026-11-04T04:37:02.146Z",
+      "observedExitIP": "80.232.221.211",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "http://46.32.187.81:3128",
+      "at": "2026-11-04T04:37:07.161Z",
+      "observedExitIP": "46.32.187.81",
+      "outcome": "exit-budget-or-cooldown"
+    }
+  ],
+  "requests": [
+    {
+      "at": "2026-11-04T04:36:58.297Z",
+      "key": "person:3AA3ABD",
+      "kind": "curl",
+      "path": "/person/3AA3ABD/x/",
+      "proxy": "socks5://193.218.118.128:1080",
+      "observedExitIP": "51.194.86.143",
+      "exitWindowRequest": 2,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 987229,
+      "rawTables": 0,
+      "title": " عصمت ملکی - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-04T04:37:05.189Z",
+      "key": "person:3AA3ABD",
+      "kind": "browser-navigation",
+      "path": "/person/3AA3ABD/x/",
+      "proxy": "socks5://193.218.118.128:1080",
+      "observedExitIP": "51.194.86.143",
+      "exitWindowRequest": 3
+    },
+    {
+      "at": "2026-11-04T04:37:16.684Z",
+      "key": "company:10103483497",
+      "kind": "curl",
+      "path": "/company/10103483497/direct/",
+      "proxy": "socks5://193.218.118.128:1080",
+      "observedExitIP": "51.194.86.143",
+      "exitWindowRequest": 4,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1052059,
+      "rawTables": 2,
+      "title": "🏢 فن آوران نیوشا - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    }
+  ],
+  "outcomes": [
+    {
+      "at": "2026-11-04T04:37:16.566Z",
+      "key": "person:3AA3ABD",
+      "proxy": "socks5://193.218.118.128:1080",
+      "observedExitIP": "51.194.86.143",
+      "mainRequests": 2,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "providerLimited": false,
+      "reason": null
+    },
+    {
+      "at": "2026-11-04T04:37:23.150Z",
+      "key": "company:10103483497",
+      "proxy": "socks5://193.218.118.128:1080",
+      "observedExitIP": "51.194.86.143",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "providerLimited": false,
+      "reason": null
+    }
+  ],
+  "skippedRecentUnavailable": 10,
+  "candidateUniverse": 14,
+  "candidateCount": 4
+}
