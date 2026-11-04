@@ -24,7 +24,8 @@ import {graphPartitions} from './graph-partitions.mjs';
 import {readStaticSSR} from './static-ssr.mjs';
 import {providerLimitedCompany} from './provider-limited-profile.mjs';
 import {requeueMalformedTables} from './table-shape-repair.mjs';
-import { PublicProxyTransport, permittedDetailURL, permittedResourceURL } from './proxy-transport.mjs';
+import { permittedDetailURL, permittedResourceURL } from './proxy-transport.mjs';
+import {createRotatingProxyTransport} from './rotating-proxy-transport.mjs';
 import { interleaveDetailLanes, requiresProxy, poolExhausted } from './detail-lanes.mjs';
 import { extractEmbeddedNoticesFromDOM, persistEmbeddedNotices } from './embedded-notices.mjs';
 import { execSync } from 'node:child_process';
@@ -1639,7 +1640,7 @@ try {
     } catch (e) { dbg('lock-error', String(e).slice(0, 150)); }
   }
   if(PUBLIC_PROXY_DETAILS) {
-    publicProxyTransport=await new PublicProxyTransport({frontier,out:OUT}).initialize();
+    publicProxyTransport=await createRotatingProxyTransport({frontier,out:OUT});
     log('PUBLIC-PROXY-ENABLED', {types:['company','person'],candidates:publicProxyTransport.candidates.length,directFallback:false});
   }
   log('startup — راه‌اندازی مرورگر… | node', process.version);

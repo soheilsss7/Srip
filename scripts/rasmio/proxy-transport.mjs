@@ -29,8 +29,8 @@ export function reserveExit(state, ip, {now=Date.now(), max=4, windowMs=WINDOW}=
   entry.requests++;entry.lastAt=now;
   return entry.requests;
 }
-export function transportCurlArgs(proxy,url,{profile=false}={}) {
-  const p=parsePublicProxy(proxy);if(!p || !['http','https','socks5'].includes(p.protocol))throw new Error('Invalid transport proxy');
+export function transportCurlArgs(proxy,url,{profile=false,trustedLocal=false}={}) {
+  let p=parsePublicProxy(proxy);if(!p&&trustedLocal){try{const u=new URL(proxy);if(u.protocol==='socks5:'&&u.hostname==='127.0.0.1'&&Number(u.port)>=1024&&Number(u.port)<=65535&&!u.username&&!u.password&&u.pathname===''&&!u.search&&!u.hash)p={protocol:'socks5',url:u.href};}catch{}}if(!p || !['http','https','socks5'].includes(p.protocol))throw new Error('Invalid transport proxy');
   const endpoint=p.protocol==='socks5'?p.url.replace(/^socks5:/,'socks5h:'):p.url;
   return ['-q','--silent','--show-error','--fail','--proxy',endpoint,'--noproxy','','--proto','=https','--proto-redir','=https','--max-redirs','0','--connect-timeout','5','--max-time',profile?'45':'12','--max-filesize','4194304','--user-agent','Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36','--header','accept-language: fa,en',url];
 }
@@ -98,15 +98,16 @@ export class PublicProxyTransport {
       if(entry){this.busy.add(entry.ip);return this.lease(entry,ent);}
       if(this.index<this.candidates.length && this.checked<this.maxChecks){
         const candidate=this.candidates[this.index++];this.checked++;this.checking++;
-        const observation={proxy:candidate.url,at:new Date().toISOString()};this.report.health.push(observation);
+        const observation={proxy:candidate.url,at:new Date().toISOString()};this.report.health.push(observation);let resolved;
         try{
-          const {stdout}=await this.execute('curl',transportCurlArgs(candidate.url,'https://api.ipify.org/?format=json'),{env:this.env,cwd:this.scratch,timeout:14000,maxBuffer:4500000});
+          resolved=this.resolveCandidate?await this.resolveCandidate(candidate):candidate;observation.proxy=resolved.url;if(resolved.tunnelId)observation.tunnelId=resolved.tunnelId;
+          const {stdout}=await this.execute('curl',transportCurlArgs(resolved.url,'https://api.ipify.org/?format=json',{trustedLocal:resolved.trustedLocal===true}),{env:this.env,cwd:this.scratch,timeout:14000,maxBuffer:4500000});
           const ip=JSON.parse(stdout).ip;if(!isIP(ip))throw new Error('Invalid echo IP');observation.observedExitIP=ip;
           this.state.endpointHealth[candidate.url]=healthSuccess(this.state.endpointHealth[candidate.url],ip,this.now());
-          if(!this.available(ip)){observation.outcome='exit-budget-or-cooldown';continue;}
-          if(this.ready.some(e=>e.ip===ip && !e.retired)){observation.outcome='duplicate-echo-exit';continue;}
-          entry={proxy:candidate.url,ip,retired:false};this.ready.push(entry);observation.outcome='https-echo-verified';
-        }catch(e){this.state.endpointHealth[candidate.url]=healthFailure(this.state.endpointHealth[candidate.url],this.now());observation.outcome='health-failed';observation.error=String(e.stderr||e.message).slice(0,200);}
+          if(!this.available(ip)){observation.outcome='exit-budget-or-cooldown';resolved.release?.();continue;}
+          if(this.ready.some(e=>e.ip===ip && !e.retired)){observation.outcome='duplicate-echo-exit';resolved.release?.();continue;}
+          entry={proxy:resolved.url,ip,retired:false,trustedLocal:resolved.trustedLocal===true,tunnelId:resolved.tunnelId};this.ready.push(entry);observation.outcome='https-echo-verified';
+        }catch(e){resolved?.release?.();this.state.endpointHealth[candidate.url]=healthFailure(this.state.endpointHealth[candidate.url],this.now());observation.outcome='health-failed';observation.error=String(e.stderr||e.message).slice(0,200);}
         finally{this.checking--;for(const resolve of this.waiters.splice(0))resolve();this.save();}
         continue;
       }
@@ -129,7 +130,7 @@ export class PublicProxyTransport {
         for(let redirects=0;redirects<4;redirects++){
           const observation=lease.reserve('curl',target);
           let stdout;
-          try {({stdout}=await pool.execute('curl',[...transportCurlArgs(entry.proxy,target,{profile:true}).filter(a=>a!=='--fail'),'--write-out','\n__EGRESS_META__%{http_code}\t%{redirect_url}'],{env:pool.env,cwd:pool.scratch,timeout:48000,maxBuffer:4500000}));}
+          try {({stdout}=await pool.execute('curl',[...transportCurlArgs(entry.proxy,target,{profile:true,trustedLocal:entry.trustedLocal===true}).filter(a=>a!=='--fail'),'--write-out','\n__EGRESS_META__%{http_code}\t%{redirect_url}'],{env:pool.env,cwd:pool.scratch,timeout:48000,maxBuffer:4500000}));}
           catch(e){observation.error=String(e.stderr||e.message).slice(0,240);observation.partialBytesReceived=Buffer.byteLength(String(e.stdout||''));observation.partialResponseAccepted=false;pool.save();const error=new Error('proxy-curl-failed: '+observation.error);error.retryable=true;throw error;}
           const at=stdout.lastIndexOf('\n__EGRESS_META__');if(at<0)throw new Error('Missing HTTP metadata');
           const body=stdout.slice(0,at),[statusText,redirect]=stdout.slice(at+'\n__EGRESS_META__'.length).split('\t');const status=Number(statusText);
