@@ -1,0 +1,275 @@
+{
+  "runId": "41985275973",
+  "startedAt": "2026-11-05T07:10:47.174Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "lines": 3785
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 13019
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 5553
+    }
+  ],
+  "health": [
+    {
+      "proxy": "socks5://127.0.0.1:43205",
+      "at": "2026-11-05T07:10:47.758Z",
+      "tunnelId": "5179235e99dbbbfb",
+      "observedExitIP": "76.164.203.242",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:33497",
+      "at": "2026-11-05T07:10:47.770Z",
+      "tunnelId": "32ad7c4c101c0f15",
+      "outcome": "health-failed",
+      "error": "curl: (22) The requested URL returned error: 429\n"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:34287",
+      "at": "2026-11-05T07:10:47.771Z",
+      "tunnelId": "22ba89f99a165f2f",
+      "observedExitIP": "193.108.119.134",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:45949",
+      "at": "2026-11-05T07:10:49.045Z",
+      "tunnelId": "9c50514660d9dc04",
+      "observedExitIP": "80.174.118.40",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:33851",
+      "at": "2026-11-05T07:10:49.122Z",
+      "tunnelId": "2d7fb37faf7e4837",
+      "observedExitIP": "80.174.118.60",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:40695",
+      "at": "2026-11-05T07:10:49.752Z",
+      "tunnelId": "81f854888fd66a99",
+      "observedExitIP": "185.225.205.53",
+      "outcome": "exit-budget-or-cooldown"
+    }
+  ],
+  "requests": [
+    {
+      "at": "2026-11-05T07:10:54.814Z",
+      "key": "company:10260332613",
+      "kind": "curl",
+      "path": "/company/10260332613/direct/",
+      "tunnelId": "5179235e99dbbbfb",
+      "proxy": "socks5://127.0.0.1:43205",
+      "observedExitIP": "76.164.203.242",
+      "exitWindowRequest": 1,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1201243,
+      "rawTables": 6,
+      "title": "🏢 دریا رنگ اصفهان - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-05T07:11:00.053Z",
+      "key": "person:4CB27890",
+      "kind": "curl",
+      "path": "/person/4CB27890/x/",
+      "tunnelId": "5179235e99dbbbfb",
+      "proxy": "socks5://127.0.0.1:43205",
+      "observedExitIP": "76.164.203.242",
+      "exitWindowRequest": 2,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1220861,
+      "rawTables": 0,
+      "title": " اکبر بنائیان مفرد - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-05T07:11:02.063Z",
+      "key": "person:4CB27890",
+      "kind": "browser-navigation",
+      "path": "/person/4CB27890/x/",
+      "tunnelId": "5179235e99dbbbfb",
+      "proxy": "socks5://127.0.0.1:43205",
+      "observedExitIP": "76.164.203.242",
+      "exitWindowRequest": 3
+    },
+    {
+      "at": "2026-11-05T07:11:23.178Z",
+      "key": "company:10260333287",
+      "kind": "curl",
+      "path": "/company/10260333287/direct/",
+      "tunnelId": "5179235e99dbbbfb",
+      "proxy": "socks5://127.0.0.1:43205",
+      "observedExitIP": "76.164.203.242",
+      "exitWindowRequest": 4,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1383451,
+      "rawTables": 6,
+      "title": "🏢 اطلس پمپ سپاهان - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    }
+  ],
+  "outcomes": [
+    {
+      "at": "2026-11-05T07:10:59.983Z",
+      "key": "company:10260332613",
+      "tunnelId": "5179235e99dbbbfb",
+      "proxy": "socks5://127.0.0.1:43205",
+      "observedExitIP": "76.164.203.242",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "providerLimited": false,
+      "reason": null
+    },
+    {
+      "at": "2026-11-05T07:11:12.115Z",
+      "key": "person:4CB27890",
+      "tunnelId": "5179235e99dbbbfb",
+      "proxy": "socks5://127.0.0.1:43205",
+      "observedExitIP": "76.164.203.242",
+      "mainRequests": 2,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "providerLimited": false,
+      "reason": null
+    },
+    {
+      "at": "2026-11-05T07:11:31.136Z",
+      "key": "company:10260333287",
+      "tunnelId": "5179235e99dbbbfb",
+      "proxy": "socks5://127.0.0.1:43205",
+      "observedExitIP": "76.164.203.242",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "providerLimited": false,
+      "reason": null
+    }
+  ],
+  "skippedRecentUnavailable": 43,
+  "candidateUniverse": 10000,
+  "candidateCount": 32,
+  "userTunnels": {
+    "enabled": true,
+    "source": "data/sources/user-public-tunnels/2026-11-04.txt",
+    "total": 57,
+    "accepted": 52,
+    "rejected": [
+      {
+        "line": 26,
+        "reason": "unsupported-shadowsocks-cipher"
+      },
+      {
+        "line": 43,
+        "reason": "unsupported-security-extension"
+      },
+      {
+        "line": 45,
+        "reason": "unsupported-security-extension"
+      },
+      {
+        "line": 51,
+        "reason": "unsupported-security-extension"
+      }
+    ],
+    "duplicates": [
+      {
+        "line": 59,
+        "id": "32ad7c4c101c0f15"
+      }
+    ],
+    "rotation": "up to eight configurations attempted per run; persistent cursor advances on attempt; shared four-page observed-IP budget",
+    "clientSHA256": "e4bd9119f50ae7c41658b1abd0679ae06f98bd864a2907ff33f2f2cf7081b214",
+    "scheduling": "profile-success first, healthy second, untested then expired failures; exhausted observed exits revalidated no more than hourly",
+    "selected": [
+      {
+        "id": "5179235e99dbbbfb",
+        "line": 21,
+        "protocol": "vless"
+      },
+      {
+        "id": "32ad7c4c101c0f15",
+        "line": 30,
+        "protocol": "shadowsocks"
+      },
+      {
+        "id": "22ba89f99a165f2f",
+        "line": 36,
+        "protocol": "trojan"
+      },
+      {
+        "id": "9c50514660d9dc04",
+        "line": 20,
+        "protocol": "shadowsocks"
+      },
+      {
+        "id": "2d7fb37faf7e4837",
+        "line": 24,
+        "protocol": "shadowsocks"
+      },
+      {
+        "id": "81f854888fd66a99",
+        "line": 25,
+        "protocol": "vless"
+      },
+      {
+        "id": "959b07032185a20c",
+        "line": 34,
+        "protocol": "vless"
+      },
+      {
+        "id": "3b20b9a688865dbc",
+        "line": 35,
+        "protocol": "vless"
+      }
+    ]
+  },
+  "healthProviderRefused": true,
+  "healthWarmup": {
+    "concurrency": 3,
+    "checks": 6,
+    "milliseconds": 4217,
+    "scope": "HTTPS echo only; no profile requests or quota reservations"
+  }
+}
