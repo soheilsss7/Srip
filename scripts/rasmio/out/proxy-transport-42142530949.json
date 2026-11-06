@@ -1,0 +1,220 @@
+{
+  "runId": "42142530949",
+  "startedAt": "2026-11-06T01:15:58.196Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "lines": 4149
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 11463
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 7207
+    }
+  ],
+  "health": [
+    {
+      "proxy": "user-tunnel:c839306333d70c976add6b44fd1d1b8425207d5decf4b76ab244ee4dc48fe9c4",
+      "at": "2026-11-06T01:15:58.762Z",
+      "outcome": "health-failed",
+      "error": "tunnel-client-config-rejected"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:38543",
+      "at": "2026-11-06T01:15:58.776Z",
+      "tunnelId": "706612a2b8be74bb",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:39915",
+      "at": "2026-11-06T01:15:58.776Z",
+      "tunnelId": "437b50e956606a58",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:45895",
+      "at": "2026-11-06T01:15:59.520Z",
+      "tunnelId": "0fa677c616af2168",
+      "outcome": "health-failed",
+      "error": "curl: (35) Recv failure: Connection reset by peer\n"
+    },
+    {
+      "proxy": "http://20.83.147.124:3128",
+      "at": "2026-11-06T01:16:02.295Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://195.112.114.91:10808",
+      "at": "2026-11-06T01:16:04.694Z",
+      "observedExitIP": "5.230.5.16",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "http://147.161.246.39:10130",
+      "at": "2026-11-06T01:16:04.719Z",
+      "outcome": "health-failed",
+      "error": "curl: (22) The requested URL returned error: 429\n"
+    }
+  ],
+  "requests": [
+    {
+      "at": "2026-11-06T01:16:10.808Z",
+      "key": "person:82039594",
+      "kind": "curl",
+      "path": "/person/82039594/x/",
+      "proxy": "http://195.112.114.91:10808",
+      "observedExitIP": "5.230.5.16",
+      "exitWindowRequest": 1,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1002155,
+      "rawTables": 0,
+      "title": " مظاهر اسدی فر - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-06T01:16:13.138Z",
+      "key": "person:82039594",
+      "kind": "browser-navigation",
+      "path": "/person/82039594/x/",
+      "proxy": "http://195.112.114.91:10808",
+      "observedExitIP": "5.230.5.16",
+      "exitWindowRequest": 2
+    },
+    {
+      "at": "2026-11-06T01:16:24.664Z",
+      "key": "company:10380100800",
+      "kind": "curl",
+      "path": "/company/10380100800/direct/",
+      "proxy": "http://195.112.114.91:10808",
+      "observedExitIP": "5.230.5.16",
+      "exitWindowRequest": 3,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1218714,
+      "rawTables": 4,
+      "title": "🏢 توسعه اقتصادی و بین المللی فولاد یار - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    }
+  ],
+  "outcomes": [
+    {
+      "at": "2026-11-06T01:16:24.543Z",
+      "key": "person:82039594",
+      "proxy": "http://195.112.114.91:10808",
+      "observedExitIP": "5.230.5.16",
+      "mainRequests": 2,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "providerLimited": false,
+      "reason": null
+    },
+    {
+      "at": "2026-11-06T01:16:28.607Z",
+      "key": "company:10380100800",
+      "proxy": "http://195.112.114.91:10808",
+      "observedExitIP": "5.230.5.16",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "explicit-access-limit"
+    }
+  ],
+  "skippedRecentUnavailable": 28,
+  "candidateUniverse": 10000,
+  "candidateCount": 32,
+  "userTunnels": {
+    "enabled": true,
+    "source": "data/sources/user-public-tunnels/2026-11-04.txt",
+    "total": 57,
+    "accepted": 52,
+    "rejected": [
+      {
+        "line": 26,
+        "reason": "unsupported-shadowsocks-cipher"
+      },
+      {
+        "line": 43,
+        "reason": "unsupported-security-extension"
+      },
+      {
+        "line": 45,
+        "reason": "unsupported-security-extension"
+      },
+      {
+        "line": 51,
+        "reason": "unsupported-security-extension"
+      }
+    ],
+    "duplicates": [
+      {
+        "line": 59,
+        "id": "32ad7c4c101c0f15"
+      }
+    ],
+    "rotation": "up to eight configurations attempted per run; persistent cursor advances on attempt; shared four-page observed-IP budget",
+    "clientSHA256": "e4bd9119f50ae7c41658b1abd0679ae06f98bd864a2907ff33f2f2cf7081b214",
+    "scheduling": "profile-success first, healthy second, untested then expired failures; exhausted observed exits revalidated no more than hourly",
+    "selected": [
+      {
+        "id": "c839306333d70c97",
+        "line": 19,
+        "protocol": "vless"
+      },
+      {
+        "id": "706612a2b8be74bb",
+        "line": 22,
+        "protocol": "vless"
+      },
+      {
+        "id": "437b50e956606a58",
+        "line": 23,
+        "protocol": "vless"
+      },
+      {
+        "id": "0fa677c616af2168",
+        "line": 27,
+        "protocol": "vless"
+      }
+    ]
+  },
+  "healthProviderRefused": true,
+  "healthWarmup": {
+    "concurrency": 3,
+    "checks": 7,
+    "milliseconds": 8556,
+    "scope": "HTTPS echo only; no profile requests or quota reservations"
+  }
+}
