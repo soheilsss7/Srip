@@ -1,0 +1,469 @@
+{
+  "runId": "42197221274",
+  "startedAt": "2026-11-06T09:44:53.347Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 6544
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 12983
+    },
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "lines": 4292
+    }
+  ],
+  "health": [
+    {
+      "proxy": "socks5://127.0.0.1:37401",
+      "at": "2026-11-06T09:44:53.863Z",
+      "tunnelId": "dbc09e63c0833ddc",
+      "outcome": "health-failed",
+      "error": "curl: (35) TLS connect error: error:0A000126:SSL routines::unexpected eof while reading\n"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:45781",
+      "at": "2026-11-06T09:44:53.922Z",
+      "tunnelId": "0317e104c6fbc721",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:39549",
+      "at": "2026-11-06T09:44:53.923Z",
+      "tunnelId": "8e43238a72b4528c",
+      "observedExitIP": "13.143.188.120",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:33457",
+      "at": "2026-11-06T09:44:55.801Z",
+      "tunnelId": "d1f47b78dff9d015",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://177.234.212.132:999",
+      "at": "2026-11-06T09:44:56.116Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://41.209.57.199:80",
+      "at": "2026-11-06T09:45:00.311Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://168.90.13.32:999",
+      "at": "2026-11-06T09:45:00.951Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://170.84.145.76:8088",
+      "at": "2026-11-06T09:45:01.135Z",
+      "observedExitIP": "170.84.145.76",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "http://103.177.235.194:83",
+      "at": "2026-11-06T09:45:02.862Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://116.204.166.205:8080",
+      "at": "2026-11-06T09:45:05.330Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://49.148.17.137:9999",
+      "at": "2026-11-06T09:45:05.970Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://190.8.165.193:999",
+      "at": "2026-11-06T09:45:07.903Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://103.172.42.123:1111",
+      "at": "2026-11-06T09:45:10.429Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://78.39.253.49:8080",
+      "at": "2026-11-06T09:45:10.988Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://12.218.209.130:53281",
+      "at": "2026-11-06T09:45:12.922Z",
+      "observedExitIP": "12.218.209.130",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "http://160.20.128.31:1080",
+      "at": "2026-11-06T09:45:15.447Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://181.114.225.224:8080",
+      "at": "2026-11-06T09:45:16.005Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://103.153.135.90:1080",
+      "at": "2026-11-06T09:45:16.307Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://45.167.125.63:999",
+      "at": "2026-11-06T09:45:20.465Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://103.166.27.254:8080",
+      "at": "2026-11-06T09:45:21.022Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://102.0.20.92:8080",
+      "at": "2026-11-06T09:45:21.324Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://182.52.113.105:80",
+      "at": "2026-11-06T09:45:25.484Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://203.99.63.97:1080",
+      "at": "2026-11-06T09:45:26.039Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://186.73.227.202:999",
+      "at": "2026-11-06T09:45:26.423Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://201.4.69.29:8080",
+      "at": "2026-11-06T09:45:30.501Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://118.69.186.75:1452",
+      "at": "2026-11-06T09:45:31.055Z",
+      "observedExitIP": "118.69.186.75",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "socks5://218.77.50.79:6666",
+      "at": "2026-11-06T09:45:31.441Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://103.153.62.176:3125",
+      "at": "2026-11-06T09:45:35.517Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://43.252.107.106:9020",
+      "at": "2026-11-06T09:45:36.302Z",
+      "observedExitIP": "43.252.107.106",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "http://102.218.41.98:8082",
+      "at": "2026-11-06T09:45:36.458Z",
+      "observedExitIP": "102.218.41.98",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "http://102.38.13.9:18000",
+      "at": "2026-11-06T09:45:39.482Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://160.119.51.209:8088",
+      "at": "2026-11-06T09:45:40.534Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5001 milliseconds\n"
+    }
+  ],
+  "requests": [
+    {
+      "at": "2026-11-06T09:45:47.849Z",
+      "key": "company:10460091758",
+      "kind": "curl",
+      "path": "/company/10460091758/direct/",
+      "proxy": "http://170.84.145.76:8088",
+      "observedExitIP": "170.84.145.76",
+      "exitWindowRequest": 1,
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    },
+    {
+      "at": "2026-11-06T09:45:47.878Z",
+      "key": "person:B24B3749",
+      "kind": "curl",
+      "path": "/person/B24B3749/x/",
+      "proxy": "http://12.218.209.130:53281",
+      "observedExitIP": "12.218.209.130",
+      "exitWindowRequest": 1,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1125113,
+      "rawTables": 0,
+      "title": " مجید بهرامی - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-06T09:45:54.980Z",
+      "key": "person:B24B3749",
+      "kind": "browser-navigation",
+      "path": "/person/B24B3749/x/",
+      "proxy": "http://12.218.209.130:53281",
+      "observedExitIP": "12.218.209.130",
+      "exitWindowRequest": 2
+    },
+    {
+      "at": "2026-11-06T09:46:08.246Z",
+      "key": "person:B24B3749",
+      "kind": "browser-navigation",
+      "path": "/person/B24B3749/x/",
+      "proxy": "http://12.218.209.130:53281",
+      "observedExitIP": "12.218.209.130",
+      "exitWindowRequest": 3
+    },
+    {
+      "at": "2026-11-06T09:46:29.492Z",
+      "key": "company:10460092894",
+      "kind": "curl",
+      "path": "/company/10460092894/direct/",
+      "proxy": "http://118.69.186.75:1452",
+      "observedExitIP": "118.69.186.75",
+      "exitWindowRequest": 1,
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    },
+    {
+      "at": "2026-11-06T09:46:29.515Z",
+      "key": "person:B24B8ED8",
+      "kind": "curl",
+      "path": "/person/B24B8ED8/x/",
+      "proxy": "http://43.252.107.106:9020",
+      "observedExitIP": "43.252.107.106",
+      "exitWindowRequest": 1,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 973488,
+      "rawTables": 0,
+      "title": " بتول فهیمی - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-06T09:46:33.957Z",
+      "key": "person:B24B8ED8",
+      "kind": "browser-navigation",
+      "path": "/person/B24B8ED8/x/",
+      "proxy": "http://43.252.107.106:9020",
+      "observedExitIP": "43.252.107.106",
+      "exitWindowRequest": 2
+    },
+    {
+      "at": "2026-11-06T09:46:54.614Z",
+      "key": "person:B24B8ED8",
+      "kind": "browser-navigation",
+      "path": "/person/B24B8ED8/x/",
+      "proxy": "http://43.252.107.106:9020",
+      "observedExitIP": "43.252.107.106",
+      "exitWindowRequest": 3
+    },
+    {
+      "at": "2026-11-06T09:47:16.393Z",
+      "key": "company:10460093783",
+      "kind": "curl",
+      "path": "/company/10460093783/direct/",
+      "proxy": "http://102.218.41.98:8082",
+      "observedExitIP": "102.218.41.98",
+      "exitWindowRequest": 3,
+      "error": "curl: (28) Connection timed out after 5001 milliseconds\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    }
+  ],
+  "outcomes": [
+    {
+      "at": "2026-11-06T09:45:52.889Z",
+      "key": "company:10460091758",
+      "proxy": "http://170.84.145.76:8088",
+      "observedExitIP": "170.84.145.76",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "at": "2026-11-06T09:46:22.268Z",
+      "key": "person:B24B3749",
+      "proxy": "http://12.218.209.130:53281",
+      "observedExitIP": "12.218.209.130",
+      "mainRequests": 3,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com",
+        ""
+      ],
+      "success": false,
+      "providerLimited": false,
+      "reason": "empty-detail-response"
+    },
+    {
+      "at": "2026-11-06T09:46:34.520Z",
+      "key": "company:10460092894",
+      "proxy": "http://118.69.186.75:1452",
+      "observedExitIP": "118.69.186.75",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "at": "2026-11-06T09:47:07.419Z",
+      "key": "person:B24B8ED8",
+      "proxy": "http://43.252.107.106:9020",
+      "observedExitIP": "43.252.107.106",
+      "mainRequests": 3,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": false,
+      "providerLimited": false,
+      "reason": "empty-detail-response"
+    },
+    {
+      "at": "2026-11-06T09:47:21.606Z",
+      "key": "company:10460093783",
+      "proxy": "http://102.218.41.98:8082",
+      "observedExitIP": "102.218.41.98",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) Connection timed out after 5001 milliseconds\n"
+    }
+  ],
+  "skippedRecentUnavailable": 41,
+  "candidateUniverse": 10000,
+  "candidateCount": 32,
+  "userTunnels": {
+    "enabled": true,
+    "source": "data/sources/user-public-tunnels/2026-11-04.txt",
+    "total": 57,
+    "accepted": 52,
+    "rejected": [
+      {
+        "line": 26,
+        "reason": "unsupported-shadowsocks-cipher"
+      },
+      {
+        "line": 43,
+        "reason": "unsupported-security-extension"
+      },
+      {
+        "line": 45,
+        "reason": "unsupported-security-extension"
+      },
+      {
+        "line": 51,
+        "reason": "unsupported-security-extension"
+      }
+    ],
+    "duplicates": [
+      {
+        "line": 59,
+        "id": "32ad7c4c101c0f15"
+      }
+    ],
+    "rotation": "up to eight configurations attempted per run; persistent cursor advances on attempt; shared four-page observed-IP budget",
+    "clientSHA256": "e4bd9119f50ae7c41658b1abd0679ae06f98bd864a2907ff33f2f2cf7081b214",
+    "scheduling": "profile-success first, healthy second, untested then expired failures; exhausted observed exits revalidated no more than hourly",
+    "selected": [
+      {
+        "id": "dbc09e63c0833ddc",
+        "line": 56,
+        "protocol": "vless"
+      },
+      {
+        "id": "0317e104c6fbc721",
+        "line": 3,
+        "protocol": "vless"
+      },
+      {
+        "id": "8e43238a72b4528c",
+        "line": 9,
+        "protocol": "vless"
+      },
+      {
+        "id": "d1f47b78dff9d015",
+        "line": 28,
+        "protocol": "vless"
+      }
+    ]
+  },
+  "healthWarmup": {
+    "concurrency": 3,
+    "checks": 32,
+    "milliseconds": 51688,
+    "scope": "HTTPS echo only; no profile requests or quota reservations"
+  }
+}
