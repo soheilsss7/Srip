@@ -1,0 +1,248 @@
+{
+  "runId": "42472466362",
+  "startedAt": "2026-11-08T10:42:17.343Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "error": "HTTP 504"
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 504"
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 504"
+    }
+  ],
+  "health": [
+    {
+      "proxy": "user-tunnel:f64f6df5a2233ae3dfd9ea234753daf1e59c75c00d8239f13a3d7d0cc8a1df5e",
+      "at": "2026-11-08T10:42:28.559Z",
+      "outcome": "health-failed",
+      "error": "tunnel-client-install-failed"
+    },
+    {
+      "proxy": "user-tunnel:c839306333d70c976add6b44fd1d1b8425207d5decf4b76ab244ee4dc48fe9c4",
+      "at": "2026-11-08T10:42:28.571Z",
+      "outcome": "health-failed",
+      "error": "tunnel-client-install-failed"
+    },
+    {
+      "proxy": "user-tunnel:706612a2b8be74bbd6402212814aa6809e9d25874293c9800c4f04a0f195bb96",
+      "at": "2026-11-08T10:42:28.571Z",
+      "outcome": "health-failed",
+      "error": "tunnel-client-install-failed"
+    },
+    {
+      "proxy": "user-tunnel:437b50e956606a586058d3541e52962679a95b4b56f50485798d3a42c51ae49e",
+      "at": "2026-11-08T10:43:11.637Z",
+      "outcome": "health-failed",
+      "error": "tunnel-client-install-failed"
+    },
+    {
+      "proxy": "user-tunnel:0fa677c616af2168b8cb7824fa094f4c9209dc222d4a91481ea69c57da41eaee",
+      "at": "2026-11-08T10:43:11.637Z",
+      "outcome": "health-failed",
+      "error": "tunnel-client-install-failed"
+    },
+    {
+      "proxy": "user-tunnel:f123a2f738081733a4b0c9f60d02af95937f589a522188fc919a4107bf1ba898",
+      "at": "2026-11-08T10:43:11.637Z",
+      "outcome": "health-failed",
+      "error": "tunnel-client-install-failed"
+    },
+    {
+      "proxy": "user-tunnel:a3c85080b41a1c8c0ac76af308df511fced81a3fbc323c3b818eddbfe4769921",
+      "at": "2026-11-08T10:43:11.638Z",
+      "outcome": "health-failed",
+      "error": "tunnel-client-install-failed"
+    },
+    {
+      "proxy": "user-tunnel:0317e104c6fbc72130b10b4d3d0b6c2352a8f29b9df674383ef659697a7157b8",
+      "at": "2026-11-08T10:43:11.639Z",
+      "outcome": "health-failed",
+      "error": "tunnel-client-install-failed"
+    },
+    {
+      "proxy": "socks5://212.237.125.216:6969",
+      "at": "2026-11-08T10:43:11.639Z",
+      "observedExitIP": "212.237.125.216",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "http://1.10.248.239:80",
+      "at": "2026-11-08T10:43:11.650Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    }
+  ],
+  "requests": [
+    {
+      "at": "2026-11-08T10:43:19.481Z",
+      "key": "company:10100373295",
+      "kind": "curl",
+      "path": "/company/10100373295/direct/",
+      "proxy": "socks5://212.237.125.216:6969",
+      "observedExitIP": "212.237.125.216",
+      "exitWindowRequest": 3,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1402535,
+      "rawTables": 7,
+      "title": "🏢 روزدارو - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    },
+    {
+      "at": "2026-11-08T10:43:32.392Z",
+      "key": "person:10A628D6C",
+      "kind": "curl",
+      "path": "/person/10A628D6C/x/",
+      "proxy": "socks5://212.237.125.216:6969",
+      "observedExitIP": "212.237.125.216",
+      "exitWindowRequest": 4,
+      "scriptHosts": [
+        "minio.rasmio.com"
+      ],
+      "status": 200,
+      "bytes": 1002353,
+      "rawTables": 0,
+      "title": " علی اکبر فراشاهی نژاد - رسمــیو | پلتفرم ارتباط و تحلیل کسب و کارها"
+    }
+  ],
+  "outcomes": [
+    {
+      "at": "2026-11-08T10:43:32.294Z",
+      "key": "company:10100373295",
+      "proxy": "socks5://212.237.125.216:6969",
+      "observedExitIP": "212.237.125.216",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com"
+      ],
+      "success": true,
+      "providerLimited": false,
+      "reason": null
+    },
+    {
+      "at": "2026-11-08T10:43:51.752Z",
+      "key": "person:10A628D6C",
+      "proxy": "socks5://212.237.125.216:6969",
+      "observedExitIP": "212.237.125.216",
+      "mainRequests": 1,
+      "blockedResourceHosts": [
+        "cdn.yektanet.com",
+        ""
+      ],
+      "success": false,
+      "providerLimited": false,
+      "reason": "empty-detail-response"
+    }
+  ],
+  "skippedRecentUnavailable": 5,
+  "candidateUniverse": 7,
+  "candidateCount": 10,
+  "userTunnels": {
+    "enabled": true,
+    "source": "data/sources/user-public-tunnels/2026-11-04.txt",
+    "total": 57,
+    "accepted": 52,
+    "rejected": [
+      {
+        "line": 26,
+        "reason": "unsupported-shadowsocks-cipher"
+      },
+      {
+        "line": 43,
+        "reason": "unsupported-security-extension"
+      },
+      {
+        "line": 45,
+        "reason": "unsupported-security-extension"
+      },
+      {
+        "line": 51,
+        "reason": "unsupported-security-extension"
+      }
+    ],
+    "duplicates": [
+      {
+        "line": 59,
+        "id": "32ad7c4c101c0f15"
+      }
+    ],
+    "rotation": "up to eight configurations attempted per run; persistent cursor advances on attempt; shared four-page observed-IP budget",
+    "clientSHA256": "e4bd9119f50ae7c41658b1abd0679ae06f98bd864a2907ff33f2f2cf7081b214",
+    "scheduling": "profile-success first, healthy second, untested then expired failures; exhausted observed exits revalidated no more than hourly",
+    "selected": [
+      {
+        "id": "f64f6df5a2233ae3",
+        "line": 13,
+        "protocol": "vless"
+      },
+      {
+        "id": "c839306333d70c97",
+        "line": 19,
+        "protocol": "vless"
+      },
+      {
+        "id": "706612a2b8be74bb",
+        "line": 22,
+        "protocol": "vless"
+      },
+      {
+        "id": "437b50e956606a58",
+        "line": 23,
+        "protocol": "vless"
+      },
+      {
+        "id": "0fa677c616af2168",
+        "line": 27,
+        "protocol": "vless"
+      },
+      {
+        "id": "f123a2f738081733",
+        "line": 29,
+        "protocol": "vless"
+      },
+      {
+        "id": "a3c85080b41a1c8c",
+        "line": 31,
+        "protocol": "vless"
+      },
+      {
+        "id": "0317e104c6fbc721",
+        "line": 3,
+        "protocol": "vless"
+      }
+    ]
+  },
+  "healthWarmup": {
+    "concurrency": 3,
+    "checks": 10,
+    "milliseconds": 48112,
+    "scope": "HTTPS echo only; no profile requests or quota reservations"
+  }
+}
