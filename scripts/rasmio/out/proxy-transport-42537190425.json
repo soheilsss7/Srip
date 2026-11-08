@@ -1,0 +1,310 @@
+{
+  "runId": "42537190425",
+  "startedAt": "2026-11-08T23:52:50.926Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "lines": 1622
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 5286
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 12045
+    }
+  ],
+  "health": [
+    {
+      "proxy": "socks5://127.0.0.1:44555",
+      "at": "2026-11-08T23:52:51.493Z",
+      "tunnelId": "d94d22ae6da9f98b",
+      "outcome": "health-failed",
+      "error": "curl: (35) TLS connect error: error:0A000126:SSL routines::unexpected eof while reading\n"
+    },
+    {
+      "proxy": "http://181.79.95.65:999",
+      "at": "2026-11-08T23:52:51.505Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://160.22.65.129:4004",
+      "at": "2026-11-08T23:52:51.505Z",
+      "observedExitIP": "160.22.65.129",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "https://54.157.89.139:443",
+      "at": "2026-11-08T23:52:52.335Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target ipv4 address '54.157.89.139'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the s"
+    },
+    {
+      "proxy": "http://201.190.178.191:8080",
+      "at": "2026-11-08T23:52:52.430Z",
+      "observedExitIP": "201.190.178.191",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "https://34.203.121.122:443",
+      "at": "2026-11-08T23:52:54.843Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://89.45.209.131:8080",
+      "at": "2026-11-08T23:52:55.490Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Operation timed out after 5000 milliseconds with 0 bytes received\n"
+    },
+    {
+      "proxy": "https://104.36.250.114:443",
+      "at": "2026-11-08T23:52:56.525Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target ipv4 address '104.36.250.114'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the "
+    },
+    {
+      "proxy": "http://190.8.164.64:999",
+      "at": "2026-11-08T23:52:56.744Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://160.19.41.48:80",
+      "at": "2026-11-08T23:52:59.864Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5001 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://43.242.227.10:9051",
+      "at": "2026-11-08T23:53:00.511Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "https://54.198.140.56:50576",
+      "at": "2026-11-08T23:53:01.765Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: certificate subject name '154.201.239.12' does not match target hostname '54.198.140.56'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of "
+    },
+    {
+      "proxy": "http://103.227.187.1:6080",
+      "at": "2026-11-08T23:53:01.804Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://103.187.136.20:3838",
+      "at": "2026-11-08T23:53:04.887Z",
+      "observedExitIP": "103.187.136.30",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "https://3.21.156.147:28011",
+      "at": "2026-11-08T23:53:05.531Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: certificate subject name '*.svc-portal.private' does not match target hostname '3.21.156.147'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimac"
+    },
+    {
+      "proxy": "https://18.231.126.121:36754",
+      "at": "2026-11-08T23:53:05.590Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: certificate subject name 'genericx86-64' does not match target hostname '18.231.126.121'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of "
+    },
+    {
+      "proxy": "http://103.50.25.7:8888",
+      "at": "2026-11-08T23:53:05.844Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "https://78.12.136.220:53974",
+      "at": "2026-11-08T23:53:06.823Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: certificate subject name '*.ndr.iis.io' does not match target hostname '78.12.136.220'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of th"
+    },
+    {
+      "proxy": "http://103.36.9.9:8181",
+      "at": "2026-11-08T23:53:06.968Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://180.211.161.26:8080",
+      "at": "2026-11-08T23:53:08.539Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "https://56.112.92.32:5565",
+      "at": "2026-11-08T23:53:10.864Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: certificate subject name 'stats-ansible.digital' does not match target hostname '56.112.92.32'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitima"
+    },
+    {
+      "proxy": "http://45.228.233.78:999",
+      "at": "2026-11-08T23:53:11.263Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://1.20.178.201:80",
+      "at": "2026-11-08T23:53:11.988Z",
+      "outcome": "health-failed",
+      "error": "curl: (56) Recv failure: Connection reset by peer\n"
+    },
+    {
+      "proxy": "https://34.207.102.197:55683",
+      "at": "2026-11-08T23:53:13.561Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: unable to obtain common name from peer certificate\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nest"
+    },
+    {
+      "proxy": "http://103.70.122.147:8080",
+      "at": "2026-11-08T23:53:13.841Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://31.15.169.77:808",
+      "at": "2026-11-08T23:53:15.130Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5000 milliseconds\n"
+    },
+    {
+      "proxy": "https://16.28.101.55:41348",
+      "at": "2026-11-08T23:53:16.284Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: certificate subject name 'FGb3f86eeb' does not match target hostname '16.28.101.55'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the s"
+    },
+    {
+      "proxy": "http://103.147.247.193:8080",
+      "at": "2026-11-08T23:53:16.736Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "http://183.89.202.45:8081",
+      "at": "2026-11-08T23:53:18.873Z",
+      "outcome": "health-failed",
+      "error": "curl: (56) Proxy CONNECT aborted\n"
+    },
+    {
+      "proxy": "socks5://162.253.68.97:4145",
+      "at": "2026-11-08T23:53:20.159Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL certificate OpenSSL verify result: self-signed certificate in certificate chain (19)\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the s"
+    },
+    {
+      "proxy": "https://205.178.144.224:8443",
+      "at": "2026-11-08T23:53:20.573Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target ipv4 address '205.178.144.224'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the"
+    },
+    {
+      "proxy": "http://181.119.111.239:999",
+      "at": "2026-11-08T23:53:20.649Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    }
+  ],
+  "requests": [
+    {
+      "at": "2026-11-08T23:53:28.373Z",
+      "key": "person:18C5DEBEB",
+      "kind": "curl",
+      "path": "/person/18C5DEBEB/x/",
+      "proxy": "http://103.187.136.20:3838",
+      "observedExitIP": "103.187.136.30",
+      "exitWindowRequest": 1,
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    }
+  ],
+  "outcomes": [
+    {
+      "at": "2026-11-08T23:53:33.423Z",
+      "key": "person:18C5DEBEB",
+      "proxy": "http://103.187.136.20:3838",
+      "observedExitIP": "103.187.136.30",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (28) Connection timed out after 5002 milliseconds\n"
+    }
+  ],
+  "skippedRecentUnavailable": 60,
+  "candidateUniverse": 10000,
+  "candidateCount": 32,
+  "userTunnels": {
+    "enabled": true,
+    "source": "data/sources/user-public-tunnels/2026-11-04.txt",
+    "total": 57,
+    "accepted": 52,
+    "rejected": [
+      {
+        "line": 26,
+        "reason": "unsupported-shadowsocks-cipher"
+      },
+      {
+        "line": 43,
+        "reason": "unsupported-security-extension"
+      },
+      {
+        "line": 45,
+        "reason": "unsupported-security-extension"
+      },
+      {
+        "line": 51,
+        "reason": "unsupported-security-extension"
+      }
+    ],
+    "duplicates": [
+      {
+        "line": 59,
+        "id": "32ad7c4c101c0f15"
+      }
+    ],
+    "rotation": "up to eight configurations attempted per run; persistent cursor advances on attempt; shared four-page observed-IP budget",
+    "clientSHA256": "e4bd9119f50ae7c41658b1abd0679ae06f98bd864a2907ff33f2f2cf7081b214",
+    "scheduling": "profile-success first, healthy second, untested then expired failures; exhausted observed exits revalidated no more than hourly",
+    "selected": [
+      {
+        "id": "d94d22ae6da9f98b",
+        "line": 12,
+        "protocol": "vmess"
+      }
+    ]
+  },
+  "healthWarmup": {
+    "concurrency": 3,
+    "checks": 32,
+    "milliseconds": 34176,
+    "scope": "HTTPS echo only; no profile requests or quota reservations"
+  }
+}
