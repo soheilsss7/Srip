@@ -1,0 +1,196 @@
+{
+  "runId": "42494299161",
+  "startedAt": "2026-11-08T15:21:30.787Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "lines": 1108
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 11782
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 3879
+    }
+  ],
+  "health": [
+    {
+      "proxy": "socks5://127.0.0.1:33823",
+      "at": "2026-11-08T15:21:31.624Z",
+      "tunnelId": "f76f153a96435e4f",
+      "observedExitIP": "152.228.139.33",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:36481",
+      "at": "2026-11-08T15:21:31.637Z",
+      "tunnelId": "87dd88d0c1e4765b",
+      "observedExitIP": "15.204.97.206",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:36201",
+      "at": "2026-11-08T15:21:31.637Z",
+      "tunnelId": "7b35147439192f02",
+      "observedExitIP": "15.204.97.206",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:46381",
+      "at": "2026-11-08T15:21:32.811Z",
+      "tunnelId": "d1f47b78dff9d015",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:41505",
+      "at": "2026-11-08T15:21:32.901Z",
+      "tunnelId": "f123a2f738081733",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:40205",
+      "at": "2026-11-08T15:21:33.280Z",
+      "tunnelId": "a3c85080b41a1c8c",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5003 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:46611",
+      "at": "2026-11-08T15:21:37.969Z",
+      "tunnelId": "9ebe657f063de560",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5003 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:38003",
+      "at": "2026-11-08T15:21:38.056Z",
+      "tunnelId": "3b20b9a688865dbc",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "https://137.175.22.16:443",
+      "at": "2026-11-08T15:21:38.469Z",
+      "outcome": "health-failed",
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target ipv4 address '137.175.22.16'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the s"
+    },
+    {
+      "proxy": "http://45.167.124.30:999",
+      "at": "2026-11-08T15:21:38.633Z",
+      "outcome": "health-failed",
+      "error": "curl: (22) The requested URL returned error: 429\n"
+    }
+  ],
+  "requests": [],
+  "outcomes": [],
+  "skippedRecentUnavailable": 76,
+  "candidateUniverse": 10000,
+  "candidateCount": 32,
+  "userTunnels": {
+    "enabled": true,
+    "source": "data/sources/user-public-tunnels/2026-11-04.txt",
+    "total": 57,
+    "accepted": 52,
+    "rejected": [
+      {
+        "line": 26,
+        "reason": "unsupported-shadowsocks-cipher"
+      },
+      {
+        "line": 43,
+        "reason": "unsupported-security-extension"
+      },
+      {
+        "line": 45,
+        "reason": "unsupported-security-extension"
+      },
+      {
+        "line": 51,
+        "reason": "unsupported-security-extension"
+      }
+    ],
+    "duplicates": [
+      {
+        "line": 59,
+        "id": "32ad7c4c101c0f15"
+      }
+    ],
+    "rotation": "up to eight configurations attempted per run; persistent cursor advances on attempt; shared four-page observed-IP budget",
+    "clientSHA256": "e4bd9119f50ae7c41658b1abd0679ae06f98bd864a2907ff33f2f2cf7081b214",
+    "scheduling": "profile-success first, healthy second, untested then expired failures; exhausted observed exits revalidated no more than hourly",
+    "selected": [
+      {
+        "id": "f76f153a96435e4f",
+        "line": 37,
+        "protocol": "vless"
+      },
+      {
+        "id": "87dd88d0c1e4765b",
+        "line": 10,
+        "protocol": "vless"
+      },
+      {
+        "id": "7b35147439192f02",
+        "line": 11,
+        "protocol": "vless"
+      },
+      {
+        "id": "d1f47b78dff9d015",
+        "line": 28,
+        "protocol": "vless"
+      },
+      {
+        "id": "f123a2f738081733",
+        "line": 29,
+        "protocol": "vless"
+      },
+      {
+        "id": "a3c85080b41a1c8c",
+        "line": 31,
+        "protocol": "vless"
+      },
+      {
+        "id": "9ebe657f063de560",
+        "line": 33,
+        "protocol": "vless"
+      },
+      {
+        "id": "3b20b9a688865dbc",
+        "line": 35,
+        "protocol": "vless"
+      }
+    ]
+  },
+  "healthProviderRefused": true,
+  "healthWarmup": {
+    "concurrency": 3,
+    "checks": 10,
+    "milliseconds": 11587,
+    "scope": "HTTPS echo only; no profile requests or quota reservations"
+  }
+}
