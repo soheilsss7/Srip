@@ -1,0 +1,175 @@
+{
+  "runId": "42478021242",
+  "startedAt": "2026-11-08T11:58:49.608Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "error": "fetch failed"
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 503"
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "error": "HTTP 503"
+    }
+  ],
+  "health": [
+    {
+      "proxy": "user-tunnel:a006a33927b670348261be97f7cbc6759e5a167a984509f0131775ece09d6f7f",
+      "at": "2026-11-08T11:58:53.761Z",
+      "outcome": "health-failed",
+      "error": "tunnel-client-install-failed"
+    },
+    {
+      "proxy": "user-tunnel:d3f15f83cc147c48ad9f0fe14d188f980d4ba7e5412a666b318c42ed09e36845",
+      "at": "2026-11-08T11:58:53.773Z",
+      "outcome": "health-failed",
+      "error": "tunnel-client-install-failed"
+    },
+    {
+      "proxy": "user-tunnel:9ab167dd8d6ba9a7857861f5075ac9a077e32b1f941396ed77672cad38a805db",
+      "at": "2026-11-08T11:58:53.773Z",
+      "outcome": "health-failed",
+      "error": "tunnel-client-install-failed"
+    },
+    {
+      "proxy": "user-tunnel:c839306333d70c976add6b44fd1d1b8425207d5decf4b76ab244ee4dc48fe9c4",
+      "at": "2026-11-08T11:59:53.787Z",
+      "outcome": "health-failed",
+      "error": "tunnel-client-install-failed"
+    },
+    {
+      "proxy": "user-tunnel:706612a2b8be74bbd6402212814aa6809e9d25874293c9800c4f04a0f195bb96",
+      "at": "2026-11-08T11:59:53.787Z",
+      "outcome": "health-failed",
+      "error": "tunnel-client-install-failed"
+    },
+    {
+      "proxy": "user-tunnel:437b50e956606a586058d3541e52962679a95b4b56f50485798d3a42c51ae49e",
+      "at": "2026-11-08T11:59:53.787Z",
+      "outcome": "health-failed",
+      "error": "tunnel-client-install-failed"
+    },
+    {
+      "proxy": "user-tunnel:81f854888fd66a99b995e812bffa03c639d9c90dd9a3a688bc0f5e408579e810",
+      "at": "2026-11-08T11:59:53.788Z",
+      "outcome": "health-failed",
+      "error": "tunnel-client-install-failed"
+    },
+    {
+      "proxy": "user-tunnel:0fa677c616af2168b8cb7824fa094f4c9209dc222d4a91481ea69c57da41eaee",
+      "at": "2026-11-08T11:59:53.789Z",
+      "outcome": "health-failed",
+      "error": "tunnel-client-install-failed"
+    }
+  ],
+  "requests": [],
+  "outcomes": [],
+  "skippedRecentUnavailable": 3,
+  "candidateUniverse": 3,
+  "candidateCount": 8,
+  "userTunnels": {
+    "enabled": true,
+    "source": "data/sources/user-public-tunnels/2026-11-04.txt",
+    "total": 57,
+    "accepted": 52,
+    "rejected": [
+      {
+        "line": 26,
+        "reason": "unsupported-shadowsocks-cipher"
+      },
+      {
+        "line": 43,
+        "reason": "unsupported-security-extension"
+      },
+      {
+        "line": 45,
+        "reason": "unsupported-security-extension"
+      },
+      {
+        "line": 51,
+        "reason": "unsupported-security-extension"
+      }
+    ],
+    "duplicates": [
+      {
+        "line": 59,
+        "id": "32ad7c4c101c0f15"
+      }
+    ],
+    "rotation": "up to eight configurations attempted per run; persistent cursor advances on attempt; shared four-page observed-IP budget",
+    "clientSHA256": "e4bd9119f50ae7c41658b1abd0679ae06f98bd864a2907ff33f2f2cf7081b214",
+    "scheduling": "profile-success first, healthy second, untested then expired failures; exhausted observed exits revalidated no more than hourly",
+    "selected": [
+      {
+        "id": "a006a33927b67034",
+        "line": 16,
+        "protocol": "shadowsocks"
+      },
+      {
+        "id": "d3f15f83cc147c48",
+        "line": 17,
+        "protocol": "vless"
+      },
+      {
+        "id": "9ab167dd8d6ba9a7",
+        "line": 18,
+        "protocol": "vless"
+      },
+      {
+        "id": "c839306333d70c97",
+        "line": 19,
+        "protocol": "vless"
+      },
+      {
+        "id": "706612a2b8be74bb",
+        "line": 22,
+        "protocol": "vless"
+      },
+      {
+        "id": "437b50e956606a58",
+        "line": 23,
+        "protocol": "vless"
+      },
+      {
+        "id": "81f854888fd66a99",
+        "line": 25,
+        "protocol": "vless"
+      },
+      {
+        "id": "0fa677c616af2168",
+        "line": 27,
+        "protocol": "vless"
+      }
+    ]
+  },
+  "healthWarmup": {
+    "concurrency": 3,
+    "checks": 8,
+    "milliseconds": 60029,
+    "scope": "HTTPS echo only; no profile requests or quota reservations"
+  }
+}
