@@ -1,0 +1,237 @@
+{
+  "runId": "42466422890",
+  "startedAt": "2026-11-08T09:16:54.194Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "lines": 1173
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 12144
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 3891
+    }
+  ],
+  "health": [
+    {
+      "proxy": "user-tunnel:1882a150a4a595330966cc72e5b2d6e5420dcc02151647061bb9a345105f159d",
+      "at": "2026-11-08T09:16:54.791Z",
+      "outcome": "health-failed",
+      "error": "tunnel-client-install-failed"
+    },
+    {
+      "proxy": "user-tunnel:a006a33927b670348261be97f7cbc6759e5a167a984509f0131775ece09d6f7f",
+      "at": "2026-11-08T09:16:54.804Z",
+      "outcome": "health-failed",
+      "error": "tunnel-client-install-failed"
+    },
+    {
+      "proxy": "user-tunnel:d3f15f83cc147c48ad9f0fe14d188f980d4ba7e5412a666b318c42ed09e36845",
+      "at": "2026-11-08T09:16:54.804Z",
+      "outcome": "health-failed",
+      "error": "tunnel-client-install-failed"
+    },
+    {
+      "proxy": "user-tunnel:9ab167dd8d6ba9a7857861f5075ac9a077e32b1f941396ed77672cad38a805db",
+      "at": "2026-11-08T09:17:05.840Z",
+      "outcome": "health-failed",
+      "error": "tunnel-client-install-failed"
+    },
+    {
+      "proxy": "user-tunnel:5179235e99dbbbfb0d8cae897b3a46b058464906fad39de7ea1ceb902b5416f4",
+      "at": "2026-11-08T09:17:05.841Z",
+      "outcome": "health-failed",
+      "error": "tunnel-client-install-failed"
+    },
+    {
+      "proxy": "user-tunnel:1c23ee6ea135214c166524e26ffbe18342be65d728ee3283ed95cadce70bbd97",
+      "at": "2026-11-08T09:17:05.841Z",
+      "outcome": "health-failed",
+      "error": "tunnel-client-install-failed"
+    },
+    {
+      "proxy": "user-tunnel:4cac42f63906f7d53a29dbf432e7244783f419c2e8e6b7f74698b39fc493dd64",
+      "at": "2026-11-08T09:17:05.842Z",
+      "outcome": "health-failed",
+      "error": "tunnel-client-install-failed"
+    },
+    {
+      "proxy": "user-tunnel:7fa67013b99fa4aa298d696fc15e67187ccceee23d9c2237fd22ad47b1c10b1d",
+      "at": "2026-11-08T09:17:05.842Z",
+      "outcome": "health-failed",
+      "error": "tunnel-client-install-failed"
+    },
+    {
+      "proxy": "http://27.147.142.156:12051",
+      "at": "2026-11-08T09:17:05.842Z",
+      "observedExitIP": "27.147.142.156",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "socks5://45.74.31.42:7496",
+      "at": "2026-11-08T09:17:05.853Z",
+      "outcome": "health-failed",
+      "error": "curl: (22) The requested URL returned error: 429\n"
+    },
+    {
+      "proxy": "socks5://193.25.215.182:22222",
+      "at": "2026-11-08T09:17:05.853Z",
+      "outcome": "health-failed",
+      "error": "curl: (35) TLS connect error: error:0A000126:SSL routines::unexpected eof while reading\n"
+    },
+    {
+      "proxy": "http://89.144.53.75:3128",
+      "at": "2026-11-08T09:17:06.219Z",
+      "observedExitIP": "89.144.53.75",
+      "outcome": "https-echo-verified"
+    },
+    {
+      "proxy": "socks5://45.194.33.12:30001",
+      "at": "2026-11-08T09:17:06.851Z",
+      "observedExitIP": "45.194.33.12",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "socks5://46.146.220.247:1080",
+      "at": "2026-11-08T09:17:07.168Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    }
+  ],
+  "requests": [
+    {
+      "at": "2026-11-08T09:17:14.245Z",
+      "key": "person:10487C771",
+      "kind": "curl",
+      "path": "/person/10487C771/x/",
+      "proxy": "http://89.144.53.75:3128",
+      "observedExitIP": "89.144.53.75",
+      "exitWindowRequest": 4,
+      "error": "curl: (60) SSL: no alternative certificate subject name matches target hostname 'rasmio.com'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish a secur",
+      "partialBytesReceived": 20,
+      "partialResponseAccepted": false
+    }
+  ],
+  "outcomes": [
+    {
+      "at": "2026-11-08T09:17:14.551Z",
+      "key": "person:10487C771",
+      "proxy": "http://89.144.53.75:3128",
+      "observedExitIP": "89.144.53.75",
+      "mainRequests": 1,
+      "blockedResourceHosts": [],
+      "success": false,
+      "providerLimited": false,
+      "reason": "proxy-curl-failed: curl: (60) SSL: no alternative certificate subject name matches target hostname 'rasmio.com'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed t"
+    }
+  ],
+  "skippedRecentUnavailable": 65,
+  "candidateUniverse": 10000,
+  "candidateCount": 32,
+  "userTunnels": {
+    "enabled": true,
+    "source": "data/sources/user-public-tunnels/2026-11-04.txt",
+    "total": 57,
+    "accepted": 52,
+    "rejected": [
+      {
+        "line": 26,
+        "reason": "unsupported-shadowsocks-cipher"
+      },
+      {
+        "line": 43,
+        "reason": "unsupported-security-extension"
+      },
+      {
+        "line": 45,
+        "reason": "unsupported-security-extension"
+      },
+      {
+        "line": 51,
+        "reason": "unsupported-security-extension"
+      }
+    ],
+    "duplicates": [
+      {
+        "line": 59,
+        "id": "32ad7c4c101c0f15"
+      }
+    ],
+    "rotation": "up to eight configurations attempted per run; persistent cursor advances on attempt; shared four-page observed-IP budget",
+    "clientSHA256": "e4bd9119f50ae7c41658b1abd0679ae06f98bd864a2907ff33f2f2cf7081b214",
+    "scheduling": "profile-success first, healthy second, untested then expired failures; exhausted observed exits revalidated no more than hourly",
+    "selected": [
+      {
+        "id": "1882a150a4a59533",
+        "line": 15,
+        "protocol": "vless"
+      },
+      {
+        "id": "a006a33927b67034",
+        "line": 16,
+        "protocol": "shadowsocks"
+      },
+      {
+        "id": "d3f15f83cc147c48",
+        "line": 17,
+        "protocol": "vless"
+      },
+      {
+        "id": "9ab167dd8d6ba9a7",
+        "line": 18,
+        "protocol": "vless"
+      },
+      {
+        "id": "5179235e99dbbbfb",
+        "line": 21,
+        "protocol": "vless"
+      },
+      {
+        "id": "1c23ee6ea135214c",
+        "line": 42,
+        "protocol": "vless"
+      },
+      {
+        "id": "4cac42f63906f7d5",
+        "line": 47,
+        "protocol": "vless"
+      },
+      {
+        "id": "7fa67013b99fa4aa",
+        "line": 7,
+        "protocol": "vless"
+      }
+    ]
+  },
+  "healthProviderRefused": true,
+  "healthWarmup": {
+    "concurrency": 3,
+    "checks": 14,
+    "milliseconds": 17396,
+    "scope": "HTTPS echo only; no profile requests or quota reservations"
+  }
+}
