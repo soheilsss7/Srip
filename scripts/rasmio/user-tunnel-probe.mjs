@@ -1,10 +1,10 @@
 import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {execFile} from 'node:child_process';import {promisify} from 'node:util';import {isIP} from 'node:net';
-import {parseTunnelList} from './user-tunnel-configs.mjs';import {UserTunnelManager,clientArchive} from './user-tunnel-manager.mjs';import {userTunnelFile} from './rotating-proxy-transport.mjs';import {transportCurlArgs} from './proxy-transport.mjs';
+import {loadPublicTunnelCatalog,publicTunnelManifest} from './public-tunnel-catalog.mjs';import {UserTunnelManager,clientArchive} from './user-tunnel-manager.mjs';import {userTunnelFile} from './rotating-proxy-transport.mjs';import {transportCurlArgs} from './proxy-transport.mjs';
 const execute=promisify(execFile);
 export async function runUserTunnelProbe(){
  const runId=String(process.env.GITHUB_RUN_ID||'local').replace(/[^\w-]/g,''),file=`out/user-tunnel-probe-${runId}.json`,files=[file];fs.mkdirSync('out',{recursive:true});
- const catalog=parseTunnelList(fs.readFileSync(userTunnelFile,'utf8')),scratch=fs.mkdtempSync(path.join(os.tmpdir(),'user-public-tunnel-probe-'));const manager=new UserTunnelManager({scratch,maxClients:3});
- const report={runId,startedAt:new Date().toISOString(),mode:'user-tunnel-probe',source:userTunnelFile,total:catalog.total,accepted:catalog.accepted.length,rejected:catalog.rejected,duplicates:catalog.duplicates,clientSHA256:clientArchive.sha256,attempts:[],verifiedProfiles:[],canonicalRecordsChanged:false,fullCoverageVerified:false,healthOnly:true,originProfilesRequested:0};
+ const catalog=loadPublicTunnelCatalog(userTunnelFile),scratch=fs.mkdtempSync(path.join(os.tmpdir(),'user-public-tunnel-probe-'));const manager=new UserTunnelManager({scratch,maxClients:3});
+ const report={runId,startedAt:new Date().toISOString(),mode:'user-tunnel-probe',source:userTunnelFile,sources:catalog.sources,total:catalog.total,accepted:catalog.accepted.length,rejected:catalog.rejected,duplicates:catalog.duplicates,clientSHA256:clientArchive.sha256,attempts:[],verifiedProfiles:[],canonicalRecordsChanged:false,fullCoverageVerified:false,healthOnly:true,originProfilesRequested:0};
  let candidates=catalog.accepted;
  let payload={};try{payload=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,'utf8')).client_payload||{};}catch{}
  if(payload.retryAfterCapacityRun!==undefined){
@@ -19,7 +19,7 @@ export async function runUserTunnelProbe(){
  try{
   await manager.prepare();report.clientChecksumVerified=true;let index=0,refused=false;
   await Promise.all(Array.from({length:3},async()=>{while(index<candidates.length&&!refused){
-   const c=candidates[index++],attempt={id:c.id.slice(0,16),line:c.line,protocol:c.outbound.protocol,startedAt:new Date().toISOString()};report.attempts.push(attempt);save();
+   const c=candidates[index++],attempt={id:c.id.slice(0,16),line:c.line,sourceFile:c.sourceFile,protocol:c.outbound.protocol,startedAt:new Date().toISOString()};report.attempts.push(attempt);save();
    try{
     const endpoint=await manager.start(c);
     const {stdout}=await execute('curl',[...transportCurlArgs(endpoint.url,'https://api.ipify.org/?format=json',{trustedLocal:true}).filter(x=>x!=='--fail'),'--write-out','\n__USER_HEALTH__%{http_code}'],{env:manager.env,timeout:14000,maxBuffer:10000});

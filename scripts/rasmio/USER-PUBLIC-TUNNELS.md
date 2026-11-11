@@ -6,7 +6,7 @@ links or account credentials in that file. Original lines, including rejected an
 duplicate inputs, are retained; runtime parsing repairs HTML entities and Markdown
 wrappers without changing the original archive.
 
-## Current admission
+## Original batch admission
 
 - 57 original inputs; 52 unique supported configurations.
 - One duplicate and four rejected inputs (one unsupported cipher; three ECH or
@@ -61,3 +61,18 @@ Echo 401/403/429 stops scheduling further echo checks. Reports include
 Empty public shells in one lane no longer force every independent lane to a
 single worker; duplicated empty-wave sleeps were removed, retaining the normal
 pacing interval and access-wall handling. No sustained speed multiplier is implied.
+
+## Additional public batch (2026-11-11)
+
+The manifest `data/sources/user-public-tunnels/catalog.json` now appends the second
+user-authorized archive without replacing the first. Both runtime rotation and
+the diagnostic use the same loader. Old candidate IDs and ordering are preserved.
+The new archive has 49 inputs: 39 unique parser-supported candidates in the batch,
+7 rejected inputs and 3 internal duplicates. One supported candidate also exists
+in the original batch, giving **38 new candidates / 90 total**, with 106 original
+inputs, 11 rejected and 5 duplicates overall. Rejections retain their source and
+line number; unsupported security settings are not removed. Parser support is
+not client validation or network success: the client validates candidates before
+starting them and the normal scheduler admits only successful health checks.
+Shared observed-exit-IP request limits remain unchanged. The catalog regression
+suite and existing configuration/scheduler/transport tests pass (29 tests).
