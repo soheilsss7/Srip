@@ -1,0 +1,404 @@
+{
+  "runId": "43087204562",
+  "startedAt": "2026-11-11T19:27:39.820Z",
+  "enabledTypes": [
+    "company",
+    "person"
+  ],
+  "directFallback": false,
+  "policy": {
+    "requestsPerEchoExit": 4,
+    "supportedTransports": [
+      "http",
+      "https",
+      "socks5"
+    ],
+    "windowHours": 96,
+    "maxCandidateChecks": 32,
+    "profileResponseSeconds": 45,
+    "healthResponseSeconds": 12,
+    "scope": "Echo-observed IP is not proof of destination egress or unused target quota; 96h is a conservative client policy"
+  },
+  "sources": [
+    {
+      "repo": "monosans/proxy-list",
+      "file": "proxies/all.txt",
+      "lines": 963
+    },
+    {
+      "repo": "ProxyScrape/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 2509
+    },
+    {
+      "repo": "proxifly/free-proxy-list",
+      "file": "proxies/all/data.txt",
+      "lines": 11336
+    }
+  ],
+  "health": [
+    {
+      "proxy": "socks5://127.0.0.1:46041",
+      "at": "2026-11-11T19:27:40.585Z",
+      "tunnelId": "959b07032185a20c",
+      "observedExitIP": "91.107.179.0",
+      "outcome": "exit-budget-or-cooldown"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:35331",
+      "at": "2026-11-11T19:27:41.041Z",
+      "tunnelId": "3b20b9a688865dbc",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:33585",
+      "at": "2026-11-11T19:27:41.042Z",
+      "tunnelId": "7c41fb56b11a4979",
+      "outcome": "health-failed",
+      "error": "curl: (35) Recv failure: Connection reset by peer\n"
+    },
+    {
+      "proxy": "user-tunnel:0357aeb5fac6ff800b54fa09d65df48e2bfda4a5ff05d6ce09a893f83892731d",
+      "at": "2026-11-11T19:27:44.765Z",
+      "outcome": "health-failed",
+      "error": "tunnel-client-config-rejected"
+    },
+    {
+      "proxy": "user-tunnel:652c2ce6a11e993d4983cfd68c8367f365221ec48b120c006091630a41149316",
+      "at": "2026-11-11T19:27:44.789Z",
+      "outcome": "health-failed",
+      "error": "tunnel-dns-failed"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:35623",
+      "at": "2026-11-11T19:27:44.826Z",
+      "tunnelId": "1c23ee6ea135214c",
+      "outcome": "health-failed",
+      "error": "curl: (35) TLS connect error: error:0A000126:SSL routines::unexpected eof while reading\n"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:41717",
+      "at": "2026-11-11T19:27:45.192Z",
+      "tunnelId": "dc2fa4568de847c4",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://127.0.0.1:34915",
+      "at": "2026-11-11T19:27:45.304Z",
+      "tunnelId": "4cac42f63906f7d5",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5003 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://213.148.6.12:7777",
+      "at": "2026-11-11T19:27:46.949Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5000 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://47.242.254.69:50001",
+      "at": "2026-11-11T19:27:50.352Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://47.79.78.76:18080",
+      "at": "2026-11-11T19:27:50.539Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://62.182.138.3:2080",
+      "at": "2026-11-11T19:27:51.969Z",
+      "outcome": "health-failed",
+      "error": "curl: (7) Failed to connect to api.ipify.org port 443 via 62.182.138.3 after 160 ms: Could not connect to server\n"
+    },
+    {
+      "proxy": "socks5://83.219.232.123:1080",
+      "at": "2026-11-11T19:27:52.148Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://31.76.20.131:1080",
+      "at": "2026-11-11T19:27:55.374Z",
+      "outcome": "health-failed",
+      "error": "curl: (7) Failed to connect to api.ipify.org port 443 via 31.76.20.131 after 97 ms: Could not connect to server\n"
+    },
+    {
+      "proxy": "socks5://80.74.27.53:1080",
+      "at": "2026-11-11T19:27:55.490Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://194.163.174.78:1088",
+      "at": "2026-11-11T19:27:55.559Z",
+      "outcome": "health-failed",
+      "error": "curl: (7) Failed to connect to api.ipify.org port 443 via 194.163.174.78 after 99 ms: Could not connect to server\n"
+    },
+    {
+      "proxy": "socks5://47.243.19.177:1011",
+      "at": "2026-11-11T19:27:55.678Z",
+      "outcome": "health-failed",
+      "error": "curl: (7) Failed to connect to api.ipify.org port 443 via 47.243.19.177 after 205 ms: Could not connect to server\n"
+    },
+    {
+      "proxy": "socks5://23.177.185.71:1080",
+      "at": "2026-11-11T19:27:55.902Z",
+      "outcome": "health-failed",
+      "error": "curl: (7) Failed to connect to api.ipify.org port 443 via 23.177.185.71 after 76 ms: Could not connect to server\n"
+    },
+    {
+      "proxy": "socks5://47.79.23.234:18080",
+      "at": "2026-11-11T19:27:55.995Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://202.62.55.154:1080",
+      "at": "2026-11-11T19:27:57.168Z",
+      "outcome": "health-failed",
+      "error": "curl: (7) Failed to connect to api.ipify.org port 443 via 202.62.55.154 after 249 ms: Could not connect to server\n"
+    },
+    {
+      "proxy": "socks5://172.245.66.2:1080",
+      "at": "2026-11-11T19:27:57.436Z",
+      "outcome": "health-failed",
+      "error": "curl: (97) No authentication method was acceptable.\n"
+    },
+    {
+      "proxy": "socks5://47.79.78.59:18080",
+      "at": "2026-11-11T19:27:57.502Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5005 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://80.64.27.68:1080",
+      "at": "2026-11-11T19:28:00.513Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://95.81.96.158:1080",
+      "at": "2026-11-11T19:28:01.016Z",
+      "outcome": "health-failed",
+      "error": "curl: (7) Failed to connect to api.ipify.org port 443 via 95.81.96.158 after 86 ms: Could not connect to server\n"
+    },
+    {
+      "proxy": "socks5://190.104.35.30:1080",
+      "at": "2026-11-11T19:28:01.120Z",
+      "outcome": "health-failed",
+      "error": "curl: (7) Failed to connect to api.ipify.org port 443 via 190.104.35.30 after 141 ms: Could not connect to server\n"
+    },
+    {
+      "proxy": "socks5://158.160.128.27:1080",
+      "at": "2026-11-11T19:28:01.281Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://54.95.120.6:1080",
+      "at": "2026-11-11T19:28:02.525Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://188.186.102.92:1080",
+      "at": "2026-11-11T19:28:05.534Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://213.88.12.210:1080",
+      "at": "2026-11-11T19:28:06.302Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://94.228.245.213:1080",
+      "at": "2026-11-11T19:28:07.552Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    },
+    {
+      "proxy": "socks5://146.0.77.29:9050",
+      "at": "2026-11-11T19:28:10.553Z",
+      "outcome": "health-failed",
+      "error": "curl: (7) Failed to connect to api.ipify.org port 443 via 146.0.77.29 after 91 ms: Could not connect to server\n"
+    },
+    {
+      "proxy": "socks5://2.56.119.138:9080",
+      "at": "2026-11-11T19:28:10.662Z",
+      "outcome": "health-failed",
+      "error": "curl: (28) Connection timed out after 5002 milliseconds\n"
+    }
+  ],
+  "requests": [],
+  "outcomes": [],
+  "skippedRecentUnavailable": 34,
+  "candidateUniverse": 10000,
+  "candidateCount": 32,
+  "userTunnels": {
+    "enabled": true,
+    "source": "data/sources/user-public-tunnels/catalog.json",
+    "sources": [
+      {
+        "sourceFile": "2026-11-04.txt",
+        "total": 57,
+        "acceptedUniqueInBatch": 52,
+        "newUniqueAdded": 52,
+        "rejected": 4,
+        "duplicates": 1
+      },
+      {
+        "sourceFile": "2026-11-11.txt",
+        "total": 49,
+        "acceptedUniqueInBatch": 39,
+        "newUniqueAdded": 38,
+        "rejected": 7,
+        "duplicates": 4
+      }
+    ],
+    "total": 106,
+    "accepted": 90,
+    "rejected": [
+      {
+        "line": 26,
+        "reason": "unsupported-shadowsocks-cipher",
+        "sourceFile": "2026-11-04.txt"
+      },
+      {
+        "line": 43,
+        "reason": "unsupported-security-extension",
+        "sourceFile": "2026-11-04.txt"
+      },
+      {
+        "line": 45,
+        "reason": "unsupported-security-extension",
+        "sourceFile": "2026-11-04.txt"
+      },
+      {
+        "line": 51,
+        "reason": "unsupported-security-extension",
+        "sourceFile": "2026-11-04.txt"
+      },
+      {
+        "line": 2,
+        "reason": "unsupported-security-extension",
+        "sourceFile": "2026-11-11.txt"
+      },
+      {
+        "line": 18,
+        "reason": "invalid-vless-id",
+        "sourceFile": "2026-11-11.txt"
+      },
+      {
+        "line": 20,
+        "reason": "unsupported-header",
+        "sourceFile": "2026-11-11.txt"
+      },
+      {
+        "line": 27,
+        "reason": "invalid-reality",
+        "sourceFile": "2026-11-11.txt"
+      },
+      {
+        "line": 31,
+        "reason": "unsupported-xhttp-extra",
+        "sourceFile": "2026-11-11.txt"
+      },
+      {
+        "line": 44,
+        "reason": "unsupported-security-extension",
+        "sourceFile": "2026-11-11.txt"
+      },
+      {
+        "line": 47,
+        "reason": "unsupported-security-extension",
+        "sourceFile": "2026-11-11.txt"
+      }
+    ],
+    "duplicates": [
+      {
+        "line": 59,
+        "id": "32ad7c4c101c0f15",
+        "sourceFile": "2026-11-04.txt"
+      },
+      {
+        "line": 16,
+        "id": "7b1dd89d4394758f",
+        "sourceFile": "2026-11-11.txt"
+      },
+      {
+        "line": 32,
+        "id": "2fbf923b10c37926",
+        "sourceFile": "2026-11-11.txt"
+      },
+      {
+        "line": 49,
+        "id": "f64f6df5a2233ae3",
+        "sourceFile": "2026-11-11.txt"
+      },
+      {
+        "sourceFile": "2026-11-11.txt",
+        "line": 35,
+        "id": "f64f6df5a2233ae3",
+        "duplicateSourceFile": "2026-11-04.txt"
+      }
+    ],
+    "rotation": "up to eight configurations attempted per run; persistent cursor advances on attempt; shared four-page observed-IP budget",
+    "clientSHA256": "e4bd9119f50ae7c41658b1abd0679ae06f98bd864a2907ff33f2f2cf7081b214",
+    "scheduling": "profile-success first, healthy second, untested then expired failures; exhausted observed exits revalidated no more than hourly",
+    "selected": [
+      {
+        "id": "959b07032185a20c",
+        "line": 34,
+        "protocol": "vless"
+      },
+      {
+        "id": "3b20b9a688865dbc",
+        "line": 35,
+        "protocol": "vless"
+      },
+      {
+        "id": "7c41fb56b11a4979",
+        "line": 38,
+        "protocol": "vless"
+      },
+      {
+        "id": "0357aeb5fac6ff80",
+        "line": 40,
+        "protocol": "vless"
+      },
+      {
+        "id": "652c2ce6a11e993d",
+        "line": 41,
+        "protocol": "vless"
+      },
+      {
+        "id": "1c23ee6ea135214c",
+        "line": 42,
+        "protocol": "vless"
+      },
+      {
+        "id": "dc2fa4568de847c4",
+        "line": 46,
+        "protocol": "shadowsocks"
+      },
+      {
+        "id": "4cac42f63906f7d5",
+        "line": 47,
+        "protocol": "vless"
+      }
+    ]
+  },
+  "healthWarmup": {
+    "concurrency": 3,
+    "checks": 32,
+    "milliseconds": 35097,
+    "scope": "HTTPS echo only; no profile requests or quota reservations"
+  }
+}
